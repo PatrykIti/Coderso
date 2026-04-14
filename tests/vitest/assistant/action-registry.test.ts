@@ -19,17 +19,23 @@ test("assistantActionTypes lists every supported action type once", () => {
     "custom-screen.widget.patch",
     "listing-query.upsert",
     "listing-query.delete",
+    "listing-query.update",
     "listing-template.upsert",
     "listing-template.delete",
+    "listing-template.update",
     "form.upsert",
     "form.delete",
     "form.archive",
+    "form.update",
     "entry.upsert-draft",
     "entry.delete",
+    "entry.update",
     "menu.item.upsert",
     "menu.item.delete",
+    "menu.item.update",
     "seo.document.upsert",
     "seo.document.delete",
+    "seo.document.update",
     "media.reference.attach",
     "listing-query.filters.patch",
     "listing-template.card.patch",
@@ -86,13 +92,19 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("menu.item.delete")).toBe(true);
   expect(isAssistantActionType("seo.document.upsert")).toBe(true);
   expect(isAssistantActionType("seo.document.delete")).toBe(true);
+  expect(isAssistantActionType("seo.document.update")).toBe(true);
   expect(isAssistantActionType("media.reference.attach")).toBe(true);
   expect(isAssistantActionType("listing-query.delete")).toBe(true);
+  expect(isAssistantActionType("listing-query.update")).toBe(true);
   expect(isAssistantActionType("listing-query.filters.patch")).toBe(true);
   expect(isAssistantActionType("listing-template.delete")).toBe(true);
+  expect(isAssistantActionType("listing-template.update")).toBe(true);
   expect(isAssistantActionType("listing-template.card.patch")).toBe(true);
   expect(isAssistantActionType("form.delete")).toBe(true);
   expect(isAssistantActionType("form.archive")).toBe(true);
+  expect(isAssistantActionType("form.update")).toBe(true);
+  expect(isAssistantActionType("entry.update")).toBe(true);
+  expect(isAssistantActionType("menu.item.update")).toBe(true);
   expect(isAssistantActionType("page.widget.patch")).toBe(true);
   expect(isAssistantActionType("form.automation.upsert")).toBe(true);
   expect(isAssistantActionType("page.update")).toBe(true);

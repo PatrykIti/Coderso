@@ -31,6 +31,7 @@ import {
   getEntry,
   getEntryBySlug,
   updateEntry,
+  updateEntryMetadata,
 } from "../content/entryService";
 import {
   createPage,
@@ -46,6 +47,7 @@ import {
   deleteSeoDocument,
   getSeoDocument,
   getSeoDocumentByTarget,
+  updateSeoDocumentById,
   upsertSeoDocument,
 } from "../seo/seoService";
 import {
@@ -97,18 +99,23 @@ import type {
   AssistantCustomScreenWidgetPatchAction,
   AssistantEntryUpsertDraftAction,
   AssistantEntryDeleteAction,
+  AssistantEntryUpdateAction,
   AssistantFormUpsertAction,
   AssistantFormDeleteAction,
   AssistantFormArchiveAction,
+  AssistantFormUpdateAction,
   AssistantFormAutomationUpsertAction,
   AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryDeleteAction,
+  AssistantListingQueryUpdateAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateCardPatchAction,
   AssistantListingTemplateDeleteAction,
+  AssistantListingTemplateUpdateAction,
   AssistantListingTemplateUpsertAction,
   AssistantMediaReferenceAttachAction,
   AssistantMenuItemDeleteAction,
+  AssistantMenuItemUpdateAction,
   AssistantMenuItemUpsertAction,
   AssistantPageWidgetPatchAction,
   AssistantPageUpdateAction,
@@ -119,6 +126,7 @@ import type {
   AssistantWidgetTemplateBlockPatchAction,
   AssistantPlannedAction,
   AssistantSeoDocumentDeleteAction,
+  AssistantSeoDocumentUpdateAction,
   AssistantSeoDocumentUpsertAction,
   AssistantSiteKitInstallAction,
   AssistantSiteKitRecommendAction,
@@ -583,6 +591,7 @@ type ActionExecutorDeps = {
   createEntry: typeof createEntry;
   deleteEntry: typeof deleteEntry;
   updateEntry: typeof updateEntry;
+  updateEntryMetadata: typeof updateEntryMetadata;
   getEntry: typeof getEntry;
   deleteMenuItem: typeof deleteMenuItem;
   listMenuItems: typeof listMenuItems;
@@ -590,6 +599,7 @@ type ActionExecutorDeps = {
   getSeoDocument: typeof getSeoDocument;
   deleteSeoDocument: typeof deleteSeoDocument;
   getSeoDocumentByTarget: typeof getSeoDocumentByTarget;
+  updateSeoDocumentById: typeof updateSeoDocumentById;
   upsertSeoDocument: typeof upsertSeoDocument;
   getMediaById: typeof getMediaById;
   logAudit: typeof logAudit;
@@ -645,6 +655,7 @@ const defaultDeps: ActionExecutorDeps = {
   createEntry,
   deleteEntry,
   updateEntry,
+  updateEntryMetadata,
   getEntry,
   deleteMenuItem,
   listMenuItems,
@@ -652,6 +663,7 @@ const defaultDeps: ActionExecutorDeps = {
   getSeoDocument,
   deleteSeoDocument,
   getSeoDocumentByTarget,
+  updateSeoDocumentById,
   upsertSeoDocument,
   getMediaById,
   logAudit,
@@ -1086,6 +1098,62 @@ const buildListingQueryFiltersPatchPreview = async (
   });
 };
 
+const buildListingQueryUpdatePreview = async (
+  action: AssistantListingQueryUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingQueries()).find((entry) => entry.id === action.input.id) ?? null;
+  const nextQuery = existing
+    ? {
+        ...existing.query,
+        sourceConfig: {
+          ...(isRecord(existing.query.sourceConfig) ? existing.query.sourceConfig : {}),
+          ...(action.input.patch.includeDrafts !== undefined
+            ? { includeDrafts: action.input.patch.includeDrafts }
+            : {}),
+        },
+        pagination: {
+          ...(isRecord(existing.query.pagination) ? existing.query.pagination : {}),
+          ...(action.input.patch.limit !== undefined ? { limit: action.input.patch.limit } : {}),
+        },
+      }
+    : null;
+  const nextValue = existing
+    ? {
+        name: action.input.patch.name ?? existing.name,
+        description:
+          action.input.patch.description !== undefined
+            ? action.input.patch.description
+            : existing.description,
+        query: nextQuery,
+      }
+    : null;
+
+  return createPreviewChange({
+    action,
+    targetType: "listing-query",
+    targetKey: action.input.name,
+    summary: `Update listing query "${action.input.name}"`,
+    conflicts:
+      existing && existing.name === action.input.name
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Listing query no longer matches the planned update target."
+                : "Listing query was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? { name: existing.name, description: existing.description, query: existing.query }
+      : null,
+    nextValue,
+  });
+};
+
 const buildListingTemplatePreview = async (
   action: AssistantListingTemplateUpsertAction,
   deps: ActionExecutorDeps
@@ -1190,6 +1258,58 @@ const buildListingTemplateCardPatchPreview = async (
         ],
     beforeValue: existing?.config ?? null,
     nextValue: nextConfig,
+  });
+};
+
+const buildListingTemplateUpdatePreview = async (
+  action: AssistantListingTemplateUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingTemplates()).find((entry) => entry.id === action.input.id) ?? null;
+  const expectedLayout = action.input.expectedLayout?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    existing.slug === action.input.slug &&
+    (!expectedLayout || existing.layout === expectedLayout);
+  const nextConfig =
+    existing && action.input.patch.card
+      ? {
+          ...existing.config,
+          card: action.input.patch.card,
+        }
+      : existing?.config ?? null;
+
+  return createPreviewChange({
+    action,
+    targetType: "listing-template",
+    targetKey: action.input.slug,
+    summary: `Update listing template "${action.input.name}"`,
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Listing template no longer matches the planned update target."
+                : "Listing template was not found.",
+            },
+          ],
+    beforeValue: existing,
+    nextValue: existing
+      ? {
+          name: action.input.patch.name ?? existing.name,
+          slug: action.input.patch.slug ?? existing.slug,
+          description:
+            action.input.patch.description !== undefined
+              ? action.input.patch.description
+              : existing.description,
+          layout: action.input.patch.layout ?? existing.layout,
+          config: nextConfig,
+        }
+      : null,
   });
 };
 
@@ -1468,6 +1588,39 @@ const buildFormArchivePreview = async (
   });
 };
 
+const buildFormUpdatePreview = async (
+  action: AssistantFormUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getForm(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    existing.slug === action.input.slug &&
+    (!expectedStatus || existing.status === expectedStatus);
+
+  return createPreviewChange({
+    action,
+    targetType: "form",
+    targetKey: action.input.slug,
+    summary: `Update form "${action.input.name}"`,
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Form no longer matches the planned update target."
+                : "Form was not found.",
+            },
+          ],
+    beforeValue: existing,
+    nextValue: existing ? { ...existing, ...action.input.patch } : null,
+  });
+};
+
 const buildEntryUpsertDraftPreview = async (
   action: AssistantEntryUpsertDraftAction,
   deps: ActionExecutorDeps
@@ -1554,6 +1707,65 @@ const buildEntryDeletePreview = async (
         }
       : null,
     nextValue: null,
+  });
+};
+
+const buildEntryUpdatePreview = async (
+  action: AssistantEntryUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getEntry(action.input.id);
+  const contentType =
+    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  const matches =
+    Boolean(existing) &&
+    (!action.input.expectedTitle || existing?.title === action.input.expectedTitle) &&
+    (!action.input.expectedSlug || existing?.slug === action.input.expectedSlug) &&
+    (!action.input.expectedStatus || existing?.status === action.input.expectedStatus) &&
+    (!contentType || existing?.typeId === contentType.id);
+
+  return createPreviewChange({
+    action,
+    targetType: "entry",
+    targetKey: action.input.expectedSlug ?? action.input.id,
+    summary: `Update entry "${action.input.expectedTitle ?? action.input.id}"`,
+    warnings:
+      action.input.patch.status === "published"
+        ? ["Publishing this entry may make it visible on the public site."]
+        : [],
+    conflicts:
+      matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Entry no longer matches the planned update target."
+                : "Entry was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          title: existing.title,
+          slug: existing.slug,
+          status: existing.status,
+          data: existing.data,
+          seo: existing.seo,
+        }
+      : null,
+    nextValue: existing
+      ? {
+          title: action.input.patch.title ?? existing.title,
+          slug: action.input.patch.slug ?? existing.slug,
+          status: action.input.patch.status ?? existing.status,
+          data: action.input.patch.values
+            ? { ...existing.data, ...action.input.patch.values }
+            : existing.data,
+          seo: action.input.patch.seo ? { ...(existing.seo ?? {}), ...action.input.patch.seo } : existing.seo,
+        }
+      : null,
   });
 };
 
@@ -1673,6 +1885,46 @@ const buildMenuItemDeletePreview = async (
           remainingItems: existingItems.length - deleteIds.size,
         }
       : null,
+  });
+};
+
+const buildMenuItemUpdatePreview = async (
+  action: AssistantMenuItemUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const existing = existingItems.find((item) => item.id === action.input.itemId) ?? null;
+  const matches =
+    existing?.label === action.input.label &&
+    (action.input.expectedHref === undefined || existing.href === action.input.expectedHref) &&
+    (action.input.expectedParentId === undefined ||
+      existing.parentId === action.input.expectedParentId);
+  const nextValue = existing
+    ? {
+        ...existing,
+        ...action.input.patch,
+      }
+    : null;
+
+  return createPreviewChange({
+    action,
+    targetType: "menu-item",
+    targetKey: `${action.input.menuId}/${action.input.itemId}`,
+    summary: `Update menu item "${action.input.label}"`,
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Menu item no longer matches the planned update target."
+                : "Menu item was not found.",
+            },
+          ],
+    beforeValue: existing,
+    nextValue,
   });
 };
 
@@ -1826,6 +2078,50 @@ const buildSeoDocumentDeletePreview = async (
         }
       : null,
     nextValue: null,
+  });
+};
+
+const buildSeoDocumentUpdatePreview = async (
+  action: AssistantSeoDocumentUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getSeoDocument(action.input.id);
+  const expectedSlug = action.input.expectedSlug
+    ? normalizeSeoSlugForAction(action.input.expectedSlug)
+    : null;
+  const matches =
+    existing?.targetType === action.input.targetType &&
+    existing.targetId === action.input.targetId &&
+    (!expectedSlug || normalizeSeoSlugForAction(existing.slug) === expectedSlug) &&
+    (!action.input.expectedTitle || existing.title === action.input.expectedTitle);
+
+  return createPreviewChange({
+    action,
+    targetType: "seo-document",
+    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    summary: `Update SEO document for ${action.input.targetType} ${action.input.targetId}`,
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "SEO document no longer matches the planned update target."
+                : "SEO document was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          title: existing.title,
+          description: existing.description,
+          canonicalUrl: existing.canonicalUrl,
+          robots: existing.robots,
+        }
+      : null,
+    nextValue: existing ? { ...existing, ...action.input.patch } : null,
   });
 };
 
@@ -2800,6 +3096,59 @@ const executeListingQueryFiltersPatchAction = async (
   };
 };
 
+const executeListingQueryUpdateAction = async (
+  action: AssistantListingQueryUpdateAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing =
+    (await deps.listListingQueries()).find((entry) => entry.id === action.input.id) ?? null;
+  if (!existing || existing.name !== action.input.name) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const nextQuery = {
+    ...existing.query,
+    sourceConfig: {
+      ...(isRecord(existing.query.sourceConfig) ? existing.query.sourceConfig : {}),
+      ...(action.input.patch.includeDrafts !== undefined
+        ? { includeDrafts: action.input.patch.includeDrafts }
+        : {}),
+    },
+    pagination: {
+      ...(isRecord(existing.query.pagination) ? existing.query.pagination : {}),
+      ...(action.input.patch.limit !== undefined ? { limit: action.input.patch.limit } : {}),
+    },
+  };
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateListingQuery(existing.id, {
+          name: action.input.patch.name ?? existing.name,
+          description:
+            action.input.patch.description !== undefined
+              ? action.input.patch.description
+              : existing.description,
+          query: nextQuery,
+        });
+  if (!record) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "listing-query",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: "/admin/coderso/listings",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Listing query already matched the planned patch."
+        : `Updated listing query "${record.name}".`,
+  };
+};
+
 const executeListingTemplateAction = async (
   action: AssistantListingTemplateUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -2917,6 +3266,57 @@ const executeListingTemplateCardPatchAction = async (
       preview.operation === "noop"
         ? "Listing template card config already matched the planned patch."
         : "Listing template card config is updated.",
+  };
+};
+
+const executeListingTemplateUpdateAction = async (
+  action: AssistantListingTemplateUpdateAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing =
+    (await deps.listListingTemplates()).find((entry) => entry.id === action.input.id) ?? null;
+  const expectedLayout = action.input.expectedLayout?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    existing.slug !== action.input.slug ||
+    (expectedLayout && existing.layout !== expectedLayout)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const config = action.input.patch.card
+    ? { ...existing.config, card: action.input.patch.card }
+    : existing.config;
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateListingTemplate(existing.id, {
+          name: action.input.patch.name ?? existing.name,
+          slug: action.input.patch.slug ?? existing.slug,
+          description:
+            action.input.patch.description !== undefined
+              ? action.input.patch.description
+              : existing.description,
+          layout: action.input.patch.layout ?? existing.layout,
+          config,
+        });
+  if (!record) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "listing-template",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: "/admin/coderso/listings",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Listing template already matched the planned patch."
+        : `Updated listing template "${record.name}".`,
   };
 };
 
@@ -3138,6 +3538,44 @@ const executeFormArchiveAction = async (
   };
 };
 
+const executeFormUpdateAction = async (
+  action: AssistantFormUpdateAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getForm(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    existing.slug !== action.input.slug ||
+    (expectedStatus && existing.status !== expectedStatus)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateForm(existing.id, action.input.patch);
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "form",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/coderso/forms/${encodeURIComponent(updated.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Form already matched the planned patch."
+        : `Updated form "${updated.name}".`,
+  };
+};
+
 const executeEntryUpsertDraftAction = async (
   action: AssistantEntryUpsertDraftAction,
   preview: AssistantActionPreviewChange,
@@ -3220,6 +3658,68 @@ const executeEntryDeleteAction = async (
   };
 };
 
+const executeEntryUpdateAction = async (
+  action: AssistantEntryUpdateAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getEntry(action.input.id);
+  const contentType =
+    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  if (
+    !existing ||
+    (action.input.expectedTitle && existing.title !== action.input.expectedTitle) ||
+    (action.input.expectedSlug && existing.slug !== action.input.expectedSlug) ||
+    (action.input.expectedStatus && existing.status !== action.input.expectedStatus) ||
+    (contentType && existing.typeId !== contentType.id)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const data = action.input.patch.values
+    ? { ...existing.data, ...action.input.patch.values }
+    : existing.data;
+  const entry =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateEntry(existing.id, {
+          title: action.input.patch.title ?? existing.title,
+          slug: action.input.patch.slug ?? existing.slug,
+          data,
+        });
+  if (!entry) throw new Error("assistant_action_dependency_missing");
+  const metadata =
+    action.input.patch.status || action.input.patch.seo
+      ? await deps.updateEntryMetadata(
+          entry.id,
+          {
+            status: action.input.patch.status,
+            seo: action.input.patch.seo,
+          },
+          actorId
+        )
+      : entry;
+  if (!metadata) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "entry",
+    targetKey: action.input.expectedSlug ?? action.input.id,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: metadata.id,
+    adminHref: action.input.contentTypeSlug
+      ? `/admin/coderso/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(metadata.id)}`
+      : "/admin/coderso/entries",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Entry already matched the planned patch."
+        : `Updated entry "${metadata.title}".`,
+  };
+};
+
 const executeMenuItemAction = async (
   action: AssistantMenuItemUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -3290,6 +3790,54 @@ const executeMenuItemDeleteAction = async (
     adminHref: `/admin/menus/${encodeURIComponent(action.input.menuId)}`,
     publicHref: deleted.deleted.href,
     message: `Deleted menu item "${deleted.deleted.label}".`,
+  };
+};
+
+const executeMenuItemUpdateAction = async (
+  action: AssistantMenuItemUpdateAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const existing = existingItems.find((item) => item.id === action.input.itemId) ?? null;
+  if (
+    !existing ||
+    existing.label !== action.input.label ||
+    (action.input.expectedHref !== undefined && existing.href !== action.input.expectedHref) ||
+    (action.input.expectedParentId !== undefined &&
+      existing.parentId !== action.input.expectedParentId)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const nextItems = existingItems.map((item) =>
+    item.id === existing.id
+      ? {
+          ...item,
+          ...action.input.patch,
+        }
+      : item
+  );
+  const tree =
+    preview.operation === "noop"
+      ? await deps.listMenuItems(action.input.menuId)
+      : await deps.replaceMenuItems(action.input.menuId, nextItems);
+  const saved = flattenMenuNodes(tree).find((item) => item.id === existing.id) ?? null;
+  if (!saved) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "menu-item",
+    targetKey: `${action.input.menuId}/${action.input.itemId}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: saved.id,
+    adminHref: `/admin/menus/${encodeURIComponent(action.input.menuId)}`,
+    publicHref: saved.href,
+    message:
+      preview.operation === "noop"
+        ? "Menu item already matched the planned patch."
+        : `Updated menu item "${saved.label}".`,
   };
 };
 
@@ -3364,6 +3912,47 @@ const executeSeoDocumentDeleteAction = async (
     adminHref: "/admin/seo",
     publicHref: null,
     message: `Deleted SEO document for ${deleted.targetType} ${deleted.targetId}.`,
+  };
+};
+
+const executeSeoDocumentUpdateAction = async (
+  action: AssistantSeoDocumentUpdateAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getSeoDocument(action.input.id);
+  const expectedSlug = action.input.expectedSlug
+    ? normalizeSeoSlugForAction(action.input.expectedSlug)
+    : null;
+  if (
+    !existing ||
+    existing.targetType !== action.input.targetType ||
+    existing.targetId !== action.input.targetId ||
+    (expectedSlug && normalizeSeoSlugForAction(existing.slug) !== expectedSlug) ||
+    (action.input.expectedTitle && existing.title !== action.input.expectedTitle)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateSeoDocumentById(existing.id, action.input.patch);
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "seo-document",
+    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/seo/${encodeURIComponent(updated.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "SEO document already matched the planned patch."
+        : `Updated SEO document for ${updated.targetType} ${updated.targetId}.`,
   };
 };
 
@@ -3929,6 +4518,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeListingQueryDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
+  "listing-query.update": {
+    preview: (action, ctx) =>
+      action.type === "listing-query.update"
+        ? buildListingQueryUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-query.update"
+        ? executeListingQueryUpdateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "listing-query.filters.patch": {
     preview: (action, ctx) =>
       action.type === "listing-query.filters.patch"
@@ -3957,6 +4556,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "listing-template.delete"
         ? executeListingTemplateDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "listing-template.update": {
+    preview: (action, ctx) =>
+      action.type === "listing-template.update"
+        ? buildListingTemplateUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-template.update"
+        ? executeListingTemplateUpdateAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "listing-template.card.patch": {
@@ -4019,6 +4628,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeFormArchiveAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
+  "form.update": {
+    preview: (action, ctx) =>
+      action.type === "form.update"
+        ? buildFormUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "form.update"
+        ? executeFormUpdateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "entry.upsert-draft": {
     preview: (action, ctx) =>
       action.type === "entry.upsert-draft"
@@ -4037,6 +4656,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "entry.delete"
         ? executeEntryDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "entry.update": {
+    preview: (action, ctx) =>
+      action.type === "entry.update"
+        ? buildEntryUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "entry.update"
+        ? executeEntryUpdateAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
   "menu.item.upsert": {
@@ -4059,6 +4688,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeMenuItemDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
+  "menu.item.update": {
+    preview: (action, ctx) =>
+      action.type === "menu.item.update"
+        ? buildMenuItemUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "menu.item.update"
+        ? executeMenuItemUpdateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "seo.document.upsert": {
     preview: (action, ctx) =>
       action.type === "seo.document.upsert"
@@ -4077,6 +4716,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "seo.document.delete"
         ? executeSeoDocumentDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "seo.document.update": {
+    preview: (action, ctx) =>
+      action.type === "seo.document.update"
+        ? buildSeoDocumentUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "seo.document.update"
+        ? executeSeoDocumentUpdateAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "media.reference.attach": {

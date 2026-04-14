@@ -45,6 +45,7 @@ Initial edit action families:
 - 2026-04-14: Completed `TASK-174-04-02`; `page.widget.patch` can patch selected block data paths while preserving unrelated blocks.
 - 2026-04-14: Completed `TASK-174-04-03`; `widget-template.update` and `widget-template.block.patch` edit reusable template metadata/settings/blocks.
 - 2026-04-14: Completed `TASK-174-04-04`; `custom-screen.update` and `custom-screen.widget.patch` edit custom screen metadata/sidebar/bindings/blocks.
+- 2026-04-14: Completed `TASK-174-04-05`; remaining content/form/listing/menu/SEO update adapters execute through domain services.
 
 Patch rules:
 - schema-first and reject unknown fields,

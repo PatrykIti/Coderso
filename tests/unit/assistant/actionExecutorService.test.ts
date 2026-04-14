@@ -568,6 +568,56 @@ const createDeps = () => {
         ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntry"]>
       >;
     },
+    updateEntryMetadata: async (
+      id: string,
+      input: {
+        status?: "draft" | "published" | "scheduled" | "archived";
+        seo?: {
+          title?: string | null;
+          description?: string | null;
+          canonicalUrl?: string | null;
+          robots?: string | null;
+        };
+      }
+    ) => {
+      const existing = entries.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.status !== undefined && input.status !== "scheduled") {
+        existing.status = input.status;
+      }
+      if (input.seo) {
+        const seo =
+          seoDocuments.find(
+            (entry) => entry.targetType === "entry" && entry.targetId === id
+          ) ?? null;
+        if (seo) {
+          seo.title = input.seo.title ?? seo.title;
+          seo.description = input.seo.description ?? seo.description;
+          seo.canonicalUrl = input.seo.canonicalUrl ?? seo.canonicalUrl;
+          seo.robots = input.seo.robots ?? seo.robots;
+        } else {
+          seoDocuments.push({
+            id: `seo-${seoDocuments.length + 1}`,
+            targetType: "entry",
+            targetId: id,
+            slug: existing.slug,
+            title: input.seo.title ?? null,
+            description: input.seo.description ?? null,
+            canonicalUrl: input.seo.canonicalUrl ?? null,
+            robots: input.seo.robots ?? null,
+            score: null,
+            status: "warning",
+            issues: [],
+            lastAuditAt: null,
+            createdAt: new Date("2026-04-10T12:00:00.000Z"),
+            updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+          });
+        }
+      }
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntryMetadata"]>
+      >;
+    },
     listMenuItems: async (menuId: string) =>
       (menuItemsByMenu.get(menuId) ?? []).map((item) => ({
         ...item,
@@ -637,6 +687,24 @@ const createDeps = () => {
       if (index < 0) return null;
       const [deleted] = seoDocuments.splice(index, 1);
       return deleted ?? null;
+    },
+    updateSeoDocumentById: async (
+      id: string,
+      input: {
+        title?: string | null;
+        description?: string | null;
+        canonicalUrl?: string | null;
+        robots?: string | null;
+      }
+    ) => {
+      const existing = seoDocuments.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.title !== undefined) existing.title = input.title;
+      if (input.description !== undefined) existing.description = input.description;
+      if (input.canonicalUrl !== undefined) existing.canonicalUrl = input.canonicalUrl;
+      if (input.robots !== undefined) existing.robots = input.robots;
+      existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
+      return existing;
     },
     upsertSeoDocument: async (input: {
       targetType: "page" | "entry";
@@ -1787,6 +1855,102 @@ test("executeAssistantActionPlan blocks listing deletes when page references rem
   expect(deps.__state.listingQueries).toHaveLength(1);
 });
 
+test("executeAssistantActionPlan updates listing query and template config without broad rewrites", async () => {
+  const deps = createDeps();
+  await deps.createListingQuery({
+    name: "Products Catalog Query",
+    description: "Product listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: "ct-products",
+        includeDrafts: true,
+      },
+      filters: [{ field: "status", operator: "eq", value: "active" }],
+      sort: [{ field: "title", dir: "asc" }],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  });
+  await deps.createListingTemplate({
+    name: "Products Grid",
+    slug: "products-grid",
+    description: "Product cards",
+    layout: "grid",
+    config: {
+      columns: 3,
+      card: { showImage: true },
+    },
+  });
+  const query = deps.__state.listingQueries[0]!;
+  const template = deps.__state.listingTemplates[0]!;
+  const plan: AssistantActionPlan = {
+    id: "plan-listing-update",
+    status: "ready",
+    intentId: "listing-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update listing resources",
+    answer: "I can update selected listing resources.",
+    summary: "Update listing query and template.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "listing-query-update-1",
+        type: "listing-query.update",
+        title: "Update Products Query",
+        description: "Update selected listing query.",
+        input: {
+          id: query.id,
+          name: query.name,
+          patch: {
+            limit: 24,
+            includeDrafts: false,
+          },
+        },
+      },
+      {
+        id: "listing-template-update-1",
+        type: "listing-template.update",
+        title: "Update Products Grid",
+        description: "Update selected listing template.",
+        input: {
+          id: template.id,
+          name: template.name,
+          slug: template.slug,
+          expectedLayout: "grid",
+          patch: {
+            layout: "list",
+            card: { showImage: false },
+          },
+        },
+      },
+    ],
+  };
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-listing-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(2);
+  expect(deps.__state.listingQueries[0]?.query.pagination).toEqual({ limit: 24, offset: 0 });
+  expect(deps.__state.listingQueries[0]?.query.sourceConfig).toEqual({
+    contentTypeId: "ct-products",
+    includeDrafts: false,
+  });
+  expect(deps.__state.listingQueries[0]?.query.filters).toHaveLength(1);
+  expect(deps.__state.listingTemplates[0]?.layout).toBe("list");
+  expect(deps.__state.listingTemplates[0]?.config.columns).toBe(3);
+  expect(deps.__state.listingTemplates[0]?.config.card).toEqual({ showImage: false });
+});
+
 test("executeAssistantActionPlan deletes empty forms through explicit delete actions", async () => {
   const deps = createDeps();
   const form = await deps.createForm({
@@ -1960,6 +2124,64 @@ test("executeAssistantActionPlan archives forms while retaining submissions", as
   expect(deps.__state.formSubmissionCounts.get(form.id)).toBe(3);
 });
 
+test("executeAssistantActionPlan updates forms without reading submissions", async () => {
+  const deps = createDeps();
+  const form = await deps.createForm({
+    name: "Lead Capture",
+    slug: "lead-capture",
+    status: "published",
+    description: "Lead intake",
+    successMessage: "Thanks.",
+    submissionAccess: "public",
+  });
+  deps.__state.formSubmissionCounts.set(form.id, 3);
+  const plan: AssistantActionPlan = {
+    id: "plan-form-update",
+    status: "ready",
+    intentId: "form-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update Lead Capture",
+    answer: "I can update the selected form.",
+    summary: "Update selected form.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "form-update-1",
+        type: "form.update",
+        title: "Update Lead Capture",
+        description: "Update selected form.",
+        input: {
+          id: form.id,
+          name: "Lead Capture",
+          slug: "lead-capture",
+          expectedStatus: "published",
+          patch: {
+            name: "Lead Capture Updated",
+            submissionAccess: "internal",
+          },
+        },
+      },
+    ],
+  };
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-form-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.forms[0]?.name).toBe("Lead Capture Updated");
+  expect(deps.__state.forms[0]?.submissionAccess).toBe("internal");
+  expect(deps.__state.formSubmissionCounts.get(form.id)).toBe(3);
+});
+
 test("executeAssistantActionPlan upserts menu items without duplicates", async () => {
   const deps = createDeps();
   const plan: AssistantActionPlan = {
@@ -2046,6 +2268,76 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan updates menu items and preserves unrelated tree", async () => {
+  const deps = createDeps();
+  deps.__state.menuItemsByMenu.set("menu-primary", [
+    {
+      id: "menu-products",
+      label: "Products",
+      href: "/products",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      settings: {},
+    },
+    {
+      id: "menu-about",
+      label: "About",
+      href: "/about",
+      pageId: null,
+      parentId: null,
+      orderIndex: 1,
+      settings: {},
+    },
+  ]);
+  const plan: AssistantActionPlan = {
+    id: "plan-menu-item-domain-update",
+    status: "ready",
+    intentId: "menu-item-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update menu item",
+    answer: "I can update the selected menu item.",
+    summary: "Update menu item.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "menu-products-update",
+        type: "menu.item.update",
+        title: "Update Products menu item",
+        description: "Update selected menu item.",
+        input: {
+          menuId: "menu-primary",
+          itemId: "menu-products",
+          label: "Products",
+          expectedHref: "/products",
+          expectedParentId: null,
+          patch: {
+            label: "Products Catalog",
+          },
+        },
+      },
+    ],
+  };
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.menuItemsByMenu.get("menu-primary")?.map((item) => item.label)).toEqual([
+    "Products Catalog",
+    "About",
+  ]);
 });
 
 test("executeAssistantActionPlan upserts seo documents for known targets", async () => {
@@ -2285,6 +2577,99 @@ test("executeAssistantActionPlan deletes SEO documents through explicit delete a
   expect(executed.summary.delete).toBe(1);
   expect(executed.results[0]?.message).toBe(`Deleted SEO document for page ${page.id}.`);
   expect(deps.__state.seoDocuments).toHaveLength(0);
+});
+
+test("executeAssistantActionPlan updates entries and SEO documents through domain services", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        price: { type: "number" },
+      },
+    },
+  });
+  const entry = await deps.createEntry(contentType.id, {
+    title: "Sample Product",
+    slug: "sample-product",
+    data: { title: "Sample Product", price: 10 },
+    authorId: "user-1",
+  });
+  const seo = await deps.upsertSeoDocument({
+    targetType: "entry",
+    targetId: entry.id,
+    slug: "sample-product",
+    title: "Sample Product SEO",
+    description: "Old description.",
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-entry-seo-update",
+    status: "ready",
+    intentId: "entry-seo-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update entry and SEO",
+    answer: "I can update the selected entry and SEO document.",
+    summary: "Update entry and SEO.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-update-1",
+        type: "entry.update",
+        title: "Update Sample Product",
+        description: "Update selected entry.",
+        input: {
+          id: entry.id,
+          contentTypeSlug: "products",
+          expectedTitle: "Sample Product",
+          expectedSlug: "sample-product",
+          expectedStatus: "draft",
+          patch: {
+            title: "Sample Product Updated",
+            values: { title: "Sample Product Updated" },
+          },
+        },
+      },
+      {
+        id: "seo-update-1",
+        type: "seo.document.update",
+        title: "Update Sample Product SEO",
+        description: "Update selected SEO document.",
+        input: {
+          id: seo.id,
+          targetType: "entry",
+          targetId: entry.id,
+          expectedSlug: "sample-product",
+          expectedTitle: "Sample Product SEO",
+          patch: {
+            description: "Updated description.",
+          },
+        },
+      },
+    ],
+  };
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-entry-seo-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(2);
+  expect(deps.__state.entries[0]?.title).toBe("Sample Product Updated");
+  expect(deps.__state.entries[0]?.data.price).toBe(10);
+  expect(deps.__state.seoDocuments.find((item) => item.id === seo.id)?.description).toBe(
+    "Updated description."
+  );
 });
 
 test("executeAssistantActionPlan attaches existing media references to entries", async () => {

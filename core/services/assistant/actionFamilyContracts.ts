@@ -236,6 +236,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "listing-query.update",
+    "listing",
+    "core/services/content/listingQueriesService.ts",
+    ["id", "name", "patch"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Updates listing query metadata and bounded runtime query settings while preserving unrelated query config."],
+    }
+  ),
+  executableContract(
     "listing-template.upsert",
     "listing",
     "core/services/content/listingTemplatesService.ts",
@@ -255,6 +269,20 @@ export const assistantActionFamilyContracts = [
       notes: [
         "Deletes one exact listing template after page/widget references are checked.",
       ],
+    }
+  ),
+  executableContract(
+    "listing-template.update",
+    "listing",
+    "core/services/content/listingTemplatesService.ts",
+    ["id", "name", "slug", "patch"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Updates listing template metadata/layout/card config while preserving unrelated template config."],
     }
   ),
   executableContract(
@@ -296,6 +324,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "form.update",
+    "form",
+    "core/services/forms/formsService.ts",
+    ["id", "name", "slug", "patch"],
+    {
+      permissions: {
+        plan: ["forms:read"],
+        dryRun: ["forms:read"],
+        execute: ["forms:write"],
+      },
+      notes: ["Updates form metadata/status/access only and never reads submission payloads."],
+    }
+  ),
+  executableContract(
     "entry.upsert-draft",
     "entry",
     "core/services/content/entryService.ts",
@@ -321,6 +363,20 @@ export const assistantActionFamilyContracts = [
         execute: ["content:write", "content:publish"],
       },
       notes: ["Deletes one exact entry after active context/catalog target resolution."],
+    }
+  ),
+  executableContract(
+    "entry.update",
+    "entry",
+    "core/services/content/entryService.ts",
+    ["id", "patch"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write", "content:publish"],
+      },
+      notes: ["Updates one exact entry through content services and preserves unrelated data fields."],
     }
   ),
   executableContract(
@@ -354,6 +410,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "menu.item.update",
+    "menu",
+    "core/services/menus/menuService.ts",
+    ["menuId", "itemId", "label", "patch"],
+    {
+      permissions: {
+        plan: ["menus:read"],
+        dryRun: ["menus:read"],
+        execute: ["menus:write"],
+      },
+      notes: ["Updates one exact menu item through the menu tree service and preserves unrelated menu items."],
+    }
+  ),
+  executableContract(
     "seo.document.upsert",
     "seo",
     "core/services/seo/seoService.ts",
@@ -379,6 +449,20 @@ export const assistantActionFamilyContracts = [
         execute: ["content:write"],
       },
       notes: ["Deletes one exact SEO document through the SEO domain service."],
+    }
+  ),
+  executableContract(
+    "seo.document.update",
+    "seo",
+    "core/services/seo/seoService.ts",
+    ["id", "targetType", "targetId", "patch"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Updates one exact SEO document through the SEO domain service."],
     }
   ),
   executableContract(

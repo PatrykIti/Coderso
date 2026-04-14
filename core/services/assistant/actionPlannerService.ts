@@ -243,6 +243,16 @@ const extractQuotedPrefix = (prompt: string) => {
   return match?.[1]?.trim() || null;
 };
 
+const extractQuotedValues = (prompt: string) =>
+  [...prompt.matchAll(/['"“”]([^'"“”]+)['"“”]/g)]
+    .map((match) => match[1]?.trim())
+    .filter((value): value is string => Boolean(value));
+
+const extractFirstNumber = (normalizedPrompt: string) => {
+  const match = normalizedPrompt.match(/\b(\d{1,4})\b/);
+  return match?.[1] ? Number(match[1]) : null;
+};
+
 const extractNamedPrefix = (prompt: string) => {
   const quoted = extractQuotedPrefix(prompt);
   if (quoted) return quoted;
@@ -1903,6 +1913,350 @@ const buildSeoDocumentDeletePlan = (
   };
 };
 
+const buildDomainUpdateNeedsInputPlan = (
+  prompt: string,
+  intentId: string,
+  title: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: `plan-${intentId}-needs-input`,
+  status: "needs_input",
+  intentId: `${intentId}-needs-input`,
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title,
+  answer: [
+    "I can edit this resource only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Provide one exact target and one supported field/value change.",
+  ].join("\n"),
+  summary: `${title} could not be planned safely from the current context.`,
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: `${intentId}-target`,
+      label: "Which exact resource and field should I update?",
+      description: "Provide the exact target plus one supported field/value change.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildEntryUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!includesAny(normalizedPrompt, entryDeleteKeywords) || isLikelyDeletePrompt(normalizedPrompt)) {
+    return null;
+  }
+  const target = readActiveEntryTarget(context);
+  if (!target) return null;
+  const [value] = extractQuotedValues(prompt);
+  if (!value) {
+    return buildDomainUpdateNeedsInputPlan(
+      prompt,
+      "entry-update",
+      "Entry update needs a value",
+      "The prompt did not include a quoted value for a supported entry field."
+    );
+  }
+  const patch: {
+    title?: string;
+    slug?: string;
+    status?: "draft" | "published" | "archived";
+  } = includesAny(normalizedPrompt, ["slug", "url"])
+    ? { slug: value }
+    : includesAny(normalizedPrompt, ["status"]) && (value === "draft" || value === "published" || value === "archived")
+      ? { status: value }
+      : { title: value };
+  return {
+    id: `plan-entry-update-${target.id}`,
+    status: "ready",
+    intentId: "entry-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update active entry",
+    answer: "I can update the active entry through the reviewed LLM Guide action flow.",
+    summary: "Update the active entry.",
+    confidence: 0.78,
+    assumptions: [
+      "The target entry is resolved from the active admin route context.",
+      "The update preserves unrelated entry fields.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `entry-update-${target.id}`,
+        type: "entry.update",
+        title: "Update active entry",
+        description: "Update the active entry selected from admin context.",
+        input: {
+          id: target.id,
+          contentTypeSlug: target.contentTypeSlug,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
+const buildFormUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    !includesFormTargetKeyword(normalizedPrompt) ||
+    isLikelyDeletePrompt(normalizedPrompt) ||
+    includesAny(normalizedPrompt, formArchiveKeywords)
+  ) {
+    return null;
+  }
+  const targets = findFormOperationTargets(prompt, context);
+  if (targets.length !== 1) return null;
+  const quoted = extractQuotedValues(prompt);
+  const value = quoted.length > 1 ? quoted[1] : quoted[0];
+  const target = targets[0];
+  if (!target?.slug || !value) return null;
+  const patch: {
+    name?: string;
+    slug?: string;
+    status?: "draft" | "published" | "archived";
+    submissionAccess?: "public" | "internal";
+  } = includesAny(normalizedPrompt, ["status"]) && (value === "draft" || value === "published" || value === "archived")
+    ? { status: value }
+    : includesAny(normalizedPrompt, ["slug"])
+      ? { slug: value }
+      : includesAny(normalizedPrompt, ["access"]) && (value === "public" || value === "internal")
+        ? { submissionAccess: value }
+        : { name: value };
+  return {
+    id: `plan-form-update-${target.id}`,
+    status: "ready",
+    intentId: "form-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${target.name}`,
+    answer: "I can update the selected form through the reviewed LLM Guide action flow.",
+    summary: `Update form "${target.name}" (${target.slug}).`,
+    confidence: 0.78,
+    assumptions: ["The target form is resolved from active context or the server-side resource catalog."],
+    questions: [],
+    actions: [
+      {
+        id: `form-update-${target.id}`,
+        type: "form.update",
+        title: `Update ${target.name}`,
+        description: "Update a form selected from trusted admin context.",
+        input: {
+          id: target.id,
+          name: target.name,
+          slug: target.slug,
+          expectedStatus: target.status,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
+const buildListingQueryUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!includesAny(normalizedPrompt, listingQueryDeleteKeywords) || isLikelyDeletePrompt(normalizedPrompt)) {
+    return null;
+  }
+  const targets = findListingQueryDeleteTargets(prompt, context);
+  if (targets.length !== 1) return null;
+  const target = targets[0];
+  if (!target) return null;
+  const number = extractFirstNumber(normalizedPrompt);
+  const quoted = extractQuotedValues(prompt);
+  const value = quoted.length > 1 ? quoted[1] : null;
+  const patch =
+    includesAny(normalizedPrompt, ["limit"]) && number
+      ? { limit: number }
+      : value
+        ? { name: value }
+        : null;
+  if (!patch) return null;
+  return {
+    id: `plan-listing-query-update-${target.id}`,
+    status: "ready",
+    intentId: "listing-query-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${target.name}`,
+    answer: "I can update the selected listing query through the reviewed LLM Guide action flow.",
+    summary: `Update listing query "${target.name}".`,
+    confidence: 0.78,
+    assumptions: ["The target listing query is resolved from active context or the server-side resource catalog."],
+    questions: [],
+    actions: [
+      {
+        id: `listing-query-update-${target.id}`,
+        type: "listing-query.update",
+        title: `Update ${target.name}`,
+        description: "Update a listing query selected from trusted admin context.",
+        input: { id: target.id, name: target.name, patch },
+      },
+    ],
+  };
+};
+
+const buildListingTemplateUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!includesAny(normalizedPrompt, listingTemplateDeleteKeywords) || isLikelyDeletePrompt(normalizedPrompt)) {
+    return null;
+  }
+  const targets = findListingTemplateDeleteTargets(prompt, context);
+  if (targets.length !== 1) return null;
+  const target = targets[0];
+  if (!target) return null;
+  const quoted = extractQuotedValues(prompt);
+  const value = quoted.length > 1 ? quoted[1] : null;
+  const patch =
+    value && includesAny(normalizedPrompt, ["layout"]) && ["grid", "list", "table", "calendar", "map"].includes(value)
+      ? { layout: value as "grid" | "list" | "table" | "calendar" | "map" }
+      : value
+        ? { name: value }
+        : null;
+  if (!patch) return null;
+  return {
+    id: `plan-listing-template-update-${target.id}`,
+    status: "ready",
+    intentId: "listing-template-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${target.name}`,
+    answer: "I can update the selected listing template through the reviewed LLM Guide action flow.",
+    summary: `Update listing template "${target.name}" (${target.slug}).`,
+    confidence: 0.78,
+    assumptions: ["The target listing template is resolved from active context or the server-side resource catalog."],
+    questions: [],
+    actions: [
+      {
+        id: `listing-template-update-${target.id}`,
+        type: "listing-template.update",
+        title: `Update ${target.name}`,
+        description: "Update a listing template selected from trusted admin context.",
+        input: {
+          id: target.id,
+          name: target.name,
+          slug: target.slug,
+          expectedLayout: target.layout,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
+const buildMenuItemUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!includesAny(normalizedPrompt, menuItemDeleteKeywords) || isLikelyDeletePrompt(normalizedPrompt)) {
+    return null;
+  }
+  const targets = findMenuItemDeleteTargets(prompt, context);
+  if (targets.length !== 1) return null;
+  const quoted = extractQuotedValues(prompt);
+  const value = quoted.length > 1 ? quoted[1] : null;
+  const target = targets[0];
+  if (!target || !value) return null;
+  const patch = includesAny(normalizedPrompt, ["href", "url"]) ? { href: value } : { label: value };
+  return {
+    id: `plan-menu-item-update-${target.item.id}`,
+    status: "ready",
+    intentId: "menu-item-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${target.item.label}`,
+    answer: "I can update the selected menu item through the reviewed LLM Guide action flow.",
+    summary: `Update menu item "${target.item.label}".`,
+    confidence: 0.78,
+    assumptions: ["The target menu item is resolved from the server-side resource catalog."],
+    questions: [],
+    actions: [
+      {
+        id: `menu-item-update-${target.item.id}`,
+        type: "menu.item.update",
+        title: `Update ${target.item.label}`,
+        description: "Update a menu item selected from trusted admin context.",
+        input: {
+          menuId: target.menu.id,
+          itemId: target.item.id,
+          label: target.item.label,
+          expectedHref: target.item.href,
+          expectedParentId: target.item.parentId,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
+const buildSeoDocumentUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!includesAny(normalizedPrompt, seoDocumentDeleteKeywords) || isLikelyDeletePrompt(normalizedPrompt)) {
+    return null;
+  }
+  const targets = findSeoDocumentDeleteTargets(prompt, context);
+  if (targets.length !== 1) return null;
+  const quoted = extractQuotedValues(prompt);
+  const value = quoted.length > 1 ? quoted[1] : null;
+  const target = targets[0];
+  if (!target || !value) return null;
+  const patch =
+    includesAny(normalizedPrompt, ["description", "opis"])
+      ? { description: value }
+      : { title: value };
+  return {
+    id: `plan-seo-document-update-${target.id}`,
+    status: "ready",
+    intentId: "seo-document-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update SEO for ${target.targetTitle ?? target.slug ?? target.targetId}`,
+    answer: "I can update the selected SEO document through the reviewed LLM Guide action flow.",
+    summary: `Update SEO document for ${target.targetType} "${target.targetTitle ?? target.slug ?? target.targetId}".`,
+    confidence: 0.78,
+    assumptions: ["The target SEO document is resolved from active context or the server-side resource catalog."],
+    questions: [],
+    actions: [
+      {
+        id: `seo-document-update-${target.id}`,
+        type: "seo.document.update",
+        title: `Update SEO for ${target.targetTitle ?? target.slug ?? target.targetId}`,
+        description: "Update a SEO document selected from trusted admin context.",
+        input: {
+          id: target.id,
+          targetType: target.targetType,
+          targetId: target.targetId,
+          expectedSlug: target.slug,
+          expectedTitle: target.title,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
   options: {
@@ -2330,6 +2684,42 @@ export const planAssistantActions = (
   );
   if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
   if (classification.promptKind === "refinement_request") {
+    const entryUpdatePlan = buildEntryUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (entryUpdatePlan) return normalizeAssistantActionPlan(entryUpdatePlan);
+    const formUpdatePlan = buildFormUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (formUpdatePlan) return normalizeAssistantActionPlan(formUpdatePlan);
+    const listingQueryUpdatePlan = buildListingQueryUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (listingQueryUpdatePlan) return normalizeAssistantActionPlan(listingQueryUpdatePlan);
+    const listingTemplateUpdatePlan = buildListingTemplateUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (listingTemplateUpdatePlan) return normalizeAssistantActionPlan(listingTemplateUpdatePlan);
+    const menuItemUpdatePlan = buildMenuItemUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (menuItemUpdatePlan) return normalizeAssistantActionPlan(menuItemUpdatePlan);
+    const seoDocumentUpdatePlan = buildSeoDocumentUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (seoDocumentUpdatePlan) return normalizeAssistantActionPlan(seoDocumentUpdatePlan);
     const widgetTemplateEditPlan = buildWidgetTemplateEditPlan(
       input.prompt,
       context,

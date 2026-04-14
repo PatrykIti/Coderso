@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 638 | 2026-04-14 | TASK-174-04-05 domain resource edit actions | Assistant/Core |
 | 637 | 2026-04-14 | TASK-174-04-04 custom screen edit actions | Assistant/Core |
 | 636 | 2026-04-14 | TASK-174-04-03 widget template edit actions | Assistant/Core |
 | 635 | 2026-04-14 | TASK-174-04-02 page widget patch action | Assistant/Core |

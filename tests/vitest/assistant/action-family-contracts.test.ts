@@ -52,6 +52,9 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(getAssistantActionFamilyContract("menu.item.delete").permissions.execute).toEqual([
     "menus:write",
   ]);
+  expect(getAssistantActionFamilyContract("menu.item.update").permissions.execute).toEqual([
+    "menus:write",
+  ]);
   expect(
     getAssistantActionFamilyContract("menu.item.delete").strictInput.notes.join(" ")
   ).toContain("preserves unrelated menu items");
@@ -62,6 +65,9 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   ]);
   expect(
     getAssistantActionFamilyContract("seo.document.delete").strictInput.notes.join(" ")
+  ).toContain("SEO domain service");
+  expect(
+    getAssistantActionFamilyContract("seo.document.update").strictInput.notes.join(" ")
   ).toContain("SEO domain service");
   const mediaContract = getAssistantActionFamilyContract("media.reference.attach");
   expect(mediaContract.status).toBe("executable");
@@ -86,14 +92,26 @@ test("menu seo media and surface expansion contracts declare domain permissions"
     getAssistantActionFamilyContract("form.archive").strictInput.notes.join(" ")
   ).toContain("without exposing submission payloads");
   expect(
+    getAssistantActionFamilyContract("form.update").strictInput.notes.join(" ")
+  ).toContain("never reads submission payloads");
+  expect(
+    getAssistantActionFamilyContract("entry.update").strictInput.notes.join(" ")
+  ).toContain("preserves unrelated data fields");
+  expect(
     getAssistantActionFamilyContract("listing-query.delete").strictInput.notes.join(" ")
   ).toContain("references");
+  expect(
+    getAssistantActionFamilyContract("listing-query.update").strictInput.notes.join(" ")
+  ).toContain("preserving unrelated query config");
   expect(
     getAssistantActionFamilyContract("listing-query.filters.patch").strictInput.notes.join(" ")
   ).toContain("array records");
   expect(
     getAssistantActionFamilyContract("listing-template.delete").strictInput.notes.join(" ")
   ).toContain("references");
+  expect(
+    getAssistantActionFamilyContract("listing-template.update").strictInput.notes.join(" ")
+  ).toContain("preserving unrelated template config");
   expect(
     getAssistantActionFamilyContract("listing-template.card.patch").strictInput.notes.join(" ")
   ).toContain("preserve unrelated");

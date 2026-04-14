@@ -423,6 +423,7 @@ Action family contract registry:
 - `page.widget.patch` supports selected block `patch-data` for existing data paths and preserves unrelated blocks/slots.
 - `widget-template.update` edits reusable template metadata/settings; `widget-template.block.patch` patches selected reusable template block data paths and preserves unrelated blocks/settings.
 - `custom-screen.update` edits custom screen metadata/sidebar/binding mode; `custom-screen.widget.patch` patches selected custom screen widget block data paths while preserving unrelated blocks/bindings.
+- `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update`, and `seo.document.update` cover remaining domain resource edits through existing domain services and preserve unrelated fields/config/tree items.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.

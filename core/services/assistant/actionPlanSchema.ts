@@ -330,6 +330,30 @@ const normalizeListingQueryDeleteInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeListingQueryUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["name", "description", "limit", "includeDrafts"]));
+  return {
+    ...(input.name !== undefined ? { name: readText(input.name) } : {}),
+    ...(input.description !== undefined
+      ? { description: readOptionalText(input.description) }
+      : {}),
+    ...(input.limit !== undefined ? { limit: readFiniteNumber(input.limit) } : {}),
+    ...(input.includeDrafts !== undefined
+      ? { includeDrafts: readBoolean(input.includeDrafts) }
+      : {}),
+  };
+};
+
+const normalizeListingQueryUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "patch"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    patch: normalizeListingQueryUpdatePatch(input.patch),
+  };
+};
+
 const normalizeListingTemplateInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["name", "slug", "description", "layout", "config"]));
   return {
@@ -350,6 +374,35 @@ const normalizeListingTemplateDeleteInput = (input: JsonRecord) => {
     ...(input.expectedLayout !== undefined
       ? { expectedLayout: readOptionalText(input.expectedLayout) }
       : {}),
+  };
+};
+
+const normalizeListingTemplateUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["name", "slug", "description", "layout", "card"]));
+  return {
+    ...(input.name !== undefined ? { name: readText(input.name) } : {}),
+    ...(input.slug !== undefined ? { slug: readText(input.slug) } : {}),
+    ...(input.description !== undefined
+      ? { description: readOptionalText(input.description) }
+      : {}),
+    ...(input.layout !== undefined
+      ? { layout: readEnum(input.layout, new Set(["grid", "list", "table", "calendar", "map"])) }
+      : {}),
+    ...(input.card !== undefined ? { card: assertRecord(input.card) } : {}),
+  };
+};
+
+const normalizeListingTemplateUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "slug", "expectedLayout", "patch"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    slug: readText(input.slug),
+    ...(input.expectedLayout !== undefined
+      ? { expectedLayout: readOptionalText(input.expectedLayout) }
+      : {}),
+    patch: normalizeListingTemplateUpdatePatch(input.patch),
   };
 };
 
@@ -389,6 +442,54 @@ const normalizeFormDeleteInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeFormUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "name",
+      "slug",
+      "status",
+      "description",
+      "successMessage",
+      "successRedirectUrl",
+      "submissionAccess",
+    ])
+  );
+  return {
+    ...(input.name !== undefined ? { name: readText(input.name) } : {}),
+    ...(input.slug !== undefined ? { slug: readText(input.slug) } : {}),
+    ...(input.status !== undefined
+      ? { status: readEnum(input.status, new Set(["draft", "published", "archived"])) }
+      : {}),
+    ...(input.description !== undefined
+      ? { description: readOptionalText(input.description) }
+      : {}),
+    ...(input.successMessage !== undefined
+      ? { successMessage: readOptionalText(input.successMessage) }
+      : {}),
+    ...(input.successRedirectUrl !== undefined
+      ? { successRedirectUrl: readOptionalText(input.successRedirectUrl) }
+      : {}),
+    ...(input.submissionAccess !== undefined
+      ? { submissionAccess: readEnum(input.submissionAccess, new Set(["public", "internal"])) }
+      : {}),
+  };
+};
+
+const normalizeFormUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "slug", "expectedStatus", "patch"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    slug: readText(input.slug),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+    patch: normalizeFormUpdatePatch(input.patch),
+  };
+};
+
 const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "values"]));
   return {
@@ -421,6 +522,43 @@ const normalizeEntryDeleteInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeEntryUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["title", "slug", "status", "values", "seo"]));
+  return {
+    ...(input.title !== undefined ? { title: readText(input.title) } : {}),
+    ...(input.slug !== undefined ? { slug: readText(input.slug) } : {}),
+    ...(input.status !== undefined
+      ? { status: readEnum(input.status, new Set(["draft", "published", "archived"])) }
+      : {}),
+    ...(input.values !== undefined ? { values: assertRecord(input.values) } : {}),
+    ...(input.seo !== undefined ? { seo: normalizeSeoPayload(input.seo) } : {}),
+  };
+};
+
+const normalizeEntryUpdateInput = (input: JsonRecord) => {
+  assertKeys(
+    input,
+    new Set(["id", "contentTypeSlug", "expectedTitle", "expectedSlug", "expectedStatus", "patch"])
+  );
+  return {
+    id: readText(input.id),
+    ...(input.contentTypeSlug !== undefined
+      ? { contentTypeSlug: readOptionalText(input.contentTypeSlug) }
+      : {}),
+    ...(input.expectedTitle !== undefined
+      ? { expectedTitle: readOptionalText(input.expectedTitle) }
+      : {}),
+    ...(input.expectedSlug !== undefined
+      ? { expectedSlug: readOptionalText(input.expectedSlug) }
+      : {}),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+    patch: normalizeEntryUpdatePatch(input.patch),
+  };
+};
+
 const readSafeRelativeHref = (value: unknown) => {
   const href = readText(value);
   const hasControlChar = Array.from(href).some((char) => {
@@ -437,6 +575,11 @@ const readSafeRelativeHref = (value: unknown) => {
     fail();
   }
   return href;
+};
+
+const readOptionalSafeRelativeHref = (value: unknown) => {
+  if (value === undefined || value === null) return null;
+  return readSafeRelativeHref(value);
 };
 
 const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
@@ -465,6 +608,35 @@ const normalizeMenuItemDeleteInput = (input: JsonRecord) => {
     ...(input.expectedParentId !== undefined
       ? { expectedParentId: readOptionalText(input.expectedParentId) }
       : {}),
+  };
+};
+
+const normalizeMenuItemUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["label", "href", "parentId", "orderIndex"]));
+  return {
+    ...(input.label !== undefined ? { label: readText(input.label) } : {}),
+    ...(input.href !== undefined ? { href: readOptionalSafeRelativeHref(input.href) } : {}),
+    ...(input.parentId !== undefined ? { parentId: readOptionalText(input.parentId) } : {}),
+    ...(input.orderIndex !== undefined
+      ? { orderIndex: readOptionalFiniteNumber(input.orderIndex) }
+      : {}),
+  };
+};
+
+const normalizeMenuItemUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["menuId", "itemId", "label", "expectedHref", "expectedParentId", "patch"]));
+  return {
+    menuId: readText(input.menuId),
+    itemId: readText(input.itemId),
+    label: readText(input.label),
+    ...(input.expectedHref !== undefined
+      ? { expectedHref: readOptionalText(input.expectedHref) }
+      : {}),
+    ...(input.expectedParentId !== undefined
+      ? { expectedParentId: readOptionalText(input.expectedParentId) }
+      : {}),
+    patch: normalizeMenuItemUpdatePatch(input.patch),
   };
 };
 
@@ -505,6 +677,22 @@ const normalizeSeoDocumentDeleteInput = (input: JsonRecord) => {
     ...(input.expectedTitle !== undefined
       ? { expectedTitle: readOptionalText(input.expectedTitle) }
       : {}),
+  };
+};
+
+const normalizeSeoDocumentUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "targetType", "targetId", "expectedSlug", "expectedTitle", "patch"]));
+  return {
+    id: readText(input.id),
+    targetType: readEnum(input.targetType, new Set(["page", "entry"])),
+    targetId: readText(input.targetId),
+    ...(input.expectedSlug !== undefined
+      ? { expectedSlug: readOptionalText(input.expectedSlug) }
+      : {}),
+    ...(input.expectedTitle !== undefined
+      ? { expectedTitle: readOptionalText(input.expectedTitle) }
+      : {}),
+    patch: normalizeSeoPayload(input.patch),
   };
 };
 
@@ -983,27 +1171,39 @@ const normalizeActionInput = (
       return normalizeListingQueryInput(record);
     case "listing-query.delete":
       return normalizeListingQueryDeleteInput(record);
+    case "listing-query.update":
+      return normalizeListingQueryUpdateInput(record);
     case "listing-template.upsert":
       return normalizeListingTemplateInput(record);
     case "listing-template.delete":
       return normalizeListingTemplateDeleteInput(record);
+    case "listing-template.update":
+      return normalizeListingTemplateUpdateInput(record);
     case "form.upsert":
       return normalizeFormInput(record);
     case "form.delete":
     case "form.archive":
       return normalizeFormDeleteInput(record);
+    case "form.update":
+      return normalizeFormUpdateInput(record);
     case "entry.upsert-draft":
       return normalizeEntryUpsertDraftInput(record);
     case "entry.delete":
       return normalizeEntryDeleteInput(record);
+    case "entry.update":
+      return normalizeEntryUpdateInput(record);
     case "menu.item.upsert":
       return normalizeMenuItemUpsertInput(record);
     case "menu.item.delete":
       return normalizeMenuItemDeleteInput(record);
+    case "menu.item.update":
+      return normalizeMenuItemUpdateInput(record);
     case "seo.document.upsert":
       return normalizeSeoDocumentUpsertInput(record);
     case "seo.document.delete":
       return normalizeSeoDocumentDeleteInput(record);
+    case "seo.document.update":
+      return normalizeSeoDocumentUpdateInput(record);
     case "media.reference.attach":
       return normalizeMediaReferenceAttachInput(record);
     case "listing-query.filters.patch":

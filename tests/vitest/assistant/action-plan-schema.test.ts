@@ -282,6 +282,125 @@ test("normalizeAssistantActionPlan accepts menu and seo delete actions", () => {
   ]);
 });
 
+test("normalizeAssistantActionPlan accepts remaining domain update actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "entry-update",
+        type: "entry.update",
+        title: "Update entry",
+        description: "Update selected entry.",
+        input: {
+          id: "entry-1",
+          contentTypeSlug: "products",
+          expectedTitle: "Old",
+          expectedSlug: "old",
+          expectedStatus: "draft",
+          patch: {
+            title: "New",
+            values: { title: "New" },
+            seo: { title: "SEO New" },
+          },
+        },
+      },
+      {
+        id: "form-update",
+        type: "form.update",
+        title: "Update form",
+        description: "Update selected form.",
+        input: {
+          id: "form-1",
+          name: "Contact",
+          slug: "contact",
+          expectedStatus: "published",
+          patch: {
+            name: "Contact Updated",
+            submissionAccess: "internal",
+          },
+        },
+      },
+      {
+        id: "listing-query-update",
+        type: "listing-query.update",
+        title: "Update query",
+        description: "Update listing query.",
+        input: {
+          id: "query-1",
+          name: "Products Query",
+          patch: {
+            limit: 24,
+            includeDrafts: false,
+          },
+        },
+      },
+      {
+        id: "listing-template-update",
+        type: "listing-template.update",
+        title: "Update template",
+        description: "Update listing template.",
+        input: {
+          id: "template-1",
+          name: "Products Grid",
+          slug: "products-grid",
+          expectedLayout: "grid",
+          patch: {
+            layout: "list",
+            card: { showImage: false },
+          },
+        },
+      },
+      {
+        id: "menu-item-update",
+        type: "menu.item.update",
+        title: "Update menu item",
+        description: "Update menu item.",
+        input: {
+          menuId: "menu-primary",
+          itemId: "menu-products",
+          label: "Products",
+          expectedHref: "/products",
+          expectedParentId: null,
+          patch: {
+            label: "Products Catalog",
+          },
+        },
+      },
+      {
+        id: "seo-update",
+        type: "seo.document.update",
+        title: "Update SEO",
+        description: "Update SEO document.",
+        input: {
+          id: "seo-1",
+          targetType: "page",
+          targetId: "page-1",
+          expectedSlug: "/products",
+          expectedTitle: "Products",
+          patch: {
+            title: "Products SEO",
+            description: "Browse products.",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions.map((action) => action.type)).toEqual([
+    "entry.update",
+    "form.update",
+    "listing-query.update",
+    "listing-template.update",
+    "menu.item.update",
+    "seo.document.update",
+  ]);
+});
+
 test("normalizeAssistantActionPlan accepts entry media reference attach actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -985,6 +1104,56 @@ test("normalizeAssistantActionPlan rejects malformed listing template card patch
             listingTemplateSlug: "products-grid",
             card: {},
             debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed remaining domain update actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "listing-query-update",
+          type: "listing-query.update",
+          title: "Update query",
+          description: "Update listing query.",
+          input: {
+            id: "query-1",
+            name: "Products Query",
+            patch: {
+              debug: true,
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "menu-item-update",
+          type: "menu.item.update",
+          title: "Update menu item",
+          description: "Update menu item.",
+          input: {
+            menuId: "menu-primary",
+            itemId: "menu-products",
+            label: "Products",
+            patch: {
+              href: "https://example.com",
+            },
           },
         },
       ],

@@ -344,6 +344,23 @@ export type AssistantListingQueryDeleteAction = {
   };
 };
 
+export type AssistantListingQueryUpdateAction = {
+  id: string;
+  type: "listing-query.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    patch: {
+      name?: string;
+      description?: string | null;
+      limit?: number;
+      includeDrafts?: boolean;
+    };
+  };
+};
+
 export type AssistantListingTemplateUpsertAction = {
   id: string;
   type: "listing-template.upsert";
@@ -368,6 +385,26 @@ export type AssistantListingTemplateDeleteAction = {
     name: string;
     slug: string;
     expectedLayout?: string | null;
+  };
+};
+
+export type AssistantListingTemplateUpdateAction = {
+  id: string;
+  type: "listing-template.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    slug: string;
+    expectedLayout?: string | null;
+    patch: {
+      name?: string;
+      slug?: string;
+      description?: string | null;
+      layout?: "grid" | "list" | "table" | "calendar" | "map";
+      card?: Record<string, unknown>;
+    };
   };
 };
 
@@ -413,6 +450,28 @@ export type AssistantFormArchiveAction = {
   };
 };
 
+export type AssistantFormUpdateAction = {
+  id: string;
+  type: "form.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    slug: string;
+    expectedStatus?: string | null;
+    patch: {
+      name?: string;
+      slug?: string;
+      status?: "draft" | "published" | "archived";
+      description?: string | null;
+      successMessage?: string | null;
+      successRedirectUrl?: string | null;
+      submissionAccess?: "public" | "internal";
+    };
+  };
+};
+
 export type AssistantEntryUpsertDraftAction = {
   id: string;
   type: "entry.upsert-draft";
@@ -437,6 +496,32 @@ export type AssistantEntryDeleteAction = {
     expectedTitle?: string | null;
     expectedSlug?: string | null;
     expectedStatus?: string | null;
+  };
+};
+
+export type AssistantEntryUpdateAction = {
+  id: string;
+  type: "entry.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    contentTypeSlug?: string | null;
+    expectedTitle?: string | null;
+    expectedSlug?: string | null;
+    expectedStatus?: string | null;
+    patch: {
+      title?: string;
+      slug?: string;
+      status?: "draft" | "published" | "archived";
+      values?: Record<string, unknown>;
+      seo?: {
+        title?: string | null;
+        description?: string | null;
+        canonicalUrl?: string | null;
+        robots?: string | null;
+      };
+    };
   };
 };
 
@@ -469,6 +554,26 @@ export type AssistantMenuItemDeleteAction = {
   };
 };
 
+export type AssistantMenuItemUpdateAction = {
+  id: string;
+  type: "menu.item.update";
+  title: string;
+  description: string;
+  input: {
+    menuId: string;
+    itemId: string;
+    label: string;
+    expectedHref?: string | null;
+    expectedParentId?: string | null;
+    patch: {
+      label?: string;
+      href?: string | null;
+      parentId?: string | null;
+      orderIndex?: number;
+    };
+  };
+};
+
 export type AssistantSeoDocumentUpsertAction = {
   id: string;
   type: "seo.document.upsert";
@@ -498,6 +603,26 @@ export type AssistantSeoDocumentDeleteAction = {
     targetId: string;
     expectedSlug?: string | null;
     expectedTitle?: string | null;
+  };
+};
+
+export type AssistantSeoDocumentUpdateAction = {
+  id: string;
+  type: "seo.document.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    targetType: "page" | "entry";
+    targetId: string;
+    expectedSlug?: string | null;
+    expectedTitle?: string | null;
+    patch: {
+      title?: string | null;
+      description?: string | null;
+      canonicalUrl?: string | null;
+      robots?: string | null;
+    };
   };
 };
 
@@ -737,17 +862,23 @@ export type AssistantPlannedAction =
   | AssistantCustomScreenWidgetPatchAction
   | AssistantListingQueryUpsertAction
   | AssistantListingQueryDeleteAction
+  | AssistantListingQueryUpdateAction
   | AssistantListingTemplateUpsertAction
   | AssistantListingTemplateDeleteAction
+  | AssistantListingTemplateUpdateAction
   | AssistantFormUpsertAction
   | AssistantFormDeleteAction
   | AssistantFormArchiveAction
+  | AssistantFormUpdateAction
   | AssistantEntryUpsertDraftAction
   | AssistantEntryDeleteAction
+  | AssistantEntryUpdateAction
   | AssistantMenuItemUpsertAction
   | AssistantMenuItemDeleteAction
+  | AssistantMenuItemUpdateAction
   | AssistantSeoDocumentUpsertAction
   | AssistantSeoDocumentDeleteAction
+  | AssistantSeoDocumentUpdateAction
   | AssistantMediaReferenceAttachAction
   | AssistantListingQueryFiltersPatchAction
   | AssistantListingTemplateCardPatchAction

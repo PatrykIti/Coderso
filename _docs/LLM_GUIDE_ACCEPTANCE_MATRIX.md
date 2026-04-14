@@ -44,18 +44,24 @@ Rules:
 | `custom-screen.widget.patch` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Patches selected custom screen widget block data paths |
 | `listing-query.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `listing-query.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact unreferenced listing queries after review |
+| `listing-query.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Updates listing query metadata and bounded runtime settings |
 | `listing-template.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `listing-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact unreferenced listing templates after review |
+| `listing-template.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Updates listing template metadata/layout/card config |
 | `page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + public runtime smoke | `content:read/write/publish` | Supports catalog and simple block-backed page mode |
 | `form.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` through per-action permissions when applicable | Public submissions use existing Forms runtime hardening |
 | `form.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service count | `forms:read/write` | Deletes exact zero-submission forms after review |
 | `form.archive` | Vitest planner/schema | Bun executor | Bun executor + DB service count | `forms:read/write` | Archives exact forms while retaining submission history |
+| `form.update` | Vitest planner/schema | Bun executor | Bun executor | `forms:read/write` | Updates form metadata/status/access without reading submissions |
 | `entry.upsert-draft` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Draft-only; no publish behavior |
 | `entry.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context entries after review |
+| `entry.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Updates exact entry metadata/data and preserves unrelated fields |
 | `menu.item.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `menus:read/write` | Safe relative hrefs only |
 | `menu.item.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service test | `menus:read/write` | Deletes exact menu items while preserving unrelated tree items |
+| `menu.item.update` | Vitest planner/schema | Bun executor | Bun executor | `menus:read/write` | Updates exact menu item fields while preserving unrelated tree items |
 | `seo.document.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Explicit `page` / `entry` targets |
 | `seo.document.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service test | `content:read/write` | Deletes exact SEO documents without deleting target resources |
+| `seo.document.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Updates exact SEO document fields |
 | `media.reference.attach` | Vitest `action-plan-schema` | Bun executor | Bun executor | `media:read` + `content:write` | Existing media ids only, entry targets only |
 | `listing-query.filters.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `query.filters` only |
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |

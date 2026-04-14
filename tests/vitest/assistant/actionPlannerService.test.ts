@@ -950,6 +950,52 @@ test("planAssistantActions asks for exact listing query when name is ambiguous",
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds listing query update plan from exact target", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien limit listing query 'Products Catalog Query' na 24",
+    context: {
+      page: "/admin/coderso/listings",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-1",
+              name: "Products Catalog Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("listing-query-update");
+  expect(plan.actions[0]).toMatchObject({
+    type: "listing-query.update",
+    input: { id: "query-1", name: "Products Catalog Query", patch: { limit: 24 } },
+  });
+});
+
 test("planAssistantActions builds form delete plan from active form route", () => {
   const plan = planAssistantActions({
     prompt: "usun ten formularz",
@@ -1178,6 +1224,66 @@ test("planAssistantActions builds menu item delete plan from exact href", () => 
   });
 });
 
+test("planAssistantActions builds menu item update plan from exact href", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien menu item '/products' na 'Products Catalog'",
+    context: {
+      page: "/admin/menus/menu-primary",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [
+          {
+            id: "menu-primary",
+            name: "Primary",
+            location: "primary",
+            itemCount: 1,
+            items: [
+              {
+                id: "menu-products",
+                label: "Products",
+                href: "/products",
+                pageId: null,
+                parentId: null,
+                orderIndex: 0,
+                depth: 0,
+              },
+            ],
+          },
+        ],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("menu-item-update");
+  expect(plan.actions[0]).toMatchObject({
+    type: "menu.item.update",
+    input: {
+      menuId: "menu-primary",
+      itemId: "menu-products",
+      label: "Products",
+      expectedHref: "/products",
+      patch: {
+        label: "Products Catalog",
+      },
+    },
+  });
+});
+
 test("planAssistantActions builds SEO document delete plan from exact slug", () => {
   const plan = planAssistantActions({
     prompt: "usun seo document '/products'",
@@ -1225,6 +1331,59 @@ test("planAssistantActions builds SEO document delete plan from exact slug", () 
       targetId: "page-products",
       expectedSlug: "/products",
       expectedTitle: "Products Catalog",
+    },
+  });
+});
+
+test("planAssistantActions builds SEO document update plan from exact slug", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien seo document '/products' title na 'Products SEO'",
+    context: {
+      page: "/admin/seo/seo-products",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [
+          {
+            id: "seo-products",
+            targetType: "page",
+            targetId: "page-products",
+            targetTitle: "Products",
+            slug: "/products",
+            title: "Products Catalog",
+            status: "warning",
+          },
+        ],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("seo-document-update");
+  expect(plan.actions[0]).toMatchObject({
+    type: "seo.document.update",
+    input: {
+      id: "seo-products",
+      targetType: "page",
+      targetId: "page-products",
+      expectedSlug: "/products",
+      expectedTitle: "Products Catalog",
+      patch: {
+        title: "Products SEO",
+      },
     },
   });
 });
