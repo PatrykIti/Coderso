@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Domain Services
 **Estimated Effort:** Large
 **Dependencies:** TASK-174-01, TASK-174-02
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -34,6 +34,7 @@ Assistant provenance is useful for undo, but it must not be required for ordinar
 - 2026-04-13: Completed `TASK-174-03-05`; `listing-query.delete` and `listing-template.delete` are executable with page/widget-template reference conflict checks.
 - 2026-04-14: Completed `TASK-174-03-06`; `form.delete` deletes zero-submission forms and `form.archive` preserves forms with submissions.
 - 2026-04-14: Completed `TASK-174-03-07`; `menu.item.delete` and `seo.document.delete` are executable through domain-owned mutation helpers.
+- 2026-04-14: Parent task closed during `TASK-174-07`; delete/archive adapters are covered by planner/schema, executor, route permission, and security closure validation.
 
 ## Architecture
 

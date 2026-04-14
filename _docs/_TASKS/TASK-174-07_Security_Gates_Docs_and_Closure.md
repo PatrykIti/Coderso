@@ -5,7 +5,7 @@
 **Category:** Security + QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-174-01, TASK-174-02, TASK-174-03, TASK-174-04, TASK-174-05, TASK-174-06  
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -102,3 +102,14 @@ await writeChangelog();
 2. Docs describe resource operations as reviewed, typed, permission-checked, and conflict-aware.
 3. Board and changelog are synchronized for all `TASK-174` leaves.
 4. Any skipped security validation is documented with the reason and remaining CI coverage.
+
+## Progress Notes
+
+- 2026-04-14: Completed security/docs/closure for `TASK-174`. Synchronized parent task statuses (`TASK-174-02`, `TASK-174-03`, `TASK-174-04`, `TASK-174-07`, and `TASK-174`) with the task board, updated source-of-truth assistant/security docs, and recorded scanner availability.
+- 2026-04-14: Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/integration/routes/assistant.test.ts tests/integration/routes/assistant-rate-limit.test.ts tests/security/codersoSecurityGate.test.ts tests/perf/codersoPerformanceGate.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/template-section-references.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/ui/assistant-panel.test.tsx tests/vitest/ui/assistant-panel-interaction.test.tsx`
+  - `set -a && source .env && set +a && if [ -n "${DATABASE_URL:-}" ]; then bun test tests/unit/assistant/actionExecutorService.db.test.ts; else echo DATABASE_URL_MISSING; fi` (suite reported 1 skipped DB test)
+- 2026-04-14: Local Semgrep, Trivy, and Gitleaks binaries were not available in the workspace (`command -v` returned missing for all three), so SAST/SCA/secrets scanner validation remains CI-only through the existing security workflow.

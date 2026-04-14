@@ -41,9 +41,9 @@ current route is designed for:
 - setting LLM token/time constraints and request quotas.
 
 `Docs only` answers questions from the official docs corpus and does not create
-or change resources. `LLM Guide` is for reviewed setup work: it can prepare a
-typed plan, run a dry-run preview, and execute only the supported assistant
-actions after confirmation.
+or change resources. `LLM Guide` is for reviewed setup and resource-operation
+work: it can prepare a typed plan, run a dry-run preview, and execute only the
+supported assistant actions after confirmation.
 
 This is a runtime and governance screen, not a chat surface. It defines what
 the assistant is allowed to do and how expensive or constrained that behavior
@@ -85,7 +85,8 @@ should be.
     without a valid enabled provider.
 14. Keep the capability boundary clear:
     - docs-only answers are read-only,
-    - LLM Guide setup actions require plan review, dry-run, and execute,
+    - LLM Guide setup and resource-operation actions require plan review,
+      dry-run, and execute,
     - arbitrary code execution and autonomous mutation are not supported.
 
 Use this safe Assistant Settings order when you want fewer runtime mistakes:
@@ -109,11 +110,12 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
   DB corpus is rebuilt.
 - `Docs only` vs `LLM Guide` is a policy decision as much as a feature toggle.
   It changes cost, behavior, and operational expectations.
-- The current LLM Guide setup surface supports typed actions for catalog,
-  lead-capture, product-inquiry, portfolio, editorial-hub, and site-kit setup
-  flows. Booking, checkout/payment, webhook automation, nested page widget
-  patches, and installed-kit refinements remain gated until their adapters and
-  hardening are explicit.
+- The current LLM Guide surface supports typed actions for catalog,
+  lead-capture, product-inquiry, portfolio, editorial-hub, site-kit setup flows,
+  and reviewed edits/deletes for supported existing admin resources. Booking,
+  checkout/payment, webhook automation, nested page widget patches, and
+  installed-kit refinements remain gated until their adapters and hardening are
+  explicit.
 - Token/time limits and request quotas are part of runtime governance, not only
   technical tuning.
 - The launcher avatar settings affect assistant presentation, but they should

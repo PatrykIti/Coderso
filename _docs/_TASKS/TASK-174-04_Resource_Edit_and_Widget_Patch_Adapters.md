@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Editing
 **Estimated Effort:** Large
 **Dependencies:** TASK-174-02
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -46,6 +46,7 @@ Initial edit action families:
 - 2026-04-14: Completed `TASK-174-04-03`; `widget-template.update` and `widget-template.block.patch` edit reusable template metadata/settings/blocks.
 - 2026-04-14: Completed `TASK-174-04-04`; `custom-screen.update` and `custom-screen.widget.patch` edit custom screen metadata/sidebar/bindings/blocks.
 - 2026-04-14: Completed `TASK-174-04-05`; remaining content/form/listing/menu/SEO update adapters execute through domain services.
+- 2026-04-14: Parent task closed during `TASK-174-07`; edit/patch adapters are covered by planner/schema, executor, route permission, and security closure validation.
 
 Patch rules:
 - schema-first and reject unknown fields,

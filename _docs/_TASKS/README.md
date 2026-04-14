@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 11 tasks
-- **In Progress:** 6 tasks
-- **Done:** 856 tasks
+- **To Do:** 7 tasks
+- **In Progress:** 5 tasks
+- **Done:** 861 tasks
 
 ---
 
@@ -45,10 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-174-02 | Active Admin Surface Context and Inspection | High | Large | Give LLM Guide bounded active page/screen/template/canvas context |
-| TASK-174-03 | Resource Delete Adapters | High | Large | Delete/archive supported user-created and assistant-created resources safely |
-| TASK-174-04 | Resource Edit and Widget Patch Adapters | High | Large | Edit pages, widgets, templates, screens, entries, forms, listings, menus, and SEO through typed actions |
-| TASK-174-07 | Security Gates, Docs, and Closure | High | Medium | Security/perf/docs/changelog closure for assistant cleanup |
 
 ---
 
@@ -61,7 +57,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-174 | LLM Guide Resource Operations and Active Context | High | Large | In progress: resource operations, template bridge, and review UI are complete through TASK-174-06; security/docs closure is next |
 
 ---
 
@@ -118,6 +113,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-173-06 | Docs Corpus Capability Limits and Closure | High | Medium | Done: docs/corpus now state LLM Guide supported capabilities, gated gaps, and read-only docs-only behavior |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Done: readiness matrix, recovery UX, idempotency diagnostics, gates, metrics, and docs closure completed for the declared capability set |
 | TASK-174-01 | Provenance Undo Manifest and Persistence | High | Large | Done: assistant executions persist sanitized undo manifest items with DB migration artifacts |
+| TASK-174-02 | Active Admin Surface Context and Inspection | High | Large | Done: bounded active page/template/custom-screen context and server hydration shipped |
 | TASK-174-03-01 | Custom Screen Delete Action | High | Medium | Done: `custom-screen.delete` supports reviewed deletion of server-catalog resolved screens |
 | TASK-174-02-01 | Active Page Canvas Context | High | Medium | Done: Assistant context includes active page id, selected block, bounded canvas blocks, and template-section refs |
 | TASK-174-02-02 | Active Widget Template Context | High | Medium | Done: Assistant context includes active widget template id, settings summary, selected block, and block refs |
@@ -129,16 +125,20 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-03-05 | Listing Query and Template Delete Actions | High | Medium | Done: `listing-query.delete` and `listing-template.delete` use reviewed typed action flow with reference checks |
 | TASK-174-03-06 | Form Delete or Archive Action | High | Medium | Done: `form.delete` handles zero-submission forms and `form.archive` preserves submission history |
 | TASK-174-03-07 | Menu and SEO Delete Actions | Medium | Medium | Done: `menu.item.delete` and `seo.document.delete` use reviewed typed action flow |
+| TASK-174-03 | Resource Delete Adapters | High | Large | Done: delete/archive adapters use reviewed typed actions and domain services |
 | TASK-174-04-01 | Page Metadata and Settings Edit Actions | High | Medium | Done: `page.update` edits active page metadata/settings while preserving page data |
 | TASK-174-04-02 | Page Widget Block Patch Actions | High | Large | Done: `page.widget.patch` edits selected block data paths and preserves unrelated blocks |
 | TASK-174-04-03 | Widget Template Edit Actions | High | Large | Done: `widget-template.update` and `widget-template.block.patch` edit reusable templates |
 | TASK-174-04-04 | Custom Screen Edit Actions | High | Medium | Done: `custom-screen.update` and `custom-screen.widget.patch` edit custom screens |
 | TASK-174-04-05 | Content, Form, Listing, Menu, and SEO Edit Actions | High | Large | Done: remaining entry/form/listing/menu/SEO update actions use domain services |
+| TASK-174-04 | Resource Edit and Widget Patch Adapters | High | Large | Done: edit/patch adapters cover supported pages/widgets/templates/screens/domain resources |
 | TASK-174-05-01 | Template Section Reference Inspection | High | Medium | Done: page `template-section` refs are deduped and hydrated with redacted referenced widget template summaries |
 | TASK-174-05-02 | Page Instance vs Template Target Resolution | High | Medium | Done: ambiguous template-backed page edits ask for target confirmation and explicit prompts route to page/template patch targets |
 | TASK-174-05 | Widget Template and Page Canvas Context Bridge | High | Large | Done: referenced widget template inspection and page-instance vs reusable-template target resolution shipped |
 | TASK-174-06-01 | Resource Operation Review UI States | High | Medium | Done: review/result UI renders operation badges, destructive/blocked states, partial counts, and redacted dynamic text |
 | TASK-174-06 | Admin Resource Operations Review UI | High | Large | Done: assistant review UI treats edit/delete/archive-style operations as reviewed resource mutations |
+| TASK-174-07 | Security Gates, Docs, and Closure | High | Medium | Done: route/security/perf/UI validation and docs/changelog/board closure completed; local scanners remain CI-only |
+| TASK-174 | LLM Guide Resource Operations and Active Context | High | Large | Done: active context, resource edit/delete adapters, template bridge, review UI, and closure gates completed |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |

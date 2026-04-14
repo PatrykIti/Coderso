@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 642 | 2026-04-14 | TASK-174 resource operations closure | QA/Assistant |
 | 641 | 2026-04-14 | TASK-174-06-01 resource operation review UI states | Admin/UI |
 | 640 | 2026-04-14 | TASK-174-05-02 page template target resolution | Assistant/Core |
 | 639 | 2026-04-14 | TASK-174-05-01 template section reference inspection | Assistant/Core |

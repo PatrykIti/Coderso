@@ -12,6 +12,11 @@ It now runs through the same `LLM Guide` action engine as the floating assistant
 
 `prompt -> typed plan -> dry-run -> execute`
 
+The floating `LLM Guide` also supports reviewed resource operations for existing
+admin resources through the same action engine. Those edits/deletes must resolve
+targets from active context or server-side catalogs, preview conflicts before
+execution, and remain inside the strict typed action set.
+
 Current implemented guide blueprint:
 - `house-projects-catalog`
 - shared catalog-family business blueprint packs for:
@@ -59,6 +64,9 @@ Current capability limits:
   their adapters, permissions, and hardening are explicit.
 - No guide flow supports arbitrary code execution or autonomous mutation
   without review/confirm.
+- Existing-resource edits/deletes are reviewed resource operations, not
+site-builder shortcuts. They still require typed plans, dry-runs, per-action
+permissions, idempotency, and conflict-aware execution.
 
 ## Runtime Contract
 

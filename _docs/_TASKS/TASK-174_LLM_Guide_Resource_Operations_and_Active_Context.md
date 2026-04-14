@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin/UI + Resource Operations
 **Estimated Effort:** Large
 **Dependencies:** TASK-170, TASK-172, TASK-173
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -222,3 +222,5 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-14: Completed `TASK-174-05`; the widget-template/page-canvas bridge now supports read-only referenced template inspection plus conservative page-instance vs reusable-template target resolution.
 - 2026-04-14: Completed `TASK-174-06-01`; assistant review/result UI distinguishes resource operation types, destructive/blocked previews, partial results, and redacts secret-like dynamic text.
 - 2026-04-14: Completed `TASK-174-06`; admin resource operation review UI now treats edit/delete/archive-style actions as reviewed mutations instead of setup-only actions.
+- 2026-04-14: Completed `TASK-174-07`; security/performance/route/UI validation passed, scanner checks remain CI-only because Semgrep/Trivy/Gitleaks binaries were not installed locally, and all TASK-174 parent/leaf task board entries are synchronized.
+- 2026-04-14: Completed `TASK-174`; LLM Guide resource operations now cover active context inspection, typed edit/delete adapters, template-section bridge target resolution, review UI states, and closure docs/gates.
