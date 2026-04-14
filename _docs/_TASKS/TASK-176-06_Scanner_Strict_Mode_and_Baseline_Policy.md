@@ -5,7 +5,7 @@
 **Category:** Security + Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-176-01, TASK-176-02, TASK-176-03, TASK-176-04, TASK-176-05
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -70,3 +70,13 @@ No child task files.
 2. Strict mode exits non-zero on unapproved blocking/HIGH/CRITICAL findings.
 3. Any remaining exceptions include owner, reason, expiry/review date, and task/ticket id.
 4. Gitleaks remains clean.
+
+## Progress Notes
+
+- 2026-04-14: Completed scanner strict mode and baseline policy. Added `scan:*:strict` scripts for Semgrep, Trivy, Gitleaks, and combined `scan:security:strict`.
+- 2026-04-14: Added one documented inline Semgrep suppression for `core/server/middleware/cors.ts`; the middleware emits only configured trusted origins or literal wildcard, but the rule cannot infer the trusted-origin map. Owner/reason/review date/task id are recorded in `_docs/SECURITY_SPEC.md`.
+- 2026-04-14: Validation passed:
+  - `bun run scan:security:strict` (Semgrep 0 findings, Trivy 0 vulnerabilities, Gitleaks no leaks)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/integration/routes/cors.test.ts`

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 9 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 866 tasks
+- **Done:** 868 tasks
 
 ---
 
@@ -45,8 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-176 | Security Scanner Baseline Remediation | High | Large | Remediate Semgrep and Trivy scanner findings so scanner gates become actionable |
-| TASK-176-06 | Scanner Strict Mode and Baseline Policy | High | Medium | Add strict scanner mode after findings are fixed or time-boxed |
 
 ---
 
@@ -147,6 +145,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-176-03 | Post HTML Rendering Sanitization Audit | High | Large | Done: post editor/runtime rich text renders sanitized React nodes without raw HTML injection |
 | TASK-176-04 | CORS Origin Validation Hardening | High | Medium | Done: CORS origin headers are emitted from trusted configured origins or literal wildcard |
 | TASK-176-05 | Runtime Dependency CVE Upgrades | High | Medium | Done: runtime dependency CVEs remediated; Trivy reports 0 bun.lock vulnerabilities |
+| TASK-176-06 | Scanner Strict Mode and Baseline Policy | High | Medium | Done: strict scanner scripts pass with Semgrep 0, Trivy 0, and Gitleaks clean |
+| TASK-176 | Security Scanner Baseline Remediation | High | Large | Done: scanner baseline remediated and strict security scan is actionable |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

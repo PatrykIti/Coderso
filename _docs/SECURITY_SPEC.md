@@ -75,10 +75,18 @@ Convenience package scripts wrap the same scanner commands when the CLIs are
 available on `PATH`:
 ```bash
 bun run scan:security
+bun run scan:security:strict
 bun run scan:semgrep
+bun run scan:semgrep:strict
 bun run scan:trivy
+bun run scan:trivy:strict
 bun run scan:gitleaks
+bun run scan:gitleaks:strict
 ```
+
+Strict scanner scripts fail on blocking Semgrep findings, HIGH/CRITICAL Trivy
+findings, or Gitleaks leaks. Use advisory scripts for local triage and strict
+scripts for release/CI-style verification.
 
 Trivy local scan scope:
 - Owner: Platform/Security.
@@ -86,6 +94,14 @@ Trivy local scan scope:
 - Scope: local `scan:trivy` and `scan:security` package scripts skip `_docs`, `node_modules`, `dist`, `build`, and `.next`.
 - Expiry/review: review this exclusion by 2026-07-14 or when `_docs/` starts carrying runtime-installed packages.
 - Ticket: scanner baseline follow-up from `TASK-174` closure / changelog 643.
+
+Semgrep local suppressions:
+- Owner: Platform/Security.
+- Rule: `javascript.express.security.cors-misconfiguration.cors-misconfiguration`.
+- Location: `core/server/middleware/cors.ts`.
+- Reason: `Access-Control-Allow-Origin` is emitted from a value selected out of configured trusted origins or literal `*`; raw request origin casing is not reflected after validation. Semgrep cannot infer the trusted-origin map.
+- Expiry/review: review by 2026-07-14 or when CORS configuration is refactored.
+- Ticket: `TASK-176-04` / scanner baseline follow-up.
 
 ### Konfiguracja runtime (Admin UI)
 

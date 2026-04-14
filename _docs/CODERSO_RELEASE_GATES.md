@@ -98,6 +98,12 @@ bun scripts/coderso-release-gates.ts --gate security
 bun scripts/coderso-release-gates.ts --gate performance
 ```
 
+Run strict local scanners after the scanner baseline is clean:
+
+```bash
+bun run scan:security:strict
+```
+
 Generate report to custom path:
 
 ```bash

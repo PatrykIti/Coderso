@@ -48,6 +48,7 @@ export function applyCorsHeaders(
   const allowedOrigin = allowAny ? "*" : allowedOrigins.get(normalizedOrigin);
   if (!allowedOrigin) return { allowed: false, origin };
 
+  // nosemgrep: javascript.express.security.cors-misconfiguration.cors-misconfiguration -- allowedOrigin is selected from configured trusted origins or literal "*" after validation, not reflected directly from the request header.
   headers.set("Access-Control-Allow-Origin", allowedOrigin);
   headers.set("Access-Control-Allow-Methods", config.allowedMethods.join(", "));
   headers.set("Access-Control-Allow-Headers", config.allowedHeaders.join(", "));

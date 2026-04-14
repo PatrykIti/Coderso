@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 649 | 2026-04-14 | TASK-176 scanner strict mode and closure | Security/Tooling |
 | 648 | 2026-04-14 | TASK-176-05 runtime dependency CVE upgrades | Security/Dependencies |
 | 647 | 2026-04-14 | TASK-176-04 CORS origin hardening | Security/Server |
 | 646 | 2026-04-14 | TASK-176-03 post HTML rendering sanitization | Security/Posts |

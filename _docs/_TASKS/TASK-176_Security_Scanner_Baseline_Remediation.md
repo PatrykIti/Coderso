@@ -5,7 +5,7 @@
 **Category:** Security + QA + Tooling
 **Estimated Effort:** Large
 **Dependencies:** TASK-174
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -86,3 +86,5 @@ Scanner remediation rules:
 - 2026-04-14: Completed `TASK-176-03`; post editor/runtime rich text rendering now uses sanitized React-node rendering and no longer relies on `dangerouslySetInnerHTML`.
 - 2026-04-14: Completed `TASK-176-04`; CORS origin headers now come from trusted configured origins or literal wildcard rather than raw request-origin reflection.
 - 2026-04-14: Completed `TASK-176-05`; runtime dependency CVEs in `bun.lock` are remediated and `bun run scan:trivy` reports 0 vulnerabilities for the current runtime scope.
+- 2026-04-14: Completed `TASK-176-06`; strict scanner scripts now fail on Semgrep/Trivy/Gitleaks findings, with the current baseline passing strict mode.
+- 2026-04-14: Completed `TASK-176`; scanner baseline remediation is closed with Semgrep 0 findings, Trivy 0 runtime vulnerabilities, and Gitleaks clean.
