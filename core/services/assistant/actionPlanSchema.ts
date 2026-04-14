@@ -482,12 +482,65 @@ const normalizePageWidgetPatchBlock = (value: unknown) => {
   };
 };
 
+const unsafePatchPathSegments = new Set(["__proto__", "prototype", "constructor"]);
+
+const normalizeDataPath = (value: unknown) => {
+  const path = readStringArray(value);
+  if (path.length === 0 || path.length > 6) fail();
+  for (const segment of path) {
+    if (
+      !/^[a-zA-Z0-9_-]+$/.test(segment) ||
+      unsafePatchPathSegments.has(segment)
+    ) {
+      fail();
+    }
+  }
+  return path;
+};
+
+const normalizePatchValue = (value: unknown) => {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    value === null
+  ) {
+    if (typeof value === "number" && !Number.isFinite(value)) fail();
+    return value;
+  }
+  fail();
+};
+
 const normalizePageWidgetPatchInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["pageSlug", "operation", "block"]));
+  assertKeys(
+    input,
+    new Set([
+      "pageSlug",
+      "operation",
+      "block",
+      "blockId",
+      "expectedBlockType",
+      "dataPath",
+      "value",
+    ])
+  );
+  const operation = readEnum(input.operation, new Set(["upsert-block", "patch-data"]));
+  if (operation === "upsert-block") {
+    return {
+      pageSlug: readText(input.pageSlug),
+      operation,
+      block: normalizePageWidgetPatchBlock(input.block),
+    };
+  }
   return {
     pageSlug: readText(input.pageSlug),
-    operation: readEnum(input.operation, new Set(["upsert-block"])),
-    block: normalizePageWidgetPatchBlock(input.block),
+    operation,
+    blockId: readText(input.blockId),
+    ...(input.expectedBlockType !== undefined
+      ? { expectedBlockType: readOptionalText(input.expectedBlockType) }
+      : {}),
+    dataPath: normalizeDataPath(input.dataPath),
+    value: normalizePatchValue(input.value),
   };
 };
 

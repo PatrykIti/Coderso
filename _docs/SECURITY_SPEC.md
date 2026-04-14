@@ -280,7 +280,7 @@ Rotacja klucza:
   - `media.reference.attach` is internal-only, requires `media:read` plus `content:write` for execute, accepts existing media ids only, supports entry targets in the first adapter slice, and never transports raw upload bytes,
   - `listing-query.filters.patch` is internal-only, requires `content:write` for execute, and updates only existing listing query `filters` while preserving unrelated query config,
   - `listing-template.card.patch` is internal-only, requires `content:write` for execute, and updates only existing listing template `config.card` while preserving unrelated template config,
-  - `page.widget.patch` is internal-only, requires `content:write` for execute, supports top-level `upsert-block`, and validates widget type/data before updating page current data,
+  - `page.widget.patch` is internal-only, requires `content:write` for execute, supports top-level `upsert-block` plus selected block `patch-data`, validates widget type/data before updating page current data, and blocks unknown data paths instead of broad JSON rewrites,
   - `form.automation.upsert` is internal-only, requires `forms:write` for execute, supports safe non-webhook form actions first, and leaves webhook automation disabled until secret handling is explicit,
   - lead capture blueprint creates public forms through existing Forms runtime; it does not add a new public write endpoint or bypass form nonce/access hardening,
   - booking blueprint is gated as `needs_input` and does not create booking resources until booking action adapters and public booking hardening are explicit,

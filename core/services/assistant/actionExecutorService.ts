@@ -137,6 +137,7 @@ import {
 } from "./actionExecutionStore";
 import { recordAssistantActionMetric } from "./assistantMetrics";
 import { buildAssistantUndoManifestItems } from "./actionUndoManifest";
+import { applyPageWidgetDataPatch } from "./pageWidgetPatch";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
@@ -1053,6 +1054,52 @@ const buildPageWidgetPatchPreview = async (
 ) => {
   const existing = await deps.getPageBySlug(action.input.pageSlug);
   const blocks = readPageBlocks(existing);
+  if (action.input.operation === "patch-data") {
+    const patch = existing ? applyPageWidgetDataPatch(blocks, action.input) : null;
+    const conflictMessage =
+      patch?.status === "missing_block"
+        ? "Selected page widget block was not found."
+        : patch?.status === "type_mismatch"
+          ? "Selected page widget block type changed."
+          : patch?.status === "missing_path"
+            ? "Selected page widget data path does not exist."
+            : "Page is required before widget block can be patched.";
+
+    return createPreviewChange({
+      action,
+      targetType: "page",
+      targetKey: `${action.input.pageSlug}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
+      summary: `Patch widget block "${action.input.blockId}" on page ${action.input.pageSlug}`,
+      warnings: existing ? [] : ["The page does not exist."],
+      conflicts:
+        existing && patch?.status === "ok"
+          ? []
+          : [
+              {
+                code: "assistant_action_dependency_missing",
+                severity: "error",
+                message: conflictMessage,
+              },
+            ],
+      beforeValue:
+        existing && patch?.status === "ok"
+          ? {
+              blockId: action.input.blockId,
+              dataPath: action.input.dataPath,
+              value: patch.beforeValue,
+            }
+          : null,
+      nextValue:
+        existing && patch?.status === "ok"
+          ? {
+              blockId: action.input.blockId,
+              dataPath: action.input.dataPath,
+              value: patch.nextValue,
+            }
+          : null,
+    });
+  }
+
   const nextBlocks = existing ? applyPageWidgetPatch(blocks, action.input.block) : [];
 
   return createPreviewChange({
@@ -2465,7 +2512,17 @@ const executePageWidgetPatchAction = async (
   }
   const currentData = isRecord(existing.currentData) ? existing.currentData : {};
   const blocks = Array.isArray(currentData.blocks) ? (currentData.blocks as WidgetBlock[]) : [];
-  const nextBlocks = applyPageWidgetPatch(blocks, action.input.block);
+  let nextBlocks: WidgetBlock[];
+  if (action.input.operation === "patch-data") {
+    const patch = applyPageWidgetDataPatch(blocks, action.input);
+    if (patch.status !== "ok") {
+      throw new Error("assistant_action_dependency_missing");
+    }
+    normalizeAssistantPagePatchBlock(patch.block!);
+    nextBlocks = patch.blocks;
+  } else {
+    nextBlocks = applyPageWidgetPatch(blocks, action.input.block);
+  }
   const record =
     preview.operation === "noop"
       ? existing
@@ -2480,7 +2537,10 @@ const executePageWidgetPatchAction = async (
     actionId: action.id,
     type: action.type,
     targetType: "page",
-    targetKey: `${action.input.pageSlug}/${action.input.block.id}`,
+    targetKey:
+      action.input.operation === "patch-data"
+        ? `${action.input.pageSlug}/${action.input.blockId}/${action.input.dataPath.join(".")}`
+        : `${action.input.pageSlug}/${action.input.block.id}`,
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,

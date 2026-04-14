@@ -438,6 +438,35 @@ test("normalizeAssistantActionPlan accepts page widget patch actions", () => {
   expect(normalized.actions[0]?.type).toBe("page.widget.patch");
 });
 
+test("normalizeAssistantActionPlan accepts page widget data patch actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-hero-title",
+        type: "page.widget.patch",
+        title: "Patch hero title",
+        description: "Patch selected block title.",
+        input: {
+          pageSlug: "/products",
+          operation: "patch-data",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["title"],
+          value: "New title",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("page.widget.patch");
+});
+
 test("normalizeAssistantActionPlan accepts page update actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -658,6 +687,34 @@ test("normalizeAssistantActionPlan rejects unsupported page widget patch operati
               type: "spacer",
               data: {},
             },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects unsafe page widget data patch paths", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-hero-title",
+          type: "page.widget.patch",
+          title: "Patch hero title",
+          description: "Patch selected block title.",
+          input: {
+            pageSlug: "/products",
+            operation: "patch-data",
+            blockId: "hero-1",
+            dataPath: ["__proto__"],
+            value: "Nope",
           },
         },
       ],

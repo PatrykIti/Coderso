@@ -289,6 +289,81 @@ test("planAssistantActions builds page navigation update plan from active page c
   });
 });
 
+test("planAssistantActions builds selected page widget data patch plan", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku na 'New headline'",
+    context: {
+      page: "/admin/pages/page-home",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-home",
+          title: "Home",
+          slug: "/",
+          status: "draft",
+          template: "landing",
+        },
+        selectedBlockId: "hero-1",
+        blocks: [
+          {
+            id: "hero-1",
+            type: "hero",
+            label: "Hero",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-widget-patch");
+  expect(plan.actions[0]).toMatchObject({
+    id: "page-widget-patch-hero-1",
+    type: "page.widget.patch",
+    input: {
+      pageSlug: "/",
+      operation: "patch-data",
+      blockId: "hero-1",
+      expectedBlockType: "hero",
+      dataPath: ["headline"],
+      value: "New headline",
+    },
+  });
+});
+
+test("planAssistantActions asks for selected block before page widget data patch", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku na 'New headline'",
+    context: {
+      page: "/admin/pages/page-home",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-home",
+          title: "Home",
+          slug: "/",
+          status: "draft",
+          template: "landing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("page-widget-patch-needs-input");
+});
+
 test("planAssistantActions builds widget template delete plan from active template context", () => {
   const plan = planAssistantActions({
     prompt: "usun ten widget template Contact CTA",

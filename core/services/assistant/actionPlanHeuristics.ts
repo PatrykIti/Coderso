@@ -67,6 +67,8 @@ const refinementKeywords = [
   "refine",
   "expand",
   "extend",
+  "ukryj",
+  "hide",
   "filtr",
   "filter",
   "formularz",

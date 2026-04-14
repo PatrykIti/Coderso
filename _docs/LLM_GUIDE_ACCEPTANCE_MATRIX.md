@@ -58,7 +58,7 @@ Rules:
 | `listing-query.filters.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `query.filters` only |
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |
 | `page.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Edits active page metadata/settings and preserves page data |
-| `page.widget.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Top-level `upsert-block` only |
+| `page.widget.patch` | Vitest `action-plan-schema` + pure patch helper | Bun executor | Bun executor | `content:read/write` | Top-level `upsert-block` and selected block `patch-data` |
 | `page.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context pages after review |
 | `widget-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Deletes active-context reusable widget templates after review |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |

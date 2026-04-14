@@ -2274,6 +2274,135 @@ test("executeAssistantActionPlan upserts top-level page widget blocks and preser
   expect(noopPreview.changes[0]?.operation).toBe("noop");
 });
 
+test("executeAssistantActionPlan patches selected page widget data and preserves unrelated blocks", async () => {
+  const deps = createDeps();
+  await deps.createPage({
+    title: "Landing",
+    slug: "/landing",
+    data: {
+      blocks: [
+        {
+          id: "hero-1",
+          type: "hero",
+          data: {
+            headline: "Old title",
+            body: "Welcome",
+          },
+        },
+        {
+          id: "text-1",
+          type: "rich-text-section",
+          data: {
+            text: "Keep this",
+          },
+        },
+      ],
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-page-widget-data",
+    status: "ready",
+    intentId: "page-widget-patch",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Patch selected block",
+    answer: "I can patch the selected block.",
+    summary: "Patch hero title.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-widget-title",
+        type: "page.widget.patch",
+        title: "Patch hero title",
+        description: "Patch selected block data.",
+        input: {
+          pageSlug: "/landing",
+          operation: "patch-data",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["headline"],
+          value: "New title",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-widget-data-1",
+    },
+    deps
+  );
+
+  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<{
+    id: string;
+    data: Record<string, unknown>;
+  }>;
+  expect(blocks[0]?.data.headline).toBe("New title");
+  expect(blocks[0]?.data.body).toBe("Welcome");
+  expect(blocks[1]?.data.text).toBe("Keep this");
+});
+
+test("dryRunAssistantActionPlan blocks missing page widget data paths", async () => {
+  const deps = createDeps();
+  await deps.createPage({
+    title: "Landing",
+    slug: "/landing",
+    data: {
+      blocks: [
+        {
+          id: "hero-1",
+          type: "hero",
+          data: {
+            title: "Old title",
+          },
+        },
+      ],
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-page-widget-missing-path",
+    status: "ready",
+    intentId: "page-widget-patch",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Patch selected block",
+    answer: "I can patch the selected block.",
+    summary: "Patch missing field.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-widget-missing",
+        type: "page.widget.patch",
+        title: "Patch missing field",
+        description: "Patch selected block data.",
+        input: {
+          pageSlug: "/landing",
+          operation: "patch-data",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["missing"],
+          value: "New value",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.message).toBe(
+    "Selected page widget data path does not exist."
+  );
+});
+
 test("dryRunAssistantActionPlan rejects unsupported page widget patch types", async () => {
   const deps = createDeps();
   await deps.createPage({

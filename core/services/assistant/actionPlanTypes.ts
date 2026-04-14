@@ -500,11 +500,20 @@ export type AssistantPageWidgetPatchAction = {
   type: "page.widget.patch";
   title: string;
   description: string;
-  input: {
-    pageSlug: string;
-    operation: "upsert-block";
-    block: WidgetBlock;
-  };
+  input:
+    | {
+        pageSlug: string;
+        operation: "upsert-block";
+        block: WidgetBlock;
+      }
+    | {
+        pageSlug: string;
+        operation: "patch-data";
+        blockId: string;
+        expectedBlockType?: string | null;
+        dataPath: string[];
+        value: string | number | boolean | null;
+      };
 };
 
 export type AssistantFormAutomationUpsertAction = {

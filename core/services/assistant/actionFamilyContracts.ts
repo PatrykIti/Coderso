@@ -406,7 +406,9 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: ["Supports top-level upsert-block only and preserves unrelated page blocks."],
+      notes: [
+        "Supports top-level upsert-block and selected block data patches while preserving unrelated page blocks.",
+      ],
     }
   ),
   executableContract(

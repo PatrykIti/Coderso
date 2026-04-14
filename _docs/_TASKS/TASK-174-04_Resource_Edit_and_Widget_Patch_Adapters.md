@@ -42,6 +42,7 @@ Initial edit action families:
 ## Progress Notes
 
 - 2026-04-14: Completed `TASK-174-04-01`; `page.update` edits active page metadata/settings while preserving unrelated page data.
+- 2026-04-14: Completed `TASK-174-04-02`; `page.widget.patch` can patch selected block data paths while preserving unrelated blocks.
 
 Patch rules:
 - schema-first and reject unknown fields,

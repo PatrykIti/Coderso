@@ -577,6 +577,130 @@ const buildPageUpdatePlan = (
   };
 };
 
+const pageWidgetPatchKeywords = [
+  "widget",
+  "block",
+  "blok",
+  "bloku",
+  "selected block",
+  "wybrany blok",
+];
+
+const resolvePageWidgetPatchPath = (normalizedPrompt: string, blockType?: string | null) => {
+  if (/\btitle\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["tytul", "tytuł", "naglowek", "nagłówek"])) {
+    return blockType === "hero" ? ["headline"] : ["title"];
+  }
+  if (/\blabel\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["etykiet", "cta", "button", "przycisk"])) {
+    return ["label"];
+  }
+  if (/\bdescription\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["opis"])) {
+    return ["description"];
+  }
+  if (/\btext\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["tekst"])) {
+    return ["text"];
+  }
+  return null;
+};
+
+const buildPageWidgetPatchNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-page-widget-patch-needs-input",
+  status: "needs_input",
+  intentId: "page-widget-patch-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Page widget patch needs a selected block",
+  answer: [
+    "I can patch page widget block data only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Select one page block and provide the exact supported field value.",
+  ].join("\n"),
+  summary: "Page widget patch could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "page-widget-patch-target",
+      label: "Which selected block field should I update?",
+      description: "Select a block and provide a supported field such as title, label, description, or text.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildPageWidgetPatchPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, pageWidgetPatchKeywords)
+  ) {
+    return null;
+  }
+  if (context.activeSurface?.kind !== "page") {
+    return buildPageWidgetPatchNeedsInputPlan(
+      prompt,
+      "The prompt asks to edit a page widget block, but there is no active page context."
+    );
+  }
+  const blockId = context.activeSurface.selectedBlockId;
+  if (!blockId) {
+    return buildPageWidgetPatchNeedsInputPlan(
+      prompt,
+      "No selected block was provided in the active page context."
+    );
+  }
+  const block = context.activeSurface.blocks.find((entry) => entry.id === blockId) ?? null;
+  const dataPath = resolvePageWidgetPatchPath(normalizedPrompt, block?.type);
+  const value = extractFirstQuotedText(prompt);
+  if (!dataPath || !value) {
+    return buildPageWidgetPatchNeedsInputPlan(
+      prompt,
+      "The prompt did not include a supported block field and quoted value."
+    );
+  }
+  const page = context.activeSurface.page;
+  return {
+    id: `plan-page-widget-patch-${page.id}-${blockId}`,
+    status: "ready",
+    intentId: "page-widget-patch",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Patch ${block?.label ?? blockId}`,
+    answer: "I can patch the selected page widget block through the reviewed LLM Guide action flow.",
+    summary: `Patch selected block "${block?.label ?? blockId}" on page "${page.title}".`,
+    confidence: 0.78,
+    assumptions: [
+      "The target page is resolved from the active admin page context.",
+      "The selected block must still exist and the data path must already exist at dry-run/execute time.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `page-widget-patch-${blockId}`,
+        type: "page.widget.patch",
+        title: `Patch ${block?.label ?? blockId}`,
+        description: "Patch selected page widget block data.",
+        input: {
+          pageSlug: page.slug,
+          operation: "patch-data",
+          blockId,
+          expectedBlockType: block?.type ?? null,
+          dataPath,
+          value,
+        },
+      },
+    ],
+  };
+};
+
 const buildWidgetTemplateDeleteNeedsInputPlan = (
   prompt: string,
   reason: string
@@ -1851,12 +1975,20 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
-  const pageUpdatePlan = buildPageUpdatePlan(
-    input.prompt,
-    context,
-    classification.normalizedPrompt
-  );
-  if (pageUpdatePlan) return normalizeAssistantActionPlan(pageUpdatePlan);
+  if (classification.promptKind === "refinement_request") {
+    const pageWidgetPatchPlan = buildPageWidgetPatchPlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (pageWidgetPatchPlan) return normalizeAssistantActionPlan(pageWidgetPatchPlan);
+    const pageUpdatePlan = buildPageUpdatePlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (pageUpdatePlan) return normalizeAssistantActionPlan(pageUpdatePlan);
+  }
   const listingQueryDeletePlan = buildListingQueryDeletePlan(
     input.prompt,
     context,

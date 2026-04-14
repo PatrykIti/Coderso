@@ -5,7 +5,7 @@
 **Category:** Assistant/Edit + Page Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-174-02, TASK-174-04
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -62,3 +62,18 @@ No child task files.
 1. Assistant can edit selected page widget config after review.
 2. Patch preserves unrelated blocks/slots.
 3. Unknown paths are blocked rather than broad-rewritten.
+
+## Completion Notes
+
+- Expanded executable `page.widget.patch` with `patch-data`.
+- Added strict `blockId` + `dataPath[]` + primitive `value` patch input.
+- Planner resolves selected page block patches from active page context.
+- Executor blocks missing selected blocks, changed block types, and unknown data paths.
+- Patch helper preserves sibling blocks and refuses broad JSON rewrites.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/page-widget-patch.test.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

@@ -420,6 +420,7 @@ Action family contract registry:
 - `menu.item.delete` deletes exact menu items through the menu tree service while preserving unrelated menu items.
 - `seo.document.delete` deletes exact SEO documents without deleting the owning page or entry target.
 - `page.update` edits active page title/slug/draft-published status and page-owned settings while preserving unrelated page data and blocks.
+- `page.widget.patch` supports selected block `patch-data` for existing data paths and preserves unrelated blocks/slots.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.
