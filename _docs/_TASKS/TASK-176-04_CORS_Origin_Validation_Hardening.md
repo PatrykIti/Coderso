@@ -5,7 +5,7 @@
 **Category:** Security + Server Middleware
 **Estimated Effort:** Medium
 **Dependencies:** TASK-176
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -66,3 +66,12 @@ No child task files.
 1. CORS origin reflection is clearly guarded by trusted-origin checks.
 2. Middleware tests cover trusted/untrusted/wildcard behavior.
 3. Semgrep CORS finding is resolved or justified with a precise scanner suppression and documented rationale.
+
+## Progress Notes
+
+- 2026-04-14: Completed CORS origin validation hardening. `Access-Control-Allow-Origin` is now emitted from trusted configured origins (or literal wildcard), not reflected from raw request origin casing.
+- 2026-04-14: Validation passed:
+  - `bun test tests/integration/routes/cors.test.ts tests/unit/security/securitySettings.test.ts` (CORS tests passed; DB-backed security settings tests skipped without DB)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run scan:semgrep > /tmp/nextless-semgrep-176-04.txt 2>&1; if rg -q "cors-misconfiguration|core/server/middleware/cors\\.ts" /tmp/nextless-semgrep-176-04.txt; then rg -n "cors-misconfiguration|core/server/middleware/cors\\.ts" /tmp/nextless-semgrep-176-04.txt; exit 1; else echo "CORS Semgrep finding resolved"; rg -n "Findings:" /tmp/nextless-semgrep-176-04.txt | tail -1; fi`

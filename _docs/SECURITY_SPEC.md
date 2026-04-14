@@ -11,6 +11,10 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Public: read ma wyzszy limit niz write.
   - Admin: authenticated bypass, anonimowe requesty nadal limitowane.
 - CORS: tylko zaufane originy dla admina.
+  - `Access-Control-Allow-Origin` is emitted from configured trusted origins or
+    literal `*`; raw request origin casing is not reflected back as the header
+    value.
+  - Wildcard origins do not emit `Access-Control-Allow-Credentials`.
 - CSRF: token dla POST/PUT/DELETE w admin.
   - Token pobierany z `GET /admin/api/auth/csrf`.
   - UI dodaje `X-CSRF-Token` do mutacji.

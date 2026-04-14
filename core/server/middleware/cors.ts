@@ -17,6 +17,20 @@ const resolveDevOrigin = () => {
 
 const normalizeOrigin = (origin: string) => origin.toLowerCase();
 
+const buildAllowedOriginMap = (origins: string[]) => {
+  const allowed = new Map<string, string>();
+  for (const origin of origins) {
+    const trimmed = origin.trim();
+    if (!trimmed) continue;
+    if (trimmed === "*") {
+      allowed.set("*", "*");
+      continue;
+    }
+    allowed.set(normalizeOrigin(trimmed), trimmed);
+  }
+  return allowed;
+};
+
 export function applyCorsHeaders(
   req: Request,
   headers: Headers,
@@ -25,16 +39,16 @@ export function applyCorsHeaders(
   const origin = req.headers.get("origin");
   if (!origin) return { allowed: false };
 
-  const allowedOrigins = new Set(config.allowedOrigins.map(normalizeOrigin));
+  const allowedOrigins = buildAllowedOriginMap(config.allowedOrigins);
   const devOrigin = resolveDevOrigin();
-  if (devOrigin) allowedOrigins.add(devOrigin);
+  if (devOrigin) allowedOrigins.set(devOrigin, devOrigin);
 
   const normalizedOrigin = normalizeOrigin(origin);
   const allowAny = allowedOrigins.has("*");
-  const isAllowed = allowAny || allowedOrigins.has(normalizedOrigin);
-  if (!isAllowed) return { allowed: false, origin };
+  const allowedOrigin = allowAny ? "*" : allowedOrigins.get(normalizedOrigin);
+  if (!allowedOrigin) return { allowed: false, origin };
 
-  headers.set("Access-Control-Allow-Origin", allowAny ? "*" : origin);
+  headers.set("Access-Control-Allow-Origin", allowedOrigin);
   headers.set("Access-Control-Allow-Methods", config.allowedMethods.join(", "));
   headers.set("Access-Control-Allow-Headers", config.allowedHeaders.join(", "));
   headers.set("Access-Control-Max-Age", String(config.maxAgeSeconds));
