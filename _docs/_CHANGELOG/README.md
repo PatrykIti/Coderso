@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 645 | 2026-04-14 | TASK-176-02 AES-GCM tag length hardening | Security/Crypto |
 | 644 | 2026-04-14 | TASK-176-01 Dockerfile non-root runtime user | Security/Runtime |
 | 643 | 2026-04-14 | Trivy scanner source scope | Security/Tooling |
 | 642 | 2026-04-14 | TASK-174 resource operations closure | QA/Assistant |

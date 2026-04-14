@@ -82,3 +82,4 @@ Scanner remediation rules:
 ## Progress Notes
 
 - 2026-04-14: Completed `TASK-176-01`; Dockerfile production runner now uses non-root `bun` user and the Semgrep Dockerfile missing-user finding is resolved.
+- 2026-04-14: Completed `TASK-176-02`; AES-GCM email/secret decrypt paths now use explicit 16-byte auth tag length and reject malformed IV/tag lengths.

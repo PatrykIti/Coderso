@@ -26,6 +26,33 @@ test("encryptSecret and decryptSecret roundtrip", () => {
   expect(plain).toBe("hello-world");
 });
 
+test("decryptSecret rejects malformed or truncated auth tags", () => {
+  const payload = encryptSecret("hello-world");
+  expect(() =>
+    decryptSecret({
+      ...payload,
+      tag: Buffer.alloc(8).toString("base64"),
+    })
+  ).toThrow("encrypted_secret_invalid");
+
+  expect(() =>
+    decryptSecret({
+      ...payload,
+      tag: Buffer.alloc(16, 1).toString("base64"),
+    })
+  ).toThrow();
+});
+
+test("decryptSecret rejects malformed IVs", () => {
+  const payload = encryptSecret("hello-world");
+  expect(() =>
+    decryptSecret({
+      ...payload,
+      iv: Buffer.alloc(8).toString("base64"),
+    })
+  ).toThrow("encrypted_secret_invalid");
+});
+
 test("encryptSecret fails without master key", () => {
   const current = process.env.MEDIA_SECRET_MASTER_KEY;
   delete process.env.MEDIA_SECRET_MASTER_KEY;

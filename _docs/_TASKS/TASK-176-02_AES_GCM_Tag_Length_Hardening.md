@@ -5,7 +5,7 @@
 **Category:** Security + Crypto
 **Estimated Effort:** Medium
 **Dependencies:** TASK-176
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -69,3 +69,12 @@ No child task files.
 1. AES-GCM auth tag length is explicit in decrypt paths.
 2. Malformed/truncated tags fail closed.
 3. Semgrep AES-GCM tag-length findings are resolved.
+
+## Progress Notes
+
+- 2026-04-14: Completed AES-GCM tag length hardening. Email and secret encryption now pass explicit 16-byte GCM auth tag length to cipher/decipher creation and reject wrong-length IV/auth tags before decrypting.
+- 2026-04-14: Validation passed:
+  - `bun test tests/unit/security/secretStore.test.ts tests/unit/security/piiEmail.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run scan:semgrep > /tmp/nextless-semgrep-176-02.txt 2>&1; if rg -q "gcm-no-tag-length|core/services/security/(piiEmail|secretStore)\\.ts" /tmp/nextless-semgrep-176-02.txt; then rg -n "gcm-no-tag-length|core/services/security/(piiEmail|secretStore)\\.ts" /tmp/nextless-semgrep-176-02.txt; exit 1; else echo "AES-GCM tag-length findings resolved"; rg -n "Findings:" /tmp/nextless-semgrep-176-02.txt | tail -1; fi`

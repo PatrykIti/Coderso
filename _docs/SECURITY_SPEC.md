@@ -136,6 +136,9 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 
 `MEDIA_SECRET_MASTER_KEY` to klucz master do szyfrowania/odszyfrowywania sekretow
 S3/Azure zapisywanych w DB. Bez niego runtime nie odszyfruje rekordow.
+Storage secrets use AES-256-GCM with 12-byte IVs and explicit 16-byte
+authentication tags; decrypt paths reject malformed IV/tag lengths before
+authentication.
 
 Akceptowane formaty (32 bajty):
 - 64‑znakowy hex
@@ -166,6 +169,8 @@ Rotacja klucza:
   - `email` jest nadpisywany hash-em dla kompatybilnosci.
 - Wymagane ENV: `PII_HASH_KEY`, `PII_ENC_KEY` (32 bajty).
 - Bez kluczy system powinien fail-fast.
+- Email encryption uses 12-byte IVs and explicit 16-byte AES-GCM authentication
+  tags; malformed IV/tag lengths are rejected before decrypting.
 
 ## Secrets
 

@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 
 import {
   buildEmailFields,
+  decryptEmail,
   hashEmail,
+  encryptEmail,
   normalizeEmail,
   parseEncryptedEmail,
   resolveEmailValue,
@@ -17,6 +19,38 @@ test("buildEmailFields hashes and encrypts email", () => {
   expect(fields.emailEncrypted).toBeTruthy();
   const resolved = resolveEmailValue({ emailEncrypted: fields.emailEncrypted });
   expect(resolved).toBe("user@example.com");
+});
+
+test("encryptEmail and decryptEmail roundtrip", () => {
+  const payload = encryptEmail("User@Example.com");
+  expect(decryptEmail(payload)).toBe("user@example.com");
+});
+
+test("decryptEmail rejects malformed or truncated auth tags", () => {
+  const payload = encryptEmail("user@example.com");
+  expect(() =>
+    decryptEmail({
+      ...payload,
+      tag: Buffer.alloc(8).toString("base64"),
+    })
+  ).toThrow("encrypted_email_invalid");
+
+  expect(() =>
+    decryptEmail({
+      ...payload,
+      tag: Buffer.alloc(16, 1).toString("base64"),
+    })
+  ).toThrow();
+});
+
+test("decryptEmail rejects malformed IVs", () => {
+  const payload = encryptEmail("user@example.com");
+  expect(() =>
+    decryptEmail({
+      ...payload,
+      iv: Buffer.alloc(8).toString("base64"),
+    })
+  ).toThrow("encrypted_email_invalid");
 });
 
 test("hashEmail is deterministic for normalized email", () => {

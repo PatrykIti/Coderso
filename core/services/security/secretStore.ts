@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
+const AUTH_TAG_LENGTH = 16;
 
 export type EncryptedSecret = {
   v: 1;
@@ -60,7 +61,9 @@ export function isEncryptedSecret(input: unknown): input is EncryptedSecret {
 export function encryptSecret(plain: string): EncryptedSecret {
   const key = resolveKeyFromEnv();
   const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
   const encrypted = Buffer.concat([
     cipher.update(Buffer.from(plain, "utf8")),
     cipher.final(),
@@ -80,8 +83,13 @@ export function decryptSecret(payload: EncryptedSecret): string {
   const iv = Buffer.from(payload.iv, "base64");
   const tag = Buffer.from(payload.tag, "base64");
   const cipherText = Buffer.from(payload.cipherText, "base64");
+  if (iv.length !== IV_LENGTH || tag.length !== AUTH_TAG_LENGTH) {
+    throw new Error("encrypted_secret_invalid");
+  }
 
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
   decipher.setAuthTag(tag);
   const decrypted = Buffer.concat([
     decipher.update(cipherText),

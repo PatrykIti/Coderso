@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:
 
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
+const AUTH_TAG_LENGTH = 16;
 
 export type EncryptedEmail = {
   v: 1;
@@ -76,7 +77,9 @@ export function encryptEmail(email: string): EncryptedEmail {
   const normalized = normalizeEmail(email);
   const key = resolveEncKey();
   const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
   const encrypted = Buffer.concat([
     cipher.update(Buffer.from(normalized, "utf8")),
     cipher.final(),
@@ -96,8 +99,13 @@ export function decryptEmail(payload: EncryptedEmail): string {
   const iv = Buffer.from(payload.iv, "base64");
   const tag = Buffer.from(payload.tag, "base64");
   const cipherText = Buffer.from(payload.cipherText, "base64");
+  if (iv.length !== IV_LENGTH || tag.length !== AUTH_TAG_LENGTH) {
+    throw new Error("encrypted_email_invalid");
+  }
 
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
   decipher.setAuthTag(tag);
   const decrypted = Buffer.concat([
     decipher.update(cipherText),
