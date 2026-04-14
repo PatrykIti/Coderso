@@ -27,7 +27,7 @@
     "test:security": "bun test tests/security",
     "scan:security": "bun run scan:semgrep && bun run scan:trivy && bun run scan:gitleaks",
     "scan:semgrep": "semgrep --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit --config p/nodejs --config p/typescript",
-    "scan:trivy": "trivy fs --severity HIGH,CRITICAL --ignore-unfixed .",
+    "scan:trivy": "trivy fs --severity HIGH,CRITICAL --ignore-unfixed --skip-dirs _docs .",
     "scan:gitleaks": "gitleaks detect --config .gitleaks.toml",
     "db:generate": "set -a; [ ! -f .env ] || . ./.env; set +a; bunx drizzle-kit generate --config core/db/drizzle.config.ts",
     "db:migrate": "set -a; [ ! -f .env ] || . ./.env; set +a; bunx drizzle-kit migrate --config core/db/drizzle.config.ts",
