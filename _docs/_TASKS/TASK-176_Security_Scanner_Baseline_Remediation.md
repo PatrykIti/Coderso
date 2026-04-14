@@ -85,3 +85,4 @@ Scanner remediation rules:
 - 2026-04-14: Completed `TASK-176-02`; AES-GCM email/secret decrypt paths now use explicit 16-byte auth tag length and reject malformed IV/tag lengths.
 - 2026-04-14: Completed `TASK-176-03`; post editor/runtime rich text rendering now uses sanitized React-node rendering and no longer relies on `dangerouslySetInnerHTML`.
 - 2026-04-14: Completed `TASK-176-04`; CORS origin headers now come from trusted configured origins or literal wildcard rather than raw request-origin reflection.
+- 2026-04-14: Completed `TASK-176-05`; runtime dependency CVEs in `bun.lock` are remediated and `bun run scan:trivy` reports 0 vulnerabilities for the current runtime scope.

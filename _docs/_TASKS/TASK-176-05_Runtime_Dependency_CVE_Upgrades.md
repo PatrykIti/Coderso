@@ -5,7 +5,7 @@
 **Category:** Security + Dependencies
 **Estimated Effort:** Medium
 **Dependencies:** TASK-176
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -70,3 +70,13 @@ No child task files.
 1. Runtime CVEs in `bun.lock` are remediated or explicitly tracked as time-boxed exceptions.
 2. Dependency upgrades do not break DB, email, parser, or integration behavior.
 3. `bun run scan:trivy` becomes actionable for runtime dependency findings.
+
+## Progress Notes
+
+- 2026-04-14: Completed runtime dependency CVE upgrades. Updated `drizzle-orm`, `nodemailer`, and forced transitive `fast-xml-parser` through package overrides; refreshed `bun.lock`.
+- 2026-04-14: Validation passed:
+  - `bun install`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/security/secretStore.test.ts tests/unit/email/emailSettingsService.test.ts tests/unit/settings/storageSettings.test.ts tests/unit/integrations/integrationsService.test.ts tests/unit/webhooks/webhooksService.test.ts tests/integration/routes/emailSettings.test.ts` (5 pass, 7 DB-backed skips)
+  - `bun run scan:trivy` (0 vulnerabilities in `bun.lock`)
