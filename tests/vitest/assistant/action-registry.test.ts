@@ -25,7 +25,9 @@ test("assistantActionTypes lists every supported action type once", () => {
     "entry.upsert-draft",
     "entry.delete",
     "menu.item.upsert",
+    "menu.item.delete",
     "seo.document.upsert",
+    "seo.document.delete",
     "media.reference.attach",
     "listing-query.filters.patch",
     "listing-template.card.patch",
@@ -74,7 +76,9 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("content-type.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.delete")).toBe(true);
   expect(isAssistantActionType("menu.item.upsert")).toBe(true);
+  expect(isAssistantActionType("menu.item.delete")).toBe(true);
   expect(isAssistantActionType("seo.document.upsert")).toBe(true);
+  expect(isAssistantActionType("seo.document.delete")).toBe(true);
   expect(isAssistantActionType("media.reference.attach")).toBe(true);
   expect(isAssistantActionType("listing-query.delete")).toBe(true);
   expect(isAssistantActionType("listing-query.filters.patch")).toBe(true);

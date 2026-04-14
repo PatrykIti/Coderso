@@ -387,6 +387,21 @@ const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeMenuItemDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["menuId", "itemId", "label", "expectedHref", "expectedParentId"]));
+  return {
+    menuId: readText(input.menuId),
+    itemId: readText(input.itemId),
+    label: readText(input.label),
+    ...(input.expectedHref !== undefined
+      ? { expectedHref: readOptionalText(input.expectedHref) }
+      : {}),
+    ...(input.expectedParentId !== undefined
+      ? { expectedParentId: readOptionalText(input.expectedParentId) }
+      : {}),
+  };
+};
+
 const normalizeSeoPayload = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["slug", "title", "description", "canonicalUrl", "robots"]));
@@ -409,6 +424,21 @@ const normalizeSeoDocumentUpsertInput = (input: JsonRecord) => {
     targetType: readEnum(input.targetType, new Set(["page", "entry"])),
     targetId: readText(input.targetId),
     seo: normalizeSeoPayload(input.seo),
+  };
+};
+
+const normalizeSeoDocumentDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "targetType", "targetId", "expectedSlug", "expectedTitle"]));
+  return {
+    id: readText(input.id),
+    targetType: readEnum(input.targetType, new Set(["page", "entry"])),
+    targetId: readText(input.targetId),
+    ...(input.expectedSlug !== undefined
+      ? { expectedSlug: readOptionalText(input.expectedSlug) }
+      : {}),
+    ...(input.expectedTitle !== undefined
+      ? { expectedTitle: readOptionalText(input.expectedTitle) }
+      : {}),
   };
 };
 
@@ -719,8 +749,12 @@ const normalizeActionInput = (
       return normalizeEntryDeleteInput(record);
     case "menu.item.upsert":
       return normalizeMenuItemUpsertInput(record);
+    case "menu.item.delete":
+      return normalizeMenuItemDeleteInput(record);
     case "seo.document.upsert":
       return normalizeSeoDocumentUpsertInput(record);
+    case "seo.document.delete":
+      return normalizeSeoDocumentDeleteInput(record);
     case "media.reference.attach":
       return normalizeMediaReferenceAttachInput(record);
     case "listing-query.filters.patch":

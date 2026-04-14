@@ -101,6 +101,47 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
           ],
         },
       ],
+      menus: [
+        {
+          menu: {
+            id: "menu-primary",
+            name: "Primary",
+            location: "primary",
+          },
+          items: [
+            {
+              id: "menu-products",
+              label: "Products",
+              href: "/products",
+              pageId: null,
+              parentId: null,
+              orderIndex: 0,
+              children: [
+                {
+                  id: "menu-products-child",
+                  label: "Featured",
+                  href: "/products/featured",
+                  pageId: null,
+                  parentId: "menu-products",
+                  orderIndex: 0,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      seoDocuments: [
+        {
+          id: "seo-products",
+          targetType: "page",
+          targetId: "page-products",
+          targetTitle: "Products",
+          slug: "/products",
+          title: "Products SEO",
+          description: "redacted from summary",
+          status: "warning",
+        },
+      ],
       widgets: [
         {
           type: "content-list",
@@ -187,6 +228,25 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         submissionAccess: "public",
       },
     ],
+    menus: [
+      {
+        id: "menu-primary",
+        name: "Primary",
+        location: "primary",
+        itemCount: 2,
+      },
+    ],
+    seoDocuments: [
+      {
+        id: "seo-products",
+        targetType: "page",
+        targetId: "page-products",
+        targetTitle: "Products",
+        slug: "/products",
+        title: "Products SEO",
+        status: "warning",
+      },
+    ],
     widgets: [
       {
         id: "content-list",
@@ -202,6 +262,10 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
     "title",
   ]);
   expect(snapshot.forms[0]?.fields.map((field) => field.name)).toEqual(["email"]);
+  expect(snapshot.menus[0]?.items.map((item) => item.label)).toEqual([
+    "Products",
+    "Featured",
+  ]);
   expect(snapshot.widgets[0]?.slots).toEqual([
     {
       id: "header",

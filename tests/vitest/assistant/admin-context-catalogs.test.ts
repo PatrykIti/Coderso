@@ -88,6 +88,42 @@ const createDeps = (overrides: Partial<AssistantResourceCatalogDeps> = {}) => {
         },
       ];
     },
+    listMenusWithItems: async () => {
+      calls.push("menus");
+      return [
+        {
+          menu: {
+            id: "menu-primary",
+            name: "Primary",
+            location: "primary",
+          },
+          items: [
+            {
+              id: "menu-products",
+              label: "Products",
+              href: "/products",
+              pageId: null,
+              parentId: null,
+              orderIndex: 0,
+            },
+          ],
+        },
+      ];
+    },
+    listSeoDocuments: async () => {
+      calls.push("seoDocuments");
+      return [
+        {
+          id: "seo-products",
+          targetType: "page",
+          targetId: "page-products",
+          targetTitle: "Products",
+          slug: "/products",
+          title: "Products",
+          status: "warning",
+        },
+      ];
+    },
     listWidgetCatalog: async () => {
       calls.push("widgets");
       return [
@@ -121,11 +157,15 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
     "forms",
     "listingQueries",
     "listingTemplates",
+    "menus",
+    "seoDocuments",
     "widgets",
   ]);
   expect(snapshot.generatedAt).toBe("2026-04-11T10:00:00.000Z");
   expect(snapshot.contentTypes[0]?.slug).toBe("products");
   expect(snapshot.forms[0]?.fields[0]?.name).toBe("email");
+  expect(snapshot.menus[0]?.items[0]?.label).toBe("Products");
+  expect(snapshot.seoDocuments[0]?.slug).toBe("/products");
   expect(snapshot.widgets[0]?.id).toBe("content-list");
   expect(snapshot.warnings).toEqual([]);
 });

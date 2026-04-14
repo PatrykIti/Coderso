@@ -49,6 +49,36 @@ const resourceCatalog = {
       fields: [],
     },
   ],
+  menus: [
+    {
+      id: "menu-primary",
+      name: "Primary",
+      location: "primary",
+      itemCount: 1,
+      items: [
+        {
+          id: "menu-products",
+          label: "Products",
+          href: "/products",
+          pageId: null,
+          parentId: null,
+          orderIndex: 0,
+          depth: 0,
+        },
+      ],
+    },
+  ],
+  seoDocuments: [
+    {
+      id: "seo-products",
+      targetType: "page",
+      targetId: "page-products",
+      targetTitle: "Products",
+      slug: "/products",
+      title: "Products",
+      status: "warning",
+    },
+  ],
   widgets: [
     {
       id: "hero",
@@ -140,6 +170,8 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.docs[0]?.content).toContain("...");
   expect(prompt.resources?.contentTypes).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
+  expect(prompt.resources?.menus).toHaveLength(1);
+  expect(prompt.resources?.seoDocuments).toHaveLength(1);
   expect(prompt.resources?.widgets).toHaveLength(1);
   expect(prompt.activeSurface).toBeNull();
   expect(prompt.warnings).toEqual([

@@ -59,6 +59,8 @@ export type AssistantProviderPlanningPromptPackage = {
     customScreens: AssistantResourceCatalogSnapshot["customScreens"];
     listings: AssistantResourceCatalogSnapshot["listings"];
     forms: AssistantResourceCatalogSnapshot["forms"];
+    menus: AssistantResourceCatalogSnapshot["menus"];
+    seoDocuments: AssistantResourceCatalogSnapshot["seoDocuments"];
     widgets: AssistantResourceCatalogSnapshot["widgets"];
     warnings: string[];
   } | null;
@@ -151,6 +153,8 @@ const buildResources = (
       templates: clampItems(catalog.listings.templates, maxItemsPerGroup, "listing_templates_truncated", warnings),
     },
     forms: clampItems(catalog.forms, maxItemsPerGroup, "forms_truncated", warnings),
+    menus: clampItems(catalog.menus, maxItemsPerGroup, "menus_truncated", warnings),
+    seoDocuments: clampItems(catalog.seoDocuments, maxItemsPerGroup, "seo_documents_truncated", warnings),
     widgets: clampItems(catalog.widgets, maxItemsPerGroup, "widgets_truncated", warnings),
     warnings: [...catalog.warnings],
   };

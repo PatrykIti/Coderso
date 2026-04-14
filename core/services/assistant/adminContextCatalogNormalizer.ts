@@ -6,9 +6,12 @@ import type {
   AssistantListingQuerySummary,
   AssistantListingSortSummary,
   AssistantListingTemplateSummary,
+  AssistantMenuItemSummary,
+  AssistantMenuSummary,
   AssistantResourceCatalogBudget,
   AssistantResourceCatalogSnapshot,
   AssistantResourceFieldSummary,
+  AssistantSeoDocumentSummary,
   AssistantWidgetSlotSummary,
   AssistantWidgetSummary,
 } from "./adminContextTypes";
@@ -19,6 +22,8 @@ export type AssistantResourceCatalogRawInput = {
   listingQueries?: unknown;
   listingTemplates?: unknown;
   forms?: unknown;
+  menus?: unknown;
+  seoDocuments?: unknown;
   widgets?: unknown;
 };
 
@@ -294,6 +299,63 @@ const normalizeForm = (
   };
 };
 
+const normalizeMenuItems = (
+  value: unknown,
+  depth = 0
+): AssistantMenuItemSummary[] =>
+  readRecordArray(value)
+    .flatMap((item): AssistantMenuItemSummary[] => {
+      const id = readString(item.id);
+      const label = readString(item.label);
+      if (!id || !label) return [];
+      const normalized: AssistantMenuItemSummary = {
+        id,
+        label,
+        href: readString(item.href),
+        pageId: readString(item.pageId),
+        parentId: readString(item.parentId),
+        orderIndex: readNumber(item.orderIndex) ?? 0,
+        depth,
+      };
+      return [normalized, ...normalizeMenuItems(item.children, depth + 1)];
+    })
+    .sort((left, right) => {
+      if (left.depth !== right.depth) return left.depth - right.depth;
+      if (left.orderIndex !== right.orderIndex) return left.orderIndex - right.orderIndex;
+      return left.label.localeCompare(right.label);
+    });
+
+const normalizeMenu = (value: Record<string, unknown>): AssistantMenuSummary | null => {
+  const menu = isRecord(value.menu) ? value.menu : value;
+  const id = readString(menu.id);
+  const name = readString(menu.name);
+  if (!id || !name) return null;
+  const items = normalizeMenuItems(value.items ?? menu.items);
+  return {
+    id,
+    name,
+    location: readString(menu.location),
+    itemCount: items.length,
+    items,
+  };
+};
+
+const normalizeSeoDocument = (value: Record<string, unknown>): AssistantSeoDocumentSummary | null => {
+  const id = readString(value.id);
+  const targetType = readString(value.targetType);
+  const targetId = readString(value.targetId);
+  if (!id || (targetType !== "page" && targetType !== "entry") || !targetId) return null;
+  return {
+    id,
+    targetType,
+    targetId,
+    targetTitle: readString(value.targetTitle),
+    slug: readString(value.slug),
+    title: readString(value.title),
+    status: readString(value.status) ?? "unknown",
+  };
+};
+
 const normalizeVariantIds = (value: unknown) =>
   readArray(value)
     .map((entry) => {
@@ -397,6 +459,28 @@ export function normalizeAssistantResourceCatalog(
     ),
     "forms"
   );
+  const menus = clamp(
+    sortByKey(
+      readRecordArray(raw.menus)
+        .map(normalizeMenu)
+        .filter((entry): entry is AssistantMenuSummary => Boolean(entry)),
+      (entry) => entry.name
+    ),
+    "menus"
+  ).map((menu) => ({
+    ...menu,
+    items: clamp(menu.items, `menu_${menu.id}_items`, budget.maxFieldsPerResource),
+    itemCount: menu.itemCount,
+  }));
+  const seoDocuments = clamp(
+    sortByKey(
+      readRecordArray(raw.seoDocuments)
+        .map(normalizeSeoDocument)
+        .filter((entry): entry is AssistantSeoDocumentSummary => Boolean(entry)),
+      (entry) => `${entry.targetType}:${entry.slug ?? entry.targetId}`
+    ),
+    "seo_documents"
+  );
   const widgets = clamp(
     sortByKey(
       readRecordArray(raw.widgets)
@@ -418,6 +502,8 @@ export function normalizeAssistantResourceCatalog(
       templates,
     },
     forms,
+    menus,
+    seoDocuments,
     widgets,
     warnings: [...new Set(warnings)].sort((left, right) => left.localeCompare(right)),
   };

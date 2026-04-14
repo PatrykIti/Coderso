@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { contentEntries, pages, seoDocuments } from "../../db/schema";
@@ -198,6 +198,25 @@ export async function listSeoDocuments(): Promise<SeoListItem[]> {
   return results;
 }
 
+export async function listExistingSeoDocuments(): Promise<SeoListItem[]> {
+  const [targets, rows] = await Promise.all([
+    loadTargets(),
+    db.select().from(seoDocuments).orderBy(desc(seoDocuments.updatedAt)),
+  ]);
+  const targetByKey = new Map(
+    targets.map((target) => [`${target.targetType}:${target.id}`, target])
+  );
+
+  return rows.map((row) => {
+    const doc = mapDocument(row);
+    const target = targetByKey.get(`${doc.targetType}:${doc.targetId}`);
+    return {
+      ...doc,
+      targetTitle: target?.title ?? doc.title ?? doc.slug ?? doc.targetId,
+    };
+  });
+}
+
 export async function getSeoDocument(id: string): Promise<SeoDocument | null> {
   const [row] = await db.select().from(seoDocuments).where(eq(seoDocuments.id, id));
   return row ? mapDocument(row) : null;
@@ -264,6 +283,11 @@ export async function updateSeoDocumentById(
     })
     .where(eq(seoDocuments.id, id))
     .returning();
+  return row ? mapDocument(row) : null;
+}
+
+export async function deleteSeoDocument(id: string): Promise<SeoDocument | null> {
+  const [row] = await db.delete(seoDocuments).where(eq(seoDocuments.id, id)).returning();
   return row ? mapDocument(row) : null;
 }
 

@@ -51,7 +51,9 @@ Rules:
 | `entry.upsert-draft` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Draft-only; no publish behavior |
 | `entry.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context entries after review |
 | `menu.item.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `menus:read/write` | Safe relative hrefs only |
+| `menu.item.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service test | `menus:read/write` | Deletes exact menu items while preserving unrelated tree items |
 | `seo.document.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Explicit `page` / `entry` targets |
+| `seo.document.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service test | `content:read/write` | Deletes exact SEO documents without deleting target resources |
 | `media.reference.attach` | Vitest `action-plan-schema` | Bun executor | Bun executor | `media:read` + `content:write` | Existing media ids only, entry targets only |
 | `listing-query.filters.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `query.filters` only |
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |

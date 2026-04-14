@@ -18,6 +18,8 @@ test("buildAssistantAdminContext keeps route/module mapping and resource catalog
       customScreens: [],
       listings: { queries: [], templates: [] },
       forms: [],
+      menus: [],
+      seoDocuments: [],
       widgets: [],
       warnings: [],
     },

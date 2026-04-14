@@ -33,6 +33,7 @@ Assistant provenance is useful for undo, but it must not be required for ordinar
 - 2026-04-13: Completed `TASK-174-03-04`; `entry.delete` and guarded `content-type.delete` are executable through the normal LLM Guide plan/dry-run/execute flow.
 - 2026-04-13: Completed `TASK-174-03-05`; `listing-query.delete` and `listing-template.delete` are executable with page/widget-template reference conflict checks.
 - 2026-04-14: Completed `TASK-174-03-06`; `form.delete` deletes zero-submission forms and `form.archive` preserves forms with submissions.
+- 2026-04-14: Completed `TASK-174-03-07`; `menu.item.delete` and `seo.document.delete` are executable through domain-owned mutation helpers.
 
 ## Architecture
 

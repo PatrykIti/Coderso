@@ -211,3 +211,4 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-13: Completed `TASK-174-03-04`; active entry deletion and guarded content type deletion are available as reviewed typed actions.
 - 2026-04-13: Completed `TASK-174-03-05`; listing query/template deletion is available as reviewed typed actions with page/widget-template reference conflict checks.
 - 2026-04-14: Completed `TASK-174-03-06`; form delete/archive is available as reviewed typed actions with submission-retention protection.
+- 2026-04-14: Completed `TASK-174-03-07`; menu item and SEO document deletion are available as reviewed typed actions.

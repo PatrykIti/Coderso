@@ -5,6 +5,7 @@ import { db } from "../../../core/db/client";
 import { menuItems, menus } from "../../../core/db/schema";
 import {
   createMenu,
+  deleteMenuItem,
   getMenuWithItems,
   replaceMenuItems,
 } from "../../../core/services/menus/menuService";
@@ -147,6 +148,35 @@ testIfDb("replaceMenuItems normalizes menu metadata settings", async () => {
     description: "Seasonal promotions",
     icon: "sparkles",
   });
+
+  await cleanupMenu(createdMenuId);
+  createdMenuId = undefined;
+});
+
+testIfDb("deleteMenuItem removes descendants and preserves unrelated items", async () => {
+  const menu = await createMenu({
+    name: `Delete Item-${randomUUID()}`,
+    location: `delete-item-${randomUUID()}`,
+  });
+
+  createdMenuId = menu?.id;
+  if (!createdMenuId) throw new Error("menu_missing");
+  const productsId = randomUUID();
+  const featuredId = randomUUID();
+  const aboutId = randomUUID();
+
+  await replaceMenuItems(createdMenuId, [
+    { id: productsId, label: "Products", href: "/products" },
+    { id: featuredId, label: "Featured", href: "/products/featured", parentId: productsId },
+    { id: aboutId, label: "About", href: "/about" },
+  ]);
+
+  const result = await deleteMenuItem(createdMenuId, productsId);
+  expect(result?.deleted.label).toBe("Products");
+  expect(result?.deletedIds).toEqual([featuredId, productsId].sort());
+
+  const stored = await getMenuWithItems(createdMenuId);
+  expect(stored?.items.map((item) => item.id)).toEqual([aboutId]);
 
   await cleanupMenu(createdMenuId);
   createdMenuId = undefined;

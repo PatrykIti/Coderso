@@ -2458,6 +2458,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-03-04` promuje `entry.delete` i `content-type.delete` do executable typed actions; content type delete jest blokowany, gdy server-side catalog raportuje istniejace entries.
 `TASK-174-03-05` promuje `listing-query.delete` i `listing-template.delete` do executable typed actions; dry-run/execute blokuje usuniecie, gdy page/widget-template reference scan nadal widzi zalezne referencje.
 `TASK-174-03-06` promuje `form.delete` i `form.archive` do executable typed actions; hard delete jest blokowany, gdy formularz ma submissions, a archiwizacja zachowuje historie submissions bez ujawniania payloadow.
+`TASK-174-03-07` promuje `menu.item.delete` i `seo.document.delete` do executable typed actions; menu item delete zachowuje niezalezne elementy drzewa menu, a SEO delete usuwa tylko dokument SEO bez usuwania target page/entry.
 `TASK-172-02` dodaje lead capture blueprint pack: prompt o stronie kontaktowej/leadowej moze zwrocic plan `form.upsert` + prosty `page.upsert` z embedem formularza.
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.

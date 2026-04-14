@@ -44,6 +44,9 @@ import type {
   AssistantFormSummary,
   AssistantListingQuerySummary,
   AssistantListingTemplateSummary,
+  AssistantMenuItemSummary,
+  AssistantMenuSummary,
+  AssistantSeoDocumentSummary,
 } from "./adminContextTypes";
 
 export {
@@ -159,6 +162,27 @@ const formArchiveKeywords = [
 const includesFormTargetKeyword = (normalizedPrompt: string) =>
   /\bforms?\b/.test(normalizedPrompt) ||
   includesAny(normalizedPrompt, ["formularz", "formularze", "formularza"]);
+
+const menuItemDeleteKeywords = [
+  "menu item",
+  "menu items",
+  "pozycje menu",
+  "pozycje w menu",
+  "pozycje z menu",
+  "element menu",
+  "elementy menu",
+  "link menu",
+  "link z menu",
+];
+
+const seoDocumentDeleteKeywords = [
+  "seo",
+  "seo document",
+  "seo documents",
+  "meta",
+  "meta title",
+  "meta description",
+];
 
 const listingQueryDeleteKeywords = [
   "listing query",
@@ -1020,6 +1044,239 @@ const buildFormOperationPlan = (
   };
 };
 
+const sortMenusByName = (menus: AssistantMenuSummary[]) =>
+  [...menus].sort((left, right) => left.name.localeCompare(right.name));
+
+const sortSeoDocumentsByTarget = (documents: AssistantSeoDocumentSummary[]) =>
+  [...documents].sort((left, right) =>
+    `${left.targetType}:${left.slug ?? left.targetId}`.localeCompare(
+      `${right.targetType}:${right.slug ?? right.targetId}`
+    )
+  );
+
+const buildMenuItemDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-menu-item-delete-needs-input",
+  status: "needs_input",
+  intentId: "menu-item-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Menu item delete needs a safe target",
+  answer: [
+    "I can delete menu items only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Provide an exact menu item label, href, or item id.",
+  ].join("\n"),
+  summary: "Menu item deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "menu-item-delete-target",
+      label: "Which exact menu item should I delete?",
+      description: "Provide the exact menu item label, href, or item id.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildSeoDocumentDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-seo-document-delete-needs-input",
+  status: "needs_input",
+  intentId: "seo-document-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "SEO document delete needs a safe target",
+  answer: [
+    "I can delete SEO documents only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Provide an exact SEO document slug, target title, or document id.",
+  ].join("\n"),
+  summary: "SEO document deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "seo-document-delete-target",
+      label: "Which exact SEO document should I delete?",
+      description: "Provide the exact SEO slug, target title, or document id.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const findMenuItemDeleteTargets = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  const menus = context.resourceCatalog?.menus ?? [];
+  const matches: Array<{ menu: AssistantMenuSummary; item: AssistantMenuItemSummary }> = [];
+  const selectedId = selected?.kind === "menu-item" ? selected.id : null;
+  const quotedTarget = extractQuotedPrefix(prompt);
+  const normalizedTarget = quotedTarget ? normalizeAssistantPlannerPrompt(quotedTarget) : null;
+
+  for (const menu of sortMenusByName(menus)) {
+    for (const item of menu.items) {
+      if (selectedId && item.id === selectedId) {
+        matches.push({ menu, item });
+        continue;
+      }
+      if (!normalizedTarget) continue;
+      const candidates = [item.id, item.label, item.href ?? ""].map((value) =>
+        normalizeAssistantPlannerPrompt(value)
+      );
+      if (candidates.includes(normalizedTarget)) {
+        matches.push({ menu, item });
+      }
+    }
+  }
+
+  return matches;
+};
+
+const findSeoDocumentDeleteTargets = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  const documents = context.resourceCatalog?.seoDocuments ?? [];
+  if (selected?.kind === "seo-document") {
+    const match = documents.find((entry) => entry.id === selected.id) ?? null;
+    return match ? [match] : [];
+  }
+  const target = extractQuotedPrefix(prompt);
+  if (!target) return [];
+  const normalizedTarget = normalizeAssistantPlannerPrompt(target);
+  return sortSeoDocumentsByTarget(documents).filter((entry) =>
+    [entry.id, entry.targetId, entry.slug ?? "", entry.targetTitle ?? "", entry.title ?? ""]
+      .map((value) => normalizeAssistantPlannerPrompt(value))
+      .includes(normalizedTarget)
+  );
+};
+
+const buildMenuItemDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    !isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, menuItemDeleteKeywords)
+  ) {
+    return null;
+  }
+  const targets = findMenuItemDeleteTargets(prompt, context);
+  if (targets.length !== 1) {
+    return buildMenuItemDeleteNeedsInputPlan(
+      prompt,
+      targets.length > 1
+        ? "The prompt matched more than one menu item."
+        : "The prompt did not resolve to one exact menu item from the server-side catalog."
+    );
+  }
+  const target = targets[0];
+  if (!target) return null;
+  return {
+    id: `plan-menu-item-delete-${target.item.id}`,
+    status: "ready",
+    intentId: "menu-item-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${target.item.label}`,
+    answer: "I can delete the selected menu item through the reviewed LLM Guide action flow.",
+    summary: `Delete menu item "${target.item.label}" from menu "${target.menu.name}".`,
+    confidence: 0.82,
+    assumptions: [
+      "The target menu item is resolved from the server-side resource catalog.",
+      "Deletion uses the menu tree service and preserves unrelated menu items.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `menu-item-delete-${target.item.id}`,
+        type: "menu.item.delete",
+        title: `Delete ${target.item.label}`,
+        description: "Delete a menu item selected from trusted admin context.",
+        input: {
+          menuId: target.menu.id,
+          itemId: target.item.id,
+          label: target.item.label,
+          expectedHref: target.item.href,
+          expectedParentId: target.item.parentId,
+        },
+      },
+    ],
+  };
+};
+
+const buildSeoDocumentDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    !isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, seoDocumentDeleteKeywords)
+  ) {
+    return null;
+  }
+  const targets = findSeoDocumentDeleteTargets(prompt, context);
+  if (targets.length !== 1) {
+    return buildSeoDocumentDeleteNeedsInputPlan(
+      prompt,
+      targets.length > 1
+        ? "The prompt matched more than one SEO document."
+        : "The prompt did not resolve to one exact SEO document from active context or the server-side catalog."
+    );
+  }
+  const target = targets[0];
+  if (!target) return null;
+  return {
+    id: `plan-seo-document-delete-${target.id}`,
+    status: "ready",
+    intentId: "seo-document-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete SEO for ${target.targetTitle ?? target.slug ?? target.targetId}`,
+    answer:
+      "I can delete the selected SEO document through the reviewed LLM Guide action flow.",
+    summary: `Delete SEO document for ${target.targetType} "${target.targetTitle ?? target.slug ?? target.targetId}".`,
+    confidence: 0.82,
+    assumptions: [
+      "The target SEO document is resolved from active context or the server-side resource catalog.",
+      "Only the SEO document is deleted; the page or entry target is not deleted.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `seo-document-delete-${target.id}`,
+        type: "seo.document.delete",
+        title: `Delete SEO for ${target.targetTitle ?? target.slug ?? target.targetId}`,
+        description: "Delete a SEO document selected from trusted admin context.",
+        input: {
+          id: target.id,
+          targetType: target.targetType,
+          targetId: target.targetId,
+          expectedSlug: target.slug,
+          expectedTitle: target.title,
+        },
+      },
+    ],
+  };
+};
+
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
   options: {
@@ -1482,6 +1739,18 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (formOperationPlan) return normalizeAssistantActionPlan(formOperationPlan);
+  const menuItemDeletePlan = buildMenuItemDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (menuItemDeletePlan) return normalizeAssistantActionPlan(menuItemDeletePlan);
+  const seoDocumentDeletePlan = buildSeoDocumentDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (seoDocumentDeletePlan) return normalizeAssistantActionPlan(seoDocumentDeletePlan);
 
   if (
     classification.promptKind === "setup_request" &&

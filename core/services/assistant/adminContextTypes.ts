@@ -74,6 +74,34 @@ export type AssistantFormSummary = {
   fields: AssistantResourceFieldSummary[];
 };
 
+export type AssistantMenuItemSummary = {
+  id: string;
+  label: string;
+  href: string | null;
+  pageId: string | null;
+  parentId: string | null;
+  orderIndex: number;
+  depth: number;
+};
+
+export type AssistantMenuSummary = {
+  id: string;
+  name: string;
+  location: string | null;
+  itemCount: number;
+  items: AssistantMenuItemSummary[];
+};
+
+export type AssistantSeoDocumentSummary = {
+  id: string;
+  targetType: "page" | "entry";
+  targetId: string;
+  targetTitle: string | null;
+  slug: string | null;
+  title: string | null;
+  status: string;
+};
+
 export type AssistantWidgetSlotSummary = {
   id: string;
   label: string;
@@ -110,6 +138,8 @@ export type AssistantResourceCatalogSnapshot = {
     templates: AssistantListingTemplateSummary[];
   };
   forms: AssistantFormSummary[];
+  menus: AssistantMenuSummary[];
+  seoDocuments: AssistantSeoDocumentSummary[];
   widgets: AssistantWidgetSummary[];
   warnings: string[];
 };

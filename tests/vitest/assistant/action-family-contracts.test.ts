@@ -49,11 +49,20 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(menuContract.permissions.execute).toEqual([
     "menus:write",
   ]);
+  expect(getAssistantActionFamilyContract("menu.item.delete").permissions.execute).toEqual([
+    "menus:write",
+  ]);
+  expect(
+    getAssistantActionFamilyContract("menu.item.delete").strictInput.notes.join(" ")
+  ).toContain("preserves unrelated menu items");
   const seoContract = getAssistantActionFamilyContract("seo.document.upsert");
   expect(seoContract.status).toBe("executable");
   expect(seoContract.permissions.execute).toEqual([
     "content:write",
   ]);
+  expect(
+    getAssistantActionFamilyContract("seo.document.delete").strictInput.notes.join(" ")
+  ).toContain("SEO domain service");
   const mediaContract = getAssistantActionFamilyContract("media.reference.attach");
   expect(mediaContract.status).toBe("executable");
   expect(

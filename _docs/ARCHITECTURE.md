@@ -351,6 +351,8 @@ Resource catalog context:
   - custom screens,
   - listing queries/templates,
   - forms + fields,
+  - menus + bounded menu items,
+  - existing SEO documents,
   - widgets/templates.
 - Snapshot jest schema-versioned, deterministic, limitowany budzetem i redaguje secret-like keys.
 - Docs-only chat nie hydratuje resource catalogu i pozostaje docs-corpus driven.
@@ -415,6 +417,8 @@ Action family contract registry:
 - `content-type.delete` is executable for exact server-side catalog targets and is blocked when the catalog reports existing entries.
 - `listing-query.delete` and `listing-template.delete` are executable for active/exact catalog listing targets; dry-run and execute scan page data plus widget template blocks/settings for surviving references before deletion.
 - `form.delete` deletes exact zero-submission forms; `form.archive` preserves forms with submissions by setting status to `archived` without exposing submission payloads.
+- `menu.item.delete` deletes exact menu items through the menu tree service while preserving unrelated menu items.
+- `seo.document.delete` deletes exact SEO documents without deleting the owning page or entry target.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.

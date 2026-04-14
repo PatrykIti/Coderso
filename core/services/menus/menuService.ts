@@ -233,3 +233,50 @@ export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
 
   return buildMenuTree(records);
 }
+
+const flattenMenuNodes = (nodes: MenuItemNode[]): MenuItemRecord[] =>
+  nodes.flatMap((node) => {
+    const { children: _children, ...record } = node;
+    return [record, ...flattenMenuNodes(node.children)];
+  });
+
+const collectMenuItemDescendantIds = (items: MenuItemRecord[], itemId: string) => {
+  const deleteIds = new Set([itemId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const item of items) {
+      if (item.parentId && deleteIds.has(item.parentId) && !deleteIds.has(item.id)) {
+        deleteIds.add(item.id);
+        changed = true;
+      }
+    }
+  }
+  return deleteIds;
+};
+
+export async function deleteMenuItem(menuId: string, itemId: string) {
+  const existingItems = flattenMenuNodes(await listMenuItems(menuId));
+  const existing = existingItems.find((item) => item.id === itemId) ?? null;
+  if (!existing) return null;
+
+  const deleteIds = collectMenuItemDescendantIds(existingItems, itemId);
+  const nextItems = existingItems
+    .filter((item) => !deleteIds.has(item.id))
+    .map((item) => ({
+      id: item.id,
+      label: item.label,
+      href: item.href,
+      pageId: item.pageId,
+      parentId: item.parentId,
+      orderIndex: item.orderIndex,
+      settings: item.settings,
+    }));
+  const items = await replaceMenuItems(menuId, nextItems);
+
+  return {
+    deleted: existing,
+    deletedIds: [...deleteIds].sort((left, right) => left.localeCompare(right)),
+    items,
+  };
+}

@@ -5,7 +5,9 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { pages, seoDocuments } from "../../../core/db/schema";
 import {
+  deleteSeoDocument,
   getSeoDocumentByTarget,
+  listExistingSeoDocuments,
   listSeoDocuments,
   runSeoAudit,
   upsertSeoDocument,
@@ -76,4 +78,22 @@ testIfDb("listSeoDocuments includes target title", async () => {
   const list = await listSeoDocuments();
   const item = list.find((row) => row.targetId === pageId);
   expect(item?.targetTitle).toBe("SEO Test Page");
+});
+
+testIfDb("listExistingSeoDocuments and deleteSeoDocument do not create missing docs", async () => {
+  if (!pageId) throw new Error("missing_test_page");
+  const doc = await upsertSeoDocument({
+    targetType: "page",
+    targetId: pageId,
+    slug: "/seo-test",
+    title: "Existing SEO Test Page",
+  });
+  if (!doc) throw new Error("missing_seo_doc");
+
+  const list = await listExistingSeoDocuments();
+  expect(list.some((row) => row.id === doc.id)).toBe(true);
+
+  const deleted = await deleteSeoDocument(doc.id);
+  expect(deleted?.id).toBe(doc.id);
+  await expect(getSeoDocumentByTarget("page", pageId)).resolves.toBeNull();
 });

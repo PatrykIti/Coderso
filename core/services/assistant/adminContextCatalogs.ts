@@ -9,12 +9,19 @@ export type AssistantFormWithFieldsRaw = {
   fields: Record<string, unknown>[];
 };
 
+export type AssistantMenuWithItemsRaw = {
+  menu: Record<string, unknown>;
+  items: Record<string, unknown>[];
+};
+
 export type AssistantResourceCatalogDeps = {
   listContentTypes: () => Promise<unknown[]>;
   listCustomScreens: () => Promise<unknown[]>;
   listListingQueries: () => Promise<unknown[]>;
   listListingTemplates: () => Promise<unknown[]>;
   listFormsWithFields: () => Promise<AssistantFormWithFieldsRaw[]>;
+  listMenusWithItems: () => Promise<AssistantMenuWithItemsRaw[]>;
+  listSeoDocuments: () => Promise<unknown[]>;
   listWidgetCatalog: () => Promise<unknown[]>;
 };
 
@@ -26,6 +33,8 @@ type CatalogGroup =
   | "listing_queries"
   | "listing_templates"
   | "forms"
+  | "menus"
+  | "seo_documents"
   | "widgets";
 
 const safeLoadGroup = async (
@@ -52,6 +61,8 @@ export async function buildAssistantResourceCatalogSnapshot(
     listingQueries,
     listingTemplates,
     forms,
+    menus,
+    seoDocuments,
     widgets,
   ] = await Promise.all([
     safeLoadGroup("content_types", deps.listContentTypes, warnings),
@@ -59,6 +70,8 @@ export async function buildAssistantResourceCatalogSnapshot(
     safeLoadGroup("listing_queries", deps.listListingQueries, warnings),
     safeLoadGroup("listing_templates", deps.listListingTemplates, warnings),
     safeLoadGroup("forms", deps.listFormsWithFields, warnings),
+    safeLoadGroup("menus", deps.listMenusWithItems, warnings),
+    safeLoadGroup("seo_documents", deps.listSeoDocuments, warnings),
     safeLoadGroup("widgets", deps.listWidgetCatalog, warnings),
   ]);
 
@@ -69,6 +82,8 @@ export async function buildAssistantResourceCatalogSnapshot(
       listingQueries,
       listingTemplates,
       forms,
+      menus,
+      seoDocuments,
       widgets,
     },
     input
@@ -91,6 +106,8 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     listingQueryService,
     listingTemplateService,
     formsService,
+    menuService,
+    seoService,
     widgetCatalogService,
   ] = await Promise.all([
     import("../content/typeService"),
@@ -98,6 +115,8 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     import("../content/listingQueriesService"),
     import("../content/listingTemplatesService"),
     import("../forms/formsService"),
+    import("../menus/menuService"),
+    import("../seo/seoService"),
     import("../widgets/widgetCatalogService"),
   ]);
 
@@ -115,6 +134,16 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
         }))
       );
     },
+    listMenusWithItems: async () => {
+      const menus = await menuService.listMenus();
+      return Promise.all(
+        menus.map(async (menu) => ({
+          menu: menu as Record<string, unknown>,
+          items: (await menuService.listMenuItems(menu.id)) as unknown as Record<string, unknown>[],
+        }))
+      );
+    },
+    listSeoDocuments: seoService.listExistingSeoDocuments,
     listWidgetCatalog: widgetCatalogService.listWidgetCatalog,
   });
 }

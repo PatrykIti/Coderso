@@ -542,6 +542,29 @@ const createDeps = () => {
         ...item,
         children: [],
       })),
+    deleteMenuItem: async (menuId: string, itemId: string) => {
+      const existingItems = menuItemsByMenu.get(menuId) ?? [];
+      const existing = existingItems.find((item) => item.id === itemId) ?? null;
+      if (!existing) return null;
+      const deleteIds = new Set([itemId]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const item of existingItems) {
+          if (item.parentId && deleteIds.has(item.parentId) && !deleteIds.has(item.id)) {
+            deleteIds.add(item.id);
+            changed = true;
+          }
+        }
+      }
+      const next = existingItems.filter((item) => !deleteIds.has(item.id));
+      menuItemsByMenu.set(menuId, next);
+      return {
+        deleted: existing,
+        deletedIds: [...deleteIds].sort((left, right) => left.localeCompare(right)),
+        items: next.map((item) => ({ ...item, children: [] })),
+      };
+    },
     replaceMenuItems: async (
       menuId: string,
       items: Array<{
@@ -572,10 +595,18 @@ const createDeps = () => {
         children: [],
       }));
     },
+    getSeoDocument: async (id: string) =>
+      seoDocuments.find((entry) => entry.id === id) ?? null,
     getSeoDocumentByTarget: async (targetType: "page" | "entry", targetId: string) =>
       seoDocuments.find(
         (entry) => entry.targetType === targetType && entry.targetId === targetId
       ) ?? null,
+    deleteSeoDocument: async (id: string) => {
+      const index = seoDocuments.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = seoDocuments.splice(index, 1);
+      return deleted ?? null;
+    },
     upsertSeoDocument: async (input: {
       targetType: "page" | "entry";
       targetId: string;
@@ -1641,6 +1672,147 @@ test("executeAssistantActionPlan upserts seo documents for known targets", async
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan deletes menu items while preserving unrelated items", async () => {
+  const deps = createDeps();
+  deps.__state.menuItemsByMenu.set("menu-primary", [
+    {
+      id: "menu-products",
+      label: "Products",
+      href: "/products",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      settings: {},
+    },
+    {
+      id: "menu-products-child",
+      label: "Featured",
+      href: "/products/featured",
+      pageId: null,
+      parentId: "menu-products",
+      orderIndex: 1,
+      settings: {},
+    },
+    {
+      id: "menu-about",
+      label: "About",
+      href: "/about",
+      pageId: null,
+      parentId: null,
+      orderIndex: 2,
+      settings: {},
+    },
+  ]);
+  const plan: AssistantActionPlan = {
+    id: "plan-menu-item-delete",
+    status: "ready",
+    intentId: "menu-item-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete Products menu item",
+    answer: "I can delete the selected menu item.",
+    summary: "Delete menu item.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "menu-products-delete",
+        type: "menu.item.delete",
+        title: "Delete Products",
+        description: "Delete selected menu item.",
+        input: {
+          menuId: "menu-primary",
+          itemId: "menu-products",
+          label: "Products",
+          expectedHref: "/products",
+          expectedParentId: null,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+  expect(preview.changes[0]?.warnings[0]).toContain("nested child");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe('Deleted menu item "Products".');
+  expect(deps.__state.menuItemsByMenu.get("menu-primary")?.map((item) => item.id)).toEqual([
+    "menu-about",
+  ]);
+});
+
+test("executeAssistantActionPlan deletes SEO documents through explicit delete actions", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Products",
+    slug: "/products",
+    data: { blocks: [] },
+  });
+  const seo = await deps.upsertSeoDocument({
+    targetType: "page",
+    targetId: page.id,
+    slug: "/products",
+    title: "Products Catalog",
+    description: "Browse the product catalog.",
+    robots: "index,follow",
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-seo-document-delete",
+    status: "ready",
+    intentId: "seo-document-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete Products SEO",
+    answer: "I can delete the selected SEO document.",
+    summary: "Delete products SEO document.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "seo-products-delete",
+        type: "seo.document.delete",
+        title: "Delete Products SEO",
+        description: "Delete selected SEO document.",
+        input: {
+          id: seo.id,
+          targetType: "page",
+          targetId: page.id,
+          expectedSlug: "/products",
+          expectedTitle: "Products Catalog",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-seo-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe(`Deleted SEO document for page ${page.id}.`);
+  expect(deps.__state.seoDocuments).toHaveLength(0);
 });
 
 test("executeAssistantActionPlan attaches existing media references to entries", async () => {

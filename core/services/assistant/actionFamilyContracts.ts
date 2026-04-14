@@ -310,6 +310,22 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "menu.item.delete",
+    "menu",
+    "core/services/menus/menuService.ts",
+    ["menuId", "itemId", "label"],
+    {
+      permissions: {
+        plan: ["menus:read"],
+        dryRun: ["menus:read"],
+        execute: ["menus:write"],
+      },
+      notes: [
+        "Deletes one exact menu item through the menu tree service and preserves unrelated menu items.",
+      ],
+    }
+  ),
+  executableContract(
     "seo.document.upsert",
     "seo",
     "core/services/seo/seoService.ts",
@@ -321,6 +337,20 @@ export const assistantActionFamilyContracts = [
         execute: ["content:write"],
       },
       notes: ["SEO target must resolve to an existing schema-owned page or entry."],
+    }
+  ),
+  executableContract(
+    "seo.document.delete",
+    "seo",
+    "core/services/seo/seoService.ts",
+    ["id", "targetType", "targetId"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Deletes one exact SEO document through the SEO domain service."],
     }
   ),
   executableContract(

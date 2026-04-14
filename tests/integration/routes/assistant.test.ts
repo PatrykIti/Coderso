@@ -317,6 +317,8 @@ test("assistant action plan route attaches resource catalog context when request
         customScreens: [],
         listings: { queries: [], templates: [] },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       }),
@@ -527,6 +529,7 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
     questions: [],
     actions: [
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
+      { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
       { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
       {
@@ -547,6 +550,7 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
       { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
       { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
       { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
+      { id: "seo-delete", type: "seo.document.delete", title: "SEO delete", description: "SEO delete", input: {} },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
         id: "template",
@@ -706,6 +710,7 @@ test("assistant action execute route enforces per-action write permissions", asy
     questions: [],
     actions: [
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
+      { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
       { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
       {
@@ -726,6 +731,7 @@ test("assistant action execute route enforces per-action write permissions", asy
       { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
       { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
       { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
+      { id: "seo-delete", type: "seo.document.delete", title: "SEO delete", description: "SEO delete", input: {} },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
         id: "template",

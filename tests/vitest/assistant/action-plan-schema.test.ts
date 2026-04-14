@@ -238,6 +238,50 @@ test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {
   expect(normalized.actions[0]?.type).toBe("seo.document.upsert");
 });
 
+test("normalizeAssistantActionPlan accepts menu and seo delete actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "menu-products-delete",
+        type: "menu.item.delete",
+        title: "Delete products menu item",
+        description: "Delete selected menu item.",
+        input: {
+          menuId: "menu-primary",
+          itemId: "menu-products",
+          label: "Products",
+          expectedHref: "/products",
+          expectedParentId: null,
+        },
+      },
+      {
+        id: "seo-products-delete",
+        type: "seo.document.delete",
+        title: "Delete products SEO",
+        description: "Delete selected SEO document.",
+        input: {
+          id: "seo-1",
+          targetType: "page",
+          targetId: "page-products",
+          expectedSlug: "/products",
+          expectedTitle: "Products Catalog",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions.map((action) => action.type)).toEqual([
+    "menu.item.delete",
+    "seo.document.delete",
+  ]);
+});
+
 test("normalizeAssistantActionPlan accepts entry media reference attach actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -746,6 +790,52 @@ test("normalizeAssistantActionPlan rejects invalid seo targets and fields", () =
               title: "Products",
               debug: true,
             },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed menu and seo delete actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "menu-delete",
+          type: "menu.item.delete",
+          title: "Delete menu item",
+          description: "Delete selected menu item.",
+          input: {
+            menuId: "menu-primary",
+            itemId: "menu-products",
+            label: "Products",
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "seo-delete",
+          type: "seo.document.delete",
+          title: "Delete SEO",
+          description: "Delete selected SEO document.",
+          input: {
+            id: "seo-1",
+            targetType: "product",
+            targetId: "page-products",
           },
         },
       ],

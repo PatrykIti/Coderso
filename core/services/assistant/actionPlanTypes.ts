@@ -414,6 +414,20 @@ export type AssistantMenuItemUpsertAction = {
   };
 };
 
+export type AssistantMenuItemDeleteAction = {
+  id: string;
+  type: "menu.item.delete";
+  title: string;
+  description: string;
+  input: {
+    menuId: string;
+    itemId: string;
+    label: string;
+    expectedHref?: string | null;
+    expectedParentId?: string | null;
+  };
+};
+
 export type AssistantSeoDocumentUpsertAction = {
   id: string;
   type: "seo.document.upsert";
@@ -429,6 +443,20 @@ export type AssistantSeoDocumentUpsertAction = {
       canonicalUrl?: string | null;
       robots?: string | null;
     };
+  };
+};
+
+export type AssistantSeoDocumentDeleteAction = {
+  id: string;
+  type: "seo.document.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    targetType: "page" | "entry";
+    targetId: string;
+    expectedSlug?: string | null;
+    expectedTitle?: string | null;
   };
 };
 
@@ -599,7 +627,9 @@ export type AssistantPlannedAction =
   | AssistantEntryUpsertDraftAction
   | AssistantEntryDeleteAction
   | AssistantMenuItemUpsertAction
+  | AssistantMenuItemDeleteAction
   | AssistantSeoDocumentUpsertAction
+  | AssistantSeoDocumentDeleteAction
   | AssistantMediaReferenceAttachAction
   | AssistantListingQueryFiltersPatchAction
   | AssistantListingTemplateCardPatchAction

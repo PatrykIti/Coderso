@@ -140,6 +140,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
         ],
         listings: { queries: [], templates: [] },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -335,6 +337,8 @@ test("planAssistantActions builds content type delete plan from resource catalog
         customScreens: [],
         listings: { queries: [], templates: [] },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -381,6 +385,8 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
         customScreens: [],
         listings: { queries: [], templates: [] },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -441,6 +447,8 @@ test("planAssistantActions builds listing query delete plan from active listing 
           templates: [],
         },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -489,6 +497,8 @@ test("planAssistantActions builds listing template delete plan from exact slug",
           ],
         },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -555,6 +565,8 @@ test("planAssistantActions asks for exact listing query when name is ambiguous",
           templates: [],
         },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -607,6 +619,8 @@ test("planAssistantActions builds form delete plan from active form route", () =
             fields: [],
           },
         ],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -654,6 +668,8 @@ test("planAssistantActions builds form archive plan from exact slug", () => {
             fields: [],
           },
         ],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -709,6 +725,8 @@ test("planAssistantActions asks for exact form when name is ambiguous", () => {
             fields: [],
           },
         ],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },
@@ -717,6 +735,183 @@ test("planAssistantActions asks for exact form when name is ambiguous", () => {
 
   expect(plan.status).toBe("needs_input");
   expect(plan.intentId).toBe("form-delete-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
+test("planAssistantActions builds menu item delete plan from exact href", () => {
+  const plan = planAssistantActions({
+    prompt: "usun menu item '/products'",
+    context: {
+      page: "/admin/menus/menu-primary",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [
+          {
+            id: "menu-primary",
+            name: "Primary",
+            location: "primary",
+            itemCount: 2,
+            items: [
+              {
+                id: "menu-products",
+                label: "Products",
+                href: "/products",
+                pageId: null,
+                parentId: null,
+                orderIndex: 0,
+                depth: 0,
+              },
+              {
+                id: "menu-about",
+                label: "About",
+                href: "/about",
+                pageId: null,
+                parentId: null,
+                orderIndex: 1,
+                depth: 0,
+              },
+            ],
+          },
+        ],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("menu-item-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "menu-item-delete-menu-products",
+    type: "menu.item.delete",
+    input: {
+      menuId: "menu-primary",
+      itemId: "menu-products",
+      label: "Products",
+      expectedHref: "/products",
+      expectedParentId: null,
+    },
+  });
+});
+
+test("planAssistantActions builds SEO document delete plan from exact slug", () => {
+  const plan = planAssistantActions({
+    prompt: "usun seo document '/products'",
+    context: {
+      page: "/admin/seo/seo-products",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [
+          {
+            id: "seo-products",
+            targetType: "page",
+            targetId: "page-products",
+            targetTitle: "Products",
+            slug: "/products",
+            title: "Products Catalog",
+            status: "warning",
+          },
+        ],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("seo-document-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "seo-document-delete-seo-products",
+    type: "seo.document.delete",
+    input: {
+      id: "seo-products",
+      targetType: "page",
+      targetId: "page-products",
+      expectedSlug: "/products",
+      expectedTitle: "Products Catalog",
+    },
+  });
+});
+
+test("planAssistantActions asks for exact menu item when label is ambiguous", () => {
+  const plan = planAssistantActions({
+    prompt: "usun menu item 'Products'",
+    context: {
+      page: "/admin/menus/menu-primary",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [
+          {
+            id: "menu-primary",
+            name: "Primary",
+            location: "primary",
+            itemCount: 2,
+            items: [
+              {
+                id: "menu-products",
+                label: "Products",
+                href: "/products",
+                pageId: null,
+                parentId: null,
+                orderIndex: 0,
+                depth: 0,
+              },
+              {
+                id: "menu-products-footer",
+                label: "Products",
+                href: "/catalog",
+                pageId: null,
+                parentId: null,
+                orderIndex: 1,
+                depth: 0,
+              },
+            ],
+          },
+        ],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("menu-item-delete-needs-input");
   expect(plan.actions).toEqual([]);
 });
 
@@ -950,6 +1145,8 @@ test("planAssistantActions accepts enriched resource catalog context without DB 
         customScreens: [],
         listings: { queries: [], templates: [] },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },

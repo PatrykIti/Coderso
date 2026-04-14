@@ -92,6 +92,8 @@ test("resolveContextualRefinementFamily uses resource catalog summaries", () => 
         customScreens: [],
         listings: { queries: [], templates: [] },
         forms: [],
+        menus: [],
+        seoDocuments: [],
         widgets: [],
         warnings: [],
       },

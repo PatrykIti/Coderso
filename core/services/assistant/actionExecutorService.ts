@@ -42,6 +42,8 @@ import {
   updatePage,
 } from "../pages/pageService";
 import {
+  deleteSeoDocument,
+  getSeoDocument,
   getSeoDocumentByTarget,
   upsertSeoDocument,
 } from "../seo/seoService";
@@ -64,6 +66,7 @@ import {
   setFormActions,
 } from "../forms/formActionsService";
 import {
+  deleteMenuItem,
   listMenuItems,
   replaceMenuItems,
   type MenuItemInput,
@@ -100,12 +103,14 @@ import type {
   AssistantListingTemplateDeleteAction,
   AssistantListingTemplateUpsertAction,
   AssistantMediaReferenceAttachAction,
+  AssistantMenuItemDeleteAction,
   AssistantMenuItemUpsertAction,
   AssistantPageWidgetPatchAction,
   AssistantPageUpsertAction,
   AssistantPageDeleteAction,
   AssistantWidgetTemplateDeleteAction,
   AssistantPlannedAction,
+  AssistantSeoDocumentDeleteAction,
   AssistantSeoDocumentUpsertAction,
   AssistantSiteKitInstallAction,
   AssistantSiteKitRecommendAction,
@@ -568,8 +573,11 @@ type ActionExecutorDeps = {
   deleteEntry: typeof deleteEntry;
   updateEntry: typeof updateEntry;
   getEntry: typeof getEntry;
+  deleteMenuItem: typeof deleteMenuItem;
   listMenuItems: typeof listMenuItems;
   replaceMenuItems: typeof replaceMenuItems;
+  getSeoDocument: typeof getSeoDocument;
+  deleteSeoDocument: typeof deleteSeoDocument;
   getSeoDocumentByTarget: typeof getSeoDocumentByTarget;
   upsertSeoDocument: typeof upsertSeoDocument;
   getMediaById: typeof getMediaById;
@@ -625,8 +633,11 @@ const defaultDeps: ActionExecutorDeps = {
   deleteEntry,
   updateEntry,
   getEntry,
+  deleteMenuItem,
   listMenuItems,
   replaceMenuItems,
+  getSeoDocument,
+  deleteSeoDocument,
   getSeoDocumentByTarget,
   upsertSeoDocument,
   getMediaById,
@@ -1336,6 +1347,21 @@ const findMenuItemForAction = (
   action: AssistantMenuItemUpsertAction
 ) => items.find((item) => item.href === action.input.href) ?? null;
 
+const collectMenuItemDeleteIds = (items: MenuItemRecord[], itemId: string) => {
+  const deleteIds = new Set([itemId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const item of items) {
+      if (item.parentId && deleteIds.has(item.parentId) && !deleteIds.has(item.id)) {
+        deleteIds.add(item.id);
+        changed = true;
+      }
+    }
+  }
+  return deleteIds;
+};
+
 const buildNextMenuItem = (
   action: AssistantMenuItemUpsertAction,
   existing: MenuItemRecord | null,
@@ -1373,6 +1399,59 @@ const buildMenuItemPreview = async (
     ],
     beforeValue: existing,
     nextValue,
+  });
+};
+
+const buildMenuItemDeletePreview = async (
+  action: AssistantMenuItemDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const existing = existingItems.find((item) => item.id === action.input.itemId) ?? null;
+  const deleteIds = existing ? collectMenuItemDeleteIds(existingItems, existing.id) : new Set<string>();
+  const matches =
+    existing?.label === action.input.label &&
+    (action.input.expectedHref === undefined || existing.href === action.input.expectedHref) &&
+    (action.input.expectedParentId === undefined ||
+      existing.parentId === action.input.expectedParentId);
+
+  return createPreviewChange({
+    action,
+    targetType: "menu-item",
+    targetKey: `${action.input.menuId}/${action.input.itemId}`,
+    operation: "delete",
+    summary: `Delete menu item "${action.input.label}"`,
+    warnings:
+      deleteIds.size > 1
+        ? [`This menu item has ${deleteIds.size - 1} nested child item(s) that will also be removed.`]
+        : [],
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Menu item no longer matches the planned delete target."
+                : "Menu item was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          label: existing.label,
+          href: existing.href,
+          pageId: existing.pageId,
+          parentId: existing.parentId,
+          deleteIds: [...deleteIds].sort((left, right) => left.localeCompare(right)),
+        }
+      : null,
+    nextValue: existing
+      ? {
+          remainingItems: existingItems.length - deleteIds.size,
+        }
+      : null,
   });
 };
 
@@ -1480,6 +1559,52 @@ const buildSeoDocumentPreview = async (
         }
       : null,
     nextValue,
+  });
+};
+
+const buildSeoDocumentDeletePreview = async (
+  action: AssistantSeoDocumentDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getSeoDocument(action.input.id);
+  const expectedSlug = action.input.expectedSlug
+    ? normalizeSeoSlugForAction(action.input.expectedSlug)
+    : null;
+  const matches =
+    existing?.targetType === action.input.targetType &&
+    existing.targetId === action.input.targetId &&
+    (!expectedSlug || normalizeSeoSlugForAction(existing.slug) === expectedSlug) &&
+    (!action.input.expectedTitle || existing.title === action.input.expectedTitle);
+
+  return createPreviewChange({
+    action,
+    targetType: "seo-document",
+    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    operation: "delete",
+    summary: `Delete SEO document for ${action.input.targetType} ${action.input.targetId}`,
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "SEO document no longer matches the planned delete target."
+                : "SEO document was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          targetType: existing.targetType,
+          targetId: existing.targetId,
+          slug: existing.slug,
+          title: existing.title,
+          status: existing.status,
+        }
+      : null,
+    nextValue: null,
   });
 };
 
@@ -2570,6 +2695,41 @@ const executeMenuItemAction = async (
   };
 };
 
+const executeMenuItemDeleteAction = async (
+  action: AssistantMenuItemDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const existing = existingItems.find((item) => item.id === action.input.itemId) ?? null;
+  if (
+    !existing ||
+    existing.label !== action.input.label ||
+    (action.input.expectedHref !== undefined && existing.href !== action.input.expectedHref) ||
+    (action.input.expectedParentId !== undefined &&
+      existing.parentId !== action.input.expectedParentId)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const deleted = await deps.deleteMenuItem(action.input.menuId, action.input.itemId);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "menu-item",
+    targetKey: `${action.input.menuId}/${action.input.itemId}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.deleted.id,
+    adminHref: `/admin/menus/${encodeURIComponent(action.input.menuId)}`,
+    publicHref: deleted.deleted.href,
+    message: `Deleted menu item "${deleted.deleted.label}".`,
+  };
+};
+
 const executeSeoDocumentAction = async (
   action: AssistantSeoDocumentUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -2604,6 +2764,43 @@ const executeSeoDocumentAction = async (
       preview.operation === "noop"
         ? "SEO document already matched the planned metadata."
         : "SEO document is ready.",
+  };
+};
+
+const executeSeoDocumentDeleteAction = async (
+  action: AssistantSeoDocumentDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getSeoDocument(action.input.id);
+  const expectedSlug = action.input.expectedSlug
+    ? normalizeSeoSlugForAction(action.input.expectedSlug)
+    : null;
+  if (
+    !existing ||
+    existing.targetType !== action.input.targetType ||
+    existing.targetId !== action.input.targetId ||
+    (expectedSlug && normalizeSeoSlugForAction(existing.slug) !== expectedSlug) ||
+    (action.input.expectedTitle && existing.title !== action.input.expectedTitle)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const deleted = await deps.deleteSeoDocument(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "seo-document",
+    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/seo",
+    publicHref: null,
+    message: `Deleted SEO document for ${deleted.targetType} ${deleted.targetId}.`,
   };
 };
 
@@ -3108,6 +3305,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeMenuItemAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
+  "menu.item.delete": {
+    preview: (action, ctx) =>
+      action.type === "menu.item.delete"
+        ? buildMenuItemDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "menu.item.delete"
+        ? executeMenuItemDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "seo.document.upsert": {
     preview: (action, ctx) =>
       action.type === "seo.document.upsert"
@@ -3116,6 +3323,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "seo.document.upsert"
         ? executeSeoDocumentAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "seo.document.delete": {
+    preview: (action, ctx) =>
+      action.type === "seo.document.delete"
+        ? buildSeoDocumentDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "seo.document.delete"
+        ? executeSeoDocumentDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "media.reference.attach": {
