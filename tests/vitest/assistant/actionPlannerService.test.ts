@@ -7,11 +7,87 @@ import {
   planAssistantActions,
   planAssistantActionsWithProviderDraft,
 } from "../../../core/services/assistant/actionPlannerService";
+import type { AssistantActionContext } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../core/services/assistant/providers/providerTypes";
 
 const createFakeProvider = (text: string): AssistantProvider => ({
   id: "fake",
   complete: async () => ({ text }),
+});
+
+type AssistantPageSurface = Extract<
+  NonNullable<AssistantActionContext["activeSurface"]>,
+  { kind: "page" }
+>;
+
+const createPageWithReferencedTemplateContext = (
+  surfaceOverrides: Partial<AssistantPageSurface> = {}
+): AssistantActionContext => ({
+  page: "/admin/pages/page-home",
+  locale: "pl-PL",
+  activeSurface: {
+    kind: "page",
+    page: {
+      id: "page-home",
+      title: "Home",
+      slug: "/",
+      status: "draft",
+      template: "landing",
+    },
+    selectedBlockId: "template-section-1",
+    blocks: [
+      {
+        id: "template-section-1",
+        type: "template-section",
+        label: "Hero Template",
+        path: "0",
+        childCount: 0,
+        slotKeys: [],
+        templateId: "template-1",
+        templateName: "Hero Template",
+      },
+    ],
+    templateReferences: [
+      {
+        templateId: "template-1",
+        templateName: "Hero Template",
+        blockIds: ["template-section-1"],
+        paths: ["0"],
+        count: 1,
+      },
+    ],
+    referencedTemplates: [
+      {
+        id: "template-1",
+        name: "Hero Template",
+        status: "published",
+        category: "Marketing",
+        description: null,
+        blockCount: 1,
+        blocks: [
+          {
+            id: "hero-1",
+            type: "hero",
+            label: "Hero",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            dataKeys: ["headline", "body"],
+            templateId: null,
+            templateName: null,
+          },
+        ],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    ],
+    warnings: [],
+    ...surfaceOverrides,
+  },
 });
 
 test("detects guide planning prompt for house projects catalog", () => {
@@ -330,6 +406,71 @@ test("planAssistantActions builds selected page widget data patch plan", () => {
     input: {
       pageSlug: "/",
       operation: "patch-data",
+      blockId: "hero-1",
+      expectedBlockType: "hero",
+      dataPath: ["headline"],
+      value: "New headline",
+    },
+  });
+});
+
+test("planAssistantActions asks for page instance vs template target on ambiguous template-section edits", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku na 'New headline'",
+    context: createPageWithReferencedTemplateContext(),
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("page-template-target-needs-input");
+  expect(plan.actions).toEqual([]);
+  expect(plan.questions).toEqual([
+    {
+      id: "page-template-target",
+      label: "Should I edit only this page instance or the reusable template?",
+      description:
+        "Choose page instance for a local page change, or reusable template for a change that can affect every page using that template.",
+      required: true,
+    },
+  ]);
+});
+
+test("planAssistantActions routes explicit template-section page instance edits to page widget patch", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku tylko na tej stronie na 'New headline'",
+    context: createPageWithReferencedTemplateContext(),
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-widget-patch");
+  expect(plan.actions[0]).toMatchObject({
+    id: "page-widget-patch-template-section-1",
+    type: "page.widget.patch",
+    input: {
+      pageSlug: "/",
+      operation: "patch-data",
+      blockId: "template-section-1",
+      expectedBlockType: "template-section",
+      dataPath: ["title"],
+      value: "New headline",
+    },
+  });
+});
+
+test("planAssistantActions routes explicit template-wide edits to referenced reusable template block patch", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku template everywhere na 'New headline'",
+    context: createPageWithReferencedTemplateContext(),
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-referenced-template-block-patch");
+  expect(plan.actions[0]).toMatchObject({
+    id: "widget-template-block-patch-hero-1",
+    type: "widget-template.block.patch",
+    input: {
+      id: "template-1",
+      name: "Hero Template",
+      expectedStatus: "published",
       blockId: "hero-1",
       expectedBlockType: "hero",
       dataPath: ["headline"],

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Widgets + Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-174-02, TASK-174-04
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -95,3 +95,8 @@ return summarizeOperationContext({ page, templateRefs, templates });
 1. Assistant can inspect page canvas blocks and referenced widget templates from active context.
 2. Assistant asks whether to edit the page instance or the reusable template when the prompt is ambiguous.
 3. Template inspection remains read-only and redacted until reviewed typed execution.
+
+## Progress Notes
+
+- 2026-04-14: Completed `TASK-174-05-01`; active page `template-section` references are deduped and hydrated with bounded/redacted referenced widget template summaries.
+- 2026-04-14: Completed `TASK-174-05-02`; ambiguous template-backed page edits ask whether to target only the page instance or the reusable template, while explicit prompts route to `page.widget.patch` or `widget-template.block.patch` as supported.

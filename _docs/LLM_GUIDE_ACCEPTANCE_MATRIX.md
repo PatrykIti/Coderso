@@ -1,8 +1,8 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-04-12  
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06
+**Last Updated:** 2026-04-14
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05
 
 ---
 
@@ -104,6 +104,7 @@ Rules:
 | Provider unsafe draft actions recover to `needs_input` | `tests/vitest/assistant/provider-planner-fixtures.test.ts` | Vitest |
 | Provider prompt package redacts secrets | `tests/vitest/assistant/provider-planning-context.test.ts` and `assistantRedaction.test.ts` | Vitest |
 | Preview metadata redacts secret-like fragments | `tests/vitest/assistant/action-diff-service.test.ts` | Vitest |
+| Ambiguous template-backed page edits ask for page-instance vs reusable-template target confirmation | `tests/vitest/assistant/actionPlannerService.test.ts` | Vitest |
 
 ---
 

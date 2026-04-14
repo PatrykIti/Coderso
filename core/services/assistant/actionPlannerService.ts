@@ -1,6 +1,8 @@
 import type {
   AssistantActionContext,
   AssistantActionPlan,
+  AssistantActivePageSurfaceContext,
+  AssistantActiveSurfaceBlockSummary,
   AssistantIntentFamily,
   AssistantPromptKind,
   AssistantPlanQuestion,
@@ -46,6 +48,8 @@ import type {
   AssistantListingTemplateSummary,
   AssistantMenuItemSummary,
   AssistantMenuSummary,
+  AssistantReferencedWidgetTemplateBlockSummary,
+  AssistantReferencedWidgetTemplateSummary,
   AssistantSeoDocumentSummary,
 } from "./adminContextTypes";
 
@@ -596,17 +600,77 @@ const pageWidgetPatchKeywords = [
   "wybrany blok",
 ];
 
+const pageTemplateBridgeKeywords = [
+  "template-section",
+  "template section",
+  "template",
+  "szablon",
+  "section",
+  "sekcja",
+  "cta",
+  "button",
+  "przycisk",
+  "headline",
+  "naglowek",
+  "nagłówek",
+  "etykiet",
+  "tekst",
+];
+
+const pageInstanceTargetKeywords = [
+  "only this page",
+  "this page only",
+  "current page",
+  "page instance",
+  "instance only",
+  "locally",
+  "local page",
+  "only here",
+  "tylko ta strona",
+  "tylko tej strony",
+  "tylko na tej stronie",
+  "tylko tutaj",
+  "lokalnie",
+  "na tej stronie",
+  "nie w szablonie",
+  "bez zmiany szablonu",
+];
+
+const reusableTemplateTargetKeywords = [
+  "reusable template",
+  "template everywhere",
+  "template-wide",
+  "every page",
+  "all pages",
+  "everywhere",
+  "global",
+  "globally",
+  "w szablonie",
+  "dla wszystkich stron",
+  "na wszystkich stronach",
+  "wszystkich stronach",
+  "kazdej stronie",
+  "każdej stronie",
+  "wszedzie",
+  "wszędzie",
+  "globalnie",
+];
+
 const resolvePageWidgetPatchPath = (normalizedPrompt: string, blockType?: string | null) => {
-  if (/\btitle\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["tytul", "tytuł", "naglowek", "nagłówek"])) {
+  const promptWithoutQuotedValues = normalizedPrompt.replace(/['"“”][^'"“”]+['"“”]/g, " ");
+  if (/\bheadline\b/.test(promptWithoutQuotedValues)) {
+    return ["headline"];
+  }
+  if (/\btitle\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["tytul", "tytuł", "naglowek", "nagłówek"])) {
     return blockType === "hero" ? ["headline"] : ["title"];
   }
-  if (/\blabel\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["etykiet", "cta", "button", "przycisk"])) {
+  if (/\blabel\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["etykiet", "cta", "button", "przycisk"])) {
     return ["label"];
   }
-  if (/\bdescription\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["opis"])) {
+  if (/\bdescription\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["opis"])) {
     return ["description"];
   }
-  if (/\btext\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["tekst"])) {
+  if (/\btext\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["tekst"])) {
     return ["text"];
   }
   return null;
@@ -643,17 +707,11 @@ const buildPageWidgetPatchNeedsInputPlan = (
   actions: [],
 });
 
-const buildPageWidgetPatchPlan = (
+const buildSelectedPageWidgetPatchPlan = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>,
   normalizedPrompt: string
-): AssistantActionPlan | null => {
-  if (
-    isLikelyDeletePrompt(normalizedPrompt) ||
-    !includesAny(normalizedPrompt, pageWidgetPatchKeywords)
-  ) {
-    return null;
-  }
+): AssistantActionPlan => {
   if (context.activeSurface?.kind !== "page") {
     return buildPageWidgetPatchNeedsInputPlan(
       prompt,
@@ -709,6 +767,201 @@ const buildPageWidgetPatchPlan = (
       },
     ],
   };
+};
+
+const buildPageWidgetPatchPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, pageWidgetPatchKeywords)
+  ) {
+    return null;
+  }
+  return buildSelectedPageWidgetPatchPlan(prompt, context, normalizedPrompt);
+};
+
+const buildPageTemplateTargetNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-page-template-target-needs-input",
+  status: "needs_input",
+  intentId: "page-template-target-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Page or reusable template target needs confirmation",
+  answer: [
+    "I can see this page uses a reusable widget template.",
+    "",
+    reason,
+    "",
+    "Confirm whether this should change only the current page instance or the reusable template that can affect every page using it.",
+  ].join("\n"),
+  summary: "Template-backed page edit could not be planned before the target was confirmed.",
+  confidence: 0.42,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "page-template-target",
+      label: "Should I edit only this page instance or the reusable template?",
+      description:
+        "Choose page instance for a local page change, or reusable template for a change that can affect every page using that template.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const normalizePromptToken = (value: string | null) =>
+  value ? normalizeAssistantPlannerPrompt(value) : null;
+
+const resolveReferencedTemplateTarget = (
+  surface: AssistantActivePageSurfaceContext,
+  selectedBlock: AssistantActiveSurfaceBlockSummary | null
+) => {
+  const templates = surface.referencedTemplates ?? [];
+  const selectedTemplateId = selectedBlock?.templateId;
+  const candidates = selectedTemplateId
+    ? templates.filter((template) => template.id === selectedTemplateId)
+    : templates;
+  return candidates.length === 1 ? candidates[0] : null;
+};
+
+const resolveReferencedTemplateBlockTarget = (
+  template: AssistantReferencedWidgetTemplateSummary,
+  normalizedPrompt: string
+): { block: AssistantReferencedWidgetTemplateBlockSummary; dataPath: string[] } | null => {
+  const candidates = template.blocks
+    .map((block) => {
+      const dataPath = resolvePageWidgetPatchPath(normalizedPrompt, block.type);
+      if (!dataPath) return null;
+      const field = dataPath[dataPath.length - 1];
+      if (!field || !block.dataKeys.includes(field)) return null;
+      return { block, dataPath };
+    })
+    .filter((entry): entry is { block: AssistantReferencedWidgetTemplateBlockSummary; dataPath: string[] } =>
+      Boolean(entry)
+    );
+
+  const labelMatches = candidates.filter((entry) => {
+    const label = normalizePromptToken(entry.block.label);
+    return label ? normalizedPrompt.includes(label) : false;
+  });
+  if (labelMatches.length === 1) return labelMatches[0];
+  return candidates.length === 1 ? candidates[0] : null;
+};
+
+const buildReusableTemplateBlockPatchFromPagePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string,
+  template: AssistantReferencedWidgetTemplateSummary
+): AssistantActionPlan => {
+  const value = extractFirstQuotedText(prompt);
+  const blockTarget = resolveReferencedTemplateBlockTarget(template, normalizedPrompt);
+  if (!value || !blockTarget) {
+    return buildPageTemplateTargetNeedsInputPlan(
+      prompt,
+      "The prompt points at the reusable template, but I could not resolve exactly one nested template block and supported field from the current template summary."
+    );
+  }
+  const page = context.activeSurface?.kind === "page" ? context.activeSurface.page : null;
+  return {
+    id: `plan-page-referenced-template-block-patch-${template.id}-${blockTarget.block.id}`,
+    status: "ready",
+    intentId: "page-referenced-template-block-patch",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Patch ${blockTarget.block.label ?? blockTarget.block.id}`,
+    answer:
+      "I can patch the referenced reusable widget template through the reviewed LLM Guide action flow.",
+    summary: `Patch block "${blockTarget.block.label ?? blockTarget.block.id}" in reusable template "${template.name}" referenced by page "${page?.title ?? "active page"}".`,
+    confidence: 0.76,
+    assumptions: [
+      "The reusable template target is resolved from server-hydrated active page template references.",
+      "This can affect every page that uses the reusable widget template.",
+      "The selected template block must still exist and the data path must already exist at dry-run/execute time.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `widget-template-block-patch-${blockTarget.block.id}`,
+        type: "widget-template.block.patch",
+        title: `Patch ${blockTarget.block.label ?? blockTarget.block.id}`,
+        description: "Patch a reusable widget template block referenced by the active page.",
+        input: {
+          id: template.id,
+          name: template.name,
+          expectedStatus: template.status,
+          blockId: blockTarget.block.id,
+          expectedBlockType: blockTarget.block.type,
+          dataPath: blockTarget.dataPath,
+          value,
+        },
+      },
+    ],
+  };
+};
+
+const buildPageTemplateTargetResolutionPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (isLikelyDeletePrompt(normalizedPrompt) || context.activeSurface?.kind !== "page") {
+    return null;
+  }
+  const surface = context.activeSurface;
+  if (!surface.referencedTemplates?.length) return null;
+
+  const selectedBlock = surface.selectedBlockId
+    ? surface.blocks.find((entry) => entry.id === surface.selectedBlockId) ?? null
+    : null;
+  const selectedTemplateSection = selectedBlock?.type === "template-section";
+  const mentionsTemplateBridge =
+    includesAny(normalizedPrompt, pageTemplateBridgeKeywords) ||
+    includesAny(normalizedPrompt, pageWidgetPatchKeywords);
+  const value = extractFirstQuotedText(prompt);
+  const selectedDataPath = resolvePageWidgetPatchPath(normalizedPrompt, selectedBlock?.type);
+  const wantsPageInstance = includesAny(normalizedPrompt, pageInstanceTargetKeywords);
+  const wantsReusableTemplate = includesAny(normalizedPrompt, reusableTemplateTargetKeywords);
+
+  if (!mentionsTemplateBridge || !value || !selectedDataPath) return null;
+  if (!selectedTemplateSection && !wantsReusableTemplate) return null;
+
+  if (wantsPageInstance && !wantsReusableTemplate) {
+    return buildSelectedPageWidgetPatchPlan(prompt, context, normalizedPrompt);
+  }
+
+  const referencedTemplate = resolveReferencedTemplateTarget(surface, selectedBlock);
+  if (wantsReusableTemplate && !wantsPageInstance) {
+    if (!referencedTemplate) {
+      return buildPageTemplateTargetNeedsInputPlan(
+        prompt,
+        "The prompt points at the reusable template, but the active page references more than one template or none could be resolved for the selected block."
+      );
+    }
+    return buildReusableTemplateBlockPatchFromPagePlan(
+      prompt,
+      context,
+      normalizedPrompt,
+      referencedTemplate
+    );
+  }
+
+  if (selectedTemplateSection || wantsPageInstance || wantsReusableTemplate) {
+    return buildPageTemplateTargetNeedsInputPlan(
+      prompt,
+      wantsPageInstance && wantsReusableTemplate
+        ? "The prompt includes both page-instance and reusable-template target signals."
+        : "The selected page block is backed by a reusable widget template, so this edit could target either the page instance or the template."
+    );
+  }
+
+  return null;
 };
 
 const buildWidgetTemplateDeleteNeedsInputPlan = (
@@ -2720,6 +2973,12 @@ export const planAssistantActions = (
       classification.normalizedPrompt
     );
     if (seoDocumentUpdatePlan) return normalizeAssistantActionPlan(seoDocumentUpdatePlan);
+    const pageTemplateTargetPlan = buildPageTemplateTargetResolutionPlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (pageTemplateTargetPlan) return normalizeAssistantActionPlan(pageTemplateTargetPlan);
     const widgetTemplateEditPlan = buildWidgetTemplateEditPlan(
       input.prompt,
       context,

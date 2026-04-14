@@ -109,6 +109,18 @@ const docsQuestionKeywords = [
   "configure",
 ];
 
+const docsQuestionWordKeywords = new Set(["gdzie", "where", "jak", "how"]);
+
+const containsPromptWord = (value: string, word: string) =>
+  new RegExp(`(^|[^a-z0-9ąćęłńóśźż])${word}($|[^a-z0-9ąćęłńóśźż])`, "u").test(value);
+
+const includesDocsQuestionSignal = (value: string) =>
+  docsQuestionKeywords.some((keyword) =>
+    docsQuestionWordKeywords.has(keyword)
+      ? containsPromptWord(value, keyword)
+      : value.includes(keyword)
+  );
+
 const productCatalogKeywords = [
   "produkt",
   "produkty",
@@ -283,7 +295,7 @@ export const classifyAssistantPrompt = (prompt: string) => {
   const intentFamily = resolveIntentFamily(normalized);
   const hasSetupSignal = includesAny(normalized, setupKeywords);
   const hasRefinementSignal = includesAny(normalized, refinementKeywords);
-  const hasDocsSignal = includesAny(normalized, docsQuestionKeywords);
+  const hasDocsSignal = includesDocsQuestionSignal(normalized);
 
   let promptKind: AssistantPromptKind = "unknown";
   if (hasDocsSignal && !hasSetupSignal) {

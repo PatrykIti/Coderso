@@ -229,6 +229,100 @@ test("buildProviderPlanningPromptPackage includes redacted active surface summar
   expect(prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null).toBeNull();
 });
 
+test("buildProviderPlanningPromptPackage includes referenced template target context", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Edit the template-backed page section",
+    context: {
+      page: "/admin/pages/page-1",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-1",
+          title: "Home",
+          slug: "/",
+          status: "draft",
+          template: "landing",
+        },
+        selectedBlockId: "template-section-1",
+        blocks: [
+          {
+            id: "template-section-1",
+            type: "template-section",
+            label: "Template section",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: "template-1",
+            templateName: "Hero Template",
+          },
+        ],
+        templateReferences: [
+          {
+            templateId: "template-1",
+            templateName: "Hero Template",
+            blockIds: ["template-section-1"],
+            paths: ["0"],
+            count: 1,
+          },
+        ],
+        referencedTemplates: [
+          {
+            id: "template-1",
+            name: "Hero Template",
+            status: "published",
+            category: "Marketing",
+            description: null,
+            blockCount: 1,
+            blocks: [
+              {
+                id: "hero-1",
+                type: "hero",
+                label: "apiKey should be hidden",
+                path: "0",
+                childCount: 0,
+                slotKeys: [],
+                dataKeys: ["headline", "apiKey"],
+                templateId: null,
+                templateName: null,
+              },
+            ],
+            settings: {
+              wrapperContainer: "default",
+              sectionGap: "md",
+              hasBackgroundMedia: false,
+            },
+            warnings: [],
+          },
+        ],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(prompt.activeSurface).toMatchObject({
+    kind: "page",
+    templateReferences: [
+      {
+        templateId: "template-1",
+        blockIds: ["template-section-1"],
+      },
+    ],
+    referencedTemplates: [
+      {
+        id: "template-1",
+        blocks: [
+          {
+            id: "hero-1",
+            dataKeys: ["headline"],
+          },
+        ],
+      },
+    ],
+  });
+  expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
+  expect(JSON.stringify(prompt)).not.toContain("apiKey");
+});
+
 test("buildProviderPlanningPromptPackage redacts secret-like prompt data", () => {
   const prompt = buildProviderPlanningPromptPackage({
     prompt: "Use apiKey sk-or-v1-1234567890abcdef",

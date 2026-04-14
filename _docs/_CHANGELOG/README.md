@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 640 | 2026-04-14 | TASK-174-05-02 page template target resolution | Assistant/Core |
 | 639 | 2026-04-14 | TASK-174-05-01 template section reference inspection | Assistant/Core |
 | 638 | 2026-04-14 | TASK-174-04-05 domain resource edit actions | Assistant/Core |
 | 637 | 2026-04-14 | TASK-174-04-04 custom screen edit actions | Assistant/Core |
