@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 5 tasks
-- **Done:** 861 tasks
+- **Done:** 862 tasks
 
 ---
 
@@ -46,7 +46,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
 | TASK-176 | Security Scanner Baseline Remediation | High | Large | Remediate Semgrep and Trivy scanner findings so scanner gates become actionable |
-| TASK-176-01 | Dockerfile Non-Root Runtime User | High | Small | Fix Semgrep Dockerfile missing-user finding |
 | TASK-176-02 | AES-GCM Tag Length Hardening | High | Medium | Make AES-GCM auth tag length explicit and validated |
 | TASK-176-03 | Post HTML Rendering Sanitization Audit | High | Large | Prove/sanitize post editor and runtime HTML rendering paths |
 | TASK-176-04 | CORS Origin Validation Hardening | High | Medium | Make trusted CORS origin handling scanner-legible and safe |
@@ -147,6 +146,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-07 | Security Gates, Docs, and Closure | High | Medium | Done: route/security/perf/UI validation and docs/changelog/board closure completed; local scanners remain CI-only |
 | TASK-174 | LLM Guide Resource Operations and Active Context | High | Large | Done: active context, resource edit/delete adapters, template bridge, review UI, and closure gates completed |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
+| TASK-176-01 | Dockerfile Non-Root Runtime User | High | Small | Done: production Docker runner now uses non-root `bun` user |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

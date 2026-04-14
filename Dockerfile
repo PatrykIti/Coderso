@@ -27,9 +27,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app /app
+COPY --from=builder --chown=bun:bun /app /app
 
 WORKDIR /app/core
 EXPOSE 3000
+
+USER bun
 
 CMD ["bun", "run", "server/prod.ts"]

@@ -78,3 +78,7 @@ Scanner remediation rules:
 3. Trivy runtime dependency findings in `bun.lock` are fixed or tracked with time-boxed exceptions.
 4. Gitleaks remains clean.
 5. Strict scanner scripts/gates are enabled only after the baseline is actionable.
+
+## Progress Notes
+
+- 2026-04-14: Completed `TASK-176-01`; Dockerfile production runner now uses non-root `bun` user and the Semgrep Dockerfile missing-user finding is resolved.

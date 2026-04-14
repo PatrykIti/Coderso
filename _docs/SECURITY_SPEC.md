@@ -27,6 +27,14 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Referrer-Policy
 - HTTPS w produkcji (HSTS zalecany).
 
+## Container runtime
+
+- Production Docker runner images must run as a non-root user.
+- Current core runtime image copies app files as `bun:bun` and starts
+  `server/prod.ts` as `USER bun`.
+- Build stages may use root for dependency installation/build steps, but the
+  final runtime process must not run as root.
+
 ## Release Gate Security Checks (Coderso)
 
 Security gate automation is defined in:
