@@ -61,6 +61,15 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   ).toContain("raw upload bytes");
   const formAutomationContract = getAssistantActionFamilyContract("form.automation.upsert");
   expect(formAutomationContract.status).toBe("executable");
+  expect(getAssistantActionFamilyContract("form.delete").permissions.execute).toEqual([
+    "forms:write",
+  ]);
+  expect(
+    getAssistantActionFamilyContract("form.delete").strictInput.notes.join(" ")
+  ).toContain("zero submissions");
+  expect(
+    getAssistantActionFamilyContract("form.archive").strictInput.notes.join(" ")
+  ).toContain("without exposing submission payloads");
   expect(
     getAssistantActionFamilyContract("listing-query.delete").strictInput.notes.join(" ")
   ).toContain("references");

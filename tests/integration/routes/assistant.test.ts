@@ -544,6 +544,8 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
         input: {},
       },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
+      { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
+      { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
       { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
@@ -721,6 +723,8 @@ test("assistant action execute route enforces per-action write permissions", asy
         input: {},
       },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
+      { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
+      { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
       { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {

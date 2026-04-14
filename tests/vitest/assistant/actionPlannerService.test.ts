@@ -566,6 +566,160 @@ test("planAssistantActions asks for exact listing query when name is ambiguous",
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds form delete plan from active form route", () => {
+  const plan = planAssistantActions({
+    prompt: "usun ten formularz",
+    context: {
+      page: "/admin/coderso/forms/form-1",
+      locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 1,
+        route: "/admin/coderso/forms/form-1",
+        activeHref: "/admin/coderso/forms/form-1",
+        area: "coderso",
+        codersoModule: "forms",
+        selectedResource: { kind: "form", id: "form-1" },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          requiredForVisibleActions: [],
+          reason: "frontend_user_has_no_permissions",
+        },
+      },
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-1",
+            name: "Lead Capture",
+            slug: "lead-capture",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("form-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "form-delete-form-1",
+    type: "form.delete",
+    input: {
+      id: "form-1",
+      name: "Lead Capture",
+      slug: "lead-capture",
+      expectedStatus: "published",
+    },
+  });
+});
+
+test("planAssistantActions builds form archive plan from exact slug", () => {
+  const plan = planAssistantActions({
+    prompt: "zarchiwizuj formularz 'lead-capture'",
+    context: {
+      page: "/admin/coderso/forms",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-1",
+            name: "Lead Capture",
+            slug: "lead-capture",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("form-archive");
+  expect(plan.actions[0]).toMatchObject({
+    id: "form-archive-form-1",
+    type: "form.archive",
+    input: {
+      id: "form-1",
+      name: "Lead Capture",
+      slug: "lead-capture",
+      expectedStatus: "published",
+    },
+  });
+});
+
+test("planAssistantActions asks for exact form when name is ambiguous", () => {
+  const plan = planAssistantActions({
+    prompt: "usun formularz 'Lead Capture'",
+    context: {
+      page: "/admin/coderso/forms",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-14T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-1",
+            name: "Lead Capture",
+            slug: "lead-capture",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+          {
+            id: "form-2",
+            name: "Lead Capture",
+            slug: "lead-capture-alt",
+            status: "draft",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("form-delete-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

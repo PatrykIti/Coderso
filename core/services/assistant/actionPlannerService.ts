@@ -41,6 +41,7 @@ import {
 import type {
   AssistantContentTypeSummary,
   AssistantCustomScreenSummary,
+  AssistantFormSummary,
   AssistantListingQuerySummary,
   AssistantListingTemplateSummary,
 } from "./adminContextTypes";
@@ -141,6 +142,23 @@ const contentTypeDeleteKeywords = [
   "model tresci",
   "model treści",
 ];
+
+const formArchiveKeywords = [
+  "archive",
+  "archived",
+  "archiwizuj",
+  "zarchiwizuj",
+  "archiwum",
+  "hide",
+  "ukryj",
+  "disable",
+  "wylacz",
+  "wyłącz",
+];
+
+const includesFormTargetKeyword = (normalizedPrompt: string) =>
+  /\bforms?\b/.test(normalizedPrompt) ||
+  includesAny(normalizedPrompt, ["formularz", "formularze", "formularza"]);
 
 const listingQueryDeleteKeywords = [
   "listing query",
@@ -886,6 +904,122 @@ const buildListingTemplateDeletePlan = (
   };
 };
 
+const sortFormsByName = (forms: AssistantFormSummary[]) =>
+  [...forms].sort((left, right) => left.name.localeCompare(right.name));
+
+const buildFormDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-form-delete-needs-input",
+  status: "needs_input",
+  intentId: "form-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Form delete needs a safe target",
+  answer: [
+    "I can delete or archive forms only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the form editor or provide an exact form name or slug.",
+  ].join("\n"),
+  summary: "Form deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "form-delete-target",
+      label: "Which exact form should I delete or archive?",
+      description: "Provide an exact form name or slug so I can build a reviewed dry-run plan.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const findFormOperationTargets = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  const forms = context.resourceCatalog?.forms ?? [];
+  if (selected?.kind === "form") {
+    const match = forms.find((entry) => entry.id === selected.id) ?? null;
+    return match ? [match] : [];
+  }
+  const target = extractQuotedPrefix(prompt);
+  if (!target) return [];
+  const normalizedTarget = normalizeAssistantPlannerPrompt(target);
+  return sortFormsByName(forms).filter((entry) =>
+    [entry.id, entry.slug ?? "", entry.name]
+      .map((value) => normalizeAssistantPlannerPrompt(value))
+      .includes(normalizedTarget)
+  );
+};
+
+const buildFormOperationPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  const isArchive = includesAny(normalizedPrompt, formArchiveKeywords);
+  const isDelete = isLikelyDeletePrompt(normalizedPrompt);
+  if ((!isDelete && !isArchive) || !includesFormTargetKeyword(normalizedPrompt)) {
+    return null;
+  }
+  const targets = findFormOperationTargets(prompt, context);
+  if (targets.length !== 1) {
+    return buildFormDeleteNeedsInputPlan(
+      prompt,
+      targets.length > 1
+        ? "The prompt matched more than one form."
+        : "The prompt did not resolve to one exact form from active context or the server-side catalog."
+    );
+  }
+  const target = targets[0];
+  if (!target?.slug) {
+    return buildFormDeleteNeedsInputPlan(
+      prompt,
+      "The selected form target is missing a stable slug in the server-side catalog."
+    );
+  }
+  const actionType = isArchive ? "form.archive" : "form.delete";
+  const operationLabel = isArchive ? "Archive" : "Delete";
+  return {
+    id: `plan-${actionType.replace(".", "-")}-${target.id}`,
+    status: "ready",
+    intentId: isArchive ? "form-archive" : "form-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `${operationLabel} ${target.name}`,
+    answer: `I can ${operationLabel.toLowerCase()} the selected form through the reviewed LLM Guide action flow.`,
+    summary: `${operationLabel} form "${target.name}" (${target.slug}).`,
+    confidence: 0.82,
+    assumptions: [
+      "The target form is resolved from active context or the server-side resource catalog.",
+      isArchive
+        ? "Archiving preserves submission history and disables the active form surface."
+        : "Dry-run checks submission count before hard deletion.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `${actionType.replace(".", "-")}-${target.id}`,
+        type: actionType,
+        title: `${operationLabel} ${target.name}`,
+        description: `${operationLabel} a form selected from trusted admin context.`,
+        input: {
+          id: target.id,
+          name: target.name,
+          slug: target.slug,
+          expectedStatus: target.status,
+        },
+      },
+    ],
+  };
+};
+
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
   options: {
@@ -1342,6 +1476,12 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (contentTypeDeletePlan) return normalizeAssistantActionPlan(contentTypeDeletePlan);
+  const formOperationPlan = buildFormOperationPlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (formOperationPlan) return normalizeAssistantActionPlan(formOperationPlan);
 
   if (
     classification.promptKind === "setup_request" &&

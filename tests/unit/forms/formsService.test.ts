@@ -11,6 +11,7 @@ import {
   formSubmissions,
 } from "../../../core/db/schema";
 import {
+  countFormSubmissions,
   createForm,
   deleteForm,
   listFormFields,
@@ -108,6 +109,19 @@ testIfDb("form slug must be unique", async () => {
   await expect(createForm({ name: "Contact 2", slug })).rejects.toThrow(
     "form_slug_exists"
   );
+});
+
+testIfDb("countFormSubmissions counts persisted submissions without reading payloads", async () => {
+  const form = await createForm({ name: "Counted Form" });
+  await db.insert(formSubmissions).values({
+    formId: form.id,
+    payload: { email: "lead@example.com" },
+    status: "new",
+    createdAt: new Date(),
+  });
+
+  await expect(deleteForm(form.id)).rejects.toThrow();
+  await expect(countFormSubmissions(form.id)).resolves.toBe(1);
 });
 
 testIfDb("setFormFields replaces existing fields", async () => {

@@ -311,6 +311,18 @@ const normalizeFormInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeFormDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "slug", "expectedStatus"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    slug: readText(input.slug),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+  };
+};
+
 const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "values"]));
   return {
@@ -698,6 +710,9 @@ const normalizeActionInput = (
       return normalizeListingTemplateDeleteInput(record);
     case "form.upsert":
       return normalizeFormInput(record);
+    case "form.delete":
+    case "form.archive":
+      return normalizeFormDeleteInput(record);
     case "entry.upsert-draft":
       return normalizeEntryUpsertDraftInput(record);
     case "entry.delete":

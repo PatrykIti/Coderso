@@ -346,6 +346,32 @@ export type AssistantFormUpsertAction = {
   };
 };
 
+export type AssistantFormDeleteAction = {
+  id: string;
+  type: "form.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    slug: string;
+    expectedStatus?: string | null;
+  };
+};
+
+export type AssistantFormArchiveAction = {
+  id: string;
+  type: "form.archive";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    slug: string;
+    expectedStatus?: string | null;
+  };
+};
+
 export type AssistantEntryUpsertDraftAction = {
   id: string;
   type: "entry.upsert-draft";
@@ -568,6 +594,8 @@ export type AssistantPlannedAction =
   | AssistantListingTemplateUpsertAction
   | AssistantListingTemplateDeleteAction
   | AssistantFormUpsertAction
+  | AssistantFormDeleteAction
+  | AssistantFormArchiveAction
   | AssistantEntryUpsertDraftAction
   | AssistantEntryDeleteAction
   | AssistantMenuItemUpsertAction

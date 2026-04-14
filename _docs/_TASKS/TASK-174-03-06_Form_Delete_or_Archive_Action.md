@@ -5,7 +5,7 @@
 **Category:** Assistant/Delete + Forms
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-03
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -66,3 +66,21 @@ No child task files.
 1. Assistant can delete or archive exact forms after review.
 2. Forms with submissions are protected from silent hard delete.
 3. No submission data leaks.
+
+## Completion Notes
+
+- Added executable `form.delete`.
+- Added executable `form.archive`.
+- Planner resolves form operations from active form route context or exact server-side catalog name/slug.
+- Dry-run blocks hard delete when `countFormSubmissions` reports existing submissions.
+- Archive preserves submission history and updates the form status through the existing form domain service.
+- Preview, execution, audit, and UI payloads include submission counts only, never raw submission payloads.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/ui/assistant-panel.test.tsx`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/forms/formsService.test.ts`

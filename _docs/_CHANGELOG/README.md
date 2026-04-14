@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 632 | 2026-04-14 | TASK-174-03-06 form delete archive actions | Assistant/Core |
 | 631 | 2026-04-13 | TASK-174-03-05 listing delete actions | Assistant/Core |
 | 630 | 2026-04-13 | TASK-174-03-04 content and entry delete actions | Assistant/Core |
 | 629 | 2026-04-13 | TASK-174-03-03 widget template delete action | Assistant/Core |

@@ -1,7 +1,7 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { formFields, forms } from "../../db/schema";
+import { formFields, forms, formSubmissions } from "../../db/schema";
 import {
   normalizeSubmissionAccess,
   type SubmissionAccessMode,
@@ -82,6 +82,14 @@ export async function listForms() {
 export async function getForm(id: string) {
   const [row] = await db.select().from(forms).where(eq(forms.id, id));
   return row ?? null;
+}
+
+export async function countFormSubmissions(formId: string) {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(formSubmissions)
+    .where(eq(formSubmissions.formId, formId));
+  return Number(row?.count ?? 0);
 }
 
 export async function createForm(input: FormCreateInput) {

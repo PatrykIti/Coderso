@@ -51,7 +51,10 @@ import {
   listWidgetTemplates,
 } from "../widgets/widgetTemplateService";
 import {
+  countFormSubmissions,
   createForm,
+  deleteForm,
+  getForm,
   listForms,
   setFormFields,
   updateForm,
@@ -87,6 +90,8 @@ import type {
   AssistantEntryUpsertDraftAction,
   AssistantEntryDeleteAction,
   AssistantFormUpsertAction,
+  AssistantFormDeleteAction,
+  AssistantFormArchiveAction,
   AssistantFormAutomationUpsertAction,
   AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryDeleteAction,
@@ -549,8 +554,11 @@ type ActionExecutorDeps = {
   getWidgetTemplate: typeof getWidgetTemplate;
   listWidgetTemplates: typeof listWidgetTemplates;
   deleteWidgetTemplate: typeof deleteWidgetTemplate;
+  getForm: typeof getForm;
   listForms: typeof listForms;
+  countFormSubmissions: typeof countFormSubmissions;
   createForm: typeof createForm;
+  deleteForm: typeof deleteForm;
   updateForm: typeof updateForm;
   setFormFields: typeof setFormFields;
   listFormActions: typeof listFormActions;
@@ -603,8 +611,11 @@ const defaultDeps: ActionExecutorDeps = {
   getWidgetTemplate,
   listWidgetTemplates,
   deleteWidgetTemplate,
+  getForm,
   listForms,
+  countFormSubmissions,
   createForm,
+  deleteForm,
   updateForm,
   setFormFields,
   listFormActions,
@@ -1111,6 +1122,117 @@ const buildFormPreview = async (
     summary: `${existing ? "Update" : "Create"} form "${action.input.name}"`,
     beforeValue: existing,
     nextValue: action.input,
+  });
+};
+
+const buildFormDeletePreview = async (
+  action: AssistantFormDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getForm(action.input.id);
+  const submissionCount = existing ? await deps.countFormSubmissions(existing.id) : 0;
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    existing.slug === action.input.slug &&
+    (!expectedStatus || existing.status === expectedStatus);
+
+  return createPreviewChange({
+    action,
+    targetType: "form",
+    targetKey: action.input.slug,
+    operation: "delete",
+    summary: `Delete form "${action.input.name}"`,
+    warnings:
+      submissionCount > 0
+        ? [
+            `This form has ${submissionCount} submission${submissionCount === 1 ? "" : "s"} and cannot be safely hard-deleted.`,
+          ]
+        : [],
+    conflicts:
+      existing && matches && submissionCount === 0
+        ? []
+        : [
+            {
+              code:
+                submissionCount > 0
+                  ? "assistant_action_dependency_conflict"
+                  : "assistant_action_dependency_missing",
+              severity: "error",
+              message:
+                submissionCount > 0
+                  ? "Form submissions must be retained; archive the form instead of hard-deleting it."
+                  : existing
+                    ? "Form no longer matches the planned delete target."
+                    : "Form was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          slug: existing.slug,
+          status: existing.status,
+          submissionCount,
+        }
+      : null,
+    nextValue: null,
+  });
+};
+
+const buildFormArchivePreview = async (
+  action: AssistantFormArchiveAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getForm(action.input.id);
+  const submissionCount = existing ? await deps.countFormSubmissions(existing.id) : 0;
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    existing.slug === action.input.slug &&
+    (!expectedStatus || existing.status === expectedStatus || existing.status === "archived");
+  const beforeValue = existing
+    ? {
+        id: existing.id,
+        name: existing.name,
+        slug: existing.slug,
+        status: existing.status,
+        submissionCount,
+      }
+    : null;
+  const nextValue = existing
+    ? {
+        id: existing.id,
+        name: existing.name,
+        slug: existing.slug,
+        status: "archived",
+        submissionCount,
+      }
+    : null;
+
+  return createPreviewChange({
+    action,
+    targetType: "form",
+    targetKey: action.input.slug,
+    summary: `Archive form "${action.input.name}"`,
+    warnings:
+      submissionCount > 0
+        ? ["Existing submissions are retained and submission payloads are not exposed."]
+        : [],
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Form no longer matches the planned archive target."
+                : "Form was not found.",
+            },
+          ],
+    beforeValue,
+    nextValue,
   });
 };
 
@@ -2250,6 +2372,84 @@ const executeFormAction = async (
   };
 };
 
+const executeFormDeleteAction = async (
+  action: AssistantFormDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getForm(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    existing.slug !== action.input.slug ||
+    (expectedStatus && existing.status !== expectedStatus)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const submissionCount = await deps.countFormSubmissions(existing.id);
+  if (submissionCount > 0) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const deleted = await deps.deleteForm(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "form",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/coderso/forms",
+    publicHref: null,
+    message: `Deleted form "${deleted.name}".`,
+  };
+};
+
+const executeFormArchiveAction = async (
+  action: AssistantFormArchiveAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getForm(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    existing.slug !== action.input.slug ||
+    (expectedStatus && existing.status !== expectedStatus && existing.status !== "archived")
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const archived =
+    existing.status === "archived"
+      ? existing
+      : await deps.updateForm(existing.id, { status: "archived" });
+  if (!archived) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "form",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: archived.id,
+    adminHref: `/admin/coderso/forms/${encodeURIComponent(archived.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? `Form "${archived.name}" was already archived.`
+        : `Archived form "${archived.name}".`,
+  };
+};
+
 const executeEntryUpsertDraftAction = async (
   action: AssistantEntryUpsertDraftAction,
   preview: AssistantActionPreviewChange,
@@ -2856,6 +3056,26 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "form.upsert"
         ? executeFormAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "form.delete": {
+    preview: (action, ctx) =>
+      action.type === "form.delete"
+        ? buildFormDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "form.delete"
+        ? executeFormDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "form.archive": {
+    preview: (action, ctx) =>
+      action.type === "form.archive"
+        ? buildFormArchivePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "form.archive"
+        ? executeFormArchiveAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "entry.upsert-draft": {

@@ -14,6 +14,8 @@ export const assistantActionTypes = [
   "listing-template.upsert",
   "listing-template.delete",
   "form.upsert",
+  "form.delete",
+  "form.archive",
   "entry.upsert-draft",
   "entry.delete",
   "menu.item.upsert",

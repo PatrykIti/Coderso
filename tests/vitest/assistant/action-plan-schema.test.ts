@@ -426,6 +426,48 @@ test("normalizeAssistantActionPlan accepts safe form automation upsert actions",
   expect(normalized.actions[0]?.type).toBe("form.automation.upsert");
 });
 
+test("normalizeAssistantActionPlan accepts form delete and archive actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "form-delete",
+        type: "form.delete",
+        title: "Delete contact form",
+        description: "Delete empty form.",
+        input: {
+          id: "form-1",
+          name: "Contact",
+          slug: "contact",
+          expectedStatus: "draft",
+        },
+      },
+      {
+        id: "form-archive",
+        type: "form.archive",
+        title: "Archive lead form",
+        description: "Archive form with submissions.",
+        input: {
+          id: "form-2",
+          name: "Lead Capture",
+          slug: "lead-capture",
+          expectedStatus: "published",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions.map((action) => action.type)).toEqual([
+    "form.delete",
+    "form.archive",
+  ]);
+});
+
 test("normalizeAssistantActionPlan rejects webhook form automation in this slice", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -456,6 +498,51 @@ test("normalizeAssistantActionPlan rejects webhook form automation in this slice
                 includeSubmission: true,
               },
             },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed form delete actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "form-delete",
+          type: "form.delete",
+          title: "Delete contact form",
+          description: "Delete empty form.",
+          input: {
+            id: "form-1",
+            name: "Contact",
+            slug: "contact",
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "form-archive",
+          type: "form.archive",
+          title: "Archive contact form",
+          description: "Archive form.",
+          input: {
+            id: "form-1",
+            name: "Contact",
           },
         },
       ],

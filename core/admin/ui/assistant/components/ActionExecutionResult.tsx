@@ -21,6 +21,8 @@ const actionTypeLabels: Record<string, string> = {
   "listing-template.upsert": "Listing template",
   "listing-template.delete": "Listing template",
   "form.upsert": "Form",
+  "form.delete": "Form",
+  "form.archive": "Form",
   "entry.upsert-draft": "Draft entry",
   "entry.delete": "Entry",
   "menu.item.upsert": "Menu item",

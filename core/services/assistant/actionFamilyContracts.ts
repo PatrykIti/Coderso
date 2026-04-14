@@ -236,6 +236,38 @@ export const assistantActionFamilyContracts = [
     ["name", "slug", "status", "submissionAccess", "fields"]
   ),
   executableContract(
+    "form.delete",
+    "form",
+    "core/services/forms/formsService.ts",
+    ["id", "name", "slug"],
+    {
+      permissions: {
+        plan: ["forms:read"],
+        dryRun: ["forms:read"],
+        execute: ["forms:write"],
+      },
+      notes: [
+        "Deletes one exact form only when the form has zero submissions.",
+      ],
+    }
+  ),
+  executableContract(
+    "form.archive",
+    "form",
+    "core/services/forms/formsService.ts",
+    ["id", "name", "slug"],
+    {
+      permissions: {
+        plan: ["forms:read"],
+        dryRun: ["forms:read"],
+        execute: ["forms:write"],
+      },
+      notes: [
+        "Archives one exact form without exposing submission payloads.",
+      ],
+    }
+  ),
+  executableContract(
     "entry.upsert-draft",
     "entry",
     "core/services/content/entryService.ts",
