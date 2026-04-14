@@ -968,6 +968,174 @@ const buildWidgetTemplateEditPlan = (
   };
 };
 
+const customScreenEditKeywords = [
+  "custom screen",
+  "custom screens",
+  "screen",
+  "screens",
+  "ekran",
+  "ekranu",
+];
+
+const buildCustomScreenEditNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-custom-screen-edit-needs-input",
+  status: "needs_input",
+  intentId: "custom-screen-edit-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Custom screen edit needs an active screen",
+  answer: [
+    "I can edit custom screens only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the custom screen builder and provide one exact metadata/sidebar/binding or selected block change.",
+  ].join("\n"),
+  summary: "Custom screen edit could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "custom-screen-edit-target",
+      label: "Which exact custom screen field should I update?",
+      description: "Open the custom screen builder and provide a supported field or selected block patch.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildCustomScreenMetadataPatch = (prompt: string, normalizedPrompt: string) => {
+  const quoted = extractFirstQuotedText(prompt);
+  const patch: {
+    name?: string;
+    status?: "draft" | "active";
+    showInSidebar?: boolean;
+    sidebarLabel?: string | null;
+  } = {};
+  if (quoted && (/\bname\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["nazwa", "nazwe", "nazwę"]))) {
+    patch.name = quoted;
+  } else if (quoted && includesAny(normalizedPrompt, ["sidebar", "menu"])) {
+    patch.sidebarLabel = quoted;
+  }
+  if (includesAny(normalizedPrompt, ["active", "aktywuj"])) patch.status = "active";
+  if (includesAny(normalizedPrompt, ["draft", "szkic"])) patch.status = "draft";
+  if (includesAny(normalizedPrompt, ["show", "pokaz", "pokaż"]) && includesAny(normalizedPrompt, ["sidebar", "menu"])) {
+    patch.showInSidebar = true;
+  }
+  if (includesAny(normalizedPrompt, ["hide", "ukryj"]) && includesAny(normalizedPrompt, ["sidebar", "menu"])) {
+    patch.showInSidebar = false;
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+};
+
+const buildCustomScreenEditPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, customScreenEditKeywords)
+  ) {
+    return null;
+  }
+  if (context.activeSurface?.kind !== "custom-screen") {
+    return buildCustomScreenEditNeedsInputPlan(
+      prompt,
+      "The prompt asks to edit a custom screen, but there is no active custom screen context."
+    );
+  }
+  const screen = context.activeSurface.screen;
+  const selectedBlockId = context.activeSurface.selectedBlockId;
+  const block = selectedBlockId
+    ? context.activeSurface.blocks.find((entry) => entry.id === selectedBlockId) ?? null
+    : null;
+  const dataPath =
+    selectedBlockId && block && includesAny(normalizedPrompt, pageWidgetPatchKeywords)
+      ? resolvePageWidgetPatchPath(normalizedPrompt, block.type)
+      : null;
+  const value = dataPath ? extractFirstQuotedText(prompt) : null;
+  if (selectedBlockId && block && dataPath && value) {
+    return {
+      id: `plan-custom-screen-widget-patch-${screen.id}-${selectedBlockId}`,
+      status: "ready",
+      intentId: "custom-screen-widget-patch",
+      promptKind: "refinement_request",
+      intentFamily: "unknown",
+      title: `Patch ${block.label ?? selectedBlockId}`,
+      answer:
+        "I can patch the selected custom screen widget through the reviewed LLM Guide action flow.",
+      summary: `Patch selected block "${block.label ?? selectedBlockId}" in custom screen "${screen.name}".`,
+      confidence: 0.78,
+      assumptions: [
+        "The target custom screen is resolved from active custom screen context.",
+        "The selected block must still exist and the data path must already exist at dry-run/execute time.",
+      ],
+      questions: [],
+      actions: [
+        {
+          id: `custom-screen-widget-patch-${selectedBlockId}`,
+          type: "custom-screen.widget.patch",
+          title: `Patch ${block.label ?? selectedBlockId}`,
+          description: "Patch selected custom screen widget block data.",
+          input: {
+            id: screen.id,
+            name: screen.name,
+            expectedStatus: screen.status,
+            blockId: selectedBlockId,
+            expectedBlockType: block.type,
+            dataPath,
+            value,
+          },
+        },
+      ],
+    };
+  }
+  const patch = buildCustomScreenMetadataPatch(prompt, normalizedPrompt);
+  if (!patch) {
+    return buildCustomScreenEditNeedsInputPlan(
+      prompt,
+      "The prompt did not include a supported custom screen metadata/sidebar or selected block patch."
+    );
+  }
+  return {
+    id: `plan-custom-screen-update-${screen.id}`,
+    status: "ready",
+    intentId: "custom-screen-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${screen.name}`,
+    answer:
+      "I can update the active custom screen through the reviewed LLM Guide action flow.",
+    summary: `Update metadata/sidebar config for custom screen "${screen.name}".`,
+    confidence: 0.82,
+    assumptions: [
+      "The target custom screen is resolved from active custom screen context.",
+      "The update preserves unrelated blocks and bindings.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `custom-screen-update-${screen.id}`,
+        type: "custom-screen.update",
+        title: `Update ${screen.name}`,
+        description: "Update custom screen metadata/sidebar config.",
+        input: {
+          id: screen.id,
+          name: screen.name,
+          expectedStatus: screen.status,
+          expectedContentTypeId: screen.contentTypeId,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
 const readRouteSegmentsFromContext = (context: ReturnType<typeof buildAssistantAdminContext>) =>
   (context.route ?? "")
     .split("/")
@@ -2168,6 +2336,12 @@ export const planAssistantActions = (
       classification.normalizedPrompt
     );
     if (widgetTemplateEditPlan) return normalizeAssistantActionPlan(widgetTemplateEditPlan);
+    const customScreenEditPlan = buildCustomScreenEditPlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (customScreenEditPlan) return normalizeAssistantActionPlan(customScreenEditPlan);
     const pageWidgetPatchPlan = buildPageWidgetPatchPlan(
       input.prompt,
       context,

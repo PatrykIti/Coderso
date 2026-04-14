@@ -40,6 +40,8 @@ Rules:
 | `content-type.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact zero-entry content types after review |
 | `custom-screen.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `custom-screen.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes catalog-resolved custom screens after review |
+| `custom-screen.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Edits active custom screen metadata/sidebar/binding mode |
+| `custom-screen.widget.patch` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Patches selected custom screen widget block data paths |
 | `listing-query.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `listing-query.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact unreferenced listing queries after review |
 | `listing-template.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |

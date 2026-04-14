@@ -2462,6 +2462,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-04-01` promuje `page.update` do executable typed action dla aktywnej strony; akcja edytuje title/slug/status/settings i zachowuje niepowiazane page data oraz blocks.
 `TASK-174-04-02` rozszerza `page.widget.patch` o selected-block `patch-data`; akcja wymaga istniejacego block id i dataPath, a brak sciezki blokuje patch zamiast wykonywac szeroki rewrite.
 `TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
+`TASK-174-04-04` promuje `custom-screen.update` i `custom-screen.widget.patch` do executable typed actions dla aktywnego custom screen; binding target jest rozpoznawany po `widgetId + propPath + field`, bez ujawniania entry payloadow.
 `TASK-172-02` dodaje lead capture blueprint pack: prompt o stronie kontaktowej/leadowej moze zwrocic plan `form.upsert` + prosty `page.upsert` z embedem formularza.
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.

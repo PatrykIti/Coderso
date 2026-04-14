@@ -32,6 +32,8 @@ const actionTypeLabels: Record<string, string> = {
   "content-type.delete": "Content model",
   "custom-screen.upsert": "Custom screen",
   "custom-screen.delete": "Custom screen",
+  "custom-screen.update": "Custom screen",
+  "custom-screen.widget.patch": "Custom screen widget",
   "listing-query.upsert": "Listing query",
   "listing-query.delete": "Listing query",
   "listing-template.upsert": "Listing template",

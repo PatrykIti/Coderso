@@ -215,3 +215,4 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-14: Completed `TASK-174-04-01`; active page metadata/settings updates are available as reviewed `page.update` typed actions.
 - 2026-04-14: Completed `TASK-174-04-02`; selected page widget block data patching is available as reviewed `page.widget.patch` typed actions.
 - 2026-04-14: Completed `TASK-174-04-03`; reusable widget template metadata/settings and selected block patching are available as reviewed typed actions.
+- 2026-04-14: Completed `TASK-174-04-04`; custom screen metadata/sidebar/binding and selected block patching are available as reviewed typed actions.

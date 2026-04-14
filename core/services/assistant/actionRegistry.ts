@@ -9,6 +9,8 @@ export const assistantActionTypes = [
   "content-type.delete",
   "custom-screen.upsert",
   "custom-screen.delete",
+  "custom-screen.update",
+  "custom-screen.widget.patch",
   "listing-query.upsert",
   "listing-query.delete",
   "listing-template.upsert",

@@ -545,6 +545,105 @@ test("planAssistantActions asks for explicit template target outside reusable te
   expect(plan.intentId).toBe("widget-template-edit-needs-input");
 });
 
+test("planAssistantActions builds custom screen update plan from active screen context", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien nazwe custom screen na 'Projects Admin'",
+    context: {
+      page: "/admin/coderso/custom-screens/screen-1/builder",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "custom-screen",
+        screen: {
+          id: "screen-1",
+          name: "Projects Screen",
+          status: "draft",
+          contentTypeId: "ct-projects",
+          showInSidebar: false,
+          sidebarLabel: null,
+          mode: "record-view",
+        },
+        selectedEntryId: null,
+        selectedBlockId: null,
+        blocks: [],
+        bindings: [],
+        writableBindingFields: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("custom-screen-update");
+  expect(plan.actions[0]).toMatchObject({
+    id: "custom-screen-update-screen-1",
+    type: "custom-screen.update",
+    input: {
+      id: "screen-1",
+      name: "Projects Screen",
+      expectedStatus: "draft",
+      expectedContentTypeId: "ct-projects",
+      patch: {
+        name: "Projects Admin",
+      },
+    },
+  });
+});
+
+test("planAssistantActions builds custom screen widget patch plan from selected block", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku custom screen na 'New headline'",
+    context: {
+      page: "/admin/coderso/custom-screens/screen-1/builder",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "custom-screen",
+        screen: {
+          id: "screen-1",
+          name: "Projects Screen",
+          status: "draft",
+          contentTypeId: "ct-projects",
+          showInSidebar: false,
+          sidebarLabel: null,
+          mode: "record-view",
+        },
+        selectedEntryId: null,
+        selectedBlockId: "hero-1",
+        blocks: [
+          {
+            id: "hero-1",
+            type: "hero",
+            label: "Hero",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
+        bindings: [],
+        writableBindingFields: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("custom-screen-widget-patch");
+  expect(plan.actions[0]).toMatchObject({
+    id: "custom-screen-widget-patch-hero-1",
+    type: "custom-screen.widget.patch",
+    input: {
+      id: "screen-1",
+      name: "Projects Screen",
+      expectedStatus: "draft",
+      blockId: "hero-1",
+      expectedBlockType: "hero",
+      dataPath: ["headline"],
+      value: "New headline",
+    },
+  });
+});
+
 test("planAssistantActions builds entry delete plan from active entry route", () => {
   const plan = planAssistantActions({
     prompt: "usun ten wpis",

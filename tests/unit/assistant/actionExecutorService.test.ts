@@ -1061,6 +1061,164 @@ test("executeAssistantActionPlan deletes custom screens through explicit delete 
   expect(await deps.getCustomScreen(screen.id)).toBeNull();
 });
 
+test("executeAssistantActionPlan updates custom screen metadata and binding mode", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Projects",
+    slug: "projects",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const screen = await deps.createCustomScreen({
+    name: "Projects Screen",
+    contentTypeId: contentType.id,
+    status: "draft",
+    showInSidebar: false,
+    sidebarLabel: null,
+    blocks: [{ id: "hero-1", type: "hero", data: { headline: "Old headline" } }],
+    bindings: [
+      {
+        id: "hero-headline",
+        widgetId: "hero-1",
+        propPath: "headline",
+        field: "title",
+        mode: "read",
+      },
+    ],
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-update",
+    status: "ready",
+    intentId: "custom-screen-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update custom screen",
+    answer: "I can update the selected custom screen.",
+    summary: "Update custom screen metadata and binding.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-update-1",
+        type: "custom-screen.update",
+        title: "Update Projects Screen",
+        description: "Update selected custom screen.",
+        input: {
+          id: screen.id,
+          name: "Projects Screen",
+          expectedStatus: "draft",
+          expectedContentTypeId: contentType.id,
+          patch: {
+            name: "Projects Admin",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "Projects",
+            binding: {
+              widgetId: "hero-1",
+              propPath: "headline",
+              field: "title",
+              mode: "readwrite",
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.customScreens[0]?.name).toBe("Projects Admin");
+  expect(deps.__state.customScreens[0]?.showInSidebar).toBe(true);
+  expect(deps.__state.customScreens[0]?.bindings[0]?.mode).toBe("readwrite");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.id).toBe("hero-1");
+});
+
+test("executeAssistantActionPlan patches custom screen widget block data", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Projects",
+    slug: "projects",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const screen = await deps.createCustomScreen({
+    name: "Projects Screen",
+    contentTypeId: contentType.id,
+    status: "draft",
+    showInSidebar: false,
+    sidebarLabel: null,
+    blocks: [
+      { id: "hero-1", type: "hero", data: { headline: "Old headline", body: "Keep body" } },
+      { id: "text-1", type: "rich-text-section", data: { title: "Keep sibling" } },
+    ],
+    bindings: [],
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-widget-patch",
+    status: "ready",
+    intentId: "custom-screen-widget-patch",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Patch custom screen widget",
+    answer: "I can patch the selected custom screen widget.",
+    summary: "Patch screen hero headline.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-widget-patch-1",
+        type: "custom-screen.widget.patch",
+        title: "Patch hero",
+        description: "Patch selected custom screen widget.",
+        input: {
+          id: screen.id,
+          name: "Projects Screen",
+          expectedStatus: "draft",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["headline"],
+          value: "New headline",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-widget-patch-1",
+    },
+    deps
+  );
+
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.headline).toBe("New headline");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.body).toBe("Keep body");
+  expect(deps.__state.customScreens[0]?.blocks[1]?.data.title).toBe("Keep sibling");
+});
+
 test("executeAssistantActionPlan deletes pages through explicit delete actions", async () => {
   const deps = createDeps();
   const page = await deps.createPage({

@@ -70,6 +70,12 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   ).toContain("raw upload bytes");
   const formAutomationContract = getAssistantActionFamilyContract("form.automation.upsert");
   expect(formAutomationContract.status).toBe("executable");
+  expect(
+    getAssistantActionFamilyContract("custom-screen.update").strictInput.notes.join(" ")
+  ).toContain("preserving unrelated config");
+  expect(
+    getAssistantActionFamilyContract("custom-screen.widget.patch").strictInput.notes.join(" ")
+  ).toContain("one existing custom screen widget block");
   expect(getAssistantActionFamilyContract("form.delete").permissions.execute).toEqual([
     "forms:write",
   ]);

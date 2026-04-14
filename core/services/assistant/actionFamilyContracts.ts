@@ -186,6 +186,34 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "custom-screen.update",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "patch"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Updates custom screen metadata/sidebar/binding mode while preserving unrelated config."],
+    }
+  ),
+  executableContract(
+    "custom-screen.widget.patch",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "blockId", "dataPath", "value"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Patches one existing custom screen widget block data path and preserves unrelated blocks."],
+    }
+  ),
+  executableContract(
     "listing-query.upsert",
     "listing",
     "core/services/content/listingQueriesService.ts",

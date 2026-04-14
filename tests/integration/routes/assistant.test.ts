@@ -528,6 +528,8 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
     assumptions: [],
     questions: [],
     actions: [
+      { id: "screen-update", type: "custom-screen.update", title: "Screen update", description: "Screen update", input: {} },
+      { id: "screen-widget", type: "custom-screen.widget.patch", title: "Screen widget", description: "Screen widget", input: {} },
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
       { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
@@ -723,6 +725,8 @@ test("assistant action execute route enforces per-action write permissions", asy
     assumptions: [],
     questions: [],
     actions: [
+      { id: "screen-update", type: "custom-screen.update", title: "Screen update", description: "Screen update", input: {} },
+      { id: "screen-widget", type: "custom-screen.widget.patch", title: "Screen widget", description: "Screen widget", input: {} },
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
       { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },

@@ -232,6 +232,72 @@ const normalizeCustomScreenDeleteInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeCustomScreenBindingPatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["widgetId", "propPath", "field", "mode"]));
+  return {
+    widgetId: readText(input.widgetId),
+    propPath: readText(input.propPath),
+    field: readText(input.field),
+    mode: readEnum(input.mode, new Set(["read", "write", "readwrite"])),
+  };
+};
+
+const normalizeCustomScreenUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["name", "status", "showInSidebar", "sidebarLabel", "binding"]));
+  return {
+    ...(input.name !== undefined ? { name: readText(input.name) } : {}),
+    ...(input.status !== undefined
+      ? { status: readEnum(input.status, new Set(["draft", "active"])) }
+      : {}),
+    ...(input.showInSidebar !== undefined
+      ? { showInSidebar: readBoolean(input.showInSidebar) }
+      : {}),
+    ...(input.sidebarLabel !== undefined
+      ? { sidebarLabel: readOptionalText(input.sidebarLabel) }
+      : {}),
+    ...(input.binding !== undefined
+      ? { binding: normalizeCustomScreenBindingPatch(input.binding) }
+      : {}),
+  };
+};
+
+const normalizeCustomScreenUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedStatus", "expectedContentTypeId", "patch"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+    ...(input.expectedContentTypeId !== undefined
+      ? { expectedContentTypeId: readOptionalText(input.expectedContentTypeId) }
+      : {}),
+    patch: normalizeCustomScreenUpdatePatch(input.patch),
+  };
+};
+
+const normalizeCustomScreenWidgetPatchInput = (input: JsonRecord) => {
+  assertKeys(
+    input,
+    new Set(["id", "name", "expectedStatus", "blockId", "expectedBlockType", "dataPath", "value"])
+  );
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+    blockId: readText(input.blockId),
+    ...(input.expectedBlockType !== undefined
+      ? { expectedBlockType: readOptionalText(input.expectedBlockType) }
+      : {}),
+    dataPath: normalizeDataPath(input.dataPath),
+    value: normalizePatchValue(input.value),
+  };
+};
+
 const normalizeListingQueryInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -909,6 +975,10 @@ const normalizeActionInput = (
       return normalizeCustomScreenInput(record);
     case "custom-screen.delete":
       return normalizeCustomScreenDeleteInput(record);
+    case "custom-screen.update":
+      return normalizeCustomScreenUpdateInput(record);
+    case "custom-screen.widget.patch":
+      return normalizeCustomScreenWidgetPatchInput(record);
     case "listing-query.upsert":
       return normalizeListingQueryInput(record);
     case "listing-query.delete":

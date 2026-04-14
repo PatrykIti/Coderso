@@ -276,6 +276,47 @@ export type AssistantCustomScreenDeleteAction = {
   };
 };
 
+export type AssistantCustomScreenUpdateAction = {
+  id: string;
+  type: "custom-screen.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    expectedContentTypeId?: string | null;
+    patch: {
+      name?: string;
+      status?: "draft" | "active";
+      showInSidebar?: boolean;
+      sidebarLabel?: string | null;
+      binding?: {
+        widgetId: string;
+        propPath: string;
+        field: string;
+        mode: "read" | "write" | "readwrite";
+      };
+    };
+  };
+};
+
+export type AssistantCustomScreenWidgetPatchAction = {
+  id: string;
+  type: "custom-screen.widget.patch";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    blockId: string;
+    expectedBlockType?: string | null;
+    dataPath: string[];
+    value: string | number | boolean | null;
+  };
+};
+
 export type AssistantListingQueryUpsertAction = {
   id: string;
   type: "listing-query.upsert";
@@ -692,6 +733,8 @@ export type AssistantPlannedAction =
   | AssistantContentTypeDeleteAction
   | AssistantCustomScreenUpsertAction
   | AssistantCustomScreenDeleteAction
+  | AssistantCustomScreenUpdateAction
+  | AssistantCustomScreenWidgetPatchAction
   | AssistantListingQueryUpsertAction
   | AssistantListingQueryDeleteAction
   | AssistantListingTemplateUpsertAction

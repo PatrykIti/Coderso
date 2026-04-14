@@ -561,6 +561,63 @@ test("normalizeAssistantActionPlan accepts widget template update and block patc
   ]);
 });
 
+test("normalizeAssistantActionPlan accepts custom screen update and widget patch actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "screen-update",
+        type: "custom-screen.update",
+        title: "Update screen",
+        description: "Update custom screen.",
+        input: {
+          id: "screen-1",
+          name: "Project Screen",
+          expectedStatus: "draft",
+          expectedContentTypeId: "ct-projects",
+          patch: {
+            name: "Project Screen Updated",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "Projects",
+            binding: {
+              widgetId: "hero-1",
+              propPath: "headline",
+              field: "title",
+              mode: "readwrite",
+            },
+          },
+        },
+      },
+      {
+        id: "screen-widget-patch",
+        type: "custom-screen.widget.patch",
+        title: "Patch screen widget",
+        description: "Patch custom screen widget block.",
+        input: {
+          id: "screen-1",
+          name: "Project Screen",
+          expectedStatus: "draft",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["headline"],
+          value: "New headline",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions.map((action) => action.type)).toEqual([
+    "custom-screen.update",
+    "custom-screen.widget.patch",
+  ]);
+});
+
 test("normalizeAssistantActionPlan accepts safe form automation upsert actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -847,6 +904,60 @@ test("normalizeAssistantActionPlan rejects malformed widget template edit action
             name: "Hero Template",
             blockId: "hero-1",
             dataPath: ["constructor"],
+            value: "Nope",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed custom screen edit actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "screen-update",
+          type: "custom-screen.update",
+          title: "Update screen",
+          description: "Update custom screen.",
+          input: {
+            id: "screen-1",
+            name: "Project Screen",
+            patch: {
+              binding: {
+                widgetId: "hero-1",
+                propPath: "headline",
+                field: "title",
+                mode: "admin",
+              },
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "screen-widget-patch",
+          type: "custom-screen.widget.patch",
+          title: "Patch screen widget",
+          description: "Patch custom screen widget block.",
+          input: {
+            id: "screen-1",
+            name: "Project Screen",
+            blockId: "hero-1",
+            dataPath: ["prototype"],
             value: "Nope",
           },
         },

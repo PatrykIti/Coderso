@@ -5,7 +5,7 @@
 **Category:** Assistant/Edit + Custom Screens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-04
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -61,3 +61,19 @@ No child task files.
 1. Assistant can edit selected custom screen properties after review.
 2. Binding and block patches preserve unrelated screen config.
 3. No raw entry data leaks.
+
+## Completion Notes
+
+- Added executable `custom-screen.update`.
+- Added executable `custom-screen.widget.patch`.
+- Planner resolves metadata/sidebar edits and selected block patches from active custom screen context.
+- `custom-screen.update` supports name, status, sidebar visibility/label, and binding mode patch by `widgetId + propPath + field`.
+- `custom-screen.widget.patch` reuses selected-block `dataPath[]` semantics and preserves unrelated blocks/bindings.
+- Executor delegates persistence to `customScreenService.updateCustomScreen`.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

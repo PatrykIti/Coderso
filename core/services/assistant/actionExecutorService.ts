@@ -93,6 +93,8 @@ import type {
   AssistantContentTypeDeleteAction,
   AssistantCustomScreenUpsertAction,
   AssistantCustomScreenDeleteAction,
+  AssistantCustomScreenUpdateAction,
+  AssistantCustomScreenWidgetPatchAction,
   AssistantEntryUpsertDraftAction,
   AssistantEntryDeleteAction,
   AssistantFormUpsertAction,
@@ -821,6 +823,168 @@ const buildCustomScreenDeletePreview = async (
     conflicts,
     beforeValue: existing,
     nextValue: null,
+  });
+};
+
+const findCustomScreenBinding = (
+  bindings: CustomScreenBinding[],
+  target: NonNullable<AssistantCustomScreenUpdateAction["input"]["patch"]["binding"]>
+) =>
+  bindings.find(
+    (binding) =>
+      binding.widgetId === target.widgetId &&
+      binding.propPath === target.propPath &&
+      binding.field === target.field
+  ) ?? null;
+
+const applyCustomScreenUpdatePatch = (
+  existing: Awaited<ReturnType<typeof getCustomScreen>>,
+  patch: AssistantCustomScreenUpdateAction["input"]["patch"]
+) => {
+  if (!existing) return null;
+  const bindings = [...existing.bindings];
+  if (patch.binding) {
+    const index = bindings.findIndex(
+      (binding) =>
+        binding.widgetId === patch.binding?.widgetId &&
+        binding.propPath === patch.binding?.propPath &&
+        binding.field === patch.binding?.field
+    );
+    if (index < 0) return null;
+    bindings[index] = {
+      ...bindings[index]!,
+      mode: patch.binding.mode,
+    };
+  }
+  return {
+    name: patch.name ?? existing.name,
+    status: patch.status ?? existing.status,
+    showInSidebar:
+      patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
+    sidebarLabel:
+      patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
+    bindings,
+  };
+};
+
+const buildCustomScreenUpdatePreview = async (
+  action: AssistantCustomScreenUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const expectedContentTypeId = action.input.expectedContentTypeId?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    (!expectedStatus || existing.status === expectedStatus) &&
+    (!expectedContentTypeId || existing.contentTypeId === expectedContentTypeId);
+  const binding = existing && action.input.patch.binding
+    ? findCustomScreenBinding(existing.bindings, action.input.patch.binding)
+    : null;
+  const nextValue = existing && matches
+    ? applyCustomScreenUpdatePatch(existing, action.input.patch)
+    : null;
+  const conflictMessage =
+    existing && matches && action.input.patch.binding && !binding
+      ? "Custom screen binding target was not found."
+      : existing
+        ? "Custom screen no longer matches the planned update target."
+        : "Custom screen was not found.";
+
+  return createPreviewChange({
+    action,
+    targetType: "custom-screen",
+    targetKey: action.input.name,
+    summary: `Update custom screen "${action.input.name}"`,
+    conflicts:
+      existing && matches && nextValue
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: conflictMessage,
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          status: existing.status,
+          showInSidebar: existing.showInSidebar,
+          sidebarLabel: existing.sidebarLabel,
+          bindings: existing.bindings.map((item) => ({
+            widgetId: item.widgetId,
+            propPath: item.propPath,
+            field: item.field,
+            mode: item.mode,
+          })),
+        }
+      : null,
+    nextValue,
+  });
+};
+
+const buildCustomScreenWidgetPatchPreview = async (
+  action: AssistantCustomScreenWidgetPatchAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    (!expectedStatus || existing.status === expectedStatus);
+  const patch =
+    existing && matches
+      ? applyPageWidgetDataPatch(existing.blocks, {
+          blockId: action.input.blockId,
+          expectedBlockType: action.input.expectedBlockType,
+          dataPath: action.input.dataPath,
+          value: action.input.value,
+        })
+      : null;
+  const conflictMessage =
+    patch?.status === "missing_block"
+      ? "Selected custom screen widget block was not found."
+      : patch?.status === "type_mismatch"
+        ? "Selected custom screen widget block type changed."
+        : patch?.status === "missing_path"
+          ? "Selected custom screen widget block data path does not exist."
+          : existing
+            ? "Custom screen no longer matches the planned widget patch target."
+            : "Custom screen was not found.";
+
+  return createPreviewChange({
+    action,
+    targetType: "custom-screen",
+    targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
+    summary: `Patch custom screen block "${action.input.blockId}"`,
+    conflicts:
+      existing && matches && patch?.status === "ok"
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: conflictMessage,
+            },
+          ],
+    beforeValue:
+      existing && patch?.status === "ok"
+        ? {
+            blockId: action.input.blockId,
+            dataPath: action.input.dataPath,
+            value: patch.beforeValue,
+          }
+        : null,
+    nextValue:
+      existing && patch?.status === "ok"
+        ? {
+            blockId: action.input.blockId,
+            dataPath: action.input.dataPath,
+            value: patch.nextValue,
+          }
+        : null,
   });
 };
 
@@ -2413,6 +2577,100 @@ const executeCustomScreenDeleteAction = async (
   };
 };
 
+const executeCustomScreenUpdateAction = async (
+  action: AssistantCustomScreenUpdateAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const expectedContentTypeId = action.input.expectedContentTypeId?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    (expectedStatus && existing.status !== expectedStatus) ||
+    (expectedContentTypeId && existing.contentTypeId !== expectedContentTypeId)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const nextValue = applyCustomScreenUpdatePatch(existing, action.input.patch);
+  if (!nextValue) throw new Error("assistant_action_dependency_missing");
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateCustomScreen(existing.id, {
+          name: nextValue.name,
+          status: nextValue.status,
+          showInSidebar: nextValue.showInSidebar,
+          sidebarLabel: nextValue.sidebarLabel,
+          bindings: nextValue.bindings,
+        });
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "custom-screen",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/coderso/custom-screens/${encodeURIComponent(updated.id)}/entries`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Custom screen already matched the planned patch."
+        : `Updated custom screen "${updated.name}".`,
+  };
+};
+
+const executeCustomScreenWidgetPatchAction = async (
+  action: AssistantCustomScreenWidgetPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    (expectedStatus && existing.status !== expectedStatus)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const patch = applyPageWidgetDataPatch(existing.blocks, {
+    blockId: action.input.blockId,
+    expectedBlockType: action.input.expectedBlockType,
+    dataPath: action.input.dataPath,
+    value: action.input.value,
+  });
+  if (patch.status !== "ok") throw new Error("assistant_action_dependency_missing");
+  normalizeAssistantPagePatchBlock(patch.block!);
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateCustomScreen(existing.id, {
+          blocks: patch.blocks,
+        });
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "custom-screen",
+    targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/coderso/custom-screens/${encodeURIComponent(updated.id)}/entries`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Custom screen widget block already matched the planned patch."
+        : `Patched custom screen widget block "${action.input.blockId}".`,
+  };
+};
+
 const executeListingQueryAction = async (
   action: AssistantListingQueryUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -3629,6 +3887,26 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "custom-screen.delete"
         ? executeCustomScreenDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.update": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.update"
+        ? buildCustomScreenUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.update"
+        ? executeCustomScreenUpdateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.widget.patch": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.widget.patch"
+        ? buildCustomScreenWidgetPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.widget.patch"
+        ? executeCustomScreenWidgetPatchAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "listing-query.upsert": {
