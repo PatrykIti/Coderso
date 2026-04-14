@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 5 tasks
 - **Done:** 861 tasks
 
@@ -45,6 +45,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-176 | Security Scanner Baseline Remediation | High | Large | Remediate Semgrep and Trivy scanner findings so scanner gates become actionable |
+| TASK-176-01 | Dockerfile Non-Root Runtime User | High | Small | Fix Semgrep Dockerfile missing-user finding |
+| TASK-176-02 | AES-GCM Tag Length Hardening | High | Medium | Make AES-GCM auth tag length explicit and validated |
+| TASK-176-03 | Post HTML Rendering Sanitization Audit | High | Large | Prove/sanitize post editor and runtime HTML rendering paths |
+| TASK-176-04 | CORS Origin Validation Hardening | High | Medium | Make trusted CORS origin handling scanner-legible and safe |
+| TASK-176-05 | Runtime Dependency CVE Upgrades | High | Medium | Remediate Trivy runtime dependency findings in bun.lock |
+| TASK-176-06 | Scanner Strict Mode and Baseline Policy | High | Medium | Add strict scanner mode after findings are fixed or time-boxed |
 
 ---
 
