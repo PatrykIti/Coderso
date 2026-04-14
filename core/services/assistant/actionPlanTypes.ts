@@ -557,6 +557,33 @@ export type AssistantPageUpsertAction = {
   };
 };
 
+export type AssistantPageUpdateAction = {
+  id: string;
+  type: "page.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    title: string;
+    slug: string;
+    expectedStatus?: string | null;
+    patch: {
+      title?: string;
+      slug?: string;
+      status?: "draft" | "published";
+      settings?: {
+        template?: string;
+        showInNav?: boolean;
+        revisionRetention?: number;
+        seo?: {
+          title?: string | null;
+          description?: string | null;
+        };
+      };
+    };
+  };
+};
+
 export type AssistantPageDeleteAction = {
   id: string;
   type: "page.delete";
@@ -636,6 +663,7 @@ export type AssistantPlannedAction =
   | AssistantPageWidgetPatchAction
   | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
+  | AssistantPageUpdateAction
   | AssistantPageDeleteAction
   | AssistantWidgetTemplateDeleteAction
   | AssistantSiteKitRecommendAction

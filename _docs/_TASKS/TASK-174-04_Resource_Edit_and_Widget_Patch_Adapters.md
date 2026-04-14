@@ -39,6 +39,10 @@ Initial edit action families:
 - `menu.item.update`: selected menu item changes,
 - `seo.document.update`: SEO field edits.
 
+## Progress Notes
+
+- 2026-04-14: Completed `TASK-174-04-01`; `page.update` edits active page metadata/settings while preserving unrelated page data.
+
 Patch rules:
 - schema-first and reject unknown fields,
 - patch one targeted block/resource at a time unless the user explicitly asks for batch changes,

@@ -432,6 +432,22 @@ export const assistantActionFamilyContracts = [
     ["title", "slug", "status", "listingQueryName", "listingTemplateSlug"]
   ),
   executableContract(
+    "page.update",
+    "page",
+    "core/services/pages/pageService.ts",
+    ["id", "title", "slug", "patch"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write", "content:publish"],
+      },
+      notes: [
+        "Updates page metadata/settings only and preserves unrelated page data.",
+      ],
+    }
+  ),
+  executableContract(
     "page.delete",
     "page",
     "core/services/pages/pageService.ts",

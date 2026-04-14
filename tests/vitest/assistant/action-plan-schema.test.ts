@@ -438,6 +438,47 @@ test("normalizeAssistantActionPlan accepts page widget patch actions", () => {
   expect(normalized.actions[0]?.type).toBe("page.widget.patch");
 });
 
+test("normalizeAssistantActionPlan accepts page update actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-update",
+        type: "page.update",
+        title: "Update page",
+        description: "Update page metadata.",
+        input: {
+          id: "page-1",
+          title: "Products",
+          slug: "/products",
+          expectedStatus: "draft",
+          patch: {
+            title: "Products Catalog",
+            slug: "/catalog",
+            status: "published",
+            settings: {
+              template: "landing",
+              showInNav: false,
+              revisionRetention: 5,
+              seo: {
+                title: "Products Catalog",
+                description: "Browse products.",
+              },
+            },
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("page.update");
+});
+
 test("normalizeAssistantActionPlan accepts safe form automation upsert actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -616,6 +657,35 @@ test("normalizeAssistantActionPlan rejects unsupported page widget patch operati
               id: "assistant-spacer",
               type: "spacer",
               data: {},
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed page update actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-update",
+          type: "page.update",
+          title: "Update page",
+          description: "Update page metadata.",
+          input: {
+            id: "page-1",
+            title: "Products",
+            slug: "/products",
+            patch: {
+              blocks: [],
             },
           },
         },

@@ -621,6 +621,58 @@ const normalizePageInput = (input: JsonRecord) => {
   };
 };
 
+const normalizePageUpdateSettingsPatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["template", "showInNav", "revisionRetention", "seo"]));
+  const seo = input.seo === undefined ? undefined : assertRecord(input.seo);
+  if (seo) assertKeys(seo, new Set(["title", "description"]));
+  return {
+    ...(input.template !== undefined ? { template: readText(input.template) } : {}),
+    ...(input.showInNav !== undefined ? { showInNav: readBoolean(input.showInNav) } : {}),
+    ...(input.revisionRetention !== undefined
+      ? { revisionRetention: readFiniteNumber(input.revisionRetention) }
+      : {}),
+    ...(seo
+      ? {
+          seo: {
+            ...(seo.title !== undefined ? { title: readOptionalText(seo.title) } : {}),
+            ...(seo.description !== undefined
+              ? { description: readOptionalText(seo.description) }
+              : {}),
+          },
+        }
+      : {}),
+  };
+};
+
+const normalizePageUpdatePatch = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["title", "slug", "status", "settings"]));
+  return {
+    ...(input.title !== undefined ? { title: readText(input.title) } : {}),
+    ...(input.slug !== undefined ? { slug: readSafeRelativeHref(input.slug) } : {}),
+    ...(input.status !== undefined
+      ? { status: readEnum(input.status, new Set(["draft", "published"])) }
+      : {}),
+    ...(input.settings !== undefined
+      ? { settings: normalizePageUpdateSettingsPatch(input.settings) }
+      : {}),
+  };
+};
+
+const normalizePageUpdateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "title", "slug", "expectedStatus", "patch"]));
+  return {
+    id: readText(input.id),
+    title: readText(input.title),
+    slug: readSafeRelativeHref(input.slug),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+    patch: normalizePageUpdatePatch(input.patch),
+  };
+};
+
 const normalizePageDeleteInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["id", "title", "slug", "expectedStatus"]));
   return {
@@ -767,6 +819,8 @@ const normalizeActionInput = (
       return normalizeFormAutomationUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
+    case "page.update":
+      return normalizePageUpdateInput(record);
     case "page.delete":
       return normalizePageDeleteInput(record);
     case "widget-template.delete":

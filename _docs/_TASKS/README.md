@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 21 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 6 tasks
-- **Done:** 846 tasks
+- **Done:** 847 tasks
 
 ---
 
@@ -48,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-02 | Active Admin Surface Context and Inspection | High | Large | Give LLM Guide bounded active page/screen/template/canvas context |
 | TASK-174-03 | Resource Delete Adapters | High | Large | Delete/archive supported user-created and assistant-created resources safely |
 | TASK-174-04 | Resource Edit and Widget Patch Adapters | High | Large | Edit pages, widgets, templates, screens, entries, forms, listings, menus, and SEO through typed actions |
-| TASK-174-04-01 | Page Metadata and Settings Edit Actions | High | Medium | Edit page metadata/settings/status through page domain service |
 | TASK-174-04-02 | Page Widget Block Patch Actions | High | Large | Patch selected page widget blocks while preserving unrelated blocks |
 | TASK-174-04-03 | Widget Template Edit Actions | High | Large | Edit reusable widget template metadata/settings/blocks |
 | TASK-174-04-04 | Custom Screen Edit Actions | High | Medium | Edit custom screen metadata, bindings, and selected screen widgets |
@@ -139,6 +138,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-03-05 | Listing Query and Template Delete Actions | High | Medium | Done: `listing-query.delete` and `listing-template.delete` use reviewed typed action flow with reference checks |
 | TASK-174-03-06 | Form Delete or Archive Action | High | Medium | Done: `form.delete` handles zero-submission forms and `form.archive` preserves submission history |
 | TASK-174-03-07 | Menu and SEO Delete Actions | Medium | Medium | Done: `menu.item.delete` and `seo.document.delete` use reviewed typed action flow |
+| TASK-174-04-01 | Page Metadata and Settings Edit Actions | High | Medium | Done: `page.update` edits active page metadata/settings while preserving page data |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |

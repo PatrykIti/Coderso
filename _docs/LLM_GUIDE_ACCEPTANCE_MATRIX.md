@@ -57,6 +57,7 @@ Rules:
 | `media.reference.attach` | Vitest `action-plan-schema` | Bun executor | Bun executor | `media:read` + `content:write` | Existing media ids only, entry targets only |
 | `listing-query.filters.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `query.filters` only |
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |
+| `page.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Edits active page metadata/settings and preserves page data |
 | `page.widget.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Top-level `upsert-block` only |
 | `page.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context pages after review |
 | `widget-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Deletes active-context reusable widget templates after review |

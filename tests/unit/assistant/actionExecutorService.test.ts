@@ -386,6 +386,15 @@ const createDeps = () => {
         ReturnType<(typeof import("../../../core/services/pages/pageService"))["publishPage"]>
       >;
     },
+    unpublishPage: async (id: string) => {
+      const existing = pages.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      existing.status = "draft";
+      existing.publishedData = null;
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/pages/pageService"))["unpublishPage"]>
+      >;
+    },
     getWidgetTemplate: async (id: string) =>
       widgetTemplates.find((entry) => entry.id === id) ?? null,
     listWidgetTemplates: async () => widgetTemplates,
@@ -1085,6 +1094,134 @@ test("executeAssistantActionPlan deletes pages through explicit delete actions",
   expect(executed.summary.delete).toBe(1);
   expect(executed.results[0]?.message).toBe('Deleted page "Contact".');
   expect(await deps.getPage(page.id)).toBeNull();
+});
+
+test("executeAssistantActionPlan updates page metadata and preserves page blocks", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Contact",
+    slug: "/contact",
+    data: {
+      blocks: [{ id: "hero", type: "hero", data: { title: "Hello" } }],
+      settings: {
+        template: "landing",
+        showInNav: true,
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-update-contact-page",
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update Contact",
+    answer: "I can update the selected page.",
+    summary: "Update active page metadata.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-update-contact",
+        type: "page.update",
+        title: "Update Contact",
+        description: "Update selected page.",
+        input: {
+          id: page.id,
+          title: "Contact",
+          slug: "/contact",
+          expectedStatus: "draft",
+          patch: {
+            title: "Contact Us",
+            slug: "/contact-us",
+            settings: {
+              showInNav: false,
+              template: "landing",
+              seo: {
+                title: "Contact Us",
+                description: "Reach our team.",
+              },
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(executed.results[0]?.message).toBe('Updated page "Contact Us".');
+  expect(deps.__state.pages[0]?.title).toBe("Contact Us");
+  expect(deps.__state.pages[0]?.slug).toBe("/contact-us");
+  expect((deps.__state.pages[0]?.currentData.blocks as Array<{ id: string }>)[0]?.id).toBe("hero");
+  expect((deps.__state.pages[0]?.currentData.settings as { showInNav?: boolean })?.showInNav).toBe(false);
+});
+
+test("executeAssistantActionPlan publishes page updates through page service", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Landing",
+    slug: "/landing",
+    data: { blocks: [] },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-publish-landing-page",
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Publish Landing",
+    answer: "I can publish the selected page.",
+    summary: "Publish active page.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-update-landing",
+        type: "page.update",
+        title: "Publish Landing",
+        description: "Publish selected page.",
+        input: {
+          id: page.id,
+          title: "Landing",
+          slug: "/landing",
+          expectedStatus: "draft",
+          patch: {
+            status: "published",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.warnings[0]).toContain("public site");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-update-publish-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.pages[0]?.status).toBe("published");
+  expect(deps.__state.pages[0]?.publishedData).not.toBeNull();
 });
 
 test("executeAssistantActionPlan deletes widget templates through explicit delete actions", async () => {

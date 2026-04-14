@@ -39,6 +39,7 @@ import {
   getPageBySlug,
   listPages,
   publishPage,
+  unpublishPage,
   updatePage,
 } from "../pages/pageService";
 import {
@@ -106,6 +107,7 @@ import type {
   AssistantMenuItemDeleteAction,
   AssistantMenuItemUpsertAction,
   AssistantPageWidgetPatchAction,
+  AssistantPageUpdateAction,
   AssistantPageUpsertAction,
   AssistantPageDeleteAction,
   AssistantWidgetTemplateDeleteAction,
@@ -556,6 +558,7 @@ type ActionExecutorDeps = {
   deletePage: typeof deletePage;
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
+  unpublishPage: typeof unpublishPage;
   getWidgetTemplate: typeof getWidgetTemplate;
   listWidgetTemplates: typeof listWidgetTemplates;
   deleteWidgetTemplate: typeof deleteWidgetTemplate;
@@ -616,6 +619,7 @@ const defaultDeps: ActionExecutorDeps = {
   deletePage,
   updatePage,
   publishPage,
+  unpublishPage,
   getWidgetTemplate,
   listWidgetTemplates,
   deleteWidgetTemplate,
@@ -1755,6 +1759,86 @@ const buildPagePreview = async (
                 formEmbed: action.input.formEmbed ?? null,
               }
             : {}),
+        }
+      : null,
+    nextValue,
+  });
+};
+
+const applyPageUpdatePatch = (
+  currentData: Record<string, unknown>,
+  patch: AssistantPageUpdateAction["input"]["patch"]
+) => {
+  const currentSettings = isRecord(currentData.settings) ? currentData.settings : {};
+  const settingsPatch = patch.settings;
+  if (!settingsPatch) return currentData;
+  const nextSettings = { ...currentSettings };
+  if (settingsPatch.template !== undefined) nextSettings.template = settingsPatch.template;
+  if (settingsPatch.showInNav !== undefined) nextSettings.showInNav = settingsPatch.showInNav;
+  if (settingsPatch.revisionRetention !== undefined) {
+    nextSettings.revisionRetention = settingsPatch.revisionRetention;
+  }
+  if (settingsPatch.seo !== undefined) {
+    const currentSeo = isRecord(nextSettings.seo) ? nextSettings.seo : {};
+    nextSettings.seo = {
+      ...currentSeo,
+      ...settingsPatch.seo,
+    };
+  }
+  return {
+    ...currentData,
+    settings: nextSettings,
+  };
+};
+
+const buildPageUpdatePreview = async (
+  action: AssistantPageUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getPage(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const currentData = isRecord(existing?.currentData) ? existing.currentData : {};
+  const nextData = existing ? applyPageUpdatePatch(currentData, action.input.patch) : null;
+  const nextValue = existing
+    ? {
+        title: action.input.patch.title ?? existing.title,
+        slug: action.input.patch.slug ?? existing.slug,
+        status: action.input.patch.status ?? existing.status,
+        settings: isRecord(nextData?.settings) ? nextData.settings : {},
+      }
+    : null;
+  const matches =
+    existing?.title === action.input.title &&
+    existing.slug === action.input.slug &&
+    (!expectedStatus || existing.status === expectedStatus);
+
+  return createPreviewChange({
+    action,
+    targetType: "page",
+    targetKey: action.input.slug,
+    summary: `Update page "${action.input.title}"`,
+    warnings:
+      action.input.patch.status === "published"
+        ? ["Publishing this page may make the latest page data visible on the public site."]
+        : [],
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Page no longer matches the planned update target."
+                : "Page was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          title: existing.title,
+          slug: existing.slug,
+          status: existing.status,
+          settings: currentData.settings ?? null,
         }
       : null,
     nextValue,
@@ -2950,6 +3034,63 @@ const executePageAction = async (
   };
 };
 
+const executePageUpdateAction = async (
+  action: AssistantPageUpdateAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getPage(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.title !== action.input.title ||
+    existing.slug !== action.input.slug ||
+    (expectedStatus && existing.status !== expectedStatus)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const currentData = isRecord(existing.currentData) ? existing.currentData : {};
+  const nextData = applyPageUpdatePatch(currentData, action.input.patch);
+  const nextTitle = action.input.patch.title ?? existing.title;
+  const nextSlug = action.input.patch.slug ?? existing.slug;
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updatePage(existing.id, {
+          title: nextTitle,
+          slug: nextSlug,
+          data: nextData,
+        });
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  const statusPatch = action.input.patch.status;
+  const record =
+    statusPatch === "published" && updated.status !== "published"
+      ? await deps.publishPage(updated.id, actorId, nextData)
+      : statusPatch === "draft" && updated.status === "published"
+        ? await deps.unpublishPage(updated.id)
+        : updated;
+  if (!record) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "page",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: `/admin/pages/${encodeURIComponent(record.id)}`,
+    publicHref: record.status === "published" ? record.slug : null,
+    message:
+      preview.operation === "noop"
+        ? "Page metadata already matched the planned patch."
+        : `Updated page "${record.title}".`,
+  };
+};
+
 const executePageDeleteAction = async (
   action: AssistantPageDeleteAction,
   preview: AssistantActionPreviewChange,
@@ -3353,6 +3494,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "page.upsert"
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "page.update": {
+    preview: (action, ctx) =>
+      action.type === "page.update"
+        ? buildPageUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "page.update"
+        ? executePageUpdateAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
   "page.delete": {

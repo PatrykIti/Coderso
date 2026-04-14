@@ -5,7 +5,7 @@
 **Category:** Assistant/Edit + Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-04
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -62,3 +62,18 @@ No child task files.
 1. Assistant can update page metadata/settings after review.
 2. Unrelated page data remains unchanged.
 3. Status/publish-affecting changes keep correct permissions.
+
+## Completion Notes
+
+- Added executable `page.update`.
+- Planner resolves page metadata updates from active page context.
+- Supported strict patch fields: title, slug, draft/published status, template, navigation visibility, revision retention, and page-owned SEO title/description in page settings.
+- Executor revalidates the active page id/title/slug/status before mutation.
+- Executor preserves unrelated page data and blocks, and uses `publishPage` / `unpublishPage` for status changes.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

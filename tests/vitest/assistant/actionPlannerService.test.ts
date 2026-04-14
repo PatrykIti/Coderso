@@ -214,6 +214,81 @@ test("planAssistantActions asks for active page context before page deletion", (
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds page update plan from active page context", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł strony na 'Contact Us'",
+    context: {
+      page: "/admin/pages/page-contact",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-contact",
+          title: "Contact",
+          slug: "/contact",
+          status: "draft",
+          template: "landing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-update");
+  expect(plan.actions[0]).toMatchObject({
+    id: "page-update-page-contact",
+    type: "page.update",
+    input: {
+      id: "page-contact",
+      title: "Contact",
+      slug: "/contact",
+      expectedStatus: "draft",
+      patch: {
+        title: "Contact Us",
+      },
+    },
+  });
+});
+
+test("planAssistantActions builds page navigation update plan from active page context", () => {
+  const plan = planAssistantActions({
+    prompt: "ukryj te strone w nawigacji",
+    context: {
+      page: "/admin/pages/page-contact",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-contact",
+          title: "Contact",
+          slug: "/contact",
+          status: "published",
+          template: "landing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-update");
+  expect(plan.actions[0]).toMatchObject({
+    type: "page.update",
+    input: {
+      patch: {
+        settings: {
+          showInNav: false,
+        },
+      },
+    },
+  });
+});
+
 test("planAssistantActions builds widget template delete plan from active template context", () => {
   const plan = planAssistantActions({
     prompt: "usun ten widget template Contact CTA",

@@ -113,6 +113,20 @@ const pageDeleteKeywords = [
   "stronie",
 ];
 
+const includesPageUpdateTargetKeyword = (normalizedPrompt: string) =>
+  /\b(page|title|slug|url|nav|navigation|template|publish|published|draft)\b/.test(normalizedPrompt) ||
+  includesAny(normalizedPrompt, [
+    "strona",
+    "strone",
+    "stronę",
+    "tytul",
+    "tytuł",
+    "nawigacji",
+    "szablon",
+    "opublikuj",
+    "szkic",
+  ]);
+
 const widgetTemplateDeleteKeywords = [
   "widget template",
   "widget templates",
@@ -423,6 +437,140 @@ const buildPageDeletePlan = (
           title: page.title,
           slug: page.slug,
           expectedStatus: page.status,
+        },
+      },
+    ],
+  };
+};
+
+const buildPageUpdateNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-page-update-needs-input",
+  status: "needs_input",
+  intentId: "page-update-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Page update needs an active page",
+  answer: [
+    "I can update page metadata only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the page editor and provide one exact metadata or settings change.",
+  ].join("\n"),
+  summary: "Page metadata update could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "page-update-target",
+      label: "Which exact page metadata should I change?",
+      description: "Open the page and provide the exact title, slug, status, template, or navigation change.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const normalizePlannedSlug = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+};
+
+const extractFirstQuotedText = (prompt: string) => extractQuotedPrefix(prompt);
+
+const extractPageUpdatePatch = (prompt: string, normalizedPrompt: string) => {
+  const quoted = extractFirstQuotedText(prompt);
+  const patch: {
+    title?: string;
+    slug?: string;
+    status?: "draft" | "published";
+    settings?: {
+      template?: string;
+      showInNav?: boolean;
+    };
+  } = {};
+
+  if (quoted && /\b(slug|url)\b/.test(normalizedPrompt)) {
+    const slug = normalizePlannedSlug(quoted);
+    if (slug) patch.slug = slug;
+  } else if (quoted && (/\btitle\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["tytul", "tytuł"]))) {
+    patch.title = quoted;
+  } else if (quoted && (/\btemplate\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["szablon"]))) {
+    patch.settings = { ...(patch.settings ?? {}), template: quoted };
+  }
+
+  if (includesAny(normalizedPrompt, ["opublikuj", "publish", "published"])) {
+    patch.status = "published";
+  }
+  if (includesAny(normalizedPrompt, ["draft", "szkic", "unpublish", "wycofaj publikacje"])) {
+    patch.status = "draft";
+  }
+  if (includesAny(normalizedPrompt, ["ukryj", "hide"]) && includesAny(normalizedPrompt, ["nav", "nawigacji", "menu"])) {
+    patch.settings = { ...(patch.settings ?? {}), showInNav: false };
+  }
+  if (includesAny(normalizedPrompt, ["pokaz", "pokaż", "show"]) && includesAny(normalizedPrompt, ["nav", "nawigacji", "menu"])) {
+    patch.settings = { ...(patch.settings ?? {}), showInNav: true };
+  }
+
+  return Object.keys(patch).length > 0 ? patch : null;
+};
+
+const buildPageUpdatePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesPageUpdateTargetKeyword(normalizedPrompt)
+  ) {
+    return null;
+  }
+  if (context.activeSurface?.kind !== "page") {
+    return buildPageUpdateNeedsInputPlan(
+      prompt,
+      "The prompt asks to edit page metadata, but there is no active page context."
+    );
+  }
+  const patch = extractPageUpdatePatch(prompt, normalizedPrompt);
+  if (!patch) {
+    return buildPageUpdateNeedsInputPlan(
+      prompt,
+      "The prompt did not include a supported page metadata/settings patch."
+    );
+  }
+  const page = context.activeSurface.page;
+  return {
+    id: `plan-page-update-${page.id}`,
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${page.title}`,
+    answer: "I can update the active page metadata through the reviewed LLM Guide action flow.",
+    summary: `Update metadata/settings for active page "${page.title}" (${page.slug}).`,
+    confidence: 0.82,
+    assumptions: [
+      "The target page is resolved from the active admin page context.",
+      "The update preserves unrelated page data and blocks.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `page-update-${page.id}`,
+        type: "page.update",
+        title: `Update ${page.title}`,
+        description: "Update active page metadata/settings selected from admin context.",
+        input: {
+          id: page.id,
+          title: page.title,
+          slug: page.slug,
+          expectedStatus: page.status,
+          patch,
         },
       },
     ],
@@ -1703,6 +1851,12 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
+  const pageUpdatePlan = buildPageUpdatePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (pageUpdatePlan) return normalizeAssistantActionPlan(pageUpdatePlan);
   const listingQueryDeletePlan = buildListingQueryDeletePlan(
     input.prompt,
     context,

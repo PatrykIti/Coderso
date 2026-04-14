@@ -94,6 +94,9 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     getAssistantActionFamilyContract("page.widget.patch").strictInput.notes.join(" ")
   ).toContain("top-level");
+  expect(
+    getAssistantActionFamilyContract("page.update").strictInput.notes.join(" ")
+  ).toContain("preserves unrelated page data");
   expect(formAutomationContract.strictInput.notes.join(" ")).toContain("non-webhook");
 });
 
