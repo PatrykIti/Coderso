@@ -288,7 +288,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
     });
     expect(dryRunSpy).toHaveBeenCalledTimes(1);
 
-    const executeButton = findButton(view.container, "Execute setup");
+    const executeButton = findButton(view.container, "Execute reviewed actions");
     if (!executeButton) throw new Error("missing_execute_button");
     await act(async () => {
       executeButton.click();
@@ -296,7 +296,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
     });
 
     expect(executeSpy).toHaveBeenCalledTimes(1);
-    expect(view.container.textContent).toContain("Setup results");
+    expect(view.container.textContent).toContain("Action results");
     expect(view.container.textContent).toContain("Open public page");
   } finally {
     view.cleanup();
@@ -399,7 +399,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
 
     expect(view.container.textContent).toContain("More input needed");
     const dryRunButton = findButton(view.container, "Dry-run changes");
-    const executeButton = findButton(view.container, "Execute setup");
+    const executeButton = findButton(view.container, "Execute reviewed actions");
     expect(dryRunButton?.disabled).toBe(true);
     expect(executeButton?.disabled).toBe(true);
   } finally {

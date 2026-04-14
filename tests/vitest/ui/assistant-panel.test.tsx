@@ -330,7 +330,84 @@ test("ActionPlanReview renders planned guide actions", () => {
   expect(html).toContain("Existing menu item will be reused if present.");
   expect(html).toContain("Depends on:");
   expect(html).toContain("permission/menus:write");
-  expect(html).toContain("Execute setup");
+  expect(html).toContain("Execute reviewed actions");
+});
+
+test("ActionPlanReview renders destructive and blocked resource-operation states", () => {
+  const html = renderAdminUi(
+    <ActionPlanReview
+      plan={{
+        id: "plan-delete-page",
+        status: "ready",
+        intentId: "page-delete",
+        title: "Delete Contact",
+        answer: "Plan ready",
+        summary: "Delete active page.",
+        confidence: 0.82,
+        assumptions: ["Target was resolved from active page context."],
+        questions: [],
+        actions: [
+          {
+            id: "page-delete-contact",
+            type: "page.delete",
+            title: "Delete Contact",
+            description: "Delete the active page after preview.",
+            input: {
+              id: "page-1",
+              title: "Contact",
+              slug: "/contact",
+            },
+          },
+        ],
+      }}
+      preview={{
+        plan: {
+          id: "plan-delete-page",
+          status: "ready",
+          intentId: "page-delete",
+          title: "Delete Contact",
+          answer: "Plan ready",
+          summary: "Delete active page.",
+          confidence: 0.82,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        changes: [
+          {
+            actionId: "page-delete-contact",
+            type: "page.delete",
+            targetType: "page",
+            targetKey: "/contact",
+            operation: "delete",
+            summary: "Delete page",
+            warnings: ["Public page will be removed."],
+            conflicts: [
+              {
+                code: "page_has_references",
+                severity: "error",
+                message: "Page is still referenced from navigation.",
+              },
+            ],
+            dependencies: [],
+          },
+        ],
+        warnings: ["Review public navigation before execution."],
+        readyToExecute: false,
+      }}
+      onPreview={() => undefined}
+      onExecute={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Destructive operation requires review");
+  expect(html).toContain("Action blocked");
+  expect(html).toContain("Preview warnings");
+  expect(html).toContain("Review public navigation before execution.");
+  expect(html).toContain("Delete");
+  expect(html).toContain("Blocked");
+  expect(html).toContain("Public page will be removed.");
+  expect(html).toContain("Page is still referenced from navigation.");
 });
 
 test("ActionExecutionResult renders resource links and summary", () => {
@@ -390,7 +467,7 @@ test("ActionExecutionResult renders resource links and summary", () => {
     />
   );
 
-  expect(html).toContain("Setup results");
+  expect(html).toContain("Action results");
   expect(html).toContain("Page widget");
   expect(html).toContain("Page widget block is updated.");
   expect(html).toContain("Open in admin");
@@ -474,4 +551,67 @@ test("ActionExecutionResult renders partial failure recovery guidance", () => {
   expect(html).toContain("Form automation");
   expect(html).toContain("form_action_invalid");
   expect(html).toContain("Form action could not be updated.");
+});
+
+test("ActionExecutionResult renders archive counts and redacts secret-like messages", () => {
+  const html = renderAdminUi(
+    <ActionExecutionResult
+      result={{
+        plan: {
+          id: "plan-form-archive",
+          status: "ready",
+          intentId: "form-archive",
+          title: "Archive form",
+          answer: "Plan ready",
+          summary: "Archive form",
+          confidence: 0.9,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        preview: {
+          plan: {
+            id: "plan-form-archive",
+            status: "ready",
+            intentId: "form-archive",
+            title: "Archive form",
+            answer: "Plan ready",
+            summary: "Archive form",
+            confidence: 0.9,
+            assumptions: [],
+            questions: [],
+            actions: [],
+          },
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        },
+        results: [
+          {
+            actionId: "form-archive",
+            type: "form.archive",
+            targetType: "form",
+            targetKey: "lead-form",
+            operation: "update",
+            status: "success",
+            resourceId: "form-1",
+            adminHref: null,
+            publicHref: null,
+            message: "Archived token secret payload",
+          },
+        ],
+        summary: {
+          create: 0,
+          update: 1,
+          noop: 0,
+          failed: 0,
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Action results");
+  expect(html).toContain("Archive");
+  expect(html).toContain("[redacted]");
+  expect(html).not.toContain("token secret payload");
 });

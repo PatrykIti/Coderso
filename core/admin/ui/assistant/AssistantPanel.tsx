@@ -720,7 +720,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         {
           id: createEntryId(),
           role: "assistant",
-          text: `Guide setup executed. Created ${execution.summary.create}, updated ${execution.summary.update}, deleted ${execution.summary.delete ?? 0}, and left ${execution.summary.noop} item(s) unchanged.`,
+          text: `Guide actions executed. Created ${execution.summary.create}, updated ${execution.summary.update}, deleted ${execution.summary.delete ?? 0}, failed ${execution.summary.failed}, and left ${execution.summary.noop} item(s) unchanged.`,
         },
       ]);
     } catch (error) {

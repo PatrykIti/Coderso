@@ -56,32 +56,64 @@ const actionTypeLabels: Record<string, string> = {
 const resolveActionTypeLabel = (type: string) =>
   actionTypeLabels[type] ?? type.replaceAll(".", " ");
 
+const secretLikeTextPattern =
+  /(token|secret|password|api[-_]?key|credential|cookie|csrf|authorization|bearer)/i;
+
+const redactUiText = (value: string) =>
+  secretLikeTextPattern.test(value) ? "[redacted]" : value;
+
+const resolveResultOperation = (
+  item: AssistantActionExecuteResponse["results"][number]
+) => {
+  if (item.type.endsWith(".archive")) return "archive";
+  if (item.type.includes(".delete")) return "delete";
+  if (item.type.includes(".detach")) return "detach";
+  if (item.type.includes(".restore")) return "restore";
+  return item.operation;
+};
+
 const failureItems = (result: AssistantActionExecuteResponse) =>
   result.results.filter((item) => item.status === "failed");
 
 const successCount = (result: AssistantActionExecuteResponse) =>
   result.results.filter((item) => item.status === "success").length;
 
+const countSuccessfulOperation = (
+  result: AssistantActionExecuteResponse,
+  operation: ReturnType<typeof resolveResultOperation>
+) =>
+  result.results.filter(
+    (item) => item.status === "success" && resolveResultOperation(item) === operation
+  ).length;
+
 export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
   const failed = failureItems(result);
   const hasFailures = failed.length > 0;
+  const createCount = countSuccessfulOperation(result, "create");
+  const updateCount = countSuccessfulOperation(result, "update");
+  const deleteCount = countSuccessfulOperation(result, "delete");
+  const archiveCount = countSuccessfulOperation(result, "archive");
+  const detachCount = countSuccessfulOperation(result, "detach");
+  const restoreCount = countSuccessfulOperation(result, "restore");
+  const noopCount = countSuccessfulOperation(result, "noop");
 
   return (
     <Card className="border-border/80">
       <CardHeader className="space-y-2 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="default">Executed</Badge>
-          <Badge variant="outline">Create {result.summary.create}</Badge>
-          <Badge variant="outline">Update {result.summary.update}</Badge>
-          {(result.summary.delete ?? 0) > 0 ? (
-            <Badge variant="outline">Delete {result.summary.delete}</Badge>
-          ) : null}
-          <Badge variant="outline">No-op {result.summary.noop}</Badge>
+          <Badge variant="outline">Create {createCount}</Badge>
+          <Badge variant="outline">Update {updateCount}</Badge>
+          {deleteCount > 0 ? <Badge variant="outline">Delete {deleteCount}</Badge> : null}
+          {archiveCount > 0 ? <Badge variant="outline">Archive {archiveCount}</Badge> : null}
+          {detachCount > 0 ? <Badge variant="outline">Detach {detachCount}</Badge> : null}
+          {restoreCount > 0 ? <Badge variant="outline">Restore {restoreCount}</Badge> : null}
+          <Badge variant="outline">No-op {noopCount}</Badge>
           {result.summary.failed > 0 ? (
             <Badge variant="destructive">Failed {result.summary.failed}</Badge>
           ) : null}
         </div>
-        <CardTitle className="text-base">Setup results</CardTitle>
+        <CardTitle className="text-base">Action results</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {hasFailures ? (
@@ -98,7 +130,7 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
                   <li key={item.actionId}>
                     <span className="font-medium">{resolveActionTypeLabel(item.type)}</span>
                     {item.errorCode ? <span>{` (${item.errorCode})`}</span> : null}
-                    <span>{`: ${item.message}`}</span>
+                    <span>{`: ${redactUiText(item.message)}`}</span>
                   </li>
                 ))}
               </ul>
@@ -126,10 +158,10 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
                 )}
               </Badge>
               <Badge variant="secondary">{resolveActionTypeLabel(item.type)}</Badge>
-              <Badge variant="outline">{item.operation}</Badge>
-              <span className="font-medium">{item.targetKey}</span>
+              <Badge variant="outline">{resolveResultOperation(item)}</Badge>
+              <span className="font-medium">{redactUiText(item.targetKey)}</span>
             </div>
-            <p className="mt-2 text-muted-foreground">{item.message}</p>
+            <p className="mt-2 text-muted-foreground">{redactUiText(item.message)}</p>
             <div className="mt-3 flex flex-wrap gap-3 text-xs">
               {item.adminHref ? (
                 <AdminLink href={item.adminHref} className="inline-flex items-center gap-1">

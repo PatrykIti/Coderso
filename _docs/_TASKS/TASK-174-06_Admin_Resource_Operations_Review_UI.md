@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant
 **Estimated Effort:** Large
 **Dependencies:** TASK-174-02, TASK-174-03, TASK-174-04, TASK-174-05
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -88,3 +88,7 @@ UI surfaces:
 2. UI treats destructive operations as explicit reviewed mutations.
 3. Partial results are clear and do not hide blocked/failed work.
 4. UI remains redacted and permission-safe.
+
+## Progress Notes
+
+- 2026-04-14: Completed `TASK-174-06-01`; assistant review/result UI now treats edit/delete/archive-style resource operations as reviewed mutations with destructive/blocked warnings, operation badges, partial-result counts, and dynamic text redaction.

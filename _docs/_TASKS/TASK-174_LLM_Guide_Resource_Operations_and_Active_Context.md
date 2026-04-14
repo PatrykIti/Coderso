@@ -220,3 +220,5 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-14: Completed `TASK-174-05-01`; active page template-section references are deduped and hydrated with bounded/redacted referenced widget template summaries before planning.
 - 2026-04-14: Completed `TASK-174-05-02`; ambiguous template-backed page edits ask for page-instance vs reusable-template target confirmation, and explicit prompts route to the supported page/template patch target.
 - 2026-04-14: Completed `TASK-174-05`; the widget-template/page-canvas bridge now supports read-only referenced template inspection plus conservative page-instance vs reusable-template target resolution.
+- 2026-04-14: Completed `TASK-174-06-01`; assistant review/result UI distinguishes resource operation types, destructive/blocked previews, partial results, and redacts secret-like dynamic text.
+- 2026-04-14: Completed `TASK-174-06`; admin resource operation review UI now treats edit/delete/archive-style actions as reviewed mutations instead of setup-only actions.

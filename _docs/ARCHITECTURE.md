@@ -336,6 +336,7 @@ Zamiast tego:
 - `core/server/routes/assistantRoutes.ts` wystawia internal action endpoints,
 - `core/admin/ui/assistant/components/ActionPlanReview.tsx` i `ActionExecutionResult.tsx`
   domykaja review/confirm UX w panelu asystenta.
+- Resource-operation review UI distinguishes create/update/delete/archive/detach/restore/blocked actions, shows destructive and blocked preview states before execute, renders partial execution counts, and redacts secret-like dynamic text from preview/result payloads.
 - `core/services/assistant/adminContextCatalogNormalizer.ts` i `adminContextCatalogs.ts`
   buduja bounded/redacted resource catalog snapshot dla `LLM Guide` bez dodawania osobnego flow.
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
