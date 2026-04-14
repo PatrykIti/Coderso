@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 15 tasks
 - **In Progress:** 6 tasks
-- **Done:** 851 tasks
+- **Done:** 852 tasks
 
 ---
 
@@ -49,7 +49,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-03 | Resource Delete Adapters | High | Large | Delete/archive supported user-created and assistant-created resources safely |
 | TASK-174-04 | Resource Edit and Widget Patch Adapters | High | Large | Edit pages, widgets, templates, screens, entries, forms, listings, menus, and SEO through typed actions |
 | TASK-174-05 | Widget Template and Page Canvas Context Bridge | High | Large | Inspect template-section references and nested widget template blocks before editing |
-| TASK-174-05-01 | Template Section Reference Inspection | High | Medium | Extract template-section refs and hydrate referenced template summaries |
 | TASK-174-05-02 | Page Instance vs Template Target Resolution | High | Medium | Ask/route whether edits affect page instance or reusable template |
 | TASK-174-06 | Admin Resource Operations Review UI | High | Large | Review and execute edit/delete/resource operations without autonomous mutation |
 | TASK-174-06-01 | Resource Operation Review UI States | High | Medium | Render edit/delete/archive/detach/restore/blocked operation review states |
@@ -66,7 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-174 | LLM Guide Resource Operations and Active Context | High | Large | In progress: provenance and custom-screen delete are complete; active surface context is next |
+| TASK-174 | LLM Guide Resource Operations and Active Context | High | Large | In progress: edit adapters and template-section inspection are complete; page instance vs reusable template target resolution is next |
 
 ---
 
@@ -139,6 +138,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-04-03 | Widget Template Edit Actions | High | Large | Done: `widget-template.update` and `widget-template.block.patch` edit reusable templates |
 | TASK-174-04-04 | Custom Screen Edit Actions | High | Medium | Done: `custom-screen.update` and `custom-screen.widget.patch` edit custom screens |
 | TASK-174-04-05 | Content, Form, Listing, Menu, and SEO Edit Actions | High | Large | Done: remaining entry/form/listing/menu/SEO update actions use domain services |
+| TASK-174-05-01 | Template Section Reference Inspection | High | Medium | Done: page `template-section` refs are deduped and hydrated with redacted referenced widget template summaries |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |

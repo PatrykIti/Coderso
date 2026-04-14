@@ -10,6 +10,11 @@ import type {
   AssistantAdminRuntimeVisibleAction,
 } from "./actionPlanTypes";
 import type { AssistantCustomScreenBindingSummary } from "./adminContextTypes";
+import {
+  extractAssistantTemplateSectionReferences,
+  mergeAssistantTemplateSectionReferences,
+  normalizeAssistantReferencedWidgetTemplates,
+} from "./adminContextCatalogNormalizer";
 
 const actionKinds = new Set<AssistantAdminRuntimeActionKind>([
   "navigate",
@@ -261,6 +266,13 @@ const normalizeActiveSurface = (
       },
       selectedBlockId: normalizeText(value.selectedBlockId, 120),
       blocks,
+      templateReferences: mergeAssistantTemplateSectionReferences([
+        ...extractAssistantTemplateSectionReferences(blocks),
+        ...(Array.isArray(value.templateReferences) ? value.templateReferences : []),
+      ]),
+      referencedTemplates: normalizeAssistantReferencedWidgetTemplates(
+        value.referencedTemplates
+      ),
       warnings: normalizeStringArray(value.warnings, 20, 160),
     };
   }

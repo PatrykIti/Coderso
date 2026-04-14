@@ -5,7 +5,7 @@
 **Category:** Assistant/Context + Widget Templates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-05
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -56,3 +56,12 @@ No child task files.
 1. Assistant can inspect page template-section references.
 2. Assistant can summarize referenced widget templates safely.
 3. Duplicate template refs are deduped.
+
+## Progress Notes
+
+- 2026-04-14: Completed template-section reference inspection. Added bounded helpers for extracting/deduping page `template-section` references, server-side active page hydration for referenced widget template summaries, redacted nested template block/config summaries, and route-level `widgets:read` enforcement for active page template inspection.
+- 2026-04-14: Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/template-section-references.test.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts tests/vitest/assistant/admin-context-catalogs.test.ts tests/vitest/assistant/admin-context-service.test.ts tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/assistant/actionPlannerService.test.ts`
+  - `bun test tests/integration/routes/assistant.test.ts`

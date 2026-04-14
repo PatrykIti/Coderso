@@ -127,6 +127,42 @@ export type AssistantWidgetSummary = {
   status: "draft" | "published";
 };
 
+export type AssistantTemplateSectionReferenceSummary = {
+  templateId: string;
+  templateName: string | null;
+  blockIds: string[];
+  paths: string[];
+  count: number;
+};
+
+export type AssistantReferencedWidgetTemplateBlockSummary = {
+  id: string;
+  type: string;
+  label: string | null;
+  path: string;
+  childCount: number;
+  slotKeys: string[];
+  dataKeys: string[];
+  templateId: string | null;
+  templateName: string | null;
+};
+
+export type AssistantReferencedWidgetTemplateSummary = {
+  id: string;
+  name: string;
+  status: string;
+  category: string;
+  description: string | null;
+  blockCount: number;
+  blocks: AssistantReferencedWidgetTemplateBlockSummary[];
+  settings: {
+    wrapperContainer: string | null;
+    sectionGap: string | null;
+    hasBackgroundMedia: boolean;
+  };
+  warnings: string[];
+};
+
 export type AssistantResourceCatalogSnapshot = {
   schemaVersion: 1;
   generatedAt: string;

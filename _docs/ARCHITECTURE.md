@@ -369,6 +369,7 @@ Runtime admin context:
 - `WidgetTemplateEditorPage` publishes bounded active widget template surface context: template identity, selected block id, block id/type/path summaries, slot keys, template-section references, and template settings summary.
 - Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
 - The assistant plan route rehydrates active surface identity server-side before planning: pages through `pageService`, widget templates through `widgetTemplateService`, and custom screens through `customScreenService`; missing resources clear the active surface instead of trusting stale browser context.
+- Active page hydration also extracts and dedupes `template-section` references from the advisory surface and persisted page canvas data, then loads referenced widget template summaries through `widgetTemplateService` with bounded nested block/config keys and secret-like redaction. Page template inspection requires `widgets:read` in addition to active page `content:read`.
 - Snapshot nie jest autoryzacja; execute/dry-run dalej polegaja na route/domain permission checks.
 - Snapshot nie zawiera user PII, roli, sesji, raw permissions ani tokenow.
 

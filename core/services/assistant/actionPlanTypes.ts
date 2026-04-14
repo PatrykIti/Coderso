@@ -13,7 +13,9 @@ import type {
 } from "./siteBuilderExecutor";
 import type {
   AssistantCustomScreenBindingSummary,
+  AssistantReferencedWidgetTemplateSummary,
   AssistantResourceCatalogSnapshot,
+  AssistantTemplateSectionReferenceSummary,
 } from "./adminContextTypes";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 
@@ -138,6 +140,8 @@ export type AssistantActivePageSurfaceContext = {
   };
   selectedBlockId: string | null;
   blocks: AssistantActiveSurfaceBlockSummary[];
+  templateReferences?: AssistantTemplateSectionReferenceSummary[];
+  referencedTemplates?: AssistantReferencedWidgetTemplateSummary[];
   warnings: string[];
 };
 

@@ -8,13 +8,17 @@ import type {
   AssistantListingTemplateSummary,
   AssistantMenuItemSummary,
   AssistantMenuSummary,
+  AssistantReferencedWidgetTemplateBlockSummary,
+  AssistantReferencedWidgetTemplateSummary,
   AssistantResourceCatalogBudget,
   AssistantResourceCatalogSnapshot,
   AssistantResourceFieldSummary,
   AssistantSeoDocumentSummary,
+  AssistantTemplateSectionReferenceSummary,
   AssistantWidgetSlotSummary,
   AssistantWidgetSummary,
 } from "./adminContextTypes";
+import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
 
 export type AssistantResourceCatalogRawInput = {
   contentTypes?: unknown;
@@ -33,8 +37,17 @@ export type AssistantResourceCatalogNormalizeOptions = {
   maxFieldsPerResource?: number;
 };
 
+export type AssistantTemplateReferenceNormalizeOptions = {
+  maxTemplateReferences?: number;
+  maxBlocksPerTemplate?: number;
+  maxDataKeysPerBlock?: number;
+};
+
 const DEFAULT_MAX_ITEMS_PER_GROUP = 50;
 const DEFAULT_MAX_FIELDS_PER_RESOURCE = 24;
+const DEFAULT_MAX_TEMPLATE_REFERENCES = 20;
+const DEFAULT_MAX_TEMPLATE_BLOCKS = 40;
+const DEFAULT_MAX_TEMPLATE_BLOCK_DATA_KEYS = 20;
 const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|webhook)/i;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -57,6 +70,12 @@ const readArray = (value: unknown): unknown[] => (Array.isArray(value) ? value :
 const readRecordArray = (value: unknown) => readArray(value).filter(isRecord);
 
 const isSecretLike = (value: string) => secretKeyPattern.test(value);
+
+const readSafeString = (value: unknown) => {
+  const text = readString(value);
+  if (!text || isSecretLike(text)) return null;
+  return text;
+};
 
 const readStringArray = (value: unknown) =>
   readArray(value)
@@ -405,6 +424,275 @@ const normalizeWidget = (value: Record<string, unknown>): AssistantWidgetSummary
     status: value.status === "draft" ? "draft" : "published",
   };
 };
+
+const clampTemplateReferenceOptions = (
+  options: AssistantTemplateReferenceNormalizeOptions = {}
+) => ({
+  maxTemplateReferences: Math.max(
+    1,
+    Math.floor(options.maxTemplateReferences ?? DEFAULT_MAX_TEMPLATE_REFERENCES)
+  ),
+  maxBlocksPerTemplate: Math.max(
+    1,
+    Math.floor(options.maxBlocksPerTemplate ?? DEFAULT_MAX_TEMPLATE_BLOCKS)
+  ),
+  maxDataKeysPerBlock: Math.max(
+    1,
+    Math.floor(options.maxDataKeysPerBlock ?? DEFAULT_MAX_TEMPLATE_BLOCK_DATA_KEYS)
+  ),
+});
+
+const readBlockDataValue = (block: Record<string, unknown>, key: string) => {
+  const data = isRecord(block.data) ? block.data : {};
+  return data[key] ?? block[key];
+};
+
+const readBlockTemplateText = (block: Record<string, unknown>, key: string) =>
+  readSafeString(readBlockDataValue(block, key));
+
+const addUnique = (items: string[], value: string) => {
+  if (!items.includes(value)) items.push(value);
+};
+
+export function mergeAssistantTemplateSectionReferences(
+  references: AssistantTemplateSectionReferenceSummary[],
+  options: AssistantTemplateReferenceNormalizeOptions = {}
+): AssistantTemplateSectionReferenceSummary[] {
+  const limits = clampTemplateReferenceOptions(options);
+  const byTemplateId = new Map<string, AssistantTemplateSectionReferenceSummary>();
+
+  for (const reference of references) {
+    const templateId = readSafeString(reference.templateId);
+    if (!templateId) continue;
+    const existing = byTemplateId.get(templateId);
+    const next =
+      existing ??
+      ({
+        templateId,
+        templateName: readSafeString(reference.templateName) ?? null,
+        blockIds: [],
+        paths: [],
+        count: 0,
+      } satisfies AssistantTemplateSectionReferenceSummary);
+
+    for (const blockId of readArray(reference.blockIds)) {
+      const safeBlockId = readSafeString(blockId);
+      if (safeBlockId) addUnique(next.blockIds, safeBlockId);
+    }
+    for (const path of readArray(reference.paths)) {
+      const safePath = readSafeString(path);
+      if (safePath) addUnique(next.paths, safePath);
+    }
+    next.count += Math.max(1, Math.floor(readNumber(reference.count) ?? 1));
+    byTemplateId.set(templateId, next);
+  }
+
+  return [...byTemplateId.values()]
+    .sort((left, right) => left.templateId.localeCompare(right.templateId))
+    .slice(0, limits.maxTemplateReferences);
+}
+
+export function extractAssistantTemplateSectionReferences(
+  blocks: unknown,
+  options: AssistantTemplateReferenceNormalizeOptions = {}
+): AssistantTemplateSectionReferenceSummary[] {
+  const limits = clampTemplateReferenceOptions(options);
+  const references: AssistantTemplateSectionReferenceSummary[] = [];
+  let visited = 0;
+
+  const visit = (items: unknown, pathPrefix: string) => {
+    for (const [index, block] of readArray(items).entries()) {
+      if (visited >= limits.maxBlocksPerTemplate) return;
+      if (!isRecord(block)) continue;
+      visited += 1;
+      const type = readSafeString(block.type);
+      const path =
+        readSafeString(block.path) ?? (pathPrefix ? `${pathPrefix}.${index}` : String(index));
+      const id = readSafeString(block.id) ?? path;
+      if (type === "template-section") {
+        const templateId = readBlockTemplateText(block, "templateId");
+        if (templateId) {
+          references.push({
+            templateId,
+            templateName: readBlockTemplateText(block, "templateName"),
+            blockIds: [id],
+            paths: [path],
+            count: 1,
+          });
+        }
+      }
+
+      const childBlocks = Array.isArray(block.children) ? block.children : [];
+      if (childBlocks.length > 0) visit(childBlocks, `${path}.children`);
+
+      const slots = isRecord(block.slots) ? block.slots : {};
+      for (const [slotId, value] of Object.entries(slots)) {
+        if (visited >= limits.maxBlocksPerTemplate) break;
+        if (Array.isArray(value)) visit(value, `${path}.slots.${slotId}`);
+      }
+    }
+  };
+
+  visit(blocks, "");
+  return mergeAssistantTemplateSectionReferences(references, options);
+}
+
+const readTemplateBlockDataKeys = (
+  data: unknown,
+  warnings: string[],
+  group: string,
+  maxKeys: number
+) => {
+  if (!isRecord(data)) return [];
+  const keys: string[] = [];
+  for (const key of Object.keys(data).sort((left, right) => left.localeCompare(right))) {
+    if (isSecretLike(key)) {
+      warnings.push(`${group}_block_data_key_redacted`);
+      continue;
+    }
+    keys.push(key);
+    if (keys.length >= maxKeys) {
+      if (Object.keys(data).length > maxKeys) warnings.push(`${group}_block_data_keys_truncated`);
+      break;
+    }
+  }
+  return keys;
+};
+
+const normalizeReferencedTemplateBlocks = (
+  blocks: unknown,
+  options: Required<AssistantTemplateReferenceNormalizeOptions>,
+  warnings: string[],
+  group: string
+) => {
+  const summaries: AssistantReferencedWidgetTemplateBlockSummary[] = [];
+  let visited = 0;
+
+  const visit = (items: unknown, pathPrefix: string) => {
+    for (const [index, block] of readArray(items).entries()) {
+      if (summaries.length >= options.maxBlocksPerTemplate) return;
+      if (!isRecord(block)) continue;
+      visited += 1;
+      const path =
+        readSafeString(block.path) ?? (pathPrefix ? `${pathPrefix}.${index}` : String(index));
+      const id = readSafeString(block.id);
+      const type = readSafeString(block.type);
+      if (!id || !type) {
+        warnings.push(`${group}_block_redacted`);
+        continue;
+      }
+
+      const data = isRecord(block.data) ? block.data : null;
+      const childBlocks = Array.isArray(block.children) ? block.children : [];
+      const slotEntries = isRecord(block.slots) ? Object.entries(block.slots) : [];
+      const slotChildCount = slotEntries.reduce(
+        (count, [, value]) => count + (Array.isArray(value) ? value.length : 0),
+        0
+      );
+      const slotKeys =
+        slotEntries.length > 0
+          ? slotEntries
+              .map(([key]) => readSafeString(key))
+              .filter((key): key is string => Boolean(key))
+              .sort((left, right) => left.localeCompare(right))
+          : readStringArray(block.slotKeys);
+      const childCount = readNumber(block.childCount) ?? childBlocks.length + slotChildCount;
+      const dataKeys = data
+        ? readTemplateBlockDataKeys(data, warnings, group, options.maxDataKeysPerBlock)
+        : readStringArray(block.dataKeys).slice(0, options.maxDataKeysPerBlock);
+
+      summaries.push({
+        id,
+        type,
+        label:
+          readSafeString(data?.title) ??
+          readSafeString(data?.headline) ??
+          readSafeString(block.label),
+        path,
+        childCount,
+        slotKeys,
+        dataKeys,
+        templateId: type === "template-section" ? readBlockTemplateText(block, "templateId") : null,
+        templateName:
+          type === "template-section" ? readBlockTemplateText(block, "templateName") : null,
+      });
+
+      if (summaries.length >= options.maxBlocksPerTemplate) return;
+      if (childBlocks.length > 0) visit(childBlocks, `${path}.children`);
+      for (const [slotId, value] of slotEntries) {
+        if (summaries.length >= options.maxBlocksPerTemplate) break;
+        if (Array.isArray(value)) visit(value, `${path}.slots.${slotId}`);
+      }
+    }
+  };
+
+  visit(blocks, "");
+  if (summaries.length >= options.maxBlocksPerTemplate && visited > summaries.length) {
+    warnings.push(`${group}_blocks_truncated`);
+  }
+  return {
+    blockCount: visited,
+    blocks: summaries,
+  };
+};
+
+export function normalizeAssistantReferencedWidgetTemplate(
+  value: Record<string, unknown>,
+  options: AssistantTemplateReferenceNormalizeOptions = {}
+): AssistantReferencedWidgetTemplateSummary | null {
+  const id = readSafeString(value.id);
+  const name = readSafeString(value.name);
+  const status = readSafeString(value.status);
+  const category = readSafeString(value.category);
+  if (!id || !name || !status || !category) return null;
+
+  const limits = clampTemplateReferenceOptions(options);
+  const warnings: string[] = [];
+  const group = `widget_template_${id}`;
+  const settings = normalizeWidgetTemplateSettings(value.settings);
+  const settingsSummary = isRecord(value.settings) ? value.settings : {};
+  const blockSummary = normalizeReferencedTemplateBlocks(
+    value.blocks,
+    limits,
+    warnings,
+    group
+  );
+
+  return {
+    id,
+    name,
+    status,
+    category,
+    description: readSafeString(value.description),
+    blockCount: readNumber(value.blockCount) ?? blockSummary.blockCount,
+    blocks: blockSummary.blocks,
+    settings: {
+      wrapperContainer:
+        readSafeString(settingsSummary.wrapperContainer) ?? settings.layout.wrapper.container,
+      sectionGap: readSafeString(settingsSummary.sectionGap) ?? settings.layout.sections.gap,
+      hasBackgroundMedia:
+        typeof settingsSummary.hasBackgroundMedia === "boolean"
+          ? settingsSummary.hasBackgroundMedia
+          : settings.layout.wrapper.background.media.type !== "none",
+    },
+    warnings: [...new Set([...warnings, ...readStringArray(value.warnings)])].sort((left, right) =>
+      left.localeCompare(right)
+    ),
+  };
+}
+
+export function normalizeAssistantReferencedWidgetTemplates(
+  value: unknown,
+  options: AssistantTemplateReferenceNormalizeOptions = {}
+): AssistantReferencedWidgetTemplateSummary[] {
+  const limits = clampTemplateReferenceOptions(options);
+  return sortByKey(
+    readRecordArray(value)
+      .map((entry) => normalizeAssistantReferencedWidgetTemplate(entry, options))
+      .filter((entry): entry is AssistantReferencedWidgetTemplateSummary => Boolean(entry)),
+    (entry) => entry.id
+  ).slice(0, limits.maxTemplateReferences);
+}
 
 export function normalizeAssistantResourceCatalog(
   raw: AssistantResourceCatalogRawInput,

@@ -350,6 +350,9 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       if (surfaceKind === "page" || surfaceKind === "custom-screen") {
         await requirePermission("content:read")(ctx);
       }
+      if (surfaceKind === "page") {
+        await requirePermission("widgets:read")(ctx);
+      }
       return withAssistantErrors(ctx.requestId, async () => {
         if (hasSiteKitContext(body.context) || includeResourceCatalog) {
           await ensureLlmGuideAvailable();

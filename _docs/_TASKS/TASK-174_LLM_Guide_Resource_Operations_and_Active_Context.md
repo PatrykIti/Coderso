@@ -217,3 +217,4 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-14: Completed `TASK-174-04-03`; reusable widget template metadata/settings and selected block patching are available as reviewed typed actions.
 - 2026-04-14: Completed `TASK-174-04-04`; custom screen metadata/sidebar/binding and selected block patching are available as reviewed typed actions.
 - 2026-04-14: Completed `TASK-174-04-05`; content, form, listing, menu, and SEO update adapters are available as reviewed typed actions.
+- 2026-04-14: Completed `TASK-174-05-01`; active page template-section references are deduped and hydrated with bounded/redacted referenced widget template summaries before planning.

@@ -186,6 +186,15 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
         templateName: "Contact CTA",
       },
     ],
+    templateReferences: [
+      {
+        templateId: "tpl-1",
+        templateName: "Contact CTA",
+        blockIds: ["template-1"],
+        paths: ["1"],
+        count: 1,
+      },
+    ],
     warnings: ["page_has_unsaved_changes"],
   });
 });

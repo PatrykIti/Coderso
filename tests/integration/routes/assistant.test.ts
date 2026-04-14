@@ -390,6 +390,65 @@ test("assistant action plan route attaches resource catalog context when request
   });
 });
 
+test("assistant action plan route requires widget read permission for active page template inspection", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+    service: {
+      hydrateActiveSurface: async (context) => context,
+      planActions: async () => buildHouseProjectsCatalogPlan(),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "sprawdz template section na tej stronie",
+      context: {
+        page: "/admin/pages/page-1",
+        activeSurface: {
+          kind: "page",
+          page: {
+            id: "page-1",
+            title: "Contact",
+            slug: "/contact",
+            status: "draft",
+            template: "landing",
+          },
+          selectedBlockId: "template-ref",
+          blocks: [
+            {
+              id: "template-ref",
+              type: "template-section",
+              label: "Contact CTA",
+              path: "0",
+              childCount: 0,
+              slotKeys: [],
+              templateId: "template-1",
+              templateName: "Contact CTA",
+            },
+          ],
+          warnings: [],
+        },
+      },
+    },
+    requestId: "req-plan-page-template-ref",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("content:read");
+  expect(requestedPermissions).toContain("widgets:read");
+});
+
 test("assistant action plan route rejects unknown context fields", async () => {
   const { router, routes } = makeRouter();
 
