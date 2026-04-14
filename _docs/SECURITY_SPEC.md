@@ -55,7 +55,7 @@ Local runbook:
 ```bash
 pip install semgrep
 semgrep --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit --config p/nodejs --config p/typescript
-trivy fs --severity HIGH,CRITICAL --ignore-unfixed --skip-dirs _docs .
+trivy fs --severity HIGH,CRITICAL --ignore-unfixed --skip-dirs _docs --skip-dirs node_modules --skip-dirs dist --skip-dirs build --skip-dirs .next .
 gitleaks detect --config .gitleaks.toml
 ```
 
@@ -70,8 +70,8 @@ bun run scan:gitleaks
 
 Trivy local scan scope:
 - Owner: Platform/Security.
-- Reason: `_docs/` contains documentation, reference fixtures, and vendored UI snapshots; it is not a runtime dependency surface and creates noisy SCA findings unrelated to shipped app dependencies.
-- Scope: local `scan:trivy` and `scan:security` package scripts skip `_docs/`.
+- Reason: Trivy local SCA scope should match the non-runtime path exclusions from `.semgrep.yml`. `_docs/` contains documentation, reference fixtures, and vendored UI snapshots; `node_modules`, `dist`, `build`, and `.next` are generated/dependency/build output paths rather than source-of-truth runtime lockfiles.
+- Scope: local `scan:trivy` and `scan:security` package scripts skip `_docs`, `node_modules`, `dist`, `build`, and `.next`.
 - Expiry/review: review this exclusion by 2026-07-14 or when `_docs/` starts carrying runtime-installed packages.
 - Ticket: scanner baseline follow-up from `TASK-174` closure / changelog 643.
 
