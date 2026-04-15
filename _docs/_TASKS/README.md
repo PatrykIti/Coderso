@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 5 tasks
 - **Done:** 868 tasks
 
@@ -45,6 +45,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-177 | Vitest Happy-DOM Async Navigation Noise Cleanup | High | Large | Remove happy-dom navigation/fetch noise and make unexpected browser async errors fail tests |
+| TASK-177-01 | Identify Happy-DOM Navigation Noise Sources | High | Medium | Isolate suites/components emitting AsyncTaskManager and localhost ECONNREFUSED noise |
+| TASK-177-02 | Test Harness Unhandled Browser Error Guard | High | Medium | Fail tests on unexpected browser async errors/unhandled rejections/console errors |
+| TASK-177-03 | Component Test Navigation and Fetch Mocks | High | Large | Mock or assert navigation/fetch side effects in noisy component suites |
+| TASK-177-04 | Full Vitest Log-Clean Closure | High | Medium | Prove full Vitest lane is green and log-clean |
 
 ---
 
