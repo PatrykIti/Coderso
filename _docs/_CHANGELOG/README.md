@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 650 | 2026-04-15 | TASK-177 Vitest happy-dom cleanup | QA/Test Infrastructure |
 | 649 | 2026-04-14 | TASK-176 scanner strict mode and closure | Security/Tooling |
 | 648 | 2026-04-14 | TASK-176-05 runtime dependency CVE upgrades | Security/Dependencies |
 | 647 | 2026-04-14 | TASK-176-04 CORS origin hardening | Security/Server |

@@ -5,7 +5,7 @@
 **Category:** QA + Test Infrastructure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-177-01
-**Status:** To Do
+**Status:** Done (2026-04-15)
 
 ---
 
@@ -60,3 +60,8 @@ No child task files.
 1. Unexpected happy-dom/browser async errors fail tests.
 2. Existing tests that intentionally assert errors use explicit mocks/helpers.
 3. Harness cleanup does not leak state between tests.
+
+## Progress Notes
+
+- 2026-04-15: Updated `tests/setup/vitest.ts` to wait for happy-dom async tasks, intercept browser-managed HTTP(S) fetches from component tests with a local empty response, and fail on unexpected `console.error`, `window error`, or `unhandledrejection` output.
+- 2026-04-15: The guard remains environment-safe for node-owned tests where `window` is undefined.

@@ -5,7 +5,7 @@
 **Category:** QA + Admin UI Tests
 **Estimated Effort:** Large
 **Dependencies:** TASK-177-01, TASK-177-02
-**Status:** To Do
+**Status:** Done (2026-04-15)
 
 ---
 
@@ -58,3 +58,8 @@ No child task files.
 1. No targeted suite emits `AsyncTaskManager has been aborted`.
 2. No targeted suite emits `ECONNREFUSED 127.0.0.1:3000`.
 3. Tests explicitly assert navigation/fetch behavior when it matters.
+
+## Progress Notes
+
+- 2026-04-15: Component test navigation/fetch side effects are controlled through the shared Vitest setup instead of individual broad suppressions. Iframe preview URLs still render as attributes for assertions, but happy-dom no longer performs real network navigation for those browser-managed requests.
+- 2026-04-15: Targeted `tests/vitest/ui/post-editor-canvas-wave.test.tsx` now passes without `AsyncTaskManager` or `ECONNREFUSED` noise.

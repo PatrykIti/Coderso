@@ -86,6 +86,21 @@ then that test should move to Vitest.
 - SDK contract tests.
 - Pure widget logic that can run without Bun runtime primitives.
 
+### Vitest Happy-DOM Guardrails
+
+- Component tests must not perform real browser navigation or network requests
+  to local/external servers.
+- `tests/setup/vitest.ts` prevents default anchor/form navigation in happy-dom,
+  intercepts browser-managed HTTP(S) requests such as iframe preview loading
+  with an empty local response, waits for happy-dom async tasks after each test,
+  and fails on unexpected `console.error`, `window error`, or
+  `unhandledrejection` output.
+- Tests that intentionally assert error logging must mock/spy on the expected
+  error locally instead of letting it leak to the global test output.
+- Full `bun run test:vitest` should be both green and log-clean; happy-dom
+  `AsyncTaskManager` errors or `ECONNREFUSED localhost:3000` output indicate a
+  test harness or component-test isolation bug.
+
 ### Do Not Do
 
 - Do not move runtime-kernel tests to Vitest only to increase coverage numbers.

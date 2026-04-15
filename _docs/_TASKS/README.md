@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 12 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 868 tasks
+- **Done:** 873 tasks
 
 ---
 
@@ -45,11 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-177 | Vitest Happy-DOM Async Navigation Noise Cleanup | High | Large | Remove happy-dom navigation/fetch noise and make unexpected browser async errors fail tests |
-| TASK-177-01 | Identify Happy-DOM Navigation Noise Sources | High | Medium | Isolate suites/components emitting AsyncTaskManager and localhost ECONNREFUSED noise |
-| TASK-177-02 | Test Harness Unhandled Browser Error Guard | High | Medium | Fail tests on unexpected browser async errors/unhandled rejections/console errors |
-| TASK-177-03 | Component Test Navigation and Fetch Mocks | High | Large | Mock or assert navigation/fetch side effects in noisy component suites |
-| TASK-177-04 | Full Vitest Log-Clean Closure | High | Medium | Prove full Vitest lane is green and log-clean |
 
 ---
 
@@ -152,6 +147,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-176-05 | Runtime Dependency CVE Upgrades | High | Medium | Done: runtime dependency CVEs remediated; Trivy reports 0 bun.lock vulnerabilities |
 | TASK-176-06 | Scanner Strict Mode and Baseline Policy | High | Medium | Done: strict scanner scripts pass with Semgrep 0, Trivy 0, and Gitleaks clean |
 | TASK-176 | Security Scanner Baseline Remediation | High | Large | Done: scanner baseline remediated and strict security scan is actionable |
+| TASK-177-01 | Identify Happy-DOM Navigation Noise Sources | High | Medium | Done: iframe preview navigation in post editor canvas identified as reproducible noise source |
+| TASK-177-02 | Test Harness Unhandled Browser Error Guard | High | Medium | Done: Vitest setup fails unexpected browser/console errors and waits for happy-dom async tasks |
+| TASK-177-03 | Component Test Navigation and Fetch Mocks | High | Large | Done: component-test browser-managed HTTP(S) requests are intercepted without real localhost fetches |
+| TASK-177-04 | Full Vitest Log-Clean Closure | High | Medium | Done: full Vitest lane passes log-clean with 494 files and 1968 tests |
+| TASK-177 | Vitest Happy-DOM Async Navigation Noise Cleanup | High | Large | Done: happy-dom async navigation/fetch noise removed and guarded |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

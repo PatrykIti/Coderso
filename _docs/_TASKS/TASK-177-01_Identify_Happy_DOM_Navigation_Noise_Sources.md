@@ -5,7 +5,7 @@
 **Category:** QA + Test Diagnostics
 **Estimated Effort:** Medium
 **Dependencies:** TASK-177
-**Status:** To Do
+**Status:** Done (2026-04-15)
 
 ---
 
@@ -52,3 +52,12 @@ No child task files.
 1. Source suite(s) for current noise are identified.
 2. Root cause category is documented for each source.
 3. Follow-up fixes can be scoped without broad global suppression.
+
+## Progress Notes
+
+- 2026-04-15: Identified `tests/vitest/ui/post-editor-canvas-wave.test.tsx` as the reproducible source of `AsyncTaskManager` noise. The trigger was `PostEditorCanvas` embed preview iframes: happy-dom tried to load iframe `src` values through `BrowserFrameNavigator`.
+- 2026-04-15: Full Vitest log also showed `ECONNREFUSED localhost:3000`, caused by browser-managed fetch/navigation side effects rather than asserted test logic.
+- 2026-04-15: Diagnostic commands:
+  - full `bun run test:vitest` outside sandbox captured to `/tmp/nextless-vitest-full-177.log`
+  - targeted `post-editor-canvas-wave` run reproduced the iframe navigation noise
+  - per-test isolation showed the embed preview fallback/mixed embed tests as noisy before the harness fix

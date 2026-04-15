@@ -5,7 +5,7 @@
 **Category:** QA + Test Infrastructure
 **Estimated Effort:** Large
 **Dependencies:** TASK-176
-**Status:** To Do
+**Status:** Done (2026-04-15)
 
 ---
 
@@ -78,3 +78,10 @@ Existing context:
 2. Unexpected browser async errors, unhandled rejections, and console errors fail tests unless explicitly asserted.
 3. No component test depends on a local dev server.
 4. Test harness behavior is documented.
+
+## Progress Notes
+
+- 2026-04-15: Completed `TASK-177-01`; identified happy-dom iframe preview navigation in `post-editor-canvas-wave` as the reproducible source of `AsyncTaskManager` noise.
+- 2026-04-15: Completed `TASK-177-02`; shared Vitest setup now waits for happy-dom async tasks, intercepts browser-managed HTTP(S) requests in component tests, and fails on unexpected browser/console errors.
+- 2026-04-15: Completed `TASK-177-03`; targeted noisy suite runs clean without hidden localhost/dev-server dependency.
+- 2026-04-15: Completed `TASK-177-04`; full `bun run test:vitest` passes log-clean with 494 files and 1968 tests.

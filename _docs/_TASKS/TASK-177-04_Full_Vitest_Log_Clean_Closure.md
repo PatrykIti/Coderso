@@ -5,7 +5,7 @@
 **Category:** QA + Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-177-02, TASK-177-03
-**Status:** To Do
+**Status:** Done (2026-04-15)
 
 ---
 
@@ -58,3 +58,13 @@ No child task files.
 2. Output has no happy-dom async navigation/fetch errors.
 3. Output has no `ECONNREFUSED 127.0.0.1:3000`.
 4. `TASK-177` and all leaves are closed in the task board.
+
+## Progress Notes
+
+- 2026-04-15: Full Vitest lane passed log-clean outside sandbox:
+  - `bun run test:vitest > /tmp/nextless-vitest-full-177-guard.log 2>&1; rc=$?; echo EXIT:$rc; rg -n "AsyncTaskManager|ECONNREFUSED|localhost:3000|127\\.0\\.0\\.1:3000|::1:3000|AggregateError" /tmp/nextless-vitest-full-177-guard.log || true; tail -30 /tmp/nextless-vitest-full-177-guard.log; exit $rc`
+  - Result: 494 files passed, 1968 tests passed, no matching noise patterns.
+- 2026-04-15: Validation also included:
+  - targeted `tests/vitest/ui/post-editor-canvas-wave.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
