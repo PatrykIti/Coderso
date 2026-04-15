@@ -47,7 +47,19 @@ test("scanThemes ignores invalid theme.json files", async () => {
 
   await createTheme(tempDir, "broken", { name: "broken" });
 
-  await scanThemes();
-  const themes = listThemes();
-  expect(themes).toHaveLength(0);
+  const warn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args);
+  };
+
+  try {
+    await scanThemes();
+    const themes = listThemes();
+    expect(themes).toHaveLength(0);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.[0]).toBe("Theme 'broken' ignored:");
+  } finally {
+    console.warn = warn;
+  }
 });
