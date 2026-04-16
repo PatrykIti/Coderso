@@ -392,6 +392,11 @@ Planner schema/recovery:
 - Assistant action plans can carry strict planner metadata (`local`, `provider`, or `fallback`) so the admin review UI can explain whether a plan came from provider draft or local deterministic planning.
 - Assistant action plans can also carry strict read-only `inspection` metadata for
   CMS resource candidate lists. These plans have no actions and are not executable.
+- In `LLM Guide` mode the admin panel routes prompts through `/assistant/actions/plan`
+  by default; docs-only mode remains on `/assistant/chat`.
+- Provider planning now accepts strict CMS operation drafts as the preferred output
+  shape. The server validates those drafts locally, resolves targets from trusted
+  context, and only then returns inspection/actions/needs-input plans.
 - Provider planner fixture coverage uses injected fake providers only; live route wiring remains a separate opt-in step.
 
 Execution registry and idempotency:

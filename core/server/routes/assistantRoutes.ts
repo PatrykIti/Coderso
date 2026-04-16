@@ -14,7 +14,10 @@ import {
   assistantActionExecuteRequestSchema,
   assistantActionPlanRequestSchema,
 } from "../validation/assistantActionSchemas";
-import { planAssistantActions } from "../../services/assistant/actionPlannerService";
+import {
+  planAssistantActionsWithProviderDraft,
+  type AssistantActionPlanInput,
+} from "../../services/assistant/actionPlannerService";
 import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
@@ -49,7 +52,7 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
-  planActions: typeof planAssistantActions;
+  planActions: (input: AssistantActionPlanInput) => AssistantActionPlan | Promise<AssistantActionPlan>;
   dryRunActions: typeof dryRunAssistantActionPlan;
   executeActions: typeof executeAssistantActionPlan;
   buildResourceCatalog: typeof buildAssistantResourceCatalogSnapshotWithDefaultDeps;
@@ -58,11 +61,55 @@ type AssistantRouteService = {
   ) => Promise<AssistantActionContext | undefined>;
 };
 
+const readOptionalStringSetting = async (key: string, fallback: string) => {
+  const { getSetting } = await import("../../services/settings/settingsService");
+  const value = await getSetting(key);
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+};
+
+const readOptionalNumberSetting = async (key: string, fallback: number) => {
+  const { getSetting } = await import("../../services/settings/settingsService");
+  const value = await getSetting(key);
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+};
+
+const resolveProviderForActionPlanning = async () => {
+  const { getSetting } = await import("../../services/settings/settingsService");
+  const { resolveAssistantProvider } = await import("../../services/assistant/providers");
+  const enabled = (await getSetting("assistant.llm.enabled")) === true;
+  if (!enabled) return null;
+  const provider = await readOptionalStringSetting("assistant.llm.provider", "none");
+  const model = await readOptionalStringSetting(
+    "assistant.llm.model",
+    "google/gemma-3n-e2b-it:free"
+  );
+  if (provider !== "openrouter") return null;
+  return resolveAssistantProvider({ provider, model });
+};
+
 const defaultService: AssistantRouteService = {
   getStatus: getAssistantStatus,
   reindex: reindexAssistantDocs,
   chat: answerAssistantQuestion,
-  planActions: planAssistantActions,
+  planActions: async (input) => {
+    const provider = await resolveProviderForActionPlanning();
+    return planAssistantActionsWithProviderDraft({
+      ...input,
+      provider,
+      llmAvailable: Boolean(provider),
+      limits: {
+        maxInputTokens: await readOptionalNumberSetting(
+          "assistant.llm.maxInputTokens",
+          8192
+        ),
+        maxOutputTokens: await readOptionalNumberSetting(
+          "assistant.llm.maxOutputTokens",
+          2048
+        ),
+        timeoutMs: await readOptionalNumberSetting("assistant.llm.timeoutMs", 20000),
+      },
+    });
+  },
   dryRunActions: dryRunAssistantActionPlan,
   executeActions: executeAssistantActionPlan,
   buildResourceCatalog: buildAssistantResourceCatalogSnapshotWithDefaultDeps,

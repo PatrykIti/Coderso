@@ -57,7 +57,10 @@ import type {
   AssistantReferencedWidgetTemplateSummary,
   AssistantSeoDocumentSummary,
 } from "./adminContextTypes";
-import type { CmsOperationDraft } from "./cmsOperationDraftSchema";
+import {
+  type CmsOperationDraft,
+  normalizeCmsOperationDraft,
+} from "./cmsOperationDraftSchema";
 
 export {
   classifyAssistantPrompt,
@@ -3089,6 +3092,16 @@ const buildGenericCmsOperationPlan = (
   return buildGenericCmsMutationPlan(prompt, draft, context);
 };
 
+const buildGenericCmsOperationPlanFromDraft = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  draft: CmsOperationDraft
+): AssistantActionPlan | null => {
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan) return inspectionPlan;
+  return buildGenericCmsMutationPlan(prompt, draft, context);
+};
+
 const cloneSiteKitPlanInput = (
   input: AssistantSiteKitPlanInput
 ): AssistantSiteKitPlanInput => ({
@@ -3174,10 +3187,12 @@ export type AssistantProviderDraftPlanInput = AssistantActionPlanInput & {
 };
 
 const providerPlannerSystemPrompt = [
-  "You draft Nextless LLM Guide action plans.",
+  "You draft Nextless LLM Guide CMS operation drafts.",
   "Return only JSON.",
-  "Use only supported typed actions and never invent arbitrary commands.",
-  "The local server will validate your draft through a strict schema before any dry-run or execution.",
+  "Return a single object with operation, resourceKind, optional targetQuery, optional mutation, and optional constraints.",
+  "Do not return executable actions.",
+  "Do not invent arbitrary commands, SQL, filesystem paths, tools, or resource ids.",
+  "The local server will validate your draft, resolve targets from trusted context, and map to a strict plan before any dry-run or execution.",
 ].join(" ");
 
 const parseProviderDraftJson = (value: string) => JSON.parse(value) as unknown;
@@ -3189,6 +3204,32 @@ const buildProviderRequestLimits = (
   maxOutputTokens: Math.max(1, Math.floor(limits?.maxOutputTokens ?? 1_500)),
   timeoutMs: Math.max(1_000, Math.floor(limits?.timeoutMs ?? 15_000)),
 });
+
+const tryPlanProviderCmsOperationDraft = (
+  input: AssistantProviderDraftPlanInput,
+  draft: unknown
+) => {
+  const context = buildAssistantAdminContext(input.context);
+  try {
+    const operationDraft = normalizeCmsOperationDraft(draft);
+    const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft);
+    if (!plan) return null;
+    return normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        providerId: input.provider?.id ?? null,
+      },
+      assumptions: [
+        ...plan.assumptions,
+        "Provider draft was validated locally before target resolution.",
+      ],
+    });
+  } catch {
+    return null;
+  }
+};
 
 export const planAssistantActions = (
   input: AssistantActionPlanInput
@@ -3395,9 +3436,12 @@ export const planAssistantActionsWithProviderDraft = async (
       snippets: [],
       limits: buildProviderRequestLimits(input.limits),
     });
+    const draft = parseProviderDraftJson(response.text);
+    const operationPlan = tryPlanProviderCmsOperationDraft(input, draft);
+    if (operationPlan) return operationPlan;
     return adaptProviderDraftPlan({
       prompt: input.prompt,
-      draft: parseProviderDraftJson(response.text),
+      draft,
     });
   } catch {
     return planAssistantActions(input);

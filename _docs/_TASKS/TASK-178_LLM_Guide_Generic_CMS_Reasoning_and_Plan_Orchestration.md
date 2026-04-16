@@ -28,6 +28,11 @@ The solution must not add one-off prompt cases for every resource. It must intro
 - `TASK-178-01_Intent_Operation_Taxonomy_and_Planner_Contract.md`
 - `TASK-178-02_CMS_Resource_Registry_and_Target_Resolver.md`
 - `TASK-178-03_Provider_First_Planner_Context_and_Draft_Contract.md`
+  - `TASK-178-03-01_LLM_Guide_Mode_Planning_Route_Contract.md`
+  - `TASK-178-03-02_Provider_Operation_Draft_Prompt_and_Response_Schema.md`
+  - `TASK-178-03-03_Model_First_Planner_Orchestration_and_Fallbacks.md`
+  - `TASK-178-03-04_Planner_Response_Kinds_Docs_Inspection_Action_Needs_Input.md`
+  - `TASK-178-03-05_Provider_Safety_Evaluation_and_Route_Coverage.md`
 - `TASK-178-04_Generic_Read_Inspect_and_Candidate_Plans.md`
 - `TASK-178-05_Generic_Mutation_Planning_and_Action_Mapping.md`
 - `TASK-178-06_Conversation_State_and_Follow_Up_Target_Memory.md`
@@ -110,6 +115,7 @@ Non-goals:
   - `TASK-178-04` read-only inspection/candidate plans.
 - The current implementation stays inside the existing `/assistant/actions/*` flow and reuses current planner/schema/executor/review UI contracts.
 - Provider-first operation planning, generic mutation mapping beyond the first page delete/update slice, conversation target memory, fixture matrix expansion, and closure docs/gates remain open leaves.
+- 2026-04-16: Completed `TASK-178-03-01` and `TASK-178-03-02`, and started `TASK-178-03-03`; `LLM Guide` mode now routes through action planning instead of a frontend keyword gate, and provider JSON can be validated as CMS operation drafts.
 
 ## Security Contract
 

@@ -28,7 +28,6 @@ import {
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
 import { cn } from "@/lib/utils";
-import { isLikelyGuidePlanningPrompt } from "../../../services/assistant/actionPlanHeuristics";
 
 import { AssistantEmptyState } from "./AssistantEmptyState";
 import { AssistantMessage } from "./AssistantMessage";
@@ -563,7 +562,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       setIsSending(true);
 
       try {
-        if (currentMode === "llm-guide" && isLikelyGuidePlanningPrompt(outgoingMessage)) {
+        if (currentMode === "llm-guide") {
           const plan = await planAssistantActions({
             prompt: outgoingMessage,
             context: {

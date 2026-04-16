@@ -10,6 +10,14 @@ const resourceCatalog = {
     maxFieldsPerResource: 24,
     truncated: false,
   },
+  pages: [
+    {
+      id: "page-products",
+      title: "Products",
+      slug: "/products",
+      status: "published",
+    },
+  ],
   contentTypes: [
     {
       id: "ct-products",
@@ -168,6 +176,8 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   });
   expect(prompt.docs).toHaveLength(1);
   expect(prompt.docs[0]?.content).toContain("...");
+  expect(prompt.registry.some((entry) => entry.kind === "page")).toBe(true);
+  expect(prompt.resources?.pages).toHaveLength(1);
   expect(prompt.resources?.contentTypes).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.menus).toHaveLength(1);

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + LLM Provider Planning
 **Estimated Effort:** Large
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-171
-**Status:** To Do
+**Status:** In Progress (2026-04-16)
 
 ---
 
@@ -17,7 +17,11 @@ The model should receive bounded CMS context and return a structured operation d
 
 ## Sub-Tasks
 
-No child task files.
+- `TASK-178-03-01_LLM_Guide_Mode_Planning_Route_Contract.md`
+- `TASK-178-03-02_Provider_Operation_Draft_Prompt_and_Response_Schema.md`
+- `TASK-178-03-03_Model_First_Planner_Orchestration_and_Fallbacks.md`
+- `TASK-178-03-04_Planner_Response_Kinds_Docs_Inspection_Action_Needs_Input.md`
+- `TASK-178-03-05_Provider_Safety_Evaluation_and_Route_Coverage.md`
 
 ## Architecture
 
@@ -40,6 +44,12 @@ Provider output must not be trusted directly. It must pass:
 5. action plan schema.
 
 Local deterministic planner remains fallback for provider unavailable/error/malformed output.
+
+The intended route shape is:
+
+`LLM Guide UI -> /assistant/actions/plan -> provider operation draft when available -> strict local validation -> target resolver -> read-only/action/needs-input response`
+
+The UI must not decide whether a prompt is "LLM Guide enough" by keyword. In `LLM Guide` mode, the planning endpoint owns that decision.
 
 ## Integration with Current Code
 
@@ -109,3 +119,9 @@ Local deterministic planner remains fallback for provider unavailable/error/malf
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/SECURITY_SPEC.md`
 - task/changelog entries on completion
+
+## Progress Notes
+
+- 2026-04-16: Completed `TASK-178-03-01` and `TASK-178-03-02`.
+- 2026-04-16: Started `TASK-178-03-03`; route wiring now uses the provider-aware planner wrapper and provider outputs can be validated as CMS operation drafts before local target resolution.
+- Remaining work: explicit planner response kinds for docs-style guidance (`TASK-178-03-04`) and broader provider safety/route matrix (`TASK-178-03-05`).

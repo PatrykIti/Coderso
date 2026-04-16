@@ -23,6 +23,8 @@ The same flow now has a generic CMS operation foundation:
 
 Read-only inspection plans can list bounded CMS candidates, such as matching pages
 or custom screens, without exposing dry-run or execute controls.
+In `LLM Guide` mode the floating assistant sends prompts to `/assistant/actions/plan`
+by default; `docs-only` remains the documentation chat path.
 
 Current implemented guide blueprint:
 - `house-projects-catalog`
@@ -77,6 +79,9 @@ permissions, idempotency, and conflict-aware execution.
 - CMS inspection/find prompts are non-mutating. They can return candidate plans
   with no executable actions, and follow-up mutation still has to resolve to a
   reviewed typed action plan.
+- Provider planning prefers a strict CMS operation draft response. The backend
+  validates and repairs/falls back locally before any target resolution or action
+  planning can proceed.
 
 ## Runtime Contract
 

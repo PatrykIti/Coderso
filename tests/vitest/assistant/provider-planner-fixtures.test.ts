@@ -8,6 +8,7 @@ test.each(providerPlannerFixtures)(
   async (fixture) => {
     const plan = await planAssistantActionsWithProviderDraft({
       prompt: fixture.prompt,
+      context: fixture.context,
       llmAvailable: fixture.llmAvailable,
       provider: fixture.provider,
     });

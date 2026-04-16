@@ -6,6 +6,7 @@ import type {
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
 import { redactAssistantMetadata, redactAssistantText } from "./assistantRedaction";
+import { cmsResourceRegistry } from "./cmsResourceRegistry";
 
 export type AssistantProviderPlanningEvidence =
   | DocsSearchHit
@@ -55,6 +56,7 @@ export type AssistantProviderPlanningPromptPackage = {
   resources: {
     schemaVersion: 1;
     budget: AssistantResourceCatalogSnapshot["budget"];
+    pages: NonNullable<AssistantResourceCatalogSnapshot["pages"]>;
     contentTypes: AssistantResourceCatalogSnapshot["contentTypes"];
     customScreens: AssistantResourceCatalogSnapshot["customScreens"];
     listings: AssistantResourceCatalogSnapshot["listings"];
@@ -64,6 +66,12 @@ export type AssistantProviderPlanningPromptPackage = {
     widgets: AssistantResourceCatalogSnapshot["widgets"];
     warnings: string[];
   } | null;
+  registry: Array<{
+    kind: string;
+    aliases: string[];
+    supportedOperations: string[];
+    readPermissions: string[];
+  }>;
   activeSurface: AssistantActionContext["activeSurface"];
   warnings: string[];
 };
@@ -146,6 +154,7 @@ const buildResources = (
   return {
     schemaVersion: 1,
     budget: catalog.budget,
+    pages: clampItems(catalog.pages ?? [], maxItemsPerGroup, "pages_truncated", warnings),
     contentTypes: clampItems(catalog.contentTypes, maxItemsPerGroup, "content_types_truncated", warnings),
     customScreens: clampItems(catalog.customScreens, maxItemsPerGroup, "custom_screens_truncated", warnings),
     listings: {
@@ -177,6 +186,14 @@ const buildRuntime = (snapshot: AssistantAdminRuntimeSnapshot | null) => {
   };
 };
 
+const buildRegistryCapabilities = () =>
+  cmsResourceRegistry.map((entry) => ({
+    kind: entry.kind,
+    aliases: entry.aliases.slice(0, 12),
+    supportedOperations: [...entry.supportedOperations],
+    readPermissions: [...entry.readPermissions],
+  }));
+
 export const buildProviderPlanningPromptPackage = (
   input: AssistantProviderPlanningPromptInput
 ): AssistantProviderPlanningPromptPackage => {
@@ -200,6 +217,7 @@ export const buildProviderPlanningPromptPackage = (
     runtime: buildRuntime(context.runtimeSnapshot),
     docs: buildDocs(input.evidence, maxDocs, maxCharsPerDoc, warnings),
     resources: buildResources(context.resourceCatalog, maxResourceItemsPerGroup, warnings),
+    registry: buildRegistryCapabilities(),
     activeSurface: context.activeSurface,
     warnings,
   };

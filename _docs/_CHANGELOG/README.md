@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 652 | 2026-04-16 | TASK-178 model-first planning route | Assistant/Core |
 | 651 | 2026-04-16 | TASK-178 generic CMS planner foundation | Assistant/Core |
 | 650 | 2026-04-15 | TASK-177 Vitest happy-dom cleanup | QA/Test Infrastructure |
 | 649 | 2026-04-14 | TASK-176 scanner strict mode and closure | Security/Tooling |

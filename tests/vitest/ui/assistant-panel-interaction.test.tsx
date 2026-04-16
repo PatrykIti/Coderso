@@ -548,3 +548,102 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
     view.cleanup();
   }
 });
+
+test("AssistantPanel keeps docs-only mode on assistant chat route", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "docs-only",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
+    "pages.openAfterCreate": true,
+    "media.openAfterUpload": false,
+    "widgets.favorites": [],
+    "widgets.hero.presets": [],
+    "posts.editor.preferences": {
+      version: 2,
+      focusModeOnOpen: false,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: true,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: true,
+    },
+    "assistant.mode": "docs-only",
+    "assistant.ui.enabled": true,
+    "assistant.ui.avatarEnabled": false,
+    "assistant.ui.avatarAsset": null,
+  });
+  const planSpy = vi.spyOn(assistantClient, "planAssistantActions");
+  const chatSpy = vi.spyOn(assistantClient, "sendAssistantMessage").mockResolvedValue({
+    mode: "docs-only",
+    template: "how_to_answer",
+    detailLevel: "medium",
+    guideMode: "default",
+    answer: "Open Custom Screens from Coderso.",
+    confidence: 0.7,
+    sources: [],
+    followUpOptions: [],
+    fallbackUsed: false,
+    requestedMode: "docs-only",
+    effectiveMode: "docs-only",
+    retrievalBackend: "db",
+    llm: null,
+  });
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await act(async () => {
+      setTextareaValue(textarea, "gdzie znajde custom screens?");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(chatSpy).toHaveBeenCalledTimes(1);
+    expect(planSpy).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Open Custom Screens from Coderso.");
+  } finally {
+    view.cleanup();
+  }
+});
