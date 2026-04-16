@@ -143,6 +143,8 @@ export function ActionPlanReview({
     change.conflicts?.some((conflict) => conflict.severity === "error")
   );
   const hasExecutableActions = plan.actions.length > 0;
+  const isReadOnlyInspectionPlan = Boolean(plan.inspection) && !hasExecutableActions;
+  const showActionControls = hasExecutableActions || !isReadOnlyInspectionPlan;
 
   return (
     <Card className="border-emerald-200/80 bg-emerald-50/40">
@@ -354,30 +356,35 @@ export function ActionPlanReview({
           </Alert>
         ) : null}
 
-        {hasExecutableActions ? (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onPreview}
-            disabled={isPreviewing || isExecuting || plan.questions.length > 0}
-          >
-            {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Dry-run changes
-          </Button>
-          <Button
-            type="button"
-            onClick={onExecute}
-            disabled={!previewReady || isExecuting || isPreviewing}
-          >
-            {isExecuting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="mr-2 h-4 w-4" />
-            )}
-            Execute reviewed actions
-          </Button>
-        </div>
+        {showActionControls ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onPreview}
+              disabled={
+                isPreviewing ||
+                isExecuting ||
+                plan.questions.length > 0 ||
+                !hasExecutableActions
+              }
+            >
+              {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Dry-run changes
+            </Button>
+            <Button
+              type="button"
+              onClick={onExecute}
+              disabled={!previewReady || isExecuting || isPreviewing || !hasExecutableActions}
+            >
+              {isExecuting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              Execute reviewed actions
+            </Button>
+          </div>
         ) : null}
       </CardContent>
     </Card>
