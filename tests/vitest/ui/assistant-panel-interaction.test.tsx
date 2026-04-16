@@ -406,3 +406,145 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
     view.cleanup();
   }
 });
+
+test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
+    "pages.openAfterCreate": true,
+    "media.openAfterUpload": false,
+    "widgets.favorites": [],
+    "widgets.hero.presets": [],
+    "posts.editor.preferences": {
+      version: 2,
+      focusModeOnOpen: false,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: true,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: true,
+    },
+    "assistant.mode": "llm-guide",
+    "assistant.ui.enabled": true,
+    "assistant.ui.avatarEnabled": false,
+    "assistant.ui.avatarAsset": null,
+  });
+  const chatSpy = vi.spyOn(assistantClient, "sendAssistantMessage").mockResolvedValue({
+    mode: "llm-guide",
+    template: "missing_answer",
+    detailLevel: "medium",
+    guideMode: "default",
+    answer: "Docs fallback should not be used.",
+    confidence: 0.2,
+    sources: [],
+    followUpOptions: [],
+    fallbackUsed: true,
+    requestedMode: "llm-guide",
+    effectiveMode: "docs-only",
+    retrievalBackend: "db",
+    llm: null,
+  });
+  const planSpy = vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
+    id: "plan-cms-custom-screen-inspect",
+    status: "ready",
+    intentId: "cms-resource-inspect",
+    title: "CMS resource inspection",
+    answer: "I searched custom-screen resources.",
+    summary: "Found 2 custom-screen candidate(s).",
+    confidence: 0.72,
+    assumptions: ["Read-only response."],
+    questions: [],
+    inspection: {
+      kind: "resource-candidates",
+      operation: "inspect",
+      resourceKind: "custom-screen",
+      matchStatus: "matched",
+      query: null,
+      candidates: [
+        {
+          kind: "custom-screen",
+          id: "screen-house",
+          label: "House Projects",
+          status: "active",
+          adminHref: "/admin/coderso/custom-screens/screen-house",
+        },
+      ],
+      truncated: false,
+    },
+    actions: [],
+  });
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await act(async () => {
+      setTextareaValue(
+        textarea,
+        "sprawdz jakie ekrany w admin ui (customowe) sa widoczne - jak sie nazywaja dokladnie"
+      );
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(1);
+    expect(chatSpy).not.toHaveBeenCalled();
+    expect(planSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          includeResourceCatalog: true,
+          runtimeSnapshot: expect.objectContaining({
+            route: "/admin/coderso/custom-screens",
+            codersoModule: "custom-screens",
+          }),
+        }),
+      })
+    );
+    expect(view.container.textContent).toContain("CMS resource matches");
+    expect(view.container.textContent).toContain("House Projects");
+  } finally {
+    view.cleanup();
+  }
+});

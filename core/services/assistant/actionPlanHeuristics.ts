@@ -123,6 +123,8 @@ const includesDocsQuestionSignal = (value: string) =>
   );
 
 const cmsOperationQuestionSignals = [
+  "sprawdz",
+  "sprawdź",
   "czy widzisz",
   "widzisz",
   "jakie",

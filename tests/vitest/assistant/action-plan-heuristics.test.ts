@@ -35,6 +35,11 @@ test("classifyAssistantPrompt routes CMS operation questions to LLM Guide planni
     promptKind: "refinement_request",
     intentFamily: "unknown",
   });
+
+  expect(classifyAssistantPrompt("sprawdz ekrany customowe w admin ui")).toMatchObject({
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+  });
 });
 
 test("classifyAssistantPrompt routes setup and refinement prompts deterministically", () => {

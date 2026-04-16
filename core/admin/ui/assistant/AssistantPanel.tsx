@@ -28,6 +28,7 @@ import {
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
 import { cn } from "@/lib/utils";
+import { isLikelyGuidePlanningPrompt } from "../../../services/assistant/actionPlanHeuristics";
 
 import { AssistantEmptyState } from "./AssistantEmptyState";
 import { AssistantMessage } from "./AssistantMessage";
@@ -99,52 +100,6 @@ const resolveApiError = (error: unknown, fallback: string) => {
   if (isApiClientError(error)) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return fallback;
-};
-
-const guidePromptSignals = [
-  "potrzebuje",
-  "chce",
-  "potrzebuję",
-  "utworz",
-  "utwórz",
-  "stworz",
-  "stwórz",
-  "zrob",
-  "zrób",
-  "dodaj",
-  "zmien",
-  "zmień",
-  "update",
-  "adjust",
-  "refine",
-  "catalog",
-  "katalog",
-  "projekt",
-  "projekty",
-  "dom",
-  "house",
-  "produkt",
-  "produkty",
-  "product",
-  "products",
-  "portfolio",
-  "service",
-  "services",
-  "uslugi",
-  "usługi",
-  "directory",
-  "formularz",
-  "form",
-  "filter",
-  "filtr",
-  "build",
-  "create",
-  "set up",
-];
-
-const isLikelyGuidePlanningPrompt = (value: string) => {
-  const normalized = value.trim().toLowerCase();
-  return guidePromptSignals.some((signal) => normalized.includes(signal));
 };
 
 const readRuntimeStateCache = (nowMs: number) => {
