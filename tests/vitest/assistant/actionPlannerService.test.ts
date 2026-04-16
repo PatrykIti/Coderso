@@ -166,6 +166,159 @@ test("planAssistantActions returns clarification plan for non-actionable prompt"
   expect(plan.actions).toHaveLength(0);
 });
 
+test("planAssistantActions returns read-only CMS inspection plan for page lookup", () => {
+  const plan = planAssistantActions({
+    prompt: "czy widzisz strone 'Pysiek Mysiek' w pages?",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-16T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [
+          {
+            id: "page-pysiek",
+            title: "Pysiek Mysiek",
+            slug: "/pysiek-mysiek",
+            status: "draft",
+          },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("cms-resource-inspect");
+  expect(plan.actions).toEqual([]);
+  expect(plan.inspection).toMatchObject({
+    resourceKind: "page",
+    matchStatus: "matched",
+    candidates: [
+      {
+        id: "page-pysiek",
+        label: "Pysiek Mysiek",
+      },
+    ],
+  });
+});
+
+test("planAssistantActions builds generic page delete plan from resource catalog target", () => {
+  const plan = planAssistantActions({
+    prompt: "czy widzisz strone 'Pysiek Mysiek' w pages i mi ja usun",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-16T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [
+          {
+            id: "page-pysiek",
+            title: "Pysiek Mysiek",
+            slug: "/pysiek-mysiek",
+            status: "draft",
+          },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "page-delete-page-pysiek",
+    type: "page.delete",
+    input: {
+      id: "page-pysiek",
+      title: "Pysiek Mysiek",
+      slug: "/pysiek-mysiek",
+      expectedStatus: "draft",
+    },
+  });
+});
+
+test("planAssistantActions returns custom screen prefix candidates as read-only inspection", () => {
+  const plan = planAssistantActions({
+    prompt: "no to jakie ekrany widzisz z prefixem 'House Projects' ?",
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-16T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [
+          {
+            id: "screen-house",
+            name: "House Projects",
+            contentTypeId: "type-1",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "House Projects",
+            writableBindingFields: [],
+            bindings: [],
+          },
+          {
+            id: "screen-house-archive",
+            name: "House Projects Archive",
+            contentTypeId: "type-1",
+            status: "draft",
+            showInSidebar: false,
+            sidebarLabel: null,
+            writableBindingFields: [],
+            bindings: [],
+          },
+        ],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("cms-resource-inspect");
+  expect(plan.actions).toEqual([]);
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual([
+    "House Projects",
+    "House Projects Archive",
+  ]);
+});
+
 test("planAssistantActions builds custom screen delete plan from resource catalog prefix", () => {
   const plan = planAssistantActions({
     prompt: "usun dwa ekrany w screens o prefixie 'House Projects' w tytule ekranu",

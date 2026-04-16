@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Planning Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178
-**Status:** To Do
+**Status:** Done (2026-04-16)
 
 ---
 
@@ -105,3 +105,10 @@ The exact shape must be owned by assistant planner modules and validated strictl
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-16)
+
+- Added strict generic CMS operation draft schema in `cmsOperationDraftSchema.ts`.
+- Added prompt-to-operation draft extraction through the current `actionPlannerService.ts` path.
+- Kept existing blueprint and resource-operation plans backward-compatible.
+- Added Vitest coverage for strict draft validation and planner regression behavior.

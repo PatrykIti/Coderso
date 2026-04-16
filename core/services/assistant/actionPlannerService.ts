@@ -40,6 +40,11 @@ import {
   PRODUCT_CATALOG_PRESET,
   SERVICES_DIRECTORY_PRESET,
 } from "./blueprints/catalogFamilyPresets";
+import {
+  buildCmsOperationDraftFromPrompt,
+  type CmsResolvedTargetCandidate,
+  resolveCmsOperationTargets,
+} from "./cmsTargetResolver";
 import type {
   AssistantContentTypeSummary,
   AssistantCustomScreenSummary,
@@ -52,6 +57,7 @@ import type {
   AssistantReferencedWidgetTemplateSummary,
   AssistantSeoDocumentSummary,
 } from "./adminContextTypes";
+import type { CmsOperationDraft } from "./cmsOperationDraftSchema";
 
 export {
   classifyAssistantPrompt,
@@ -2803,6 +2809,286 @@ const buildClarifyingPlan = (
   };
 };
 
+const describeCmsTargetQuery = (draft: CmsOperationDraft) =>
+  draft.targetQuery?.exactName ??
+  draft.targetQuery?.prefix ??
+  draft.targetQuery?.slug ??
+  draft.targetQuery?.text ??
+  null;
+
+const toInspectionCandidates = (candidates: CmsResolvedTargetCandidate[]) =>
+  candidates.slice(0, 10).map((candidate) => ({
+    kind: candidate.kind,
+    id: candidate.id,
+    label: candidate.label,
+    slug: candidate.slug,
+    status: candidate.status,
+    adminHref: candidate.adminHref,
+  }));
+
+const buildGenericCmsInspectionPlan = (
+  prompt: string,
+  draft: CmsOperationDraft,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  if (draft.operation !== "inspect" && draft.operation !== "find") return null;
+  const resolution = resolveCmsOperationTargets(draft, context);
+  const candidates = toInspectionCandidates(resolution.candidates);
+  const query = describeCmsTargetQuery(draft);
+  const matchStatus =
+    resolution.status === "unsupported"
+      ? "unsupported"
+      : resolution.status === "no_match"
+        ? "no_match"
+        : resolution.status === "ambiguous"
+          ? "ambiguous"
+          : "matched";
+  const candidateLines =
+    candidates.length > 0
+      ? candidates
+          .map((candidate) => {
+            const slug = candidate.slug ? ` (${candidate.slug})` : "";
+            const status = candidate.status ? ` - ${candidate.status}` : "";
+            return `- ${candidate.label}${slug}${status}`;
+          })
+          .join("\n")
+      : "No matching CMS resources were found.";
+
+  return {
+    id: `plan-cms-${draft.resourceKind}-inspect`,
+    status: "ready",
+    intentId: "cms-resource-inspect",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    inspection: {
+      kind: "resource-candidates",
+      operation: draft.operation,
+      resourceKind: draft.resourceKind,
+      matchStatus,
+      query,
+      candidates,
+      truncated: resolution.candidates.length > candidates.length,
+    },
+    title: "CMS resource inspection",
+    answer: [
+      query
+        ? `I searched ${draft.resourceKind} resources for "${query}".`
+        : `I searched visible ${draft.resourceKind} resources.`,
+      "",
+      candidateLines,
+    ].join("\n"),
+    summary:
+      candidates.length > 0
+        ? `Found ${resolution.candidates.length} ${draft.resourceKind} candidate(s).`
+        : `No ${draft.resourceKind} candidates matched the request.`,
+    confidence:
+      resolution.status === "exact"
+        ? 0.84
+        : resolution.status === "candidates"
+          ? 0.72
+          : 0.58,
+    assumptions: [
+      "Inspection uses trusted active context and server-side resource catalog summaries.",
+      "No changes are planned for this read-only response.",
+      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+    ],
+    questions: [],
+    actions: [],
+  };
+};
+
+const buildGenericCmsNeedsInputPlan = (
+  prompt: string,
+  draft: CmsOperationDraft,
+  reason: string,
+  candidates: CmsResolvedTargetCandidate[]
+): AssistantActionPlan => ({
+  id: `plan-cms-${draft.resourceKind}-${draft.operation}-needs-input`,
+  status: "needs_input",
+  intentId: `cms-${draft.resourceKind}-${draft.operation}-needs-input`,
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  inspection: {
+    kind: "resource-candidates",
+    operation: "find",
+    resourceKind: draft.resourceKind,
+    matchStatus: candidates.length > 0 ? "ambiguous" : "no_match",
+    query: describeCmsTargetQuery(draft),
+    candidates: toInspectionCandidates(candidates),
+    truncated: candidates.length > 10,
+  },
+  title: "CMS operation needs a precise target",
+  answer: [
+    "I can plan this CMS operation only after the target is resolved safely.",
+    "",
+    reason,
+  ].join("\n"),
+  summary: "The CMS operation target is not precise enough for a reviewed action plan.",
+  confidence: 0.45,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "cms-operation-target",
+      label: "Which exact CMS resource should I use?",
+      description: "Choose one exact candidate, provide a stricter name, or add the expected count.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const normalizeGenericPageSlug = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+};
+
+const buildGenericPageUpdatePatch = (
+  draft: CmsOperationDraft
+): { title?: string; slug?: string; status?: "draft" | "published" } | null => {
+  const value = draft.mutation?.value;
+  if (typeof value !== "string" || !value.trim()) return null;
+  const fieldIntent = draft.mutation?.fieldIntent ?? "title";
+  if (fieldIntent === "slug") {
+    const slug = normalizeGenericPageSlug(value);
+    return slug ? { slug } : null;
+  }
+  if (fieldIntent === "status") {
+    if (value === "draft" || value === "published") return { status: value };
+    return null;
+  }
+  return { title: value.trim() };
+};
+
+const buildGenericCmsMutationPlan = (
+  prompt: string,
+  draft: CmsOperationDraft,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  if (draft.operation !== "delete" && draft.operation !== "update") return null;
+  if (draft.resourceKind !== "page") return null;
+  if (!context.resourceCatalog?.pages?.length && context.activeSurface?.kind !== "page") {
+    return null;
+  }
+  if (
+    draft.targetQuery?.active &&
+    !draft.targetQuery.exactName &&
+    !draft.targetQuery.slug &&
+    !draft.targetQuery.prefix &&
+    !draft.targetQuery.text
+  ) {
+    return null;
+  }
+
+  const resolution = resolveCmsOperationTargets(draft, context);
+  if (resolution.status !== "exact") {
+    return buildGenericCmsNeedsInputPlan(prompt, draft, resolution.reason, resolution.candidates);
+  }
+  const target = resolution.candidates[0];
+  if (!target) return null;
+
+  if (draft.operation === "delete") {
+    return {
+      id: `plan-page-delete-${target.id}`,
+      status: "ready",
+      intentId: "page-delete",
+      promptKind: "refinement_request",
+      intentFamily: "unknown",
+      title: `Delete ${target.label}`,
+      answer: "I can delete the resolved page through the reviewed LLM Guide action flow.",
+      summary: `Delete page "${target.label}"${target.slug ? ` (${target.slug})` : ""}.`,
+      confidence: 0.82,
+      assumptions: [
+        "The target page is resolved from trusted active context or the server-side resource catalog.",
+        "Dry-run must be reviewed before deletion.",
+      ],
+      questions: [],
+      actions: [
+        {
+          id: `page-delete-${target.id}`,
+          type: "page.delete",
+          title: `Delete ${target.label}`,
+          description: "Delete the resolved page selected from trusted CMS context.",
+          input: {
+            id: target.id,
+            title: target.label,
+            slug: target.slug ?? "",
+            expectedStatus: target.status,
+          },
+        },
+      ],
+    };
+  }
+
+  const patch = buildGenericPageUpdatePatch(draft);
+  if (!patch) {
+    return buildGenericCmsNeedsInputPlan(
+      prompt,
+      draft,
+      "The prompt did not include a supported page field and value.",
+      [target]
+    );
+  }
+  return {
+    id: `plan-page-update-${target.id}`,
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${target.label}`,
+    answer: "I can update the resolved page through the reviewed LLM Guide action flow.",
+    summary: `Update page "${target.label}"${target.slug ? ` (${target.slug})` : ""}.`,
+    confidence: 0.78,
+    assumptions: [
+      "The target page is resolved from trusted active context or the server-side resource catalog.",
+      "The update preserves unrelated page data and blocks.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `page-update-${target.id}`,
+        type: "page.update",
+        title: `Update ${target.label}`,
+        description: "Update resolved page metadata/settings selected from trusted CMS context.",
+        input: {
+          id: target.id,
+          title: target.label,
+          slug: target.slug ?? "",
+          expectedStatus: target.status,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
+const buildGenericCmsOperationPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  if (
+    includesAny(normalizedPrompt, [
+      "widget",
+      "block",
+      "blok",
+      "bloku",
+      "selected block",
+      "wybrany blok",
+      "wybranego bloku",
+      "template-section",
+      "template section",
+    ])
+  ) {
+    return null;
+  }
+  const draft = buildCmsOperationDraftFromPrompt(prompt, context);
+  if (!draft) return null;
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan) return inspectionPlan;
+  return buildGenericCmsMutationPlan(prompt, draft, context);
+};
+
 const cloneSiteKitPlanInput = (
   input: AssistantSiteKitPlanInput
 ): AssistantSiteKitPlanInput => ({
@@ -2922,6 +3208,11 @@ export const planAssistantActions = (
     return normalizeAssistantActionPlan(
       buildClarifyingPlan(input.prompt, context, routedClassification)
     );
+  }
+
+  if (classification.promptKind !== "setup_request") {
+    const genericCmsPlan = buildGenericCmsOperationPlan(input.prompt, context);
+    if (genericCmsPlan) return normalizeAssistantActionPlan(genericCmsPlan);
   }
 
   const deletePlan = buildCustomScreenDeletePlan(

@@ -142,6 +142,7 @@ export function ActionPlanReview({
   const blocked = preview?.changes.some((change) =>
     change.conflicts?.some((conflict) => conflict.severity === "error")
   );
+  const hasExecutableActions = plan.actions.length > 0;
 
   return (
     <Card className="border-emerald-200/80 bg-emerald-50/40">
@@ -227,12 +228,51 @@ export function ActionPlanReview({
           </Alert>
         ) : null}
 
+        {plan.inspection ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              CMS resource matches
+            </p>
+            <div className="space-y-2 rounded-lg border bg-background px-3 py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{redactUiText(plan.inspection.resourceKind)}</Badge>
+                <Badge variant="outline">{redactUiText(plan.inspection.matchStatus)}</Badge>
+                {plan.inspection.query ? (
+                  <Badge variant="outline">{redactUiText(plan.inspection.query)}</Badge>
+                ) : null}
+              </div>
+              {plan.inspection.candidates.length > 0 ? (
+                <ul className="ml-5 mt-2 list-disc space-y-1 text-muted-foreground">
+                  {plan.inspection.candidates.map((candidate) => (
+                    <li key={`${candidate.kind}-${candidate.id}`}>
+                      <span className="font-medium text-foreground">
+                        {redactUiText(candidate.label)}
+                      </span>
+                      {candidate.slug ? ` (${redactUiText(candidate.slug)})` : null}
+                      {candidate.status ? ` - ${redactUiText(candidate.status)}` : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-muted-foreground">
+                  No matching CMS resources were found.
+                </p>
+              )}
+              {plan.inspection.truncated ? (
+                <p className="text-xs text-muted-foreground">
+                  More matches exist. Refine the target before planning changes.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Planned actions
           </p>
           <div className="space-y-2">
-            {plan.actions.map((action) => {
+            {hasExecutableActions ? plan.actions.map((action) => {
               const previewChange = preview?.changes.find(
                 (change) => change.actionId === action.id
               );
@@ -299,7 +339,11 @@ export function ActionPlanReview({
                   ) : null}
                 </div>
               );
-            })}
+            }) : (
+              <div className="rounded-lg border bg-background px-3 py-3 text-sm text-muted-foreground">
+                No changes are planned for this response.
+              </div>
+            )}
           </div>
         </div>
 
@@ -310,6 +354,7 @@ export function ActionPlanReview({
           </Alert>
         ) : null}
 
+        {hasExecutableActions ? (
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -333,6 +378,7 @@ export function ActionPlanReview({
             Execute reviewed actions
           </Button>
         </div>
+        ) : null}
       </CardContent>
     </Card>
   );

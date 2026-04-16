@@ -60,6 +60,44 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
+test("normalizeAssistantActionPlan accepts read-only inspection plans", () => {
+  const plan = normalizeAssistantActionPlan({
+    id: "plan-cms-page-inspect",
+    status: "ready",
+    intentId: "cms-resource-inspect",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    inspection: {
+      kind: "resource-candidates",
+      operation: "inspect",
+      resourceKind: "page",
+      matchStatus: "matched",
+      query: "Pysiek Mysiek",
+      candidates: [
+        {
+          kind: "page",
+          id: "page-pysiek",
+          label: "Pysiek Mysiek",
+          slug: "/pysiek-mysiek",
+          status: "draft",
+          adminHref: "/admin/pages/page-pysiek",
+        },
+      ],
+      truncated: false,
+    },
+    title: "CMS resource inspection",
+    answer: "Found one page.",
+    summary: "Found 1 page candidate.",
+    confidence: 0.84,
+    assumptions: ["Read-only."],
+    questions: [],
+    actions: [],
+  });
+
+  expect(plan.inspection?.candidates[0]?.label).toBe("Pysiek Mysiek");
+  expect(plan.actions).toEqual([]);
+});
+
 test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + CMS Resource Contracts
 **Estimated Effort:** Large
 **Dependencies:** TASK-178-01, TASK-101-09-02-02, TASK-174-02
-**Status:** To Do
+**Status:** Done (2026-04-16)
 
 ---
 
@@ -122,3 +122,10 @@ Target resolution must return one of:
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/SECURITY_SPEC.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-16)
+
+- Added `cmsResourceRegistry.ts` with CMS resource aliases, supported operations, and read-permission metadata.
+- Added `cmsTargetResolver.ts` for exact, prefix, candidate, no-match, ambiguous, and unsupported target outcomes.
+- Extended assistant resource catalog summaries with optional `pages[]` from the existing page service.
+- Added Vitest coverage for registry aliasing, target resolution, resource catalog page summaries, and redaction-safe normalization.

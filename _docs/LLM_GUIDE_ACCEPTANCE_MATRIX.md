@@ -1,8 +1,8 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-04-14
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07
+**Last Updated:** 2026-04-16
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-04
 
 ---
 
@@ -24,6 +24,8 @@ Rules:
 | Area | Owner Lane | Reason |
 |---|---|---|
 | Prompt classification and blueprint plan shape | Vitest | Pure planner/blueprint logic |
+| Generic CMS operation draft and target resolution | Vitest | Pure operation draft schema, registry aliases, and target resolver |
+| Read-only CMS inspection plans | Vitest | Strict plan schema + admin review UI; no executor path |
 | Provider draft packaging and repair | Vitest | Pure provider adapter and redaction logic; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |
@@ -73,6 +75,14 @@ Rules:
 | `widget-template.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Patches selected reusable template block data paths |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |
 | `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | `solution-kits:read/write` + LLM availability gate | Existing unified site-kit action flow |
+
+---
+
+## Supported Read-Only Plans
+
+| Plan Type | Plan Coverage | UI Coverage | Route Permissions | Notes |
+|---|---|---|---|---|
+| CMS resource inspection/candidates | Vitest operation draft + target resolver | Vitest `ActionPlanReview` | target-family read permissions through resource catalog/active context | Non-mutating; no dry-run/execute controls |
 
 ---
 

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 5 tasks
-- **Done:** 873 tasks
+- **Done:** 876 tasks
 
 ---
 
@@ -39,10 +39,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-178 | LLM Guide Generic CMS Reasoning and Plan Orchestration | High | Large | Generic CMS intent, target resolution, typed plan, review, and execute pipeline |
-| TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Define generic operation draft contract before resource-specific mapping |
-| TASK-178-02 | CMS Resource Registry and Target Resolver | High | Large | Registry-owned aliases, read summaries, target matching, and permissions across CMS resources |
 | TASK-178-03 | Provider-First Planner Context and Draft Contract | High | Large | Use reasoning model for operation drafts with strict local validation and fallback |
-| TASK-178-04 | Generic Read, Inspect, and Candidate Plans | High | Medium | First-class read-only inspection/candidate plans with no execution affordance |
 | TASK-178-05 | Generic Mutation Planning and Action Mapping | High | Large | Map generic CMS operations to strict typed actions without prompt-specific branches |
 | TASK-178-06 | Conversation State and Follow-Up Target Memory | High | Medium | Preserve bounded candidate/target context for follow-up prompts |
 | TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | CMS-wide Polish/English prompt fixtures, malformed provider drafts, and abuse cases |
@@ -73,6 +70,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Done: strict CMS operation draft schema and planner integration foundation shipped |
+| TASK-178-02 | CMS Resource Registry and Target Resolver | High | Large | Done: registry aliases, page summaries, and target resolution outcomes shipped |
+| TASK-178-04 | Generic Read, Inspect, and Candidate Plans | High | Medium | Done: read-only inspection plans render CMS candidates without execution controls |
 | TASK-170-01 | Action Family Contract and Permission Model | High | Medium | Done: non-executable action family contract registry and permission model added |
 | TASK-170-01-01 | Entry Action Contracts | High | Medium | Done: entry contracts documented; `entry.upsert-draft` was later promoted by TASK-170-03-01 |
 | TASK-170-01-02 | Menu, SEO, and Media Action Contracts | High | Medium | Done: menu/SEO/media contracts documented; menu item and SEO were later promoted by TASK-170-03-02 leaves |

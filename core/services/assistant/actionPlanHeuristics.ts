@@ -3,6 +3,7 @@ import type {
   AssistantIntentFamily,
   AssistantPromptKind,
 } from "./actionPlanTypes";
+import { resolveCmsResourceKindFromPrompt } from "./cmsResourceRegistry";
 
 export const normalizeAssistantPlannerPrompt = (value: string) =>
   value
@@ -120,6 +121,27 @@ const includesDocsQuestionSignal = (value: string) =>
       ? containsPromptWord(value, keyword)
       : value.includes(keyword)
   );
+
+const cmsOperationQuestionSignals = [
+  "czy widzisz",
+  "widzisz",
+  "jakie",
+  "ktore",
+  "które",
+  "which",
+  "find",
+  "show",
+  "list",
+  "pokaż",
+  "pokaz",
+  "czy jest",
+];
+
+const isLikelyCmsOperationPrompt = (value: string) =>
+  Boolean(resolveCmsResourceKindFromPrompt(value)) &&
+  (includesAny(value, cmsOperationQuestionSignals) ||
+    includesAny(value, destructiveKeywords) ||
+    includesAny(value, refinementKeywords));
 
 const productCatalogKeywords = [
   "produkt",
@@ -296,13 +318,18 @@ export const classifyAssistantPrompt = (prompt: string) => {
   const hasSetupSignal = includesAny(normalized, setupKeywords);
   const hasRefinementSignal = includesAny(normalized, refinementKeywords);
   const hasDocsSignal = includesDocsQuestionSignal(normalized);
+  const hasCmsOperationSignal = isLikelyCmsOperationPrompt(normalized);
 
   let promptKind: AssistantPromptKind = "unknown";
-  if (hasDocsSignal && !hasSetupSignal) {
+  if (hasSetupSignal) {
+    promptKind = "setup_request";
+  } else if (hasCmsOperationSignal) {
+    promptKind = "refinement_request";
+  } else if (hasDocsSignal && !hasSetupSignal) {
     promptKind = "docs_question";
   } else if (hasRefinementSignal && !hasSetupSignal) {
     promptKind = "refinement_request";
-  } else if (hasSetupSignal || intentFamily !== "unknown") {
+  } else if (intentFamily !== "unknown") {
     promptKind = "setup_request";
   }
 

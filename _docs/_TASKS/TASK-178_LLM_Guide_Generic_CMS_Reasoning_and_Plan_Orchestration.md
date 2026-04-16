@@ -102,6 +102,15 @@ Non-goals:
 5. Ambiguous resource matches return candidates or questions instead of guessing.
 6. Provider reasoning improves understanding, but strict local validation remains the authority.
 
+## Progress Notes
+
+- 2026-04-16: Completed the first generic CMS planner foundation:
+  - `TASK-178-01` operation draft contract,
+  - `TASK-178-02` resource registry and target resolver,
+  - `TASK-178-04` read-only inspection/candidate plans.
+- The current implementation stays inside the existing `/assistant/actions/*` flow and reuses current planner/schema/executor/review UI contracts.
+- Provider-first operation planning, generic mutation mapping beyond the first page delete/update slice, conversation target memory, fixture matrix expansion, and closure docs/gates remain open leaves.
+
 ## Security Contract
 
 - Visibility: internal-only admin endpoints under `/admin/api/assistant/*`.

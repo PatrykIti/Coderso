@@ -25,6 +25,18 @@ test("classifyAssistantPrompt keeps docs-only questions non-mutating", () => {
   });
 });
 
+test("classifyAssistantPrompt routes CMS operation questions to LLM Guide planning", () => {
+  expect(classifyAssistantPrompt("jakie ekrany widzisz z prefixem House Projects?")).toMatchObject({
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+  });
+
+  expect(classifyAssistantPrompt("czy widzisz strone Pysiek w pages?")).toMatchObject({
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+  });
+});
+
 test("classifyAssistantPrompt routes setup and refinement prompts deterministically", () => {
   expect(classifyAssistantPrompt("potrzebuje katalogu produktow")).toMatchObject({
     promptKind: "setup_request",

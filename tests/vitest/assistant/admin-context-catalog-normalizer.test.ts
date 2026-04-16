@@ -5,6 +5,15 @@ import { normalizeAssistantResourceCatalog } from "../../../core/services/assist
 test("normalizeAssistantResourceCatalog summarizes resource schemas deterministically", () => {
   const snapshot = normalizeAssistantResourceCatalog(
     {
+      pages: [
+        {
+          id: "page-products",
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          currentData: { secretToken: "never expose" },
+        },
+      ],
       contentTypes: [
         {
           id: "ct-products",
@@ -188,6 +197,14 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         slug: "products",
         name: "Products",
         entryCount: 12,
+      },
+    ],
+    pages: [
+      {
+        id: "page-products",
+        title: "Products",
+        slug: "/products",
+        status: "published",
       },
     ],
     customScreens: [

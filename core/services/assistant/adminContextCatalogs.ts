@@ -15,6 +15,7 @@ export type AssistantMenuWithItemsRaw = {
 };
 
 export type AssistantResourceCatalogDeps = {
+  listPages: () => Promise<unknown[]>;
   listContentTypes: () => Promise<unknown[]>;
   listCustomScreens: () => Promise<unknown[]>;
   listListingQueries: () => Promise<unknown[]>;
@@ -28,6 +29,7 @@ export type AssistantResourceCatalogDeps = {
 export type AssistantResourceCatalogInput = AssistantResourceCatalogNormalizeOptions;
 
 type CatalogGroup =
+  | "pages"
   | "content_types"
   | "custom_screens"
   | "listing_queries"
@@ -56,6 +58,7 @@ export async function buildAssistantResourceCatalogSnapshot(
 ): Promise<AssistantResourceCatalogSnapshot> {
   const warnings: string[] = [];
   const [
+    pages,
     contentTypes,
     customScreens,
     listingQueries,
@@ -65,6 +68,7 @@ export async function buildAssistantResourceCatalogSnapshot(
     seoDocuments,
     widgets,
   ] = await Promise.all([
+    safeLoadGroup("pages", deps.listPages, warnings),
     safeLoadGroup("content_types", deps.listContentTypes, warnings),
     safeLoadGroup("custom_screens", deps.listCustomScreens, warnings),
     safeLoadGroup("listing_queries", deps.listListingQueries, warnings),
@@ -78,6 +82,7 @@ export async function buildAssistantResourceCatalogSnapshot(
   const snapshot = normalizeAssistantResourceCatalog(
     {
       contentTypes,
+      pages,
       customScreens,
       listingQueries,
       listingTemplates,
@@ -102,6 +107,7 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
 ): Promise<AssistantResourceCatalogSnapshot> {
   const [
     typeService,
+    pageService,
     customScreenService,
     listingQueryService,
     listingTemplateService,
@@ -111,6 +117,7 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     widgetCatalogService,
   ] = await Promise.all([
     import("../content/typeService"),
+    import("../pages/pageService"),
     import("../customScreens/customScreenService"),
     import("../content/listingQueriesService"),
     import("../content/listingTemplatesService"),
@@ -121,6 +128,7 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
   ]);
 
   return buildAssistantResourceCatalogSnapshot(input, {
+    listPages: pageService.listPages,
     listContentTypes: typeService.listContentTypes,
     listCustomScreens: customScreenService.listCustomScreens,
     listListingQueries: listingQueryService.listListingQueries,

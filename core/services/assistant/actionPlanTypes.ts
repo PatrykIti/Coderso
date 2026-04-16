@@ -947,6 +947,25 @@ export type AssistantActionPlanMetadata = {
   providerId?: string | null;
 };
 
+export type AssistantActionPlanInspectionCandidate = {
+  kind: string;
+  id: string;
+  label: string;
+  slug?: string | null;
+  status?: string | null;
+  adminHref?: string | null;
+};
+
+export type AssistantActionPlanInspection = {
+  kind: "resource-candidates";
+  operation: "inspect" | "find";
+  resourceKind: string;
+  matchStatus: "matched" | "no_match" | "ambiguous" | "unsupported";
+  query: string | null;
+  candidates: AssistantActionPlanInspectionCandidate[];
+  truncated: boolean;
+};
+
 export type AssistantActionPlan = {
   id: string;
   status: AssistantActionPlanStatus;
@@ -954,6 +973,7 @@ export type AssistantActionPlan = {
   promptKind?: AssistantPromptKind;
   intentFamily?: AssistantIntentFamily;
   metadata?: AssistantActionPlanMetadata;
+  inspection?: AssistantActionPlanInspection;
   title: string;
   answer: string;
   summary: string;

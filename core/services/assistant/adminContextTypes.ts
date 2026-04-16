@@ -20,6 +20,13 @@ export type AssistantContentTypeSummary = {
   fields: AssistantResourceFieldSummary[];
 };
 
+export type AssistantPageSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+};
+
 export type AssistantCustomScreenBindingSummary = {
   widgetId: string;
   field: string;
@@ -167,6 +174,7 @@ export type AssistantResourceCatalogSnapshot = {
   schemaVersion: 1;
   generatedAt: string;
   budget: AssistantResourceCatalogBudget;
+  pages?: AssistantPageSummary[];
   contentTypes: AssistantContentTypeSummary[];
   customScreens: AssistantCustomScreenSummary[];
   listings: {

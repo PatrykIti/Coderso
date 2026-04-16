@@ -8,6 +8,17 @@ import {
 const createDeps = (overrides: Partial<AssistantResourceCatalogDeps> = {}) => {
   const calls: string[] = [];
   const deps: AssistantResourceCatalogDeps = {
+    listPages: async () => {
+      calls.push("pages");
+      return [
+        {
+          id: "page-products",
+          title: "Products",
+          slug: "/products",
+          status: "published",
+        },
+      ];
+    },
     listContentTypes: async () => {
       calls.push("contentTypes");
       return [
@@ -158,11 +169,13 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
     "listingQueries",
     "listingTemplates",
     "menus",
+    "pages",
     "seoDocuments",
     "widgets",
   ]);
   expect(snapshot.generatedAt).toBe("2026-04-11T10:00:00.000Z");
   expect(snapshot.contentTypes[0]?.slug).toBe("products");
+  expect(snapshot.pages?.[0]?.slug).toBe("/products");
   expect(snapshot.forms[0]?.fields[0]?.name).toBe("email");
   expect(snapshot.menus[0]?.items[0]?.label).toBe("Products");
   expect(snapshot.seoDocuments[0]?.slug).toBe("/products");

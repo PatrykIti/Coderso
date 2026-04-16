@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-178-03
-**Status:** To Do
+**Status:** Done (2026-04-16)
 
 ---
 
@@ -104,3 +104,11 @@ This prevents cases where a simple "what do you see?" prompt falls into catalog-
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - relevant `docs/` assistant corpus pages
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-16)
+
+- Added read-only `inspection` metadata to strict `AssistantActionPlan`.
+- `LLM Guide` now returns read-only candidate plans for CMS inspection prompts such as page lookup and custom-screen prefix lookup.
+- `ActionPlanReview` renders CMS resource matches and hides dry-run/execute controls when no actions are planned.
+- Dry-run results now mark zero-action plans as not executable.
+- Added Vitest UI and planner coverage for read-only inspection behavior.

@@ -1,5 +1,6 @@
 import type {
   AssistantActionPlan,
+  AssistantActionPlanInspection,
   AssistantActionPlanStatus,
   AssistantExecutableActionType,
   AssistantIntentFamily,
@@ -23,6 +24,7 @@ const planKeys = new Set([
   "promptKind",
   "intentFamily",
   "metadata",
+  "inspection",
   "title",
   "answer",
   "summary",
@@ -154,6 +156,48 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
     planner: readEnum(input.planner, new Set(["local", "provider", "fallback"])),
     providerDraftUsed: readBoolean(input.providerDraftUsed),
     ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
+  };
+};
+
+const normalizePlanInspection = (value: unknown): AssistantActionPlanInspection | undefined => {
+  if (value === undefined) return undefined;
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "kind",
+      "operation",
+      "resourceKind",
+      "matchStatus",
+      "query",
+      "candidates",
+      "truncated",
+    ])
+  );
+  const candidates = readRecordArray(input.candidates).map((candidate) => {
+    assertKeys(candidate, new Set(["kind", "id", "label", "slug", "status", "adminHref"]));
+    return {
+      kind: readText(candidate.kind),
+      id: readText(candidate.id),
+      label: readText(candidate.label),
+      ...(candidate.slug !== undefined ? { slug: readOptionalText(candidate.slug) } : {}),
+      ...(candidate.status !== undefined ? { status: readOptionalText(candidate.status) } : {}),
+      ...(candidate.adminHref !== undefined
+        ? { adminHref: readOptionalText(candidate.adminHref) }
+        : {}),
+    };
+  });
+  return {
+    kind: readEnum(input.kind, new Set(["resource-candidates"])),
+    operation: readEnum(input.operation, new Set(["inspect", "find"])),
+    resourceKind: readText(input.resourceKind),
+    matchStatus: readEnum(
+      input.matchStatus,
+      new Set(["matched", "no_match", "ambiguous", "unsupported"])
+    ),
+    query: readOptionalText(input.query),
+    candidates,
+    truncated: readBoolean(input.truncated),
   };
 };
 
@@ -1269,6 +1313,9 @@ export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPla
       ? { intentFamily: readOptionalEnum(input.intentFamily, intentFamilies) }
       : {}),
     ...(input.metadata !== undefined ? { metadata: normalizePlanMetadata(input.metadata) } : {}),
+    ...(input.inspection !== undefined
+      ? { inspection: normalizePlanInspection(input.inspection) }
+      : {}),
     title: readText(input.title),
     answer: readText(input.answer),
     summary: readText(input.summary),

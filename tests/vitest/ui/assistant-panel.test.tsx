@@ -333,6 +333,52 @@ test("ActionPlanReview renders planned guide actions", () => {
   expect(html).toContain("Execute reviewed actions");
 });
 
+test("ActionPlanReview renders read-only CMS inspection without execution controls", () => {
+  const html = renderAdminUi(
+    <ActionPlanReview
+      plan={{
+        id: "plan-cms-page-inspect",
+        status: "ready",
+        intentId: "cms-resource-inspect",
+        title: "CMS resource inspection",
+        answer: "Found one page.",
+        summary: "Found 1 page candidate.",
+        confidence: 0.84,
+        assumptions: ["Read-only response."],
+        questions: [],
+        inspection: {
+          kind: "resource-candidates",
+          operation: "inspect",
+          resourceKind: "page",
+          matchStatus: "matched",
+          query: "Pysiek Mysiek",
+          candidates: [
+            {
+              kind: "page",
+              id: "page-pysiek",
+              label: "Pysiek Mysiek",
+              slug: "/pysiek-mysiek",
+              status: "draft",
+              adminHref: "/admin/pages/page-pysiek",
+            },
+          ],
+          truncated: false,
+        },
+        actions: [],
+      }}
+      preview={null}
+      onPreview={() => undefined}
+      onExecute={() => undefined}
+    />
+  );
+
+  expect(html).toContain("CMS resource matches");
+  expect(html).toContain("Pysiek Mysiek");
+  expect(html).toContain("No changes are planned for this response.");
+  expect(html).not.toContain("Dry-run changes");
+  expect(html).not.toContain("Execute reviewed actions");
+});
+
 test("ActionPlanReview renders destructive and blocked resource-operation states", () => {
   const html = renderAdminUi(
     <ActionPlanReview

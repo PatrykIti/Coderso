@@ -4852,7 +4852,7 @@ export const dryRunAssistantActionPlan = async (
     plan,
     changes,
     warnings: changes.flatMap((change) => change.warnings),
-    readyToExecute: plan.status === "ready" && plan.questions.length === 0,
+    readyToExecute: plan.status === "ready" && plan.questions.length === 0 && plan.actions.length > 0,
   };
 };
 

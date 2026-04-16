@@ -339,6 +339,12 @@ Zamiast tego:
 - Resource-operation review UI distinguishes create/update/delete/archive/detach/restore/blocked actions, shows destructive and blocked preview states before execute, renders partial execution counts, and redacts secret-like dynamic text from preview/result payloads.
 - `core/services/assistant/adminContextCatalogNormalizer.ts` i `adminContextCatalogs.ts`
   buduja bounded/redacted resource catalog snapshot dla `LLM Guide` bez dodawania osobnego flow.
+- `core/services/assistant/cmsOperationDraftSchema.ts`, `cmsResourceRegistry.ts`, and
+  `cmsTargetResolver.ts` add the generic CMS operation foundation inside the same
+  planner flow: prompt -> strict operation draft -> registry-backed resource target
+  resolution -> read-only inspection plan or typed action mapping.
+- Resource catalog snapshots now include bounded page summaries when the plan route
+  requests server-side resource context; page data payloads stay out of the catalog.
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
 - `core/services/assistant/blueprints/leadCaptureBlueprint.ts` provides a lead-capture pack that creates a public inquiry form and a simple landing page through existing `form.upsert` and block-backed `page.upsert` actions.
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
@@ -384,6 +390,8 @@ Planner schema/recovery:
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled provider draft planning. It requires injected provider availability, maps provider JSON through `actionPlanProviderAdapter.ts`, and falls back to the deterministic local planner on provider errors/unavailability.
 - Provider draft adapter repair fills safe optional action labels and preserves typed provider questions when strict schema validation fails.
 - Assistant action plans can carry strict planner metadata (`local`, `provider`, or `fallback`) so the admin review UI can explain whether a plan came from provider draft or local deterministic planning.
+- Assistant action plans can also carry strict read-only `inspection` metadata for
+  CMS resource candidate lists. These plans have no actions and are not executable.
 - Provider planner fixture coverage uses injected fake providers only; live route wiring remains a separate opt-in step.
 
 Execution registry and idempotency:
@@ -400,6 +408,9 @@ Execution registry and idempotency:
 Declared capability boundary:
 - `docs-only` pozostaje read-only i nie zwraca executable action plans.
 - `LLM Guide` wykonuje tylko strict typed actions opisane w `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`, po plan/dry-run/review/execute.
+- `LLM Guide` can also return non-mutating CMS inspection plans for prompts such as
+  page lookup or custom-screen prefix lookup; those plans render candidates but do not
+  expose dry-run/execute controls.
 - Obecny executable business set obejmuje house-projects catalog, catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub oraz `site-kit.recommend/install/validate`.
 - Booking resource setup, checkout/payment, webhook form automation, nested page widget patches, `menu.structure.patch`, bulk/sample entry creation, field patching i solution-kit refinements bez server-derived installed-kit context pozostaja gated follow-up capabilities.
 - Guide nie wspiera arbitralnego code execution ani autonomicznych mutacji poza review/confirm flow.

@@ -8,6 +8,7 @@ import type {
   AssistantListingTemplateSummary,
   AssistantMenuItemSummary,
   AssistantMenuSummary,
+  AssistantPageSummary,
   AssistantReferencedWidgetTemplateBlockSummary,
   AssistantReferencedWidgetTemplateSummary,
   AssistantResourceCatalogBudget,
@@ -21,6 +22,7 @@ import type {
 import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
 
 export type AssistantResourceCatalogRawInput = {
+  pages?: unknown;
   contentTypes?: unknown;
   customScreens?: unknown;
   listingQueries?: unknown;
@@ -163,6 +165,19 @@ const normalizeContentType = (
     name,
     entryCount: readNumber(value.entryCount),
     fields: readSchemaFields(value.schema, budget, warnings, `content_type_${slug}`),
+  };
+};
+
+const normalizePage = (value: Record<string, unknown>): AssistantPageSummary | null => {
+  const id = readString(value.id);
+  const title = readString(value.title);
+  const slug = readString(value.slug);
+  if (!id || !title || !slug) return null;
+  return {
+    id,
+    title,
+    slug,
+    status: readString(value.status) ?? "unknown",
   };
 };
 
@@ -702,6 +717,15 @@ export function normalizeAssistantResourceCatalog(
   const budget = normalizeBudget(options);
   const clamp = createClamp(budget, warnings);
 
+  const pages = clamp(
+    sortByKey(
+      readRecordArray(raw.pages)
+        .map(normalizePage)
+        .filter((entry): entry is AssistantPageSummary => Boolean(entry)),
+      (entry) => entry.slug
+    ),
+    "pages"
+  );
   const contentTypes = clamp(
     sortByKey(
       readRecordArray(raw.contentTypes)
@@ -783,6 +807,7 @@ export function normalizeAssistantResourceCatalog(
     schemaVersion: 1,
     generatedAt: options.generatedAt ?? new Date().toISOString(),
     budget,
+    pages,
     contentTypes,
     customScreens,
     listings: {

@@ -17,6 +17,13 @@ admin resources through the same action engine. Those edits/deletes must resolve
 targets from active context or server-side catalogs, preview conflicts before
 execution, and remain inside the strict typed action set.
 
+The same flow now has a generic CMS operation foundation:
+
+`prompt -> strict CMS operation draft -> resource registry target resolver -> read-only inspection or typed action plan`
+
+Read-only inspection plans can list bounded CMS candidates, such as matching pages
+or custom screens, without exposing dry-run or execute controls.
+
 Current implemented guide blueprint:
 - `house-projects-catalog`
 - shared catalog-family business blueprint packs for:
@@ -67,6 +74,9 @@ Current capability limits:
 - Existing-resource edits/deletes are reviewed resource operations, not
 site-builder shortcuts. They still require typed plans, dry-runs, per-action
 permissions, idempotency, and conflict-aware execution.
+- CMS inspection/find prompts are non-mutating. They can return candidate plans
+  with no executable actions, and follow-up mutation still has to resolve to a
+  reviewed typed action plan.
 
 ## Runtime Contract
 
