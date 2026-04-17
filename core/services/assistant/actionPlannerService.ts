@@ -2812,6 +2812,39 @@ const buildClarifyingPlan = (
   };
 };
 
+const buildDocsGuidancePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan => {
+  const routeHint = context.route
+    ? `Current admin route: ${context.route}.`
+    : "No active admin route was provided.";
+  return {
+    id: "plan-docs-guidance",
+    status: "ready",
+    intentId: "docs-guidance",
+    responseKind: "docs",
+    promptKind: "docs_question",
+    intentFamily: "unknown",
+    title: "Documentation guidance",
+    answer: [
+      "This looks like a documentation or how-to question rather than a CMS operation.",
+      "",
+      routeHint,
+      "",
+      "Ask what you want me to inspect, change, create, delete, or configure if this should become a reviewed LLM Guide plan.",
+    ].join("\n"),
+    summary: "The prompt is classified as non-mutating documentation guidance.",
+    confidence: 0.62,
+    assumptions: [
+      "LLM Guide did not plan a mutation for this prompt.",
+      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+    ],
+    questions: [],
+    actions: [],
+  };
+};
+
 const describeCmsTargetQuery = (draft: CmsOperationDraft) =>
   draft.targetQuery?.exactName ??
   draft.targetQuery?.prefix ??
@@ -2861,6 +2894,7 @@ const buildGenericCmsInspectionPlan = (
     id: `plan-cms-${draft.resourceKind}-inspect`,
     status: "ready",
     intentId: "cms-resource-inspect",
+    responseKind: "inspection",
     promptKind: "refinement_request",
     intentFamily: "unknown",
     inspection: {
@@ -2909,6 +2943,7 @@ const buildGenericCmsNeedsInputPlan = (
   id: `plan-cms-${draft.resourceKind}-${draft.operation}-needs-input`,
   status: "needs_input",
   intentId: `cms-${draft.resourceKind}-${draft.operation}-needs-input`,
+  responseKind: "needs_input",
   promptKind: "refinement_request",
   intentFamily: "unknown",
   inspection: {
@@ -2995,6 +3030,7 @@ const buildGenericCmsMutationPlan = (
       id: `plan-page-delete-${target.id}`,
       status: "ready",
       intentId: "page-delete",
+      responseKind: "action_plan",
       promptKind: "refinement_request",
       intentFamily: "unknown",
       title: `Delete ${target.label}`,
@@ -3036,6 +3072,7 @@ const buildGenericCmsMutationPlan = (
     id: `plan-page-update-${target.id}`,
     status: "ready",
     intentId: "page-update",
+    responseKind: "action_plan",
     promptKind: "refinement_request",
     intentFamily: "unknown",
     title: `Update ${target.label}`,
@@ -3099,7 +3136,26 @@ const buildGenericCmsOperationPlanFromDraft = (
 ): AssistantActionPlan | null => {
   const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
   if (inspectionPlan) return inspectionPlan;
-  return buildGenericCmsMutationPlan(prompt, draft, context);
+  const mutationPlan = buildGenericCmsMutationPlan(prompt, draft, context);
+  if (mutationPlan) return mutationPlan;
+  if (
+    draft.operation === "delete" ||
+    draft.operation === "update" ||
+    draft.operation === "archive" ||
+    draft.operation === "publish" ||
+    draft.operation === "configure"
+  ) {
+    const resolution = resolveCmsOperationTargets(draft, context);
+    return buildGenericCmsNeedsInputPlan(
+      prompt,
+      draft,
+      resolution.status === "unsupported"
+        ? resolution.reason
+        : "This CMS operation resolved through the generic planner, but it does not yet map to a supported typed action for this resource family.",
+      resolution.candidates
+    );
+  }
+  return null;
 };
 
 const cloneSiteKitPlanInput = (
@@ -3254,6 +3310,9 @@ export const planAssistantActions = (
   if (classification.promptKind !== "setup_request") {
     const genericCmsPlan = buildGenericCmsOperationPlan(input.prompt, context);
     if (genericCmsPlan) return normalizeAssistantActionPlan(genericCmsPlan);
+  }
+  if (classification.promptKind === "docs_question") {
+    return normalizeAssistantActionPlan(buildDocsGuidancePlan(input.prompt, context));
   }
 
   const deletePlan = buildCustomScreenDeletePlan(

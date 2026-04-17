@@ -98,6 +98,45 @@ test("normalizeAssistantActionPlan accepts read-only inspection plans", () => {
   expect(plan.actions).toEqual([]);
 });
 
+test("normalizeAssistantActionPlan accepts docs response kind and rejects executable docs plans", () => {
+  const docsPlan = normalizeAssistantActionPlan({
+    id: "plan-docs-guidance",
+    status: "ready",
+    intentId: "docs-guidance",
+    responseKind: "docs",
+    promptKind: "docs_question",
+    intentFamily: "unknown",
+    title: "Documentation guidance",
+    answer: "This is a non-mutating docs answer.",
+    summary: "Docs guidance.",
+    confidence: 0.62,
+    assumptions: ["Read-only."],
+    questions: [],
+    actions: [],
+  });
+
+  expect(docsPlan.responseKind).toBe("docs");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...docsPlan,
+      actions: [
+        {
+          id: "page-delete",
+          type: "page.delete",
+          title: "Delete page",
+          description: "Unsafe docs response action.",
+          input: {
+            id: "page-1",
+            title: "Home",
+            slug: "/",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",

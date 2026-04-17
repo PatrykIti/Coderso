@@ -150,7 +150,7 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
   expect(plan.actions.some((action) => action.type === "page.upsert")).toBe(true);
 });
 
-test("planAssistantActions returns clarification plan for non-actionable prompt", () => {
+test("planAssistantActions returns docs guidance plan for non-actionable docs prompt", () => {
   const plan = planAssistantActions({
     prompt: "gdzie zmienie kolory hero widgetu?",
     context: {
@@ -159,10 +159,11 @@ test("planAssistantActions returns clarification plan for non-actionable prompt"
     },
   });
 
-  expect(plan.status).toBe("needs_input");
+  expect(plan.status).toBe("ready");
+  expect(plan.responseKind).toBe("docs");
   expect(plan.promptKind).toBe("docs_question");
   expect(plan.intentFamily).toBe("unknown");
-  expect(plan.questions.length).toBeGreaterThan(0);
+  expect(plan.questions).toEqual([]);
   expect(plan.actions).toHaveLength(0);
 });
 

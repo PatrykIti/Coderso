@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + LLM Provider Planning
 **Estimated Effort:** Large
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-171
-**Status:** In Progress (2026-04-16)
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -124,4 +124,11 @@ The UI must not decide whether a prompt is "LLM Guide enough" by keyword. In `LL
 
 - 2026-04-16: Completed `TASK-178-03-01` and `TASK-178-03-02`.
 - 2026-04-16: Started `TASK-178-03-03`; route wiring now uses the provider-aware planner wrapper and provider outputs can be validated as CMS operation drafts before local target resolution.
-- Remaining work: explicit planner response kinds for docs-style guidance (`TASK-178-03-04`) and broader provider safety/route matrix (`TASK-178-03-05`).
+- 2026-04-17: Completed `TASK-178-03-03`, `TASK-178-03-04`, and `TASK-178-03-05`.
+
+## Completion Notes (2026-04-17)
+
+- `LLM Guide` mode now routes through `/assistant/actions/plan` without a frontend keyword gate.
+- Provider planning prefers strict CMS operation drafts, then resolves targets and maps locally to strict plans.
+- Planner response kind metadata now distinguishes docs guidance, inspection, action plans, needs-input, and gated responses.
+- Provider safety fixtures cover smaller-model-style valid drafts, malformed output, invented targets, broad destructive prompts, and unsafe actions.

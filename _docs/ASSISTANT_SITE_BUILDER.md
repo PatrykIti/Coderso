@@ -25,6 +25,10 @@ Read-only inspection plans can list bounded CMS candidates, such as matching pag
 or custom screens, without exposing dry-run or execute controls.
 In `LLM Guide` mode the floating assistant sends prompts to `/assistant/actions/plan`
 by default; `docs-only` remains the documentation chat path.
+Planner responses can be tagged as `docs`, `inspection`, `action_plan`,
+`needs_input`, or `gated` so the admin UI can render guidance, candidate lists,
+reviewable actions, disabled clarification, or blocked states without guessing
+from prompt text.
 
 Current implemented guide blueprint:
 - `house-projects-catalog`

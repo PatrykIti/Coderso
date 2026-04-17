@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Planner Orchestration
 **Estimated Effort:** Large
 **Dependencies:** TASK-178-03-01, TASK-178-03-02, TASK-178-04, TASK-178-05
-**Status:** In Progress (2026-04-16)
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -90,4 +90,11 @@ Target orchestration:
 
 - 2026-04-16: `/assistant/actions/plan` default service now uses `planAssistantActionsWithProviderDraft` with the configured provider when available.
 - 2026-04-16: Provider operation drafts pass through strict local draft validation and target resolution before producing read-only/action/needs-input plans.
-- Remaining work: route-level provider fixtures that exercise configured provider resolution and full fallback/error matrix.
+- 2026-04-17: Provider-first orchestration and fallback tests are green.
+
+## Completion Notes (2026-04-17)
+
+- Provider operation drafts are validated before target resolution.
+- Malformed provider JSON falls back to deterministic local planning.
+- Unsafe provider action drafts still recover through the existing safe provider adapter path.
+- Route smoke coverage remains green for `/assistant/actions/plan`.

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178-03-01, TASK-178-03-02, TASK-178-04
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -89,3 +89,11 @@ The response must make UI decisions deterministic:
 - `_docs/CMS_API.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Added strict optional `responseKind` metadata to `AssistantActionPlan`.
+- Planner docs-style guidance is returned as `responseKind: "docs"` without action review.
+- Inspection plans use `responseKind: "inspection"`.
+- Needs-input/gated/action response kinds are validated by `actionPlanSchema`.
+- `AssistantPanel` renders docs-style planner responses as normal assistant messages without `ActionPlanReview`.

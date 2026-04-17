@@ -143,8 +143,9 @@ export function ActionPlanReview({
     change.conflicts?.some((conflict) => conflict.severity === "error")
   );
   const hasExecutableActions = plan.actions.length > 0;
-  const isReadOnlyInspectionPlan = Boolean(plan.inspection) && !hasExecutableActions;
-  const showActionControls = hasExecutableActions || !isReadOnlyInspectionPlan;
+  const isReadOnlyPlan =
+    plan.responseKind === "inspection" || (Boolean(plan.inspection) && !hasExecutableActions);
+  const showActionControls = hasExecutableActions || !isReadOnlyPlan;
 
   return (
     <Card className="border-emerald-200/80 bg-emerald-50/40">

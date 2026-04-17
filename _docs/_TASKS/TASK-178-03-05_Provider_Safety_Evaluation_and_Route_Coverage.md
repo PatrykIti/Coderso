@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178-03-02, TASK-178-03-03, TASK-178-03-04
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -79,3 +79,9 @@ Each fixture should assert the final planner outcome, not just provider output.
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/SECURITY_SPEC.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Added provider fixtures for valid CMS operation drafts, broad destructive prompts, invented target ids, malformed JSON fallback, and unsafe action drafts.
+- Provider fixtures assert final planner outcomes, not only provider output shape.
+- Route smoke tests remain green for assistant action planning and permission paths.

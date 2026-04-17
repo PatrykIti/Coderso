@@ -571,7 +571,9 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
             },
           });
 
-          setActivePlan(plan);
+          if (plan.responseKind !== "docs") {
+            setActivePlan(plan);
+          }
           setMessages((previous) => [
             ...previous,
             {

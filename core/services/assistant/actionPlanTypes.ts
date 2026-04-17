@@ -966,10 +966,18 @@ export type AssistantActionPlanInspection = {
   truncated: boolean;
 };
 
+export type AssistantActionPlanResponseKind =
+  | "action_plan"
+  | "inspection"
+  | "needs_input"
+  | "docs"
+  | "gated";
+
 export type AssistantActionPlan = {
   id: string;
   status: AssistantActionPlanStatus;
   intentId: string;
+  responseKind?: AssistantActionPlanResponseKind;
   promptKind?: AssistantPromptKind;
   intentFamily?: AssistantIntentFamily;
   metadata?: AssistantActionPlanMetadata;

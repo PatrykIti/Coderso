@@ -392,6 +392,9 @@ Planner schema/recovery:
 - Assistant action plans can carry strict planner metadata (`local`, `provider`, or `fallback`) so the admin review UI can explain whether a plan came from provider draft or local deterministic planning.
 - Assistant action plans can also carry strict read-only `inspection` metadata for
   CMS resource candidate lists. These plans have no actions and are not executable.
+- Assistant action plans can carry strict `responseKind` metadata (`docs`,
+  `inspection`, `action_plan`, `needs_input`, or `gated`) so the UI does not infer
+  behavior from prompt text or action count alone.
 - In `LLM Guide` mode the admin panel routes prompts through `/assistant/actions/plan`
   by default; docs-only mode remains on `/assistant/chat`.
 - Provider planning now accepts strict CMS operation drafts as the preferred output

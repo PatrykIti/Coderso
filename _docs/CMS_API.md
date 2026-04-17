@@ -2677,6 +2677,12 @@ Snapshot obejmuje pages, content types, custom screens, listings, forms, menus, 
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
 `runtimeSnapshot` jest advisory planning context; nie zastepuje route/domain RBAC.
 Generic CMS operation planning uses the same route and can return strict read-only `inspection` metadata for resource candidate lists. Those responses have `actions: []`, are not executable, and are used for prompts such as "czy widzisz strone X" or "jakie ekrany widzisz z prefixem Y".
+Action plan responses may include `responseKind`:
+- `docs`: non-mutating planner guidance, rendered as an assistant message,
+- `inspection`: read-only candidate list, no dry-run/execute,
+- `action_plan`: reviewable typed actions,
+- `needs_input`: clarification required before planning,
+- `gated`: unsupported or blocked capability.
 When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
 For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.

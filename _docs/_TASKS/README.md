@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
-- **In Progress:** 7 tasks
-- **Done:** 878 tasks
+- **To Do:** 12 tasks
+- **In Progress:** 5 tasks
+- **Done:** 882 tasks
 
 ---
 
@@ -39,8 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-178 | LLM Guide Generic CMS Reasoning and Plan Orchestration | High | Large | Generic CMS intent, target resolution, typed plan, review, and execute pipeline |
-| TASK-178-03-04 | Planner Response Kinds for Docs, Inspection, Action, and Needs Input | High | Medium | Backend planner owns docs/inspection/action/needs-input response routing |
-| TASK-178-03-05 | Provider Safety Evaluation and Route Coverage | High | Medium | Fake-provider fixtures for small-model behavior, unsafe drafts, and route fallback |
 | TASK-178-05 | Generic Mutation Planning and Action Mapping | High | Large | Map generic CMS operations to strict typed actions without prompt-specific branches |
 | TASK-178-06 | Conversation State and Follow-Up Target Memory | High | Medium | Preserve bounded candidate/target context for follow-up prompts |
 | TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | CMS-wide Polish/English prompt fixtures, malformed provider drafts, and abuse cases |
@@ -59,8 +57,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-178-03 | Provider-First Planner Context and Draft Contract | High | Large | In progress: mode routing and operation draft schema landed; response-kind and broader safety matrix remain |
-| TASK-178-03-03 | Model-First Planner Orchestration and Fallbacks | High | Large | In progress: provider-aware planner wrapper is wired into the default action plan route |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -73,8 +69,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-178-03 | Provider-First Planner Context and Draft Contract | High | Large | Done: provider-first operation drafts, response kinds, and safety fixtures shipped |
 | TASK-178-03-01 | LLM Guide Mode Planning Route Contract | High | Medium | Done: LLM Guide mode routes through action planning without frontend keyword gating |
 | TASK-178-03-02 | Provider Operation Draft Prompt and Response Schema | High | Large | Done: provider prompt package and draft adapter now support strict CMS operation drafts |
+| TASK-178-03-03 | Model-First Planner Orchestration and Fallbacks | High | Large | Done: provider-aware planner wrapper is wired into the default action plan route with fallback |
+| TASK-178-03-04 | Planner Response Kinds for Docs, Inspection, Action, and Needs Input | High | Medium | Done: strict responseKind metadata drives docs/inspection/action/needs-input UI behavior |
+| TASK-178-03-05 | Provider Safety Evaluation and Route Coverage | High | Medium | Done: fake-provider fixtures cover malformed, unsafe, broad, and valid operation drafts |
 | TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Done: strict CMS operation draft schema and planner integration foundation shipped |
 | TASK-178-02 | CMS Resource Registry and Target Resolver | High | Large | Done: registry aliases, page summaries, and target resolution outcomes shipped |
 | TASK-178-04 | Generic Read, Inspect, and Candidate Plans | High | Medium | Done: read-only inspection plans render CMS candidates without execution controls |

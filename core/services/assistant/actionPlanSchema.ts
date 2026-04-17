@@ -1,10 +1,12 @@
 import type {
   AssistantActionPlan,
   AssistantActionPlanInspection,
+  AssistantActionPlanResponseKind,
   AssistantActionPlanStatus,
   AssistantExecutableActionType,
   AssistantIntentFamily,
   AssistantActionPlanMetadata,
+  AssistantPlanQuestion,
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "./actionPlanTypes";
@@ -21,6 +23,7 @@ const planKeys = new Set([
   "id",
   "status",
   "intentId",
+  "responseKind",
   "promptKind",
   "intentFamily",
   "metadata",
@@ -51,6 +54,14 @@ const intentFamilies = new Set<AssistantIntentFamily>([
   "editorial_content_hub",
   "site_kit",
   "unknown",
+]);
+
+const responseKinds = new Set<AssistantActionPlanResponseKind>([
+  "action_plan",
+  "inspection",
+  "needs_input",
+  "docs",
+  "gated",
 ]);
 
 const safeFormAutomationActionTypes = new Set<FormActionType>([
@@ -1292,20 +1303,41 @@ const normalizeActions = (value: unknown): AssistantPlannedAction[] =>
     } as AssistantPlannedAction;
   });
 
+const resolvePlanResponseKind = (
+  input: JsonRecord,
+  status: AssistantActionPlanStatus,
+  questions: AssistantPlanQuestion[],
+  actions: AssistantPlannedAction[]
+): AssistantActionPlanResponseKind => {
+  if (input.responseKind !== undefined) {
+    return readEnum(input.responseKind, responseKinds);
+  }
+  if (input.inspection !== undefined) return "inspection";
+  if (status === "needs_input" || questions.length > 0) return "needs_input";
+  if (actions.length > 0) return "action_plan";
+  return "docs";
+};
+
 export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPlan => {
   const input = assertRecord(value);
   assertKeys(input, planKeys);
   const status = readEnum(input.status, new Set<AssistantActionPlanStatus>(["ready", "needs_input"]));
   const questions = normalizeQuestions(input.questions);
   const actions = normalizeActions(input.actions);
+  const responseKind = resolvePlanResponseKind(input, status, questions, actions);
 
   if (status === "ready" && questions.length > 0) fail();
   if (status === "needs_input" && questions.length === 0) fail();
+  if (responseKind === "docs" && actions.length > 0) fail();
+  if (responseKind === "inspection" && input.inspection === undefined) fail();
+  if (responseKind === "action_plan" && actions.length === 0) fail();
+  if ((responseKind === "needs_input" || responseKind === "gated") && status !== "needs_input") fail();
 
   return {
     id: readText(input.id),
     status,
     intentId: readText(input.intentId),
+    responseKind,
     ...(input.promptKind !== undefined
       ? { promptKind: readOptionalEnum(input.promptKind, promptKinds) }
       : {}),

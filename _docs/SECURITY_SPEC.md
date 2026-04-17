@@ -316,6 +316,8 @@ Rotacja klucza:
   - provider planning prompt packages are built by `providerPlanningContext.ts` with bounded docs/resource/runtime context and redacted through `assistantRedaction.ts` before future provider calls,
   - provider draft execution through `planAssistantActionsWithProviderDraft` requires provider availability, prefers strict CMS operation drafts, uses strict local adapter validation, and falls back to deterministic local planning on provider failures,
   - `LLM Guide` mode routes through `/assistant/actions/plan`; docs-only mode remains on `/assistant/chat`,
+  - `responseKind=docs` and `responseKind=inspection` are non-mutating and cannot execute actions,
+  - `responseKind=action_plan` requires strict typed actions before dry-run/execute,
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
