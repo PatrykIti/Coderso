@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Docs/Assistant + QA
 **Estimated Effort:** Small
-**Dependencies:** TASK-179-01, TASK-179-02, TASK-179-03, TASK-179-04, TASK-179-05
+**Dependencies:** TASK-179-01, TASK-179-02, TASK-179-03, TASK-179-04, TASK-179-05, TASK-179-07
 **Status:** To Do
 
 ---
@@ -12,6 +12,7 @@
 ## Overview
 
 Close `TASK-179` after surface hints, filters, inspection UX, and natural prompt tests are implemented.
+Also verify assistant-executed mutations refresh admin SPA cache/sidebar state without reload.
 
 ## Sub-Tasks
 
@@ -49,7 +50,8 @@ Docs must clearly state:
 2. Docs describe surface hints and filters.
 3. Acceptance matrix lists natural prompt/live provider coverage.
 4. Targeted lint/type/test/live smoke results are recorded.
-5. Task board and changelog are synchronized.
+5. Admin cache docs cover assistant action invalidation.
+6. Task board and changelog are synchronized.
 
 ## Security Contract
 
@@ -67,6 +69,7 @@ Docs must clearly state:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - targeted Vitest suites touched by TASK-179
+- targeted admin cache/UI suites touched by TASK-179-07
 - opt-in OpenAI/OpenRouter live tests when env vars are present.
 
 ## Documentation Updates Required

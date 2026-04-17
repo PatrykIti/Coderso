@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
+- **To Do:** 15 tasks
 - **In Progress:** 5 tasks
 - **Done:** 889 tasks
 
@@ -45,6 +45,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-179-04 | Read-Only Inspection UI Copy and State | High | Medium | Render inspection as read-only, not as an executable plan |
 | TASK-179-05 | Natural Prompt Fixtures and Live Provider Regression | High | Large | Natural Polish/English prompts plus OpenAI/OpenRouter live regression coverage |
 | TASK-179-06 | Docs, Changelog, and Closure | High | Small | Close docs, matrix, changelog, and targeted gates for TASK-179 |
+| TASK-179-07 | Assistant Action Admin Cache and Sidebar Refresh | High | Medium | Refresh custom screen list/sidebar after assistant-executed mutations without reload |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
