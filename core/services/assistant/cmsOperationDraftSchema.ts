@@ -67,6 +67,7 @@ const targetQueryKeys = new Set(["text", "exactName", "prefix", "slug", "route",
 const mutationKeys = new Set(["fieldIntent", "value", "patch"]);
 const constraintsKeys = new Set(["expectedCount", "destructive", "requiresConfirmation"]);
 const draftKeys = new Set(["operation", "resourceKind", "targetQuery", "mutation", "constraints"]);
+const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
 
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -191,5 +192,41 @@ export const isCmsOperationDraft = (value: unknown): value is CmsOperationDraft 
     return true;
   } catch {
     return false;
+  }
+};
+
+const containsSecretLikeKey = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.some(containsSecretLikeKey);
+  if (!isRecord(value)) return false;
+  return Object.entries(value).some(([key, nested]) => {
+    if (secretKeyPattern.test(key)) return true;
+    return containsSecretLikeKey(nested);
+  });
+};
+
+const pickRecord = (value: unknown, allowed: Set<string>) => {
+  if (!isRecord(value)) return undefined;
+  const result: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (allowed.has(key)) result[key] = nested;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+
+export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | null => {
+  if (!isRecord(value) || containsSecretLikeKey(value)) return null;
+  const targetQuery = pickRecord(value.targetQuery ?? value["optional targetQuery"], targetQueryKeys);
+  const mutation = pickRecord(value.mutation ?? value["optional mutation"], mutationKeys);
+  const constraints = pickRecord(value.constraints ?? value["optional constraints"], constraintsKeys);
+  try {
+    return normalizeCmsOperationDraft({
+      operation: value.operation,
+      resourceKind: value.resourceKind,
+      ...(targetQuery ? { targetQuery } : {}),
+      ...(mutation ? { mutation } : {}),
+      ...(constraints ? { constraints } : {}),
+    });
+  } catch {
+    return null;
   }
 };

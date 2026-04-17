@@ -89,4 +89,6 @@ The test is skipped unless both test env vars are set.
 
 - Added the opt-in live OpenRouter planner smoke test.
 - Added `.env.example` documentation for test-only OpenRouter vars.
-- Local live smoke was skipped because `TEST_OPENROUTER_MODEL` was not present in `.env`; the test will run once both vars are set.
+- Adjusted OpenRouter provider planning calls so empty-snippet requests send raw planner prompts instead of RAG snippet wrappers.
+- Added safe operation-draft repair for common small-model JSON shape drift (`optional targetQuery`, extra filter/return fields) while still rejecting secret-like keys.
+- Local live smoke passed after both `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL` were present.

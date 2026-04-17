@@ -156,7 +156,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     ),
     expected: {
       status: "needs_input",
-      summaryIncludes: "unknown fields",
+      summaryIncludes: "not precise enough",
     },
   },
   {
@@ -216,6 +216,61 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
         }),
         "```",
       ].join("\n")
+    ),
+    expected: {
+      status: "ready",
+      intentId: "cms-resource-inspect",
+      summaryIncludes: "custom-screen candidate",
+    },
+  },
+  {
+    name: "provider repaired CMS operation draft inspection",
+    prompt: "sprawdz jakie ekrany customowe sa widoczne",
+    context: {
+      page: "/admin/coderso/custom-screens",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-16T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [
+          {
+            id: "screen-house",
+            name: "House Projects",
+            contentTypeId: "ct-house",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "House Projects",
+            writableBindingFields: [],
+            bindings: [],
+          },
+        ],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+    llmAvailable: true,
+    provider: fakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "custom-screen",
+        "optional targetQuery": {
+          filters: [{ field: "showInSidebar", operator: "eq", value: true }],
+        },
+        constraints: {
+          returnFields: ["name"],
+        },
+      })
     ),
     expected: {
       status: "ready",

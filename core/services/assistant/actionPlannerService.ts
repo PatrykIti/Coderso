@@ -61,6 +61,7 @@ import type {
 import {
   type CmsOperationDraft,
   normalizeCmsOperationDraft,
+  repairCmsOperationDraft,
 } from "./cmsOperationDraftSchema";
 import { buildCmsOperationDraftFromPlanningState } from "./cmsPlanningState";
 
@@ -3140,7 +3141,7 @@ const tryPlanProviderCmsOperationDraft = (
 ) => {
   const context = buildAssistantAdminContext(input.context);
   try {
-    const operationDraft = normalizeCmsOperationDraft(draft);
+    const operationDraft = repairCmsOperationDraft(draft) ?? normalizeCmsOperationDraft(draft);
     const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft);
     if (!plan) return null;
     return normalizeAssistantActionPlan({
