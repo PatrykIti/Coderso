@@ -56,7 +56,24 @@ const context = buildAssistantAdminContext({
       },
     ],
     listings: { queries: [], templates: [] },
-    forms: [],
+    forms: [
+      {
+        id: "form-lead",
+        name: "Lead Form",
+        slug: "lead-form",
+        status: "published",
+        submissionAccess: "public",
+        fields: [],
+      },
+      {
+        id: "form-internal",
+        name: "Internal Form",
+        slug: "internal-form",
+        status: "draft",
+        submissionAccess: "internal",
+        fields: [],
+      },
+    ],
     menus: [],
     seoDocuments: [],
     widgets: [],
@@ -185,6 +202,26 @@ test("resolveCmsOperationTargets keeps page published filter family-specific", (
     candidates: [
       {
         label: "Contact",
+        status: "published",
+      },
+    ],
+  });
+});
+
+test("resolveCmsOperationTargets applies form visibility filters", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "form",
+    surfaceHint: "Forms",
+    filters: [{ field: "visibility", operator: "eq", value: "public" }],
+    targetQuery: null,
+  });
+
+  expect(resolveCmsOperationTargets(draft, context)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        label: "Lead Form",
         status: "published",
       },
     ],

@@ -561,6 +561,22 @@ const matchesFilter = (candidate: CmsResolvedTargetCandidate, draft: CmsOperatio
       }
       continue;
     }
+    if (draft.resourceKind === "form") {
+      if (filter.field === "status") {
+        const expected = normalizeFilterValue(filter.value);
+        const values = Array.isArray(expected) ? expected : [expected];
+        if (!values.includes(normalizeText(candidate.status ?? ""))) return false;
+        continue;
+      }
+      if (filter.field === "visibility") {
+        const expectsPublic =
+          includesFilterValue(filter.value, "public") ||
+          includesFilterValue(filter.value, "publiczny");
+        const submissionAccess = candidate.details?.submissionAccess;
+        if (expectsPublic && submissionAccess !== "public") return false;
+        continue;
+      }
+    }
     return false;
   }
   return true;

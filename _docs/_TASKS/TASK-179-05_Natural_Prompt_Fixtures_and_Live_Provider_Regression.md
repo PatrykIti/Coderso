@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Provider Integration
 **Estimated Effort:** Large
 **Dependencies:** TASK-179-01, TASK-179-02, TASK-179-03, TASK-179-04
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -136,3 +136,9 @@ Live tests must remain opt-in and use only:
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-17)
+
+- Expanded OpenAI/OpenRouter live smokes into a natural prompt matrix covering Screens, Pages, Engine/content types, and Forms.
+- Added resolver regression coverage for surface-only read queries and custom-screen/page/form filters.
+- Live OpenAI and OpenRouter matrix tests passed with `.env` test credentials and selected models.
