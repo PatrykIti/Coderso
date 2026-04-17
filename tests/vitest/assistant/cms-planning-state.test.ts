@@ -74,17 +74,20 @@ test("normalizeAssistantPlanningState rejects expired and secret-like state", ()
   ).toBeNull();
 
   expect(
-    normalizeAssistantPlanningState({
-      schemaVersion: 1,
-      sourcePlanId: "plan-1",
-      route: "/admin",
-      resourceKind: "custom-screen",
-      operation: "inspect",
-      query: "apiKey should not persist",
-      candidates: [{ kind: "custom-screen", id: "screen-1", label: "House Projects" }],
-      createdAt: "2026-04-17T10:00:00.000Z",
-      expiresAt: "2026-04-17T10:01:00.000Z",
-    })
+    normalizeAssistantPlanningState(
+      {
+        schemaVersion: 1,
+        sourcePlanId: "plan-1",
+        route: "/admin",
+        resourceKind: "custom-screen",
+        operation: "inspect",
+        query: "apiKey should not persist",
+        candidates: [{ kind: "custom-screen", id: "screen-1", label: "House Projects" }],
+        createdAt: "2026-04-17T10:00:00.000Z",
+        expiresAt: "2026-04-17T10:01:00.000Z",
+      },
+      { nowMs: Date.parse("2026-04-17T10:00:30.000Z") }
+    )
   ).toMatchObject({
     query: null,
   });

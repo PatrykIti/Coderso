@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 658 | 2026-04-17 | TASK-178 evaluation fixture matrix | Assistant/QA |
 | 657 | 2026-04-17 | TASK-178 model capability structured output | Assistant/Core |
 | 656 | 2026-04-17 | TASK-178 OpenRouter live planner smoke | Assistant/QA |
 | 655 | 2026-04-17 | TASK-178 conversation target memory | Assistant/Core |

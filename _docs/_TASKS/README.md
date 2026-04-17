@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
-- **In Progress:** 6 tasks
-- **Done:** 886 tasks
+- **To Do:** 9 tasks
+- **In Progress:** 5 tasks
+- **Done:** 887 tasks
 
 ---
 
@@ -54,7 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | In progress: OpenRouter live smoke and model capability structured output leaves are done |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -75,6 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-178-03-05 | Provider Safety Evaluation and Route Coverage | High | Medium | Done: fake-provider fixtures cover malformed, unsafe, broad, and valid operation drafts |
 | TASK-178-05 | Generic Mutation Planning and Action Mapping | High | Large | Done: generic CMS operation drafts map to existing typed actions for supported resources |
 | TASK-178-06 | Conversation State and Follow-Up Target Memory | High | Medium | Done: bounded inspection candidate state supports safe follow-up target selection |
+| TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | Done: CMS operation fixtures, provider safety, structured output strategy, and live smokes covered |
 | TASK-178-07-01 | OpenRouter Live Planner Smoke | High | Small | Done: opt-in live OpenRouter planner smoke uses test-only env vars |
 | TASK-178-07-02 | Model Capability Driven Structured Output Strategy | High | Medium | Done: provider/model-family structured output strategy drives CMS operation draft requests |
 | TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Done: strict CMS operation draft schema and planner integration foundation shipped |
