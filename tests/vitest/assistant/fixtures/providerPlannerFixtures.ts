@@ -279,6 +279,60 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     },
   },
   {
+    name: "provider uses surface hint for Screens instead of target query",
+    prompt: "no a jakies sa opublikowane w sekcji Screens?",
+    context: {
+      page: "/admin/coderso/custom-screens",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-17T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [
+          {
+            id: "screen-house",
+            name: "House Projects",
+            contentTypeId: "ct-house",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "House Projects",
+            writableBindingFields: [],
+            bindings: [],
+          },
+        ],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+    llmAvailable: true,
+    provider: fakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "custom-screen",
+        surfaceHint: "Screens",
+        filters: [{ field: "status", operator: "eq", value: "active" }],
+        targetQuery: null,
+        mutation: null,
+        constraints: null,
+      })
+    ),
+    expected: {
+      status: "ready",
+      intentId: "cms-resource-inspect",
+      summaryIncludes: "custom-screen candidate",
+    },
+  },
+  {
     name: "provider ready draft",
     prompt: "create a draft product entry",
     llmAvailable: true,

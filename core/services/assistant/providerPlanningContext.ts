@@ -72,6 +72,13 @@ export type AssistantProviderPlanningPromptPackage = {
     supportedOperations: string[];
     readPermissions: string[];
   }>;
+  operationDraftGuidance: {
+    notes: string[];
+    examples: Array<{
+      prompt: string;
+      draft: Record<string, unknown>;
+    }>;
+  };
   activeSurface: AssistantActionContext["activeSurface"];
   warnings: string[];
 };
@@ -194,6 +201,158 @@ const buildRegistryCapabilities = () =>
     readPermissions: [...entry.readPermissions],
   }));
 
+const buildOperationDraftGuidance = (): AssistantProviderPlanningPromptPackage["operationDraftGuidance"] => ({
+  notes: [
+    "Use surfaceHint for UI locations such as Screens, Pages, Engine, Admin UI, menu, or sidebar.",
+    "Use targetQuery only for real resource names, slugs, prefixes, routes, or active/current references.",
+    "Do not put UI section names like Screens into targetQuery.text.",
+    "Use filters for active/published/visible/show-in-sidebar language.",
+    "For custom-screen published/opublikowane means status active. Visible/widoczne usually means showInSidebar true.",
+    "For pages, published/opublikowana maps to status published. Navigation/menu visibility is not the same as page publish status.",
+    "For Engine/content-type prompts, resourceKind is content-type and Engine is surfaceHint.",
+    "For Entries/custom content prompts, resourceKind is entry and the content type name is targetQuery or surfaceHint depending on wording.",
+    "For Forms, public/internal/published/archived words should become allowlisted filters or update mutation values.",
+    "For Listings, distinguish listing-query from listing-template. Query/template names are targets; Listings is surfaceHint.",
+    "For Menus and SEO, menu/SEO sections are surface hints; item labels, hrefs, page titles, and slugs are targets.",
+    "For Widgets/Templates, Widgets is surfaceHint and template names are targets. Block-level edits require active selected block context.",
+    "For relation-oriented prompts, prefer inspect or needs_input unless a safe relation action contract is explicitly available.",
+  ],
+  examples: [
+    {
+      prompt: "jakie ekrany customowe istnieja w admin ui",
+      draft: {
+        operation: "inspect",
+        resourceKind: "custom-screen",
+        surfaceHint: "admin ui",
+        targetQuery: null,
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "no a jakies sa opublikowane w sekcji Screens?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "custom-screen",
+        surfaceHint: "Screens",
+        targetQuery: null,
+        filters: [{ field: "status", operator: "eq", value: "active" }],
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "czy jest strona Pysiek Mysiek?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "page",
+        surfaceHint: "Pages",
+        targetQuery: { exactName: "Pysiek Mysiek" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "jakie typy tresci sa w Engine?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "content-type",
+        surfaceHint: "Engine",
+        targetQuery: null,
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "pokaz wpisy dla Products",
+      draft: {
+        operation: "inspect",
+        resourceKind: "entry",
+        surfaceHint: "Entries",
+        targetQuery: { text: "Products" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "czy formularz Lead Form jest publiczny?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "form",
+        surfaceHint: "Forms",
+        targetQuery: { exactName: "Lead Form" },
+        filters: [{ field: "visibility", operator: "eq", value: "public" }],
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "jakie listing query sa dla produktow?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "listing-query",
+        surfaceHint: "Listings",
+        targetQuery: { text: "products" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "czy menu ma link Products?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "menu-item",
+        surfaceHint: "Menus",
+        targetQuery: { exactName: "Products" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "sprawdz SEO dla strony Products",
+      draft: {
+        operation: "inspect",
+        resourceKind: "seo-document",
+        surfaceHint: "SEO",
+        targetQuery: { text: "Products" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "jakie szablony widgetow sa dostepne?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "widget-template",
+        surfaceHint: "Widgets",
+        targetQuery: null,
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+    {
+      prompt: "czy wpis Product ma relacje do kategorii?",
+      draft: {
+        operation: "inspect",
+        resourceKind: "entry",
+        surfaceHint: "Entries",
+        targetQuery: { text: "Product" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      },
+    },
+  ],
+});
+
 export const buildProviderPlanningPromptPackage = (
   input: AssistantProviderPlanningPromptInput
 ): AssistantProviderPlanningPromptPackage => {
@@ -218,6 +377,7 @@ export const buildProviderPlanningPromptPackage = (
     docs: buildDocs(input.evidence, maxDocs, maxCharsPerDoc, warnings),
     resources: buildResources(context.resourceCatalog, maxResourceItemsPerGroup, warnings),
     registry: buildRegistryCapabilities(),
+    operationDraftGuidance: buildOperationDraftGuidance(),
     activeSurface: context.activeSurface,
     warnings,
   };

@@ -26,6 +26,10 @@ Provider instructions must include examples:
 - `jakie ekrany customowe istnieja w admin ui` -> `resourceKind=custom-screen`, no target query.
 - `opublikowane w sekcji Screens` -> `surfaceHint=Screens`, `filters=[status active]`.
 - `House Projects` -> target query only when it names an actual resource.
+- Engine/content types: Engine is `surfaceHint`, content type names are targets.
+- Entries/custom content: Entries is `surfaceHint`, content type or record names are targets depending on wording.
+- Forms/Listings/Menus/SEO/Widgets: product area names are `surfaceHint`; concrete labels/slugs/hrefs/template names are targets.
+- Relation-oriented prompts should prefer inspect/needs-input until relation action contracts are explicit.
 
 ## Integration with Current Code
 

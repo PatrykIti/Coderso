@@ -177,6 +177,15 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.docs).toHaveLength(1);
   expect(prompt.docs[0]?.content).toContain("...");
   expect(prompt.registry.some((entry) => entry.kind === "page")).toBe(true);
+  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("surfaceHint");
+  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("Engine/content-type");
+  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("relation-oriented");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Screens");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Engine");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Lead Form");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("listing-query");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("seo-document");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("widget-template");
   expect(prompt.resources?.pages).toHaveLength(1);
   expect(prompt.resources?.contentTypes).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
