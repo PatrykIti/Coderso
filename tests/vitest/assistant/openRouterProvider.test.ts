@@ -115,6 +115,76 @@ test("createOpenRouterProvider sends raw user message for planning calls without
   expect(requestBody.messages[1]?.content).not.toContain("Documentation snippets");
 });
 
+test("createOpenRouterProvider maps generic JSON schema response contract", async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return new Response(
+      JSON.stringify({
+        id: "or-plan-schema",
+        choices: [
+          {
+            message: {
+              content: "{\"operation\":\"inspect\",\"resourceKind\":\"custom-screen\"}",
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+
+  const provider = createOpenRouterProvider({
+    apiKey: "sk-or-v1-test",
+    model: "openai/gpt-5.4-nano",
+    fetchImpl: fetchMock,
+    retryCount: 0,
+  });
+
+  await provider.complete({
+    systemPrompt: "Return JSON",
+    userMessage: "{}",
+    snippets: [],
+    responseContract: {
+      kind: "json_schema",
+      name: "cms_operation_draft",
+      strict: true,
+      schema: { type: "object" },
+    },
+    requireStructuredOutput: true,
+    limits: {
+      maxInputTokens: 8192,
+      maxOutputTokens: 512,
+      timeoutMs: 1000,
+    },
+  });
+
+  const requestBody = JSON.parse(String(calls[0]?.init?.body)) as {
+    response_format?: {
+      type?: string;
+      json_schema?: {
+        name?: string;
+        strict?: boolean;
+        schema?: Record<string, unknown>;
+      };
+    };
+    provider?: {
+      require_parameters?: boolean;
+    };
+  };
+  expect(requestBody.response_format).toEqual({
+    type: "json_schema",
+    json_schema: {
+      name: "cms_operation_draft",
+      strict: true,
+      schema: { type: "object" },
+    },
+  });
+  expect(requestBody.provider).toEqual({
+    require_parameters: true,
+  });
+});
+
 test("createOpenRouterProvider retries once on retryable HTTP status", async () => {
   let attempts = 0;
   const fetchMock: typeof fetch = async () => {

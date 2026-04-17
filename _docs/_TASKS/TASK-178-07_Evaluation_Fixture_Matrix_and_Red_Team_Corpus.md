@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-04, TASK-178-05, TASK-178-06
-**Status:** To Do
+**Status:** In Progress (2026-04-17)
 
 ---
 
@@ -108,3 +108,4 @@ Each fixture records:
 
 - 2026-04-17: Completed `TASK-178-07-01`; opt-in OpenRouter live planner smoke exists and is skipped unless `TEST_OPENROUTER_API_KEY` plus `TEST_OPENROUTER_MODEL` are set.
 - 2026-04-17: Added `TASK-178-07-02` to cover provider/model-family structured output strategy before this evaluation wave can close.
+- 2026-04-17: Completed `TASK-178-07-02`; structured output is capability-driven and OpenRouter live smoke passes with test env vars.

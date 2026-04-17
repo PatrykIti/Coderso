@@ -4,10 +4,26 @@ export type AssistantProviderSnippet = {
   content: string;
 };
 
+export type AssistantProviderResponseContract =
+  | {
+      kind: "json_schema";
+      name: string;
+      strict: boolean;
+      schema: Record<string, unknown>;
+    }
+  | {
+      kind: "json_object";
+    }
+  | {
+      kind: "prompt_json_only";
+    };
+
 export type AssistantProviderRequest = {
   systemPrompt: string;
   userMessage: string;
   snippets: AssistantProviderSnippet[];
+  responseContract?: AssistantProviderResponseContract;
+  requireStructuredOutput?: boolean;
   limits: {
     maxInputTokens: number;
     maxOutputTokens: number;

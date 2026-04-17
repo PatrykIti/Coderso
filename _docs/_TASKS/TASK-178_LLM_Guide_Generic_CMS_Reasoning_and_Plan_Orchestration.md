@@ -122,6 +122,7 @@ Non-goals:
 - 2026-04-17: Completed `TASK-178-05`; generic CMS operation drafts can now map to existing typed actions for supported resource families without adding executor paths.
 - 2026-04-17: Completed `TASK-178-06`; read-only inspection candidates can be reused safely in follow-up prompts through bounded advisory planning state.
 - 2026-04-17: Added `TASK-178-07-02`; remaining evaluation work must include model/provider capability-driven structured output instead of provider-specific planner hardcode.
+- 2026-04-17: Completed `TASK-178-07-02`; provider structured output now uses model capability profiles and provider-agnostic response contracts.
 
 ## Security Contract
 

@@ -60,9 +60,14 @@ import type {
 } from "./adminContextTypes";
 import {
   type CmsOperationDraft,
+  buildCmsOperationDraftJsonSchema,
   normalizeCmsOperationDraft,
   repairCmsOperationDraft,
 } from "./cmsOperationDraftSchema";
+import {
+  chooseProviderResponseContract,
+  resolveModelCapabilityProfile,
+} from "./modelCapabilities";
 import { buildCmsOperationDraftFromPlanningState } from "./cmsPlanningState";
 
 export {
@@ -3093,6 +3098,7 @@ export type AssistantActionPlanInput = {
 
 export type AssistantProviderDraftPlanInput = AssistantActionPlanInput & {
   provider?: AssistantProvider | null;
+  providerModel?: string | null;
   llmAvailable?: boolean;
   evidence?: AssistantProviderPlanningEvidence[];
   limits?: {
@@ -3381,6 +3387,17 @@ export const planAssistantActionsWithProviderDraft = async (
       systemPrompt: providerPlannerSystemPrompt,
       userMessage: JSON.stringify(promptPackage),
       snippets: [],
+      ...chooseProviderResponseContract(
+        resolveModelCapabilityProfile({
+          provider: input.provider.id,
+          model: input.providerModel ?? "",
+        }),
+        {
+          name: "cms_operation_draft",
+          schema: buildCmsOperationDraftJsonSchema(),
+          strict: true,
+        }
+      ),
       limits: buildProviderRequestLimits(input.limits),
     });
     const draft = parseProviderDraftJson(response.text);

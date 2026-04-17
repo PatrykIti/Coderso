@@ -523,17 +523,23 @@ export const resolveCmsOperationTargets = (
   const query = draft.targetQuery ?? {};
   const activeCandidate = query.active ? activeCandidateForKind(draft.resourceKind, context) : null;
   if (query.active && !activeCandidate) {
-    return {
-      status: "no_match",
-      draft,
-      candidates: [],
-      reason: `No active ${entry.label.toLowerCase()} context is available.`,
-    };
+    if (draft.operation !== "inspect" && draft.operation !== "find") {
+      return {
+        status: "no_match",
+        draft,
+        candidates: [],
+        reason: `No active ${entry.label.toLowerCase()} context is available.`,
+      };
+    }
   }
   const allCandidates = activeCandidate
     ? [activeCandidate]
     : candidatesForKind(draft.resourceKind, context.resourceCatalog, context);
-  const matches = allCandidates.filter((item) => matchesCandidate(item, query));
+  const matchQuery =
+    query.active && !activeCandidate && (draft.operation === "inspect" || draft.operation === "find")
+      ? { ...query, active: undefined }
+      : query;
+  const matches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
   if (matches.length === 0) {
     return {
       status: "no_match",

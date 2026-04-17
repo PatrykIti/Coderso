@@ -127,9 +127,42 @@ const parseUsage = (body: OpenRouterResponseBody): AssistantProviderResponse["us
   };
 };
 
+const buildResponseFormat = (request: AssistantProviderRequest) => {
+  const contract = request.responseContract;
+  if (!contract || contract.kind === "prompt_json_only") return {};
+  if (contract.kind === "json_object") {
+    return {
+      response_format: {
+        type: "json_object",
+      },
+    };
+  }
+  return {
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: contract.name,
+        strict: contract.strict,
+        schema: contract.schema,
+      },
+    },
+  };
+};
+
+const buildProviderPreferences = (request: AssistantProviderRequest) =>
+  request.requireStructuredOutput
+    ? {
+        provider: {
+          require_parameters: true,
+        },
+      }
+    : {};
+
 const toRequestBody = (request: AssistantProviderRequest, model: string) => ({
   model,
   max_tokens: request.limits.maxOutputTokens,
+  ...buildResponseFormat(request),
+  ...buildProviderPreferences(request),
   messages: [
     {
       role: "system",

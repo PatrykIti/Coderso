@@ -89,6 +89,10 @@ permissions, idempotency, and conflict-aware execution.
 - Provider planning prefers a strict CMS operation draft response. The backend
   validates and repairs/falls back locally before any target resolution or action
   planning can proceed.
+- Structured provider output is capability-driven per provider/model family. When
+  strict JSON schema output is supported, the provider adapter can request it; when
+  it is not supported, the planner falls back to prompt-only JSON plus repair and
+  strict local validation.
 
 ## Runtime Contract
 

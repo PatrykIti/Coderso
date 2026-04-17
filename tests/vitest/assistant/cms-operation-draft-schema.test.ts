@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import {
+  buildCmsOperationDraftJsonSchema,
   isCmsOperationDraft,
   repairCmsOperationDraft,
   normalizeCmsOperationDraft,
@@ -86,4 +87,30 @@ test("repairCmsOperationDraft keeps safe fields from model-shaped drafts", () =>
       apiKey: "never",
     })
   ).toBeNull();
+});
+
+test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () => {
+  const schema = buildCmsOperationDraftJsonSchema();
+
+  expect(schema).toMatchObject({
+    type: "object",
+    additionalProperties: false,
+    required: ["operation", "resourceKind", "targetQuery", "mutation", "constraints"],
+    properties: {
+      operation: {
+        enum: expect.arrayContaining(["inspect", "delete", "update"]),
+      },
+      resourceKind: {
+        enum: expect.arrayContaining(["page", "custom-screen", "form"]),
+      },
+    },
+  });
+  expect(
+    ((schema.properties as Record<string, unknown>).targetQuery as { anyOf: Array<Record<string, unknown>> })
+      .anyOf[0]
+  ).toMatchObject({
+    type: "object",
+    additionalProperties: false,
+    required: ["text", "exactName", "prefix", "slug", "route", "active"],
+  });
 });

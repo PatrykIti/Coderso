@@ -406,6 +406,10 @@ Planner schema/recovery:
 - Provider planning now accepts strict CMS operation drafts as the preferred output
   shape. The server validates those drafts locally, resolves targets from trusted
   context, and only then returns inspection/actions/needs-input plans.
+- Provider structured output is selected through model capability profiles rather
+  than planner hardcode. The planner requests a provider-agnostic
+  `cms_operation_draft` contract, and provider adapters translate that contract
+  to the concrete provider payload when supported.
 - Provider planner fixture coverage uses injected fake providers only; live route wiring remains a separate opt-in step.
 
 Execution registry and idempotency:

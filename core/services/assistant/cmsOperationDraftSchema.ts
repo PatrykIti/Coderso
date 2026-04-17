@@ -92,18 +92,18 @@ const readText = (value: unknown): string => {
 };
 
 const readOptionalText = (value: unknown): string | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   return readText(value);
 };
 
 const readOptionalBoolean = (value: unknown): boolean | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   if (typeof value !== "boolean") fail();
   return value as boolean;
 };
 
 const readOptionalPositiveInteger = (value: unknown): number | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) fail();
   return value as number;
 };
@@ -122,12 +122,12 @@ const readMutationValue = (value: unknown) => {
 };
 
 const readOptionalRecord = (value: unknown): Record<string, unknown> | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   return assertRecord(value);
 };
 
 const normalizeTargetQuery = (value: unknown): CmsOperationTargetQuery | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   const input = assertRecord(value);
   assertKeys(input, targetQueryKeys);
   const result: CmsOperationTargetQuery = {};
@@ -141,7 +141,7 @@ const normalizeTargetQuery = (value: unknown): CmsOperationTargetQuery | undefin
 };
 
 const normalizeMutation = (value: unknown): CmsOperationMutation | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   const input = assertRecord(value);
   assertKeys(input, mutationKeys);
   return {
@@ -152,7 +152,7 @@ const normalizeMutation = (value: unknown): CmsOperationMutation | undefined => 
 };
 
 const normalizeConstraints = (value: unknown): CmsOperationConstraints | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined || value === null) return undefined;
   const input = assertRecord(value);
   assertKeys(input, constraintsKeys);
   const result: CmsOperationConstraints = {};
@@ -230,3 +230,87 @@ export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | nul
     return null;
   }
 };
+
+export const buildCmsOperationDraftJsonSchema = (): Record<string, unknown> => ({
+  type: "object",
+  additionalProperties: false,
+  required: ["operation", "resourceKind", "targetQuery", "mutation", "constraints"],
+  properties: {
+    operation: {
+      type: "string",
+      enum: cmsOperationValues,
+    },
+    resourceKind: {
+      type: "string",
+      enum: cmsResourceKindValues,
+    },
+    targetQuery: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["text", "exactName", "prefix", "slug", "route", "active"],
+          properties: {
+            text: { type: ["string", "null"] },
+            exactName: { type: ["string", "null"] },
+            prefix: { type: ["string", "null"] },
+            slug: { type: ["string", "null"] },
+            route: { type: ["string", "null"] },
+            active: { type: ["boolean", "null"] },
+          },
+        },
+        { type: "null" },
+      ],
+    },
+    mutation: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["fieldIntent", "value", "patch"],
+          properties: {
+            fieldIntent: { type: ["string", "null"] },
+            value: {
+              anyOf: [
+                { type: "string" },
+                { type: "number" },
+                { type: "boolean" },
+                { type: "null" },
+              ],
+            },
+            patch: {
+              anyOf: [
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {},
+                  required: [],
+                },
+                { type: "null" },
+              ],
+            },
+          },
+        },
+        { type: "null" },
+      ],
+    },
+    constraints: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["expectedCount", "destructive", "requiresConfirmation"],
+          properties: {
+            expectedCount: {
+              type: ["integer", "null"],
+              minimum: 1,
+            },
+            destructive: { type: ["boolean", "null"] },
+            requiresConfirmation: { type: ["boolean", "null"] },
+          },
+        },
+        { type: "null" },
+      ],
+    },
+  },
+});

@@ -96,6 +96,10 @@ const defaultService: AssistantRouteService = {
     return planAssistantActionsWithProviderDraft({
       ...input,
       provider,
+      providerModel: await readOptionalStringSetting(
+        "assistant.llm.model",
+        "google/gemma-3n-e2b-it:free"
+      ),
       llmAvailable: Boolean(provider),
       limits: {
         maxInputTokens: await readOptionalNumberSetting(

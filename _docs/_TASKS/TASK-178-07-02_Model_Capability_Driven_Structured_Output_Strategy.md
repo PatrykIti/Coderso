@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + LLM Provider Integration
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178-07-01, TASK-178-03, TASK-178-05
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -135,3 +135,12 @@ Fallback strategy:
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` on completion
+
+## Completion Notes (2026-04-17)
+
+- Added provider-agnostic response contracts to `AssistantProviderRequest`.
+- Added `modelCapabilities.ts` for provider/model-family structured output strategy selection.
+- Added `buildCmsOperationDraftJsonSchema()` and made it compatible with strict structured-output providers that require all object properties to be listed in `required` with nullable optional values.
+- OpenRouter adapter now maps generic JSON schema contracts into provider payload `response_format`.
+- `planAssistantActionsWithProviderDraft` now asks for `cms_operation_draft` through the model capability strategy.
+- Live OpenRouter planner smoke passes with `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`.

@@ -26,6 +26,7 @@ liveTest(
       prompt:
         "sprawdz jakie ekrany customowe sa widoczne w sekcji Screens i podaj ich dokladne nazwy",
       provider,
+      providerModel: model,
       llmAvailable: true,
       context: {
         page: "/admin/coderso/custom-screens",
