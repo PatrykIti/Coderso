@@ -176,6 +176,9 @@ Clients update caches and broadcast events on:
   custom screen cache state and broadcasts `customScreens:list` plus the touched
   `customScreens:detail:<id>` key, so the current `Screens` list and Coderso
   sidebar shortcuts can refresh without full reload.
+- Assistant `page.*` action results clear page cache state and broadcast
+  `pages:list` plus touched `pages:detail:<id>` keys, so page lists/navigation
+  react after assistant-executed page mutations without a full reload.
 
 ## Extending The Cache
 When adding a new resource:

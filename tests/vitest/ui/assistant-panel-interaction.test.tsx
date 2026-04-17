@@ -1027,6 +1027,7 @@ test("AssistantPanel restores conversation after close and SPA remount", async (
       "jakie ekrany widzisz z prefixem House Projects?"
     );
     expect(secondView.container.textContent).toContain("House Projects");
+    expect(secondView.container.textContent).not.toContain("Loading assistant runtime");
     expect(planSpy).toHaveBeenCalledTimes(1);
   } finally {
     secondView.cleanup();

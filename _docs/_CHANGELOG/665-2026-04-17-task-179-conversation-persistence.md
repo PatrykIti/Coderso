@@ -11,6 +11,7 @@ Tasks: TASK-179-08
 - Added bounded browser-local assistant conversation persistence.
 - Restores safe transcript, active plan state, planning state, and assistant mode across close/remount.
 - Assistant panel can reopen after SPA route changes without losing the current conversation.
+- Restored conversations render immediately without blocking on the assistant runtime loading state.
 
 ### Security
 
@@ -20,3 +21,4 @@ Tasks: TASK-179-08
 ## Validation
 
 - Added helper and UI interaction coverage for assistant conversation persistence.
+- Added regression coverage that restored conversations do not show the loading runtime placeholder.

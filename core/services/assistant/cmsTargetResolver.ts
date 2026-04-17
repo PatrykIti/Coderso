@@ -626,7 +626,16 @@ export const resolveCmsOperationTargets = (
     query.active && !activeCandidate && (draft.operation === "inspect" || draft.operation === "find")
       ? { ...query, active: undefined }
       : query;
-  const matches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
+  const directMatches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
+  const matches =
+    directMatches.length === 0 &&
+    draft.constraints?.expectedCount !== undefined &&
+    query.exactName &&
+    (draft.operation === "delete" || draft.operation === "archive")
+      ? allCandidates.filter((item) =>
+          normalizeCandidateValue(item.label).includes(normalizeText(query.exactName ?? ""))
+        )
+      : directMatches;
   const filteredMatches = matches.filter((item) => matchesFilter(item, draft));
   const filteredAllCandidates = allCandidates.filter((item) => matchesFilter(item, draft));
   const effectiveMatches = filteredMatches.length > 0 ? filteredMatches : matches;

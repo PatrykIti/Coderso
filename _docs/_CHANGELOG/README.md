@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 667 | 2026-04-17 | TASK-179 follow-up page cache and restore | Assistant/Admin UI |
 | 666 | 2026-04-17 | TASK-179 surface hints inspection closure | Docs/Assistant |
 | 665 | 2026-04-17 | TASK-179 conversation persistence | Admin/UI |
 | 664 | 2026-04-17 | TASK-179 assistant cache refresh | Admin/UI |

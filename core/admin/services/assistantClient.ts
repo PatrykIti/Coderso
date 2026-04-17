@@ -3,6 +3,7 @@ import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { apiRequest } from "./apiClient";
 import { cacheKeys } from "./cachePolicy";
 import { clearCustomScreensCache } from "./customScreensClient";
+import { clearPagesCache } from "./pagesClient";
 import type {
   SiteBuilderPlanInput,
   SiteBuilderPlanOutput,
@@ -299,6 +300,24 @@ const notifyAssistantExecutionCacheEvents = (result: AssistantActionExecuteRespo
         broadcastCacheEvent({
           key: cacheKeys.customScreenDetail(item.resourceId),
           action: item.type === "custom-screen.delete" ? "invalidate" : "update",
+        });
+      }
+    }
+    if (
+      item.type === "page.delete" ||
+      item.type === "page.update" ||
+      item.type === "page.upsert" ||
+      item.type === "page.widget.patch"
+    ) {
+      clearPagesCache();
+      broadcastCacheEvent({
+        key: cacheKeys.pagesList,
+        action: item.type === "page.delete" ? "invalidate" : "update",
+      });
+      if (item.resourceId) {
+        broadcastCacheEvent({
+          key: cacheKeys.pageDetail(item.resourceId),
+          action: item.type === "page.delete" ? "invalidate" : "update",
         });
       }
     }

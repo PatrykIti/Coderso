@@ -341,6 +341,112 @@ test("executeAssistantActions invalidates custom screen caches after successful 
   }
 });
 
+test("executeAssistantActions invalidates page caches after successful delete", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBroadcast = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storageWrites: string[] = [];
+  const storage = {
+    getItem: () => null,
+    setItem: (_key: string, value: string) => {
+      storageWrites.push(value);
+    },
+    removeItem: () => undefined,
+  };
+
+  delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    return jsonResponse({
+      plan: {
+        id: "plan-page-delete",
+        status: "ready",
+        intentId: "page-delete",
+        title: "Delete page",
+        answer: "Plan ready",
+        summary: "Delete page.",
+        confidence: 0.78,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      preview: {
+        plan: {
+          id: "plan-page-delete",
+          status: "ready",
+          intentId: "page-delete",
+          title: "Delete page",
+          answer: "Plan ready",
+          summary: "Delete page.",
+          confidence: 0.78,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        changes: [],
+        warnings: [],
+        readyToExecute: true,
+      },
+      results: [
+        {
+          actionId: "page-delete-page-1",
+          type: "page.delete",
+          targetType: "page",
+          targetKey: "/projekty-domow-a3afbe30",
+          operation: "delete",
+          status: "success",
+          resourceId: "page-1",
+          adminHref: "/admin/pages",
+          publicHref: null,
+          message: "Deleted page.",
+        },
+      ],
+      summary: { create: 0, update: 0, delete: 1, noop: 0, failed: 0 },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await executeAssistantActions({
+      plan: {
+        id: "plan-page-delete",
+        status: "ready",
+        intentId: "page-delete",
+        title: "Delete page",
+        answer: "Plan ready",
+        summary: "Delete page.",
+        confidence: 0.78,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      idempotencyKey: "assistant-page-delete-1",
+    });
+
+    const events = storageWrites.map((value) => JSON.parse(value) as { key: string; action: string });
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: cacheKeys.pagesList, action: "invalidate" }),
+        expect.objectContaining({ key: cacheKeys.pageDetail("page-1"), action: "invalidate" }),
+      ])
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalBroadcast === undefined) {
+      delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+    } else {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = originalBroadcast;
+    }
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
 test("sendAssistantMessage uses CSRF and POST", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];

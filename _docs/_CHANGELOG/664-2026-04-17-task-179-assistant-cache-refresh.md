@@ -10,11 +10,13 @@ Tasks: TASK-179-07
 
 - Assistant action execution now invalidates known resource-family caches from successful execution results.
 - Custom screen mutations executed by the assistant invalidate custom screen list/detail cache keys.
+- Page mutations executed by the assistant invalidate page list/detail cache keys.
 - Existing cache bus subscribers can refresh the current Screens list and Coderso sidebar shortcuts without a full reload.
 
 ### Docs
 
 - Updated admin cache docs and cache map for assistant-driven custom screen invalidation.
+- Updated admin cache docs for assistant-driven page invalidation.
 
 ## Validation
 

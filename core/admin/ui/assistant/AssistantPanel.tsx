@@ -727,25 +727,6 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     [isSending, message, status?.indexReady]
   );
 
-  const viewState = useMemo(
-    () =>
-      resolveAssistantPanelViewState({
-        isReady,
-        loadError,
-        statusEnabled: Boolean(status?.enabled),
-      }),
-    [isReady, loadError, status?.enabled]
-  );
-
-  const conversationState = useMemo(
-    () =>
-      resolveAssistantConversationState({
-        messageCount: messages.length,
-        indexReady: Boolean(status?.indexReady),
-      }),
-    [messages.length, status?.indexReady]
-  );
-
   const conversationWindowPosition = useMemo(() => {
     const { width, height } = getViewportSize();
     return resolveAssistantConversationWindowPosition({
@@ -757,6 +738,25 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   }, [conversationWidth, launcherPosition]);
 
   const currentMode = assistantMode ?? status?.defaultMode ?? "docs-only";
+  const hasRestoredConversation =
+    messages.length > 0 || Boolean(activePlan) || Boolean(activeExecution);
+  const resolvedViewState = useMemo(
+    () =>
+      resolveAssistantPanelViewState({
+        isReady: isReady || hasRestoredConversation,
+        loadError,
+        statusEnabled: status ? Boolean(status.enabled) : hasRestoredConversation,
+      }),
+    [hasRestoredConversation, isReady, loadError, status]
+  );
+  const resolvedConversationState = useMemo(
+    () =>
+      resolveAssistantConversationState({
+        messageCount: messages.length,
+        indexReady: status ? Boolean(status.indexReady) : hasRestoredConversation,
+      }),
+    [hasRestoredConversation, messages.length, status]
+  );
 
   if (!launcherEnabled) {
     return null;
@@ -848,7 +848,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4">
-            {viewState === "loading" ? (
+            {resolvedViewState === "loading" ? (
               <div className="flex flex-1 items-center justify-center rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -857,7 +857,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               </div>
             ) : null}
 
-            {viewState === "error" ? (
+            {resolvedViewState === "error" ? (
               <div className="rounded-xl border bg-muted/20 p-4 text-sm">
                 <p className="font-medium text-foreground">Assistant is unavailable</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -866,7 +866,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               </div>
             ) : null}
 
-            {viewState === "disabled" ? (
+            {resolvedViewState === "disabled" ? (
               <div className="rounded-xl border bg-muted/20 p-4 text-sm">
                 <p className="font-medium text-foreground">Assistant is disabled</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -875,7 +875,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               </div>
             ) : null}
 
-            {viewState === "ready" ? (
+            {resolvedViewState === "ready" ? (
               <>
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/10 p-3">
                   <div className="min-w-0 space-y-3 pr-3">
@@ -886,14 +886,14 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                       onChange={handleModeChange}
                     />
 
-                    {conversationState === "empty" ? (
+                    {resolvedConversationState === "empty" ? (
                       <AssistantEmptyState
                         disabled={isSending}
                         onPromptSelect={(prompt) => setMessage(prompt)}
                       />
                     ) : null}
 
-                    {conversationState === "docs-not-ready" ? (
+                    {resolvedConversationState === "docs-not-ready" ? (
                       <div className="flex h-full flex-col justify-center gap-2 rounded-xl border border-dashed bg-muted/20 p-4 text-sm">
                         <p className="font-medium text-foreground">
                           Assistant docs are not ready yet
@@ -904,7 +904,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                       </div>
                     ) : null}
 
-                    {conversationState === "messages"
+                    {resolvedConversationState === "messages"
                       ? messages.map((entry) => (
                           <AssistantMessage
                             key={entry.id}

@@ -31,6 +31,18 @@ const context = buildAssistantAdminContext({
         slug: "/contact",
         status: "published",
       },
+      {
+        id: "page-catalog-1",
+        title: "Katalog Projektów Domów 33151341",
+        slug: "/projekty-domow-33151341",
+        status: "published",
+      },
+      {
+        id: "page-catalog-2",
+        title: "Katalog Projektów Domów a3afbe30",
+        slug: "/projekty-domow-a3afbe30",
+        status: "published",
+      },
     ],
     contentTypes: [],
     customScreens: [
@@ -198,14 +210,44 @@ test("resolveCmsOperationTargets keeps page published filter family-specific", (
   });
 
   expect(resolveCmsOperationTargets(draft, context)).toMatchObject({
-    status: "exact",
+    status: "candidates",
     candidates: [
       {
         label: "Contact",
         status: "published",
       },
+      {
+        label: "Katalog Projektów Domów 33151341",
+        status: "published",
+      },
+      {
+        label: "Katalog Projektów Domów a3afbe30",
+        status: "published",
+      },
     ],
   });
+});
+
+test("resolveCmsOperationTargets resolves counted partial page deletes", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "delete",
+    resourceKind: "page",
+    targetQuery: {
+      exactName: "Katalog Projektów",
+    },
+    constraints: {
+      expectedCount: 2,
+      destructive: true,
+      requiresConfirmation: true,
+    },
+  });
+
+  const resolution = resolveCmsOperationTargets(draft, context);
+  expect(resolution.status).toBe("ambiguous");
+  expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([
+    "Katalog Projektów Domów 33151341",
+    "Katalog Projektów Domów a3afbe30",
+  ]);
 });
 
 test("resolveCmsOperationTargets applies form visibility filters", () => {

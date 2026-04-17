@@ -108,5 +108,7 @@ The fix should be generic enough to support other action families over time, but
 - `executeAssistantActions` now invalidates known resource-family caches from successful assistant action results.
 - `custom-screen.delete`, `custom-screen.update`, `custom-screen.upsert`, and `custom-screen.widget.patch` clear custom screen client memory cache and broadcast `customScreens:list`.
 - Touched custom screen detail keys are invalidated or updated from execution result `resourceId`.
+- Assistant-executed `page.*` actions now clear page client memory cache and broadcast `pages:list` plus touched `pages:detail:<id>` cache events.
 - Existing `AdminShell` and custom screen list subscriptions consume `customScreens:list` cache bus events, so the sidebar shortcut area and current Screens list can refresh without full reload.
 - Added admin client regression coverage for custom screen cache invalidation after assistant execution.
+- Added admin client regression coverage for page cache invalidation after assistant execution.

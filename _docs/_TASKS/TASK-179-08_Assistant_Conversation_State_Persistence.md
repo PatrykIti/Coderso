@@ -109,4 +109,5 @@ The implementation should prefer a small local helper such as `assistantConversa
 - Restores transcript, active plan/preview/execution when safe, planning state, and assistant mode across close/remount.
 - Persisted state expires and rejects malformed or secret-like payloads.
 - Assistant panel can restore conversation after SPA route remount without re-calling the planner.
+- Restored conversations render without blocking behind the runtime loading placeholder.
 - Added helper and UI interaction coverage.

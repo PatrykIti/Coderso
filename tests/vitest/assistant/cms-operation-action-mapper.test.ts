@@ -22,6 +22,18 @@ const context = buildAssistantAdminContext({
         slug: "/pysiek-mysiek",
         status: "draft",
       },
+      {
+        id: "page-catalog-1",
+        title: "Katalog Projektów Domów 33151341",
+        slug: "/projekty-domow-33151341",
+        status: "published",
+      },
+      {
+        id: "page-catalog-2",
+        title: "Katalog Projektów Domów a3afbe30",
+        slug: "/projekty-domow-a3afbe30",
+        status: "published",
+      },
     ],
     contentTypes: [
       {
@@ -238,4 +250,20 @@ test("mapCmsOperationToActionPlan fails closed for broad destructive prompts", (
 
   expect(plan?.status).toBe("needs_input");
   expect(plan?.actions).toEqual([]);
+});
+
+test("mapCmsOperationToActionPlan maps counted partial page deletes to multiple actions", () => {
+  const plan = planFor({
+    operation: "delete",
+    resourceKind: "page",
+    targetQuery: { exactName: "Katalog Projektów" },
+    constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+  });
+
+  expect(plan?.status).toBe("ready");
+  expect(plan?.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
+  expect(plan?.actions.map((action) => action.input.title)).toEqual([
+    "Katalog Projektów Domów 33151341",
+    "Katalog Projektów Domów a3afbe30",
+  ]);
 });
