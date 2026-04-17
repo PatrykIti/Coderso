@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-179-03, TASK-178-04
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -83,3 +83,10 @@ No child task files.
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Read-only inspection plans now render as `LLM Guide Inspection`.
+- Inspection plans show a `Read-only` badge.
+- Inspection plans no longer render `Planned actions` or `No changes are planned for this response.`
+- Existing needs-input/action-plan/destructive review states remain unchanged.

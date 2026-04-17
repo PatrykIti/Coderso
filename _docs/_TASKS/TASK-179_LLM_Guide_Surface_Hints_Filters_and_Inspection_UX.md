@@ -112,3 +112,4 @@ Rules:
 
 - 2026-04-17: Completed `TASK-179-01`; operation drafts now support `surfaceHint` and strict allowlisted filters.
 - 2026-04-17: Completed `TASK-179-02` and `TASK-179-03`; provider guidance and target resolver now separate surface hints from target queries and apply custom-screen/page filters.
+- 2026-04-17: Completed `TASK-179-04`; read-only inspections now render as `LLM Guide Inspection` with a read-only badge and without planned-action copy.

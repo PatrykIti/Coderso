@@ -146,6 +146,8 @@ export function ActionPlanReview({
   const isReadOnlyPlan =
     plan.responseKind === "inspection" || (Boolean(plan.inspection) && !hasExecutableActions);
   const showActionControls = hasExecutableActions || !isReadOnlyPlan;
+  const guideLabel = isReadOnlyPlan ? "LLM Guide Inspection" : "LLM Guide Plan";
+  const statusLabel = isReadOnlyPlan ? "Read-only" : plan.status === "ready" ? "Ready" : "Needs input";
 
   return (
     <Card className="border-emerald-200/80 bg-emerald-50/40">
@@ -153,10 +155,10 @@ export function ActionPlanReview({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="gap-1">
             <Sparkles className="h-3 w-3" />
-            LLM Guide Plan
+            {guideLabel}
           </Badge>
           <Badge variant={plan.status === "ready" ? "default" : "outline"}>
-            {plan.status === "ready" ? "Ready" : "Needs input"}
+            {statusLabel}
           </Badge>
           <Badge variant="outline">Confidence {Math.round(plan.confidence * 100)}%</Badge>
           <Badge variant="outline">{resolvePlannerLabel(plan.metadata)}</Badge>
@@ -270,85 +272,87 @@ export function ActionPlanReview({
           </div>
         ) : null}
 
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Planned actions
-          </p>
+        {!isReadOnlyPlan ? (
           <div className="space-y-2">
-            {hasExecutableActions ? plan.actions.map((action) => {
-              const previewChange = preview?.changes.find(
-                (change) => change.actionId === action.id
-              );
-              return (
-                <div
-                  key={action.id}
-                  className="rounded-xl border bg-background px-3 py-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{redactUiText(action.title)}</span>
-                    <Badge variant="secondary">{resolveActionTypeLabel(action.type)}</Badge>
-                    <Badge
-                      variant={
-                        resolveOperationLabel(action.type, previewChange) === "Blocked" ||
-                        isDestructiveAction(action.type, previewChange)
-                          ? "destructive"
-                          : "outline"
-                      }
-                    >
-                      {resolveOperationLabel(action.type, previewChange)}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-muted-foreground">
-                    {redactUiText(action.description)}
-                  </p>
-                  {previewChange ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Target: {redactUiText(previewChange.targetType)} /{" "}
-                      {redactUiText(previewChange.targetKey)}
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Planned actions
+            </p>
+            <div className="space-y-2">
+              {hasExecutableActions ? plan.actions.map((action) => {
+                const previewChange = preview?.changes.find(
+                  (change) => change.actionId === action.id
+                );
+                return (
+                  <div
+                    key={action.id}
+                    className="rounded-xl border bg-background px-3 py-3 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{redactUiText(action.title)}</span>
+                      <Badge variant="secondary">{resolveActionTypeLabel(action.type)}</Badge>
+                      <Badge
+                        variant={
+                          resolveOperationLabel(action.type, previewChange) === "Blocked" ||
+                          isDestructiveAction(action.type, previewChange)
+                            ? "destructive"
+                            : "outline"
+                        }
+                      >
+                        {resolveOperationLabel(action.type, previewChange)}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">
+                      {redactUiText(action.description)}
                     </p>
-                  ) : null}
-                  {previewChange?.warnings.length ? (
-                    <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
-                      {previewChange.warnings.map((warning) => (
-                        <li key={warning}>{redactUiText(warning)}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {previewChange?.conflicts?.length ? (
-                    <div className="mt-2 space-y-1 text-xs">
-                      {previewChange.conflicts.map((conflict) => (
-                        <p
-                          key={`${conflict.code}-${conflict.message}`}
-                          className={
-                            conflict.severity === "error"
-                              ? "text-destructive"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          Conflict: {redactUiText(conflict.message)}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                  {previewChange?.dependencies?.length ? (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Depends on:{" "}
-                      {previewChange.dependencies
-                        .map((dependency) =>
-                          redactUiText(`${dependency.targetType}/${dependency.targetKey}`)
-                        )
-                        .join(", ")}
-                    </div>
-                  ) : null}
+                    {previewChange ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Target: {redactUiText(previewChange.targetType)} /{" "}
+                        {redactUiText(previewChange.targetKey)}
+                      </p>
+                    ) : null}
+                    {previewChange?.warnings.length ? (
+                      <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
+                        {previewChange.warnings.map((warning) => (
+                          <li key={warning}>{redactUiText(warning)}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {previewChange?.conflicts?.length ? (
+                      <div className="mt-2 space-y-1 text-xs">
+                        {previewChange.conflicts.map((conflict) => (
+                          <p
+                            key={`${conflict.code}-${conflict.message}`}
+                            className={
+                              conflict.severity === "error"
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            Conflict: {redactUiText(conflict.message)}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                    {previewChange?.dependencies?.length ? (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Depends on:{" "}
+                        {previewChange.dependencies
+                          .map((dependency) =>
+                            redactUiText(`${dependency.targetType}/${dependency.targetKey}`)
+                          )
+                          .join(", ")}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }) : (
+                <div className="rounded-lg border bg-background px-3 py-3 text-sm text-muted-foreground">
+                  No changes are planned for this response.
                 </div>
-              );
-            }) : (
-              <div className="rounded-lg border bg-background px-3 py-3 text-sm text-muted-foreground">
-                No changes are planned for this response.
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {error ? (
           <Alert variant="destructive">

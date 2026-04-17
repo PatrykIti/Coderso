@@ -156,7 +156,7 @@ const readFilterValue = (value: unknown): string | boolean | string[] => {
   if (typeof value === "string") return readText(value);
   if (typeof value === "boolean") return value;
   if (Array.isArray(value)) return value.map(readText);
-  fail();
+  return fail();
 };
 
 const readOptionalRecord = (value: unknown): Record<string, unknown> | undefined => {
@@ -197,7 +197,7 @@ const normalizeFilter = (value: unknown): CmsOperationFilter => {
 const normalizeFilters = (value: unknown): CmsOperationFilter[] | undefined => {
   if (value === undefined || value === null) return undefined;
   if (!Array.isArray(value)) fail();
-  return value.map(normalizeFilter);
+  return (value as unknown[]).map(normalizeFilter);
 };
 
 const normalizeMutation = (value: unknown): CmsOperationMutation | undefined => {

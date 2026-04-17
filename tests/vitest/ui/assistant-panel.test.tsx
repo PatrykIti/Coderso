@@ -372,9 +372,13 @@ test("ActionPlanReview renders read-only CMS inspection without execution contro
     />
   );
 
+  expect(html).toContain("LLM Guide Inspection");
+  expect(html).toContain("Read-only");
   expect(html).toContain("CMS resource matches");
   expect(html).toContain("Pysiek Mysiek");
-  expect(html).toContain("No changes are planned for this response.");
+  expect(html).not.toContain("LLM Guide Plan");
+  expect(html).not.toContain("Planned actions");
+  expect(html).not.toContain("No changes are planned for this response.");
   expect(html).not.toContain("Dry-run changes");
   expect(html).not.toContain("Execute reviewed actions");
 });
