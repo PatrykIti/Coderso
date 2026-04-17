@@ -39,6 +39,24 @@ export type CmsOperationTargetQuery = {
   active?: boolean;
 };
 
+export const cmsOperationFilterFieldValues = [
+  "status",
+  "visibility",
+  "showInSidebar",
+] as const;
+
+export type CmsOperationFilterField = (typeof cmsOperationFilterFieldValues)[number];
+
+export const cmsOperationFilterOperatorValues = ["eq", "in"] as const;
+
+export type CmsOperationFilterOperator = (typeof cmsOperationFilterOperatorValues)[number];
+
+export type CmsOperationFilter = {
+  field: CmsOperationFilterField;
+  operator: CmsOperationFilterOperator;
+  value: string | boolean | string[];
+};
+
 export type CmsOperationMutation = {
   fieldIntent?: string;
   value?: string | number | boolean | null;
@@ -54,6 +72,8 @@ export type CmsOperationConstraints = {
 export type CmsOperationDraft = {
   operation: CmsOperation;
   resourceKind: CmsResourceKind;
+  surfaceHint?: string;
+  filters?: CmsOperationFilter[];
   targetQuery?: CmsOperationTargetQuery;
   mutation?: CmsOperationMutation;
   constraints?: CmsOperationConstraints;
@@ -63,10 +83,21 @@ type JsonRecord = Record<string, unknown>;
 
 const operationSet = new Set<string>(cmsOperationValues);
 const resourceKindSet = new Set<string>(cmsResourceKindValues);
+const filterFieldSet = new Set<string>(cmsOperationFilterFieldValues);
+const filterOperatorSet = new Set<string>(cmsOperationFilterOperatorValues);
 const targetQueryKeys = new Set(["text", "exactName", "prefix", "slug", "route", "active"]);
+const filterKeys = new Set(["field", "operator", "value"]);
 const mutationKeys = new Set(["fieldIntent", "value", "patch"]);
 const constraintsKeys = new Set(["expectedCount", "destructive", "requiresConfirmation"]);
-const draftKeys = new Set(["operation", "resourceKind", "targetQuery", "mutation", "constraints"]);
+const draftKeys = new Set([
+  "operation",
+  "resourceKind",
+  "surfaceHint",
+  "filters",
+  "targetQuery",
+  "mutation",
+  "constraints",
+]);
 const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
 
 const isRecord = (value: unknown): value is JsonRecord =>
@@ -121,6 +152,13 @@ const readMutationValue = (value: unknown) => {
   fail();
 };
 
+const readFilterValue = (value: unknown): string | boolean | string[] => {
+  if (typeof value === "string") return readText(value);
+  if (typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.map(readText);
+  fail();
+};
+
 const readOptionalRecord = (value: unknown): Record<string, unknown> | undefined => {
   if (value === undefined || value === null) return undefined;
   return assertRecord(value);
@@ -138,6 +176,28 @@ const normalizeTargetQuery = (value: unknown): CmsOperationTargetQuery | undefin
   if (input.route !== undefined) result.route = readOptionalText(input.route);
   if (input.active !== undefined) result.active = readOptionalBoolean(input.active);
   return result;
+};
+
+const normalizeFilter = (value: unknown): CmsOperationFilter => {
+  const input = assertRecord(value);
+  assertKeys(input, filterKeys);
+  const field = readText(input.field);
+  const operator = readText(input.operator);
+  if (!filterFieldSet.has(field) || !filterOperatorSet.has(operator)) fail();
+  const normalizedValue = readFilterValue(input.value);
+  if (operator === "eq" && Array.isArray(normalizedValue)) fail();
+  if (operator === "in" && !Array.isArray(normalizedValue)) fail();
+  return {
+    field: field as CmsOperationFilterField,
+    operator: operator as CmsOperationFilterOperator,
+    value: normalizedValue,
+  };
+};
+
+const normalizeFilters = (value: unknown): CmsOperationFilter[] | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) fail();
+  return value.map(normalizeFilter);
 };
 
 const normalizeMutation = (value: unknown): CmsOperationMutation | undefined => {
@@ -176,6 +236,8 @@ export const normalizeCmsOperationDraft = (value: unknown): CmsOperationDraft =>
   return {
     operation: operation as CmsOperation,
     resourceKind: resourceKind as CmsResourceKind,
+    ...(input.surfaceHint !== undefined ? { surfaceHint: readOptionalText(input.surfaceHint) } : {}),
+    ...(input.filters !== undefined ? { filters: normalizeFilters(input.filters) } : {}),
     ...(input.targetQuery !== undefined
       ? { targetQuery: normalizeTargetQuery(input.targetQuery) }
       : {}),
@@ -215,6 +277,11 @@ const pickRecord = (value: unknown, allowed: Set<string>) => {
 
 export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | null => {
   if (!isRecord(value) || containsSecretLikeKey(value)) return null;
+  const filters = Array.isArray(value.filters)
+    ? value.filters
+        .map((item) => pickRecord(item, filterKeys))
+        .filter((item): item is Record<string, unknown> => Boolean(item))
+    : undefined;
   const targetQuery = pickRecord(value.targetQuery ?? value["optional targetQuery"], targetQueryKeys);
   const mutation = pickRecord(value.mutation ?? value["optional mutation"], mutationKeys);
   const constraints = pickRecord(value.constraints ?? value["optional constraints"], constraintsKeys);
@@ -222,6 +289,8 @@ export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | nul
     return normalizeCmsOperationDraft({
       operation: value.operation,
       resourceKind: value.resourceKind,
+      ...(value.surfaceHint !== undefined ? { surfaceHint: value.surfaceHint } : {}),
+      ...(filters && filters.length > 0 ? { filters } : {}),
       ...(targetQuery ? { targetQuery } : {}),
       ...(mutation ? { mutation } : {}),
       ...(constraints ? { constraints } : {}),
@@ -234,7 +303,7 @@ export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | nul
 export const buildCmsOperationDraftJsonSchema = (): Record<string, unknown> => ({
   type: "object",
   additionalProperties: false,
-  required: ["operation", "resourceKind", "targetQuery", "mutation", "constraints"],
+  required: ["operation", "resourceKind", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
   properties: {
     operation: {
       type: "string",
@@ -243,6 +312,40 @@ export const buildCmsOperationDraftJsonSchema = (): Record<string, unknown> => (
     resourceKind: {
       type: "string",
       enum: cmsResourceKindValues,
+    },
+    surfaceHint: { type: ["string", "null"] },
+    filters: {
+      anyOf: [
+        {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["field", "operator", "value"],
+            properties: {
+              field: {
+                type: "string",
+                enum: cmsOperationFilterFieldValues,
+              },
+              operator: {
+                type: "string",
+                enum: cmsOperationFilterOperatorValues,
+              },
+              value: {
+                anyOf: [
+                  { type: "string" },
+                  { type: "boolean" },
+                  {
+                    type: "array",
+                    items: { type: "string" },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        { type: "null" },
+      ],
     },
     targetQuery: {
       anyOf: [

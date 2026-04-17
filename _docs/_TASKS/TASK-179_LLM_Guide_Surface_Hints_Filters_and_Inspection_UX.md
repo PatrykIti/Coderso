@@ -107,3 +107,7 @@ Rules:
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Progress Notes
+
+- 2026-04-17: Completed `TASK-179-01`; operation drafts now support `surfaceHint` and strict allowlisted filters.

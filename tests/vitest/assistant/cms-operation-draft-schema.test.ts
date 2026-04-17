@@ -12,6 +12,19 @@ test("normalizeCmsOperationDraft accepts strict CMS operation drafts", () => {
     normalizeCmsOperationDraft({
       operation: "delete",
       resourceKind: "page",
+      surfaceHint: "Pages",
+      filters: [
+        {
+          field: "status",
+          operator: "eq",
+          value: "published",
+        },
+        {
+          field: "showInSidebar",
+          operator: "eq",
+          value: true,
+        },
+      ],
       targetQuery: {
         exactName: "Pysiek Mysiek",
       },
@@ -24,6 +37,19 @@ test("normalizeCmsOperationDraft accepts strict CMS operation drafts", () => {
   ).toEqual({
     operation: "delete",
     resourceKind: "page",
+    surfaceHint: "Pages",
+    filters: [
+      {
+        field: "status",
+        operator: "eq",
+        value: "published",
+      },
+      {
+        field: "showInSidebar",
+        operator: "eq",
+        value: true,
+      },
+    ],
     targetQuery: {
       exactName: "Pysiek Mysiek",
     },
@@ -51,6 +77,22 @@ test("normalizeCmsOperationDraft rejects unknown fields and unsupported operatio
     })
   ).toThrow("cms_operation_draft_invalid");
 
+  expect(() =>
+    normalizeCmsOperationDraft({
+      operation: "inspect",
+      resourceKind: "custom-screen",
+      filters: [{ field: "database.path", operator: "eq", value: "users" }],
+    })
+  ).toThrow("cms_operation_draft_invalid");
+
+  expect(() =>
+    normalizeCmsOperationDraft({
+      operation: "inspect",
+      resourceKind: "custom-screen",
+      filters: [{ field: "status", operator: "eq", value: ["active"] }],
+    })
+  ).toThrow("cms_operation_draft_invalid");
+
   expect(isCmsOperationDraft({ operation: "inspect", resourceKind: "form" })).toBe(true);
   expect(isCmsOperationDraft({ operation: "inspect", resourceKind: "secret" })).toBe(false);
 });
@@ -60,6 +102,11 @@ test("repairCmsOperationDraft keeps safe fields from model-shaped drafts", () =>
     repairCmsOperationDraft({
       operation: "inspect",
       resourceKind: "custom-screen",
+      surfaceHint: "Screens",
+      filters: [
+        { field: "showInSidebar", operator: "eq", value: true },
+        { field: "status", operator: "in", value: ["active", "published"] },
+      ],
       "optional targetQuery": {
         filters: [{ field: "showInSidebar", operator: "eq", value: true }],
         exactName: "House Projects",
@@ -72,6 +119,11 @@ test("repairCmsOperationDraft keeps safe fields from model-shaped drafts", () =>
   ).toEqual({
     operation: "inspect",
     resourceKind: "custom-screen",
+    surfaceHint: "Screens",
+    filters: [
+      { field: "showInSidebar", operator: "eq", value: true },
+      { field: "status", operator: "in", value: ["active", "published"] },
+    ],
     targetQuery: {
       exactName: "House Projects",
     },
@@ -95,13 +147,16 @@ test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () 
   expect(schema).toMatchObject({
     type: "object",
     additionalProperties: false,
-    required: ["operation", "resourceKind", "targetQuery", "mutation", "constraints"],
+    required: ["operation", "resourceKind", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
     properties: {
       operation: {
         enum: expect.arrayContaining(["inspect", "delete", "update"]),
       },
       resourceKind: {
         enum: expect.arrayContaining(["page", "custom-screen", "form"]),
+      },
+      filters: {
+        anyOf: expect.any(Array),
       },
     },
   });

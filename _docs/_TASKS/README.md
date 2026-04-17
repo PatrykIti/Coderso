@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 15 tasks
 - **In Progress:** 5 tasks
 - **Done:** 889 tasks
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-179 | LLM Guide Surface Hints, Filters, and Inspection UX | High | Large | Natural UI language, surface/location hints, filters, and read-only inspection UX |
-| TASK-179-01 | Surface Hint and Filter Operation Draft Contract | High | Medium | Add safe surfaceHint/filter fields to CMS operation drafts |
 | TASK-179-02 | Provider Prompt and Structured Output Surface Hints | High | Medium | Teach providers to separate surface hints from resource target names |
 | TASK-179-03 | Surface-Aware Target Resolver and Filtering | High | Large | Resolve Screens/admin UI hints and active/visible filters without name confusion |
 | TASK-179-04 | Read-Only Inspection UI Copy and State | High | Medium | Render inspection as read-only, not as an executable plan |
@@ -73,6 +72,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-179-01 | Surface Hint and Filter Operation Draft Contract | High | Medium | Done: CMS operation drafts support surfaceHint and allowlisted filters |
 | TASK-178-03 | Provider-First Planner Context and Draft Contract | High | Large | Done: provider-first operation drafts, response kinds, and safety fixtures shipped |
 | TASK-178-03-01 | LLM Guide Mode Planning Route Contract | High | Medium | Done: LLM Guide mode routes through action planning without frontend keyword gating |
 | TASK-178-03-02 | Provider Operation Draft Prompt and Response Schema | High | Large | Done: provider prompt package and draft adapter now support strict CMS operation drafts |

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Schema
 **Estimated Effort:** Medium
 **Dependencies:** TASK-179, TASK-178-01, TASK-178-07-02
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -83,3 +83,11 @@ The JSON Schema builder must remain compatible with strict structured-output pro
 - `_docs/CMS_API.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Added `surfaceHint` to `CmsOperationDraft`.
+- Added allowlisted `filters[]` with `status`, `visibility`, and `showInSidebar` fields plus `eq`/`in` operators.
+- Updated `repairCmsOperationDraft()` to preserve safe model-provided filters and surface hints.
+- Updated strict JSON Schema builder for structured-output providers.
+- Added schema/repair tests for valid and invalid filters.
