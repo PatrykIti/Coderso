@@ -15,6 +15,7 @@ import {
   getBusinessBlueprintPack,
   listBusinessBlueprintPacks,
 } from "../../../core/services/assistant/blueprints/businessBlueprintTypes";
+import { normalizeAssistantActionPlan } from "../../../core/services/assistant/actionPlanSchema";
 
 test("buildCatalogFamilyPlan keeps house-projects preset backward-compatible", () => {
   const genericPlan = buildCatalogFamilyPlan(HOUSE_PROJECTS_CATALOG_PRESET, {
@@ -224,5 +225,5 @@ test("business blueprint pack builds strict plans without changing catalog outpu
     intentFamily: "product_catalog",
   });
 
-  expect(packPlan).toEqual(directPlan);
+  expect(packPlan).toEqual(normalizeAssistantActionPlan(directPlan));
 });
