@@ -239,7 +239,9 @@ const resolveSettingsPayload = (
     value: unknown,
     fallbackValue: SettingsValues["assistantLlmProvider"]
   ): SettingsValues["assistantLlmProvider"] =>
-    value === "openrouter" || value === "none" ? value : fallbackValue;
+    value === "openai" || value === "openrouter" || value === "none"
+      ? value
+      : fallbackValue;
   const resolveOptionalString = (value: unknown, fallbackValue: string) => {
     if (value === null) return "";
     if (typeof value !== "string") return fallbackValue;

@@ -62,7 +62,7 @@ export type AssistantChatLlmUsage = {
 };
 
 export type AssistantChatLlm = {
-  provider: "none" | "openrouter";
+  provider: "none" | "openai" | "openrouter";
   model: string;
   providerRequestId: string | null;
   usage?: AssistantChatLlmUsage;

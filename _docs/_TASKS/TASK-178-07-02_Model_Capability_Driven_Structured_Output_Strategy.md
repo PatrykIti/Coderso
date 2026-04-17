@@ -76,29 +76,32 @@ Fallback strategy:
 - Extend `AssistantProviderRequest` with provider-agnostic structured output fields.
 - Add `modelCapabilities.ts` or equivalent pure capability resolver.
 - Add `buildCmsOperationDraftJsonSchema()` next to `cmsOperationDraftSchema.ts`.
-- Update `openRouterProvider.ts` to translate generic response contracts into OpenRouter payload shape.
+- Update `openRouterProvider.ts` and `openAiProvider.ts` to translate generic response contracts into provider payload shape.
 - Do not move provider-specific request details into `actionPlannerService.ts`.
 - Keep `repairCmsOperationDraft` as fallback, not the primary strategy when strict schema is supported.
 
 ## Files to Change
 
 - `core/services/assistant/providers/providerTypes.ts`
+- `core/services/assistant/providers/openAiProvider.ts`
 - `core/services/assistant/providers/openRouterProvider.ts`
 - `core/services/assistant/modelCapabilities.ts` (new)
 - `core/services/assistant/cmsOperationDraftSchema.ts`
 - `core/services/assistant/actionPlannerService.ts`
 - `tests/vitest/assistant/model-capabilities.test.ts` (new)
+- `tests/vitest/assistant/openAiProvider.test.ts`
 - `tests/vitest/assistant/openRouterProvider.test.ts`
 - `tests/vitest/assistant/cms-operation-draft-schema.test.ts`
+- `tests/integration/routes/assistant-openai-live.test.ts`
 - `tests/integration/routes/assistant-openrouter-live.test.ts`
 
 ## Acceptance Criteria
 
 1. Planner asks for a generic `cms_operation_draft` output contract, not provider-specific JSON.
 2. Capability resolver chooses strategy by provider/model family with explicit unknown fallback.
-3. OpenRouter adapter supports strict JSON schema when the resolved capability allows it.
+3. OpenRouter and OpenAI adapters support strict JSON schema when the resolved capability allows it.
 4. Unknown/unsupported models fall back to prompt JSON + repair + strict local validation.
-5. Live OpenRouter smoke uses the capability resolver and structured strategy when supported.
+5. Live OpenRouter/OpenAI smokes use the capability resolver and structured strategy when supported.
 6. Backend validation remains authoritative even when provider structured output is used.
 
 ## Security Contract
@@ -121,11 +124,12 @@ Fallback strategy:
 
 - Vitest:
   - model capability resolver for GPT/Gemini/Qwen/unknown families,
-  - provider request contract mapping for OpenRouter,
+  - provider request contract mapping for OpenRouter and OpenAI,
   - JSON Schema builder matches accepted `CmsOperationDraft` shape,
   - fallback selection when strict schema is unsupported.
 - Bun integration:
-  - opt-in OpenRouter smoke using `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`.
+  - opt-in OpenRouter smoke using `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`,
+  - opt-in OpenAI smoke using `TEST_OPENAI_API_KEY` and `TEST_OPENAI_MODEL`.
 
 ## Documentation Updates Required
 
@@ -142,5 +146,7 @@ Fallback strategy:
 - Added `modelCapabilities.ts` for provider/model-family structured output strategy selection.
 - Added `buildCmsOperationDraftJsonSchema()` and made it compatible with strict structured-output providers that require all object properties to be listed in `required` with nullable optional values.
 - OpenRouter adapter now maps generic JSON schema contracts into provider payload `response_format`.
+- Added direct OpenAI provider adapter and integration/settings support behind the same provider-agnostic response contract.
 - `planAssistantActionsWithProviderDraft` now asks for `cms_operation_draft` through the model capability strategy.
 - Live OpenRouter planner smoke passes with `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`.
+- Added opt-in OpenAI live smoke using `TEST_OPENAI_API_KEY` and `TEST_OPENAI_MODEL`; local run skips when these env vars are absent.

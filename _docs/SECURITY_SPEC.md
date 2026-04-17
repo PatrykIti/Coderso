@@ -316,6 +316,7 @@ Rotacja klucza:
   - provider planning prompt packages are built by `providerPlanningContext.ts` with bounded docs/resource/runtime context and redacted through `assistantRedaction.ts` before future provider calls,
   - provider draft execution through `planAssistantActionsWithProviderDraft` requires provider availability, prefers strict CMS operation drafts, uses strict local adapter validation, and falls back to deterministic local planning on provider failures,
   - provider structured output is selected by provider/model capability profile and remains provider-agnostic at the planner boundary,
+  - OpenAI and OpenRouter direct credentials are read from encrypted integration config for production and from test-only env vars only in opt-in live tests,
   - `LLM Guide` mode routes through `/assistant/actions/plan`; docs-only mode remains on `/assistant/chat`,
   - `responseKind=docs` and `responseKind=inspection` are non-mutating and cannot execute actions,
   - `responseKind=action_plan` requires strict typed actions before dry-run/execute,

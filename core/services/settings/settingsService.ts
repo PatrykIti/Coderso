@@ -10,7 +10,7 @@ type WidgetTemplateCategorySetting = {
 };
 
 export type AssistantMode = "docs-only" | "llm-guide";
-export type AssistantLlmProvider = "openrouter" | "none";
+export type AssistantLlmProvider = "openai" | "openrouter" | "none";
 export type AssistantDocsBackend = "db";
 export type PostEditorMode = "blocks" | "classic";
 
@@ -126,7 +126,7 @@ const ASSISTANT_SETTING_KEYS = [
 type AssistantSettingKey = (typeof ASSISTANT_SETTING_KEYS)[number];
 const assistantSettingKeySet = new Set<string>(ASSISTANT_SETTING_KEYS);
 const assistantModes: AssistantMode[] = ["docs-only", "llm-guide"];
-const assistantProviders: AssistantLlmProvider[] = ["openrouter", "none"];
+const assistantProviders: AssistantLlmProvider[] = ["openai", "openrouter", "none"];
 const postEditorModes: PostEditorMode[] = ["blocks", "classic"];
 const LEGACY_ASSISTANT_DOCS_SETTING_KEYS = [
   "assistant.docs.backend",

@@ -410,6 +410,9 @@ Planner schema/recovery:
   than planner hardcode. The planner requests a provider-agnostic
   `cms_operation_draft` contract, and provider adapters translate that contract
   to the concrete provider payload when supported.
+- Direct OpenAI and OpenRouter providers are separate adapters behind the same
+  `AssistantProvider` interface; production credentials stay in encrypted
+  Integrations config rather than planner code.
 - Provider planner fixture coverage uses injected fake providers only; live route wiring remains a separate opt-in step.
 
 Execution registry and idempotency:

@@ -540,6 +540,23 @@ export const resolveCmsOperationTargets = (
       ? { ...query, active: undefined }
       : query;
   const matches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
+  if (
+    matches.length === 0 &&
+    (draft.operation === "inspect" || draft.operation === "find") &&
+    query.text &&
+    !query.exactName &&
+    !query.prefix &&
+    !query.slug &&
+    !query.active &&
+    allCandidates.length > 0
+  ) {
+    return {
+      status: "candidates",
+      draft,
+      candidates: allCandidates,
+      reason: "No exact text match; returning visible candidates for read-only inspection.",
+    };
+  }
   if (matches.length === 0) {
     return {
       status: "no_match",

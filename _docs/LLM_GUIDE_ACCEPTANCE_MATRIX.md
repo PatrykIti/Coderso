@@ -31,7 +31,7 @@ Rules:
 | Planner response kinds | Vitest | Strict `responseKind` schema + UI behavior for docs/inspection/action/needs-input |
 | Generic CMS operation-to-action mapping | Vitest + Bun smoke | Pure mapper coverage plus executor/route smoke through existing typed actions |
 | OpenRouter live planner smoke | Bun integration opt-in | Uses only `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`; skipped when missing |
-| Model capability structured output strategy | Vitest + Bun live smoke | Provider/model family resolves generic `cms_operation_draft` response contract |
+| Model capability structured output strategy | Vitest + Bun live smoke | Provider/model family resolves generic `cms_operation_draft` response contract for OpenRouter and OpenAI adapters |
 | Provider draft packaging and repair | Vitest | Pure provider adapter and redaction logic; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |

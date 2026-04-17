@@ -83,7 +83,7 @@ const resolveProviderForActionPlanning = async () => {
     "assistant.llm.model",
     "google/gemma-3n-e2b-it:free"
   );
-  if (provider !== "openrouter") return null;
+  if (provider !== "openai" && provider !== "openrouter") return null;
   return resolveAssistantProvider({ provider, model });
 };
 

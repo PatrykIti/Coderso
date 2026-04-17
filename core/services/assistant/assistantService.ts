@@ -166,7 +166,7 @@ const normalizeProvider = (
   value: unknown,
   fallback: AssistantLlmProvider
 ): AssistantLlmProvider => {
-  if (value === "openrouter" || value === "none") return value;
+  if (value === "openai" || value === "openrouter" || value === "none") return value;
   return fallback;
 };
 

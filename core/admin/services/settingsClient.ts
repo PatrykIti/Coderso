@@ -8,7 +8,7 @@ export type SettingResponse = {
 };
 
 export type AssistantMode = "docs-only" | "llm-guide";
-export type AssistantLlmProvider = "openrouter" | "none";
+export type AssistantLlmProvider = "openai" | "openrouter" | "none";
 export type AssistantDocsBackend = "db";
 export type PostEditorMode = "blocks" | "classic";
 

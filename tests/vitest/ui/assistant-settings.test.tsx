@@ -63,6 +63,23 @@ test("AssistantSettingsPage links OpenRouter provider to integrations secrets", 
   expect(html).toContain("/admin/settings/integrations");
 });
 
+test("AssistantSettingsPage links OpenAI provider to integrations secrets", () => {
+  const html = renderAdminUi(
+    <AssistantSettingsPage
+      values={{
+        assistantLlmEnabled: true,
+        assistantLlmProvider: "openai",
+      }}
+    />,
+    { path: "/admin/settings/assistant" }
+  );
+
+  expect(html).toContain("OpenAI API key is stored as an encrypted integration secret");
+  expect(html).toContain("Configure OpenAI API key");
+  expect(html).toContain("/admin/settings/integrations");
+});
+
+
 test("Run reindex triggers assistant reindex without calling onSave first", async () => {
   const onSave = vi.fn();
   const reindexSpy = vi

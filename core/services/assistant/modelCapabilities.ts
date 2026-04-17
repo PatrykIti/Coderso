@@ -52,6 +52,21 @@ export const resolveModelCapabilityProfile = (
   const provider = normalize(input.provider);
   const family = inferFamily(input.model);
 
+  if (provider === "openai") {
+    const supportsStrictSchema = family === "gpt";
+    return {
+      provider,
+      family,
+      structuredOutput: {
+        preferred: supportsStrictSchema ? "json_schema_strict" : "prompt_json_only",
+        supportsStrictSchema,
+        supportsJsonObject: supportsStrictSchema,
+        supportsToolCalling: supportsStrictSchema,
+        requiresProviderParam: false,
+      },
+    };
+  }
+
   if (provider === "openrouter") {
     const supportsStrictSchema =
       family === "gpt" ||

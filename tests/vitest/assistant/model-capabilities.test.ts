@@ -25,6 +25,13 @@ test("resolveModelCapabilityProfile detects common model families", () => {
       preferred: "json_schema_strict",
     },
   });
+  expect(resolveModelCapabilityProfile({ provider: "openai", model: "gpt-5.4-nano" })).toMatchObject({
+    family: "gpt",
+    structuredOutput: {
+      preferred: "json_schema_strict",
+      supportsStrictSchema: true,
+    },
+  });
   expect(resolveModelCapabilityProfile({ provider: "custom", model: "unknown-model" })).toMatchObject({
     family: "unknown",
     structuredOutput: {

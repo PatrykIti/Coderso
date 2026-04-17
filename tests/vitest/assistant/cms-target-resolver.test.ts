@@ -5,6 +5,7 @@ import {
   buildCmsOperationDraftFromPrompt,
   resolveCmsOperationTargets,
 } from "../../../core/services/assistant/cmsTargetResolver";
+import { normalizeCmsOperationDraft } from "../../../core/services/assistant/cmsOperationDraftSchema";
 
 const context = buildAssistantAdminContext({
   page: "/admin/pages",
@@ -106,6 +107,26 @@ test("resolveCmsOperationTargets resolves exact and prefix candidates", () => {
   );
   if (!screenDraft) throw new Error("missing_screen_draft");
   const resolution = resolveCmsOperationTargets(screenDraft, context);
+  expect(resolution.status).toBe("candidates");
+  expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([
+    "House Projects",
+    "House Projects Archive",
+  ]);
+});
+
+test("resolveCmsOperationTargets falls back to visible candidates for vague read-only text", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "find",
+    resourceKind: "custom-screen",
+    targetQuery: {
+      text: "widoczne w sekcji Screens",
+    },
+  });
+  const resolution = resolveCmsOperationTargets(
+    draft,
+    context
+  );
+
   expect(resolution.status).toBe("candidates");
   expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([
     "House Projects",

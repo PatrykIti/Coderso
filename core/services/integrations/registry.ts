@@ -105,6 +105,44 @@ const INTEGRATIONS: IntegrationDefinition[] = [
     ],
   },
   {
+    id: "openai",
+    name: "OpenAI",
+    description:
+      "Use OpenAI directly as the optional LLM provider for Assistant LLM Guide responses.",
+    category: "Developer Tools",
+    scopes: ["assistant:generate", "assistant:retrieve"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "API Key",
+        type: "secret",
+        required: true,
+        placeholder: "sk-...",
+      },
+      {
+        key: "baseUrl",
+        label: "Base URL",
+        type: "url",
+        required: false,
+        placeholder: "https://api.openai.com/v1",
+      },
+      {
+        key: "organization",
+        label: "Organization",
+        type: "text",
+        required: false,
+        placeholder: "org_...",
+      },
+      {
+        key: "project",
+        label: "Project",
+        type: "text",
+        required: false,
+        placeholder: "proj_...",
+      },
+    ],
+  },
+  {
     id: "openrouter",
     name: "OpenRouter",
     description:

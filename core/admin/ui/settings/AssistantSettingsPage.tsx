@@ -62,7 +62,9 @@ export function AssistantSettingsPage({
             ? rawMode
             : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDefaultMode,
       assistantLlmProvider:
-        input.assistantLlmProvider === "openrouter" || input.assistantLlmProvider === "none"
+        input.assistantLlmProvider === "openai" ||
+        input.assistantLlmProvider === "openrouter" ||
+        input.assistantLlmProvider === "none"
           ? input.assistantLlmProvider
           : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmProvider,
       assistantLlmModel:

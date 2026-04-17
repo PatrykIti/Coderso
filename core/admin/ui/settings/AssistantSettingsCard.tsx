@@ -19,7 +19,7 @@ export type AssistantSettingsValues = {
   assistantDefaultMode: "docs-only" | "llm-guide";
   assistantDocsReindexOnBoot: boolean;
   assistantLlmEnabled: boolean;
-  assistantLlmProvider: "openrouter" | "none";
+  assistantLlmProvider: "openai" | "openrouter" | "none";
   assistantLlmModel: string;
   assistantLlmMaxInputTokens: number;
   assistantLlmMaxOutputTokens: number;
@@ -168,6 +168,7 @@ export function AssistantSettingsCard({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
+                <SelectItem value="openai">OpenAI</SelectItem>
                 <SelectItem value="openrouter">OpenRouter</SelectItem>
               </SelectContent>
             </Select>
@@ -179,6 +180,18 @@ export function AssistantSettingsCard({
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Configure OpenRouter API key
+                </AdminLink>
+                .
+              </p>
+            ) : null}
+            {values.assistantLlmProvider === "openai" ? (
+              <p className="text-xs text-muted-foreground">
+                OpenAI API key is stored as an encrypted integration secret.{" "}
+                <AdminLink
+                  href="/admin/settings/integrations"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Configure OpenAI API key
                 </AdminLink>
                 .
               </p>

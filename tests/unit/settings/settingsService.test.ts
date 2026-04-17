@@ -175,7 +175,7 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
     "assistant.defaultMode": "llm-guide",
     "assistant.docs.reindexOnBoot": false,
     "assistant.llm.enabled": true,
-    "assistant.llm.provider": "openrouter",
+    "assistant.llm.provider": "openai",
     "assistant.llm.model": "google/gemma-3n-e2b-it:free",
     "assistant.llm.maxInputTokens": 8192,
     "assistant.llm.maxOutputTokens": 2048,
@@ -191,7 +191,7 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
     "https://cdn.example.com/assistant-avatar.png"
   );
   expect(list["assistant.defaultMode"]).toBe("llm-guide");
-  expect(list["assistant.llm.provider"]).toBe("openrouter");
+  expect(list["assistant.llm.provider"]).toBe("openai");
   await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
     "settings_value_invalid"
   );

@@ -93,6 +93,8 @@ permissions, idempotency, and conflict-aware execution.
   strict JSON schema output is supported, the provider adapter can request it; when
   it is not supported, the planner falls back to prompt-only JSON plus repair and
   strict local validation.
+- OpenAI direct and OpenRouter are provider adapters behind the same planner
+  contract; provider credentials are configured through Settings -> Integrations.
 
 ## Runtime Contract
 
