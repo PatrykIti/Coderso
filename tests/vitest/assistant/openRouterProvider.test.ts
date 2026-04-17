@@ -71,6 +71,50 @@ test("createOpenRouterProvider maps request and response", async () => {
   expect(requestBody.messages[1]?.content).toContain("docs/coderso/widget-template-editor.md");
 });
 
+test("createOpenRouterProvider sends raw user message for planning calls without snippets", async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return new Response(
+      JSON.stringify({
+        id: "or-plan-1",
+        choices: [
+          {
+            message: {
+              content: "{\"operation\":\"inspect\",\"resourceKind\":\"custom-screen\"}",
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+
+  const provider = createOpenRouterProvider({
+    apiKey: "sk-or-v1-test",
+    model: "google/gemma-3n-e2b-it:free",
+    fetchImpl: fetchMock,
+    retryCount: 0,
+  });
+
+  await provider.complete({
+    systemPrompt: "Return JSON",
+    userMessage: "{\"prompt\":\"inspect screens\"}",
+    snippets: [],
+    limits: {
+      maxInputTokens: 8192,
+      maxOutputTokens: 512,
+      timeoutMs: 1000,
+    },
+  });
+
+  const requestBody = JSON.parse(String(calls[0]?.init?.body)) as {
+    messages: Array<{ role: string; content: string }>;
+  };
+  expect(requestBody.messages[1]?.content).toBe("{\"prompt\":\"inspect screens\"}");
+  expect(requestBody.messages[1]?.content).not.toContain("Documentation snippets");
+});
+
 test("createOpenRouterProvider retries once on retryable HTTP status", async () => {
   let attempts = 0;
   const fetchMock: typeof fetch = async () => {

@@ -171,6 +171,59 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     },
   },
   {
+    name: "provider fenced CMS operation draft inspection",
+    prompt: "sprawdz jakie ekrany customowe sa widoczne",
+    context: {
+      page: "/admin/coderso/custom-screens",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-16T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [
+          {
+            id: "screen-house",
+            name: "House Projects",
+            contentTypeId: "ct-house",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "House Projects",
+            writableBindingFields: [],
+            bindings: [],
+          },
+        ],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+    llmAvailable: true,
+    provider: fakeProvider(
+      [
+        "```json",
+        JSON.stringify({
+          operation: "inspect",
+          resourceKind: "custom-screen",
+        }),
+        "```",
+      ].join("\n")
+    ),
+    expected: {
+      status: "ready",
+      intentId: "cms-resource-inspect",
+      summaryIncludes: "custom-screen candidate",
+    },
+  },
+  {
     name: "provider ready draft",
     prompt: "create a draft product entry",
     llmAvailable: true,

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 656 | 2026-04-17 | TASK-178 OpenRouter live planner smoke | Assistant/QA |
 | 655 | 2026-04-17 | TASK-178 conversation target memory | Assistant/Core |
 | 654 | 2026-04-17 | TASK-178 generic mutation mapping | Assistant/Core |
 | 653 | 2026-04-17 | TASK-178 provider response kinds and safety | Assistant/Core |

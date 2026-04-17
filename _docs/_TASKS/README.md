@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 5 tasks
-- **Done:** 884 tasks
+- **Done:** 885 tasks
 
 ---
 
@@ -75,6 +75,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-178-03-05 | Provider Safety Evaluation and Route Coverage | High | Medium | Done: fake-provider fixtures cover malformed, unsafe, broad, and valid operation drafts |
 | TASK-178-05 | Generic Mutation Planning and Action Mapping | High | Large | Done: generic CMS operation drafts map to existing typed actions for supported resources |
 | TASK-178-06 | Conversation State and Follow-Up Target Memory | High | Medium | Done: bounded inspection candidate state supports safe follow-up target selection |
+| TASK-178-07-01 | OpenRouter Live Planner Smoke | High | Small | Done: opt-in live OpenRouter planner smoke uses test-only env vars |
 | TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Done: strict CMS operation draft schema and planner integration foundation shipped |
 | TASK-178-02 | CMS Resource Registry and Target Resolver | High | Large | Done: registry aliases, page summaries, and target resolution outcomes shipped |
 | TASK-178-04 | Generic Read, Inspect, and Candidate Plans | High | Medium | Done: read-only inspection plans render CMS candidates without execution controls |

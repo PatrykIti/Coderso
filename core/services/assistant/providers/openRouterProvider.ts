@@ -73,6 +73,9 @@ const formatSnippets = (snippets: AssistantProviderRequest["snippets"]) =>
     .join("\n\n");
 
 const buildUserPrompt = (request: AssistantProviderRequest) => {
+  if (request.snippets.length === 0) {
+    return request.userMessage;
+  }
   const snippets = formatSnippets(request.snippets);
   return [
     `Question: ${request.userMessage}`,

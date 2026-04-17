@@ -97,3 +97,7 @@ Each fixture records:
 - `_docs/SECURITY_SPEC.md`
 - `_docs/TESTING_STRATEGY.md` if lane ownership changes
 - task/changelog entries on completion
+
+## Progress Notes
+
+- 2026-04-17: Completed `TASK-178-07-01`; opt-in OpenRouter live planner smoke exists and is skipped unless `TEST_OPENROUTER_API_KEY` plus `TEST_OPENROUTER_MODEL` are set.

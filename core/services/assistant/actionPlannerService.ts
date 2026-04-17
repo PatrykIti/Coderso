@@ -3110,7 +3110,21 @@ const providerPlannerSystemPrompt = [
   "The local server will validate your draft, resolve targets from trusted context, and map to a strict plan before any dry-run or execution.",
 ].join(" ");
 
-const parseProviderDraftJson = (value: string) => JSON.parse(value) as unknown;
+const parseProviderDraftJson = (value: string) => {
+  const trimmed = value.trim();
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    if (fenced?.[1]) return JSON.parse(fenced[1]) as unknown;
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as unknown;
+    }
+    throw new Error("provider_draft_json_invalid");
+  }
+};
 
 const buildProviderRequestLimits = (
   limits: AssistantProviderDraftPlanInput["limits"] | undefined
