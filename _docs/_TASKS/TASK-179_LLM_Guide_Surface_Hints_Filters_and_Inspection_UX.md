@@ -38,6 +38,7 @@ The current implementation can over-interpret UI words like `Screens` as resourc
 - `TASK-179-05_Natural_Prompt_Fixtures_and_Live_Provider_Regression.md`
 - `TASK-179-06_Docs_Changelog_and_Closure.md`
 - `TASK-179-07_Assistant_Action_Admin_Cache_and_Sidebar_Refresh.md`
+- `TASK-179-08_Assistant_Conversation_State_Persistence.md`
 
 ## Architecture
 
@@ -64,6 +65,7 @@ Rules:
 - Natural words like `opublikowane`, `widoczne`, `visible`, `active`, `published` map to safe resource-family filters.
 - Ambiguous filter semantics return clear assumptions or `needs_input`, not guessed mutations.
 - Assistant-executed mutations must refresh the relevant admin cache/sidebar state without a full page reload.
+- Assistant conversation state must survive close/minimize and SPA route transitions without losing safe transcript/plan context.
 
 ## Security Contract
 
@@ -90,6 +92,7 @@ Rules:
   - resolver tests for `Screens` surface hint and visible/active filters,
   - UI tests for read-only inspection copy,
   - assistant execution cache invalidation tests,
+  - assistant conversation persistence tests,
   - fixture matrix for natural Polish/English prompts.
 - Bun:
   - route smoke for strict context/schema behavior if route payload changes,
