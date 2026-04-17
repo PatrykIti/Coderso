@@ -117,6 +117,7 @@ Non-goals:
 - Provider-first operation planning, generic mutation mapping beyond the first page delete/update slice, conversation target memory, fixture matrix expansion, and closure docs/gates remain open leaves.
 - 2026-04-16: Completed `TASK-178-03-01` and `TASK-178-03-02`, and started `TASK-178-03-03`; `LLM Guide` mode now routes through action planning instead of a frontend keyword gate, and provider JSON can be validated as CMS operation drafts.
 - 2026-04-17: Completed `TASK-178-03`; provider-first planning, planner response kinds, and provider safety fixtures are now in place. Remaining leaves are generic mutation mapping, conversation target memory, broader fixture matrix, and closure docs/gates.
+- 2026-04-17: Completed `TASK-178-05`; generic CMS operation drafts can now map to existing typed actions for supported resource families without adding executor paths.
 
 ## Security Contract
 

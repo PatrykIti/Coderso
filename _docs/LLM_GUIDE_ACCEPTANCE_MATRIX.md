@@ -2,7 +2,7 @@
 
 **Status:** Active  
 **Last Updated:** 2026-04-16
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-03-05, TASK-178-04
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-03-05, TASK-178-04, TASK-178-05
 
 ---
 
@@ -29,6 +29,7 @@ Rules:
 | LLM Guide mode route contract | Vitest | UI sends LLM Guide prompts to action planning; docs-only stays on chat |
 | Provider CMS operation draft package | Vitest | Fake-provider context/adapter coverage with strict local validation |
 | Planner response kinds | Vitest | Strict `responseKind` schema + UI behavior for docs/inspection/action/needs-input |
+| Generic CMS operation-to-action mapping | Vitest + Bun smoke | Pure mapper coverage plus executor/route smoke through existing typed actions |
 | Provider draft packaging and repair | Vitest | Pure provider adapter and redaction logic; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |

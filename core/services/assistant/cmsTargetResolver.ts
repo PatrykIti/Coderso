@@ -21,6 +21,7 @@ export type CmsResolvedTargetCandidate = {
   slug: string | null;
   status: string | null;
   adminHref: string | null;
+  details?: Record<string, string | number | boolean | null>;
 };
 
 export type CmsTargetResolution =
@@ -273,6 +274,11 @@ const candidatesForKind = (
         slug: null,
         status: screen.status,
         adminHref: customScreenHref(screen.id),
+        details: {
+          contentTypeId: screen.contentTypeId,
+          showInSidebar: screen.showInSidebar,
+          sidebarLabel: screen.sidebarLabel,
+        },
       }));
     }
     if (context.activeSurface?.kind === "custom-screen") {
@@ -285,6 +291,11 @@ const candidatesForKind = (
           slug: null,
           status: screen.status,
           adminHref: customScreenHref(screen.id),
+          details: {
+            contentTypeId: screen.contentTypeId,
+            showInSidebar: screen.showInSidebar,
+            sidebarLabel: screen.sidebarLabel,
+          },
         }));
       }
     }
@@ -298,6 +309,9 @@ const candidatesForKind = (
         slug: contentType.slug,
         status: null,
         adminHref: `/admin/coderso/engine/${encodeURIComponent(contentType.id)}`,
+        details: {
+          entryCount: contentType.entryCount,
+        },
       }));
     }
   }
@@ -310,6 +324,9 @@ const candidatesForKind = (
         slug: form.slug,
         status: form.status,
         adminHref: formHref(form.id),
+        details: {
+          submissionAccess: form.submissionAccess,
+        },
       }));
     }
   }
@@ -322,6 +339,11 @@ const candidatesForKind = (
         slug: null,
         status: null,
         adminHref: listingHref(query.id),
+        details: {
+          source: query.source,
+          limit: query.limit,
+          includeDrafts: query.includeDrafts,
+        },
       }));
     }
   }
@@ -334,6 +356,9 @@ const candidatesForKind = (
         slug: template.slug,
         status: template.layout,
         adminHref: "/admin/coderso/listings",
+        details: {
+          layout: template.layout,
+        },
       }));
     }
   }
@@ -346,6 +371,9 @@ const candidatesForKind = (
         slug: null,
         status: widget.status,
         adminHref: widgetTemplateHref(widget.id),
+        details: {
+          category: widget.category,
+        },
       }));
     }
     if (context.activeSurface?.kind === "widget-template") {
@@ -358,6 +386,9 @@ const candidatesForKind = (
           slug: null,
           status: template.status,
           adminHref: widgetTemplateHref(template.id),
+          details: {
+            category: template.category,
+          },
         }));
       }
     }
@@ -372,6 +403,11 @@ const candidatesForKind = (
           slug: item.href,
           status: menu.name,
           adminHref: "/admin/menus",
+          details: {
+            menuId: menu.id,
+            href: item.href,
+            parentId: item.parentId,
+          },
         }));
       }
     }
@@ -385,6 +421,11 @@ const candidatesForKind = (
         slug: doc.slug,
         status: doc.status,
         adminHref: "/admin/seo",
+        details: {
+          targetType: doc.targetType,
+          targetId: doc.targetId,
+          title: doc.title,
+        },
       }));
     }
   }
@@ -415,6 +456,11 @@ const activeCandidateForKind = (
       slug: null,
       status: screen.status,
       adminHref: customScreenHref(screen.id),
+      details: {
+        contentTypeId: screen.contentTypeId,
+        showInSidebar: screen.showInSidebar,
+        sidebarLabel: screen.sidebarLabel,
+      },
     };
   }
   if (kind === "widget-template" && context.activeSurface?.kind === "widget-template") {
@@ -426,6 +472,9 @@ const activeCandidateForKind = (
       slug: null,
       status: template.status,
       adminHref: widgetTemplateHref(template.id),
+      details: {
+        category: template.category,
+      },
     };
   }
   return null;

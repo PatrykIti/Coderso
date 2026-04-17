@@ -341,8 +341,10 @@ Zamiast tego:
   buduja bounded/redacted resource catalog snapshot dla `LLM Guide` bez dodawania osobnego flow.
 - `core/services/assistant/cmsOperationDraftSchema.ts`, `cmsResourceRegistry.ts`, and
   `cmsTargetResolver.ts` add the generic CMS operation foundation inside the same
-  planner flow: prompt -> strict operation draft -> registry-backed resource target
-  resolution -> read-only inspection plan or typed action mapping.
+  planner flow.
+- `core/services/assistant/cmsOperationActionMapper.ts` maps resolved CMS operation
+  drafts to existing strict typed actions. It does not add executor paths; dry-run
+  and execute still dispatch through `actionExecutorService.ts` and domain services.
 - Resource catalog snapshots now include bounded page summaries when the plan route
   requests server-side resource context; page data payloads stay out of the catalog.
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.

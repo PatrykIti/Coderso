@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 654 | 2026-04-17 | TASK-178 generic mutation mapping | Assistant/Core |
 | 653 | 2026-04-17 | TASK-178 provider response kinds and safety | Assistant/Core |
 | 652 | 2026-04-16 | TASK-178 model-first planning route | Assistant/Core |
 | 651 | 2026-04-16 | TASK-178 generic CMS planner foundation | Assistant/Core |

@@ -318,6 +318,7 @@ Rotacja klucza:
   - `LLM Guide` mode routes through `/assistant/actions/plan`; docs-only mode remains on `/assistant/chat`,
   - `responseKind=docs` and `responseKind=inspection` are non-mutating and cannot execute actions,
   - `responseKind=action_plan` requires strict typed actions before dry-run/execute,
+  - generic CMS mutation mapping can only emit existing typed action contracts and never bypasses `actionRegistry.ts`, per-action permissions, dry-run, execute idempotency, or domain service revalidation,
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,

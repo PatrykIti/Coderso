@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Typed Actions
 **Estimated Effort:** Large
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-04, TASK-170, TASK-174
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -109,3 +109,12 @@ Existing action-specific helpers can move behind the mapper as resource adapters
 - `_docs/CMS_API.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Added `cmsOperationActionMapper.ts` as the generic operation-to-action mapper.
+- Mapper outputs existing `AssistantPlannedAction` variants and reuses the current executor/domain-service layer.
+- Generic drafts now map to existing typed actions for pages, content types, custom screens, forms, listing queries/templates, menu items, SEO documents, and widget templates where target/field data is sufficient.
+- Broad or unsupported operations return `needs_input` with candidate context instead of guessing.
+- Existing resource-specific planner paths remain in place and still take priority for active page/widget/template workflows.
+- Added Vitest mapper coverage plus route/executor smoke validation.
