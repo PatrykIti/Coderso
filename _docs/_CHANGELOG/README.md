@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 661 | 2026-04-17 | TASK-179 provider surface hints and filters | Assistant/Core |
 | 660 | 2026-04-17 | TASK-179 surface hint filter contract | Assistant/Core |
 | 659 | 2026-04-17 | TASK-178 generic CMS reasoning closure | Docs/Assistant |
 | 658 | 2026-04-17 | TASK-178 evaluation fixture matrix | Assistant/QA |

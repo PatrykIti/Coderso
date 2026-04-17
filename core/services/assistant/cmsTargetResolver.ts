@@ -507,6 +507,77 @@ const matchesCandidate = (
   return true;
 };
 
+const normalizeFilterValue = (value: string | boolean | string[]) =>
+  Array.isArray(value)
+    ? value.map((item) => normalizeText(item))
+    : typeof value === "string"
+      ? normalizeText(value)
+      : value;
+
+const includesFilterValue = (
+  filterValue: string | boolean | string[],
+  expected: string | boolean
+) => {
+  const normalized = normalizeFilterValue(filterValue);
+  if (Array.isArray(normalized)) {
+    return normalized.includes(typeof expected === "string" ? normalizeText(expected) : String(expected));
+  }
+  if (typeof normalized === "string" && typeof expected === "string") {
+    return normalized === normalizeText(expected);
+  }
+  return normalized === expected;
+};
+
+const matchesFilter = (candidate: CmsResolvedTargetCandidate, draft: CmsOperationDraft) => {
+  const filters = draft.filters ?? [];
+  if (filters.length === 0) return true;
+  for (const filter of filters) {
+    if (draft.resourceKind === "custom-screen") {
+      if (filter.field === "status") {
+        const expectsActive =
+          includesFilterValue(filter.value, "active") ||
+          includesFilterValue(filter.value, "published") ||
+          includesFilterValue(filter.value, "opublikowane");
+        if (expectsActive && candidate.status !== "active") return false;
+        continue;
+      }
+      if (filter.field === "showInSidebar" || filter.field === "visibility") {
+        const expectsVisible =
+          includesFilterValue(filter.value, true) ||
+          includesFilterValue(filter.value, "true") ||
+          includesFilterValue(filter.value, "visible") ||
+          includesFilterValue(filter.value, "widoczne");
+        if (expectsVisible && candidate.details?.showInSidebar !== true) return false;
+        continue;
+      }
+    }
+    if (draft.resourceKind === "page" && filter.field === "status") {
+      if (
+        (includesFilterValue(filter.value, "published") ||
+          includesFilterValue(filter.value, "opublikowana")) &&
+        candidate.status !== "published"
+      ) {
+        return false;
+      }
+      continue;
+    }
+    return false;
+  }
+  return true;
+};
+
+const isSurfaceOnlyReadQuery = (
+  draft: CmsOperationDraft,
+  query: NonNullable<CmsOperationDraft["targetQuery"]>
+) =>
+  (draft.operation === "inspect" || draft.operation === "find") &&
+  Boolean(draft.surfaceHint) &&
+  Boolean(query.text) &&
+  !query.exactName &&
+  !query.prefix &&
+  !query.slug &&
+  !query.active;
+
 export const resolveCmsOperationTargets = (
   draft: CmsOperationDraft,
   context: AssistantAdminContext
@@ -540,24 +611,23 @@ export const resolveCmsOperationTargets = (
       ? { ...query, active: undefined }
       : query;
   const matches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
+  const filteredMatches = matches.filter((item) => matchesFilter(item, draft));
+  const filteredAllCandidates = allCandidates.filter((item) => matchesFilter(item, draft));
+  const effectiveMatches = filteredMatches.length > 0 ? filteredMatches : matches;
   if (
-    matches.length === 0 &&
+    (matches.length === 0 || isSurfaceOnlyReadQuery(draft, query)) &&
     (draft.operation === "inspect" || draft.operation === "find") &&
-    query.text &&
-    !query.exactName &&
-    !query.prefix &&
-    !query.slug &&
-    !query.active &&
     allCandidates.length > 0
   ) {
+    const candidates = filteredAllCandidates.length > 0 ? filteredAllCandidates : allCandidates;
     return {
       status: "candidates",
       draft,
-      candidates: allCandidates,
+      candidates,
       reason: "No exact text match; returning visible candidates for read-only inspection.",
     };
   }
-  if (matches.length === 0) {
+  if (effectiveMatches.length === 0) {
     return {
       status: "no_match",
       draft,
@@ -566,26 +636,26 @@ export const resolveCmsOperationTargets = (
     };
   }
   const expectedCount = draft.constraints?.expectedCount;
-  if (expectedCount !== undefined && matches.length !== expectedCount) {
+  if (expectedCount !== undefined && effectiveMatches.length !== expectedCount) {
     return {
       status: "ambiguous",
       draft,
-      candidates: matches,
-      reason: `Matched ${matches.length} candidate(s), but the request expected ${expectedCount}.`,
+      candidates: effectiveMatches,
+      reason: `Matched ${effectiveMatches.length} candidate(s), but the request expected ${expectedCount}.`,
     };
   }
-  if (matches.length === 1) {
+  if (effectiveMatches.length === 1) {
     return {
       status: "exact",
       draft,
-      candidates: [matches[0]!],
+      candidates: [effectiveMatches[0]!],
       reason: "Resolved one exact candidate.",
     };
   }
   return {
     status: draft.operation === "inspect" || draft.operation === "find" ? "candidates" : "ambiguous",
     draft,
-    candidates: matches,
-    reason: `Matched ${matches.length} candidates.`,
+    candidates: effectiveMatches,
+    reason: `Matched ${effectiveMatches.length} candidates.`,
   };
 };

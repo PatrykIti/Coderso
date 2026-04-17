@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Provider Planning
 **Estimated Effort:** Medium
 **Dependencies:** TASK-179-01, TASK-178-07-02
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -75,3 +75,9 @@ Provider instructions must include examples:
 - `_docs/ARCHITECTURE.md`
 - `_docs/SECURITY_SPEC.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Provider planning context now includes generic CMS operation guidance covering Screens, Pages, Engine/content types, Entries, Forms, Listings, Menus, SEO, Widgets/Templates, and relation-oriented prompts.
+- Provider system prompt now explicitly separates `surfaceHint`, `targetQuery`, and filters.
+- Fake-provider fixtures cover natural prompts using `Screens` as a surface hint.

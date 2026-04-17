@@ -133,3 +133,60 @@ test("resolveCmsOperationTargets falls back to visible candidates for vague read
     "House Projects Archive",
   ]);
 });
+
+test("resolveCmsOperationTargets uses surface hints and custom screen filters", () => {
+  const activeDraft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "custom-screen",
+    surfaceHint: "Screens",
+    filters: [{ field: "status", operator: "eq", value: "published" }],
+    targetQuery: null,
+  });
+
+  expect(resolveCmsOperationTargets(activeDraft, context)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        label: "House Projects",
+        status: "active",
+      },
+    ],
+  });
+
+  const visibleDraft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "custom-screen",
+    surfaceHint: "Screens",
+    filters: [{ field: "showInSidebar", operator: "eq", value: true }],
+    targetQuery: null,
+  });
+
+  expect(resolveCmsOperationTargets(visibleDraft, context)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        label: "House Projects",
+      },
+    ],
+  });
+});
+
+test("resolveCmsOperationTargets keeps page published filter family-specific", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "page",
+    surfaceHint: "Pages",
+    filters: [{ field: "status", operator: "eq", value: "published" }],
+    targetQuery: null,
+  });
+
+  expect(resolveCmsOperationTargets(draft, context)).toMatchObject({
+    status: "exact",
+    candidates: [
+      {
+        label: "Contact",
+        status: "published",
+      },
+    ],
+  });
+});

@@ -2687,6 +2687,13 @@ Generic mutation planning maps resolved CMS operation drafts to existing typed
 actions where a safe action contract already exists. Unsupported resources,
 ambiguous targets, missing field values, or broad destructive prompts return
 `needs_input` rather than arbitrary patches.
+Generic CMS operation drafts can include `surfaceHint` and allowlisted `filters`.
+Surface hints such as `Screens`, `Engine`, `Admin UI`, `menu`, or `Pages` are
+planner location hints and are not resource names. Filters are limited to safe
+fields such as `status`, `visibility`, and `showInSidebar`; unsupported filter
+fields are rejected by the draft schema. For custom screens, published-style
+language maps to `status=active`, while visible/show-in-sidebar language maps to
+`showInSidebar=true`.
 When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
 For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.

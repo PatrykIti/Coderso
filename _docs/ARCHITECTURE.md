@@ -342,6 +342,8 @@ Zamiast tego:
 - `core/services/assistant/cmsOperationDraftSchema.ts`, `cmsResourceRegistry.ts`, and
   `cmsTargetResolver.ts` add the generic CMS operation foundation inside the same
   planner flow.
+- CMS operation drafts support `surfaceHint` plus allowlisted filters so UI
+  locations such as `Screens` or `Engine` do not become resource target names.
 - `core/services/assistant/cmsOperationActionMapper.ts` maps resolved CMS operation
   drafts to existing strict typed actions. It does not add executor paths; dry-run
   and execute still dispatch through `actionExecutorService.ts` and domain services.

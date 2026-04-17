@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Target Resolution
 **Estimated Effort:** Large
 **Dependencies:** TASK-179-01, TASK-179-02, TASK-178-02, TASK-178-05
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -82,3 +82,11 @@ Add resource-family-specific filter interpreters:
 - `_docs/CMS_API.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- `cmsTargetResolver` now applies surface-aware read-only handling and allowlisted filters.
+- Custom screens map `published/opublikowane` to `active`.
+- Custom screens map `visible/widoczne/showInSidebar=true` to `showInSidebar=true`.
+- Page `published` filters remain page-status specific.
+- Surface-only read queries return visible candidates instead of treating UI surface names as resource names.

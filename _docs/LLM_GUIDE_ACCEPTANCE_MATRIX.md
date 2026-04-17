@@ -25,6 +25,7 @@ Rules:
 |---|---|---|
 | Prompt classification and blueprint plan shape | Vitest | Pure planner/blueprint logic |
 | Generic CMS operation draft and target resolution | Vitest | Pure operation draft schema, registry aliases, and target resolver |
+| Surface hints and CMS filters | Vitest | Draft schema + provider guidance + resolver filters for custom screens/pages |
 | Read-only CMS inspection plans | Vitest | Strict plan schema + admin review UI; no executor path |
 | LLM Guide mode route contract | Vitest | UI sends LLM Guide prompts to action planning; docs-only stays on chat |
 | Provider CMS operation draft package | Vitest | Fake-provider context/adapter coverage with strict local validation |
