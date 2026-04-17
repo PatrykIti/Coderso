@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin/UI + Docs + QA/Assistant
 **Estimated Effort:** Medium
-**Dependencies:** TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-04, TASK-178-05, TASK-178-06, TASK-178-07
+**Dependencies:** TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-04, TASK-178-05, TASK-178-06, TASK-178-07, TASK-178-07-02
 **Status:** To Do
 
 ---
@@ -42,6 +42,7 @@ Docs must stop implying that supported behavior is limited to blueprint setup or
 - Update `AssistantPanel.tsx` to pass read-only/candidate plan metadata through the existing active plan state.
 - Update docs and gates to describe the same `/assistant/actions/*` flow used by setup packs and resource operations.
 - Closure must verify that `TASK-178` did not leave duplicate planner paths or stale docs that describe old limits.
+- Closure must verify that provider/model structured-output behavior is documented as a capability-driven strategy and not as planner hardcode.
 
 ## Files to Change
 
@@ -101,5 +102,6 @@ Docs must stop implying that supported behavior is limited to blueprint setup or
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/SECURITY_SPEC.md`
 - `_docs/CODERSO_RELEASE_GATES.md` if gates change
+- provider/model capability docs if introduced by `TASK-178-07-02`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and final changelog entries

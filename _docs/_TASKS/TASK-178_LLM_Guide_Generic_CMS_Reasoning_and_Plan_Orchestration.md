@@ -37,6 +37,8 @@ The solution must not add one-off prompt cases for every resource. It must intro
 - `TASK-178-05_Generic_Mutation_Planning_and_Action_Mapping.md`
 - `TASK-178-06_Conversation_State_and_Follow_Up_Target_Memory.md`
 - `TASK-178-07_Evaluation_Fixture_Matrix_and_Red_Team_Corpus.md`
+  - `TASK-178-07-01_OpenRouter_Live_Planner_Smoke.md`
+  - `TASK-178-07-02_Model_Capability_Driven_Structured_Output_Strategy.md`
 - `TASK-178-08_Review_UX_Docs_Gates_and_Closure.md`
 
 ## Architecture
@@ -119,6 +121,7 @@ Non-goals:
 - 2026-04-17: Completed `TASK-178-03`; provider-first planning, planner response kinds, and provider safety fixtures are now in place. Remaining leaves are generic mutation mapping, conversation target memory, broader fixture matrix, and closure docs/gates.
 - 2026-04-17: Completed `TASK-178-05`; generic CMS operation drafts can now map to existing typed actions for supported resource families without adding executor paths.
 - 2026-04-17: Completed `TASK-178-06`; read-only inspection candidates can be reused safely in follow-up prompts through bounded advisory planning state.
+- 2026-04-17: Added `TASK-178-07-02`; remaining evaluation work must include model/provider capability-driven structured output instead of provider-specific planner hardcode.
 
 ## Security Contract
 

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
+- **To Do:** 11 tasks
 - **In Progress:** 5 tasks
 - **Done:** 885 tasks
 
@@ -40,6 +40,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-178 | LLM Guide Generic CMS Reasoning and Plan Orchestration | High | Large | Generic CMS intent, target resolution, typed plan, review, and execute pipeline |
 | TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | CMS-wide Polish/English prompt fixtures, malformed provider drafts, and abuse cases |
+| TASK-178-07-02 | Model Capability Driven Structured Output Strategy | High | Medium | Provider/model-family capability strategy for structured CMS operation drafts |
 | TASK-178-08 | Review UX, Docs, Gates, and Closure | High | Medium | UI states, docs, gates, and validation closure for generic CMS reasoning |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |

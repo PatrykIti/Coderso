@@ -15,9 +15,12 @@ Build an evaluation matrix that proves `LLM Guide` can handle generic CMS prompt
 
 The matrix must include normal prompts, ambiguous prompts, destructive prompts, provider malformed output, prompt injection attempts, and Polish/English mixed language requests.
 
+This task also owns provider/model-family evaluation. Structured-output behavior must be selected through a provider/model capability strategy, not through provider-specific hardcode inside the planner.
+
 ## Sub-Tasks
 
-No child task files.
+- `TASK-178-07-01_OpenRouter_Live_Planner_Smoke.md`
+- `TASK-178-07-02_Model_Capability_Driven_Structured_Output_Strategy.md`
 
 ## Architecture
 
@@ -57,8 +60,10 @@ Each fixture records:
 - `tests/vitest/assistant/provider-planner-fixtures.test.ts`
 - `tests/vitest/assistant/actionPlannerService.test.ts`
 - `tests/integration/routes/assistant.test.ts`
+- `tests/integration/routes/assistant-openrouter-live.test.ts`
 - `tests/unit/assistant/actionExecutorService.test.ts` for mapped executable smoke cases
 - `core/services/assistant/__fixtures__/cmsOperationFixtures.ts` (new, or colocated under tests)
+- `core/services/assistant/modelCapabilities.ts` (when structured output strategy lands)
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/SECURITY_SPEC.md`
 
@@ -69,6 +74,7 @@ Each fixture records:
 3. Unsafe provider drafts and prompt injection attempts fail closed.
 4. Broad destructive prompts return candidates/needs-input, not executable plans.
 5. Known unsupported gaps are documented separately from regressions.
+6. Structured output strategy is resolved by model/provider capability profile, not by planner hardcode.
 
 ## Security Contract
 
@@ -101,3 +107,4 @@ Each fixture records:
 ## Progress Notes
 
 - 2026-04-17: Completed `TASK-178-07-01`; opt-in OpenRouter live planner smoke exists and is skipped unless `TEST_OPENROUTER_API_KEY` plus `TEST_OPENROUTER_MODEL` are set.
+- 2026-04-17: Added `TASK-178-07-02` to cover provider/model-family structured output strategy before this evaluation wave can close.
