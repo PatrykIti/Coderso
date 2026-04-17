@@ -13,12 +13,47 @@
 
 Add fixture and live provider tests for natural user prompts that do not use exact system terminology.
 
-Target prompts:
+Baseline target prompts:
 
 - `czy mozesz mi sprawdzic jakie ekrany customowe istnieja w admin ui?`
 - `no a jakies sa opublikowane w sekcji 'Screens'?`
 - `sprawdz menu Screens czy cos tam jest`
 - English equivalents using `custom screens`, `admin UI`, `Screens section`, `visible`, `published`.
+
+The test matrix must not focus only on `Screens`. It must include broader CMS language where users refer to product surfaces imprecisely:
+
+- pages:
+  - `czy widzisz strone Pysiek Mysiek?`
+  - `sprawdz czy jest opublikowana strona kontakt`
+  - `show pages visible in navigation`
+- Engine/content types:
+  - `jakie typy tresci sa w Engine?`
+  - `czy istnieje model Products?`
+  - `czy typ Orders ma jeszcze rekordy?`
+- Entries/custom content:
+  - `pokaz wpisy dla Products`
+  - `czy sa rekordy w House Projects?`
+  - `usun pierwszy rekord z tej listy` after an inspection candidate response.
+- Relations between content:
+  - `czy wpis Product ma relacje do kategorii?`
+  - `sprawdz powiazane rekordy dla projektu House Projects`
+  - relationship prompts must return inspection/needs-input until relation-aware mutation support is explicit.
+- Forms:
+  - `jakie formularze zbieraja leady?`
+  - `czy formularz Lead Form jest publiczny?`
+  - `zarchiwizuj ten formularz` after an inspection candidate response.
+- Listings:
+  - `jakie listing query sa dla produktow?`
+  - `czy template Products Grid jest uzywany?`
+  - `zmien limit tej query na 24` after exact target resolution.
+- Menus and SEO:
+  - `czy menu ma link Products?`
+  - `sprawdz SEO dla strony Products`
+  - `usun ten wpis SEO` after inspection.
+- Widgets/templates:
+  - `jakie szablony widgetow sa dostepne?`
+  - `czy Hero Template jest opublikowany?`
+  - widget block mutation prompts remain scoped to active/selected block contracts.
 
 ## Sub-Tasks
 
@@ -33,6 +68,8 @@ Tests should cover:
 - OpenRouter live provider,
 - OpenAI live provider,
 - UI interaction copy.
+- follow-up prompts using prior candidates (`pierwszy`, `te dwa`, `ten formularz`, `ta strona`),
+- unsupported relation/media mutations returning `needs_input`.
 
 Live tests must remain opt-in and use only:
 
@@ -63,11 +100,18 @@ Live tests must remain opt-in and use only:
 
 ## Acceptance Criteria
 
-1. The three Polish prompts above return custom-screen candidates in local/fake-provider tests.
-2. OpenAI live smoke covers at least one natural prompt with `Screens` as surface hint.
-3. OpenRouter live smoke covers at least one natural prompt with `Screens` as surface hint.
-4. Tests prove `Screens` is not treated as resource target name.
-5. Tests prove `opublikowane` maps correctly for custom screens.
+1. The three baseline Polish `Screens` prompts return custom-screen candidates in local/fake-provider tests.
+2. Fixture matrix covers at least pages, Engine/content types, entries/custom content, relation-oriented prompts, forms, listings, menus, SEO, and widget templates.
+3. OpenAI live smoke covers at least:
+   - one `Screens` surface-hint prompt,
+   - one page prompt,
+   - one Engine/content-type prompt,
+   - one form or listing prompt.
+4. OpenRouter live smoke covers the same live prompt families as OpenAI.
+5. Tests prove `Screens`, `Engine`, `Admin UI`, `menu`, and similar surface names are not treated as resource target names.
+6. Tests prove `opublikowane`, `active`, `published`, and `widoczne/visible` map correctly per resource family.
+7. Relation-oriented prompts return inspection or `needs_input` unless a safe relation action contract exists.
+8. Follow-up prompts reuse previous candidates safely without bypassing target re-resolution.
 
 ## Security Contract
 
@@ -85,6 +129,7 @@ Live tests must remain opt-in and use only:
 - Vitest local/fake-provider tests.
 - Bun live provider smokes with env vars.
 - UI interaction tests.
+- Dedicated live prompt matrix for OpenAI/OpenRouter using the configured `.env` test model/API key pairs.
 
 ## Documentation Updates Required
 

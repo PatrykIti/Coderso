@@ -74,6 +74,7 @@ Docs must clearly state:
 - targeted admin cache/UI suites touched by TASK-179-07
 - targeted assistant conversation persistence suites touched by TASK-179-08
 - opt-in OpenAI/OpenRouter live tests when env vars are present.
+- verification that live provider tests cover Screens, pages, Engine/content types, and at least one form/listing prompt family.
 
 ## Documentation Updates Required
 
