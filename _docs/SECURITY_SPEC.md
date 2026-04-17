@@ -323,6 +323,7 @@ Rotacja klucza:
   - generic CMS mutation mapping can only emit existing typed action contracts and never bypasses `actionRegistry.ts`, per-action permissions, dry-run, execute idempotency, or domain service revalidation,
   - surface hints and CMS filters are allowlisted planner fields and cannot encode arbitrary DB paths or privileged settings,
   - assistant planning state is short-lived, bounded, advisory-only, contains candidate summaries only, and is revalidated/re-resolved server-side before mutation planning,
+  - assistant conversation UI state is browser-local, bounded, expiring, and must not store cookies, CSRF tokens, provider keys, raw provider prompts, form submissions, access logs, or secret-like settings,
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,

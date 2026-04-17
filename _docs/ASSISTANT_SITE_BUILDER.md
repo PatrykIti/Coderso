@@ -95,6 +95,9 @@ permissions, idempotency, and conflict-aware execution.
   strict local validation.
 - OpenAI direct and OpenRouter are provider adapters behind the same planner
   contract; provider credentials are configured through Settings -> Integrations.
+- The floating assistant persists bounded browser-local conversation state so
+  safe transcript, active plan context, and planning-state hints survive closing
+  the window and SPA route transitions.
 
 ## Runtime Contract
 

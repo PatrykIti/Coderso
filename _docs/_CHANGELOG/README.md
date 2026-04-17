@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 665 | 2026-04-17 | TASK-179 conversation persistence | Admin/UI |
 | 664 | 2026-04-17 | TASK-179 assistant cache refresh | Admin/UI |
 | 663 | 2026-04-17 | TASK-179 natural prompt live matrix | Assistant/QA |
 | 662 | 2026-04-17 | TASK-179 inspection UI copy | Admin/UI |

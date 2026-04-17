@@ -114,4 +114,5 @@ Rules:
 - 2026-04-17: Completed `TASK-179-02` and `TASK-179-03`; provider guidance and target resolver now separate surface hints from target queries and apply custom-screen/page filters.
 - 2026-04-17: Completed `TASK-179-04`; read-only inspections now render as `LLM Guide Inspection` with a read-only badge and without planned-action copy.
 - 2026-04-17: Completed `TASK-179-05`; live OpenAI/OpenRouter regression matrix now covers Screens, Pages, Engine/content types, and Forms natural prompts.
+- 2026-04-17: Completed `TASK-179-08`; assistant conversation state now persists safely across close/remount and SPA navigation.
 - 2026-04-17: Completed `TASK-179-07`; assistant-executed custom screen mutations now invalidate list/detail cache and sidebar shortcuts without full reload.

@@ -5,7 +5,7 @@
 **Category:** Assistant/Admin UI + Conversation UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-179, TASK-178-06
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -102,3 +102,11 @@ The implementation should prefer a small local helper such as `assistantConversa
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-17)
+
+- Added bounded browser-local assistant conversation persistence.
+- Restores transcript, active plan/preview/execution when safe, planning state, and assistant mode across close/remount.
+- Persisted state expires and rejects malformed or secret-like payloads.
+- Assistant panel can restore conversation after SPA route remount without re-calling the planner.
+- Added helper and UI interaction coverage.

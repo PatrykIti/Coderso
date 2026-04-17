@@ -40,6 +40,10 @@ import {
   normalizeAssistantPlanningState,
 } from "../../../services/assistant/cmsPlanningState";
 import type { AssistantPlanningState } from "../../../services/assistant/actionPlanTypes";
+import {
+  readAssistantConversationState,
+  writeAssistantConversationState,
+} from "./assistantConversationState";
 
 type AssistantEntry = {
   id: string;
@@ -314,25 +318,26 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     launcherAvatarAsset,
   } = useAdminAssistantConfig();
   const cachedRuntimeState = readRuntimeStateCache(Date.now());
+  const cachedConversationState = readAssistantConversationState();
   const [open, setOpen] = useState(false);
   const [isReady, setIsReady] = useState(() => cachedRuntimeState !== null);
   const [isLoadingRuntime, setIsLoadingRuntime] = useState(false);
   const [status, setStatus] = useState<AssistantStatusResponse | null>(
     () => cachedRuntimeState?.status ?? null
   );
-  const [messages, setMessages] = useState<AssistantEntry[]>([]);
+  const [messages, setMessages] = useState<AssistantEntry[]>(() => cachedConversationState?.messages ?? []);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(null);
-  const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(null);
+  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(() => cachedConversationState?.assistantMode ?? null);
+  const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(() => cachedConversationState?.activePlan ?? null);
   const [activePreview, setActivePreview] = useState<AssistantActionDryRunResponse | null>(
-    null
+    () => cachedConversationState?.activePreview ?? null
   );
   const [activeExecution, setActiveExecution] =
-    useState<AssistantActionExecuteResponse | null>(null);
-  const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(null);
+    useState<AssistantActionExecuteResponse | null>(() => cachedConversationState?.activeExecution ?? null);
+  const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(() => cachedConversationState?.planningState ?? null);
   const [isPreviewingPlan, setIsPreviewingPlan] = useState(false);
   const [isExecutingPlan, setIsExecutingPlan] = useState(false);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
@@ -408,6 +413,17 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       active = false;
     };
   }, [open, status]);
+
+  useEffect(() => {
+    writeAssistantConversationState({
+      messages,
+      activePlan,
+      activePreview,
+      activeExecution,
+      planningState,
+      assistantMode,
+    });
+  }, [activeExecution, activePlan, activePreview, assistantMode, messages, planningState]);
 
   useEffect(() => {
     const handleResize = () => {

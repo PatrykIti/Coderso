@@ -7,6 +7,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import * as assistantClient from "../../../core/admin/services/assistantClient";
 import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";
 import { AssistantPanel, clearAssistantRuntimeStateCache } from "../../../core/admin/ui/assistant/AssistantPanel";
+import { clearAssistantConversationState } from "../../../core/admin/ui/assistant/assistantConversationState";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
@@ -54,6 +55,7 @@ const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
 
 afterEach(() => {
   clearAssistantRuntimeStateCache();
+  clearAssistantConversationState();
   document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
@@ -899,5 +901,134 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
     });
   } finally {
     view.cleanup();
+  }
+});
+
+test("AssistantPanel restores conversation after close and SPA remount", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
+    "pages.openAfterCreate": true,
+    "media.openAfterUpload": false,
+    "widgets.favorites": [],
+    "widgets.hero.presets": [],
+    "posts.editor.preferences": {
+      version: 2,
+      focusModeOnOpen: false,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: true,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: true,
+    },
+    "assistant.mode": "llm-guide",
+    "assistant.ui.enabled": true,
+    "assistant.ui.avatarEnabled": false,
+    "assistant.ui.avatarAsset": null,
+  });
+  const planSpy = vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
+    id: "plan-cms-custom-screen-inspect",
+    status: "ready",
+    intentId: "cms-resource-inspect",
+    responseKind: "inspection",
+    title: "CMS resource inspection",
+    answer: "Found screens.",
+    summary: "Found candidates.",
+    confidence: 0.72,
+    assumptions: ["Read-only."],
+    questions: [],
+    inspection: {
+      kind: "resource-candidates",
+      operation: "inspect",
+      resourceKind: "custom-screen",
+      matchStatus: "matched",
+      query: "House Projects",
+      candidates: [
+        {
+          kind: "custom-screen",
+          id: "screen-house",
+          label: "House Projects",
+          status: "active",
+        },
+      ],
+      truncated: false,
+    },
+    actions: [],
+  });
+
+  const firstView = mount(
+    <AdminRouterProvider initialPath="/admin">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  const firstLauncher = findButton(firstView.container, "");
+  if (!firstLauncher) throw new Error("missing_first_launcher");
+  await act(async () => {
+    firstLauncher.click();
+    await flush();
+  });
+  const textarea = firstView.container.querySelector("textarea");
+  if (!(textarea instanceof HTMLTextAreaElement)) throw new Error("missing_textarea");
+  await act(async () => {
+    setTextareaValue(textarea, "jakie ekrany widzisz z prefixem House Projects?");
+    await flush();
+  });
+  const sendButton = findButton(firstView.container, "Send");
+  if (!sendButton) throw new Error("missing_send_button");
+  await act(async () => {
+    sendButton.click();
+    await flush();
+  });
+  expect(firstView.container.textContent).toContain("House Projects");
+  firstView.cleanup();
+
+  const secondView = mount(
+    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const secondLauncher = findButton(secondView.container, "");
+    if (!secondLauncher) throw new Error("missing_second_launcher");
+    await act(async () => {
+      secondLauncher.click();
+      await flush();
+    });
+    expect(secondView.container.textContent).toContain(
+      "jakie ekrany widzisz z prefixem House Projects?"
+    );
+    expect(secondView.container.textContent).toContain("House Projects");
+    expect(planSpy).toHaveBeenCalledTimes(1);
+  } finally {
+    secondView.cleanup();
   }
 });
