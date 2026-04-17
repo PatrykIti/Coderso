@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 666 | 2026-04-17 | TASK-179 surface hints inspection closure | Docs/Assistant |
 | 665 | 2026-04-17 | TASK-179 conversation persistence | Admin/UI |
 | 664 | 2026-04-17 | TASK-179 assistant cache refresh | Admin/UI |
 | 663 | 2026-04-17 | TASK-179 natural prompt live matrix | Assistant/QA |

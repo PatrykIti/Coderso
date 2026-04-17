@@ -5,7 +5,7 @@
 **Category:** Docs/Assistant + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-179-01, TASK-179-02, TASK-179-03, TASK-179-04, TASK-179-05, TASK-179-07, TASK-179-08
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -80,3 +80,10 @@ Docs must clearly state:
 
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-17)
+
+- Confirmed all `TASK-179` leaves are complete.
+- Confirmed source-of-truth docs describe surface hints, allowlisted filters, read-only inspection, assistant action cache invalidation, browser-local conversation persistence, and opt-in live provider env handling.
+- Confirmed acceptance matrix lists natural prompt/live provider coverage.
+- Targeted lint/type/tests and OpenAI/OpenRouter live smokes passed during the implementation leaves.

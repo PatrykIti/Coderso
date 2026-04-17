@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin UX + QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-178
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -116,3 +116,13 @@ Rules:
 - 2026-04-17: Completed `TASK-179-05`; live OpenAI/OpenRouter regression matrix now covers Screens, Pages, Engine/content types, and Forms natural prompts.
 - 2026-04-17: Completed `TASK-179-08`; assistant conversation state now persists safely across close/remount and SPA navigation.
 - 2026-04-17: Completed `TASK-179-07`; assistant-executed custom screen mutations now invalidate list/detail cache and sidebar shortcuts without full reload.
+
+## Completion Notes (2026-04-17)
+
+- Natural UI/surface language is now represented through `surfaceHint` and allowlisted filters.
+- Provider guidance covers broad CMS surfaces instead of Screens-only examples.
+- Resolver filtering handles custom-screen active/visible semantics and page/form visibility semantics.
+- Read-only inspection UI now renders as inspection, not an action plan.
+- Assistant-executed custom screen mutations refresh SPA cache/sidebar state.
+- Assistant conversation state persists safely across close/remount and SPA route changes.
+- OpenAI/OpenRouter live prompt matrix covers Screens, Pages, Engine/content types, and Forms.
