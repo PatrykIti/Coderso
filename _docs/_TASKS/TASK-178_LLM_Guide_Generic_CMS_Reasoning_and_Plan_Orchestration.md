@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + CMS Operations + Product UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-174
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -124,6 +124,16 @@ Non-goals:
 - 2026-04-17: Added `TASK-178-07-02`; remaining evaluation work must include model/provider capability-driven structured output instead of provider-specific planner hardcode.
 - 2026-04-17: Completed `TASK-178-07-02`; provider structured output now uses model capability profiles and provider-agnostic response contracts.
 - 2026-04-17: Completed `TASK-178-07`; CMS operation evaluation fixtures, provider safety cases, model capability strategy, and live provider smokes are in place.
+- 2026-04-17: Completed `TASK-178-08`; docs, board, changelog, and closure checks are aligned with the single extensible LLM Guide flow.
+
+## Completion Notes (2026-04-17)
+
+- `LLM Guide` now routes through one action planning flow and no longer depends on a frontend keyword gate.
+- Generic CMS operation drafts, resource registry, target resolution, read-only inspection, mutation mapping, and follow-up target memory are implemented.
+- Provider planning is model-first, capability-driven, and provider-agnostic at the planner boundary.
+- OpenAI direct and OpenRouter providers both use the same `AssistantProvider` interface and structured output contract.
+- Existing executors/domain services remain the only mutation path.
+- Evaluation fixtures and opt-in live provider smokes cover the current behavior and safety boundaries.
 
 ## Security Contract
 

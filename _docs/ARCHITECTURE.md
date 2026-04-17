@@ -391,8 +391,8 @@ Planner schema/recovery:
 - Planner output jest normalizowany przez strict schema przed zwroceniem z `planAssistantActions`.
 - Provider draft output jest traktowany jako untrusted input; unknown fields/actions, secret-like keys i malformed drafts wracaja jako typed `needs_input` questions zamiast executable actions.
 - Provider adapter nie wykonuje network calli i nie omija lokalnej walidacji akcji.
-- `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It can package prompt text, docs evidence, advisory runtime context, and resource catalog summaries for future provider draft calls without adding network behavior by itself.
-- Provider planning packages are passed through `assistantRedaction.ts` before a future provider boundary.
+- `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It packages prompt text, docs evidence, advisory runtime context, resource catalog summaries, and model-capability output contracts for provider planning calls.
+- Provider planning packages are passed through `assistantRedaction.ts` before the provider boundary.
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled provider draft planning. It requires injected provider availability, maps provider JSON through `actionPlanProviderAdapter.ts`, and falls back to the deterministic local planner on provider errors/unavailability.
 - Provider draft adapter repair fills safe optional action labels and preserves typed provider questions when strict schema validation fails.
 - Assistant action plans can carry strict planner metadata (`local`, `provider`, or `fallback`) so the admin review UI can explain whether a plan came from provider draft or local deterministic planning.
@@ -413,7 +413,7 @@ Planner schema/recovery:
 - Direct OpenAI and OpenRouter providers are separate adapters behind the same
   `AssistantProvider` interface; production credentials stay in encrypted
   Integrations config rather than planner code.
-- Provider planner fixture coverage uses injected fake providers only; live route wiring remains a separate opt-in step.
+- Provider planner fixture coverage uses injected fake providers, and opt-in OpenRouter/OpenAI live smoke tests cover real provider behavior through test-only env vars.
 
 Execution registry and idempotency:
 - Dry-run/execute dispatch korzysta z formalnego `actionRegistry.ts`, nie z ukrytego centralnego switcha.

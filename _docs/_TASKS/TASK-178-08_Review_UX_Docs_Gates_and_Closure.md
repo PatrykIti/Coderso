@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Docs + QA/Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-04, TASK-178-05, TASK-178-06, TASK-178-07, TASK-178-07-02
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -105,3 +105,11 @@ Docs must stop implying that supported behavior is limited to blueprint setup or
 - provider/model capability docs if introduced by `TASK-178-07-02`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and final changelog entries
+
+## Completion Notes (2026-04-17)
+
+- Verified the implementation uses one `/assistant/actions/*` flow for planning, dry-run, and execute.
+- Confirmed `docs-only` remains on `/assistant/chat`, while `LLM Guide` uses `/assistant/actions/plan`.
+- Confirmed provider/model structured output is capability-driven and translated inside provider adapters, not hardcoded in planner orchestration.
+- Confirmed review UI distinguishes docs guidance, read-only inspection, needs-input, action plans, blocked/destructive previews, and execution results through strict planner response shape and existing review/result components.
+- No release-gate workflow changes were required for this closure; targeted assistant lint/type/test gates passed in the preceding implementation leaves.

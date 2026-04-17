@@ -1,7 +1,7 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-04-16
+**Last Updated:** 2026-04-17
 **Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-03-05, TASK-178-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02
 
 ---
@@ -13,7 +13,7 @@ This matrix records the declared `LLM Guide` capability set and the validation l
 Rules:
 - `docs-only` remains read-only and never returns executable action plans.
 - `LLM Guide` can only execute strict typed actions through `/assistant/actions/*`.
-- Provider draft planning is helper-only in this wave; live route/provider wiring remains opt-in future work.
+- Provider/model planning runs through the same `/assistant/actions/plan` route when configured; provider output remains untrusted and must pass strict local validation before any reviewable plan is returned.
 - Gated packs must return typed `needs_input` plans and must not create resources.
 - Docs/corpus pages must describe the supported and gated capability set without implying broad assistant autonomy.
 

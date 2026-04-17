@@ -198,7 +198,7 @@ Rotacja klucza:
 - ENV tylko po stronie serwera.
 - Opcjonalny pepper do hasel: `AUTH_PASSWORD_PEPPER` (rotacja wymaga resetu hasel).
 - Hasla SMTP sa szyfrowane w DB (AES-256-GCM) tym samym master key.
-- Klucze providerow LLM (np. OpenRouter) traktujemy jak sekrety:
+- Klucze providerow LLM (np. OpenAI/OpenRouter) traktujemy jak sekrety:
   - trzymane poza frontendem i poza plain text w logach,
   - redagowane w audit metadata oraz error payloadach.
 
@@ -227,7 +227,7 @@ Rotacja klucza:
   - `assistant.llm.enabled=true`
   - `assistant.llm.provider != none`
 - Gdy provider nie jest skonfigurowany, runtime wraca do bezpiecznego `docs-only`.
-- OpenRouter credentials sa pobierane tylko na backendzie przez Integrations runtime config:
+- OpenAI/OpenRouter credentials sa pobierane tylko na backendzie przez Integrations runtime config:
   - integration id: `openrouter`
   - `apiKey` (secret) jest szyfrowany w DB i nigdy nie trafia do frontend payloadow
   - `baseUrl`, `siteUrl`, `appName` sa opcjonalne i nie sa traktowane jako sekrety
@@ -313,7 +313,7 @@ Rotacja klucza:
   - plan payload przechodzi strict top-level validation i wewnetrzna walidacje typed planu,
   - planner output przechodzi strict nested `actionPlanSchema` przed dry-run/execute,
   - provider draft output jest untrusted: unknown fields/actions, malformed draft i secret-like keys sa odzyskiwane jako typed questions,
-  - provider planning prompt packages are built by `providerPlanningContext.ts` with bounded docs/resource/runtime context and redacted through `assistantRedaction.ts` before future provider calls,
+  - provider planning prompt packages are built by `providerPlanningContext.ts` with bounded docs/resource/runtime context and redacted through `assistantRedaction.ts` before provider calls,
   - provider draft execution through `planAssistantActionsWithProviderDraft` requires provider availability, prefers strict CMS operation drafts, uses strict local adapter validation, and falls back to deterministic local planning on provider failures,
   - provider structured output is selected by provider/model capability profile and remains provider-agnostic at the planner boundary,
   - OpenAI and OpenRouter direct credentials are read from encrypted integration config for production and from test-only env vars only in opt-in live tests,

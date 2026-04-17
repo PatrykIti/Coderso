@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 659 | 2026-04-17 | TASK-178 generic CMS reasoning closure | Docs/Assistant |
 | 658 | 2026-04-17 | TASK-178 evaluation fixture matrix | Assistant/QA |
 | 657 | 2026-04-17 | TASK-178 model capability structured output | Assistant/Core |
 | 656 | 2026-04-17 | TASK-178 OpenRouter live planner smoke | Assistant/QA |

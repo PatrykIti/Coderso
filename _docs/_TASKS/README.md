@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 9 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 887 tasks
+- **Done:** 889 tasks
 
 ---
 
@@ -38,8 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-178 | LLM Guide Generic CMS Reasoning and Plan Orchestration | High | Large | Generic CMS intent, target resolution, typed plan, review, and execute pipeline |
-| TASK-178-08 | Review UX, Docs, Gates, and Closure | High | Medium | UI states, docs, gates, and validation closure for generic CMS reasoning |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -77,6 +75,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | Done: CMS operation fixtures, provider safety, structured output strategy, and live smokes covered |
 | TASK-178-07-01 | OpenRouter Live Planner Smoke | High | Small | Done: opt-in live OpenRouter planner smoke uses test-only env vars |
 | TASK-178-07-02 | Model Capability Driven Structured Output Strategy | High | Medium | Done: provider/model-family structured output strategy drives CMS operation draft requests |
+| TASK-178-08 | Review UX, Docs, Gates, and Closure | High | Medium | Done: final UI/docs/gate closure confirmed the single extensible LLM Guide flow |
+| TASK-178 | LLM Guide Generic CMS Reasoning and Plan Orchestration | High | Large | Done: generic CMS reasoning, provider strategy, mapping, memory, fixtures, and closure completed |
 | TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Done: strict CMS operation draft schema and planner integration foundation shipped |
 | TASK-178-02 | CMS Resource Registry and Target Resolver | High | Large | Done: registry aliases, page summaries, and target resolution outcomes shipped |
 | TASK-178-04 | Generic Read, Inspect, and Candidate Plans | High | Medium | Done: read-only inspection plans render CMS candidates without execution controls |
