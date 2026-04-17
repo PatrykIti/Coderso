@@ -5,7 +5,7 @@
 **Category:** Assistant/Admin UI + Cache Consistency
 **Estimated Effort:** Medium
 **Dependencies:** TASK-179, TASK-178-05, TASK-178-06
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -102,3 +102,11 @@ The fix should be generic enough to support other action families over time, but
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-17)
+
+- `executeAssistantActions` now invalidates known resource-family caches from successful assistant action results.
+- `custom-screen.delete`, `custom-screen.update`, `custom-screen.upsert`, and `custom-screen.widget.patch` clear custom screen client memory cache and broadcast `customScreens:list`.
+- Touched custom screen detail keys are invalidated or updated from execution result `resourceId`.
+- Existing `AdminShell` and custom screen list subscriptions consume `customScreens:list` cache bus events, so the sidebar shortcut area and current Screens list can refresh without full reload.
+- Added admin client regression coverage for custom screen cache invalidation after assistant execution.

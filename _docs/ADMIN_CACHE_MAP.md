@@ -59,6 +59,20 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/content-types/SchemaBuilderPage.tsx`
   - Cached APIs: `listContentTypesCached`, `getContentTypeCached`
 
+## Custom Screens
+- Screens list
+  - UI: `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
+  - Cached APIs: `listCustomScreensCached`, `getCachedCustomScreens`
+  - Cache bus: `customScreens:list`
+- Custom screen builder and records workflow
+  - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`, `CustomScreenEntriesPage.tsx`, `CustomScreenEntryEditor.tsx`
+  - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`, `listCustomScreensCached`
+  - Cache bus: `customScreens:list`, `customScreens:detail:<id>`
+- Coderso sidebar shortcuts
+  - UI: `core/admin/ui/layouts/AdminShell.tsx`
+  - Cached APIs: `listCustomScreensCached`
+  - Cache bus: `customScreens:list`
+
 ## Widget Templates
 - Template editor
   - UI: `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`

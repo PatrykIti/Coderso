@@ -10,6 +10,7 @@ import {
   reindexAssistantDocs,
   sendAssistantMessage,
 } from "../../../core/admin/services/assistantClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -214,6 +215,129 @@ test("executeAssistantActions uses CSRF and POST", async () => {
     expect(calls[1]?.init?.method).toBe("POST");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("executeAssistantActions invalidates custom screen caches after successful delete", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBroadcast = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storageWrites: string[] = [];
+  const storage = {
+    getItem: () => null,
+    setItem: (_key: string, value: string) => {
+      storageWrites.push(value);
+    },
+    removeItem: () => undefined,
+  };
+
+  delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      plan: {
+        id: "plan-custom-screen-delete",
+        status: "ready",
+        intentId: "custom-screen-delete",
+        title: "Delete House Projects",
+        answer: "Plan ready",
+        summary: "Delete custom screen.",
+        confidence: 0.78,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      preview: {
+        plan: {
+          id: "plan-custom-screen-delete",
+          status: "ready",
+          intentId: "custom-screen-delete",
+          title: "Delete House Projects",
+          answer: "Plan ready",
+          summary: "Delete custom screen.",
+          confidence: 0.78,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        changes: [],
+        warnings: [],
+        readyToExecute: true,
+      },
+      results: [
+        {
+          actionId: "custom-screen-delete-screen-house",
+          type: "custom-screen.delete",
+          targetType: "custom-screen",
+          targetKey: "House Projects",
+          operation: "delete",
+          status: "success",
+          resourceId: "screen-house",
+          adminHref: "/admin/coderso/custom-screens",
+          publicHref: null,
+          message: "Deleted custom screen.",
+        },
+      ],
+      summary: {
+        create: 0,
+        update: 0,
+        delete: 1,
+        noop: 0,
+        failed: 0,
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await executeAssistantActions({
+      plan: {
+        id: "plan-custom-screen-delete",
+        status: "ready",
+        intentId: "custom-screen-delete",
+        title: "Delete House Projects",
+        answer: "Plan ready",
+        summary: "Delete custom screen.",
+        confidence: 0.78,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      idempotencyKey: "assistant-custom-screen-delete-1",
+    });
+
+    const events = storageWrites.map((value) => JSON.parse(value) as { key: string; action: string });
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: cacheKeys.customScreensList,
+          action: "invalidate",
+        }),
+        expect.objectContaining({
+          key: cacheKeys.customScreenDetail("screen-house"),
+          action: "invalidate",
+        }),
+      ])
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalBroadcast === undefined) {
+      delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+    } else {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = originalBroadcast;
+    }
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
   }
 });
 

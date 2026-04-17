@@ -171,6 +171,11 @@ Consumers subscribe and revalidate when matching keys change.
 Clients update caches and broadcast events on:
 - Create / update / delete / publish / unpublish.
 - Server responses are treated as source of truth for cache updates.
+- Assistant action execution invalidates known resource-family caches from
+  validated execution results. For `custom-screen.*`, the admin client clears
+  custom screen cache state and broadcasts `customScreens:list` plus the touched
+  `customScreens:detail:<id>` key, so the current `Screens` list and Coderso
+  sidebar shortcuts can refresh without full reload.
 
 ## Extending The Cache
 When adding a new resource:

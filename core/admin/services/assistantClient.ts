@@ -1,5 +1,8 @@
 import { createReadThroughCache } from "@/utils/readThroughCache";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { apiRequest } from "./apiClient";
+import { cacheKeys } from "./cachePolicy";
+import { clearCustomScreensCache } from "./customScreensClient";
 import type {
   SiteBuilderPlanInput,
   SiteBuilderPlanOutput,
@@ -265,7 +268,7 @@ export async function dryRunAssistantActions(payload: AssistantActionDryRunReque
 }
 
 export async function executeAssistantActions(payload: AssistantActionExecuteRequest) {
-  return apiRequest<AssistantActionExecuteResponse>(
+  const result = await apiRequest<AssistantActionExecuteResponse>(
     "/assistant/actions/execute",
     {
       method: "POST",
@@ -274,7 +277,33 @@ export async function executeAssistantActions(payload: AssistantActionExecuteReq
     },
     { withCsrf: true }
   );
+  notifyAssistantExecutionCacheEvents(result);
+  return result;
 }
+
+const notifyAssistantExecutionCacheEvents = (result: AssistantActionExecuteResponse) => {
+  for (const item of result.results) {
+    if (item.status !== "success") continue;
+    if (
+      item.type === "custom-screen.delete" ||
+      item.type === "custom-screen.update" ||
+      item.type === "custom-screen.upsert" ||
+      item.type === "custom-screen.widget.patch"
+    ) {
+      clearCustomScreensCache();
+      broadcastCacheEvent({
+        key: cacheKeys.customScreensList,
+        action: item.type === "custom-screen.delete" ? "invalidate" : "update",
+      });
+      if (item.resourceId) {
+        broadcastCacheEvent({
+          key: cacheKeys.customScreenDetail(item.resourceId),
+          action: item.type === "custom-screen.delete" ? "invalidate" : "update",
+        });
+      }
+    }
+  }
+};
 
 const buildSiteKitPrompt = (payload: GuidedSiteBuilderPlanRequest) => {
   const goals = payload.goals.join(", ");
