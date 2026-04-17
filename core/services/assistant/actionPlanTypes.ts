@@ -77,6 +77,7 @@ export type AssistantActionContext = {
   resourceCatalog?: AssistantResourceCatalogSnapshot;
   runtimeSnapshot?: AssistantAdminRuntimeSnapshot;
   activeSurface?: AssistantActiveSurfaceContext | null;
+  planningState?: AssistantPlanningState | null;
 };
 
 export type AssistantAdminRuntimeActionKind =
@@ -193,6 +194,7 @@ export type AssistantAdminContext = {
   resourceCatalog: AssistantResourceCatalogSnapshot | null;
   runtimeSnapshot: AssistantAdminRuntimeSnapshot | null;
   activeSurface: AssistantActiveSurfaceContext | null;
+  planningState: AssistantPlanningState | null;
   area: "dashboard" | "pages" | "posts" | "coderso" | "settings" | "other";
   codersoModule:
     | "engine"
@@ -964,6 +966,26 @@ export type AssistantActionPlanInspection = {
   query: string | null;
   candidates: AssistantActionPlanInspectionCandidate[];
   truncated: boolean;
+};
+
+export type AssistantPlanningStateCandidate = {
+  kind: string;
+  id: string;
+  label: string;
+  slug?: string | null;
+  status?: string | null;
+};
+
+export type AssistantPlanningState = {
+  schemaVersion: 1;
+  sourcePlanId: string | null;
+  route: string | null;
+  resourceKind: string | null;
+  operation: string | null;
+  query: string | null;
+  candidates: AssistantPlanningStateCandidate[];
+  createdAt: string;
+  expiresAt: string;
 };
 
 export type AssistantActionPlanResponseKind =

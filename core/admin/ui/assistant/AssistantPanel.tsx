@@ -35,6 +35,11 @@ import { AssistantModeSwitch } from "./AssistantModeSwitch";
 import { ActionExecutionResult } from "./components/ActionExecutionResult";
 import { ActionPlanReview } from "./components/ActionPlanReview";
 import { useAssistantAdminContext } from "./useAssistantAdminContext";
+import {
+  buildAssistantPlanningStateFromPlan,
+  normalizeAssistantPlanningState,
+} from "../../../services/assistant/cmsPlanningState";
+import type { AssistantPlanningState } from "../../../services/assistant/actionPlanTypes";
 
 type AssistantEntry = {
   id: string;
@@ -327,6 +332,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   );
   const [activeExecution, setActiveExecution] =
     useState<AssistantActionExecuteResponse | null>(null);
+  const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(null);
   const [isPreviewingPlan, setIsPreviewingPlan] = useState(false);
   const [isExecutingPlan, setIsExecutingPlan] = useState(false);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
@@ -568,9 +574,15 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
             context: {
               ...assistantAdminContext,
               includeResourceCatalog: true,
+              planningState: normalizeAssistantPlanningState(planningState),
             },
           });
 
+          setPlanningState(
+            buildAssistantPlanningStateFromPlan(plan, {
+              route: assistantAdminContext.page ?? null,
+            })
+          );
           if (plan.responseKind !== "docs") {
             setActivePlan(plan);
           }
@@ -624,7 +636,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         setIsSending(false);
       }
     },
-    [assistantAdminContext, assistantMode, isSending, message, status]
+    [assistantAdminContext, assistantMode, isSending, message, planningState, status]
   );
 
   const handleFollowUpSelect = useCallback(

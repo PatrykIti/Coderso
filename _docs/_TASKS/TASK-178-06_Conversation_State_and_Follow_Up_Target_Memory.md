@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-178-01, TASK-178-02, TASK-178-04
-**Status:** To Do
+**Status:** Done (2026-04-17)
 
 ---
 
@@ -101,3 +101,11 @@ to resolve pronouns and follow-ups such as "te", "pierwszy", "oba", "tamten".
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/SECURITY_SPEC.md`
 - task/changelog entries on completion
+
+## Completion Notes (2026-04-17)
+
+- Added `cmsPlanningState.ts` for bounded, expiring, redacted planning state.
+- `AssistantPanel` now derives planning state from read-only inspection plans and sends it with the next `/assistant/actions/plan` request.
+- Server-side context normalization validates and clamps client-supplied planning state before planner use.
+- Planner follow-up handling can resolve Polish candidate references such as `pierwszy` and `te dwa pierwsze` through the existing target resolver and typed action mapper.
+- Added Vitest state normalization, planner follow-up, and UI interaction coverage.

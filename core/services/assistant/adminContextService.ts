@@ -15,6 +15,7 @@ import {
   mergeAssistantTemplateSectionReferences,
   normalizeAssistantReferencedWidgetTemplates,
 } from "./adminContextCatalogNormalizer";
+import { normalizeAssistantPlanningState } from "./cmsPlanningState";
 
 const actionKinds = new Set<AssistantAdminRuntimeActionKind>([
   "navigate",
@@ -357,6 +358,7 @@ export const buildAssistantAdminContext = (
     resourceCatalog: input?.resourceCatalog ?? null,
     runtimeSnapshot: normalizeRuntimeSnapshot(input?.runtimeSnapshot, route),
     activeSurface: normalizeActiveSurface(input?.activeSurface),
+    planningState: normalizeAssistantPlanningState(input?.planningState),
     area: resolveArea(route),
     codersoModule: resolveCodersoModule(route),
   };

@@ -62,6 +62,7 @@ import {
   type CmsOperationDraft,
   normalizeCmsOperationDraft,
 } from "./cmsOperationDraftSchema";
+import { buildCmsOperationDraftFromPlanningState } from "./cmsPlanningState";
 
 export {
   classifyAssistantPrompt,
@@ -2959,6 +2960,17 @@ const buildGenericCmsInspectionOperationPlan = (
   return buildGenericCmsInspectionPlan(prompt, draft, context);
 };
 
+const buildGenericCmsPlanningStateFollowUpPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const draft = buildCmsOperationDraftFromPlanningState(prompt, context.planningState);
+  if (!draft) return null;
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan) return inspectionPlan;
+  return mapCmsOperationToActionPlan({ prompt, draft, context });
+};
+
 const buildGenericCmsExplicitCatalogMutationPlan = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>
@@ -3155,6 +3167,8 @@ export const planAssistantActions = (
   }
 
   if (classification.promptKind !== "setup_request") {
+    const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
+    if (planningStatePlan) return normalizeAssistantActionPlan(planningStatePlan);
     const genericInspectionPlan = buildGenericCmsInspectionOperationPlan(input.prompt, context);
     if (genericInspectionPlan) return normalizeAssistantActionPlan(genericInspectionPlan);
     const explicitCatalogMutationPlan = buildGenericCmsExplicitCatalogMutationPlan(

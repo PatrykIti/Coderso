@@ -498,6 +498,36 @@ export const mapCmsOperationToActionPlan = (input: {
     return null;
   }
   const resolution = resolveCmsOperationTargets(input.draft, input.context);
+  if (
+    resolution.status === "ambiguous" &&
+    (input.draft.operation === "delete" || input.draft.operation === "archive") &&
+    input.draft.constraints?.expectedCount === resolution.candidates.length &&
+    resolution.candidates.length > 1
+  ) {
+    const actions = resolution.candidates
+      .map((target) => buildActionForExactTarget(input.draft, target))
+      .filter((action): action is AssistantPlannedAction => Boolean(action));
+    if (actions.length === resolution.candidates.length) {
+      return {
+        id: `plan-cms-${input.draft.resourceKind}-${input.draft.operation}-multi`,
+        status: "ready",
+        intentId: `cms-${input.draft.resourceKind}-${input.draft.operation}`,
+        responseKind: "action_plan",
+        promptKind: "refinement_request",
+        intentFamily: "unknown",
+        title: `${input.draft.operation === "archive" ? "Archive" : "Delete"} ${actions.length} ${input.draft.resourceKind} resources`,
+        answer: "I can prepare these CMS operations through the reviewed LLM Guide action flow.",
+        summary: `${input.draft.operation === "archive" ? "Archive" : "Delete"} ${actions.length} resolved ${input.draft.resourceKind} resources.`,
+        confidence: 0.76,
+        assumptions: [
+          "The target count was explicit and candidates were resolved from trusted context.",
+          "Dry-run must be reviewed before execution.",
+        ],
+        questions: [],
+        actions,
+      };
+    }
+  }
   if (resolution.status !== "exact") {
     return buildNeedsInputPlan(input.prompt, input.draft, resolution.reason, resolution.candidates);
   }

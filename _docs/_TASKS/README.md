@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 11 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 5 tasks
-- **Done:** 883 tasks
+- **Done:** 884 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-178 | LLM Guide Generic CMS Reasoning and Plan Orchestration | High | Large | Generic CMS intent, target resolution, typed plan, review, and execute pipeline |
-| TASK-178-06 | Conversation State and Follow-Up Target Memory | High | Medium | Preserve bounded candidate/target context for follow-up prompts |
 | TASK-178-07 | Evaluation Fixture Matrix and Red-Team Corpus | High | Large | CMS-wide Polish/English prompt fixtures, malformed provider drafts, and abuse cases |
 | TASK-178-08 | Review UX, Docs, Gates, and Closure | High | Medium | UI states, docs, gates, and validation closure for generic CMS reasoning |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
@@ -75,6 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-178-03-04 | Planner Response Kinds for Docs, Inspection, Action, and Needs Input | High | Medium | Done: strict responseKind metadata drives docs/inspection/action/needs-input UI behavior |
 | TASK-178-03-05 | Provider Safety Evaluation and Route Coverage | High | Medium | Done: fake-provider fixtures cover malformed, unsafe, broad, and valid operation drafts |
 | TASK-178-05 | Generic Mutation Planning and Action Mapping | High | Large | Done: generic CMS operation drafts map to existing typed actions for supported resources |
+| TASK-178-06 | Conversation State and Follow-Up Target Memory | High | Medium | Done: bounded inspection candidate state supports safe follow-up target selection |
 | TASK-178-01 | Intent Operation Taxonomy and Planner Contract | High | Medium | Done: strict CMS operation draft schema and planner integration foundation shipped |
 | TASK-178-02 | CMS Resource Registry and Target Resolver | High | Large | Done: registry aliases, page summaries, and target resolution outcomes shipped |
 | TASK-178-04 | Generic Read, Inspect, and Candidate Plans | High | Medium | Done: read-only inspection plans render CMS candidates without execution controls |

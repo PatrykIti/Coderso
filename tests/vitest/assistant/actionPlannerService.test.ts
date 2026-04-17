@@ -320,6 +320,85 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
   ]);
 });
 
+test("planAssistantActions reuses planning state for follow-up target selection", () => {
+  const plan = planAssistantActions({
+    prompt: "usun te dwa pierwsze",
+    context: {
+      page: "/admin/coderso/custom-screens",
+      locale: "pl-PL",
+      planningState: {
+        schemaVersion: 1,
+        sourcePlanId: "plan-cms-custom-screen-inspect",
+        route: "/admin/coderso/custom-screens",
+        resourceKind: "custom-screen",
+        operation: "inspect",
+        query: "House Projects",
+        candidates: [
+          {
+            kind: "custom-screen",
+            id: "screen-house",
+            label: "House Projects",
+            status: "active",
+          },
+          {
+            kind: "custom-screen",
+            id: "screen-house-archive",
+            label: "House Projects Archive",
+            status: "draft",
+          },
+        ],
+        createdAt: "2026-04-17T10:00:00.000Z",
+        expiresAt: "2099-04-17T10:10:00.000Z",
+      },
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-17T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [
+          {
+            id: "screen-house",
+            name: "House Projects",
+            contentTypeId: "type-1",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "House Projects",
+            writableBindingFields: [],
+            bindings: [],
+          },
+          {
+            id: "screen-house-archive",
+            name: "House Projects Archive",
+            contentTypeId: "type-1",
+            status: "draft",
+            showInSidebar: false,
+            sidebarLabel: null,
+            writableBindingFields: [],
+            bindings: [],
+          },
+        ],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "custom-screen.delete",
+    "custom-screen.delete",
+  ]);
+});
+
 test("planAssistantActions builds custom screen delete plan from resource catalog prefix", () => {
   const plan = planAssistantActions({
     prompt: "usun dwa ekrany w screens o prefixie 'House Projects' w tytule ekranu",

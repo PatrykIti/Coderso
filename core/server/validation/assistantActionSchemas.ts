@@ -367,6 +367,38 @@ const activeSurfaceSchema = {
   ],
 } as const;
 
+const planningStateSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["schemaVersion", "candidates", "createdAt", "expiresAt"],
+  properties: {
+    schemaVersion: { const: 1 },
+    sourcePlanId: { type: ["string", "null"], minLength: 1, maxLength: 160 },
+    route: { type: ["string", "null"], minLength: 1, maxLength: 240 },
+    resourceKind: { type: ["string", "null"], minLength: 1, maxLength: 80 },
+    operation: { type: ["string", "null"], minLength: 1, maxLength: 80 },
+    query: { type: ["string", "null"], minLength: 1, maxLength: 240 },
+    candidates: {
+      type: "array",
+      maxItems: 10,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["kind", "id", "label"],
+        properties: {
+          kind: { type: "string", minLength: 1, maxLength: 80 },
+          id: { type: "string", minLength: 1, maxLength: 160 },
+          label: { type: "string", minLength: 1, maxLength: 200 },
+          slug: { type: ["string", "null"], minLength: 1, maxLength: 240 },
+          status: { type: ["string", "null"], minLength: 1, maxLength: 80 },
+        },
+      },
+    },
+    createdAt: { type: "string", minLength: 10, maxLength: 80 },
+    expiresAt: { type: "string", minLength: 10, maxLength: 80 },
+  },
+} as const;
+
 export const assistantActionPlanRequestSchema = {
   type: "object",
   required: ["prompt"],
@@ -387,6 +419,9 @@ export const assistantActionPlanRequestSchema = {
         includeResourceCatalog: { type: "boolean" },
         runtimeSnapshot: runtimeSnapshotSchema,
         activeSurface: activeSurfaceSchema,
+        planningState: {
+          anyOf: [planningStateSchema, { type: "null" }],
+        },
       },
     },
   },

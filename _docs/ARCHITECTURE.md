@@ -345,6 +345,10 @@ Zamiast tego:
 - `core/services/assistant/cmsOperationActionMapper.ts` maps resolved CMS operation
   drafts to existing strict typed actions. It does not add executor paths; dry-run
   and execute still dispatch through `actionExecutorService.ts` and domain services.
+- `core/services/assistant/cmsPlanningState.ts` stores bounded advisory candidate
+  memory for follow-up prompts. The browser can pass this state back to
+  `/assistant/actions/plan`, but the server normalizes it and re-resolves targets
+  through the current resource catalog before any mutation plan is produced.
 - Resource catalog snapshots now include bounded page summaries when the plan route
   requests server-side resource context; page data payloads stay out of the catalog.
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.

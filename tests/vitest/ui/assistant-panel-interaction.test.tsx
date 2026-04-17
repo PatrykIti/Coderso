@@ -749,3 +749,155 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
     view.cleanup();
   }
 });
+
+test("AssistantPanel sends prior inspection candidates as planning state", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
+    "pages.openAfterCreate": true,
+    "media.openAfterUpload": false,
+    "widgets.favorites": [],
+    "widgets.hero.presets": [],
+    "posts.editor.preferences": {
+      version: 2,
+      focusModeOnOpen: false,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: true,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: true,
+    },
+    "assistant.mode": "llm-guide",
+    "assistant.ui.enabled": true,
+    "assistant.ui.avatarEnabled": false,
+    "assistant.ui.avatarAsset": null,
+  });
+  const planSpy = vi.spyOn(assistantClient, "planAssistantActions")
+    .mockResolvedValueOnce({
+      id: "plan-cms-custom-screen-inspect",
+      status: "ready",
+      intentId: "cms-resource-inspect",
+      responseKind: "inspection",
+      title: "CMS resource inspection",
+      answer: "Found screens.",
+      summary: "Found candidates.",
+      confidence: 0.72,
+      assumptions: ["Read-only."],
+      questions: [],
+      inspection: {
+        kind: "resource-candidates",
+        operation: "inspect",
+        resourceKind: "custom-screen",
+        matchStatus: "matched",
+        query: "House Projects",
+        candidates: [
+          {
+            kind: "custom-screen",
+            id: "screen-house",
+            label: "House Projects",
+            status: "active",
+          },
+        ],
+        truncated: false,
+      },
+      actions: [],
+    })
+    .mockResolvedValueOnce({
+      id: "plan-custom-screen-delete",
+      status: "ready",
+      intentId: "custom-screen-delete",
+      responseKind: "action_plan",
+      title: "Delete House Projects",
+      answer: "Plan ready.",
+      summary: "Delete selected screen.",
+      confidence: 0.78,
+      assumptions: [],
+      questions: [],
+      actions: [
+        {
+          id: "custom-screen-delete-screen-house",
+          type: "custom-screen.delete",
+          title: "Delete House Projects",
+          description: "Delete selected screen.",
+          input: {
+            id: "screen-house",
+            name: "House Projects",
+          },
+        },
+      ],
+    });
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await act(async () => {
+      setTextareaValue(textarea, "jakie ekrany widzisz z prefixem House Projects?");
+      await flush();
+    });
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+    await act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    await act(async () => {
+      setTextareaValue(textarea, "usun pierwszy");
+      await flush();
+    });
+    await act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(2);
+    expect(planSpy.mock.calls[1]?.[0].context?.planningState).toMatchObject({
+      resourceKind: "custom-screen",
+      query: "House Projects",
+      candidates: [
+        {
+          id: "screen-house",
+          label: "House Projects",
+        },
+      ],
+    });
+  } finally {
+    view.cleanup();
+  }
+});

@@ -29,6 +29,9 @@ Planner responses can be tagged as `docs`, `inspection`, `action_plan`,
 `needs_input`, or `gated` so the admin UI can render guidance, candidate lists,
 reviewable actions, disabled clarification, or blocked states without guessing
 from prompt text.
+Read-only inspection candidate lists can be reused as short-lived planning state
+for follow-up prompts such as "usun pierwszy" or "usun te dwa pierwsze"; the
+server still re-resolves candidates before planning any mutation.
 
 Current implemented guide blueprint:
 - `house-projects-catalog`
