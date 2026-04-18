@@ -92,6 +92,8 @@ const countWords = new Map<string, number>([
   ["one", 1],
   ["dwa", 2],
   ["dwie", 2],
+  ["dwom", 2],
+  ["dwóm", 2],
   ["two", 2],
   ["trzy", 3],
   ["three", 3],

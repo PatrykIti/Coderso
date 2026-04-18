@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Bulk Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-02, TASK-184-03, TASK-184-04, TASK-184-05, TASK-184-06, TASK-184-07, TASK-184-08
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -68,3 +68,17 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/bulkSafetyLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover planning-state follow-up deletion (`tak, te dwie, usun je`), count mismatch safety, broad destructive form delete guard, and counted page multi-update planning.
+- Fixed follow-up signal detection so short Polish pronouns such as `te` match whole words instead of arbitrary substrings inside update prompts.
+- Added Polish `dwom/dwóm` count parsing for counted two-target prompts.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-planning-state.test.ts tests/vitest/assistant/actionPlannerService.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/bulkSafetyLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

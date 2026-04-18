@@ -151,6 +151,8 @@ const countWords = new Map<string, number>([
   ["one", 1],
   ["dwa", 2],
   ["dwie", 2],
+  ["dwom", 2],
+  ["dwóm", 2],
   ["oba", 2],
   ["obie", 2],
   ["two", 2],
@@ -168,23 +170,30 @@ const resolveCandidateCount = (normalizedPrompt: string) => {
   return null;
 };
 
+const hasWord = (value: string, word: string) =>
+  new RegExp(`(^|\\s)${word}(\\s|$)`, "u").test(value);
+
 const hasFollowUpSignal = (normalizedPrompt: string) =>
-  includesAny(normalizedPrompt, [
+  [
+    "dwa pierwsze",
+    "dwie pierwsze",
     "te",
     "ten",
     "ta",
     "tych",
     "pierwszy",
     "pierwsza",
-    "dwa pierwsze",
-    "dwie pierwsze",
     "oba",
     "obie",
     "tamten",
     "tamta",
     "these",
     "first",
-  ]);
+  ].some((signal) =>
+    signal.includes(" ")
+      ? normalizedPrompt.includes(signal)
+      : hasWord(normalizedPrompt, signal)
+  );
 
 export const buildCmsOperationDraftFromPlanningState = (
   prompt: string,
