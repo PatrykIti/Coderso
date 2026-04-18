@@ -3268,6 +3268,41 @@ const buildProviderLocalRecoveryPlan = (
   });
 };
 
+const buildProviderPreferredActiveSurfacePlan = (input: AssistantProviderDraftPlanInput) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
+  if (
+    !includesAny(normalizedPrompt, [
+      "selected block",
+      "wybrany blok",
+      "wybranego bloku",
+      "headline",
+      "naglowek",
+      "nagłówek",
+      "cta",
+      "button",
+      "przycisk",
+    ])
+  ) {
+    return null;
+  }
+  const plan = planAssistantActions({
+    prompt: input.prompt,
+    context: input.context,
+  });
+  if (
+    plan.status !== "ready" ||
+    !plan.actions.some(
+      (action) =>
+        action.type === "widget-template.block.patch" ||
+        action.type === "page.widget.patch" ||
+        action.type === "custom-screen.widget.patch"
+    )
+  ) {
+    return null;
+  }
+  return plan;
+};
+
 const isProviderBroadDestructivePrompt = (prompt: string) => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
   return (
@@ -3489,6 +3524,8 @@ export const planAssistantActionsWithProviderDraft = async (
   const context = buildAssistantAdminContext(input.context);
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
   if (planningStatePlan) return normalizeAssistantActionPlan(planningStatePlan);
+  const activeSurfacePlan = buildProviderPreferredActiveSurfacePlan(input);
+  if (activeSurfacePlan) return normalizeAssistantActionPlan(activeSurfacePlan);
 
   if (!input.llmAvailable || !input.provider) {
     return planAssistantActions(input);

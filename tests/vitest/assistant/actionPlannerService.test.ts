@@ -2486,6 +2486,72 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied listing templ
   });
 });
 
+test("planAssistantActionsWithProviderDraft prefers active widget template block context before provider inference", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "update",
+          resourceKind: "widget-template",
+          targetQuery: { active: true },
+          mutation: { value: "Wrong metadata" },
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: 'Zmien headline wybranego bloku widget template na "New headline"',
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/widgets/templates/template-1",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "widget-template",
+        template: {
+          id: "template-1",
+          name: "Hero Template",
+          status: "published",
+          category: "Marketing",
+        },
+        selectedBlockId: "hero-1",
+        blocks: [
+          {
+            id: "hero-1",
+            type: "hero",
+            label: "Hero",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.actions[0]).toMatchObject({
+    type: "widget-template.block.patch",
+    input: {
+      blockId: "hero-1",
+      dataPath: ["headline"],
+      value: "New headline",
+    },
+  });
+});
+
 test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
   const provider: AssistantProvider = {
     id: "fake",

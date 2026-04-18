@@ -245,7 +245,11 @@ export const executeLivePlan = async ({
 
 export const expectSuccessfulExecution = (result: AssistantActionExecuteResult) => {
   if (result.summary.failed !== 0) {
-    throw new Error(`assistant_live_execution_failed:${result.summary.failed}`);
+    const failed = result.results
+      .filter((item) => item.status === "failed")
+      .map((item) => `${item.type}:${item.errorCode ?? "unknown"}:${item.message}`)
+      .join("|");
+    throw new Error(`assistant_live_execution_failed:${result.summary.failed}:${failed}`);
   }
   if (!result.results.every((item) => item.status === "success")) {
     throw new Error("assistant_live_execution_result_not_success");

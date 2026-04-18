@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Widget Templates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -68,3 +68,17 @@ No child task files.
 - `_docs/WIDGET_PACK_MATRIX.md` only if pack readiness changes
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/widgetTemplatesLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover widget template inspection, active template rename, selected hero block headline patch, broad delete safety, exact active template delete, state verification, and cleanup.
+- Active-surface selected-block prompts now prefer local context before provider inference to avoid metadata updates replacing block patches.
+- Live fixture hero blocks now use valid widget variants/data so executor validation covers real widget contracts.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/live-cms-harness.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/widgetTemplatesLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
