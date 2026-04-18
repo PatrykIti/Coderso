@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 5 tasks
-- **Done:** 913 tasks
+- **Done:** 914 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-12 | Store, Themes, Dashboard, and Analytics Live Matrix | High | Medium | Live coverage for Plugin Store, Admin UI Theme, Dashboard, and Analytics |
 | TASK-184-13 | Tools, Redirects, Backups, and Import Export Live Matrix | High | Medium | Live coverage for Search, SEO Manager, Backups, Import/Export, and Redirects |
 | TASK-184-14 | Admin Users, Roles, Audit, and Access Logs Live Matrix | High | Medium | Live coverage for Users, Roles Matrix, Audit Logs, and Access Logs |
 | TASK-184-15 | Settings Live Matrix | High | Large | Live coverage for General, Assistant, Site, Security, API Keys, Webhooks, Email, Storage, and Integrations |
@@ -71,6 +70,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-12 | Store, Themes, Dashboard, and Analytics Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix verifies dashboard/store/theme/analytics stay non-executable without typed contracts |
 | TASK-184-11 | Coderso Operations Modules Live Matrix | High | Large | Done: OpenAI/OpenRouter live matrix verifies unsupported operation modules stay non-executable/gated |
 | TASK-184-10 | Posts, Media, and Admin Search Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix gates post/media upload mutations and verifies Admin Search media fixture coverage |
 | TASK-184-09 | Bulk Follow-Up and Safety Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix covers follow-up deletion, count mismatch, broad destructive guard, and counted update |

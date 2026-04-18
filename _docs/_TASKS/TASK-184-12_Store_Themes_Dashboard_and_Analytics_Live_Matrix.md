@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Store/Visual/Observability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -73,3 +73,15 @@ No child task files.
 - `_docs/ADMIN_CACHE.md` if theme/plugin cache events are added
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/storeThemesDashboardAnalyticsLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover Dashboard status prompts, Plugin Store install prompts, Admin UI Theme mutation prompts, and Analytics destructive prompts.
+- The suite verifies these surfaces do not produce executable action plans without dedicated strict typed contracts.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/storeThemesDashboardAnalyticsLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
