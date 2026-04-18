@@ -15,7 +15,10 @@ Migrate current CMS/Admin resources into the new `assistantOperationPolicy`.
 
 ## Sub-Tasks
 
-No child task files.
+- `TASK-188-02-01_Pages_Forms_Listings_Policy_Migration.md`
+- `TASK-188-02-02_Content_Screens_Widgets_Media_Policy_Migration.md`
+- `TASK-188-02-03_Admin_Settings_Security_Tools_Policy_Migration.md`
+- `TASK-188-02-04_Coderso_Planned_and_Gated_Modules_Policy_Migration.md`
 
 ## Resources to Cover
 

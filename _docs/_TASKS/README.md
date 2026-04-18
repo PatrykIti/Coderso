@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 18 tasks
+- **To Do:** 22 tasks
 - **In Progress:** 5 tasks
 - **Done:** 923 tasks
 
@@ -41,6 +41,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
 | TASK-188-01 | Policy Schema and Resource Contract | High | Medium | Define strict assistant operation policy schema |
 | TASK-188-02 | Policy Migration for Current CMS Resources | High | Large | Move current Admin/CMS resources into policy |
+| TASK-188-02-01 | Pages Forms Listings Policy Migration | High | Medium | Move pages/forms/listings policy entries and action mappings into policy |
+| TASK-188-02-02 | Content Screens Widgets Media Policy Migration | High | Medium | Move content types, entries, screens, widgets, and media policy entries |
+| TASK-188-02-03 | Admin Settings Security Tools Policy Migration | High | Medium | Move settings, tools, users, audit/access/security surfaces into gated/read-only policy |
+| TASK-188-02-04 | Coderso Planned and Gated Modules Policy Migration | High | Medium | Move preview/planned Coderso module policy and gating rules |
 | TASK-188-03 | Provider Guidance and JSON Schema From Policy | High | Medium | Generate provider prompt/schema guidance from policy |
 | TASK-188-04 | Resolver and Filtering From Policy | High | Large | Drive target resolution and filters from policy |
 | TASK-188-05 | Action Mapping and Safety Rules From Policy | High | Large | Drive typed action mapping and destructive rules from policy |
