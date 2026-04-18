@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Custom Screens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01, TASK-184-03
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -69,3 +69,17 @@ No child task files.
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/customScreensLiveMatrix.test.ts`.
+- Live matrix seeds a fixture content type plus active/draft custom screens with disposable `llm-live-*` prefixes.
+- OpenAI/OpenRouter live cases cover prefix search, sidebar visibility filtering, active screen rename, broad delete safety, counted two-screen delete, state verification, and cleanup.
+- Fixed the live test actor path to use a UUID-backed test admin actor for assistant execute audit logging.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/customScreensLiveMatrix.test.ts`
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-cms-harness.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

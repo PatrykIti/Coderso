@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 22 tasks
+- **To Do:** 21 tasks
 - **In Progress:** 5 tasks
-- **Done:** 905 tasks
+- **Done:** 906 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-04 | Custom Screens Live CMS Operation Matrix | High | Medium | Live Screens search/create/update/delete coverage |
 | TASK-184-05 | Forms Live CMS Operation Matrix | High | Medium | Live forms create/search/update/archive/delete coverage |
 | TASK-184-06 | Listings Live CMS Operation Matrix | High | Medium | Live listing query/template create/search/update/delete/reference-safety coverage |
 | TASK-184-07 | Widget Templates Live CMS Operation Matrix | High | Medium | Live widget template search/update/patch/delete coverage |
@@ -79,6 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-04 | Custom Screens Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers screen search, update, delete, and safety |
 | TASK-184-03 | Content Types and Entries Live CMS Operation Matrix | High | Large | Done: OpenAI/OpenRouter DB-backed live matrix covers content type and active entry operations |
 | TASK-184-02 | Pages Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers page create/search/update/delete/safety |
 | TASK-184-01 | Live CMS Matrix Harness and Fixture Isolation | High | Large | Done: shared live provider harness, disposable prefixes, lazy dry-run/execute wrappers, and cleanup stack |
