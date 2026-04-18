@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 25 tasks
+- **To Do:** 24 tasks
 - **In Progress:** 5 tasks
-- **Done:** 902 tasks
+- **Done:** 903 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-01 | Live CMS Matrix Harness and Fixture Isolation | High | Large | Shared live provider/DB fixture harness, cleanup, commands, and safety controls |
 | TASK-184-02 | Pages Live CMS Operation Matrix | High | Medium | Live create/search/update/delete/follow-up coverage for Pages |
 | TASK-184-03 | Content Types and Entries Live CMS Operation Matrix | High | Large | Live Engine/content type and entry operation coverage |
 | TASK-184-04 | Custom Screens Live CMS Operation Matrix | High | Medium | Live Screens search/create/update/delete coverage |
@@ -82,6 +81,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-01 | Live CMS Matrix Harness and Fixture Isolation | High | Large | Done: shared live provider harness, disposable prefixes, lazy dry-run/execute wrappers, and cleanup stack |
 | TASK-183 | Assistant Page Title Search Filtering | High | Small | Done: LLM Guide page title searches now return only matching pages, including live OpenAI/OpenRouter coverage |
 | TASK-182 | Assistant Chat Mode Control Removal | Medium | Small | Done: floating assistant chat keeps readiness badge, removes mode selector, and adds a New conversation button |
 | TASK-181 | Assistant Follow-Up Target Selection With Live Provider | High | Small | Done: provider path now prefers bounded planning-state follow-up target selection |

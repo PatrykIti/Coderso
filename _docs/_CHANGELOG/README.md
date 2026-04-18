@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 672 | 2026-04-18 | TASK-184-01 live CMS matrix harness | Assistant/QA |
 | 671 | 2026-04-18 | TASK-183 assistant page title search filtering | Assistant/Core |
 | 670 | 2026-04-18 | TASK-182 assistant chat mode control removal | Admin/UI |
 | 669 | 2026-04-18 | TASK-181 assistant follow-up target selection | Assistant/Core |

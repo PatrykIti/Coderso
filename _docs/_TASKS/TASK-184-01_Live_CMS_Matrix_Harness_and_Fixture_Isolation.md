@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Test Harness
 **Estimated Effort:** Large
 **Dependencies:** TASK-184
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -80,3 +80,16 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/liveCmsHarness.ts`.
+- Harness now provides provider availability checks, OpenAI/OpenRouter runtime creation, disposable `llm-live-*` prefixes, cleanup stack, DB reachability check, provider planning wrapper, dry-run/execute wrappers, and execution success assertions.
+- Harness avoids importing DB-backed executor modules until dry-run/execute helpers are called, so pure helper tests can run without `DATABASE_URL`.
+- Added Vitest coverage for provider env availability, disposable prefix validation, and reverse-order cleanup behavior.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-cms-harness.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
