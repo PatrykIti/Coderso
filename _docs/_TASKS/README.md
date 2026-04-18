@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 5 tasks
 - **Done:** 902 tasks
 
@@ -38,6 +38,24 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
+| TASK-184-01 | Live CMS Matrix Harness and Fixture Isolation | High | Large | Shared live provider/DB fixture harness, cleanup, commands, and safety controls |
+| TASK-184-02 | Pages Live CMS Operation Matrix | High | Medium | Live create/search/update/delete/follow-up coverage for Pages |
+| TASK-184-03 | Content Types and Entries Live CMS Operation Matrix | High | Large | Live Engine/content type and entry operation coverage |
+| TASK-184-04 | Custom Screens Live CMS Operation Matrix | High | Medium | Live Screens search/create/update/delete coverage |
+| TASK-184-05 | Forms Live CMS Operation Matrix | High | Medium | Live forms create/search/update/archive/delete coverage |
+| TASK-184-06 | Listings Live CMS Operation Matrix | High | Medium | Live listing query/template create/search/update/delete/reference-safety coverage |
+| TASK-184-07 | Widget Templates Live CMS Operation Matrix | High | Medium | Live widget template search/update/patch/delete coverage |
+| TASK-184-08 | Menus, SEO, and Media Live CMS Operation Matrix | High | Medium | Live menu item, SEO document, and media reference operation coverage |
+| TASK-184-09 | Bulk Follow-Up and Safety Live Matrix | High | Medium | Cross-section live follow-up, counted bulk, and negative safety coverage |
+| TASK-184-10 | Posts, Media, and Admin Search Live Matrix | High | Medium | Live coverage for Posts, Media, and global Admin Search |
+| TASK-184-11 | Coderso Operations Modules Live Matrix | High | Large | Live coverage for Filters, Search, Booking, Reviews, Commerce, Popups, and Solution Kits |
+| TASK-184-12 | Store, Themes, Dashboard, and Analytics Live Matrix | High | Medium | Live coverage for Plugin Store, Admin UI Theme, Dashboard, and Analytics |
+| TASK-184-13 | Tools, Redirects, Backups, and Import Export Live Matrix | High | Medium | Live coverage for Search, SEO Manager, Backups, Import/Export, and Redirects |
+| TASK-184-14 | Admin Users, Roles, Audit, and Access Logs Live Matrix | High | Medium | Live coverage for Users, Roles Matrix, Audit Logs, and Access Logs |
+| TASK-184-15 | Settings Live Matrix | High | Large | Live coverage for General, Assistant, Site, Security, API Keys, Webhooks, Email, Storage, and Integrations |
+| TASK-184-16 | Navigation Coverage Map and Planned Modules | High | Medium | Source-of-truth menu-to-live-coverage map, including planned Coderso modules |
+| TASK-184-17 | Docs, Commands, and Closure | High | Medium | Commands, docs, changelog, board, and final live matrix closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
