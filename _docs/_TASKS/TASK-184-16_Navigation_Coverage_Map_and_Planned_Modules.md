@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Navigation Coverage
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -75,3 +75,16 @@ They should not silently disappear from the matrix. If their nav is disabled by 
 - `_docs/TESTING_STRATEGY.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`.
+- Exported `settingsSidebarItems` from `SettingsSidebar` so tests can compare settings nav coverage.
+- Added `tests/vitest/assistant/live-coverage-matrix.test.ts` to compare the coverage matrix against `sidebarConfig.ts`, `codersoModules.ts`, and `SettingsSidebar.tsx`.
+- Planned/disabled Coderso modules are represented as `not-applicable`.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/ui/settings-sidebar.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

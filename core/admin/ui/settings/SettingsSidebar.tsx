@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { resolveAdminHref } from "@/utils/adminPaths";
 
-const items = [
+export const settingsSidebarItems = [
   { id: "general", label: "General", icon: Settings, href: "/admin/settings/general" },
   { id: "assistant", label: "Assistant", icon: Bot, href: "/admin/settings/assistant" },
   { id: "site", label: "Site", icon: Globe, href: "/admin/settings/site" },
@@ -38,7 +38,7 @@ export function SettingsSidebar({ activeId = "general" }: SettingsSidebarProps) 
         Settings
       </p>
       <div className="space-y-1">
-        {items.map((item) => {
+        {settingsSidebarItems.map((item) => {
           const isActive = item.id === activeId;
           const Icon = item.icon;
           const href = resolveAdminHref(adminBasePath, item.href);
