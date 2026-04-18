@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Policy Schema
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -120,3 +120,17 @@ No existing files are removed in this leaf. Existing consumers continue to use t
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `core/services/assistant/operationPolicy/policyTypes.ts`.
+- Added `core/services/assistant/operationPolicy/policySchema.ts`.
+- Added `core/services/assistant/operationPolicy/policyLookup.ts`.
+- Added strict Vitest coverage for policy schema validation, unknown-key rejection, invalid action rejection, destructive defaults, and lookup helpers.
+- No runtime planner/resolver behavior was changed in this leaf.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/operation-policy-schema.test.ts tests/vitest/assistant/operation-policy-lookup.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
