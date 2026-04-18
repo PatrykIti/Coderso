@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Engine/Entries
 **Estimated Effort:** Large
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -68,3 +68,17 @@ No child task files.
 - `_docs/CMS_API.md` if live contract examples are added
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/contentEntriesLiveMatrix.test.ts`.
+- Live matrix seeds provider-scoped content types and entries with disposable `llm-live-*` prefixes.
+- OpenAI/OpenRouter live cases cover Engine content type inspection, unsafe content type delete while entries exist, active entry update, active entry delete, zero-entry content type delete, state verification, and cleanup.
+- Provider local recovery now supports active entry update/delete paths when provider returns an actionless draft.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/live-cms-harness.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/contentEntriesLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

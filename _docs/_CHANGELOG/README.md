@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 674 | 2026-04-18 | TASK-184-03 content types entries live matrix | Assistant/QA |
 | 673 | 2026-04-18 | TASK-184-02 pages live matrix | Assistant/QA |
 | 672 | 2026-04-18 | TASK-184-01 live CMS matrix harness | Assistant/QA |
 | 671 | 2026-04-18 | TASK-183 assistant page title search filtering | Assistant/Core |

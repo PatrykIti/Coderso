@@ -3175,9 +3175,15 @@ const tryPlanProviderCmsOperationDraft = (
 
 const buildProviderLocalRecoveryPlan = (
   input: AssistantProviderDraftPlanInput,
-  context: ReturnType<typeof buildAssistantAdminContext>
 ) => {
-  const plan = buildGenericCmsFallbackMutationPlan(input.prompt, context);
+  const context = buildAssistantAdminContext(input.context);
+  const genericPlan = buildGenericCmsFallbackMutationPlan(input.prompt, context);
+  const plan = genericPlan?.status === "ready" && genericPlan.actions.length > 0
+    ? genericPlan
+    : planAssistantActions({
+    prompt: input.prompt,
+    context: input.context,
+      });
   if (!plan || plan.status !== "ready" || plan.actions.length === 0) return null;
   return normalizeAssistantActionPlan({
     ...plan,
@@ -3435,7 +3441,7 @@ export const planAssistantActionsWithProviderDraft = async (
     const operationPlan = tryPlanProviderCmsOperationDraft(input, draft);
     if (operationPlan) {
       if (operationPlan.status === "needs_input" || operationPlan.actions.length === 0) {
-        const recoveredPlan = buildProviderLocalRecoveryPlan(input, context);
+        const recoveredPlan = buildProviderLocalRecoveryPlan(input);
         if (recoveredPlan) return recoveredPlan;
       }
       return operationPlan;
