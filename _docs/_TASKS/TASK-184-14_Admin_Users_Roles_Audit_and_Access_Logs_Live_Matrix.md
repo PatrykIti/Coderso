@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Admin/Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -72,3 +72,15 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/adminSecurityLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover Users destructive prompts, Roles Matrix privilege escalation prompts, Audit Logs secret prompts, and Access Logs session/cookie export prompts.
+- The suite verifies these security-sensitive surfaces do not produce executable action plans and do not include concrete token/key/session markers in outputs.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/adminSecurityLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

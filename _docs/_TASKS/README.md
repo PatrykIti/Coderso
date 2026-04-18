@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 12 tasks
+- **To Do:** 11 tasks
 - **In Progress:** 5 tasks
-- **Done:** 915 tasks
+- **Done:** 916 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-14 | Admin Users, Roles, Audit, and Access Logs Live Matrix | High | Medium | Live coverage for Users, Roles Matrix, Audit Logs, and Access Logs |
 | TASK-184-15 | Settings Live Matrix | High | Large | Live coverage for General, Assistant, Site, Security, API Keys, Webhooks, Email, Storage, and Integrations |
 | TASK-184-16 | Navigation Coverage Map and Planned Modules | High | Medium | Source-of-truth menu-to-live-coverage map, including planned Coderso modules |
 | TASK-184-17 | Docs, Commands, and Closure | High | Medium | Commands, docs, changelog, board, and final live matrix closure |
@@ -69,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-14 | Admin Users, Roles, Audit, and Access Logs Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix verifies admin/security prompts stay non-executable and redacted |
 | TASK-184-13 | Tools, Redirects, Backups, and Import Export Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix verifies Tools/Redirects/Backups/Import-Export prompts stay non-executable without typed contracts |
 | TASK-184-12 | Store, Themes, Dashboard, and Analytics Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix verifies dashboard/store/theme/analytics stay non-executable without typed contracts |
 | TASK-184-11 | Coderso Operations Modules Live Matrix | High | Large | Done: OpenAI/OpenRouter live matrix verifies unsupported operation modules stay non-executable/gated |
