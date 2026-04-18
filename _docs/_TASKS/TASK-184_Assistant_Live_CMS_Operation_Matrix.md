@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Live Provider E2E
 **Estimated Effort:** Large
 **Dependencies:** TASK-178, TASK-179, TASK-180, TASK-181, TASK-183
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -113,3 +113,18 @@ Execution coverage:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entries when leaves complete
+
+## Completion Notes (2026-04-18)
+
+- Completed live OpenAI/OpenRouter matrix coverage from `TASK-184-01` through `TASK-184-17`.
+- Added DB-backed live execution coverage for pages, content types/entries, custom screens, forms, listings, widget templates, menus, SEO, media references, and bulk/follow-up safety.
+- Added live-gated/read-only coverage for Posts, Admin Search, Coderso operations modules, Store, Themes, Dashboard, Analytics, Tools, Admin Security, and Settings surfaces.
+- Added `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` plus a static route coverage test.
+- Added `test:assistant:live:cms` command family.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-cms-harness.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-planning-state.test.ts tests/vitest/ui/settings-sidebar.test.tsx`
+- `set -a && source .env && set +a && bun run test:assistant:live:cms`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

@@ -5,7 +5,7 @@
 **Category:** Docs + QA Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01, TASK-184-02, TASK-184-03, TASK-184-04, TASK-184-05, TASK-184-06, TASK-184-07, TASK-184-08, TASK-184-09, TASK-184-10, TASK-184-11, TASK-184-12, TASK-184-13, TASK-184-14, TASK-184-15, TASK-184-16
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -76,3 +76,16 @@ The existing `test:assistant:live` can remain the lightweight natural prompt smo
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-18)
+
+- Added `test:assistant:live:cms`, `test:assistant:live:cms:openai`, and `test:assistant:live:cms:openrouter`.
+- Updated `_docs/TESTING_STRATEGY.md` and `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`.
+- Closed the TASK-184 umbrella after live matrix, coverage map, docs, and validation.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-cms-harness.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-planning-state.test.ts tests/vitest/ui/settings-sidebar.test.tsx`
+- `set -a && source .env && set +a && bun run test:assistant:live:cms`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

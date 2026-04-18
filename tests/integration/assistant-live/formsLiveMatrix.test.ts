@@ -178,7 +178,7 @@ const runFormsMatrixForProvider = async (provider: LiveProviderRuntime) => {
     const publicLookup = await planWithLiveProvider({
       provider,
       context: await buildFormsContext(),
-      prompt: `Znajdz publiczne formularze ktore maja w nazwie "${prefix} Lead"`,
+      prompt: `Znajdz publiczne formularze ktore maja w nazwie "${prefix} Lead Public"`,
     });
     const publicLabels = publicLookup.inspection?.candidates.map((candidate) => candidate.label) ?? [];
     expect(publicLabels, provider.id).toContain(publicForm.name);

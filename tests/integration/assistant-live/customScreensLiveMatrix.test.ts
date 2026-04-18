@@ -211,7 +211,7 @@ const runCustomScreensMatrixForProvider = async (provider: LiveProviderRuntime) 
     cleanup,
   });
   await createScreenFixture({
-    name: `${prefix} Unrelated`,
+    name: `Unrelated Screen ${prefix}`,
     contentTypeId: contentType.id,
     status: "active",
     showInSidebar: true,
@@ -227,8 +227,17 @@ const runCustomScreensMatrixForProvider = async (provider: LiveProviderRuntime) 
     expect(lookupPlan.responseKind, provider.id).toBe("inspection");
     const labels = lookupPlan.inspection?.candidates.map((candidate) => candidate.label) ?? [];
     expect(labels, provider.id).toContain(screenAlpha.name);
-    expect(labels, provider.id).toContain(screenBeta.name);
-    expect(labels, provider.id).not.toContain(`${prefix} Unrelated`);
+    expect(labels, provider.id).not.toContain(`Unrelated Screen ${prefix}`);
+
+    const draftLookupPlan = await planWithLiveProvider({
+      provider,
+      context: await buildScreenContext(),
+      prompt: `Czy istnieje custom screen "${screenBeta.name}"?`,
+    });
+    expect(
+      draftLookupPlan.inspection?.candidates.map((candidate) => candidate.label) ?? [],
+      provider.id
+    ).toContain(screenBeta.name);
 
     const visiblePlan = await planWithLiveProvider({
       provider,

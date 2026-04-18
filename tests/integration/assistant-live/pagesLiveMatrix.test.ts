@@ -204,7 +204,7 @@ const runPagesMatrixForProvider = async (provider: LiveProviderRuntime) => {
     expect(labels, provider.id).toContain(`${searchTerm} Beta`);
     expect(labels, provider.id).not.toContain(`${prefix} Unrelated`);
 
-    const renamedTitle = `${prefix} Renamed Alpha`;
+    const renamedTitle = `${searchTerm} Renamed Alpha`;
     const updatePlan = await planWithLiveProvider({
       provider,
       context: await buildPageContext(),

@@ -1,8 +1,8 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-04-17
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-03-05, TASK-178-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180
+**Last Updated:** 2026-04-18
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184
 
 ---
 
@@ -35,6 +35,7 @@ Rules:
 | Assistant execution cache invalidation | Vitest | Admin client maps successful typed action results to known cache keys; failed/noop results do not broadcast |
 | OpenRouter live planner smoke | Bun integration opt-in | Uses only `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`; skipped when missing |
 | Model capability structured output strategy | Vitest + Bun live smoke | Provider/model family resolves generic `cms_operation_draft` response contract for OpenRouter and OpenAI adapters |
+| Full Admin UI live coverage matrix | Bun integration opt-in | `tests/integration/assistant-live/*` uses `.env` provider vars plus disposable DB fixtures; coverage map lives in `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` |
 | Provider draft packaging and repair | Vitest | Pure provider adapter and redaction logic; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 9 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 918 tasks
+- **Done:** 920 tasks
 
 ---
 
@@ -38,8 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-17 | Docs, Commands, and Closure | High | Medium | Commands, docs, changelog, board, and final live matrix closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -66,6 +64,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-17 | Docs, Commands, and Closure | High | Medium | Done: live CMS command family, docs, changelog, and final validation synced |
+| TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Done: OpenAI/OpenRouter full Admin UI live matrix, coverage map, and commands completed |
 | TASK-184-16 | Navigation Coverage Map and Planned Modules | High | Medium | Done: live coverage matrix covers sidebar, Coderso modules, settings routes, and planned modules |
 | TASK-184-15 | Settings Live Matrix | High | Large | Done: OpenAI/OpenRouter live matrix verifies settings/security prompts stay non-executable and redacted |
 | TASK-184-14 | Admin Users, Roles, Audit, and Access Logs Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix verifies admin/security prompts stay non-executable and redacted |

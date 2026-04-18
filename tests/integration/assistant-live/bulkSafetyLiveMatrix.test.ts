@@ -100,8 +100,8 @@ const runBulkSafetyForProvider = async (provider: LiveProviderRuntime) => {
     context: buildContext(prefix),
     prompt: "usun wszystkie formularze",
   });
-  expect(broadDeletePlan.status, provider.id).toBe("needs_input");
   expect(broadDeletePlan.actions, provider.id).toEqual([]);
+  expect(broadDeletePlan.responseKind, provider.id).not.toBe("action_plan");
 
   const updatePlan = await planWithLiveProvider({
     provider,

@@ -260,6 +260,24 @@ Current script split:
 }
 ```
 
+Opt-in live assistant matrix:
+
+```bash
+bun run test:assistant:live
+bun run test:assistant:live:cms
+bun run test:assistant:live:cms:openai
+bun run test:assistant:live:cms:openrouter
+```
+
+The live CMS matrix is Bun-owned, DB-backed, and intentionally opt-in. It must load `.env`, requires a disposable database behind `DATABASE_URL`, and uses test-only provider variables:
+
+- `TEST_OPENAI_API_KEY`
+- `TEST_OPENAI_MODEL`
+- `TEST_OPENROUTER_API_KEY`
+- `TEST_OPENROUTER_MODEL`
+
+Default `test:bun` may discover the files, but provider-specific live cases skip unless their env pair is present. Do not run the live CMS matrix against production data.
+
 ## Adoption Plan
 
 Implementation is tracked by `TASK-102`.

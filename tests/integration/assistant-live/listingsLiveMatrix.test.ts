@@ -254,6 +254,9 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       prompt: `Zmien limit listing query "${query.name}" na 24`,
     });
     expect(updateQueryPlan.actions.map((action) => action.type), provider.id).toContain("listing-query.update");
+    const queryAction = updateQueryPlan.actions.find((action) => action.type === "listing-query.update");
+    expect(queryAction?.input.id, provider.id).toBe(query.id);
+    expect(queryAction?.input.patch, provider.id).toMatchObject({ limit: 24 });
     expect((await dryRunLivePlan(updateQueryPlan)).readyToExecute, provider.id).toBe(true);
     expectSuccessfulExecution(
       await executeLivePlan({
@@ -268,9 +271,12 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
     const updateTemplatePlan = await planWithLiveProvider({
       provider,
       context: await buildListingsContext(),
-      prompt: `Zmien layout listing template "${template.name}" na "list"`,
+      prompt: `Zmien layout listing template o slug "${template.slug}" na "list"`,
     });
     expect(updateTemplatePlan.actions.map((action) => action.type), provider.id).toContain("listing-template.update");
+    const templateAction = updateTemplatePlan.actions.find((action) => action.type === "listing-template.update");
+    expect(templateAction?.input.id, provider.id).toBe(template.id);
+    expect(templateAction?.input.patch, provider.id).toMatchObject({ layout: "list" });
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: updateTemplatePlan,

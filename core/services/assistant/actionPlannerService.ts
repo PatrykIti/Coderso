@@ -270,7 +270,8 @@ const extractQuotedValues = (prompt: string) =>
     .filter((value): value is string => Boolean(value));
 
 const extractFirstNumber = (normalizedPrompt: string) => {
-  const match = normalizedPrompt.match(/\b(\d{1,4})\b/);
+  const promptWithoutQuotedValues = normalizedPrompt.replace(/['"“”][^'"“”]+['"“”]/g, " ");
+  const match = promptWithoutQuotedValues.match(/\b(\d{1,4})\b/);
   return match?.[1] ? Number(match[1]) : null;
 };
 
@@ -1900,6 +1901,9 @@ const buildFormOperationPlan = (
   }
   const targets = findFormOperationTargets(prompt, context);
   if (targets.length !== 1) {
+    if (extractExplicitPromptCount(prompt) !== null && extractQuotedPrefix(prompt)) {
+      return null;
+    }
     return buildFormDeleteNeedsInputPlan(
       prompt,
       targets.length > 1
@@ -3140,6 +3144,12 @@ const parseProviderDraftJson = (value: string) => {
   }
 };
 
+const isProviderRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const providerDraftContainsActionArray = (draft: unknown) =>
+  isProviderRecord(draft) && Array.isArray(draft.actions);
+
 const buildProviderRequestLimits = (
   limits: AssistantProviderDraftPlanInput["limits"] | undefined
 ) => ({
@@ -3204,13 +3214,18 @@ const applyPromptImpliedProviderDraftFilters = (
     draft.resourceKind === "listing-query" &&
     draft.operation === "update" &&
     includesAny(normalizedPrompt, ["limit"]) &&
-    typeof draft.mutation?.value === "number"
+    (typeof draft.mutation?.value === "number" ||
+      (typeof draft.mutation?.value === "string" && /^\d+$/.test(draft.mutation.value.trim())))
   ) {
     return normalizeCmsOperationDraft({
       ...draft,
       mutation: {
         ...draft.mutation,
         fieldIntent: "limit",
+        value:
+          typeof draft.mutation.value === "string"
+            ? Number(draft.mutation.value.trim())
+            : draft.mutation.value,
       },
     });
   }
@@ -3270,6 +3285,25 @@ const buildProviderLocalRecoveryPlan = (
 
 const buildProviderPreferredActiveSurfacePlan = (input: AssistantProviderDraftPlanInput) => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
+  if (isLikelyDeletePrompt(normalizedPrompt)) {
+    const plan = planAssistantActions({
+      prompt: input.prompt,
+      context: input.context,
+    });
+    if (
+      plan.status === "ready" &&
+      plan.actions.some((action) =>
+        [
+          "page.delete",
+          "widget-template.delete",
+          "custom-screen.delete",
+          "entry.delete",
+        ].includes(action.type)
+      )
+    ) {
+      return plan;
+    }
+  }
   if (
     !includesAny(normalizedPrompt, [
       "selected block",
@@ -3392,6 +3426,29 @@ const extractNamedIdValue = (prompt: string, labels: string[]) => {
   return null;
 };
 
+const buildProviderPreferredListingFieldPlan = (input: AssistantProviderDraftPlanInput) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
+  if (
+    !includesAny(normalizedPrompt, ["listing", "template", "query"]) ||
+    !includesAny(normalizedPrompt, ["layout", "limit"])
+  ) {
+    return null;
+  }
+  const plan = planAssistantActions({
+    prompt: input.prompt,
+    context: input.context,
+  });
+  if (
+    plan.status !== "ready" ||
+    !plan.actions.some(
+      (action) => action.type === "listing-template.update" || action.type === "listing-query.update"
+    )
+  ) {
+    return null;
+  }
+  return plan;
+};
+
 const buildExplicitMediaReferencePlan = (input: AssistantActionPlanInput): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
   if (
@@ -3447,6 +3504,70 @@ const isProviderBroadDestructivePrompt = (prompt: string) => {
 
 const hasDestructiveProviderActions = (plan: AssistantActionPlan) =>
   plan.actions.some((action) => action.type.includes(".delete") || action.type.endsWith(".archive"));
+
+const explicitCountWords = new Map<string, number>([
+  ["jeden", 1],
+  ["jedna", 1],
+  ["one", 1],
+  ["dwa", 2],
+  ["dwie", 2],
+  ["dwom", 2],
+  ["dwóm", 2],
+  ["two", 2],
+  ["trzy", 3],
+  ["three", 3],
+]);
+
+const extractExplicitPromptCount = (prompt: string) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
+  if (digitMatch?.[1]) return Number(digitMatch[1]);
+  for (const [word, count] of explicitCountWords) {
+    if (new RegExp(`(^|\\s)${word}(\\s|$)`, "u").test(normalizedPrompt)) {
+      return count;
+    }
+  }
+  return null;
+};
+
+const destructiveActionCount = (plan: AssistantActionPlan) =>
+  plan.actions.filter((action) => action.type.includes(".delete") || action.type.endsWith(".archive")).length;
+
+const hasProviderDestructiveCountMismatch = (prompt: string, plan: AssistantActionPlan) => {
+  const expectedCount = extractExplicitPromptCount(prompt);
+  if (expectedCount === null) return false;
+  const actualCount = destructiveActionCount(plan);
+  return actualCount > 0 && actualCount !== expectedCount;
+};
+
+const hasProviderPromptImpliedFieldMismatch = (prompt: string, plan: AssistantActionPlan) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  if (includesAny(normalizedPrompt, ["layout"])) {
+    const listingTemplateUpdates = plan.actions.filter(
+      (action): action is Extract<(typeof plan.actions)[number], { type: "listing-template.update" }> =>
+        action.type === "listing-template.update"
+    );
+    if (
+      listingTemplateUpdates.length > 0 &&
+      listingTemplateUpdates.some((action) => action.input.patch.layout === undefined)
+    ) {
+      return true;
+    }
+  }
+  if (includesAny(normalizedPrompt, ["limit"])) {
+    const listingQueryUpdates = plan.actions.filter(
+      (action): action is Extract<(typeof plan.actions)[number], { type: "listing-query.update" }> =>
+        action.type === "listing-query.update"
+    );
+    if (
+      listingQueryUpdates.length > 0 &&
+      listingQueryUpdates.some((action) => action.input.patch.limit === undefined)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
 
 export const planAssistantActions = (
   input: AssistantActionPlanInput
@@ -3669,6 +3790,11 @@ export const planAssistantActionsWithProviderDraft = async (
   if (planningStatePlan) return normalizeAssistantActionPlan(planningStatePlan);
   const activeSurfacePlan = buildProviderPreferredActiveSurfacePlan(input);
   if (activeSurfacePlan) return normalizeAssistantActionPlan(activeSurfacePlan);
+  const listingFieldPlan = buildProviderPreferredListingFieldPlan(input);
+  if (listingFieldPlan) return normalizeAssistantActionPlan(listingFieldPlan);
+  if (isProviderBroadDestructivePrompt(input.prompt)) {
+    return planAssistantActions(input);
+  }
 
   if (!input.llmAvailable || !input.provider) {
     return planAssistantActions(input);
@@ -3707,6 +3833,12 @@ export const planAssistantActionsWithProviderDraft = async (
       if (isProviderBroadDestructivePrompt(input.prompt) && hasDestructiveProviderActions(operationPlan)) {
         return planAssistantActions(input);
       }
+      if (hasProviderDestructiveCountMismatch(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
+      if (hasProviderPromptImpliedFieldMismatch(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
       if (
         isUnsupportedPostMutationPrompt(
           normalizeAssistantPlannerPrompt(input.prompt),
@@ -3728,6 +3860,10 @@ export const planAssistantActionsWithProviderDraft = async (
       prompt: input.prompt,
       draft,
     });
+    if (adaptedPlan.actions.length === 0 && !providerDraftContainsActionArray(draft)) {
+      const recoveredPlan = buildProviderLocalRecoveryPlan(input);
+      if (recoveredPlan) return recoveredPlan;
+    }
     if (
       isUnsupportedPostMutationPrompt(
         normalizeAssistantPlannerPrompt(input.prompt),
@@ -3741,6 +3877,12 @@ export const planAssistantActionsWithProviderDraft = async (
       isUnsupportedMediaUploadPrompt(normalizeAssistantPlannerPrompt(input.prompt)) &&
       adaptedPlan.actions.length > 0
     ) {
+      return planAssistantActions(input);
+    }
+    if (hasProviderDestructiveCountMismatch(input.prompt, adaptedPlan)) {
+      return planAssistantActions(input);
+    }
+    if (hasProviderPromptImpliedFieldMismatch(input.prompt, adaptedPlan)) {
       return planAssistantActions(input);
     }
     return adaptedPlan;

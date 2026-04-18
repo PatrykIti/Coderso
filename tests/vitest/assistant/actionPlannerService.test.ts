@@ -2451,6 +2451,51 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive actions
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActionsWithProviderDraft rejects provider destructive count mismatches", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "delete",
+      resourceKind: "page",
+      targetQuery: { exactName: "Live Page" },
+      constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "usun dokladnie trzy strony z prefixem Live Page",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [
+          { id: "page-1", title: "Live Page Alpha", slug: "/live-alpha", status: "published" },
+          { id: "page-2", title: "Live Page Beta", slug: "/live-beta", status: "published" },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActionsWithProviderDraft applies prompt-implied listing template layout intent", async () => {
   const provider = createFakeProvider(
     JSON.stringify({
@@ -2506,6 +2551,123 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied listing templ
     input: {
       patch: {
         layout: "list",
+      },
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft coerces prompt-implied listing query limit intent", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "update",
+      resourceKind: "listing-query",
+      targetQuery: { exactName: "Products Query" },
+      mutation: { value: "24" },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: 'Zmien limit listing query "Products Query" na 24',
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/listings",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.actions[0]).toMatchObject({
+    type: "listing-query.update",
+    input: {
+      patch: {
+        limit: 24,
+      },
+    },
+  });
+});
+
+test("planAssistantActions reads listing query limit outside quoted target names", () => {
+  const plan = planAssistantActions({
+    prompt: 'Zmien limit listing query "Query 716" na 24',
+    context: {
+      page: "/admin/coderso/listings",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-716",
+              name: "Query 716",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.actions[0]).toMatchObject({
+    type: "listing-query.update",
+    input: {
+      patch: {
+        limit: 24,
       },
     },
   });
@@ -2573,6 +2735,60 @@ test("planAssistantActionsWithProviderDraft prefers active widget template block
       blockId: "hero-1",
       dataPath: ["headline"],
       value: "New headline",
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft prefers active widget template delete context before provider inference", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "update",
+          resourceKind: "widget-template",
+          targetQuery: { active: true },
+          mutation: { value: "Wrong update" },
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Usun aktywny widget template",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/widgets/templates/template-1",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "widget-template",
+        template: {
+          id: "template-1",
+          name: "Hero Template",
+          status: "published",
+          category: "Marketing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.actions[0]).toMatchObject({
+    type: "widget-template.delete",
+    input: {
+      id: "template-1",
+      name: "Hero Template",
     },
   });
 });
