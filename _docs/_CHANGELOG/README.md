@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 679 | 2026-04-18 | TASK-184-08 menus seo live slice | Assistant/QA |
 | 678 | 2026-04-18 | TASK-184-07 widget templates live matrix | Assistant/QA |
 | 677 | 2026-04-18 | TASK-184-06 listings live matrix | Assistant/QA |
 | 676 | 2026-04-18 | TASK-184-05 forms live matrix | Assistant/QA |

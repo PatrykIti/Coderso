@@ -70,3 +70,9 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Progress Notes
+
+- 2026-04-18: Added and validated the Menus + SEO live provider slice in `tests/integration/assistant-live/menusSeoLiveMatrix.test.ts`.
+  - OpenAI/OpenRouter live cases cover menu item inspection by href, menu item update, menu item delete preserving unrelated items, SEO document update, SEO document delete without deleting the target page, state verification, and cleanup.
+  - Media reference coverage remains pending in this leaf because it needs a dedicated storage/media fixture that safely creates an existing media asset and entry target.
