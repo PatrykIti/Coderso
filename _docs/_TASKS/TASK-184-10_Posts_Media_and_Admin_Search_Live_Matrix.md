@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Main Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -71,3 +71,17 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/postsMediaSearchLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases verify direct post creation remains gated until a typed post action contract exists.
+- OpenAI/OpenRouter live cases verify media upload prompts remain gated and do not become executable assistant actions.
+- Admin Search service smoke verifies seeded media fixtures are searchable; seeded posts are not expected in global search because current `searchAll` indexes pages, entries, media, and users, not dedicated posts.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/postsMediaSearchLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

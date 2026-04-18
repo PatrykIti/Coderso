@@ -3303,6 +3303,85 @@ const buildProviderPreferredActiveSurfacePlan = (input: AssistantProviderDraftPl
   return plan;
 };
 
+const hasPlannerWord = (value: string, word: string) =>
+  new RegExp(`(^|\\s)${word}(\\s|$)`, "u").test(value);
+
+const isUnsupportedPostMutationPrompt = (
+  normalizedPrompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selectedKind = context.runtimeSnapshot?.selectedResource?.kind;
+  if (selectedKind === "entry" || selectedKind === "custom-screen-entry") return false;
+  const directPostTarget =
+    hasPlannerWord(normalizedPrompt, "post") ||
+    hasPlannerWord(normalizedPrompt, "posts") ||
+    normalizedPrompt.includes("post blogowy") ||
+    normalizedPrompt.includes("wpis blogowy") ||
+    normalizedPrompt.includes("wpisu blogowego");
+  return (
+    directPostTarget &&
+    includesAny(normalizedPrompt, ["stworz", "stwórz", "utworz", "utwórz", "create", "usun", "usuń", "delete"])
+  );
+};
+
+const buildUnsupportedPostMutationPlan = (prompt: string): AssistantActionPlan => ({
+  id: "plan-post-mutation-needs-input",
+  status: "needs_input",
+  intentId: "post-mutation-needs-input",
+  responseKind: "needs_input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Post mutation needs a supported action",
+  answer: [
+    "I cannot mutate Posts through a reviewed typed action yet.",
+    "",
+    "Use the Posts admin screen for now, or add a dedicated post action contract first.",
+  ].join("\n"),
+  summary: "Post create/update/delete is not currently part of the executable assistant action contract.",
+  confidence: 0.58,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "post-action-contract",
+      label: "Should I keep this as a gated Posts request?",
+      description: "Posts need a dedicated typed action before the assistant can mutate them.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const isUnsupportedMediaUploadPrompt = (normalizedPrompt: string) =>
+  includesAny(normalizedPrompt, ["wgraj", "upload", "przeslij", "prześlij", "pobierz z internetu"]) &&
+  includesAny(normalizedPrompt, ["media", "image", "obraz", "plik"]);
+
+const buildUnsupportedMediaUploadPlan = (prompt: string): AssistantActionPlan => ({
+  id: "plan-media-upload-needs-input",
+  status: "needs_input",
+  intentId: "media-upload-needs-input",
+  responseKind: "needs_input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Media upload needs the Media Library",
+  answer: [
+    "I cannot upload new media files through LLM Guide actions.",
+    "",
+    "Use the Media Library upload flow, then I can reference an existing media asset by id where supported.",
+  ].join("\n"),
+  summary: "Media upload is not currently part of the executable assistant action contract.",
+  confidence: 0.62,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "media-upload-target",
+      label: "Should I keep this as a gated media upload request?",
+      description: "Upload bytes through Media Library first; assistant actions can only reference existing media.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
 const extractNamedIdValue = (prompt: string, labels: string[]) => {
   for (const label of labels) {
     const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -3390,6 +3469,13 @@ export const planAssistantActions = (
     return normalizeAssistantActionPlan(
       buildClarifyingPlan(input.prompt, context, routedClassification)
     );
+  }
+
+  if (isUnsupportedPostMutationPrompt(classification.normalizedPrompt, context)) {
+    return normalizeAssistantActionPlan(buildUnsupportedPostMutationPlan(input.prompt));
+  }
+  if (isUnsupportedMediaUploadPrompt(classification.normalizedPrompt)) {
+    return normalizeAssistantActionPlan(buildUnsupportedMediaUploadPlan(input.prompt));
   }
 
   if (classification.promptKind !== "setup_request") {
@@ -3621,12 +3707,43 @@ export const planAssistantActionsWithProviderDraft = async (
       if (isProviderBroadDestructivePrompt(input.prompt) && hasDestructiveProviderActions(operationPlan)) {
         return planAssistantActions(input);
       }
+      if (
+        isUnsupportedPostMutationPrompt(
+          normalizeAssistantPlannerPrompt(input.prompt),
+          context
+        ) &&
+        operationPlan.actions.length > 0
+      ) {
+        return planAssistantActions(input);
+      }
+      if (
+        isUnsupportedMediaUploadPrompt(normalizeAssistantPlannerPrompt(input.prompt)) &&
+        operationPlan.actions.length > 0
+      ) {
+        return planAssistantActions(input);
+      }
       return operationPlan;
     }
-    return adaptProviderDraftPlan({
+    const adaptedPlan = adaptProviderDraftPlan({
       prompt: input.prompt,
       draft,
     });
+    if (
+      isUnsupportedPostMutationPrompt(
+        normalizeAssistantPlannerPrompt(input.prompt),
+        context
+      ) &&
+      adaptedPlan.actions.length > 0
+    ) {
+      return planAssistantActions(input);
+    }
+    if (
+      isUnsupportedMediaUploadPrompt(normalizeAssistantPlannerPrompt(input.prompt)) &&
+      adaptedPlan.actions.length > 0
+    ) {
+      return planAssistantActions(input);
+    }
+    return adaptedPlan;
   } catch {
     return planAssistantActions(input);
   }

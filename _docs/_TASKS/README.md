@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 15 tasks
 - **In Progress:** 5 tasks
-- **Done:** 911 tasks
+- **Done:** 912 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-10 | Posts, Media, and Admin Search Live Matrix | High | Medium | Live coverage for Posts, Media, and global Admin Search |
 | TASK-184-11 | Coderso Operations Modules Live Matrix | High | Large | Live coverage for Filters, Search, Booking, Reviews, Commerce, Popups, and Solution Kits |
 | TASK-184-12 | Store, Themes, Dashboard, and Analytics Live Matrix | High | Medium | Live coverage for Plugin Store, Admin UI Theme, Dashboard, and Analytics |
 | TASK-184-13 | Tools, Redirects, Backups, and Import Export Live Matrix | High | Medium | Live coverage for Search, SEO Manager, Backups, Import/Export, and Redirects |
@@ -73,6 +72,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-10 | Posts, Media, and Admin Search Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix gates post/media upload mutations and verifies Admin Search media fixture coverage |
 | TASK-184-09 | Bulk Follow-Up and Safety Live Matrix | High | Medium | Done: OpenAI/OpenRouter live matrix covers follow-up deletion, count mismatch, broad destructive guard, and counted update |
 | TASK-184-08 | Menus, SEO, and Media Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers menu items, SEO documents, and media references |
 | TASK-184-07 | Widget Templates Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers widget template search, update, block patch, delete, and safety |

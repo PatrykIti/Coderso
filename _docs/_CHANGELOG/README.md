@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 681 | 2026-04-18 | TASK-184-10 posts media search live matrix | Assistant/QA |
 | 680 | 2026-04-18 | TASK-184-09 bulk follow-up safety live matrix | Assistant/QA |
 | 679 | 2026-04-18 | TASK-184-08 menus seo media live matrix | Assistant/QA |
 | 678 | 2026-04-18 | TASK-184-07 widget templates live matrix | Assistant/QA |

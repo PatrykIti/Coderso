@@ -1948,6 +1948,31 @@ test("planAssistantActions builds editorial content hub without post mutations",
   expect(JSON.stringify(plan.actions)).toContain("posts-feed");
 });
 
+test("planAssistantActions gates direct post mutation prompts", () => {
+  const plan = planAssistantActions({
+    prompt: "utworz post blogowy o tytule Test",
+    context: {
+      page: "/admin/coderso/posts",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("post-mutation-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
+test("planAssistantActions gates media upload prompts", () => {
+  const plan = planAssistantActions({
+    prompt: "wgraj nowy obraz z internetu",
+    context: { page: "/admin/media", locale: "pl-PL" },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("media-upload-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions builds ready refinement plan for house-project filters", () => {
   const plan = planAssistantActions({
     prompt: "dodaj filtr po metrazu i liczbie pokoi",
