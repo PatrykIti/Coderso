@@ -3186,6 +3186,35 @@ const applyPromptImpliedProviderDraftFilters = (
 ): CmsOperationDraft => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
   if (
+    draft.resourceKind === "listing-template" &&
+    draft.operation === "update" &&
+    includesAny(normalizedPrompt, ["layout"]) &&
+    typeof draft.mutation?.value === "string" &&
+    ["grid", "list", "table", "calendar", "map"].includes(draft.mutation.value)
+  ) {
+    return normalizeCmsOperationDraft({
+      ...draft,
+      mutation: {
+        ...draft.mutation,
+        fieldIntent: "layout",
+      },
+    });
+  }
+  if (
+    draft.resourceKind === "listing-query" &&
+    draft.operation === "update" &&
+    includesAny(normalizedPrompt, ["limit"]) &&
+    typeof draft.mutation?.value === "number"
+  ) {
+    return normalizeCmsOperationDraft({
+      ...draft,
+      mutation: {
+        ...draft.mutation,
+        fieldIntent: "limit",
+      },
+    });
+  }
+  if (
     draft.resourceKind === "form" &&
     (draft.operation === "inspect" || draft.operation === "find") &&
     !hasFilterField(draft, "visibility")

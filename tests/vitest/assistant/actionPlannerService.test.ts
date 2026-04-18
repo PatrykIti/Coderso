@@ -2426,6 +2426,66 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive actions
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActionsWithProviderDraft applies prompt-implied listing template layout intent", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "update",
+      resourceKind: "listing-template",
+      targetQuery: { exactName: "Products Grid" },
+      mutation: { value: "list" },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: 'Zmien layout listing template "Products Grid" na "list"',
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/listings",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [],
+          templates: [
+            {
+              id: "template-products",
+              name: "Products Grid",
+              slug: "products-grid",
+              description: null,
+              layout: "grid",
+              configKeys: [],
+            },
+          ],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.actions[0]).toMatchObject({
+    type: "listing-template.update",
+    input: {
+      patch: {
+        layout: "list",
+      },
+    },
+  });
+});
+
 test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
   const provider: AssistantProvider = {
     id: "fake",

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 20 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 5 tasks
-- **Done:** 907 tasks
+- **Done:** 908 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Umbrella: live OpenAI/OpenRouter CMS operation matrix across all CMS sections |
-| TASK-184-06 | Listings Live CMS Operation Matrix | High | Medium | Live listing query/template create/search/update/delete/reference-safety coverage |
 | TASK-184-07 | Widget Templates Live CMS Operation Matrix | High | Medium | Live widget template search/update/patch/delete coverage |
 | TASK-184-08 | Menus, SEO, and Media Live CMS Operation Matrix | High | Medium | Live menu item, SEO document, and media reference operation coverage |
 | TASK-184-09 | Bulk Follow-Up and Safety Live Matrix | High | Medium | Cross-section live follow-up, counted bulk, and negative safety coverage |
@@ -77,6 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-184-06 | Listings Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers listing query/template search, update, delete, and safety |
 | TASK-184-05 | Forms Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers form create/search/update/archive/delete and broad-delete safety |
 | TASK-184-04 | Custom Screens Live CMS Operation Matrix | High | Medium | Done: OpenAI/OpenRouter DB-backed live matrix covers screen search, update, delete, and safety |
 | TASK-184-03 | Content Types and Entries Live CMS Operation Matrix | High | Large | Done: OpenAI/OpenRouter DB-backed live matrix covers content type and active entry operations |

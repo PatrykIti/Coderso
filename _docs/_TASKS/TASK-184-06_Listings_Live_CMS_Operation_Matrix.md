@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Listings
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01, TASK-184-03
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -67,3 +67,16 @@ No child task files.
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/listingsLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover listing query inspection, listing template inspection, query limit update, template layout update, broad delete safety, exact query delete, exact template delete, state verification, and cleanup.
+- Provider draft post-processing now applies prompt-implied listing query `limit` and listing template `layout` field intents when the provider omits them.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/live-cms-harness.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/listingsLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
