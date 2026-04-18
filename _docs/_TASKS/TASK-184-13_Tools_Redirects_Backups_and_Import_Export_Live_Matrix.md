@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Tools
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -78,3 +78,15 @@ No child task files.
 - `_docs/CODERSO_RELEASE_GATES.md` if release gate ownership changes
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/toolsSafetyLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover global search prompts, SEO audit auto-fix prompts, backup restore prompts, import arbitrary JSON prompts, and unsafe external redirect prompts.
+- The suite verifies these Tools surfaces do not produce executable action plans without strict typed contracts.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/toolsSafetyLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
