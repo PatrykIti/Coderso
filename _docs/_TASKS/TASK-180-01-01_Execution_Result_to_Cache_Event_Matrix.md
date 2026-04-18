@@ -5,7 +5,7 @@
 **Category:** Assistant/Admin Client + Cache Mapping
 **Estimated Effort:** Medium
 **Dependencies:** TASK-180-01, TASK-179-07
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -104,3 +104,14 @@ Implement and test this mapping:
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md` if lane ownership notes change
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and changelog entry on completion
+
+## Completion Notes (2026-04-18)
+
+- Replaced page/custom-screen-only assistant cache invalidation with a typed execution result matrix.
+- Added table-driven regression coverage for content type, entry, form, form automation, listing, widget template, menu, SEO, failed, noop, and unknown action results.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/assistantClient.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

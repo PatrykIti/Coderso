@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Bulk Planning Boundaries
 **Estimated Effort:** Large
 **Dependencies:** TASK-180-02, TASK-174-04, TASK-170-03
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -122,3 +122,15 @@ Blocked direction:
 - `_docs/SECURITY_SPEC.md` if bulk planning policy changes
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and changelog entry on completion
+
+## Completion Notes (2026-04-18)
+
+- Counted multi-update plans now map to multiple reviewed typed actions when one bounded patch is valid for every resolved target.
+- Explicit multi-create plans now map locally validated `mutation.patch.items[]` to existing typed upsert/create actions.
+- Vague create requests, mismatched item counts, invalid create items, and secret-like keys return `needs_input`.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

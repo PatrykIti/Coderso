@@ -210,6 +210,402 @@ const buildSeoUpdatePatch = (draft: CmsOperationDraft) => {
 
 const actionId = (type: string, id: string) => `${type.replaceAll(".", "-")}-${id}`;
 
+const operationVerb = (operation: CmsOperationDraft["operation"]) => {
+  if (operation === "archive") return "Archive";
+  if (operation === "delete") return "Delete";
+  if (operation === "update") return "Update";
+  return "Run";
+};
+
+const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const containsSecretLikeKey = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.some(containsSecretLikeKey);
+  if (!isRecord(value)) return false;
+  return Object.entries(value).some(([key, nested]) => {
+    if (secretKeyPattern.test(key)) return true;
+    return containsSecretLikeKey(nested);
+  });
+};
+
+const hasOnlyKeys = (record: Record<string, unknown>, keys: readonly string[]) =>
+  Object.keys(record).every((key) => keys.includes(key));
+
+const readCreateItems = (draft: CmsOperationDraft) => {
+  const items = draft.mutation?.patch?.items;
+  if (!Array.isArray(items)) return null;
+  const records = items.filter(isRecord);
+  if (records.length !== items.length) return null;
+  if (records.some(containsSecretLikeKey)) return null;
+  return records;
+};
+
+const readRequiredTextField = (record: Record<string, unknown>, key: string) =>
+  typeof record[key] === "string" && record[key].trim() ? record[key].trim() : null;
+
+const readOptionalTextField = (record: Record<string, unknown>, key: string) => {
+  if (record[key] === undefined || record[key] === null) return null;
+  return readRequiredTextField(record, key);
+};
+
+const readOptionalBooleanField = (
+  record: Record<string, unknown>,
+  key: string,
+  fallback: boolean
+) => (typeof record[key] === "boolean" ? record[key] : fallback);
+
+const readOptionalNumberField = (
+  record: Record<string, unknown>,
+  key: string,
+  fallback: number
+) => (typeof record[key] === "number" && Number.isFinite(record[key]) ? record[key] : fallback);
+
+const readStringArrayField = (record: Record<string, unknown>, key: string, fallback: string[]) => {
+  const value = record[key];
+  if (value === undefined || value === null) return fallback;
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) return null;
+  return value.map((item) => item.trim()).filter(Boolean);
+};
+
+const readRecordField = (
+  record: Record<string, unknown>,
+  key: string,
+  fallback: Record<string, unknown>
+) => {
+  const value = record[key];
+  if (value === undefined || value === null) return fallback;
+  return isRecord(value) && !containsSecretLikeKey(value) ? value : null;
+};
+
+const readRecordArrayField = (
+  record: Record<string, unknown>,
+  key: string,
+  fallback: Array<Record<string, unknown>>
+) => {
+  const value = record[key];
+  if (value === undefined || value === null) return fallback;
+  if (!Array.isArray(value) || !value.every(isRecord)) return null;
+  return value.some(containsSecretLikeKey) ? null : value;
+};
+
+const slugForActionId = (value: string, fallback: number) =>
+  value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+  `item-${fallback + 1}`;
+
+const readCreateStatus = <TAllowed extends string>(
+  record: Record<string, unknown>,
+  key: string,
+  allowed: readonly TAllowed[],
+  fallback: TAllowed
+): TAllowed | null => {
+  const value = record[key];
+  if (value === undefined || value === null) return fallback;
+  return typeof value === "string" && allowed.includes(value as TAllowed)
+    ? (value as TAllowed)
+    : null;
+};
+
+const readListingSort = (record: Record<string, unknown>) => {
+  const value = record.sort;
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) return null;
+  const result: Array<{ field: string; dir: "asc" | "desc" }> = [];
+  for (const item of value) {
+    if (!isRecord(item)) return null;
+    const field = readRequiredTextField(item, "field");
+    const dir = item.dir;
+    if (!field || (dir !== "asc" && dir !== "desc")) return null;
+    result.push({ field, dir });
+  }
+  return result;
+};
+
+const buildCreateActionForItem = (
+  draft: CmsOperationDraft,
+  item: Record<string, unknown>,
+  index: number
+): AssistantPlannedAction | null => {
+  if (draft.resourceKind === "page") {
+    if (!hasOnlyKeys(item, ["title", "slug", "status", "introTitle", "introBody", "ctaLabel", "blocks"])) {
+      return null;
+    }
+    const title = readRequiredTextField(item, "title");
+    const slug = readRequiredTextField(item, "slug");
+    const introTitle = readRequiredTextField(item, "introTitle") ?? title;
+    const introBody = readRequiredTextField(item, "introBody");
+    const status = readCreateStatus(item, "status", ["draft", "published"] as const, "draft");
+    const blocks = readRecordArrayField(item, "blocks", []);
+    if (!title || !slug || !introTitle || !introBody || status === null || blocks === null) {
+      return null;
+    }
+    return {
+      id: actionId("page.upsert", slugForActionId(slug, index)),
+      type: "page.upsert",
+      title: `Create ${title}`,
+      description: "Create an explicitly provided page through the reviewed action flow.",
+      input: {
+        title,
+        slug: normalizePageSlug(slug) ?? slug,
+        status,
+        introTitle,
+        introBody,
+        ...(readOptionalTextField(item, "ctaLabel")
+          ? { ctaLabel: readOptionalTextField(item, "ctaLabel") ?? undefined }
+          : {}),
+        ...(blocks.length > 0
+          ? {
+              blocks:
+                blocks as Extract<AssistantPlannedAction, { type: "page.upsert" }>["input"]["blocks"],
+            }
+          : {}),
+      },
+    };
+  }
+
+  if (draft.resourceKind === "form") {
+    if (!hasOnlyKeys(item, ["name", "slug", "status", "description", "successMessage", "submissionAccess", "fields"])) {
+      return null;
+    }
+    const name = readRequiredTextField(item, "name");
+    const slug = readRequiredTextField(item, "slug");
+    const status = readCreateStatus(item, "status", ["draft", "published", "archived"] as const, "draft");
+    const submissionAccess = readCreateStatus(item, "submissionAccess", ["public", "internal"] as const, "internal");
+    const fields = readRecordArrayField(item, "fields", []);
+    if (!name || !slug || status === null || submissionAccess === null || fields === null) return null;
+    return {
+      id: actionId("form.upsert", slugForActionId(slug, index)),
+      type: "form.upsert",
+      title: `Create ${name}`,
+      description: "Create an explicitly provided form through the reviewed action flow.",
+      input: {
+        name,
+        slug,
+        status,
+        description: readOptionalTextField(item, "description"),
+        successMessage: readOptionalTextField(item, "successMessage"),
+        submissionAccess,
+        fields,
+      },
+    };
+  }
+
+  if (draft.resourceKind === "entry") {
+    if (!hasOnlyKeys(item, ["contentTypeSlug", "title", "slug", "values"])) return null;
+    const contentTypeSlug = readRequiredTextField(item, "contentTypeSlug");
+    const title = readRequiredTextField(item, "title");
+    const slug = readRequiredTextField(item, "slug");
+    const values = readRecordField(item, "values", {});
+    if (!contentTypeSlug || !title || !slug || values === null) return null;
+    return {
+      id: actionId("entry.upsert-draft", slugForActionId(`${contentTypeSlug}-${slug}`, index)),
+      type: "entry.upsert-draft",
+      title: `Create ${title}`,
+      description: "Create an explicitly provided draft entry through the reviewed action flow.",
+      input: { contentTypeSlug, title, slug, values },
+    };
+  }
+
+  if (draft.resourceKind === "content-type") {
+    if (!hasOnlyKeys(item, ["slug", "name", "schema"])) return null;
+    const slug = readRequiredTextField(item, "slug");
+    const name = readRequiredTextField(item, "name");
+    const schema = readRecordField(item, "schema", {});
+    if (!slug || !name || !schema) return null;
+    return {
+      id: actionId("content-type.upsert", slugForActionId(slug, index)),
+      type: "content-type.upsert",
+      title: `Create ${name}`,
+      description: "Create an explicitly provided content type through the reviewed action flow.",
+      input: { slug, name, schema },
+    };
+  }
+
+  if (draft.resourceKind === "custom-screen") {
+    if (!hasOnlyKeys(item, ["name", "contentTypeSlug", "status", "showInSidebar", "sidebarLabel", "blocks", "bindings"])) {
+      return null;
+    }
+    const name = readRequiredTextField(item, "name");
+    const contentTypeSlug = readRequiredTextField(item, "contentTypeSlug");
+    const status = readCreateStatus(item, "status", ["draft", "active"] as const, "draft");
+    const blocks = readRecordArrayField(item, "blocks", []);
+    const bindings = readRecordArrayField(item, "bindings", []);
+    if (!name || !contentTypeSlug || status === null || blocks === null || bindings === null) {
+      return null;
+    }
+    return {
+      id: actionId("custom-screen.upsert", slugForActionId(name, index)),
+      type: "custom-screen.upsert",
+      title: `Create ${name}`,
+      description: "Create an explicitly provided custom screen through the reviewed action flow.",
+      input: {
+        name,
+        contentTypeSlug,
+        status,
+        showInSidebar: readOptionalBooleanField(item, "showInSidebar", false),
+        sidebarLabel: readOptionalTextField(item, "sidebarLabel"),
+        blocks,
+        bindings,
+      },
+    };
+  }
+
+  if (draft.resourceKind === "listing-query") {
+    if (!hasOnlyKeys(item, ["name", "description", "contentTypeSlug", "fields", "includeDrafts", "limit", "sort"])) {
+      return null;
+    }
+    const name = readRequiredTextField(item, "name");
+    const contentTypeSlug = readRequiredTextField(item, "contentTypeSlug");
+    const fields = readStringArrayField(item, "fields", []);
+    const sort = readListingSort(item);
+    if (!name || !contentTypeSlug || !fields || !sort) return null;
+    return {
+      id: actionId("listing-query.upsert", slugForActionId(name, index)),
+      type: "listing-query.upsert",
+      title: `Create ${name}`,
+      description: "Create an explicitly provided listing query through the reviewed action flow.",
+      input: {
+        name,
+        description: readOptionalTextField(item, "description"),
+        contentTypeSlug,
+        fields,
+        includeDrafts: readOptionalBooleanField(item, "includeDrafts", false),
+        limit: readOptionalNumberField(item, "limit", 12),
+        sort,
+      },
+    };
+  }
+
+  if (draft.resourceKind === "listing-template") {
+    if (!hasOnlyKeys(item, ["name", "slug", "description", "layout", "config"])) return null;
+    const name = readRequiredTextField(item, "name");
+    const slug = readRequiredTextField(item, "slug");
+    const layout = readCreateStatus(item, "layout", ["grid", "list", "table", "calendar", "map"] as const, "grid");
+    const config = readRecordField(item, "config", {});
+    if (!name || !slug || layout === null || config === null) return null;
+    return {
+      id: actionId("listing-template.upsert", slugForActionId(slug, index)),
+      type: "listing-template.upsert",
+      title: `Create ${name}`,
+      description: "Create an explicitly provided listing template through the reviewed action flow.",
+      input: {
+        name,
+        slug,
+        description: readOptionalTextField(item, "description"),
+        layout,
+        config,
+      },
+    };
+  }
+
+  if (draft.resourceKind === "menu-item") {
+    if (!hasOnlyKeys(item, ["menuId", "label", "href", "parentId", "orderIndex", "settings"])) return null;
+    const menuId = readRequiredTextField(item, "menuId");
+    const label = readRequiredTextField(item, "label");
+    const href = readRequiredTextField(item, "href");
+    const settings = readRecordField(item, "settings", {});
+    if (!menuId || !label || !href || settings === null) return null;
+    return {
+      id: actionId("menu.item.upsert", slugForActionId(`${menuId}-${label}`, index)),
+      type: "menu.item.upsert",
+      title: `Create ${label}`,
+      description: "Create an explicitly provided menu item through the reviewed action flow.",
+      input: {
+        menuId,
+        label,
+        href,
+        parentId: readOptionalTextField(item, "parentId"),
+        orderIndex: readOptionalNumberField(item, "orderIndex", index),
+        settings,
+      },
+    };
+  }
+
+  if (draft.resourceKind === "seo-document") {
+    if (!hasOnlyKeys(item, ["targetType", "targetId", "seo"])) return null;
+    const targetType = item.targetType;
+    const targetId = readRequiredTextField(item, "targetId");
+    const seo = readRecordField(item, "seo", {});
+    if ((targetType !== "page" && targetType !== "entry") || !targetId || seo === null) return null;
+    return {
+      id: actionId("seo.document.upsert", slugForActionId(`${targetType}-${targetId}`, index)),
+      type: "seo.document.upsert",
+      title: `Create SEO for ${targetId}`,
+      description: "Create an explicitly provided SEO document through the reviewed action flow.",
+      input: {
+        targetType,
+        targetId,
+        seo: {
+          slug: readOptionalTextField(seo, "slug"),
+          title: readOptionalTextField(seo, "title"),
+          description: readOptionalTextField(seo, "description"),
+          canonicalUrl: readOptionalTextField(seo, "canonicalUrl"),
+          robots: readOptionalTextField(seo, "robots"),
+        },
+      },
+    };
+  }
+
+  return null;
+};
+
+const buildCreateActionPlan = (input: {
+  prompt: string;
+  draft: CmsOperationDraft;
+}): AssistantActionPlan | null => {
+  const items = readCreateItems(input.draft);
+  if (!items || items.length === 0) {
+    return buildNeedsInputPlan(
+      input.prompt,
+      input.draft,
+      "Create operations require explicit validated item definitions before a reviewed action plan can be built.",
+      []
+    );
+  }
+  if (
+    input.draft.constraints?.expectedCount !== undefined &&
+    input.draft.constraints.expectedCount !== items.length
+  ) {
+    return buildNeedsInputPlan(
+      input.prompt,
+      input.draft,
+      `The create request provided ${items.length} item definition(s), but expected ${input.draft.constraints.expectedCount}.`,
+      []
+    );
+  }
+  const actions = items
+    .map((item, index) => buildCreateActionForItem(input.draft, item, index))
+    .filter((action): action is AssistantPlannedAction => Boolean(action));
+  if (actions.length !== items.length) {
+    return buildNeedsInputPlan(
+      input.prompt,
+      input.draft,
+      "One or more create item definitions did not match the strict typed action contract.",
+      []
+    );
+  }
+  return {
+    id: `plan-cms-${input.draft.resourceKind}-create-multi`,
+    status: "ready",
+    intentId: `cms-${input.draft.resourceKind}-create`,
+    responseKind: "action_plan",
+    promptKind: "setup_request",
+    intentFamily: "unknown",
+    title: `Create ${actions.length} ${input.draft.resourceKind} resources`,
+    answer: "I can prepare these CMS create operations through the reviewed LLM Guide action flow.",
+    summary: `Create ${actions.length} explicit ${input.draft.resourceKind} resources.`,
+    confidence: 0.76,
+    assumptions: [
+      "Each create item was provided explicitly and validated locally.",
+      "Dry-run must be reviewed before execution.",
+    ],
+    questions: [],
+    actions,
+  };
+};
+
 const buildActionForExactTarget = (
   draft: CmsOperationDraft,
   target: CmsResolvedTargetCandidate
@@ -490,6 +886,9 @@ export const mapCmsOperationToActionPlan = (input: {
   draft: CmsOperationDraft;
   context: AssistantAdminContext;
 }): AssistantActionPlan | null => {
+  if (input.draft.operation === "create") {
+    return buildCreateActionPlan({ prompt: input.prompt, draft: input.draft });
+  }
   if (
     input.draft.operation !== "delete" &&
     input.draft.operation !== "update" &&
@@ -500,10 +899,13 @@ export const mapCmsOperationToActionPlan = (input: {
   const resolution = resolveCmsOperationTargets(input.draft, input.context);
   if (
     resolution.status === "ambiguous" &&
-    (input.draft.operation === "delete" || input.draft.operation === "archive") &&
+    (input.draft.operation === "delete" ||
+      input.draft.operation === "archive" ||
+      input.draft.operation === "update") &&
     input.draft.constraints?.expectedCount === resolution.candidates.length &&
     resolution.candidates.length > 1
   ) {
+    const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates
       .map((target) => buildActionForExactTarget(input.draft, target))
       .filter((action): action is AssistantPlannedAction => Boolean(action));
@@ -515,9 +917,9 @@ export const mapCmsOperationToActionPlan = (input: {
         responseKind: "action_plan",
         promptKind: "refinement_request",
         intentFamily: "unknown",
-        title: `${input.draft.operation === "archive" ? "Archive" : "Delete"} ${actions.length} ${input.draft.resourceKind} resources`,
+        title: `${verb} ${actions.length} ${input.draft.resourceKind} resources`,
         answer: "I can prepare these CMS operations through the reviewed LLM Guide action flow.",
-        summary: `${input.draft.operation === "archive" ? "Archive" : "Delete"} ${actions.length} resolved ${input.draft.resourceKind} resources.`,
+        summary: `${verb} ${actions.length} resolved ${input.draft.resourceKind} resources.`,
         confidence: 0.76,
         assumptions: [
           "The target count was explicit and candidates were resolved from trusted context.",

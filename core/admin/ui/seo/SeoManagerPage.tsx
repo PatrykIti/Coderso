@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
   listSeo,
   runSeoAudit,
@@ -13,6 +14,7 @@ import {
   type SeoDocumentItem,
 } from "@/services/seoClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { SeoAuditDialog } from "./SeoAuditDialog";
 import { SeoDrawer } from "./SeoDrawer";
@@ -117,6 +119,17 @@ export function SeoManagerPage() {
       setSelectedId(null);
     }
   }, [items, selectedId]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (
+        event.key === cacheKeys.seoList ||
+        (selectedId && event.key === cacheKeys.seoDetail(selectedId))
+      ) {
+        void refresh();
+      }
+    });
+  }, [refresh, selectedId]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {

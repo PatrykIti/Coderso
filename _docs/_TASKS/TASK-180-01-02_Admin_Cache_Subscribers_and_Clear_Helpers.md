@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Cache Subscribers
 **Estimated Effort:** Medium
 **Dependencies:** TASK-180-01-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -91,3 +91,15 @@ No child task files.
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and changelog entry on completion
+
+## Completion Notes (2026-04-18)
+
+- Reused existing cache subscribers and clear helpers for pages, entries, content types, custom screens, forms, listings, menus, and widget templates.
+- Added SEO cache bus keys and `SeoManagerPage` subscription so assistant-executed SEO mutations refresh the open SEO manager without reload.
+- Added same-tab cache bus fanout so subscribers in the current admin tab can refresh after assistant execution.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts tests/vitest/admin/seoClient.test.ts tests/vitest/ui/seo-manager.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

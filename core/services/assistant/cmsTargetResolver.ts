@@ -631,7 +631,7 @@ export const resolveCmsOperationTargets = (
     directMatches.length === 0 &&
     draft.constraints?.expectedCount !== undefined &&
     query.exactName &&
-    (draft.operation === "delete" || draft.operation === "archive")
+    (draft.operation === "delete" || draft.operation === "archive" || draft.operation === "update")
       ? allCandidates.filter((item) =>
           normalizeCandidateValue(item.label).includes(normalizeText(query.exactName ?? ""))
         )

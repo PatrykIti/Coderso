@@ -5,7 +5,7 @@
 **Category:** Assistant/Product UX + CMS Operations
 **Estimated Effort:** Large
 **Dependencies:** TASK-179-07, TASK-178-05, TASK-174, TASK-170-03
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -116,3 +116,19 @@ No task in this wave may add:
 3. Finish `TASK-180-02-01` for counted delete/archive planning.
 4. Finish `TASK-180-02-02` for conservative multi-update/create boundaries.
 5. Finish `TASK-180-03` docs, gates, changelog, and board closure.
+
+## Completion Notes (2026-04-18)
+
+- Assistant execution cache invalidation now covers successful non-noop CMS action results across content types, entries, custom screens, pages, forms, listings, widget templates, menus, and SEO.
+- Counted multi-target delete/archive/update plans now map through reviewed typed actions when every resolved target is safe.
+- Explicit multi-create drafts can map `mutation.patch.items[]` into existing typed upsert/create actions after local validation.
+- Broad, mismatched, unsafe, or secret-like bulk drafts return `needs_input`.
+- Same-tab cache bus subscribers are notified after broadcasts, so the current admin surface can refresh without reload.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts tests/vitest/admin/assistantClient.test.ts`
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/seoClient.test.ts tests/vitest/ui/seo-manager.test.tsx`
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

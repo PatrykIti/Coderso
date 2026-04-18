@@ -250,6 +250,30 @@ test("resolveCmsOperationTargets resolves counted partial page deletes", () => {
   ]);
 });
 
+test("resolveCmsOperationTargets resolves counted partial non-page updates", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "update",
+    resourceKind: "custom-screen",
+    targetQuery: {
+      exactName: "House",
+    },
+    mutation: {
+      fieldIntent: "status",
+      value: "draft",
+    },
+    constraints: {
+      expectedCount: 2,
+    },
+  });
+
+  const resolution = resolveCmsOperationTargets(draft, context);
+  expect(resolution.status).toBe("ambiguous");
+  expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([
+    "House Projects",
+    "House Projects Archive",
+  ]);
+});
+
 test("resolveCmsOperationTargets applies form visibility filters", () => {
   const draft = normalizeCmsOperationDraft({
     operation: "inspect",

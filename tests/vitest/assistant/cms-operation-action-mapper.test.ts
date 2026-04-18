@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import { buildAssistantAdminContext } from "../../../core/services/assistant/adminContextService";
+import { normalizeAssistantActionPlan } from "../../../core/services/assistant/actionPlanSchema";
 import { mapCmsOperationToActionPlan } from "../../../core/services/assistant/cmsOperationActionMapper";
 import { normalizeCmsOperationDraft } from "../../../core/services/assistant/cmsOperationDraftSchema";
 
@@ -43,6 +44,20 @@ const context = buildAssistantAdminContext({
         entryCount: 0,
         fields: [],
       },
+      {
+        id: "ct-product-archive",
+        slug: "products-archive",
+        name: "Products Archive",
+        entryCount: 0,
+        fields: [],
+      },
+      {
+        id: "ct-product-used",
+        slug: "product-used",
+        name: "Product Used",
+        entryCount: 2,
+        fields: [],
+      },
     ],
     customScreens: [
       {
@@ -65,12 +80,34 @@ const context = buildAssistantAdminContext({
         writableBindingFields: [],
         bindings: [],
       },
+      {
+        id: "screen-products-archive",
+        name: "Products Archive Screen",
+        contentTypeId: "ct-products",
+        status: "draft",
+        showInSidebar: false,
+        sidebarLabel: null,
+        writableBindingFields: [],
+        bindings: [],
+      },
     ],
     listings: {
       queries: [
         {
           id: "query-products",
           name: "Products Query",
+          description: null,
+          source: "entries",
+          contentTypeId: "ct-products",
+          taxonomyId: null,
+          includeDrafts: false,
+          fields: ["title"],
+          sort: [],
+          limit: 12,
+        },
+        {
+          id: "query-products-archive",
+          name: "Products Archive Query",
           description: null,
           source: "entries",
           contentTypeId: "ct-products",
@@ -90,6 +127,14 @@ const context = buildAssistantAdminContext({
           layout: "grid",
           configKeys: [],
         },
+        {
+          id: "template-products-list",
+          name: "Products List",
+          slug: "products-list",
+          description: null,
+          layout: "list",
+          configKeys: [],
+        },
       ],
     },
     forms: [
@@ -97,6 +142,14 @@ const context = buildAssistantAdminContext({
         id: "form-lead",
         name: "Lead Form",
         slug: "lead-form",
+        status: "published",
+        submissionAccess: "public",
+        fields: [],
+      },
+      {
+        id: "form-lead-secondary",
+        name: "Lead Form Secondary",
+        slug: "lead-form-secondary",
         status: "published",
         submissionAccess: "public",
         fields: [],
@@ -118,6 +171,15 @@ const context = buildAssistantAdminContext({
             orderIndex: 0,
             depth: 0,
           },
+          {
+            id: "menu-products-archive",
+            label: "Products Archive",
+            href: "/products/archive",
+            pageId: null,
+            parentId: null,
+            orderIndex: 1,
+            depth: 0,
+          },
         ],
       },
     ],
@@ -131,12 +193,36 @@ const context = buildAssistantAdminContext({
         title: "Products SEO",
         status: "warning",
       },
+      {
+        id: "seo-products-archive",
+        targetType: "page",
+        targetId: "page-products-archive",
+        targetTitle: "Products Archive",
+        slug: "/products/archive",
+        title: "Products Archive SEO",
+        status: "warning",
+      },
     ],
     widgets: [
       {
         id: "widget-template-hero",
         source: "template",
         name: "Hero Template",
+        description: null,
+        category: "Marketing",
+        module: "widgets",
+        complexity: "composite",
+        audience: "beginner",
+        variants: [],
+        slots: [],
+        surfaces: ["page-builder"],
+        requires: [],
+        status: "published",
+      },
+      {
+        id: "widget-template-hero-secondary",
+        source: "template",
+        name: "Hero Secondary Template",
         description: null,
         category: "Marketing",
         module: "widgets",
@@ -266,4 +352,217 @@ test("mapCmsOperationToActionPlan maps counted partial page deletes to multiple 
     "Katalog Projektów Domów 33151341",
     "Katalog Projektów Domów a3afbe30",
   ]);
+});
+
+test("mapCmsOperationToActionPlan maps counted destructive prompts for non-page families", () => {
+  const cases = [
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "custom-screen",
+        targetQuery: { exactName: "Screen" },
+        constraints: { expectedCount: 3, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["custom-screen.delete", "custom-screen.delete", "custom-screen.delete"],
+    },
+    {
+      draft: {
+        operation: "archive",
+        resourceKind: "form",
+        targetQuery: { exactName: "Lead" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["form.archive", "form.archive"],
+    },
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "listing-query",
+        targetQuery: { exactName: "Products" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["listing-query.delete", "listing-query.delete"],
+    },
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "listing-template",
+        targetQuery: { exactName: "Products" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["listing-template.delete", "listing-template.delete"],
+    },
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "widget-template",
+        targetQuery: { exactName: "Hero" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["widget-template.delete", "widget-template.delete"],
+    },
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "menu-item",
+        targetQuery: { text: "Products" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["menu.item.delete", "menu.item.delete"],
+    },
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "seo-document",
+        targetQuery: { text: "Products" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["seo.document.delete", "seo.document.delete"],
+    },
+    {
+      draft: {
+        operation: "delete",
+        resourceKind: "content-type",
+        targetQuery: { text: "Products" },
+        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
+      },
+      expectedTypes: ["content-type.delete", "content-type.delete"],
+    },
+  ] as const;
+
+  for (const item of cases) {
+    const plan = planFor(item.draft);
+    expect(plan?.status).toBe("ready");
+    expect(plan?.actions.map((action) => action.type)).toEqual(item.expectedTypes);
+  }
+});
+
+test("mapCmsOperationToActionPlan keeps counted destructive prompts blocked when counts or safety checks fail", () => {
+  const countMismatch = planFor({
+    operation: "delete",
+    resourceKind: "listing-query",
+    targetQuery: { exactName: "Products" },
+    constraints: { expectedCount: 3, destructive: true, requiresConfirmation: true },
+  });
+
+  expect(countMismatch?.status).toBe("needs_input");
+  expect(countMismatch?.actions).toEqual([]);
+
+  const unsafeContentType = planFor({
+    operation: "delete",
+    resourceKind: "content-type",
+    targetQuery: { exactName: "Product" },
+    constraints: { expectedCount: 3, destructive: true, requiresConfirmation: true },
+  });
+
+  expect(unsafeContentType?.status).toBe("needs_input");
+  expect(unsafeContentType?.actions).toEqual([]);
+});
+
+test("mapCmsOperationToActionPlan maps counted updates when one patch is valid for every target", () => {
+  const pagePlan = planFor({
+    operation: "update",
+    resourceKind: "page",
+    targetQuery: { exactName: "Katalog Projektów" },
+    mutation: { fieldIntent: "title", value: "Katalog domów" },
+    constraints: { expectedCount: 2 },
+  });
+
+  expect(pagePlan?.status).toBe("ready");
+  expect(pagePlan?.actions.map((action) => action.type)).toEqual(["page.update", "page.update"]);
+  expect(pagePlan?.actions.map((action) => action.title)).toEqual([
+    "Update Katalog Projektów Domów 33151341",
+    "Update Katalog Projektów Domów a3afbe30",
+  ]);
+
+  const listingPlan = planFor({
+    operation: "update",
+    resourceKind: "listing-query",
+    targetQuery: { exactName: "Products" },
+    mutation: { fieldIntent: "limit", value: 24 },
+    constraints: { expectedCount: 2 },
+  });
+
+  expect(listingPlan?.status).toBe("ready");
+  expect(listingPlan?.actions.map((action) => action.type)).toEqual([
+    "listing-query.update",
+    "listing-query.update",
+  ]);
+});
+
+test("mapCmsOperationToActionPlan blocks counted updates when the patch is invalid for the family", () => {
+  const plan = planFor({
+    operation: "update",
+    resourceKind: "content-type",
+    targetQuery: { text: "Products" },
+    mutation: { fieldIntent: "title", value: "Archived Products" },
+    constraints: { expectedCount: 2 },
+  });
+
+  expect(plan?.status).toBe("needs_input");
+  expect(plan?.actions).toEqual([]);
+});
+
+test("mapCmsOperationToActionPlan maps explicit multi-create items to existing typed actions", () => {
+  const plan = planFor({
+    operation: "create",
+    resourceKind: "page",
+    mutation: {
+      patch: {
+        items: [
+          {
+            title: "About",
+            slug: "/about",
+            status: "draft",
+            introTitle: "About us",
+            introBody: "Company profile.",
+          },
+          {
+            title: "Contact",
+            slug: "/contact-new",
+            status: "published",
+            introTitle: "Contact us",
+            introBody: "Talk to us.",
+          },
+        ],
+      },
+    },
+    constraints: { expectedCount: 2 },
+  });
+
+  expect(plan?.status).toBe("ready");
+  expect(plan?.actions.map((action) => action.type)).toEqual(["page.upsert", "page.upsert"]);
+  expect(plan?.actions.map((action) => action.title)).toEqual(["Create About", "Create Contact"]);
+  expect(() => normalizeAssistantActionPlan(plan!)).not.toThrow();
+});
+
+test("mapCmsOperationToActionPlan blocks vague or unsafe multi-create drafts", () => {
+  const vague = planFor({
+    operation: "create",
+    resourceKind: "form",
+    constraints: { expectedCount: 2 },
+  });
+
+  expect(vague?.status).toBe("needs_input");
+  expect(vague?.actions).toEqual([]);
+
+  const unsafe = planFor({
+    operation: "create",
+    resourceKind: "form",
+    mutation: {
+      patch: {
+        items: [
+          {
+            name: "Webhook Lead",
+            slug: "webhook-lead",
+            webhookSecret: "secret",
+          },
+        ],
+      },
+    },
+    constraints: { expectedCount: 1 },
+  });
+
+  expect(unsafe?.status).toBe("needs_input");
+  expect(unsafe?.actions).toEqual([]);
 });

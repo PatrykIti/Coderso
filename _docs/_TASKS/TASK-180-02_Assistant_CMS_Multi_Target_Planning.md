@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + CMS Planning
 **Estimated Effort:** Large
 **Dependencies:** TASK-180, TASK-178-05, TASK-174-03, TASK-174-04
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -82,3 +82,14 @@ This wave makes the multi-target contract explicit and tested:
 - `_docs/SECURITY_SPEC.md` if planning security boundaries change
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and changelog entry on completion
+
+## Completion Notes (2026-04-18)
+
+- Counted multi-target delete/archive/update planning now works through the generic CMS resolver/mapper for safe supported resource families.
+- Explicit multi-create mapping now requires locally validated `mutation.patch.items[]` and emits existing typed upsert/create actions only.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

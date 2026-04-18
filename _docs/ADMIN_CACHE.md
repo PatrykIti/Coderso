@@ -31,6 +31,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `contentTypes:detail:<id>`
 - `menus:list`
 - `menus:detail:<id>`
+- `seo:list`
+- `seo:detail:<id>`
 - `forms:list`
 - `forms:detail:<id>`
 - `forms:actions:<id>`
@@ -144,6 +146,9 @@ Contract:
 `core/admin/utils/cacheBus.ts` broadcasts cache events:
 - Primary: `BroadcastChannel`.
 - Fallback: `localStorage` storage event.
+- Same-tab subscribers are notified directly after broadcast, so assistant
+  executions and other mutations can refresh the current admin surface without
+  waiting for a cross-tab storage event or full reload.
 
 Events include:
 - `key`: cache key
@@ -172,13 +177,25 @@ Clients update caches and broadcast events on:
 - Create / update / delete / publish / unpublish.
 - Server responses are treated as source of truth for cache updates.
 - Assistant action execution invalidates known resource-family caches from
-  validated execution results. For `custom-screen.*`, the admin client clears
-  custom screen cache state and broadcasts `customScreens:list` plus the touched
-  `customScreens:detail:<id>` key, so the current `Screens` list and Coderso
-  sidebar shortcuts can refresh without full reload.
-- Assistant `page.*` action results clear page cache state and broadcast
-  `pages:list` plus touched `pages:detail:<id>` keys, so page lists/navigation
-  react after assistant-executed page mutations without a full reload.
+  validated execution results. Failed and `noop` results do not broadcast cache
+  mutations. Detail keys are derived from the strict planned action or the
+  sanitized execution `resourceId`, never provider text.
+- Assistant execution cache event coverage:
+  - `content-type.*` -> `contentTypes:list`, touched `contentTypes:detail:<id>`
+  - `entry.*` -> `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
+  - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
+  - `page.*` -> `pages:list`, touched `pages:detail:<id>`
+  - `form.*` -> `forms:list`, touched `forms:detail:<id>`
+  - `form.automation.upsert` -> `forms:actions:<id>`, `forms:action-runs:<id>`
+  - `listing-query.*` -> `listings:queries:list`, touched `listings:queries:detail:<id>`
+  - `listing-template.*` -> `listings:templates:list`, touched `listings:templates:detail:<id>`
+  - `widget-template.*` -> `widgetTemplates:list`, `widgetCatalog:list`, touched `widgetTemplates:detail:<id>`
+  - `menu.item.*` -> `menus:list`, touched `menus:detail:<menuId>`
+  - `seo.document.*` -> `seo:list`, touched `seo:detail:<id>`
+- `media.reference.attach`, `setting.content-route.upsert`, and `site-kit.*`
+  do not currently emit assistant client cache events because their safe cache
+  address is either not represented in the admin cache key contract or is
+  handled by the existing site-kit execution surface.
 
 ## Extending The Cache
 When adding a new resource:

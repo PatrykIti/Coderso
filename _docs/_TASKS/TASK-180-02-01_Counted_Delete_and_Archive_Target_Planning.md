@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Destructive Planning
 **Estimated Effort:** Medium
 **Dependencies:** TASK-180-02, TASK-174-03
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -97,3 +97,14 @@ Return `needs_input` when:
 - `_docs/SECURITY_SPEC.md` if destructive planning policy changes
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and changelog entry on completion
+
+## Completion Notes (2026-04-18)
+
+- Counted destructive prompts now have non-page mapper coverage for custom screens, forms, listing queries/templates, widget templates, menu items, SEO documents, and zero-entry content types.
+- Mismatched counts and unsafe content type delete candidates remain `needs_input`.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-target-resolver.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

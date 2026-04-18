@@ -54,6 +54,39 @@ test("broadcastCacheEvent writes to localStorage when BroadcastChannel is unavai
   }
 });
 
+test("broadcastCacheEvent notifies same-tab subscribers", () => {
+  const originalBroadcast = (globalThis as { BroadcastChannel?: unknown })
+    .BroadcastChannel;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+
+  delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  const events: Array<{ key: string; action: string }> = [];
+  const unsubscribe = subscribeCacheEvents((event) => {
+    events.push({ key: event.key, action: event.action });
+  });
+
+  try {
+    broadcastCacheEvent({ key: "pages:list", action: "update" });
+    expect(events).toEqual([{ key: "pages:list", action: "update" }]);
+  } finally {
+    unsubscribe?.();
+    if (originalBroadcast === undefined) {
+      delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+    } else {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel =
+        originalBroadcast;
+    }
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
 test("subscribeCacheEvents handles storage events", () => {
   const originalBroadcast = (globalThis as { BroadcastChannel?: unknown })
     .BroadcastChannel;

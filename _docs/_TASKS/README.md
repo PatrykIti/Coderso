@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 15 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 891 tasks
+- **Done:** 899 tasks
 
 ---
 
@@ -38,14 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-180 | Assistant CMS Bulk Operations and Cache Consistency | High | Large | Umbrella: business/product consistency for assistant bulk CMS operations and admin refresh |
-| TASK-180-01 | Assistant Execution Cache Consistency | High | Large | Technical parent for assistant execution result cache invalidation |
-| TASK-180-01-01 | Execution Result to Cache Event Matrix | High | Medium | Map successful assistant action results to known admin cache keys |
-| TASK-180-01-02 | Admin Cache Subscribers and Clear Helpers | High | Medium | Ensure admin surfaces consume assistant cache events without reload loops |
-| TASK-180-02 | Assistant CMS Multi-Target Planning | High | Large | Technical parent for counted/bulk CMS action planning |
-| TASK-180-02-01 | Counted Delete and Archive Target Planning | High | Medium | Extend counted destructive planning beyond page-only coverage |
-| TASK-180-02-02 | Multi Update and Create Planning Boundaries | High | Large | Define safe multi-update/create typed-action boundaries |
-| TASK-180-03 | Docs, Gates, and Closure | High | Medium | Final docs, changelog, board, and validation closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -72,6 +64,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-180-01-01 | Execution Result to Cache Event Matrix | High | Medium | Done: successful assistant action results now map to known admin cache keys |
+| TASK-180-01-02 | Admin Cache Subscribers and Clear Helpers | High | Medium | Done: existing subscribers were verified and SEO now consumes cache bus events |
+| TASK-180-01 | Assistant Execution Cache Consistency | High | Large | Done: assistant execute invalidates CMS admin cache families beyond pages/custom screens |
+| TASK-180-02-01 | Counted Delete and Archive Target Planning | High | Medium | Done: counted destructive planning covers non-page CMS families with unsafe cases blocked |
+| TASK-180-02-02 | Multi Update and Create Planning Boundaries | High | Large | Done: counted multi-update and explicit multi-create map through strict typed actions |
+| TASK-180-02 | Assistant CMS Multi-Target Planning | High | Large | Done: generic CMS resolver/mapper handles safe counted and explicit bulk plans |
+| TASK-180-03 | Docs, Gates, and Closure | High | Medium | Done: TASK-180 docs, changelog, board, and validation synced |
+| TASK-180 | Assistant CMS Bulk Operations and Cache Consistency | High | Large | Done: assistant bulk CMS operations and admin cache refresh are consistent across supported families |
 | TASK-179-01 | Surface Hint and Filter Operation Draft Contract | High | Medium | Done: CMS operation drafts support surfaceHint and allowlisted filters |
 | TASK-179-02 | Provider Prompt and Structured Output Surface Hints | High | Medium | Done: provider guidance covers CMS-wide surface hints and target query separation |
 | TASK-179-03 | Surface-Aware Target Resolver and Filtering | High | Large | Done: resolver applies surface hints and active/visible filters per resource family |

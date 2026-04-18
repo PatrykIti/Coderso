@@ -1,4 +1,6 @@
 import { apiRequest } from "./apiClient";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { cacheKeys } from "@/services/cachePolicy";
 
 export type SeoIssue = {
   code: string;
@@ -46,7 +48,7 @@ export async function updateSeo(
     robots?: string;
   }
 ) {
-  return apiRequest<SeoDocumentItem>(
+  const updated = await apiRequest<SeoDocumentItem>(
     `/seo/${id}`,
     {
       method: "PATCH",
@@ -55,10 +57,13 @@ export async function updateSeo(
     },
     { withCsrf: true }
   );
+  broadcastCacheEvent({ key: cacheKeys.seoList, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.seoDetail(updated.id), action: "update" });
+  return updated;
 }
 
 export async function runSeoAudit(payload: SeoAuditPayload = {}) {
-  return apiRequest<{ audited: number }>(
+  const result = await apiRequest<{ audited: number }>(
     "/seo/audit",
     {
       method: "POST",
@@ -67,4 +72,8 @@ export async function runSeoAudit(payload: SeoAuditPayload = {}) {
     },
     { withCsrf: true }
   );
+  broadcastCacheEvent({ key: cacheKeys.seoList, action: "invalidate" });
+  return result;
 }
+
+export const clearSeoCache = () => undefined;

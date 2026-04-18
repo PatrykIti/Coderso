@@ -1,9 +1,18 @@
 import { createReadThroughCache } from "@/utils/readThroughCache";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { clearLocalCache } from "@/utils/storageCache";
 import { apiRequest } from "./apiClient";
 import { cacheKeys } from "./cachePolicy";
+import { clearContentTypesCache } from "./contentTypesClient";
 import { clearCustomScreensCache } from "./customScreensClient";
+import { clearEntriesCache } from "./entriesClient";
+import { clearFormsCache } from "./formsClient";
+import { clearListingQueriesCache, clearListingTemplatesCache } from "./listingsClient";
+import { clearMenusCache } from "./menusClient";
 import { clearPagesCache } from "./pagesClient";
+import { clearSeoCache } from "./seoClient";
+import { clearWidgetTemplatesCache } from "./widgetTemplatesClient";
+import { clearWidgetCatalogCache } from "./widgetsClient";
 import type {
   SiteBuilderPlanInput,
   SiteBuilderPlanOutput,
@@ -17,7 +26,9 @@ import type {
   AssistantActionContext,
   AssistantActionDryRunResult,
   AssistantActionExecuteResult,
+  AssistantActionExecutionItem,
   AssistantActionPlan,
+  AssistantPlannedAction,
   AssistantSiteKitInstallAction,
 } from "../../services/assistant/actionPlanTypes";
 
@@ -283,44 +294,229 @@ export async function executeAssistantActions(payload: AssistantActionExecuteReq
 }
 
 const notifyAssistantExecutionCacheEvents = (result: AssistantActionExecuteResponse) => {
+  const actionsById = new Map(result.plan.actions.map((action) => [action.id, action]));
+  const emitted = new Set<string>();
+
+  const emit = (key: string, action: "invalidate" | "update") => {
+    const fingerprint = `${action}:${key}`;
+    if (emitted.has(fingerprint)) return;
+    emitted.add(fingerprint);
+    broadcastCacheEvent({ key, action });
+  };
+
   for (const item of result.results) {
     if (item.status !== "success") continue;
-    if (
-      item.type === "custom-screen.delete" ||
-      item.type === "custom-screen.update" ||
-      item.type === "custom-screen.upsert" ||
-      item.type === "custom-screen.widget.patch"
-    ) {
+    if (item.operation === "noop") continue;
+    notifyAssistantExecutionCacheEvent({
+      item,
+      action: actionsById.get(item.actionId) ?? null,
+      emit,
+    });
+  }
+};
+
+const readText = (value: string | null | undefined) =>
+  typeof value === "string" && value.trim() ? value.trim() : null;
+
+const cacheActionFor = (item: AssistantActionExecutionItem) =>
+  item.operation === "delete" ? "invalidate" : "update";
+
+const readActionId = <TType extends AssistantPlannedAction["type"]>(
+  action: AssistantPlannedAction | null,
+  type: TType
+): Extract<AssistantPlannedAction, { type: TType }> | null =>
+  action?.type === type ? (action as Extract<AssistantPlannedAction, { type: TType }>) : null;
+
+const resourceId = (item: AssistantActionExecutionItem, fallback?: string | null) =>
+  readText(item.resourceId) ?? readText(fallback);
+
+const clearAndEmitDetail = (
+  key: string,
+  cacheAction: "invalidate" | "update",
+  emit: (key: string, action: "invalidate" | "update") => void
+) => {
+  clearLocalCache(key);
+  emit(key, cacheAction);
+};
+
+const notifyAssistantExecutionCacheEvent = (input: {
+  item: AssistantActionExecutionItem;
+  action: AssistantPlannedAction | null;
+  emit: (key: string, action: "invalidate" | "update") => void;
+}) => {
+  const { item, action, emit } = input;
+  const cacheAction = cacheActionFor(item);
+
+  switch (item.type) {
+    case "content-type.upsert":
+    case "content-type.delete": {
+      const plannedDelete = readActionId(action, "content-type.delete");
+      const id = resourceId(item, plannedDelete?.input.id);
+      clearContentTypesCache();
+      emit(cacheKeys.contentTypesList, cacheAction);
+      if (id) clearAndEmitDetail(cacheKeys.contentTypeDetail(id), cacheAction, emit);
+      return;
+    }
+
+    case "entry.upsert-draft":
+    case "entry.delete":
+    case "entry.update": {
+      const plannedUpsert = readActionId(action, "entry.upsert-draft");
+      const plannedDelete = readActionId(action, "entry.delete");
+      const plannedUpdate = readActionId(action, "entry.update");
+      const typeSlug =
+        plannedUpsert?.input.contentTypeSlug ??
+        plannedDelete?.input.contentTypeSlug ??
+        plannedUpdate?.input.contentTypeSlug ??
+        null;
+      if (!typeSlug) return;
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);
+      clearEntriesCache(typeSlug);
+      emit(cacheKeys.entriesList(typeSlug), cacheAction);
+      if (id) clearAndEmitDetail(cacheKeys.entryDetail(typeSlug, id), cacheAction, emit);
+      return;
+    }
+
+    case "custom-screen.upsert":
+    case "custom-screen.delete":
+    case "custom-screen.update":
+    case "custom-screen.widget.patch": {
+      const plannedDelete = readActionId(action, "custom-screen.delete");
+      const plannedUpdate = readActionId(action, "custom-screen.update");
+      const plannedPatch = readActionId(action, "custom-screen.widget.patch");
+      const id = resourceId(
+        item,
+        plannedDelete?.input.id ?? plannedUpdate?.input.id ?? plannedPatch?.input.id
+      );
       clearCustomScreensCache();
-      broadcastCacheEvent({
-        key: cacheKeys.customScreensList,
-        action: item.type === "custom-screen.delete" ? "invalidate" : "update",
-      });
-      if (item.resourceId) {
-        broadcastCacheEvent({
-          key: cacheKeys.customScreenDetail(item.resourceId),
-          action: item.type === "custom-screen.delete" ? "invalidate" : "update",
-        });
-      }
+      emit(cacheKeys.customScreensList, cacheAction);
+      if (id) clearAndEmitDetail(cacheKeys.customScreenDetail(id), cacheAction, emit);
+      return;
     }
-    if (
-      item.type === "page.delete" ||
-      item.type === "page.update" ||
-      item.type === "page.upsert" ||
-      item.type === "page.widget.patch"
-    ) {
+
+    case "page.upsert":
+    case "page.delete":
+    case "page.update":
+    case "page.widget.patch": {
+      const plannedDelete = readActionId(action, "page.delete");
+      const plannedUpdate = readActionId(action, "page.update");
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);
       clearPagesCache();
-      broadcastCacheEvent({
-        key: cacheKeys.pagesList,
-        action: item.type === "page.delete" ? "invalidate" : "update",
-      });
-      if (item.resourceId) {
-        broadcastCacheEvent({
-          key: cacheKeys.pageDetail(item.resourceId),
-          action: item.type === "page.delete" ? "invalidate" : "update",
-        });
-      }
+      emit(cacheKeys.pagesList, cacheAction);
+      if (id) clearAndEmitDetail(cacheKeys.pageDetail(id), cacheAction, emit);
+      return;
     }
+
+    case "form.upsert":
+    case "form.delete":
+    case "form.archive":
+    case "form.update": {
+      const plannedDelete = readActionId(action, "form.delete");
+      const plannedArchive = readActionId(action, "form.archive");
+      const plannedUpdate = readActionId(action, "form.update");
+      const id = resourceId(
+        item,
+        plannedDelete?.input.id ?? plannedArchive?.input.id ?? plannedUpdate?.input.id
+      );
+      clearFormsCache();
+      emit(cacheKeys.formsList, cacheAction);
+      if (id) {
+        clearAndEmitDetail(cacheKeys.formDetail(id), cacheAction, emit);
+        clearLocalCache(cacheKeys.formActions(id));
+        clearLocalCache(cacheKeys.formActionRuns(id));
+      }
+      return;
+    }
+
+    case "form.automation.upsert": {
+      const planned = readActionId(action, "form.automation.upsert");
+      const formId = planned?.input.formId;
+      if (!formId) return;
+      clearLocalCache(cacheKeys.formActions(formId));
+      clearLocalCache(cacheKeys.formActionRuns(formId));
+      emit(cacheKeys.formActions(formId), "update");
+      emit(cacheKeys.formActionRuns(formId), "invalidate");
+      return;
+    }
+
+    case "listing-query.upsert":
+    case "listing-query.delete":
+    case "listing-query.update":
+    case "listing-query.filters.patch": {
+      const plannedDelete = readActionId(action, "listing-query.delete");
+      const plannedUpdate = readActionId(action, "listing-query.update");
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);
+      clearListingQueriesCache();
+      emit(cacheKeys.listingQueriesList, cacheAction);
+      if (id) clearAndEmitDetail(cacheKeys.listingQueryDetail(id), cacheAction, emit);
+      return;
+    }
+
+    case "listing-template.upsert":
+    case "listing-template.delete":
+    case "listing-template.update":
+    case "listing-template.card.patch": {
+      const plannedDelete = readActionId(action, "listing-template.delete");
+      const plannedUpdate = readActionId(action, "listing-template.update");
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);
+      clearListingTemplatesCache();
+      emit(cacheKeys.listingTemplatesList, cacheAction);
+      if (id) clearAndEmitDetail(cacheKeys.listingTemplateDetail(id), cacheAction, emit);
+      return;
+    }
+
+    case "widget-template.delete":
+    case "widget-template.update":
+    case "widget-template.block.patch": {
+      const plannedDelete = readActionId(action, "widget-template.delete");
+      const plannedUpdate = readActionId(action, "widget-template.update");
+      const plannedPatch = readActionId(action, "widget-template.block.patch");
+      const id = resourceId(
+        item,
+        plannedDelete?.input.id ?? plannedUpdate?.input.id ?? plannedPatch?.input.id
+      );
+      clearWidgetTemplatesCache();
+      clearWidgetCatalogCache();
+      emit(cacheKeys.widgetTemplatesList, cacheAction);
+      emit(cacheKeys.widgetCatalogList, "invalidate");
+      if (id) clearAndEmitDetail(cacheKeys.widgetTemplateDetail(id), cacheAction, emit);
+      return;
+    }
+
+    case "menu.item.upsert":
+    case "menu.item.delete":
+    case "menu.item.update": {
+      const plannedUpsert = readActionId(action, "menu.item.upsert");
+      const plannedDelete = readActionId(action, "menu.item.delete");
+      const plannedUpdate = readActionId(action, "menu.item.update");
+      const menuId =
+        plannedUpsert?.input.menuId ?? plannedDelete?.input.menuId ?? plannedUpdate?.input.menuId;
+      if (!menuId) return;
+      clearMenusCache();
+      clearLocalCache(cacheKeys.menuDetail(menuId));
+      emit(cacheKeys.menusList, cacheAction);
+      emit(cacheKeys.menuDetail(menuId), cacheAction);
+      return;
+    }
+
+    case "seo.document.upsert":
+    case "seo.document.delete":
+    case "seo.document.update": {
+      const plannedDelete = readActionId(action, "seo.document.delete");
+      const plannedUpdate = readActionId(action, "seo.document.update");
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);
+      clearSeoCache();
+      emit(cacheKeys.seoList, cacheAction);
+      if (id) emit(cacheKeys.seoDetail(id), cacheAction);
+      return;
+    }
+
+    case "media.reference.attach":
+    case "setting.content-route.upsert":
+    case "site-kit.recommend":
+    case "site-kit.install":
+    case "site-kit.validate":
+      return;
   }
 };
 

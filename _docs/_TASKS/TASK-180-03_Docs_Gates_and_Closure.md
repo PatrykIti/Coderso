@@ -5,7 +5,7 @@
 **Category:** Docs + QA + Release Gates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-180-01, TASK-180-02
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -90,3 +90,16 @@ No child task files.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entries
+
+## Completion Notes (2026-04-18)
+
+- Updated admin cache docs/map, LLM Guide acceptance matrix, architecture, CMS API, security spec, task board, and changelog for TASK-180.
+- Recorded targeted validation for admin client cache events, SEO cache bus behavior, CMS resolver/mapper planning, lint, and typecheck.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts tests/vitest/admin/assistantClient.test.ts`
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/seoClient.test.ts tests/vitest/ui/seo-manager.test.tsx`
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

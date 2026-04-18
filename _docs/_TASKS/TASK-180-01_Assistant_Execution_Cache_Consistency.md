@@ -5,7 +5,7 @@
 **Category:** Assistant/Admin UI + Cache Consistency
 **Estimated Effort:** Large
 **Dependencies:** TASK-180, TASK-179-07
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -77,3 +77,17 @@ This subtask must generalize that code without weakening safety:
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md` if coverage ownership notes change
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and changelog entry on completion
+
+## Completion Notes (2026-04-18)
+
+- Added a centralized assistant execution cache mapper in the admin client.
+- Successful non-noop action results now invalidate/broadcast known CMS cache keys across supported cached admin families.
+- SEO manager now consumes `seo:list` and `seo:detail:<id>` cache bus events.
+- Cache bus broadcasts now fan out to same-tab subscribers.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts tests/vitest/admin/assistantClient.test.ts`
+- `bun run vitest run --config vitest.config.ts tests/vitest/admin/seoClient.test.ts tests/vitest/ui/seo-manager.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

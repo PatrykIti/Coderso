@@ -18,6 +18,7 @@ type BroadcastChannelLike = {
 
 const CHANNEL_NAME = "nextless.admin.cache";
 const STORAGE_EVENT_KEY = "nextless.admin.cache.event";
+const localHandlers = new Set<CacheEventHandler>();
 
 const cacheBusId = (() => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -52,12 +53,16 @@ export const broadcastCacheEvent = (input: Omit<CacheEvent, "ts" | "sourceId">) 
   if (channel) {
     channel.postMessage(event);
     channel.close();
-    return;
+  } else {
+    emitStorageEvent(event);
   }
-  emitStorageEvent(event);
+  for (const handler of localHandlers) {
+    handler(event);
+  }
 };
 
 export const subscribeCacheEvents = (handler: CacheEventHandler) => {
+  localHandlers.add(handler);
   const channel = getBroadcastChannel();
   if (channel) {
     const listener = (event: MessageEvent) => {
@@ -67,6 +72,7 @@ export const subscribeCacheEvents = (handler: CacheEventHandler) => {
     };
     channel.addEventListener("message", listener);
     return () => {
+      localHandlers.delete(handler);
       channel.removeEventListener("message", listener);
       channel.close();
     };
@@ -88,6 +94,7 @@ export const subscribeCacheEvents = (handler: CacheEventHandler) => {
   }
 
   return () => {
+    localHandlers.delete(handler);
     if (typeof window !== "undefined") {
       window.removeEventListener("storage", storageListener);
     }
