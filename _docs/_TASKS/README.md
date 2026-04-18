@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 899 tasks
+- **Done:** 900 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-181 | Assistant Follow-Up Target Selection With Live Provider | High | Small | Done: provider path now prefers bounded planning-state follow-up target selection |
 | TASK-180-01-01 | Execution Result to Cache Event Matrix | High | Medium | Done: successful assistant action results now map to known admin cache keys |
 | TASK-180-01-02 | Admin Cache Subscribers and Clear Helpers | High | Medium | Done: existing subscribers were verified and SEO now consumes cache bus events |
 | TASK-180-01 | Assistant Execution Cache Consistency | High | Large | Done: assistant execute invalidates CMS admin cache families beyond pages/custom screens |

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 669 | 2026-04-18 | TASK-181 assistant follow-up target selection | Assistant/Core |
 | 668 | 2026-04-18 | TASK-180 assistant CMS bulk cache consistency | Assistant/Admin UI |
 | 667 | 2026-04-17 | TASK-179 follow-up page cache and restore | Assistant/Admin UI |
 | 666 | 2026-04-17 | TASK-179 surface hints inspection closure | Docs/Assistant |

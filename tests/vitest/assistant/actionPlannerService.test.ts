@@ -2120,6 +2120,96 @@ test("planAssistantActionsWithProviderDraft falls back when provider is unavaila
   expect(plan.intentId).toBe("product-catalog");
 });
 
+test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "delete",
+          resourceKind: "page",
+          targetQuery: { text: "tak, to te dwie" },
+          constraints: { destructive: true, requiresConfirmation: true },
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "tak, to te dwie, usun je",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      planningState: {
+        schemaVersion: 1,
+        sourcePlanId: "plan-cms-page-delete-needs-input",
+        route: "/admin/pages",
+        resourceKind: "page",
+        operation: "delete",
+        query: "test",
+        candidates: [
+          {
+            kind: "page",
+            id: "page-test",
+            label: "test-page",
+            slug: "/test-page",
+            status: "published",
+          },
+          {
+            kind: "page",
+            id: "page-test-2",
+            label: "test2",
+            slug: "/test2",
+            status: "published",
+          },
+        ],
+        createdAt: "2026-04-18T10:00:00.000Z",
+        expiresAt: "2099-04-18T10:10:00.000Z",
+      },
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          {
+            id: "page-catalog",
+            title: "Katalog Projektów Domów 33151341",
+            slug: "/projekty-domow-33151341",
+            status: "published",
+          },
+          { id: "page-test", title: "test-page", slug: "/test-page", status: "published" },
+          { id: "page-test-2", title: "test2", slug: "/test2", status: "published" },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.status).toBe("ready");
+  expect(plan.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
+  expect(plan.actions.map((action) => action.title)).toEqual([
+    "Delete test-page",
+    "Delete test2",
+  ]);
+});
+
 test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
   const provider: AssistantProvider = {
     id: "fake",

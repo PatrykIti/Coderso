@@ -3376,6 +3376,10 @@ export const planAssistantActions = (
 export const planAssistantActionsWithProviderDraft = async (
   input: AssistantProviderDraftPlanInput
 ): Promise<AssistantActionPlan> => {
+  const context = buildAssistantAdminContext(input.context);
+  const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
+  if (planningStatePlan) return normalizeAssistantActionPlan(planningStatePlan);
+
   if (!input.llmAvailable || !input.provider) {
     return planAssistantActions(input);
   }
