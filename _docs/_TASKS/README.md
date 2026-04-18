@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 18 tasks
 - **In Progress:** 5 tasks
 - **Done:** 923 tasks
 
@@ -38,6 +38,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
+| TASK-188-01 | Policy Schema and Resource Contract | High | Medium | Define strict assistant operation policy schema |
+| TASK-188-02 | Policy Migration for Current CMS Resources | High | Large | Move current Admin/CMS resources into policy |
+| TASK-188-03 | Provider Guidance and JSON Schema From Policy | High | Medium | Generate provider prompt/schema guidance from policy |
+| TASK-188-04 | Resolver and Filtering From Policy | High | Large | Drive target resolution and filters from policy |
+| TASK-188-05 | Action Mapping and Safety Rules From Policy | High | Large | Drive typed action mapping and destructive rules from policy |
+| TASK-188-06 | Planning State and Follow-Up Policy | High | Medium | Move pronouns/counts/follow-up selection into policy |
+| TASK-188-07 | Navigation Coverage and Live Matrix From Policy | High | Medium | Generate/validate live coverage matrix from policy |
+| TASK-188-08 | LangGraph Orchestration Evaluation | Medium | Medium | Evaluate @langchain/langgraph for workflow orchestration only |
+| TASK-188-09 | Policy Engine Cutover and Heuristic Removal | High | Large | Cut over planner/resolver/mapper and remove duplicated heuristics |
+| TASK-188-10 | Docs, Changelog, and Closure | High | Medium | Final docs, live matrix, changelog, and validation closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
