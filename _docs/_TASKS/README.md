@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 901 tasks
+- **Done:** 902 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-183 | Assistant Page Title Search Filtering | High | Small | Done: LLM Guide page title searches now return only matching pages, including live OpenAI/OpenRouter coverage |
 | TASK-182 | Assistant Chat Mode Control Removal | Medium | Small | Done: floating assistant chat keeps readiness badge, removes mode selector, and adds a New conversation button |
 | TASK-181 | Assistant Follow-Up Target Selection With Live Provider | High | Small | Done: provider path now prefers bounded planning-state follow-up target selection |
 | TASK-180-01-01 | Execution Result to Cache Event Matrix | High | Medium | Done: successful assistant action results now map to known admin cache keys |

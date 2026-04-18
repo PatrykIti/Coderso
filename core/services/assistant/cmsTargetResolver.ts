@@ -482,6 +482,15 @@ const activeCandidateForKind = (
 
 const normalizeCandidateValue = (value: string | null) => (value ? normalizeText(value) : "");
 
+const splitTextQueryTerms = (value: string) => {
+  const normalized = normalizeText(value);
+  if (!/\s(?:or|lub|albo)\s|\|/.test(normalized)) return [normalized];
+  return normalized
+    .split(/\s+(?:or|lub|albo)\s+|\|/u)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 const matchesCandidate = (
   candidate: CmsResolvedTargetCandidate,
   query: NonNullable<CmsOperationDraft["targetQuery"]>
@@ -501,8 +510,8 @@ const matchesCandidate = (
     return candidates.some((value) => value.startsWith(target));
   }
   if (query.text) {
-    const target = normalizeText(query.text);
-    return candidates.some((value) => value.includes(target));
+    const targets = splitTextQueryTerms(query.text);
+    return targets.some((target) => candidates.some((value) => value.includes(target)));
   }
   return true;
 };
@@ -585,14 +594,51 @@ const matchesFilter = (candidate: CmsResolvedTargetCandidate, draft: CmsOperatio
 const isSurfaceOnlyReadQuery = (
   draft: CmsOperationDraft,
   query: NonNullable<CmsOperationDraft["targetQuery"]>
-) =>
-  (draft.operation === "inspect" || draft.operation === "find") &&
-  Boolean(draft.surfaceHint) &&
-  Boolean(query.text) &&
-  !query.exactName &&
-  !query.prefix &&
-  !query.slug &&
-  !query.active;
+) => {
+  if (draft.operation !== "inspect" && draft.operation !== "find") return false;
+  if (!query.text || query.exactName || query.prefix || query.slug || query.active) return false;
+  const text = normalizeText(query.text);
+  if (/\s(?:or|lub|albo)\s|\|/.test(text)) return false;
+  const surfaceText = normalizeText(draft.surfaceHint ?? "");
+  const broadSurfaceTokens = new Set([
+    "admin",
+    "ui",
+    "admin ui",
+    "section",
+    "sekcja",
+    "sekcji",
+    "surface",
+    "visible",
+    "widoczne",
+    "widzisz",
+    "jakie",
+    "ktore",
+    "które",
+    "screens",
+    "ekrany",
+    "pages",
+    "strony",
+    "forms",
+    "formularze",
+    "engine",
+    "w",
+    "we",
+    "in",
+    "the",
+    "all",
+    "wszystkie",
+    "opublikowane",
+    "published",
+  ]);
+  const tokens = text.split(/[^a-z0-9ąćęłńóśźż]+/u).filter(Boolean);
+  const isOnlySurfaceWords = tokens.every(
+    (token) => broadSurfaceTokens.has(token) || token.length <= 2
+  );
+  return (
+    Boolean(surfaceText && (text === surfaceText || (text.includes(surfaceText) && isOnlySurfaceWords))) ||
+    isOnlySurfaceWords
+  );
+};
 
 export const resolveCmsOperationTargets = (
   draft: CmsOperationDraft,
@@ -627,8 +673,21 @@ export const resolveCmsOperationTargets = (
       ? { ...query, active: undefined }
       : query;
   const directMatches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
-  const matches =
+  const readOnlyPartialMatches =
     directMatches.length === 0 &&
+    query.exactName &&
+    (draft.operation === "inspect" || draft.operation === "find")
+      ? allCandidates.filter((item) => {
+          const target = normalizeText(query.exactName ?? "");
+          return [item.label, item.slug ?? ""]
+            .map(normalizeCandidateValue)
+            .some((value) => value.includes(target));
+        })
+      : [];
+  const matches =
+    readOnlyPartialMatches.length > 0
+      ? readOnlyPartialMatches
+      : directMatches.length === 0 &&
     draft.constraints?.expectedCount !== undefined &&
     query.exactName &&
     (draft.operation === "delete" || draft.operation === "archive" || draft.operation === "update")
@@ -640,7 +699,8 @@ export const resolveCmsOperationTargets = (
   const filteredAllCandidates = allCandidates.filter((item) => matchesFilter(item, draft));
   const effectiveMatches = filteredMatches.length > 0 ? filteredMatches : matches;
   if (
-    (matches.length === 0 || isSurfaceOnlyReadQuery(draft, query)) &&
+    matches.length === 0 &&
+    isSurfaceOnlyReadQuery(draft, query) &&
     (draft.operation === "inspect" || draft.operation === "find") &&
     allCandidates.length > 0
   ) {

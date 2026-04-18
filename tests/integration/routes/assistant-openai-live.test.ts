@@ -17,8 +17,17 @@ const catalog = {
     truncated: false,
   },
   pages: [
+    { id: "page-home", title: "home", slug: "/", status: "published" },
     { id: "page-pysiek", title: "Pysiek Mysiek", slug: "/pysiek-mysiek", status: "draft" },
     { id: "page-contact", title: "Contact", slug: "/contact", status: "published" },
+    {
+      id: "page-catalog",
+      title: "Katalog Projektów Domów 33151341",
+      slug: "/projekty-domow-33151341",
+      status: "published",
+    },
+    { id: "page-test", title: "test-page", slug: "/test-page", status: "published" },
+    { id: "page-test-2", title: "test2", slug: "/test2", status: "published" },
   ],
   contentTypes: [
     { id: "ct-products", slug: "products", name: "Products", entryCount: 0, fields: [] },
@@ -83,6 +92,13 @@ const cases = [
     expectedCandidate: "Pysiek Mysiek",
   },
   {
+    name: "published page title search",
+    prompt: "znajdz wszystkie opublikowane strony ktore maja w nazwie / tytule slowo 'test'",
+    expectedResourceKind: "page",
+    expectedCandidates: ["test-page", "test2"],
+    excludedCandidates: ["home", "Katalog Projektów Domów 33151341"],
+  },
+  {
     name: "engine content type lookup",
     prompt: "czy istnieje model Products w Engine?",
     expectedResourceKind: "content-type",
@@ -129,9 +145,16 @@ liveTest(
     expect(plan.responseKind, item.name).toBe("inspection");
     expect(plan.intentId, item.name).toBe("cms-resource-inspect");
     expect(plan.inspection?.resourceKind, item.name).toBe(item.expectedResourceKind);
-    expect(plan.inspection?.candidates.map((candidate) => candidate.label), item.name).toContain(
-      item.expectedCandidate
-    );
+    const labels = plan.inspection?.candidates.map((candidate) => candidate.label) ?? [];
+    const expectedCandidates =
+      "expectedCandidates" in item ? item.expectedCandidates : [item.expectedCandidate];
+    const excludedCandidates = "excludedCandidates" in item ? item.excludedCandidates : [];
+    for (const expected of expectedCandidates) {
+      expect(labels, item.name).toContain(expected);
+    }
+    for (const excluded of excludedCandidates) {
+      expect(labels, item.name).not.toContain(excluded);
+    }
     expect(JSON.stringify(plan), item.name).not.toContain(apiKey);
   }
   },

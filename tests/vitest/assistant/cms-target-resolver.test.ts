@@ -228,6 +228,77 @@ test("resolveCmsOperationTargets keeps page published filter family-specific", (
   });
 });
 
+test("resolveCmsOperationTargets filters page title searches instead of returning every surface candidate", () => {
+  const pageSearchContext = buildAssistantAdminContext({
+    page: "/admin/pages",
+    locale: "pl-PL",
+    resourceCatalog: {
+      schemaVersion: 1,
+      generatedAt: "2026-04-18T10:00:00.000Z",
+      budget: {
+        maxItemsPerGroup: 50,
+        maxFieldsPerResource: 24,
+        truncated: false,
+      },
+      pages: [
+        { id: "page-home", title: "home", slug: "/", status: "published" },
+        {
+          id: "page-catalog",
+          title: "Katalog Projektów Domów 33151341",
+          slug: "/projekty-domow-33151341",
+          status: "published",
+        },
+        { id: "page-test", title: "test-page", slug: "/test-page", status: "published" },
+        { id: "page-test-2", title: "test2", slug: "/test2", status: "published" },
+      ],
+      contentTypes: [],
+      customScreens: [],
+      listings: { queries: [], templates: [] },
+      forms: [],
+      menus: [],
+      seoDocuments: [],
+      widgets: [],
+      warnings: [],
+    },
+  });
+
+  const orDraft = normalizeCmsOperationDraft({
+    operation: "find",
+    resourceKind: "page",
+    surfaceHint: "Pages",
+    filters: [{ field: "status", operator: "eq", value: "published" }],
+    targetQuery: {
+      text: "test-page OR test2 OR test",
+    },
+  });
+
+  expect(resolveCmsOperationTargets(orDraft, pageSearchContext)).toMatchObject({
+    status: "candidates",
+    candidates: [
+      { label: "test-page", status: "published" },
+      { label: "test2", status: "published" },
+    ],
+  });
+
+  const exactNameDraft = normalizeCmsOperationDraft({
+    operation: "find",
+    resourceKind: "page",
+    surfaceHint: "Pages",
+    filters: [{ field: "status", operator: "eq", value: "published" }],
+    targetQuery: {
+      exactName: "test",
+    },
+  });
+
+  expect(resolveCmsOperationTargets(exactNameDraft, pageSearchContext)).toMatchObject({
+    status: "candidates",
+    candidates: [
+      { label: "test-page", status: "published" },
+      { label: "test2", status: "published" },
+    ],
+  });
+});
+
 test("resolveCmsOperationTargets resolves counted partial page deletes", () => {
   const draft = normalizeCmsOperationDraft({
     operation: "delete",
