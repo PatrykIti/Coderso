@@ -131,3 +131,47 @@ test("buildCmsOperationDraftFromPlanningState resolves Polish follow-up selectio
     },
   });
 });
+
+test("buildCmsOperationDraftFromPlanningState preserves all prior candidates when query is empty", () => {
+  const state = normalizeAssistantPlanningState(
+    {
+      schemaVersion: 1,
+      sourcePlanId: "plan-pages",
+      route: "/admin/pages",
+      resourceKind: "page",
+      operation: "find",
+      query: null,
+      candidates: [
+        { kind: "page", id: "home", label: "home", slug: "/", status: "published" },
+        {
+          kind: "page",
+          id: "catalog",
+          label: "Katalog Projektów Domów 33151341",
+          slug: "/projekty-domow-33151341",
+          status: "published",
+        },
+        {
+          kind: "page",
+          id: "seo-page",
+          label: "llm-live SEO Page",
+          slug: "/llm-live-seo-page",
+          status: "published",
+        },
+      ],
+      createdAt: "2026-04-17T10:00:00.000Z",
+      expiresAt: "2026-04-17T10:10:00.000Z",
+    },
+    { nowMs: Date.parse("2026-04-17T10:02:00.000Z") }
+  );
+
+  expect(buildCmsOperationDraftFromPlanningState("usun te strony", state)).toMatchObject({
+    operation: "delete",
+    resourceKind: "page",
+    targetQuery: {
+      text: "home OR Katalog Projektów Domów 33151341 OR llm-live SEO Page",
+    },
+    constraints: {
+      expectedCount: 3,
+    },
+  });
+});

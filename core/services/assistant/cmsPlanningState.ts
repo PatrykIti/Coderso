@@ -215,7 +215,9 @@ export const buildCmsOperationDraftFromPlanningState = (
     targetQuery:
       selected.length === 1
         ? { exactName: selected[0]!.label, text: selected[0]!.label }
-        : { prefix: state.query ?? selected[0]!.label },
+        : state.query
+          ? { prefix: state.query }
+          : { text: selected.map((candidate) => candidate.label).join(" OR ") },
     constraints: {
       ...(selected.length > 1 ? { expectedCount: selected.length } : {}),
       destructive: operation === "delete" || operation === "archive",
