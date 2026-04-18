@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Menus/SEO/Media
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01, TASK-184-02, TASK-184-03
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -71,8 +71,15 @@ No child task files.
 - `_docs/_TASKS/README.md`
 - changelog on completion
 
-## Progress Notes
+## Completion Notes (2026-04-18)
 
-- 2026-04-18: Added and validated the Menus + SEO live provider slice in `tests/integration/assistant-live/menusSeoLiveMatrix.test.ts`.
-  - OpenAI/OpenRouter live cases cover menu item inspection by href, menu item update, menu item delete preserving unrelated items, SEO document update, SEO document delete without deleting the target page, state verification, and cleanup.
-  - Media reference coverage remains pending in this leaf because it needs a dedicated storage/media fixture that safely creates an existing media asset and entry target.
+- Added and validated `tests/integration/assistant-live/menusSeoLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover menu item inspection by href, menu item update, menu item delete preserving unrelated items, SEO document update, SEO document delete without deleting the target page, media reference attach to an existing entry field, state verification, and cleanup.
+- Media reference fixture creates a test content type, entry, and existing media DB row; assistant action uses `media.reference.attach` and never accepts upload bytes.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/menusSeoLiveMatrix.test.ts`
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

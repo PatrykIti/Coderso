@@ -30,6 +30,8 @@ const loadDb = async () => {
 const loadMenus = () => import("../../../core/services/menus/menuService");
 const loadPages = () => import("../../../core/services/pages/pageService");
 const loadSeo = () => import("../../../core/services/seo/seoService");
+const loadContentTypes = () => import("../../../core/services/content/typeService");
+const loadEntries = () => import("../../../core/services/content/entryService");
 
 const createActor = async (prefix: string) => {
   const { db, users } = await loadDb();
@@ -281,6 +283,81 @@ const runMenusSeoMatrixForProvider = async (provider: LiveProviderRuntime) => {
     expect(await getSeoDocument(seo.id), provider.id).toBeNull();
     const { getPage } = await loadPages();
     expect(await getPage(page.id), provider.id).toBeTruthy();
+
+    const [{ media }, { createContentType, deleteContentType }, { createEntry, deleteEntry, getEntry }] =
+      await Promise.all([
+        import("../../../core/db/schema"),
+        loadContentTypes(),
+        loadEntries(),
+      ]);
+    const { db } = await loadDb();
+    const mediaType = await createContentType({
+      name: `${prefix} Media Entry Model`,
+      slug: `${prefix}-media-entry-model`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          heroImage: {
+            type: "string",
+            xFieldType: "media",
+            xFieldConfig: { media: { accept: ["image/*"] } },
+          },
+        },
+        required: [],
+      },
+    });
+    cleanup.add(`content-type:${mediaType.id}`, async () => {
+      await deleteContentType(mediaType.id).catch(() => undefined);
+    });
+    const entry = await createEntry(mediaType.id, {
+      title: `${prefix} Media Entry`,
+      slug: `${prefix}-media-entry`,
+      data: {},
+      authorId: actor.id,
+    });
+    if (!entry) throw new Error("assistant_live_entry_create_failed");
+    cleanup.add(`entry:${entry.id}`, async () => {
+      await deleteEntry(entry.id).catch(() => undefined);
+    });
+    const [mediaRow] = await db
+      .insert(media)
+      .values({
+        key: `${prefix}/hero.png`,
+        url: `/media/${prefix}/hero.png`,
+        originalName: `${prefix}-hero.png`,
+        type: "image",
+        mimeType: "image/png",
+        size: 68,
+        title: `${prefix} Hero`,
+        alt: "Hero image",
+        caption: null,
+        createdBy: actor.id,
+      })
+      .returning();
+    if (!mediaRow) throw new Error("assistant_live_media_create_failed");
+    cleanup.add(`media:${mediaRow.id}`, async () => {
+      await db.delete(media).where(eq(media.id, mediaRow.id)).catch(() => undefined);
+    });
+
+    const mediaPlan = await planWithLiveProvider({
+      provider,
+      context: await buildContext(),
+      prompt: `Podlacz mediaId "${mediaRow.id}" do entryId "${entry.id}" field "heroImage"`,
+    });
+    expect(mediaPlan.actions.map((action) => action.type), provider.id).toEqual([
+      "media.reference.attach",
+    ]);
+    expectSuccessfulExecution(
+      await executeLivePlan({
+        plan: mediaPlan,
+        actorId: actor.id,
+        idempotencyKey: `${prefix}-media-reference`,
+      })
+    );
+    expect((await getEntry(entry.id))?.data, provider.id).toMatchObject({
+      heroImage: mediaRow.id,
+    });
   } finally {
     await cleanup.run();
   }

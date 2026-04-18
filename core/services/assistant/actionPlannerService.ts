@@ -3303,6 +3303,60 @@ const buildProviderPreferredActiveSurfacePlan = (input: AssistantProviderDraftPl
   return plan;
 };
 
+const extractNamedIdValue = (prompt: string, labels: string[]) => {
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = prompt.match(new RegExp(`(?:^|[\\s,;])${escaped}\\s*[:=]?\\s*['"“”]([^'"“”]+)['"“”]`, "iu"));
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return null;
+};
+
+const buildExplicitMediaReferencePlan = (input: AssistantActionPlanInput): AssistantActionPlan | null => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
+  if (
+    !includesAny(normalizedPrompt, ["media", "image", "obraz"]) ||
+    !includesAny(normalizedPrompt, ["attach", "podlacz", "podłącz", "dodaj", "ustaw"])
+  ) {
+    return null;
+  }
+  const mediaId = extractNamedIdValue(input.prompt, ["mediaId", "media id", "media"]);
+  const targetId = extractNamedIdValue(input.prompt, ["entryId", "entry id", "targetId", "target id"]);
+  const field = extractNamedIdValue(input.prompt, ["field", "pole"]);
+  if (!mediaId || !targetId || !field) return null;
+  return {
+    id: `plan-media-reference-attach-${targetId}-${field}`,
+    status: "ready",
+    intentId: "media-reference-attach",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Attach media reference",
+    answer: "I can attach the existing media asset to the entry field through the reviewed LLM Guide action flow.",
+    summary: `Attach media ${mediaId} to entry ${targetId} field ${field}.`,
+    confidence: 0.78,
+    assumptions: [
+      "The prompt provided explicit existing media and entry ids.",
+      "Dry-run must verify both resources before execution.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `media-reference-attach-${targetId}-${field}`,
+        type: "media.reference.attach",
+        title: "Attach media reference",
+        description: "Attach an existing media asset to an entry field.",
+        input: {
+          mediaId,
+          targetType: "entry",
+          targetId,
+          field,
+        },
+      },
+    ],
+  };
+};
+
 const isProviderBroadDestructivePrompt = (prompt: string) => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
   return (
@@ -3322,6 +3376,9 @@ export const planAssistantActions = (
   if (input.context?.siteKit) {
     return normalizeAssistantActionPlan(buildSiteKitActionPlan(input.context.siteKit));
   }
+
+  const explicitMediaReferencePlan = buildExplicitMediaReferencePlan(input);
+  if (explicitMediaReferencePlan) return normalizeAssistantActionPlan(explicitMediaReferencePlan);
 
   const classification = classifyAssistantPrompt(input.prompt);
   const intentFamily =

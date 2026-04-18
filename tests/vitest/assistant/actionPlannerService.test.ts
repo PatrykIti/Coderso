@@ -2552,6 +2552,27 @@ test("planAssistantActionsWithProviderDraft prefers active widget template block
   });
 });
 
+test("planAssistantActions builds explicit media reference attach plan", () => {
+  const plan = planAssistantActions({
+    prompt: 'Podlacz mediaId "media-1" do entryId "entry-1" field "heroImage"',
+    context: {
+      page: "/admin/coderso/entries/products/entry-1",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]).toMatchObject({
+    type: "media.reference.attach",
+    input: {
+      mediaId: "media-1",
+      targetType: "entry",
+      targetId: "entry-1",
+      field: "heroImage",
+    },
+  });
+});
+
 test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
   const provider: AssistantProvider = {
     id: "fake",
