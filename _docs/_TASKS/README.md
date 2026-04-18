@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 920 tasks
+- **Done:** 921 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-185 | Assistant Read-Only Status Question Guard | High | Small | Done: live provider status/visibility questions stay read-only before model inference |
 | TASK-184-17 | Docs, Commands, and Closure | High | Medium | Done: live CMS command family, docs, changelog, and final validation synced |
 | TASK-184 | Assistant Live CMS Operation Matrix | High | Large | Done: OpenAI/OpenRouter full Admin UI live matrix, coverage map, and commands completed |
 | TASK-184-16 | Navigation Coverage Map and Planned Modules | High | Medium | Done: live coverage matrix covers sidebar, Coderso modules, settings routes, and planned modules |

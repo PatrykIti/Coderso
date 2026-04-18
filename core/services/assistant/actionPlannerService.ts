@@ -3449,6 +3449,68 @@ const buildProviderPreferredListingFieldPlan = (input: AssistantProviderDraftPla
   return plan;
 };
 
+const withProviderPlannerMetadata = (
+  plan: AssistantActionPlan,
+  input: AssistantProviderDraftPlanInput
+) =>
+  normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      planner: "provider",
+      providerDraftUsed: true,
+      providerId: input.provider?.id ?? null,
+    },
+    assumptions: [
+      ...plan.assumptions,
+      "Provider path used deterministic local routing before model inference.",
+    ],
+  });
+
+const buildProviderPreferredReadOnlyStatusPlan = (
+  input: AssistantProviderDraftPlanInput,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
+  if (
+    !hasPlannerWord(normalizedPrompt, "czy") ||
+    !includesAny(normalizedPrompt, [
+      "publiczny",
+      "publiczne",
+      "public",
+      "opublikowany",
+      "opublikowana",
+      "published",
+      "widoczny",
+      "widoczna",
+      "visible",
+    ])
+  ) {
+    return null;
+  }
+
+  for (const form of context.resourceCatalog?.forms ?? []) {
+    if (!normalizeAssistantPlannerPrompt(input.prompt).includes(normalizeAssistantPlannerPrompt(form.name))) {
+      continue;
+    }
+    const filters = includesAny(normalizedPrompt, ["publiczny", "publiczne", "public"])
+      ? [{ field: "visibility" as const, operator: "eq" as const, value: "public" }]
+      : includesAny(normalizedPrompt, ["internal", "wewnetrzny", "wewnętrzny"])
+        ? [{ field: "visibility" as const, operator: "eq" as const, value: "internal" }]
+        : includesAny(normalizedPrompt, ["opublikowany", "opublikowana", "published"])
+          ? [{ field: "status" as const, operator: "eq" as const, value: "published" }]
+          : [];
+    const draft = normalizeCmsOperationDraft({
+      operation: "inspect",
+      resourceKind: "form",
+      targetQuery: { exactName: form.name, text: form.name },
+      ...(filters.length > 0 ? { filters } : {}),
+    });
+    return buildGenericCmsInspectionPlan(input.prompt, draft, context);
+  }
+
+  return null;
+};
+
 const buildExplicitMediaReferencePlan = (input: AssistantActionPlanInput): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
   if (
@@ -3787,11 +3849,13 @@ export const planAssistantActionsWithProviderDraft = async (
 ): Promise<AssistantActionPlan> => {
   const context = buildAssistantAdminContext(input.context);
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
-  if (planningStatePlan) return normalizeAssistantActionPlan(planningStatePlan);
+  if (planningStatePlan) return withProviderPlannerMetadata(planningStatePlan, input);
   const activeSurfacePlan = buildProviderPreferredActiveSurfacePlan(input);
-  if (activeSurfacePlan) return normalizeAssistantActionPlan(activeSurfacePlan);
+  if (activeSurfacePlan) return withProviderPlannerMetadata(activeSurfacePlan, input);
   const listingFieldPlan = buildProviderPreferredListingFieldPlan(input);
-  if (listingFieldPlan) return normalizeAssistantActionPlan(listingFieldPlan);
+  if (listingFieldPlan) return withProviderPlannerMetadata(listingFieldPlan, input);
+  const readOnlyStatusPlan = buildProviderPreferredReadOnlyStatusPlan(input, context);
+  if (readOnlyStatusPlan) return withProviderPlannerMetadata(readOnlyStatusPlan, input);
   if (isProviderBroadDestructivePrompt(input.prompt)) {
     return planAssistantActions(input);
   }

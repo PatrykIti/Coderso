@@ -15,7 +15,7 @@
     "test:full": "bun run test:bun && bun run test:vitest",
     "test:bun": "bun test tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",
     "test:vitest": "vitest run --config vitest.config.ts",
-    "test:assistant:live": "bun run test:assistant:live:openai && bun run test:assistant:live:openrouter",
+    "test:assistant:live": "bun run test:assistant:live:openai && bun run test:assistant:live:openrouter && bun run test:assistant:live:cms:openai && bun run test:assistant:live:cms:openrouter",
     "test:assistant:live:openai": "set -a && source .env && set +a && bun test tests/integration/routes/assistant-openai-live.test.ts",
     "test:assistant:live:openrouter": "set -a && source .env && set +a && bun test tests/integration/routes/assistant-openrouter-live.test.ts",
     "test:assistant:live:cms": "set -a && source .env && set +a && bun test tests/integration/assistant-live",

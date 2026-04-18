@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 689 | 2026-04-18 | TASK-185 assistant read-only status question guard | Assistant/Core |
 | 688 | 2026-04-18 | TASK-184 live CMS matrix closure | Assistant/QA |
 | 687 | 2026-04-18 | TASK-184-16 live coverage map | Assistant/QA |
 | 686 | 2026-04-18 | TASK-184-15 settings live matrix | Assistant/QA |
