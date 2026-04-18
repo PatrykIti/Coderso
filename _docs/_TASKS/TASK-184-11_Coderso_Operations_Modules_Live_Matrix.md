@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Coderso Modules
 **Estimated Effort:** Large
 **Dependencies:** TASK-184-01, TASK-184-05, TASK-184-06
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -85,3 +85,15 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/codersoOperationsLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover Booking, Commerce checkout/payment, Reviews destructive prompts, Popups create prompts, and Solution Kits without installed-kit context.
+- The suite verifies unsupported Coderso operation modules do not produce executable action plans or provider-invented unsupported actions.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/codersoOperationsLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
