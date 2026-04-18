@@ -101,5 +101,6 @@ No child task files.
 - `bun run vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts tests/vitest/admin/assistantClient.test.ts`
 - `bun run vitest run --config vitest.config.ts tests/vitest/admin/seoClient.test.ts tests/vitest/ui/seo-manager.test.tsx`
 - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/assistant-openai-live.test.ts tests/integration/routes/assistant-openrouter-live.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
