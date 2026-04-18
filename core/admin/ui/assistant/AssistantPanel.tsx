@@ -25,7 +25,7 @@ import {
   type AssistantChatResponse,
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
-import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
+import { getUserSettings } from "@/services/userSettingsClient";
 import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
 import { cn } from "@/lib/utils";
 
@@ -714,13 +714,15 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     }
   }, [activePlan, isExecutingPlan, isPreviewingPlan]);
 
-  const handleModeChange = useCallback(
-    (nextMode: AssistantMode) => {
-      setAssistantMode(nextMode);
-      setUserSetting("assistant.mode", nextMode).catch(() => undefined);
-    },
-    []
-  );
+  const handleNewConversation = useCallback(() => {
+    setMessages([]);
+    setMessage("");
+    setActivePlan(null);
+    setActivePreview(null);
+    setActiveExecution(null);
+    setPlanningState(null);
+    setActionError(null);
+  }, []);
 
   const canSend = useMemo(
     () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
@@ -879,12 +881,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               <>
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/10 p-3">
                   <div className="min-w-0 space-y-3 pr-3">
-                    <AssistantModeSwitch
-                      value={currentMode}
-                      llmAvailable={Boolean(status?.llmAvailable)}
-                      disabled={isSending || isPreviewingPlan || isExecutingPlan}
-                      onChange={handleModeChange}
-                    />
+                    <AssistantModeSwitch llmAvailable={Boolean(status?.llmAvailable)} />
 
                     {resolvedConversationState === "empty" ? (
                       <AssistantEmptyState
@@ -949,7 +946,16 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                     rows={4}
                     disabled={isSending || !status?.indexReady}
                   />
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between gap-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleNewConversation}
+                      disabled={isSending || isPreviewingPlan || isExecutingPlan}
+                    >
+                      New
+                    </Button>
                     <Button
                       type="button"
                       size="sm"

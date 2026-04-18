@@ -904,6 +904,109 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
   }
 });
 
+test("AssistantPanel starts a new empty conversation from footer action", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
+    "pages.openAfterCreate": true,
+    "media.openAfterUpload": false,
+    "widgets.favorites": [],
+    "widgets.hero.presets": [],
+    "posts.editor.preferences": {
+      version: 2,
+      focusModeOnOpen: false,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: true,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: true,
+    },
+    "assistant.mode": "llm-guide",
+    "assistant.ui.enabled": true,
+    "assistant.ui.avatarEnabled": false,
+    "assistant.ui.avatarAsset": null,
+  });
+  vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
+    id: "plan-docs-response",
+    status: "ready",
+    intentId: "docs-response",
+    responseKind: "docs",
+    title: "Docs response",
+    answer: "This is the current answer.",
+    summary: "Docs answer.",
+    confidence: 0.8,
+    assumptions: [],
+    questions: [],
+    actions: [],
+  });
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await act(async () => {
+      setTextareaValue(textarea, "gdzie sa ustawienia?");
+      await flush();
+    });
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+    await act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(view.container.textContent).toContain("This is the current answer.");
+
+    const newButton = findButton(view.container, "New");
+    if (!newButton) throw new Error("missing_new_button");
+    await act(async () => {
+      newButton.click();
+      await flush();
+    });
+
+    expect(view.container.textContent).not.toContain("This is the current answer.");
+    expect(view.container.textContent).toContain("Ask where something is in docs");
+    expect(textarea.value).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("AssistantPanel restores conversation after close and SPA remount", async () => {
   vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,

@@ -58,17 +58,15 @@ test("AssistantPanel launcher uses avatar asset when configured", () => {
   expect(html).toContain("avatar.png");
 });
 
-test("AssistantModeSwitch renders mode selector", () => {
+test("AssistantModeSwitch renders readiness badge without mode selector", () => {
   const html = renderAdminUi(
     <AssistantModeSwitch
-      value="docs-only"
       llmAvailable={false}
-      onChange={() => undefined}
     />
   );
 
-  expect(html).toContain("Assistant mode");
   expect(html).toContain("Docs only");
+  expect(html).not.toContain("Assistant mode");
 });
 
 test("AssistantEmptyState renders starter prompts", () => {

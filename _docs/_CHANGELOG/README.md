@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 670 | 2026-04-18 | TASK-182 assistant chat mode control removal | Admin/UI |
 | 669 | 2026-04-18 | TASK-181 assistant follow-up target selection | Assistant/Core |
 | 668 | 2026-04-18 | TASK-180 assistant CMS bulk cache consistency | Assistant/Admin UI |
 | 667 | 2026-04-17 | TASK-179 follow-up page cache and restore | Assistant/Admin UI |
