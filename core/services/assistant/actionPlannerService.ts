@@ -3511,6 +3511,25 @@ const buildProviderPreferredReadOnlyStatusPlan = (
   return null;
 };
 
+const buildProviderPreferredReadOnlySearchPlan = (
+  input: AssistantProviderDraftPlanInput,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
+  if (
+    !includesAny(normalizedPrompt, ["znajdz", "znajdź", "find", "search"]) ||
+    !includesAny(normalizedPrompt, ["slowo", "słowo", "word", "nazwa", "nazwie", "tytul", "tytuł", "tytule"])
+  ) {
+    return null;
+  }
+  const draft = buildCmsOperationDraftFromPrompt(input.prompt, context);
+  if (!draft || (draft.operation !== "inspect" && draft.operation !== "find")) return null;
+  if (!draft.targetQuery?.exactName && !draft.targetQuery?.text && !draft.targetQuery?.slug && !draft.targetQuery?.prefix) {
+    return null;
+  }
+  return buildGenericCmsInspectionPlan(input.prompt, draft, context);
+};
+
 const buildExplicitMediaReferencePlan = (input: AssistantActionPlanInput): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
   if (
@@ -3856,6 +3875,15 @@ export const planAssistantActionsWithProviderDraft = async (
   if (listingFieldPlan) return withProviderPlannerMetadata(listingFieldPlan, input);
   const readOnlyStatusPlan = buildProviderPreferredReadOnlyStatusPlan(input, context);
   if (readOnlyStatusPlan) return withProviderPlannerMetadata(readOnlyStatusPlan, input);
+  const readOnlySearchPlan = buildProviderPreferredReadOnlySearchPlan(input, context);
+  if (readOnlySearchPlan) return withProviderPlannerMetadata(readOnlySearchPlan, input);
+  if (
+    extractExplicitPromptCount(input.prompt) !== null &&
+    (isLikelyDeletePrompt(normalizeAssistantPlannerPrompt(input.prompt)) ||
+      includesAny(normalizeAssistantPlannerPrompt(input.prompt), ["archive", "archiwizuj", "zarchiwizuj"]))
+  ) {
+    return planAssistantActions(input);
+  }
   if (isProviderBroadDestructivePrompt(input.prompt)) {
     return planAssistantActions(input);
   }

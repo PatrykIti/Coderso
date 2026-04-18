@@ -2400,6 +2400,62 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
   ]);
 });
 
+test("planAssistantActionsWithProviderDraft prefers local read-only word search before provider inference", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "find",
+          resourceKind: "page",
+          targetQuery: { text: "wrong target" },
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "znajdz wszystkie opublikowane strony ktore maja w nazwie / tytule slowo 'test'",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          { id: "page-test", title: "test-page", slug: "/test-page", status: "published" },
+          { id: "page-test-2", title: "test2", slug: "/test2", status: "published" },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual([
+    "test-page",
+    "test2",
+  ]);
+});
+
 test("planAssistantActionsWithProviderDraft rejects provider destructive actions for broad all prompts", async () => {
   const provider = createFakeProvider(
     JSON.stringify({
