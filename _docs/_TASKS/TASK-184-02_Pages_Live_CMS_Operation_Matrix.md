@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -69,3 +69,18 @@ No child task files.
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/pagesLiveMatrix.test.ts`.
+- Live matrix seeds provider-scoped published page fixtures with a disposable `llm-live-*` prefix.
+- OpenAI/OpenRouter live cases now cover page create, title search with unrelated exclusion, exact title update, broad delete safety, counted two-page delete, state verification, and cleanup.
+- Provider planning now includes explicit create guidance for `mutation.patch.items[]`, and planner recovery can map explicit page create prompt fields to `page.upsert` when provider returns an actionless draft.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/cms-target-resolver.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/pagesLiveMatrix.test.ts`
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-cms-harness.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

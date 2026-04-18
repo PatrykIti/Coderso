@@ -111,6 +111,16 @@ const extractQuotedValues = (prompt: string) =>
     .map((match) => match[1]?.trim())
     .filter((value): value is string => Boolean(value));
 
+const extractNamedQuotedValue = (prompt: string, labels: string[]) => {
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = prompt.match(new RegExp(`(?:^|[\\s,;])${escaped}\\s*[:=]?\\s*['"“”]([^'"“”]+)['"“”]`, "iu"));
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return null;
+};
+
 const extractRequestedCount = (normalizedPrompt: string) => {
   const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
   if (digitMatch?.[1]) return Number(digitMatch[1]);
@@ -190,6 +200,41 @@ export const buildCmsOperationDraftFromPrompt = (
     secondQuoted ?? (operation === "update" && usesActiveTarget ? firstQuoted : undefined);
   const queryValue =
     operation === "update" && usesActiveTarget && !secondQuoted ? undefined : targetValue;
+
+  if (operation === "create" && resourceKind === "page") {
+    const title = extractNamedQuotedValue(prompt, ["title", "tytul", "tytuł", "tytulem", "tytułem"]) ?? firstQuoted;
+    const pageSlug = extractNamedQuotedValue(prompt, ["slug", "url", "sciezka", "ścieżka"]);
+    const statusValue = extractNamedQuotedValue(prompt, ["status"]);
+    const introTitle = extractNamedQuotedValue(prompt, ["introTitle", "intro title", "naglowek", "nagłówek"]) ?? title;
+    const introBody = extractNamedQuotedValue(prompt, ["introBody", "intro body", "opis", "tresc", "treść"]);
+    if (title && pageSlug && introTitle && introBody) {
+      return normalizeCmsOperationDraft({
+        operation,
+        resourceKind,
+        mutation: {
+          patch: {
+            items: [
+              {
+                title,
+                slug: normalizeSlug(pageSlug) ?? pageSlug,
+                status:
+                  statusValue === "published" || statusValue === "opublikowana" || statusValue === "opublikowane"
+                    ? "published"
+                    : "draft",
+                introTitle,
+                introBody,
+              },
+            ],
+          },
+        },
+        constraints: {
+          expectedCount: 1,
+          destructive: false,
+          requiresConfirmation: false,
+        },
+      });
+    }
+  }
 
   return normalizeCmsOperationDraft({
     operation,

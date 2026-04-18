@@ -2210,6 +2210,59 @@ test("planAssistantActionsWithProviderDraft prefers planning state for follow-up
   ]);
 });
 
+test("planAssistantActionsWithProviderDraft recovers explicit page create fields when provider asks for target", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "find",
+      resourceKind: "page",
+      targetQuery: { text: "create page" },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt:
+      'Utworz jedna strone z tytulem "Live Created", slug "/live-created", status "draft", introTitle "Live intro", introBody "Live body"',
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.metadata?.planner).toBe("provider");
+  expect(plan.actions).toHaveLength(1);
+  expect(plan.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      title: "Live Created",
+      slug: "/live-created",
+      status: "draft",
+      introTitle: "Live intro",
+      introBody: "Live body",
+    },
+  });
+});
+
 test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
   const provider: AssistantProvider = {
     id: "fake",

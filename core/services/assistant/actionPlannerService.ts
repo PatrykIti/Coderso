@@ -3115,6 +3115,9 @@ const providerPlannerSystemPrompt = [
   "Use surfaceHint for UI locations such as Screens, Pages, Engine, Admin UI, menu, or sidebar.",
   "Use targetQuery only for actual resource names, slugs, prefixes, routes, or active/current references.",
   "Use filters for active, published, visible, show-in-sidebar, opublikowane, or widoczne language.",
+  "For create operations, put explicit item definitions in mutation.patch.items.",
+  "For page create items use: title, slug, status, introTitle, introBody, optional ctaLabel.",
+  "For multi-create operations, set constraints.expectedCount to the number of mutation.patch.items.",
   "Do not return executable actions.",
   "Do not invent arbitrary commands, SQL, filesystem paths, tools, or resource ids.",
   "The local server will validate your draft, resolve targets from trusted context, and map to a strict plan before any dry-run or execution.",
@@ -3168,6 +3171,27 @@ const tryPlanProviderCmsOperationDraft = (
   } catch {
     return null;
   }
+};
+
+const buildProviderLocalRecoveryPlan = (
+  input: AssistantProviderDraftPlanInput,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const plan = buildGenericCmsFallbackMutationPlan(input.prompt, context);
+  if (!plan || plan.status !== "ready" || plan.actions.length === 0) return null;
+  return normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      planner: "provider",
+      providerDraftUsed: true,
+      providerId: input.provider?.id ?? null,
+    },
+    assumptions: [
+      ...plan.assumptions,
+      "Provider draft was validated locally before target resolution.",
+      "Local explicit prompt fields recovered the typed action input.",
+    ],
+  });
 };
 
 export const planAssistantActions = (
@@ -3409,7 +3433,13 @@ export const planAssistantActionsWithProviderDraft = async (
     });
     const draft = parseProviderDraftJson(response.text);
     const operationPlan = tryPlanProviderCmsOperationDraft(input, draft);
-    if (operationPlan) return operationPlan;
+    if (operationPlan) {
+      if (operationPlan.status === "needs_input" || operationPlan.actions.length === 0) {
+        const recoveredPlan = buildProviderLocalRecoveryPlan(input, context);
+        if (recoveredPlan) return recoveredPlan;
+      }
+      return operationPlan;
+    }
     return adaptProviderDraftPlan({
       prompt: input.prompt,
       draft,
