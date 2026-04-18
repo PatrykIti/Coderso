@@ -217,6 +217,8 @@ const operationVerb = (operation: CmsOperationDraft["operation"]) => {
   return "Run";
 };
 
+const hasAllSignal = (prompt: string) => /\b(all|wszystkie|wszyscy|wszystkich)\b/i.test(prompt);
+
 const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -923,6 +925,40 @@ export const mapCmsOperationToActionPlan = (input: {
         confidence: 0.76,
         assumptions: [
           "The target count was explicit and candidates were resolved from trusted context.",
+          "Dry-run must be reviewed before execution.",
+        ],
+        questions: [],
+        actions,
+      };
+    }
+  }
+  if (
+    resolution.status === "ambiguous" &&
+    (input.draft.operation === "delete" || input.draft.operation === "archive") &&
+    input.draft.constraints?.expectedCount === undefined &&
+    input.draft.filters &&
+    input.draft.filters.length > 0 &&
+    hasAllSignal(input.prompt) &&
+    resolution.candidates.length > 1
+  ) {
+    const verb = operationVerb(input.draft.operation);
+    const actions = resolution.candidates
+      .map((target) => buildActionForExactTarget(input.draft, target))
+      .filter((action): action is AssistantPlannedAction => Boolean(action));
+    if (actions.length === resolution.candidates.length) {
+      return {
+        id: `plan-cms-${input.draft.resourceKind}-${input.draft.operation}-filtered-all`,
+        status: "ready",
+        intentId: `cms-${input.draft.resourceKind}-${input.draft.operation}`,
+        responseKind: "action_plan",
+        promptKind: "refinement_request",
+        intentFamily: "unknown",
+        title: `${verb} ${actions.length} ${input.draft.resourceKind} resources`,
+        answer: "I can prepare these CMS operations through the reviewed LLM Guide action flow.",
+        summary: `${verb} ${actions.length} filtered ${input.draft.resourceKind} resources.`,
+        confidence: 0.74,
+        assumptions: [
+          "The prompt requested all resources matching explicit filters.",
           "Dry-run must be reviewed before execution.",
         ],
         questions: [],

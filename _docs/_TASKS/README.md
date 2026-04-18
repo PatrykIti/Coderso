@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 922 tasks
+- **Done:** 923 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-187 | Assistant Filtered All Delete and Je Follow-Up | High | Small | Done: `usun je` and filtered-all published page deletes map to reviewed actions |
 | TASK-186 | Assistant Follow-Up All Candidates Delete | High | Small | Done: no-query multi-candidate follow-ups target exact prior candidates instead of first-label prefix |
 | TASK-185 | Assistant Read-Only Status Question Guard | High | Small | Done: live provider status/visibility questions stay read-only before model inference |
 | TASK-184-17 | Docs, Commands, and Closure | High | Medium | Done: live CMS command family, docs, changelog, and final validation synced |

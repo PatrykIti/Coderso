@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 691 | 2026-04-18 | TASK-187 assistant filtered all delete and je follow-up | Assistant/Core |
 | 690 | 2026-04-18 | TASK-186 assistant follow-up all candidates delete | Assistant/Core |
 | 689 | 2026-04-18 | TASK-185 assistant read-only status question guard | Assistant/Core |
 | 688 | 2026-04-18 | TASK-184 live CMS matrix closure | Assistant/QA |

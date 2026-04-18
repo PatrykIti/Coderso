@@ -164,7 +164,7 @@ test("buildCmsOperationDraftFromPlanningState preserves all prior candidates whe
     { nowMs: Date.parse("2026-04-17T10:02:00.000Z") }
   );
 
-  expect(buildCmsOperationDraftFromPlanningState("usun te strony", state)).toMatchObject({
+  expect(buildCmsOperationDraftFromPlanningState("usun je", state)).toMatchObject({
     operation: "delete",
     resourceKind: "page",
     targetQuery: {

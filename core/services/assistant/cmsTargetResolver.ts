@@ -174,6 +174,20 @@ const normalizeSlug = (value: string) => {
   return trimmed.startsWith("/") ? trimmed : null;
 };
 
+const inferFiltersFromPrompt = (normalizedPrompt: string) => {
+  const filters = [];
+  if (includesAny(normalizedPrompt, ["published", "opublikowane", "opublikowana", "opublikowany"])) {
+    filters.push({ field: "status" as const, operator: "eq" as const, value: "published" });
+  }
+  if (includesAny(normalizedPrompt, ["public", "publiczne", "publiczny"])) {
+    filters.push({ field: "visibility" as const, operator: "eq" as const, value: "public" });
+  }
+  if (includesAny(normalizedPrompt, ["internal", "wewnetrzne", "wewnętrzne"])) {
+    filters.push({ field: "visibility" as const, operator: "eq" as const, value: "internal" });
+  }
+  return filters;
+};
+
 export const buildCmsOperationDraftFromPrompt = (
   prompt: string,
   context?: AssistantActionContext | AssistantAdminContext
@@ -286,6 +300,9 @@ export const buildCmsOperationDraftFromPrompt = (
   return normalizeCmsOperationDraft({
     operation,
     resourceKind,
+    ...(inferFiltersFromPrompt(normalizedPrompt).length > 0
+      ? { filters: inferFiltersFromPrompt(normalizedPrompt) }
+      : {}),
     targetQuery: {
       ...(queryValue && isPrefixQuery ? { prefix: queryValue } : {}),
       ...(queryValue && !isPrefixQuery && !slug ? { exactName: queryValue } : {}),

@@ -480,6 +480,50 @@ test("planAssistantActions reuses all prior page candidates when follow-up has n
   ]);
 });
 
+test("planAssistantActions deletes all published pages through explicit filtered request", () => {
+  const plan = planAssistantActions({
+    prompt: "znajdz wszystkie opublikowane strony i je usun",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-17T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [
+          { id: "home", title: "home", slug: "/", status: "published" },
+          { id: "draft", title: "Draft", slug: "/draft", status: "draft" },
+          {
+            id: "catalog",
+            title: "Katalog Projektów Domów 33151341",
+            slug: "/projekty-domow-33151341",
+            status: "published",
+          },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
+  expect(plan.actions.map((action) => action.title)).toEqual([
+    "Delete home",
+    "Delete Katalog Projektów Domów 33151341",
+  ]);
+});
+
 test("planAssistantActions builds custom screen delete plan from resource catalog prefix", () => {
   const plan = planAssistantActions({
     prompt: "usun dwa ekrany w screens o prefixie 'House Projects' w tytule ekranu",

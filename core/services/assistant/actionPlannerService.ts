@@ -2993,7 +2993,8 @@ const buildGenericCmsExplicitCatalogMutationPlan = (
     draft.targetQuery?.exactName ||
       draft.targetQuery?.slug ||
       draft.targetQuery?.prefix ||
-      draft.targetQuery?.text
+      draft.targetQuery?.text ||
+      (draft.filters && draft.filters.length > 0)
   );
   if (
     draft.resourceKind !== "page" ||

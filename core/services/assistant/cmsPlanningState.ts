@@ -178,6 +178,7 @@ const hasFollowUpSignal = (normalizedPrompt: string) =>
     "dwa pierwsze",
     "dwie pierwsze",
     "te",
+    "je",
     "ten",
     "ta",
     "tych",
