@@ -3117,6 +3117,7 @@ const providerPlannerSystemPrompt = [
   "Use filters for active, published, visible, show-in-sidebar, opublikowane, or widoczne language.",
   "For create operations, put explicit item definitions in mutation.patch.items.",
   "For page create items use: title, slug, status, introTitle, introBody, optional ctaLabel.",
+  "For form create items use: name, slug, status, submissionAccess, fields.",
   "For multi-create operations, set constraints.expectedCount to the number of mutation.patch.items.",
   "Do not return executable actions.",
   "Do not invent arbitrary commands, SQL, filesystem paths, tools, or resource ids.",
@@ -3153,7 +3154,10 @@ const tryPlanProviderCmsOperationDraft = (
 ) => {
   const context = buildAssistantAdminContext(input.context);
   try {
-    const operationDraft = repairCmsOperationDraft(draft) ?? normalizeCmsOperationDraft(draft);
+    const operationDraft = applyPromptImpliedProviderDraftFilters(
+      input.prompt,
+      repairCmsOperationDraft(draft) ?? normalizeCmsOperationDraft(draft)
+    );
     const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft);
     if (!plan) return null;
     return normalizeAssistantActionPlan({
@@ -3171,6 +3175,41 @@ const tryPlanProviderCmsOperationDraft = (
   } catch {
     return null;
   }
+};
+
+const hasFilterField = (draft: CmsOperationDraft, field: string) =>
+  draft.filters?.some((filter) => filter.field === field) ?? false;
+
+const applyPromptImpliedProviderDraftFilters = (
+  prompt: string,
+  draft: CmsOperationDraft
+): CmsOperationDraft => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  if (
+    draft.resourceKind === "form" &&
+    (draft.operation === "inspect" || draft.operation === "find") &&
+    !hasFilterField(draft, "visibility")
+  ) {
+    if (includesAny(normalizedPrompt, ["public", "publiczne", "publiczny"])) {
+      return normalizeCmsOperationDraft({
+        ...draft,
+        filters: [
+          ...(draft.filters ?? []),
+          { field: "visibility", operator: "eq", value: "public" },
+        ],
+      });
+    }
+    if (includesAny(normalizedPrompt, ["internal", "wewnetrzne", "wewnętrzne"])) {
+      return normalizeCmsOperationDraft({
+        ...draft,
+        filters: [
+          ...(draft.filters ?? []),
+          { field: "visibility", operator: "eq", value: "internal" },
+        ],
+      });
+    }
+  }
+  return draft;
 };
 
 const buildProviderLocalRecoveryPlan = (
@@ -3199,6 +3238,18 @@ const buildProviderLocalRecoveryPlan = (
     ],
   });
 };
+
+const isProviderBroadDestructivePrompt = (prompt: string) => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  return (
+    includesAny(normalizedPrompt, ["wszystkie", "all", "kazdy", "każdy", "cale", "całe"]) &&
+    (isLikelyDeletePrompt(normalizedPrompt) ||
+      includesAny(normalizedPrompt, ["archive", "archiwizuj", "zarchiwizuj"]))
+  );
+};
+
+const hasDestructiveProviderActions = (plan: AssistantActionPlan) =>
+  plan.actions.some((action) => action.type.includes(".delete") || action.type.endsWith(".archive"));
 
 export const planAssistantActions = (
   input: AssistantActionPlanInput
@@ -3443,6 +3494,9 @@ export const planAssistantActionsWithProviderDraft = async (
       if (operationPlan.status === "needs_input" || operationPlan.actions.length === 0) {
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
         if (recoveredPlan) return recoveredPlan;
+      }
+      if (isProviderBroadDestructivePrompt(input.prompt) && hasDestructiveProviderActions(operationPlan)) {
+        return planAssistantActions(input);
       }
       return operationPlan;
     }

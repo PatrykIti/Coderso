@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Forms
 **Estimated Effort:** Medium
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -70,3 +70,18 @@ No child task files.
 - `_docs/SECURITY_SPEC.md` if live coverage documents form anti-abuse
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/formsLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover form create, public visibility search, metadata update, archive, broad delete safety, counted delete, state verification, and cleanup.
+- Provider draft post-processing now applies prompt-implied public/internal form visibility filters when the provider omits them.
+- Provider broad destructive guard now rejects provider-generated destructive actions for prompts such as `usun wszystkie formularze`.
+- Explicit form create prompt fields can recover to `form.upsert` when provider returns an actionless draft.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/cms-target-resolver.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/formsLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

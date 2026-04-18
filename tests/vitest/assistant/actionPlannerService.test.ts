@@ -2263,6 +2263,169 @@ test("planAssistantActionsWithProviderDraft recovers explicit page create fields
   });
 });
 
+test("planAssistantActionsWithProviderDraft recovers explicit form create fields when provider asks for target", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "find",
+      resourceKind: "form",
+      targetQuery: { text: "create form" },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt:
+      'Utworz formularz o nazwie "Live Form", slug "live-form", status "draft", submissionAccess "internal"',
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/forms",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.metadata?.planner).toBe("provider");
+  expect(plan.actions[0]).toMatchObject({
+    type: "form.upsert",
+    input: {
+      name: "Live Form",
+      slug: "live-form",
+      status: "draft",
+      submissionAccess: "internal",
+      fields: [],
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft applies prompt-implied public form visibility filter", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "find",
+      resourceKind: "form",
+      targetQuery: { text: "Lead" },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Znajdz publiczne formularze ktore maja w nazwie Lead",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/forms",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-public",
+            name: "Lead Public",
+            slug: "lead-public",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+          {
+            id: "form-internal",
+            name: "Lead Internal",
+            slug: "lead-internal",
+            status: "draft",
+            submissionAccess: "internal",
+            fields: [],
+          },
+        ],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual([
+    "Lead Public",
+  ]);
+});
+
+test("planAssistantActionsWithProviderDraft rejects provider destructive actions for broad all prompts", async () => {
+  const provider = createFakeProvider(
+    JSON.stringify({
+      operation: "delete",
+      resourceKind: "form",
+      targetQuery: { exactName: "Lead Public" },
+      constraints: { destructive: true, requiresConfirmation: true },
+    })
+  );
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "usun wszystkie formularze",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/coderso/forms",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-public",
+            name: "Lead Public",
+            slug: "lead-public",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
   const provider: AssistantProvider = {
     id: "fake",

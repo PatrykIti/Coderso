@@ -236,6 +236,51 @@ export const buildCmsOperationDraftFromPrompt = (
     }
   }
 
+  if (operation === "create" && resourceKind === "form") {
+    const name = extractNamedQuotedValue(prompt, ["name", "nazwa", "nazwie", "formularz"]) ?? firstQuoted;
+    const formSlug = extractNamedQuotedValue(prompt, ["slug", "url"]);
+    const statusValue = extractNamedQuotedValue(prompt, ["status"]);
+    const submissionAccessValue = extractNamedQuotedValue(prompt, [
+      "submissionAccess",
+      "submission access",
+      "access",
+      "dostep",
+      "dostęp",
+    ]);
+    if (name && formSlug) {
+      return normalizeCmsOperationDraft({
+        operation,
+        resourceKind,
+        mutation: {
+          patch: {
+            items: [
+              {
+                name,
+                slug: formSlug,
+                status:
+                  statusValue === "published" || statusValue === "opublikowany"
+                    ? "published"
+                    : statusValue === "archived" || statusValue === "zarchiwizowany"
+                      ? "archived"
+                      : "draft",
+                submissionAccess:
+                  submissionAccessValue === "public" || submissionAccessValue === "publiczny"
+                    ? "public"
+                    : "internal",
+                fields: [],
+              },
+            ],
+          },
+        },
+        constraints: {
+          expectedCount: 1,
+          destructive: false,
+          requiresConfirmation: false,
+        },
+      });
+    }
+  }
+
   return normalizeCmsOperationDraft({
     operation,
     resourceKind,
@@ -626,8 +671,15 @@ const matchesFilter = (candidate: CmsResolvedTargetCandidate, draft: CmsOperatio
         const expectsPublic =
           includesFilterValue(filter.value, "public") ||
           includesFilterValue(filter.value, "publiczny");
+        const expectsInternal =
+          includesFilterValue(filter.value, "internal") ||
+          includesFilterValue(filter.value, "wewnetrzny") ||
+          includesFilterValue(filter.value, "wewnętrzny") ||
+          includesFilterValue(filter.value, "wewnetrzne") ||
+          includesFilterValue(filter.value, "wewnętrzne");
         const submissionAccess = candidate.details?.submissionAccess;
         if (expectsPublic && submissionAccess !== "public") return false;
+        if (expectsInternal && submissionAccess !== "internal") return false;
         continue;
       }
     }
