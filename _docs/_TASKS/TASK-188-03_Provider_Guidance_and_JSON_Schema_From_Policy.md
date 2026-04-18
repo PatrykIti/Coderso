@@ -24,6 +24,35 @@ No child task files.
 3. Generated guidance includes only supported/gated policy surfaces.
 4. Secret-bearing surfaces are described as redacted/gated.
 
+## Files to Change
+
+- `core/services/assistant/operationPolicy/providerGuidance.ts` (new)
+- `core/services/assistant/cmsOperationDraftSchema.ts`
+- `core/services/assistant/actionPlannerService.ts`
+- `tests/vitest/assistant/operation-policy-provider-guidance.test.ts`
+- `tests/vitest/assistant/cms-operation-draft-schema.test.ts`
+
+## Pseudocode
+
+```ts
+export function buildProviderPolicyGuidance(policy: AssistantOperationPolicy) {
+  return {
+    resources: Object.values(policy.resources).map(toProviderResourceGuidance),
+    safety: buildProviderSafetyGuidance(policy),
+    createContracts: buildCreateItemGuidance(policy),
+  };
+}
+
+const providerPlannerSystemPrompt = [
+  baseInstructions,
+  JSON.stringify(buildProviderPolicyGuidance(assistantOperationPolicy)),
+].join("\n");
+```
+
+## Replacement Notes
+
+Remove hard-coded provider prompt lines for filters, create item fields, and destructive safety after generated guidance is green.
+
 ## Security Contract
 
 - Visibility: provider prompt package only.

@@ -43,6 +43,51 @@ No child task files.
 - Settings
 - planned/disabled Coderso modules
 
+## New Files
+
+- `core/services/assistant/operationPolicy/assistantOperationPolicy.ts`
+- `core/services/assistant/operationPolicy/cmsResourcePolicies.ts`
+- `core/services/assistant/operationPolicy/adminSurfacePolicies.ts`
+- `tests/vitest/assistant/operation-policy-coverage.test.ts`
+
+## Migration Map
+
+- Move from `cmsResourceRegistry.ts`:
+  - aliases,
+  - supported operations,
+  - read permissions.
+- Move from `cmsTargetResolver.ts`:
+  - `published/opublikowane` filters,
+  - `publiczny/internal` filters,
+  - custom screen `published -> active`,
+  - surface-only read terms.
+- Move from `actionPlannerService.ts`:
+  - post/media/settings gated-surface rules,
+  - provider local-first route hints,
+  - layout/limit field-intent repairs.
+- Move from `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`:
+  - route coverage state and task owner.
+
+## Pseudocode
+
+```ts
+export const assistantOperationPolicy = defineAssistantOperationPolicy({
+  schemaVersion: 1,
+  resources: {
+    page: pagePolicy,
+    form: formPolicy,
+    "custom-screen": customScreenPolicy,
+    "settings-surface": settingsPolicy,
+  },
+  followUp: commonFollowUpPolicy,
+  safetyDefaults: defaultSafetyPolicy,
+});
+```
+
+## Replacement Notes
+
+Do not delete `cmsResourceRegistry.ts` yet. Add compatibility tests proving policy data equals current registry behavior before switching consumers.
+
 ## Acceptance Criteria
 
 1. All routes in `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` have policy entries.

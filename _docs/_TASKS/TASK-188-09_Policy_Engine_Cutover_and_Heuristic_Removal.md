@@ -24,6 +24,48 @@ No child task files.
 3. Provider prompt, resolver, mapper, and coverage docs use policy as source of truth.
 4. No behavior regression for TASK-184/TASK-185/TASK-186/TASK-187 cases.
 
+## Files to Remove or Reduce
+
+Candidates for deletion or thin re-export after cutover:
+
+- `core/services/assistant/cmsResourceRegistry.ts`
+  - Delete if all consumers use policy lookup.
+  - Or keep as compatibility re-export from `operationPolicy`.
+
+Functions/lists to remove or delegate:
+
+- `cmsTargetResolver.ts`
+  - signal arrays,
+  - filter-specific branches,
+  - surface-only hard-coded word lists.
+- `cmsOperationActionMapper.ts`
+  - hard-coded action builder branching where policy owns mapping.
+- `cmsPlanningState.ts`
+  - pronoun/count lists.
+- `actionPlannerService.ts`
+  - provider preferred local guards that policy can express,
+  - post/media/settings hard-coded gated checks,
+  - listing layout/limit post-validation guards.
+
+## Cutover Pseudocode
+
+```ts
+const policy = assistantOperationPolicy;
+const draft = normalizeDraftWithPolicy(rawDraft, policy);
+const targetResolution = resolveTargetsWithPolicy(draft, context, policy);
+const safety = evaluateSafetyWithPolicy(draft, targetResolution, policy);
+if (!safety.ok) return buildNeedsInputFromPolicy(safety);
+const actions = mapActionsWithPolicy(draft, targetResolution, policy);
+return normalizeAssistantActionPlan({ ...basePlan, actions });
+```
+
+## Migration Guardrails
+
+- Keep old and new paths side-by-side behind a test-only flag if needed.
+- Remove test flag before closing.
+- Do not change route contracts.
+- Do not change action schemas unless a leaf explicitly requires it.
+
 ## Security Contract
 
 - Visibility: internal assistant core.

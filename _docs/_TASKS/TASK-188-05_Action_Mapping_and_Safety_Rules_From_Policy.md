@@ -24,6 +24,40 @@ No child task files.
 3. Provider post-validation guards are represented as policy safety checks.
 4. Existing strict action schemas remain the final action validator.
 
+## Files to Change
+
+- `core/services/assistant/operationPolicy/actionMappingPolicy.ts` (new)
+- `core/services/assistant/operationPolicy/safetyPolicy.ts` (new)
+- `core/services/assistant/cmsOperationActionMapper.ts`
+- `core/services/assistant/actionPlannerService.ts`
+- `tests/vitest/assistant/cms-operation-action-mapper.test.ts`
+- `tests/vitest/assistant/operation-policy-safety.test.ts`
+
+## Pseudocode
+
+```ts
+export function evaluateSafety({ prompt, operation, targets, resourcePolicy }) {
+  if (operation.destructive && !resourcePolicy.destructive) return deny("unsupported_destructive");
+  if (isAllUnfiltered(prompt) && !resourcePolicy.destructive.allowAllUnfiltered) return deny("broad_destructive");
+  if (expectedCount && expectedCount !== targets.length) return deny("count_mismatch");
+  if (targets.length > 1 && !expectedCount && !isFilteredAll(prompt)) return deny("ambiguous");
+  return allow();
+}
+
+export function mapPolicyAction({ operation, target, field, resourcePolicy }) {
+  const action = resourcePolicy.actions[operation.type];
+  return action.builder({ target, field, value: operation.value });
+}
+```
+
+## Remove or Delegate
+
+- `buildActionForExactTarget` branching where policy can own mapping,
+- duplicate multi-action branches,
+- `isProviderBroadDestructivePrompt`,
+- `hasProviderPromptImpliedFieldMismatch`,
+- other provider post-validation guards expressible in policy.
+
 ## Security Contract
 
 - Visibility: internal action planning.

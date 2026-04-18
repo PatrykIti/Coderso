@@ -24,6 +24,40 @@ No child task files.
 3. `publiczny`, `opublikowane`, `widoczne`, layout/limit and similar aliases are policy entries, not one-off code.
 4. Surface-only fallback is policy-defined and not applied to real search terms.
 
+## Files to Change
+
+- `core/services/assistant/operationPolicy/resolverPolicy.ts` (new)
+- `core/services/assistant/cmsTargetResolver.ts`
+- `tests/vitest/assistant/cms-target-resolver.test.ts`
+- `tests/vitest/assistant/operation-policy-resolver.test.ts`
+
+## Pseudocode
+
+```ts
+export function normalizeTargetQueryWithPolicy({ prompt, draft, resourcePolicy }) {
+  return {
+    query: normalizeQuery(draft.targetQuery),
+    filters: normalizeFiltersFromDraftAndPrompt(prompt, draft.filters, resourcePolicy),
+  };
+}
+
+export function matchesCandidateWithPolicy(candidate, query, resourcePolicy) {
+  return matchIdNameSlug(candidate, query, resourcePolicy.matching);
+}
+
+export function matchesFiltersWithPolicy(candidate, filters, resourcePolicy) {
+  return filters.every((filter) => applyFilterPolicy(candidate, filter, resourcePolicy));
+}
+```
+
+## Remove or Delegate
+
+- signal arrays in `cmsTargetResolver.ts`,
+- `countWords`,
+- resource-specific filter branches,
+- surface-only word lists,
+- OR-term handling if policy owns matching config.
+
 ## Security Contract
 
 - Visibility: internal resolver.

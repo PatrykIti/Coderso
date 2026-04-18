@@ -34,6 +34,44 @@ No child task files.
 3. Recommend adopt/defer/reject.
 4. If adopted, create follow-up implementation leaves with package changes and tests.
 
+## Files to Inspect or Prototype
+
+- `package.json`
+- `core/services/assistant/actionPlannerService.ts`
+- `core/server/routes/assistantRoutes.ts`
+- optional prototype:
+  - `core/services/assistant/operationGraph/*`
+  - `tests/vitest/assistant/operation-graph.test.ts`
+
+## Evaluation Pseudocode
+
+```ts
+const graph = new StateGraph(AssistantOperationState)
+  .addNode("draft", draftNode)
+  .addNode("policyNormalize", policyNormalizeNode)
+  .addNode("resolveTargets", resolveTargetsNode)
+  .addNode("safety", safetyNode)
+  .addNode("mapActions", mapActionsNode)
+  .addConditionalEdges("safety", routeSafetyResult)
+  .compile();
+```
+
+## Decision Output
+
+```text
+Decision: adopt | defer | reject
+Reason:
+- ...
+Dependency impact:
+- ...
+Security impact:
+- ...
+Migration plan if adopted:
+- ...
+```
+
+Do not add LangGraph to production dependencies in this evaluation leaf unless the ADR recommends adoption and a separate implementation leaf is created.
+
 ## Security Contract
 
 - Visibility: architecture evaluation only.

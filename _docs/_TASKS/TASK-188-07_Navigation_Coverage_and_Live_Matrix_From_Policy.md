@@ -24,6 +24,31 @@ No child task files.
 3. Live matrix command coverage is tied to policy task ids.
 4. Planned modules cannot be marked executable.
 
+## Files to Change
+
+- `core/services/assistant/operationPolicy/coveragePolicy.ts` (new)
+- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
+- `tests/vitest/assistant/live-coverage-matrix.test.ts`
+- `tests/vitest/assistant/operation-policy-coverage.test.ts`
+
+## Pseudocode
+
+```ts
+export function buildLiveCoverageRows(policy) {
+  return Object.values(policy.resources)
+    .flatMap((resource) => resource.coverage.routes)
+    .map(toMarkdownRow);
+}
+
+export function assertNavCoverage(policy, navRoutes) {
+  for (const route of navRoutes) assert(policyHasRoute(route));
+}
+```
+
+## Replacement Notes
+
+The markdown file may stay checked in, but tests must prove it matches policy output.
+
 ## Security Contract
 
 - Visibility: docs/test coverage.

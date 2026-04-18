@@ -24,6 +24,37 @@ No child task files.
 3. Empty prior query with multiple candidates targets exact prior candidates.
 4. Stale/expired planning state stays rejected.
 
+## Files to Change
+
+- `core/services/assistant/operationPolicy/followUpPolicy.ts` (new)
+- `core/services/assistant/cmsPlanningState.ts`
+- `tests/vitest/assistant/cms-planning-state.test.ts`
+- `tests/vitest/assistant/actionPlannerService.test.ts`
+
+## Pseudocode
+
+```ts
+export function buildDraftFromFollowUp({ prompt, state, policy }) {
+  const followUp = resolveFollowUpIntent(prompt, policy.followUp);
+  if (!followUp) return null;
+  const selected = selectCandidates(state.candidates, followUp.selection);
+  return buildDraftForSelectedCandidates({
+    operation: followUp.operation,
+    resourceKind: state.resourceKind,
+    selected,
+    query: state.query,
+  });
+}
+```
+
+## Remove or Delegate
+
+- `countWords`,
+- `hasFollowUpSignal`,
+- local pronoun list,
+- local operation signal list,
+- first-label prefix fallback logic.
+
 ## Security Contract
 
 - Visibility: internal assistant planning state.

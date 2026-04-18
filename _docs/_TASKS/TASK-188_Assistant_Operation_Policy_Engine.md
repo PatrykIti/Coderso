@@ -79,6 +79,85 @@ Non-goals:
 - no autonomous broad destructive execution,
 - no external framework owning domain permissions or target resolution.
 
+## Replacement Plan
+
+This task must replace the current scattered policy-like logic, not add another parallel layer.
+
+Current modules that will be reduced to orchestration/adapters:
+
+- `core/services/assistant/cmsResourceRegistry.ts`
+  - Replace hard-coded resource aliases and supported operations with policy lookups.
+  - Keep only a compatibility export during migration, then remove or turn into a thin re-export from policy.
+- `core/services/assistant/cmsTargetResolver.ts`
+  - Remove local alias/filter/surface-only word lists.
+  - Keep catalog traversal and candidate matching mechanics, but drive matching/filter rules from policy.
+- `core/services/assistant/cmsOperationActionMapper.ts`
+  - Remove hard-coded resource/field/action mapping branches where policy can express them.
+  - Keep typed action builders only as small adapter functions referenced by policy.
+- `core/services/assistant/cmsPlanningState.ts`
+  - Remove hard-coded follow-up pronouns/count words.
+  - Drive follow-up selection and count words from policy.
+- `core/services/assistant/actionPlannerService.ts`
+  - Remove provider post-validation guard lists and read-only/local-first one-offs.
+  - Keep high-level orchestration only: classify -> provider/local draft -> policy normalize -> resolve -> map.
+
+New policy module layout:
+
+```text
+core/services/assistant/operationPolicy/
+  policyTypes.ts
+  policySchema.ts
+  assistantOperationPolicy.ts
+  policyLookup.ts
+  providerGuidance.ts
+  resolverPolicy.ts
+  actionMappingPolicy.ts
+  safetyPolicy.ts
+  followUpPolicy.ts
+  coveragePolicy.ts
+```
+
+Policy resource example:
+
+```ts
+page: {
+  kind: "page",
+  aliases: ["page", "pages", "strona", "strony"],
+  operations: ["inspect", "find", "create", "update", "delete"],
+  filters: {
+    status: {
+      values: {
+        published: ["published", "opublikowane", "opublikowana"],
+        draft: ["draft", "szkic"],
+      },
+    },
+  },
+  fields: {
+    title: {
+      aliases: ["title", "tytuł", "tytul", "nazwa"],
+      action: { type: "page.update", patchPath: ["title"] },
+    },
+  },
+  destructive: {
+    requireReview: true,
+    allowAllWhenFiltered: true,
+    allowAllUnfiltered: false,
+    requireExpectedCountForPartialMatch: true,
+  },
+}
+```
+
+## Cutover Rules
+
+1. Add policy modules and tests without changing behavior.
+2. Migrate policy data for current resources.
+3. Switch provider guidance generation to policy while keeping old tests green.
+4. Switch resolver/filtering to policy.
+5. Switch action mapping/safety to policy.
+6. Switch planning state/follow-up to policy.
+7. Remove duplicated hard-coded lists and one-off guards.
+8. Run full live assistant matrix before closing.
+
 ## External Package Direction
 
 Evaluate `@langchain/langgraph` / LangGraph.js only for workflow orchestration:

@@ -41,6 +41,52 @@ The policy must describe each resource:
 - secret policy,
 - live coverage state.
 
+## New File Contracts
+
+`policyTypes.ts`:
+
+```ts
+export type AssistantOperationPolicy = {
+  schemaVersion: 1;
+  resources: Record<string, ResourcePolicy>;
+  followUp: FollowUpPolicy;
+  safetyDefaults: SafetyDefaults;
+};
+export type ResourcePolicy = {
+  kind: string;
+  label: string;
+  aliases: string[];
+  routes: string[];
+  operations: OperationPolicy[];
+  filters: Record<string, FilterPolicy>;
+  fields: Record<string, FieldPolicy>;
+  actions: Record<string, ActionMappingPolicy>;
+  destructive?: DestructivePolicy;
+  secrets?: SecretSurfacePolicy;
+  coverage: CoveragePolicy;
+};
+```
+
+`policySchema.ts`:
+
+```ts
+export function assertAssistantOperationPolicy(value: unknown): asserts value is AssistantOperationPolicy;
+export function normalizeAssistantOperationPolicy(value: unknown): AssistantOperationPolicy;
+```
+
+`policyLookup.ts`:
+
+```ts
+export function getResourcePolicy(kind: string): ResourcePolicy | null;
+export function resolveResourcePolicyFromPrompt(prompt: string): ResourcePolicy | null;
+export function getFilterPolicy(resource: ResourcePolicy, field: string): FilterPolicy | null;
+export function getFieldPolicy(resource: ResourcePolicy, fieldIntent: string): FieldPolicy | null;
+```
+
+## Replacement Notes
+
+No existing files are removed in this leaf. Existing consumers continue to use the old modules until later cutover leaves.
+
 ## Acceptance Criteria
 
 1. Policy schema is strict and typed.
