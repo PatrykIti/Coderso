@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Settings
 **Estimated Effort:** Large
 **Dependencies:** TASK-184-01
-**Status:** To Do
+**Status:** Done (2026-04-18)
 
 ---
 
@@ -103,3 +103,15 @@ No child task files.
 - `_docs/SETTINGS.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-18)
+
+- Added `tests/integration/assistant-live/settingsSecurityLiveMatrix.test.ts`.
+- OpenAI/OpenRouter live cases cover General, Assistant provider keys, Site URL changes, Security protections, API Keys, Webhooks, Email SMTP, Storage secrets, and Integrations credential edit prompts.
+- The suite verifies settings/security prompts remain non-executable without strict typed contracts and do not expose concrete token/key/session markers.
+
+## Validation
+
+- `set -a && source .env && set +a && bun test tests/integration/assistant-live/settingsSecurityLiveMatrix.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

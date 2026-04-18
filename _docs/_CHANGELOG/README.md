@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 686 | 2026-04-18 | TASK-184-15 settings live matrix | Assistant/QA |
 | 685 | 2026-04-18 | TASK-184-14 admin security live matrix | Assistant/QA |
 | 684 | 2026-04-18 | TASK-184-13 tools safety live matrix | Assistant/QA |
 | 683 | 2026-04-18 | TASK-184-12 store themes dashboard analytics live matrix | Assistant/QA |
