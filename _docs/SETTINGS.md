@@ -55,6 +55,19 @@ Publiczny payload z API `/settings/security` zwraca:
 - `botProtection.secretKey.configured` (maskowanie sekretu)
 - `passwordPepperConfigured` (ENV `AUTH_PASSWORD_PEPPER`)
 
+## Assistant operation policy for settings surfaces
+
+`core/services/assistant/operationPolicy/adminSurfacePolicies.ts` maps Settings
+root and subpages into the assistant operation policy:
+
+- Settings mutations are `live-gated` / `mode="gated"` until a dedicated typed
+  action contract exists for that setting family.
+- Secret-bearing surfaces (`assistant`, `security`, `api-keys`, `webhooks`,
+  `email`, `storage`, `integrations`) set `secrets.redacted=true` and
+  `providerAllowed=false`.
+- The policy mirrors the admin route/RBAC split: `settings:read` for inspection
+  and `settings:write` for gated configure/update attempts.
+
 ## Assistant user settings (`user_settings`)
 
 Legacy compatibility:

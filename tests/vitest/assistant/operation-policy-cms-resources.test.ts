@@ -9,18 +9,40 @@ import {
   resolveResourcePolicyFromPrompt,
 } from "../../../core/services/assistant/operationPolicy/policyLookup";
 
-test("assistantOperationPolicy includes pages forms and listings resources", () => {
+test("assistantOperationPolicy includes migrated CMS and admin resources", () => {
   const policy = normalizeAssistantOperationPolicy(assistantOperationPolicy);
 
   expect(Object.keys(policy.resources).sort()).toEqual([
+    "access-log",
+    "admin-search",
+    "analytics",
+    "audit-log",
+    "backup",
     "content-type",
     "custom-screen",
+    "dashboard",
     "entry",
     "form",
+    "import-export",
     "listing-query",
     "listing-template",
     "media",
+    "menu-item",
     "page",
+    "redirect",
+    "role",
+    "seo-document",
+    "settings-api-keys",
+    "settings-assistant",
+    "settings-email",
+    "settings-general",
+    "settings-integrations",
+    "settings-root",
+    "settings-security",
+    "settings-site",
+    "settings-storage",
+    "settings-webhooks",
+    "user",
     "widget-template",
   ]);
 });

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin Surface Policy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01, TASK-188-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -72,3 +72,17 @@ settingsSurfacePolicy({
 - `_docs/SECURITY_SPEC.md`
 - `_docs/SETTINGS.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `adminSurfacePolicies.ts` with policy entries for Dashboard, Menus, Search, SEO, Analytics, Backups, Import/Export, Redirects, Users, Roles, Audit Logs, Access Logs, and Settings subpages.
+- Marked sensitive settings/admin/tool mutations as gated and secret-bearing surfaces as redacted with provider access disabled.
+- Preserved executable Menus and SEO policy entries because TASK-188-02 still requires all current live matrix routes to be represented.
+- Extended the assistant policy aggregate and Vitest coverage for route-to-matrix mapping, settings sidebar coverage, gated actions, redacted surfaces, and Menus/SEO typed actions.
+- No runtime planner/resolver behavior was changed in this leaf.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/operation-policy-schema.test.ts tests/vitest/assistant/operation-policy-lookup.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
