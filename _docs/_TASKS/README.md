@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 5 tasks
 - **Done:** 938 tasks
 
@@ -38,6 +38,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Remove provider action-array fallback, fix exact policy identity, and collapse duplicate planner heuristics |
+| TASK-189-01 | Remove Provider Action Array Fallback | High | Medium | Provider output must be operation-draft-only and cannot supply executable actions |
+| TASK-189-02 | Fix Policy Resource Identity and Settings Collisions | High | Large | Preserve exact policy keys for shared-kind settings/admin surfaces |
+| TASK-189-03 | Remove Parallel Planner Heuristics | High | Large | Collapse CMS/admin planning into policy draft -> resolver -> safety -> mapper |
+| TASK-189-04 | Docs, Tests, and Closure | High | Medium | Final docs, changelog, board, targeted suites, and live matrix closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
