@@ -124,7 +124,7 @@ test("buildCmsOperationDraftFromPlanningState resolves Polish follow-up selectio
     operation: "delete",
     resourceKind: "custom-screen",
     targetQuery: {
-      prefix: "House Projects",
+      text: "House Projects OR House Projects Archive",
     },
     constraints: {
       expectedCount: 2,

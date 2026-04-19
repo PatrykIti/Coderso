@@ -339,16 +339,18 @@ Zamiast tego:
 - Resource-operation review UI distinguishes create/update/delete/archive/detach/restore/blocked actions, shows destructive and blocked preview states before execute, renders partial execution counts, and redacts secret-like dynamic text from preview/result payloads.
 - `core/services/assistant/adminContextCatalogNormalizer.ts` i `adminContextCatalogs.ts`
   buduja bounded/redacted resource catalog snapshot dla `LLM Guide` bez dodawania osobnego flow.
-- `core/services/assistant/cmsOperationDraftSchema.ts`, `cmsResourceRegistry.ts`, and
-  `cmsTargetResolver.ts` add the generic CMS operation foundation inside the same
-  planner flow.
+- `core/services/assistant/cmsOperationDraftSchema.ts`, `assistantOperationPolicy`,
+  and `cmsTargetResolver.ts` add the generic CMS operation foundation inside the
+  same planner flow.
 - CMS operation drafts support `surfaceHint` plus allowlisted filters so UI
   locations such as `Screens` or `Engine` do not become resource target names.
 - `core/services/assistant/cmsOperationActionMapper.ts` maps resolved CMS operation
   drafts to existing strict typed actions. It does not add executor paths; dry-run
   and execute still dispatch through `actionExecutorService.ts` and domain services.
 - `core/services/assistant/cmsPlanningState.ts` stores bounded advisory candidate
-  memory for follow-up prompts. The browser can pass this state back to
+  memory for follow-up prompts. Follow-up pronouns, count words, and candidate
+  selection are resolved through `operationPolicy/followUpPolicy.ts` from
+  `assistantOperationPolicy`. The browser can pass this state back to
   `/assistant/actions/plan`, but the server normalizes it and re-resolves targets
   through the current resource catalog before any mutation plan is produced.
 - Resource catalog snapshots now include bounded page summaries when the plan route

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 701 | 2026-04-19 | TASK-188-06 follow up policy | Assistant/Core |
 | 700 | 2026-04-19 | TASK-188-05 action mapping safety policy | Assistant/Core |
 | 699 | 2026-04-19 | TASK-188-04 resolver filtering from policy | Assistant/Core |
 | 698 | 2026-04-19 | TASK-188-03 provider guidance from policy | Assistant/Provider |

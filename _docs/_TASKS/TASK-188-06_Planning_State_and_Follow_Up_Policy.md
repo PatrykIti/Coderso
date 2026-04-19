@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Conversation State
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01, TASK-188-04, TASK-188-05
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -76,3 +76,16 @@ export function buildDraftFromFollowUp({ prompt, state, policy }) {
 - `_docs/ARCHITECTURE.md`
 - `_docs/SECURITY_SPEC.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `operationPolicy/followUpPolicy.ts` for policy-driven follow-up intent, pronoun/count-word resolution, candidate selection, and draft creation.
+- Updated `cmsPlanningState.ts` to delegate follow-up operation/count/pronoun logic to policy and to use exact prior candidate labels for multi-candidate follow-ups.
+- Extended `assistantOperationPolicy.followUp.pronouns` with missing first/all/tamten variants used by follow-up selection.
+- Added Vitest coverage for follow-up policy and updated planning-state expectations away from legacy prefix fallback.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-planning-state.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
