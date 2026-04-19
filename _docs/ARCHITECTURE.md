@@ -342,6 +342,9 @@ Zamiast tego:
 - `core/services/assistant/cmsOperationDraftSchema.ts`, `assistantOperationPolicy`,
   and `cmsTargetResolver.ts` add the generic CMS operation foundation inside the
   same planner flow.
+- Legacy `cmsResourceRegistry.ts` has been removed; resource aliases, operations,
+  filters, field intents, follow-up counts, safety rules, and coverage metadata
+  are read from `assistantOperationPolicy`.
 - CMS operation drafts support `surfaceHint` plus allowlisted filters so UI
   locations such as `Screens` or `Engine` do not become resource target names.
 - `core/services/assistant/cmsOperationActionMapper.ts` maps resolved CMS operation

@@ -2700,6 +2700,8 @@ and count words are resolved through `assistantOperationPolicy` via
 names. Filters are limited to fields declared by the resource policy; unsupported
 filters fail closed instead of widening candidate sets. Policy entries own aliases
 such as `opublikowane`, `publiczny`, `widoczne`, `layout`, and `limit`.
+The legacy CMS resource registry has been removed; policy lookup is the source of
+truth for generic CMS planning.
 When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
 For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.

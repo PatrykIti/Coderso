@@ -51,3 +51,7 @@ test("follow-up policy builds exact prior-candidate target queries", () => {
 test("follow-up policy rejects prompts without policy follow-up signal", () => {
   expect(resolveFollowUpIntent("usun strone Alpha Page", state)).toBeNull();
 });
+
+test("follow-up policy ignores pronouns when prompt names another resource family", () => {
+  expect(resolveFollowUpIntent("usun wszystkie formularze", state)).toBeNull();
+});

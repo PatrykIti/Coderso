@@ -5,7 +5,11 @@ import type {
 import type { CmsOperation, CmsOperationDraft } from "../cmsOperationDraftSchema";
 import { assistantOperationPolicy } from "./assistantOperationPolicy";
 import type { AssistantFollowUpPolicy, AssistantOperationPolicy } from "./policyTypes";
-import { inferOperationWithPolicy, normalizeResolverText } from "./resolverPolicy";
+import {
+  inferOperationWithPolicy,
+  normalizeResolverText,
+  resolveResourceKindFromPromptWithPolicy,
+} from "./resolverPolicy";
 
 export type FollowUpIntent = {
   operation: CmsOperation;
@@ -44,6 +48,8 @@ export const resolveFollowUpIntent = (
   if (!state?.resourceKind || state.candidates.length === 0) return null;
   const normalizedPrompt = normalizeResolverText(prompt);
   if (!hasPolicyPronoun(normalizedPrompt, policy.followUp)) return null;
+  const explicitResourceKind = resolveResourceKindFromPromptWithPolicy(prompt, policy);
+  if (explicitResourceKind && explicitResourceKind !== state.resourceKind) return null;
   const operation = inferOperationWithPolicy(normalizedPrompt, policy);
   if (!operation) return null;
   const requestedCount = resolveCandidateCount(normalizedPrompt, policy.followUp);

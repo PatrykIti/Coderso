@@ -127,3 +127,29 @@ export const canMapFilteredAllWithPolicy = (
 };
 
 export const getPolicyFieldForDraft = findPolicyFieldForDraft;
+
+const dangerousProviderActionPattern =
+  /(database|sql|filesystem|file[-_]?system|shell|exec|process|system|drop|truncate|cookie|session|csrf|secret|password|api[-_]?key)/i;
+
+const providerActionTypes = (draft: unknown) => {
+  if (!draft || typeof draft !== "object" || Array.isArray(draft)) return null;
+  const actions = (draft as { actions?: unknown }).actions;
+  if (!Array.isArray(actions)) return null;
+  return actions.map((action) =>
+    action && typeof action === "object" && !Array.isArray(action)
+      ? (action as { type?: unknown }).type
+      : null
+  );
+};
+
+export const canRecoverUnsupportedProviderActionDraftWithPolicy = (
+  draft: unknown,
+  _policy: AssistantOperationPolicy = assistantOperationPolicy
+) => {
+  const actionTypes = providerActionTypes(draft);
+  if (actionTypes === null || actionTypes.length === 0) return true;
+  return actionTypes.every((type) => {
+    if (typeof type !== "string" || !type.trim()) return false;
+    return !dangerousProviderActionPattern.test(type);
+  });
+};

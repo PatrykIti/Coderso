@@ -135,7 +135,7 @@ Do not delete `cmsResourceRegistry.ts` yet. Add compatibility tests proving poli
   - `TASK-188-02-04` Coderso planned/gated modules and remaining gated routes
 - `assistantOperationPolicy` now aggregates current CMS, admin, settings, tool, Coderso, planned, gated, read-only, and executable policy entries.
 - Added Vitest coverage for policy schema/lookup, resource actions/fields/filters, route-to-live-matrix mapping, settings sidebar coverage, Coderso module registry coverage, planned module state, gated mutation modes, and secret redaction metadata.
-- Kept compatibility note intact: runtime planner/resolver consumers are not cut over yet, and `cmsResourceRegistry.ts` remains in place for later TASK-188 phases.
+- Compatibility note closed by TASK-188-09: runtime planner/resolver consumers are now cut over and `cmsResourceRegistry.ts` has been removed.
 
 ## Validation (2026-04-19)
 

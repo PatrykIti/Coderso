@@ -19,6 +19,7 @@ test("resolver policy resolves resource operation and count aliases from operati
   expect(resolveResourceKindFromPromptWithPolicy("usun dwie strony")).toBe("page");
   expect(resolveResourceKindFromPromptWithPolicy("pokaż API Keys")).toBe("settings-surface");
   expect(inferOperationWithPolicy(normalizeResolverText("usun dwie strony"))).toBe("delete");
+  expect(inferOperationWithPolicy(normalizeResolverText("czy istnieje model Products"))).toBe("inspect");
   expect(inferRequestedCountWithPolicy(normalizeResolverText("usun dwie strony"))).toBe(2);
 });
 

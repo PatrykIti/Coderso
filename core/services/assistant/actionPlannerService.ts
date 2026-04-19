@@ -31,6 +31,7 @@ import {
   hasPromptImpliedFieldMismatchWithPolicy,
   isBroadDestructivePromptWithPolicy,
   extractExpectedCountWithPolicy,
+  canRecoverUnsupportedProviderActionDraftWithPolicy,
 } from "./operationPolicy/safetyPolicy";
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
@@ -246,28 +247,6 @@ const listingTemplateDeleteKeywords = [
   "szablon listingowy",
 ];
 
-const countWords = new Map<string, number>([
-  ["jeden", 1],
-  ["jedna", 1],
-  ["one", 1],
-  ["dwa", 2],
-  ["dwie", 2],
-  ["two", 2],
-  ["trzy", 3],
-  ["three", 3],
-]);
-
-const extractRequestedDeleteCount = (normalizedPrompt: string) => {
-  const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
-  if (digitMatch?.[1]) return Number(digitMatch[1]);
-  for (const [word, count] of countWords) {
-    if (normalizedPrompt.includes(` ${word} `) || normalizedPrompt.startsWith(`${word} `)) {
-      return count;
-    }
-  }
-  return null;
-};
-
 const extractQuotedPrefix = (prompt: string) => {
   const match = prompt.match(/['"“”]([^'"“”]+)['"“”]/);
   return match?.[1]?.trim() || null;
@@ -355,7 +334,7 @@ const buildCustomScreenDeletePlan = (
   const matches = sortScreensByName(screens).filter((screen) =>
     normalizeAssistantPlannerPrompt(screen.name).startsWith(normalizedPrefix)
   );
-  const requestedCount = extractRequestedDeleteCount(` ${normalizedPrompt} `);
+  const requestedCount = extractExpectedCountWithPolicy(normalizedPrompt);
   if (matches.length === 0) {
     return buildCustomScreenDeleteNeedsInputPlan(
       prompt,
@@ -3018,12 +2997,14 @@ const buildGenericCmsExplicitCatalogMutationPlan = (
 
 const buildGenericCmsFallbackMutationPlan = (
   prompt: string,
-  context: ReturnType<typeof buildAssistantAdminContext>
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  options: { resourceKinds?: CmsOperationDraft["resourceKind"][] } = {}
 ): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
   if (shouldSkipGenericCmsLocalPrompt(normalizedPrompt)) return null;
   const draft = buildCmsOperationDraftFromPrompt(prompt, context);
   if (!draft) return null;
+  if (options.resourceKinds && !options.resourceKinds.includes(draft.resourceKind)) return null;
   return mapCmsOperationToActionPlan({ prompt, draft, context });
 };
 
@@ -3140,12 +3121,6 @@ const parseProviderDraftJson = (value: string) => {
   }
 };
 
-const isProviderRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const providerDraftContainsActionArray = (draft: unknown) =>
-  isProviderRecord(draft) && Array.isArray(draft.actions);
-
 const buildProviderRequestLimits = (
   limits: AssistantProviderDraftPlanInput["limits"] | undefined
 ) => ({
@@ -3260,10 +3235,13 @@ const buildProviderLocalRecoveryPlan = (
   const plan = genericPlan?.status === "ready" && genericPlan.actions.length > 0
     ? genericPlan
     : planAssistantActions({
-    prompt: input.prompt,
-    context: input.context,
+        prompt: input.prompt,
+        context: input.context,
       });
-  if (!plan || plan.status !== "ready" || plan.actions.length === 0) return null;
+  const hasRecoveredActions = plan.status === "ready" && plan.actions.length > 0;
+  const hasRecoveredInspection =
+    plan.responseKind === "inspection" && (plan.inspection?.candidates.length ?? 0) > 0;
+  if (!hasRecoveredActions && !hasRecoveredInspection) return null;
   return normalizeAssistantActionPlan({
     ...plan,
     metadata: {
@@ -3274,7 +3252,7 @@ const buildProviderLocalRecoveryPlan = (
     assumptions: [
       ...plan.assumptions,
       "Provider draft was validated locally before target resolution.",
-      "Local explicit prompt fields recovered the typed action input.",
+      "Local policy planning recovered the safe typed plan or inspection result.",
     ],
   });
 };
@@ -3526,6 +3504,26 @@ const buildProviderPreferredReadOnlySearchPlan = (
   return buildGenericCmsInspectionPlan(input.prompt, draft, context);
 };
 
+const buildProviderPreferredPolicyPlan = (
+  input: AssistantProviderDraftPlanInput,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const inspectionPlan = buildGenericCmsInspectionOperationPlan(input.prompt, context);
+  if ((inspectionPlan?.inspection?.candidates.length ?? 0) > 0) return inspectionPlan;
+  const mutationPlan = buildGenericCmsFallbackMutationPlan(input.prompt, context);
+  if (mutationPlan?.responseKind === "action_plan" && mutationPlan.actions.length > 0) {
+    return mutationPlan;
+  }
+  if (
+    mutationPlan?.status === "needs_input" &&
+    (isLikelyDeletePrompt(normalizeAssistantPlannerPrompt(input.prompt)) ||
+      includesAny(normalizeAssistantPlannerPrompt(input.prompt), ["archive", "archiwizuj", "zarchiwizuj"]))
+  ) {
+    return mutationPlan;
+  }
+  return null;
+};
+
 const buildExplicitMediaReferencePlan = (input: AssistantActionPlanInput): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
   if (
@@ -3611,6 +3609,12 @@ export const planAssistantActions = (
     );
     if (explicitCatalogMutationPlan) {
       return normalizeAssistantActionPlan(explicitCatalogMutationPlan);
+    }
+    const genericMutationPlan = buildGenericCmsFallbackMutationPlan(input.prompt, context, {
+      resourceKinds: ["seo-document"],
+    });
+    if (genericMutationPlan?.responseKind === "action_plan" && genericMutationPlan.actions.length > 0) {
+      return normalizeAssistantActionPlan(genericMutationPlan);
     }
   }
   if (classification.promptKind === "docs_question") {
@@ -3807,6 +3811,8 @@ export const planAssistantActionsWithProviderDraft = async (
   if (isBroadDestructivePromptWithPolicy(input.prompt)) {
     return planAssistantActions(input);
   }
+  const policyPlan = buildProviderPreferredPolicyPlan(input, context);
+  if (policyPlan) return withProviderPlannerMetadata(policyPlan, input);
 
   if (!input.llmAvailable || !input.provider) {
     return planAssistantActions(input);
@@ -3838,6 +3844,15 @@ export const planAssistantActionsWithProviderDraft = async (
     const draft = parseProviderDraftJson(response.text);
     const operationPlan = tryPlanProviderCmsOperationDraft(input, draft);
     if (operationPlan) {
+      if (
+        operationPlan.responseKind === "inspection" &&
+        (operationPlan.inspection?.candidates.length ?? 0) === 0
+      ) {
+        const localInspection = buildGenericCmsInspectionOperationPlan(input.prompt, context);
+        if (localInspection && (localInspection.inspection?.candidates.length ?? 0) > 0) {
+          return withProviderPlannerMetadata(localInspection, input);
+        }
+      }
       if (operationPlan.status === "needs_input" || operationPlan.actions.length === 0) {
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
         if (recoveredPlan) return recoveredPlan;
@@ -3872,7 +3887,7 @@ export const planAssistantActionsWithProviderDraft = async (
       prompt: input.prompt,
       draft,
     });
-    if (adaptedPlan.actions.length === 0 && !providerDraftContainsActionArray(draft)) {
+    if (adaptedPlan.actions.length === 0 && canRecoverUnsupportedProviderActionDraftWithPolicy(draft)) {
       const recoveredPlan = buildProviderLocalRecoveryPlan(input);
       if (recoveredPlan) return recoveredPlan;
     }

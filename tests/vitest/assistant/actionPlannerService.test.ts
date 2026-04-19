@@ -2249,6 +2249,49 @@ test("planAssistantActionsWithProviderDraft maps provider JSON through strict ad
   expect(plan.actions[0]?.type).toBe("entry.upsert-draft");
 });
 
+test("planAssistantActionsWithProviderDraft recovers empty provider inspection through policy local inspection", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "page",
+        surfaceHint: "Pages",
+        targetQuery: { exactName: "Pages" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      })
+    ),
+    context: {
+      page: "/admin/pages",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          { id: "page-pysiek", title: "Pysiek Mysiek", slug: "/pysiek-mysiek", status: "draft" },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata?.planner).toBe("provider");
+  expect(plan.metadata?.providerDraftUsed).toBe(true);
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toContain("Pysiek Mysiek");
+});
+
 test("planAssistantActionsWithProviderDraft falls back when provider is unavailable", async () => {
   const plan = await planAssistantActionsWithProviderDraft({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

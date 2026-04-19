@@ -3,7 +3,7 @@ import type {
   AssistantIntentFamily,
   AssistantPromptKind,
 } from "./actionPlanTypes";
-import { resolveCmsResourceKindFromPrompt } from "./cmsResourceRegistry";
+import { resolveResourceKindFromPromptWithPolicy } from "./operationPolicy/resolverPolicy";
 
 export const normalizeAssistantPlannerPrompt = (value: string) =>
   value
@@ -140,7 +140,7 @@ const cmsOperationQuestionSignals = [
 ];
 
 const isLikelyCmsOperationPrompt = (value: string) =>
-  Boolean(resolveCmsResourceKindFromPrompt(value)) &&
+  Boolean(resolveResourceKindFromPromptWithPolicy(value)) &&
   (includesAny(value, cmsOperationQuestionSignals) ||
     includesAny(value, destructiveKeywords) ||
     includesAny(value, refinementKeywords));

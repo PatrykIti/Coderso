@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 704 | 2026-04-19 | TASK-188-09 policy cutover | Assistant/Core |
 | 703 | 2026-04-19 | TASK-188-08 LangGraph evaluation | Assistant/Architecture |
 | 702 | 2026-04-19 | TASK-188-07 coverage policy | Assistant/QA |
 | 701 | 2026-04-19 | TASK-188-06 follow up policy | Assistant/Core |

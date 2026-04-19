@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Refactor
 **Estimated Effort:** Large
 **Dependencies:** TASK-188-03, TASK-188-04, TASK-188-05, TASK-188-06, TASK-188-07
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -91,3 +91,18 @@ return normalizeAssistantActionPlan({ ...basePlan, actions });
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/SECURITY_SPEC.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Removed `core/services/assistant/cmsResourceRegistry.ts` and its legacy Vitest suite.
+- Switched `actionPlanHeuristics.ts` to policy-backed resource prompt resolution.
+- Removed the remaining local `countWords` / `extractRequestedDeleteCount` path from `actionPlannerService.ts` and reused policy safety count extraction.
+- Confirmed active provider prompt, resolver, mapper, follow-up, safety, and coverage paths use `assistantOperationPolicy` helpers.
+- Updated docs to remove the stale registry compatibility note.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun run test:assistant:live`

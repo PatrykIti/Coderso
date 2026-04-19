@@ -50,7 +50,7 @@ test("buildProviderPolicyGuidance derives create contracts and safety from polic
   });
 });
 
-test("provider registry is grouped from policy instead of legacy registry", () => {
+test("provider registry is grouped from operation policy", () => {
   const registry = buildProviderPolicyRegistry(assistantOperationPolicy);
   const settings = registry.find((entry) => entry.kind === "settings-surface");
 

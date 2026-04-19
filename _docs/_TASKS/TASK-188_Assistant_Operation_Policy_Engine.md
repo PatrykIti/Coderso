@@ -86,8 +86,7 @@ This task must replace the current scattered policy-like logic, not add another 
 Current modules that will be reduced to orchestration/adapters:
 
 - `core/services/assistant/cmsResourceRegistry.ts`
-  - Replace hard-coded resource aliases and supported operations with policy lookups.
-  - Keep only a compatibility export during migration, then remove or turn into a thin re-export from policy.
+  - Removed in TASK-188-09 after policy lookup cutover.
 - `core/services/assistant/cmsTargetResolver.ts`
   - Remove local alias/filter/surface-only word lists.
   - Keep catalog traversal and candidate matching mechanics, but drive matching/filter rules from policy.
