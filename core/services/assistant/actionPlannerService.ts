@@ -23,6 +23,8 @@ import {
   buildProviderPlanningPromptPackage,
   type AssistantProviderPlanningEvidence,
 } from "./providerPlanningContext";
+import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPolicy";
+import { buildProviderPlannerSystemPrompt } from "./operationPolicy/providerGuidance";
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildBookingServiceNeedsInputPlan } from "./blueprints/bookingServiceBlueprint";
@@ -3113,21 +3115,7 @@ export type AssistantProviderDraftPlanInput = AssistantActionPlanInput & {
   };
 };
 
-const providerPlannerSystemPrompt = [
-  "You draft Nextless LLM Guide CMS operation drafts.",
-  "Return only JSON.",
-  "Return a single object with operation, resourceKind, optional targetQuery, optional mutation, and optional constraints.",
-  "Use surfaceHint for UI locations such as Screens, Pages, Engine, Admin UI, menu, or sidebar.",
-  "Use targetQuery only for actual resource names, slugs, prefixes, routes, or active/current references.",
-  "Use filters for active, published, visible, show-in-sidebar, opublikowane, or widoczne language.",
-  "For create operations, put explicit item definitions in mutation.patch.items.",
-  "For page create items use: title, slug, status, introTitle, introBody, optional ctaLabel.",
-  "For form create items use: name, slug, status, submissionAccess, fields.",
-  "For multi-create operations, set constraints.expectedCount to the number of mutation.patch.items.",
-  "Do not return executable actions.",
-  "Do not invent arbitrary commands, SQL, filesystem paths, tools, or resource ids.",
-  "The local server will validate your draft, resolve targets from trusted context, and map to a strict plan before any dry-run or execution.",
-].join(" ");
+const providerPlannerSystemPrompt = buildProviderPlannerSystemPrompt(assistantOperationPolicy);
 
 const parseProviderDraftJson = (value: string) => {
   const trimmed = value.trim();
@@ -3910,7 +3898,7 @@ export const planAssistantActionsWithProviderDraft = async (
         }),
         {
           name: "cms_operation_draft",
-          schema: buildCmsOperationDraftJsonSchema(),
+          schema: buildCmsOperationDraftJsonSchema(assistantOperationPolicy),
           strict: true,
         }
       ),

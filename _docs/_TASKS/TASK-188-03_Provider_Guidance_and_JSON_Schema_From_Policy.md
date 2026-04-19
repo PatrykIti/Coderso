@@ -5,7 +5,7 @@
 **Category:** Assistant/Provider + Structured Output
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01, TASK-188-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -74,3 +74,16 @@ Remove hard-coded provider prompt lines for filters, create item fields, and des
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `operationPolicy/providerGuidance.ts` to derive provider registry entries, provider guidance, operation draft guidance, create contracts, safety notes, and provider system prompt policy JSON from `assistantOperationPolicy`.
+- Updated provider planning prompt packages to include `policyGuidance` and policy-derived `operationDraftGuidance`.
+- Updated the provider planner system prompt and structured output schema request to use `assistantOperationPolicy` as the source for allowed resource kinds, operations, filter fields, gated modes, and redacted surfaces.
+- Kept runtime resolver/action mapper behavior unchanged; this task only changes provider prompt/schema metadata sources.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/openAiProvider.test.ts tests/vitest/assistant/openRouterProvider.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

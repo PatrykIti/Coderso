@@ -6,6 +6,7 @@ import {
   repairCmsOperationDraft,
   normalizeCmsOperationDraft,
 } from "../../../core/services/assistant/cmsOperationDraftSchema";
+import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
 
 test("normalizeCmsOperationDraft accepts strict CMS operation drafts", () => {
   expect(
@@ -168,4 +169,18 @@ test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () 
     additionalProperties: false,
     required: ["text", "exactName", "prefix", "slug", "route", "active"],
   });
+});
+
+test("buildCmsOperationDraftJsonSchema can narrow provider enums from operation policy", () => {
+  const schema = buildCmsOperationDraftJsonSchema(assistantOperationPolicy);
+  const properties = schema.properties as Record<string, { enum?: string[] }>;
+
+  expect(properties.operation?.enum).toEqual(
+    expect.arrayContaining(["inspect", "find", "create", "update", "delete", "configure"])
+  );
+  expect(properties.resourceKind?.enum).toEqual(
+    expect.arrayContaining(["page", "settings-surface", "solution-kit"])
+  );
+  expect(properties.resourceKind?.enum).not.toContain("post");
+  expect(properties.resourceKind?.enum).not.toContain("appointments");
 });

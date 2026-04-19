@@ -19,7 +19,7 @@ execution, and remain inside the strict typed action set.
 
 The same flow now has a generic CMS operation foundation:
 
-`prompt -> strict CMS operation draft -> resource registry target resolver -> read-only inspection or typed action plan`
+`prompt -> policy-guided strict CMS operation draft -> target resolver -> read-only inspection or typed action plan`
 
 Read-only inspection plans can list bounded CMS candidates, such as matching pages
 or custom screens, without exposing dry-run or execute controls.
@@ -89,6 +89,10 @@ permissions, idempotency, and conflict-aware execution.
 - Provider planning prefers a strict CMS operation draft response. The backend
   validates and repairs/falls back locally before any target resolution or action
   planning can proceed.
+- Provider prompt guidance, provider-facing resource registry metadata, and the
+  strict CMS operation draft JSON schema are generated from
+  `assistantOperationPolicy`; gated/redacted surfaces are described from policy
+  rather than duplicated prompt text.
 - Structured provider output is capability-driven per provider/model family. When
   strict JSON schema output is supported, the provider adapter can request it; when
   it is not supported, the planner falls back to prompt-only JSON plus repair and

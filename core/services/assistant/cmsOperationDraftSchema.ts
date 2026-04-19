@@ -1,3 +1,5 @@
+import type { AssistantOperationPolicy } from "./operationPolicy/policyTypes";
+
 export const cmsOperationValues = [
   "inspect",
   "find",
@@ -300,18 +302,45 @@ export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | nul
   }
 };
 
-export const buildCmsOperationDraftJsonSchema = (): Record<string, unknown> => ({
+const policyEnum = <T extends string>(
+  policy: AssistantOperationPolicy | undefined,
+  allowedValues: readonly T[],
+  selectValues: (resource: AssistantOperationPolicy["resources"][string]) => string[]
+): T[] => {
+  if (!policy) return [...allowedValues];
+  const allowed = new Set<string>(allowedValues);
+  const selected = new Set<string>();
+  for (const resource of Object.values(policy.resources)) {
+    if (resource.coverage.state === "not-applicable") continue;
+    for (const value of selectValues(resource)) {
+      if (allowed.has(value)) selected.add(value);
+    }
+  }
+  const result = allowedValues.filter((value) => selected.has(value));
+  return result.length > 0 ? result : [...allowedValues];
+};
+
+export const buildCmsOperationDraftJsonSchema = (
+  policy?: AssistantOperationPolicy
+): Record<string, unknown> => {
+  const operationEnum = policyEnum(policy, cmsOperationValues, (resource) => resource.operations);
+  const resourceKindEnum = policyEnum(policy, cmsResourceKindValues, (resource) => [resource.kind]);
+  const filterFieldEnum = policyEnum(policy, cmsOperationFilterFieldValues, (resource) =>
+    Object.values(resource.filters).map((filter) => filter.field)
+  );
+
+  return {
   type: "object",
   additionalProperties: false,
   required: ["operation", "resourceKind", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
   properties: {
     operation: {
       type: "string",
-      enum: cmsOperationValues,
+      enum: operationEnum,
     },
     resourceKind: {
       type: "string",
-      enum: cmsResourceKindValues,
+      enum: resourceKindEnum,
     },
     surfaceHint: { type: ["string", "null"] },
     filters: {
@@ -325,7 +354,7 @@ export const buildCmsOperationDraftJsonSchema = (): Record<string, unknown> => (
             properties: {
               field: {
                 type: "string",
-                enum: cmsOperationFilterFieldValues,
+                enum: filterFieldEnum,
               },
               operator: {
                 type: "string",
@@ -416,4 +445,5 @@ export const buildCmsOperationDraftJsonSchema = (): Record<string, unknown> => (
       ],
     },
   },
-});
+  };
+};
