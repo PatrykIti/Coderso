@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + CMS Resource Policy
 **Estimated Effort:** Large
 **Dependencies:** TASK-188-01
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -125,3 +125,20 @@ Do not delete `cmsResourceRegistry.ts` yet. Add compatibility tests proving poli
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Completed all child migration leaves:
+  - `TASK-188-02-01` Pages, Forms, Listings
+  - `TASK-188-02-02` Content, Screens, Widgets, Media
+  - `TASK-188-02-03` Admin, Settings, Security, Tools
+  - `TASK-188-02-04` Coderso planned/gated modules and remaining gated routes
+- `assistantOperationPolicy` now aggregates current CMS, admin, settings, tool, Coderso, planned, gated, read-only, and executable policy entries.
+- Added Vitest coverage for policy schema/lookup, resource actions/fields/filters, route-to-live-matrix mapping, settings sidebar coverage, Coderso module registry coverage, planned module state, gated mutation modes, and secret redaction metadata.
+- Kept compatibility note intact: runtime planner/resolver consumers are not cut over yet, and `cmsResourceRegistry.ts` remains in place for later TASK-188 phases.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/operation-policy-schema.test.ts tests/vitest/assistant/operation-policy-lookup.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coderso-modules.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

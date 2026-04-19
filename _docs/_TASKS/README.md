@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 17 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 5 tasks
-- **Done:** 928 tasks
+- **Done:** 929 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
-| TASK-188-02 | Policy Migration for Current CMS Resources | High | Large | Move current Admin/CMS resources into policy |
 | TASK-188-03 | Provider Guidance and JSON Schema From Policy | High | Medium | Generate provider prompt/schema guidance from policy |
 | TASK-188-04 | Resolver and Filtering From Policy | High | Large | Drive target resolution and filters from policy |
 | TASK-188-05 | Action Mapping and Safety Rules From Policy | High | Large | Drive typed action mapping and destructive rules from policy |
@@ -74,6 +73,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-188-02 | Policy Migration for Current CMS Resources | High | Large | Done: current CMS/admin/settings/Coderso routes are represented in operation policy metadata |
 | TASK-188-02-04 | Coderso Planned and Gated Modules Policy Migration | High | Medium | Done: Coderso preview/planned modules and remaining gated routes are represented in policy |
 | TASK-188-02-03 | Admin Settings Security Tools Policy Migration | High | Medium | Done: admin/settings/security/tools policy entries are gated/read-only with redacted secret surfaces |
 | TASK-188-02-02 | Content Screens Widgets Media Policy Migration | High | Medium | Done: operation policy entries cover content types, entries, screens, widget templates, and media |
