@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Policy Migration
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01, TASK-188-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -80,3 +80,16 @@ export const pagePolicy = resourcePolicy({
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `cmsResourcePolicies.ts` with policy entries for `page`, `form`, `listing-query`, and `listing-template`.
+- Added `assistantOperationPolicy.ts` with the first migrated resource set plus shared follow-up and safety defaults.
+- Added Vitest coverage for page/form/listing aliases, filters, fields, actions, destructive rules, and secret policy.
+- No runtime planner/resolver behavior was changed in this leaf.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/operation-policy-schema.test.ts tests/vitest/assistant/operation-policy-lookup.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 693 | 2026-04-19 | TASK-188-02-01 pages forms listings policy | Assistant/Core |
 | 692 | 2026-04-18 | TASK-188-01 policy schema | Assistant/Core |
 | 691 | 2026-04-18 | TASK-187 assistant filtered all delete and je follow-up | Assistant/Core |
 | 690 | 2026-04-18 | TASK-186 assistant follow-up all candidates delete | Assistant/Core |
