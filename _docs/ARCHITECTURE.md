@@ -418,6 +418,9 @@ Planner schema/recovery:
   `AssistantProvider` interface; production credentials stay in encrypted
   Integrations config rather than planner code.
 - Provider planner fixture coverage uses injected fake providers, and opt-in OpenRouter/OpenAI live smoke tests cover real provider behavior through test-only env vars.
+- LangGraph.js adoption is deferred in `_docs/ADR_LANGGRAPH_ASSISTANT_ORCHESTRATION.md`;
+  TASK-188 keeps orchestration as staged pure functions while policy modules own
+  business rules and strict action schemas/domain routes own mutation safety.
 
 Execution registry and idempotency:
 - Dry-run/execute dispatch korzysta z formalnego `actionRegistry.ts`, nie z ukrytego centralnego switcha.

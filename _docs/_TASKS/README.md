@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 11 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 5 tasks
-- **Done:** 934 tasks
+- **Done:** 935 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
-| TASK-188-08 | LangGraph Orchestration Evaluation | Medium | Medium | Evaluate @langchain/langgraph for workflow orchestration only |
 | TASK-188-09 | Policy Engine Cutover and Heuristic Removal | High | Large | Cut over planner/resolver/mapper and remove duplicated heuristics |
 | TASK-188-10 | Docs, Changelog, and Closure | High | Medium | Final docs, live matrix, changelog, and validation closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
@@ -68,6 +67,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-188-08 | LangGraph Orchestration Evaluation | Medium | Medium | Done: ADR defers LangGraph adoption; no dependency added before policy cutover |
 | TASK-188-07 | Navigation Coverage and Live Matrix From Policy | High | Medium | Done: live coverage matrix and admin navigation route coverage are validated from operation policy |
 | TASK-188-06 | Planning State and Follow-Up Policy | High | Medium | Done: follow-up pronouns/counts and candidate selection now use policy-backed planning state rules |
 | TASK-188-05 | Action Mapping and Safety Rules From Policy | High | Large | Done: generic action mapper and provider safety guards now use policy-backed action/field/safety metadata |

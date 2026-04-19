@@ -5,7 +5,7 @@
 **Category:** Assistant/Architecture + Dependency Evaluation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -94,3 +94,17 @@ Do not add LangGraph to production dependencies in this evaluation leaf unless t
 - `_docs/ARCHITECTURE.md` or ADR
 - `_docs/_TASKS/README.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `_docs/ADR_LANGGRAPH_ASSISTANT_ORCHESTRATION.md`.
+- Decision: defer adopting `@langchain/langgraph`.
+- Rationale: current TASK-188 work is deterministic policy cutover; LangGraph would add dependency/runtime surface without replacing strict local validation, review/dry-run/execute routes, idempotency, or domain action contracts.
+- No package or lockfile changes were made.
+- No prototype was added because the ADR does not recommend adoption in this leaf.
+
+## Validation (2026-04-19)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
