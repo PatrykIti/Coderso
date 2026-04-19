@@ -5,7 +5,7 @@
 **Category:** Docs + QA Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01, TASK-188-02, TASK-188-03, TASK-188-04, TASK-188-05, TASK-188-06, TASK-188-07, TASK-188-08, TASK-188-09
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -54,3 +54,16 @@ No child task files.
 - `_docs/TESTING_STRATEGY.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-19)
+
+- Updated policy source-of-truth notes across Architecture, CMS API, Assistant Site Builder, LLM Guide matrices, Security Spec, and Testing Strategy.
+- Recorded final validation commands and closed the TASK-188 closure leaf.
+- No runtime code changes were required in this closure leaf.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun run test:assistant:live`

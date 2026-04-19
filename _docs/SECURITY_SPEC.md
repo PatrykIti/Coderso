@@ -320,6 +320,7 @@ Rotacja klucza:
   - CMS action mapping checks `assistantOperationPolicy` before returning executable typed actions, and destructive/bulk/provider post-validation guards use `operationPolicy/safetyPolicy.ts`,
   - follow-up planning state is bounded, expires, rejects secret-like text, and resolves pronouns/count words through `operationPolicy/followUpPolicy.ts` before targets are re-resolved from trusted catalogs,
   - legacy CMS resource registry and duplicated provider guard lists are removed from active planning; policy helpers are the local source of truth before strict schema validation,
+  - TASK-188 final validation kept targeted assistant Vitest suites plus the full OpenAI/OpenRouter live matrix green after policy cutover,
   - provider draft execution through `planAssistantActionsWithProviderDraft` requires provider availability, prefers strict CMS operation drafts, uses strict local adapter validation, and falls back to deterministic local planning on provider failures,
   - provider structured output is selected by provider/model capability profile and remains provider-agnostic at the planner boundary,
   - OpenAI and OpenRouter direct credentials are read from encrypted integration config for production and from test-only env vars only in opt-in live tests,

@@ -93,6 +93,9 @@ permissions, idempotency, and conflict-aware execution.
   strict CMS operation draft JSON schema are generated from
   `assistantOperationPolicy`; gated/redacted surfaces are described from policy
   rather than duplicated prompt text.
+- TASK-188 completed the policy cutover: resolver/filtering, action mapping,
+  destructive/bulk safety, follow-up target memory, and live route coverage all
+  read policy metadata before any strict action plan can be returned.
 - Structured provider output is capability-driven per provider/model family. When
   strict JSON schema output is supported, the provider adapter can request it; when
   it is not supported, the planner falls back to prompt-only JSON plus repair and

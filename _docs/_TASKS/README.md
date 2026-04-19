@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 9 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 936 tasks
+- **Done:** 938 tasks
 
 ---
 
@@ -38,8 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
-| TASK-188-10 | Docs, Changelog, and Closure | High | Medium | Final docs, live matrix, changelog, and validation closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -66,6 +64,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-188 | Assistant Operation Policy Engine | High | Large | Done: operation policy is source of truth for provider guidance, resolver/filtering, mapping/safety, follow-up, and coverage |
+| TASK-188-10 | Docs, Changelog, and Closure | High | Medium | Done: final docs, changelog, board, and OpenAI/OpenRouter live validation synced |
 | TASK-188-09 | Policy Engine Cutover and Heuristic Removal | High | Large | Done: legacy CMS registry and remaining duplicated planner count/resource guards removed |
 | TASK-188-08 | LangGraph Orchestration Evaluation | Medium | Medium | Done: ADR defers LangGraph adoption; no dependency added before policy cutover |
 | TASK-188-07 | Navigation Coverage and Live Matrix From Policy | High | Medium | Done: live coverage matrix and admin navigation route coverage are validated from operation policy |

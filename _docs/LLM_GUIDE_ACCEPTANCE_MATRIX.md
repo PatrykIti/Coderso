@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Last Updated:** 2026-04-19
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188-02, TASK-188-03, TASK-188-04, TASK-188-05, TASK-188-06, TASK-188-07, TASK-188-08, TASK-188-09
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188
 
 ---
 
@@ -33,6 +33,7 @@ Rules:
 | Generic CMS operation-to-action mapping | Vitest + Bun smoke | Pure mapper coverage plus executor/route smoke through existing typed actions |
 | Policy-driven action mapping and safety | Vitest | Generic mapper and provider post-validation guards use action/field/destructive policy metadata |
 | Policy engine cutover | Vitest + Bun live smoke | Legacy CMS registry and duplicated planner guard lists are removed; remaining orchestration uses policy helpers |
+| TASK-188 closure | Vitest + Bun live smoke | Final policy cutover validation keeps targeted assistant suites and OpenAI/OpenRouter live matrix green |
 | Counted multi-target CMS planning | Vitest | Resolver/mapper coverage for delete/archive/update plus explicit multi-create boundaries |
 | Assistant execution cache invalidation | Vitest | Admin client maps successful typed action results to known cache keys; failed/noop results do not broadcast |
 | Assistant operation policy metadata | Vitest | Policy schema, lookup, route matrix, gated/read-only state, and redaction metadata coverage |

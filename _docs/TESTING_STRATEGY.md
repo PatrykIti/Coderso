@@ -88,6 +88,9 @@ then that test should move to Vitest.
 - Assistant operation policy coverage and route matrix validation, because it is
   pure metadata over admin navigation/configuration and must not import runtime
   services.
+- TASK-188 policy cutover suites under `tests/vitest/assistant/*` own the pure
+  policy/schema/resolver/mapper/follow-up/coverage contracts; opt-in Bun live
+  suites remain the guard for real OpenAI/OpenRouter behavior.
 
 ### Vitest Happy-DOM Guardrails
 

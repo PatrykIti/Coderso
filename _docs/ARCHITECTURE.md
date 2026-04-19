@@ -345,6 +345,11 @@ Zamiast tego:
 - Legacy `cmsResourceRegistry.ts` has been removed; resource aliases, operations,
   filters, field intents, follow-up counts, safety rules, and coverage metadata
   are read from `assistantOperationPolicy`.
+- TASK-188 closed the policy cutover: provider guidance, resolver/filtering,
+  action mapping/safety, follow-up state, and live coverage validation now use
+  the operation policy as the source of truth. Route/domain RBAC, CSRF, strict
+  action schemas, idempotency, and domain services remain authoritative for
+  execution.
 - CMS operation drafts support `surfaceHint` plus allowlisted filters so UI
   locations such as `Screens` or `Engine` do not become resource target names.
 - `core/services/assistant/cmsOperationActionMapper.ts` maps resolved CMS operation

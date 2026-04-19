@@ -2,7 +2,7 @@
 
 **Status:** Active  
 **Last Updated:** 2026-04-19
-**Related Tasks:** TASK-184, TASK-188-02
+**Related Tasks:** TASK-184, TASK-188
 
 TASK-188 mirrors this route matrix into `assistantOperationPolicy` and validates
 the checked-in markdown against generated policy coverage rows so planner/schema

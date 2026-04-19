@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 706 | 2026-04-19 | TASK-188 policy engine closure | Assistant/Core |
+| 705 | 2026-04-19 | TASK-188-10 policy closure docs | Docs/QA |
 | 704 | 2026-04-19 | TASK-188-09 policy cutover | Assistant/Core |
 | 703 | 2026-04-19 | TASK-188-08 LangGraph evaluation | Assistant/Architecture |
 | 702 | 2026-04-19 | TASK-188-07 coverage policy | Assistant/QA |

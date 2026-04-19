@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Architecture + Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-184, TASK-185, TASK-186, TASK-187
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -226,3 +226,18 @@ Adopt a package only if it materially simplifies orchestration without adding pr
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new changelog entries for completed leaves
+
+## Completion Notes (2026-04-19)
+
+- Completed all TASK-188 child tasks from policy schema through final cutover and closure.
+- Removed the legacy CMS resource registry and duplicated planner count/resource guard paths.
+- `assistantOperationPolicy` is now the source of truth for provider guidance, resolver/filtering, action mapping/safety, follow-up planning state, and live coverage metadata.
+- LangGraph adoption was evaluated and deferred in `_docs/ADR_LANGGRAPH_ASSISTANT_ORCHESTRATION.md`.
+- Full OpenAI/OpenRouter live assistant matrix passed after cutover.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun run test:assistant:live`
