@@ -13,10 +13,15 @@ test("assistantOperationPolicy includes pages forms and listings resources", () 
   const policy = normalizeAssistantOperationPolicy(assistantOperationPolicy);
 
   expect(Object.keys(policy.resources).sort()).toEqual([
+    "content-type",
+    "custom-screen",
+    "entry",
     "form",
     "listing-query",
     "listing-template",
+    "media",
     "page",
+    "widget-template",
   ]);
 });
 
@@ -91,4 +96,27 @@ test("assistantOperationPolicy covers listing query and template action fields",
       "listing-template.card.patch",
     ])
   );
+});
+
+test("assistantOperationPolicy covers content entries screens widgets and media", () => {
+  const contentType = getResourcePolicy(assistantOperationPolicy, "content-type");
+  const entry = getResourcePolicy(assistantOperationPolicy, "entry");
+  const screen = getResourcePolicy(assistantOperationPolicy, "custom-screen");
+  const widget = getResourcePolicy(assistantOperationPolicy, "widget-template");
+  const media = getResourcePolicy(assistantOperationPolicy, "media");
+  if (!contentType || !entry || !screen || !widget || !media) {
+    throw new Error("missing_content_policy");
+  }
+
+  expect(Object.values(contentType.actions).map((action) => action.type)).toEqual(
+    expect.arrayContaining(["content-type.upsert", "content-type.delete"])
+  );
+  expect(getFieldPolicy(entry, "media")?.action?.type).toBe("media.reference.attach");
+  expect(getFilterPolicy(screen, "status")?.values?.active).toContain("opublikowane");
+  expect(Object.values(screen.actions).map((action) => action.type)).toEqual(
+    expect.arrayContaining(["custom-screen.upsert", "custom-screen.update", "custom-screen.delete", "custom-screen.widget.patch"])
+  );
+  expect(getFieldPolicy(widget, "headline")?.action?.type).toBe("widget-template.block.patch");
+  expect(media.actions.upload).toMatchObject({ type: "none", mode: "gated" });
+  expect(media.actions.attachReference.type).toBe("media.reference.attach");
 });

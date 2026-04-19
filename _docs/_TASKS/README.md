@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 20 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 5 tasks
-- **Done:** 925 tasks
+- **Done:** 926 tasks
 
 ---
 
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
 | TASK-188-02 | Policy Migration for Current CMS Resources | High | Large | Move current Admin/CMS resources into policy |
-| TASK-188-02-02 | Content Screens Widgets Media Policy Migration | High | Medium | Move content types, entries, screens, widgets, and media policy entries |
 | TASK-188-02-03 | Admin Settings Security Tools Policy Migration | High | Medium | Move settings, tools, users, audit/access/security surfaces into gated/read-only policy |
 | TASK-188-02-04 | Coderso Planned and Gated Modules Policy Migration | High | Medium | Move preview/planned Coderso module policy and gating rules |
 | TASK-188-03 | Provider Guidance and JSON Schema From Policy | High | Medium | Generate provider prompt/schema guidance from policy |
@@ -77,6 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-188-02-02 | Content Screens Widgets Media Policy Migration | High | Medium | Done: operation policy entries cover content types, entries, screens, widget templates, and media |
 | TASK-188-02-01 | Pages Forms Listings Policy Migration | High | Medium | Done: first operation policy entries cover pages, forms, listing queries, and listing templates |
 | TASK-188-01 | Policy Schema and Resource Contract | High | Medium | Done: added strict operation policy types, schema normalizer, and lookup helpers |
 | TASK-187 | Assistant Filtered All Delete and Je Follow-Up | High | Small | Done: `usun je` and filtered-all published page deletes map to reviewed actions |

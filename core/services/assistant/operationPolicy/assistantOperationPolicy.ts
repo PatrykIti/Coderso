@@ -1,10 +1,14 @@
 import type { AssistantOperationPolicy } from "./policyTypes";
-import { pagesFormsListingsPolicies } from "./cmsResourcePolicies";
+import {
+  contentScreensWidgetsMediaPolicies,
+  pagesFormsListingsPolicies,
+} from "./cmsResourcePolicies";
 
 export const assistantOperationPolicy: AssistantOperationPolicy = {
   schemaVersion: 1,
   resources: {
     ...pagesFormsListingsPolicies,
+    ...contentScreensWidgetsMediaPolicies,
   },
   followUp: {
     pronouns: [

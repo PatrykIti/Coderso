@@ -247,9 +247,286 @@ export const listingTemplatePolicy: AssistantResourcePolicy = {
   },
 };
 
+export const contentTypePolicy: AssistantResourcePolicy = {
+  kind: "content-type",
+  label: "Content Types",
+  aliases: ["content type", "content types", "model", "engine", "typ tresci", "typ treści"],
+  routes: ["/admin/coderso/engine"],
+  operations: ["inspect", "find", "create", "update", "delete"],
+  readPermissions: ["content:read"],
+  executePermissions: ["content:write"],
+  filters: {},
+  fields: {
+    name: {
+      field: "name",
+      aliases: ["name", "nazwa"],
+      valueType: "string",
+      action: { type: "content-type.upsert", patchPath: ["name"] },
+    },
+    slug: {
+      field: "slug",
+      aliases: ["slug"],
+      valueType: "string",
+      action: { type: "content-type.upsert", patchPath: ["slug"] },
+    },
+    schema: {
+      field: "schema",
+      aliases: ["schema", "fields", "pola"],
+      valueType: "record",
+      action: { type: "content-type.upsert", patchPath: ["schema"] },
+    },
+  },
+  actions: {
+    upsert: { operation: "create", type: "content-type.upsert", target: "explicit", mode: "executable" },
+    delete: { operation: "delete", type: "content-type.delete", target: "single", mode: "executable" },
+  },
+  destructive: {
+    ...filteredDestructivePolicy,
+    allowAllWhenFiltered: false,
+  },
+  coverage: {
+    state: "live-execute",
+    task: "TASK-184-03",
+    routes: ["/admin/coderso/engine"],
+    notes: "Content type inspect and zero-entry delete live matrix.",
+  },
+};
+
+export const entryPolicy: AssistantResourcePolicy = {
+  kind: "entry",
+  label: "Entries",
+  aliases: ["entry", "entries", "record", "records", "wpis", "wpisy", "rekord", "rekordy"],
+  routes: ["/admin/coderso/entries"],
+  operations: ["inspect", "find", "create", "update", "delete", "publish"],
+  readPermissions: ["content:read"],
+  executePermissions: ["content:write", "content:publish"],
+  filters: {
+    status: {
+      field: "status",
+      aliases: ["status", "published", "draft", "archived", "opublikowany", "szkic"],
+      operators: ["eq", "in"],
+      values: {
+        published: ["published", "opublikowany", "opublikowane"],
+        draft: ["draft", "szkic"],
+        archived: ["archived", "zarchiwizowany"],
+      },
+    },
+  },
+  fields: {
+    title: {
+      field: "title",
+      aliases: ["title", "tytul", "tytuł", "nazwa"],
+      valueType: "string",
+      action: { type: "entry.update", patchPath: ["title"] },
+    },
+    slug: {
+      field: "slug",
+      aliases: ["slug", "url"],
+      valueType: "string",
+      action: { type: "entry.update", patchPath: ["slug"] },
+    },
+    status: {
+      field: "status",
+      aliases: ["status", "published", "draft", "archived"],
+      valueType: "enum",
+      enumValues: ["draft", "published", "archived"],
+      action: { type: "entry.update", patchPath: ["status"] },
+    },
+    values: {
+      field: "values",
+      aliases: ["values", "data", "fields", "pola"],
+      valueType: "record",
+      action: { type: "entry.update", patchPath: ["values"] },
+    },
+    seo: {
+      field: "seo",
+      aliases: ["seo", "meta title", "meta description"],
+      valueType: "record",
+      action: { type: "entry.update", patchPath: ["seo"] },
+    },
+    mediaReference: {
+      field: "mediaReference",
+      aliases: ["media", "image", "obraz"],
+      valueType: "string",
+      action: { type: "media.reference.attach", patchPath: ["field"] },
+    },
+  },
+  actions: {
+    createDraft: { operation: "create", type: "entry.upsert-draft", target: "explicit", mode: "executable" },
+    update: { operation: "update", type: "entry.update", target: "active", mode: "executable" },
+    delete: { operation: "delete", type: "entry.delete", target: "active", mode: "executable" },
+    attachMedia: { operation: "update", type: "media.reference.attach", target: "explicit", mode: "executable" },
+  },
+  destructive: filteredDestructivePolicy,
+  secrets: {
+    redacted: true,
+    secretFields: ["values.secret", "values.password", "submissions"],
+    providerAllowed: false,
+  },
+  coverage: {
+    state: "live-execute",
+    task: "TASK-184-03",
+    routes: ["/admin/coderso/entries"],
+    notes: "Active entry update/delete and draft creation policy.",
+  },
+};
+
+export const customScreenPolicy: AssistantResourcePolicy = {
+  kind: "custom-screen",
+  label: "Custom Screens",
+  aliases: ["custom screen", "custom screens", "screen", "screens", "ekran", "ekrany", "ekranów"],
+  routes: ["/admin/coderso/custom-screens"],
+  operations: ["inspect", "find", "create", "update", "delete"],
+  readPermissions: ["content:read"],
+  executePermissions: ["content:write"],
+  filters: {
+    status: {
+      field: "status",
+      aliases: ["status", "active", "published", "opublikowane", "draft"],
+      operators: ["eq", "in"],
+      values: {
+        active: ["active", "published", "opublikowane"],
+        draft: ["draft", "szkic"],
+      },
+    },
+    showInSidebar: {
+      field: "showInSidebar",
+      aliases: ["visible", "widoczne", "sidebar", "showInSidebar"],
+      operators: ["eq"],
+      values: {
+        true: ["true", "visible", "widoczne"],
+        false: ["false", "hidden", "ukryte"],
+      },
+    },
+  },
+  fields: {
+    name: {
+      field: "name",
+      aliases: ["name", "nazwa"],
+      valueType: "string",
+      action: { type: "custom-screen.update", patchPath: ["name"] },
+    },
+    status: {
+      field: "status",
+      aliases: ["status", "active", "draft"],
+      valueType: "enum",
+      enumValues: ["draft", "active"],
+      action: { type: "custom-screen.update", patchPath: ["status"] },
+    },
+    sidebarLabel: {
+      field: "sidebarLabel",
+      aliases: ["sidebar label", "etykieta sidebar", "label"],
+      valueType: "string",
+      action: { type: "custom-screen.update", patchPath: ["sidebarLabel"] },
+    },
+    blockData: {
+      field: "blockData",
+      aliases: ["widget", "block", "blok"],
+      valueType: "record",
+      action: { type: "custom-screen.widget.patch", patchPath: ["dataPath"] },
+    },
+  },
+  actions: {
+    upsert: { operation: "create", type: "custom-screen.upsert", target: "explicit", mode: "executable" },
+    update: { operation: "update", type: "custom-screen.update", target: "active", mode: "executable" },
+    delete: { operation: "delete", type: "custom-screen.delete", target: "multiple", mode: "executable" },
+    patchWidget: { operation: "update", type: "custom-screen.widget.patch", target: "active", mode: "executable" },
+  },
+  destructive: filteredDestructivePolicy,
+  secrets: {
+    redacted: true,
+    secretFields: ["entry.values", "bindings.secret"],
+    providerAllowed: false,
+  },
+  coverage: {
+    state: "live-execute",
+    task: "TASK-184-04",
+    routes: ["/admin/coderso/custom-screens"],
+  },
+};
+
+export const widgetTemplatePolicy: AssistantResourcePolicy = {
+  kind: "widget-template",
+  label: "Widget Templates",
+  aliases: ["widget template", "widget templates", "template widget", "szablon widgetu", "szablon"],
+  routes: ["/admin/coderso/widgets"],
+  operations: ["inspect", "find", "create", "update", "delete"],
+  readPermissions: ["widgets:read"],
+  executePermissions: ["widgets:write"],
+  filters: {
+    status: {
+      field: "status",
+      aliases: ["status", "published", "draft"],
+      operators: ["eq", "in"],
+      values: {
+        published: ["published", "opublikowany"],
+        draft: ["draft", "szkic"],
+      },
+    },
+  },
+  fields: {
+    name: { field: "name", aliases: ["name", "nazwa"], valueType: "string", action: { type: "widget-template.update", patchPath: ["name"] } },
+    category: { field: "category", aliases: ["category", "kategoria"], valueType: "string", action: { type: "widget-template.update", patchPath: ["category"] } },
+    status: { field: "status", aliases: ["status"], valueType: "enum", enumValues: ["draft", "published"], action: { type: "widget-template.update", patchPath: ["status"] } },
+    blockData: { field: "blockData", aliases: ["block", "blok", "headline"], valueType: "record", action: { type: "widget-template.block.patch", patchPath: ["dataPath"] } },
+  },
+  actions: {
+    update: { operation: "update", type: "widget-template.update", target: "active", mode: "executable" },
+    delete: { operation: "delete", type: "widget-template.delete", target: "active", mode: "executable" },
+    patchBlock: { operation: "update", type: "widget-template.block.patch", target: "active", mode: "executable" },
+  },
+  destructive: filteredDestructivePolicy,
+  secrets: { redacted: true, secretFields: ["settings.secret"], providerAllowed: false },
+  coverage: {
+    state: "live-execute",
+    task: "TASK-184-07",
+    routes: ["/admin/coderso/widgets"],
+  },
+};
+
+export const mediaPolicy: AssistantResourcePolicy = {
+  kind: "media",
+  label: "Media",
+  aliases: ["media", "asset", "assets", "image", "obraz", "plik"],
+  routes: ["/admin/media"],
+  operations: ["inspect", "find", "update"],
+  readPermissions: ["media:read"],
+  executePermissions: ["media:read", "content:write"],
+  filters: {},
+  fields: {
+    title: { field: "title", aliases: ["title", "tytul", "tytuł"], valueType: "string" },
+    reference: { field: "reference", aliases: ["attach", "podłącz", "podlacz"], valueType: "string", action: { type: "media.reference.attach", patchPath: ["field"] } },
+    upload: { field: "upload", aliases: ["upload", "wgraj", "prześlij"], valueType: "record" },
+  },
+  actions: {
+    inspect: { operation: "inspect", type: "none", target: "none", mode: "read-only" },
+    attachReference: { operation: "update", type: "media.reference.attach", target: "explicit", mode: "executable" },
+    upload: { operation: "create", type: "none", target: "none", mode: "gated" },
+  },
+  secrets: {
+    redacted: true,
+    secretFields: ["signedUrl", "privateUrl", "storage.secret"],
+    providerAllowed: false,
+  },
+  coverage: {
+    state: "live-execute",
+    task: "TASK-184-08",
+    routes: ["/admin/media"],
+    notes: "Existing media references execute; raw uploads stay gated.",
+  },
+};
+
 export const pagesFormsListingsPolicies = {
   page: pagePolicy,
   form: formPolicy,
   "listing-query": listingQueryPolicy,
   "listing-template": listingTemplatePolicy,
+};
+
+export const contentScreensWidgetsMediaPolicies = {
+  "content-type": contentTypePolicy,
+  entry: entryPolicy,
+  "custom-screen": customScreenPolicy,
+  "widget-template": widgetTemplatePolicy,
+  media: mediaPolicy,
 };

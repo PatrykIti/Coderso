@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Policy Migration
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-01, TASK-188-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -73,3 +73,16 @@ entry: {
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/WIDGET_PACK_MATRIX.md` only if widget pack coverage changes
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added operation policy entries for `content-type`, `entry`, `custom-screen`, `widget-template`, and `media`.
+- Added policy coverage for content type upsert/delete, entry draft/update/delete/media attach, custom screen metadata/widget actions, widget template metadata/block actions, and media reference/upload gating.
+- Extended `assistantOperationPolicy` aggregate with the new resource policies.
+- Added Vitest coverage for actions, aliases, status mappings, media upload gating, widget block patch policy, and secret redaction flags.
+
+## Validation
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/operation-policy-schema.test.ts tests/vitest/assistant/operation-policy-lookup.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
