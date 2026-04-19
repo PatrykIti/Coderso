@@ -85,6 +85,9 @@ then that test should move to Vitest.
 - Admin/UI component tests with `jsdom` or `happy-dom`.
 - SDK contract tests.
 - Pure widget logic that can run without Bun runtime primitives.
+- Assistant operation policy coverage and route matrix validation, because it is
+  pure metadata over admin navigation/configuration and must not import runtime
+  services.
 
 ### Vitest Happy-DOM Guardrails
 

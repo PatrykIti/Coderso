@@ -4,9 +4,9 @@
 **Last Updated:** 2026-04-19
 **Related Tasks:** TASK-184, TASK-188-02
 
-TASK-188-02 mirrors this route matrix into `assistantOperationPolicy` so later
-planner/schema work can consume policy metadata instead of duplicating route
-coverage heuristics.
+TASK-188 mirrors this route matrix into `assistantOperationPolicy` and validates
+the checked-in markdown against generated policy coverage rows so planner/schema
+work consumes policy metadata instead of duplicating route coverage heuristics.
 
 This matrix maps Admin UI navigation surfaces to live OpenAI/OpenRouter assistant coverage.
 

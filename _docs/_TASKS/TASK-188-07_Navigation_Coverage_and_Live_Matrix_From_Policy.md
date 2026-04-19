@@ -5,7 +5,7 @@
 **Category:** Assistant/QA + Coverage
 **Estimated Effort:** Medium
 **Dependencies:** TASK-188-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -70,3 +70,16 @@ The markdown file may stay checked in, but tests must prove it matches policy ou
 - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `_docs/TESTING_STRATEGY.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `operationPolicy/coveragePolicy.ts` to build live coverage rows, route maps, admin navigation route sets, missing route reports, and planned-route executable checks from `assistantOperationPolicy`.
+- Updated live coverage matrix tests to compare markdown route state/task ids against generated policy coverage rows.
+- Added operation policy coverage tests for admin navigation routes, stable route metadata, and planned route non-executable enforcement.
+- Kept the markdown matrix checked in, but it is now validated against policy output.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

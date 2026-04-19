@@ -5,6 +5,11 @@ import { expect, test } from "vitest";
 import { buildDefaultNavSections } from "../../../core/admin/ui/navigation/sidebarConfig";
 import { CODERSO_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/codersoModules";
 import { settingsSidebarItems } from "../../../core/admin/ui/settings/SettingsSidebar";
+import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
+import {
+  buildAdminNavigationRoutes,
+  buildLiveCoverageRouteMap,
+} from "../../../core/services/assistant/operationPolicy/coveragePolicy";
 
 const matrixPath = resolve(process.cwd(), "_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md");
 const matrix = readFileSync(matrixPath, "utf8");
@@ -22,22 +27,14 @@ const coverageRows = matrix
 
 const coveredRoutes = new Set(coverageRows.map((row) => row.route));
 const coverageStates = new Set(["live-execute", "live-read-only", "live-gated", "not-applicable"]);
-
-const defaultNavRoutes = () => {
-  const sections = buildDefaultNavSections();
-  return sections.flatMap((section) => [
-    ...(section.items ?? []).map((item) => item.href),
-    ...(section.groups ?? []).flatMap((group) => group.items.map((item) => item.href)),
-    ...(section.itemsAfterGroups ?? []).map((item) => item.href),
-  ]);
-};
+const policyRoutes = buildLiveCoverageRouteMap(assistantOperationPolicy);
 
 test("LLM Guide live coverage matrix includes every admin nav route", () => {
-  const expected = new Set([
-    ...defaultNavRoutes(),
-    ...CODERSO_MODULE_REGISTRY.flatMap((module) => (module.nav ? [module.nav.href] : [])),
-    ...settingsSidebarItems.map((item) => item.href),
-  ]);
+  const expected = buildAdminNavigationRoutes({
+    navSections: buildDefaultNavSections(),
+    codersoModules: CODERSO_MODULE_REGISTRY,
+    settingsItems: settingsSidebarItems,
+  });
 
   for (const route of expected) {
     expect(coveredRoutes.has(route), route).toBe(true);
@@ -50,5 +47,14 @@ test("LLM Guide live coverage matrix uses valid states and task ids", () => {
     expect(row.label, row.route).toBeTruthy();
     expect(coverageStates.has(row.coverage), row.route).toBe(true);
     expect(row.task, row.route).toMatch(/^TASK-\d+/);
+  }
+});
+
+test("LLM Guide live coverage matrix matches assistantOperationPolicy route state and task ids", () => {
+  for (const row of coverageRows) {
+    const policyRow = policyRoutes.get(row.route);
+    expect(policyRow, row.route).toBeDefined();
+    expect(row.coverage, row.route).toBe(policyRow?.coverage);
+    expect(row.task, row.route).toBe(policyRow?.task);
   }
 });
