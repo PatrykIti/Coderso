@@ -1,8 +1,12 @@
 # LLM Guide Live Coverage Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-04-18  
-**Related Tasks:** TASK-184
+**Last Updated:** 2026-04-19
+**Related Tasks:** TASK-184, TASK-188-02
+
+TASK-188-02 mirrors this route matrix into `assistantOperationPolicy` so later
+planner/schema work can consume policy metadata instead of duplicating route
+coverage heuristics.
 
 This matrix maps Admin UI navigation surfaces to live OpenAI/OpenRouter assistant coverage.
 

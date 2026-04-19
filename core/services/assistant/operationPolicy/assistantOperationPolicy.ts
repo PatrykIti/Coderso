@@ -1,5 +1,6 @@
 import type { AssistantOperationPolicy } from "./policyTypes";
 import { adminSurfacePolicies } from "./adminSurfacePolicies";
+import { codersoModulePolicies } from "./codersoModulePolicies";
 import {
   contentScreensWidgetsMediaPolicies,
   pagesFormsListingsPolicies,
@@ -11,6 +12,7 @@ export const assistantOperationPolicy: AssistantOperationPolicy = {
     ...pagesFormsListingsPolicies,
     ...contentScreensWidgetsMediaPolicies,
     ...adminSurfacePolicies,
+    ...codersoModulePolicies,
   },
   followUp: {
     pronouns: [
