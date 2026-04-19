@@ -51,6 +51,17 @@ export const hasDestructiveActions = (plan: AssistantActionPlan) =>
 export const destructiveActionCount = (plan: AssistantActionPlan) =>
   plan.actions.filter(isDestructiveAction).length;
 
+export const hasPromptDestructiveIntentMismatchWithPolicy = (
+  prompt: string,
+  plan: AssistantActionPlan
+) => {
+  if (plan.actions.length === 0) return false;
+  const normalized = normalizeResolverText(prompt);
+  const destructivePrompt =
+    promptContainsAny(normalized, deleteAliases) || promptContainsAny(normalized, archiveAliases);
+  return destructivePrompt && !hasDestructiveActions(plan);
+};
+
 export const hasDestructiveCountMismatchWithPolicy = (
   prompt: string,
   plan: AssistantActionPlan,
@@ -60,6 +71,20 @@ export const hasDestructiveCountMismatchWithPolicy = (
   if (expectedCount === null) return false;
   const actualCount = destructiveActionCount(plan);
   return actualCount > 0 && actualCount !== expectedCount;
+};
+
+export const hasActionCountMismatchWithPolicy = (
+  prompt: string,
+  plan: AssistantActionPlan,
+  policy: AssistantOperationPolicy = assistantOperationPolicy
+) => {
+  const normalized = normalizeResolverText(prompt);
+  const hasCountIntent =
+    promptContainsAny(normalized, ["dokladnie", "dokładnie", "exactly", "expected count"]) ||
+    Object.keys(policy.followUp.countWords).some((word) => wordMatch(normalized, normalizeResolverText(word)));
+  if (!hasCountIntent) return false;
+  const expectedCount = extractExpectedCountWithPolicy(prompt, policy);
+  return expectedCount !== null && plan.actions.length > 0 && plan.actions.length !== expectedCount;
 };
 
 const actionPatch = (action: AssistantPlannedAction): Record<string, unknown> | null => {
@@ -86,7 +111,13 @@ export const hasPromptImpliedFieldMismatchWithPolicy = (
       );
       if (!mentioned) continue;
       const relevantActions = plan.actions.filter((action) => action.type === actionType);
-      if (relevantActions.length === 0) continue;
+      if (relevantActions.length === 0) {
+        const family = actionType.split(".")[0];
+        if (family && plan.actions.some((action) => action.type.startsWith(`${family}.`))) {
+          return true;
+        }
+        continue;
+      }
       if (relevantActions.some((action) => actionPatch(action)?.[patchKey] === undefined)) {
         return true;
       }
@@ -127,29 +158,3 @@ export const canMapFilteredAllWithPolicy = (
 };
 
 export const getPolicyFieldForDraft = findPolicyFieldForDraft;
-
-const dangerousProviderActionPattern =
-  /(database|sql|filesystem|file[-_]?system|shell|exec|process|system|drop|truncate|cookie|session|csrf|secret|password|api[-_]?key)/i;
-
-const providerActionTypes = (draft: unknown) => {
-  if (!draft || typeof draft !== "object" || Array.isArray(draft)) return null;
-  const actions = (draft as { actions?: unknown }).actions;
-  if (!Array.isArray(actions)) return null;
-  return actions.map((action) =>
-    action && typeof action === "object" && !Array.isArray(action)
-      ? (action as { type?: unknown }).type
-      : null
-  );
-};
-
-export const canRecoverUnsupportedProviderActionDraftWithPolicy = (
-  draft: unknown,
-  _policy: AssistantOperationPolicy = assistantOperationPolicy
-) => {
-  const actionTypes = providerActionTypes(draft);
-  if (actionTypes === null || actionTypes.length === 0) return true;
-  return actionTypes.every((type) => {
-    if (typeof type !== "string" || !type.trim()) return false;
-    return !dangerousProviderActionPattern.test(type);
-  });
-};

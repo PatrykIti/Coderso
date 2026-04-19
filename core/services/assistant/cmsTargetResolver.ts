@@ -20,8 +20,9 @@ import {
   matchesCandidateWithPolicy,
   matchesFiltersWithPolicy,
   normalizeResolverText,
+  resolveResourcePolicyEntryFromPromptWithPolicy,
   resolveFieldIntentWithPolicy,
-  resolveResourceKindFromPromptWithPolicy,
+  getResolverResourcePolicyForDraft,
 } from "./operationPolicy/resolverPolicy";
 
 export type CmsResolvedTargetCandidate = {
@@ -97,10 +98,12 @@ export const buildCmsOperationDraftFromPrompt = (
   if (!normalizedPrompt) return null;
 
   const operation = inferOperationWithPolicy(normalizedPrompt);
+  const resourceEntry = resolveResourcePolicyEntryFromPromptWithPolicy(prompt);
   const resourceKind =
-    resolveResourceKindFromPromptWithPolicy(prompt) ?? inferActiveResourceKindWithPolicy(context);
+    (resourceEntry?.resource.kind as CmsResourceKind | undefined) ??
+    inferActiveResourceKindWithPolicy(context);
   if (!operation || !resourceKind) return null;
-  const resourcePolicy = getResolverResourcePolicy(resourceKind);
+  const resourcePolicy = resourceEntry?.resource ?? getResolverResourcePolicy(resourceKind);
 
   const quotedValues = extractQuotedValues(prompt);
   const firstQuoted = quotedValues[0];
@@ -222,6 +225,7 @@ export const buildCmsOperationDraftFromPrompt = (
   return normalizeCmsOperationDraft({
     operation,
     resourceKind,
+    ...(resourceEntry ? { resourceKey: resourceEntry.key } : {}),
     ...(inferredFilters.length > 0 ? { filters: inferredFilters } : {}),
     targetQuery: {
       ...(queryValue && isPrefixQuery ? { prefix: queryValue } : {}),
@@ -507,7 +511,7 @@ export const resolveCmsOperationTargets = (
   draft: CmsOperationDraft,
   context: AssistantAdminContext
 ): CmsTargetResolution => {
-  const resourcePolicy = getResolverResourcePolicy(draft.resourceKind);
+  const resourcePolicy = getResolverResourcePolicyForDraft(draft);
   if (!resourcePolicy || !resourcePolicy.operations.includes(draft.operation)) {
     return {
       status: "unsupported",

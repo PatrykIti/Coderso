@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-189
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -72,3 +72,16 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - Changelog entry on completion.
+
+## Completion Notes (2026-04-19)
+
+- Removed `actionPlanProviderAdapter.ts` and its Vitest suite.
+- Removed `adaptProviderDraftPlan` fallback from `planAssistantActionsWithProviderDraft`.
+- Provider `actions[]` payloads now fall back to local policy planning from the original prompt/context and never become executor inputs.
+- Added/updated fake-provider coverage for action-array rejection and operation-draft-only recovery.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

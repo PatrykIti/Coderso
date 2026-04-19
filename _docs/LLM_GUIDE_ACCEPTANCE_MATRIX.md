@@ -13,7 +13,7 @@ This matrix records the declared `LLM Guide` capability set and the validation l
 Rules:
 - `docs-only` remains read-only and never returns executable action plans.
 - `LLM Guide` can only execute strict typed actions through `/assistant/actions/*`.
-- Provider/model planning runs through the same `/assistant/actions/plan` route when configured; provider output remains untrusted and must pass strict local validation before any reviewable plan is returned.
+- Provider/model planning runs through the same `/assistant/actions/plan` route when configured; provider output remains untrusted, operation-draft-only, and must pass strict local policy validation before any reviewable plan is returned.
 - Gated packs must return typed `needs_input` plans and must not create resources.
 - Docs/corpus pages must describe the supported and gated capability set without implying broad assistant autonomy.
 
@@ -28,11 +28,12 @@ Rules:
 | Surface hints and CMS filters | Vitest + Bun live smoke | Draft schema + provider guidance + policy-driven resolver filters for custom screens/pages/forms plus live natural prompts |
 | Read-only CMS inspection plans | Vitest | Strict plan schema + admin review UI; no executor path |
 | LLM Guide mode route contract | Vitest | UI sends LLM Guide prompts to action planning; docs-only stays on chat |
-| Provider CMS operation draft package | Vitest | Fake-provider context/adapter coverage with strict local validation |
+| Provider CMS operation draft package | Vitest | Fake-provider context coverage with strict operation-draft-only validation |
 | Planner response kinds | Vitest | Strict `responseKind` schema + UI behavior for docs/inspection/action/needs-input |
 | Generic CMS operation-to-action mapping | Vitest + Bun smoke | Pure mapper coverage plus executor/route smoke through existing typed actions |
 | Policy-driven action mapping and safety | Vitest | Generic mapper and provider post-validation guards use action/field/destructive policy metadata |
-| Policy engine cutover | Vitest + Bun live smoke | Legacy CMS registry and duplicated planner guard lists are removed; remaining orchestration uses policy helpers |
+| Policy engine cutover | Vitest + Bun live smoke | Legacy CMS registry, provider action-array adaptation, and duplicated provider guard lists are removed; remaining orchestration uses policy helpers |
+| TASK-189 policy remediation | Vitest + Bun live smoke | Provider `actions[]` are rejected, shared-kind policy resources keep exact identity, and provider-side local-first CMS/admin branches are removed |
 | TASK-188 closure | Vitest + Bun live smoke | Final policy cutover validation keeps targeted assistant suites and OpenAI/OpenRouter live matrix green |
 | Counted multi-target CMS planning | Vitest | Resolver/mapper coverage for delete/archive/update plus explicit multi-create boundaries |
 | Assistant execution cache invalidation | Vitest | Admin client maps successful typed action results to known cache keys; failed/noop results do not broadcast |
@@ -41,7 +42,7 @@ Rules:
 | OpenRouter live planner smoke | Bun integration opt-in | Uses only `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`; skipped when missing |
 | Model capability structured output strategy | Vitest + Bun live smoke | Provider/model family resolves generic `cms_operation_draft` response contract for OpenRouter and OpenAI adapters |
 | Full Admin UI live coverage matrix | Bun integration opt-in | `tests/integration/assistant-live/*` uses `.env` provider vars plus disposable DB fixtures; coverage map lives in `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` |
-| Provider draft packaging and repair | Vitest | Pure provider adapter and redaction logic; fake providers only |
+| Provider operation draft packaging and rejection | Vitest | Provider prompt package, operation-draft schema, exact policy identity, and provider action-array rejection; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |
 | Executor adapters with domain service deps | Bun | Runtime/service orchestration and idempotency behavior |

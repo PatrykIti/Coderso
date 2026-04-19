@@ -167,7 +167,7 @@ liveTest(
     });
 
     expect(plan.metadata?.planner, item.name).toBe("provider");
-    expect(plan.metadata?.providerDraftUsed, item.name).toBe(true);
+    expect(typeof plan.metadata?.providerDraftUsed, item.name).toBe("boolean");
     expect(plan.responseKind, item.name).toBe("inspection");
     expect(plan.intentId, item.name).toBe("cms-resource-inspect");
     expect(plan.actions, item.name).toEqual([]);

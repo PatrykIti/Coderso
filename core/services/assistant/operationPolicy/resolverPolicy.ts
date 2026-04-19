@@ -126,6 +126,15 @@ export const includesPrefixIntentWithPolicy = (normalizedPrompt: string) =>
 const policyResourceEntries = (policy: AssistantOperationPolicy) =>
   Object.entries(policy.resources).filter(([, resource]) => resource.coverage.state !== "not-applicable");
 
+export const getResolverResourcePolicyByKey = (
+  key: string | null | undefined,
+  policy: AssistantOperationPolicy = assistantOperationPolicy
+): AssistantResourcePolicy | null => {
+  if (!key) return null;
+  const resource = policy.resources[key];
+  return resource && resource.coverage.state !== "not-applicable" ? resource : null;
+};
+
 export const getResolverResourcePolicy = (
   kind: CmsResourceKind,
   policy: AssistantOperationPolicy = assistantOperationPolicy
@@ -137,13 +146,21 @@ export const getResolverResourcePolicy = (
   );
 };
 
-export const resolveResourceKindFromPromptWithPolicy = (
+export const getResolverResourcePolicyForDraft = (
+  draft: Pick<CmsOperationDraft, "resourceKind" | "resourceKey">,
+  policy: AssistantOperationPolicy = assistantOperationPolicy
+): AssistantResourcePolicy | null =>
+  getResolverResourcePolicyByKey(draft.resourceKey, policy) ??
+  getResolverResourcePolicy(draft.resourceKind, policy);
+
+export const resolveResourcePolicyEntryFromPromptWithPolicy = (
   prompt: string,
   policy: AssistantOperationPolicy = assistantOperationPolicy
-): CmsResourceKind | null => {
-  const normalizedPrompt = normalizeResolverText(prompt);
+): { key: string; resource: AssistantResourcePolicy } | null => {
+  const normalizedPrompt = normalizeResolverText(prompt.replace(/['"“”][^'"“”]+['"“”]/g, " "));
   const matches = policyResourceEntries(policy)
-    .map(([, resource]) => ({
+    .map(([key, resource]) => ({
+      key,
       resource,
       score: resource.aliases.reduce(
         (result, alias) =>
@@ -153,9 +170,18 @@ export const resolveResourceKindFromPromptWithPolicy = (
     }))
     .filter((match) => match.score > 0)
     .sort((left, right) => right.score - left.score);
-  const kind = matches[0]?.resource.kind;
-  return isCmsResourceKind(kind) ? kind : null;
+  const match = matches[0];
+  return match && isCmsResourceKind(match.resource.kind)
+    ? { key: match.key, resource: match.resource }
+    : null;
 };
+
+export const resolveResourceKindFromPromptWithPolicy = (
+  prompt: string,
+  policy: AssistantOperationPolicy = assistantOperationPolicy
+): CmsResourceKind | null =>
+  (resolveResourcePolicyEntryFromPromptWithPolicy(prompt, policy)?.resource.kind as CmsResourceKind | undefined) ??
+  null;
 
 const isCmsResourceKind = (value: unknown): value is CmsResourceKind =>
   typeof value === "string" &&

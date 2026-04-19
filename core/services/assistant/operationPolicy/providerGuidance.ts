@@ -269,6 +269,7 @@ const exampleFor = (
     draft: {
       operation: "inspect",
       resourceKind: resource.kind,
+      resourceKey: resource.key,
       surfaceHint: resource.label,
       ...nullDraftFields,
       ...draft,
@@ -316,6 +317,7 @@ export const buildProviderOperationDraftGuidance = (
       filterSummary.length > 0
         ? `Policy filters available: ${filterSummary.join(", ")}.`
         : "No policy filters are available.",
+      "Use resourceKey from policy guidance when selecting a resource; it disambiguates shared resourceKind values such as settings-surface.",
       "Use routes and aliases from policy resources for surfaceHint; targetQuery is only for actual names, slugs, prefixes, routes, or active/current references.",
       "Use fields/actions from policy resources for mutation intent; unknown fields must stay omitted.",
       ...guidance.safety.notes,
@@ -328,7 +330,7 @@ export const buildProviderPlannerSystemPrompt = (policy: AssistantOperationPolic
   [
     "You draft Nextless LLM Guide CMS operation drafts.",
     "Return only JSON.",
-    "Return a single object with operation, resourceKind, optional surfaceHint, optional targetQuery, optional filters, optional mutation, and optional constraints.",
+    "Return a single object with operation, resourceKind, resourceKey, optional surfaceHint, optional targetQuery, optional filters, optional mutation, and optional constraints.",
     "Use the policy guidance JSON as the source of truth for resource kinds, aliases, filters, fields, action modes, gated surfaces, and secret redaction.",
     JSON.stringify(buildProviderPolicyGuidance(policy)),
     "Do not return executable actions.",

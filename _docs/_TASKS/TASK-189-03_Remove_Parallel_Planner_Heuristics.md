@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Refactor
 **Estimated Effort:** Large
 **Dependencies:** TASK-189-01, TASK-189-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -87,3 +87,17 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/TESTING_STRATEGY.md`
 - Changelog entry on completion.
+
+## Completion Notes (2026-04-19)
+
+- Removed provider-side local-first helper branches for active surfaces, listing fields, read-only status/search, and generic policy pre-routing.
+- Added a single policy-backed local operation preplan/recovery path that uses `CmsOperationDraft`, exact policy identity, resolver, safety, and mapper.
+- Moved CMS resource target keyword lists to policy aliases and reused `assistantOperationPolicy` from planner compatibility branches.
+- Added provider safety mismatch coverage for non-destructive counted action count mismatches and field/action mismatches.
+- Preserved active-surface widget/page/template adapter behavior as an explicit local adapter exception when generic CMS parsing is intentionally skipped.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

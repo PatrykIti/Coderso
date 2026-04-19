@@ -4,7 +4,6 @@ import { normalizeCmsOperationDraft } from "../../../core/services/assistant/cms
 import {
   canMapExpectedCountMultiWithPolicy,
   canMapFilteredAllWithPolicy,
-  canRecoverUnsupportedProviderActionDraftWithPolicy,
   extractExpectedCountWithPolicy,
   hasDestructiveCountMismatchWithPolicy,
   hasPromptImpliedFieldMismatchWithPolicy,
@@ -101,17 +100,4 @@ test("safety policy gates counted and filtered-all multi target rules from polic
     ...resolution,
     draft: filteredAllDraft,
   })).toBe(true);
-});
-
-test("safety policy allows local recovery only for non-dangerous provider action arrays", () => {
-  expect(
-    canRecoverUnsupportedProviderActionDraftWithPolicy({
-      actions: [{ type: "page.create", input: {} }],
-    })
-  ).toBe(true);
-  expect(
-    canRecoverUnsupportedProviderActionDraftWithPolicy({
-      actions: [{ type: "database.drop", input: {} }],
-    })
-  ).toBe(false);
 });

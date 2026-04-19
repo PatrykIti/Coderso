@@ -333,7 +333,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     },
   },
   {
-    name: "provider ready draft",
+    name: "provider action array is ignored",
     prompt: "create a draft product entry",
     llmAvailable: true,
     provider: fakeProvider(
@@ -356,9 +356,8 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
       })
     ),
     expected: {
-      status: "ready",
-      intentId: "provider-entry",
-      actionType: "entry.upsert-draft",
+      status: "needs_input",
+      intentId: "generic-guide-needs-input",
     },
   },
   {
@@ -377,7 +376,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     ),
     expected: {
       status: "needs_input",
-      summaryIncludes: "unsupported actions",
+      intentId: "generic-guide-needs-input",
     },
   },
   {

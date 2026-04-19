@@ -2472,7 +2472,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.
 `TASK-172-06` dodaje editorial content hub pack: prompt blogowy tworzy strone z `posts-feed`, bez mutowania rekordow posts.
-Pozostale contract-only rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
+Pozostale contract-only rodziny nadal sa odrzucane przez strict action plan schema i provider operation-draft mapping do czasu osobnych adapterow preview/execute. Provider nie moze zwrocic `actions[]` jako executor payloadu; akcje musza zostac zrekonstruowane lokalnie z poprawnego `CmsOperationDraft`, policy lookup, resolvera i mappera.
 
 Declared capability limits:
 - `docs-only` remains read-only and never returns executable action plans.

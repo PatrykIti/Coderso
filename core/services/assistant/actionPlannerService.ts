@@ -11,7 +11,6 @@ import type {
 import type { AssistantProvider } from "./providers/providerTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
-import { adaptProviderDraftPlan } from "./actionPlanProviderAdapter";
 import {
   classifyAssistantPrompt,
   includesAny,
@@ -27,11 +26,12 @@ import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPo
 import { buildProviderPlannerSystemPrompt } from "./operationPolicy/providerGuidance";
 import {
   hasDestructiveActions,
+  hasActionCountMismatchWithPolicy,
   hasDestructiveCountMismatchWithPolicy,
+  hasPromptDestructiveIntentMismatchWithPolicy,
   hasPromptImpliedFieldMismatchWithPolicy,
   isBroadDestructivePromptWithPolicy,
   extractExpectedCountWithPolicy,
-  canRecoverUnsupportedProviderActionDraftWithPolicy,
 } from "./operationPolicy/safetyPolicy";
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
@@ -72,7 +72,8 @@ import {
   type CmsOperationDraft,
   buildCmsOperationDraftJsonSchema,
   normalizeCmsOperationDraft,
-  repairCmsOperationDraft,
+  normalizeCmsOperationDraftWithPolicy,
+  repairCmsOperationDraftWithPolicy,
 } from "./cmsOperationDraftSchema";
 import {
   chooseProviderResponseContract,
@@ -123,26 +124,11 @@ const checkoutKeywords = [
   "płatności",
 ];
 
-const screenDeleteKeywords = [
-  "screen",
-  "screens",
-  "ekran",
-  "ekrany",
-  "ekranow",
-  "ekranów",
-  "custom screen",
-  "custom screens",
-];
+const resourcePolicyAliases = (...keys: string[]) =>
+  keys.flatMap((key) => assistantOperationPolicy.resources[key]?.aliases ?? []);
 
-const pageDeleteKeywords = [
-  "page",
-  "pages",
-  "strona",
-  "strone",
-  "stronę",
-  "strony",
-  "stronie",
-];
+const screenDeleteKeywords = resourcePolicyAliases("custom-screen");
+const pageDeleteKeywords = resourcePolicyAliases("page");
 
 const includesPageUpdateTargetKeyword = (normalizedPrompt: string) =>
   /\b(page|title|slug|url|nav|navigation|template|publish|published|draft)\b/.test(normalizedPrompt) ||
@@ -158,38 +144,9 @@ const includesPageUpdateTargetKeyword = (normalizedPrompt: string) =>
     "szkic",
   ]);
 
-const widgetTemplateDeleteKeywords = [
-  "widget template",
-  "widget templates",
-  "template widget",
-  "template widgets",
-  "szablon widgetu",
-  "szablon widgetów",
-  "szablony widgetow",
-  "szablony widgetów",
-  "template",
-  "templates",
-];
-
-const entryDeleteKeywords = [
-  "entry",
-  "entries",
-  "record",
-  "records",
-  "wpis",
-  "wpisy",
-  "rekord",
-  "rekordy",
-];
-
-const contentTypeDeleteKeywords = [
-  "content type",
-  "content model",
-  "typ tresci",
-  "typ treści",
-  "model tresci",
-  "model treści",
-];
+const widgetTemplateDeleteKeywords = resourcePolicyAliases("widget-template");
+const entryDeleteKeywords = resourcePolicyAliases("entry");
+const contentTypeDeleteKeywords = resourcePolicyAliases("content-type");
 
 const formArchiveKeywords = [
   "archive",
@@ -206,46 +163,12 @@ const formArchiveKeywords = [
 
 const includesFormTargetKeyword = (normalizedPrompt: string) =>
   /\bforms?\b/.test(normalizedPrompt) ||
-  includesAny(normalizedPrompt, ["formularz", "formularze", "formularza"]);
+  includesAny(normalizedPrompt, resourcePolicyAliases("form"));
 
-const menuItemDeleteKeywords = [
-  "menu item",
-  "menu items",
-  "pozycje menu",
-  "pozycje w menu",
-  "pozycje z menu",
-  "element menu",
-  "elementy menu",
-  "link menu",
-  "link z menu",
-];
-
-const seoDocumentDeleteKeywords = [
-  "seo",
-  "seo document",
-  "seo documents",
-  "meta",
-  "meta title",
-  "meta description",
-];
-
-const listingQueryDeleteKeywords = [
-  "listing query",
-  "listing queries",
-  "query listingu",
-  "zapytanie listingu",
-  "zapytanie listingowe",
-  "kwerenda listingowa",
-];
-
-const listingTemplateDeleteKeywords = [
-  "listing template",
-  "listing templates",
-  "template listingu",
-  "template listingowy",
-  "szablon listingu",
-  "szablon listingowy",
-];
+const menuItemDeleteKeywords = resourcePolicyAliases("menu-item");
+const seoDocumentDeleteKeywords = resourcePolicyAliases("seo-document");
+const listingQueryDeleteKeywords = resourcePolicyAliases("listing-query");
+const listingTemplateDeleteKeywords = resourcePolicyAliases("listing-template");
 
 const extractQuotedPrefix = (prompt: string) => {
   const match = prompt.match(/['"“”]([^'"“”]+)['"“”]/);
@@ -3137,7 +3060,8 @@ const tryPlanProviderCmsOperationDraft = (
   try {
     const operationDraft = applyPromptImpliedProviderDraftFilters(
       input.prompt,
-      repairCmsOperationDraft(draft) ?? normalizeCmsOperationDraft(draft)
+      repairCmsOperationDraftWithPolicy(draft, assistantOperationPolicy) ??
+        normalizeCmsOperationDraftWithPolicy(draft, assistantOperationPolicy)
     );
     const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft);
     if (!plan) return null;
@@ -3257,58 +3181,74 @@ const buildProviderLocalRecoveryPlan = (
   });
 };
 
-const buildProviderPreferredActiveSurfacePlan = (input: AssistantProviderDraftPlanInput) => {
-  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
-  if (isLikelyDeletePrompt(normalizedPrompt)) {
-    const plan = planAssistantActions({
-      prompt: input.prompt,
-      context: input.context,
+const buildLocalPolicyOperationPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  const readOnlyPrompt = includesAny(normalizedPrompt, [
+    "pokaz",
+    "pokaż",
+    "znajdz",
+    "znajdź",
+    "find",
+    "search",
+    "show",
+    "jakie",
+    "ktore",
+    "które",
+  ]);
+  if (shouldSkipGenericCmsLocalPrompt(normalizedPrompt) && !readOnlyPrompt) {
+    const activeSurfacePlan = planAssistantActions({
+      prompt,
+      context: { ...context, locale: context.locale ?? undefined } as AssistantActionContext,
     });
-    if (
-      plan.status === "ready" &&
-      plan.actions.some((action) =>
-        [
-          "page.delete",
-          "widget-template.delete",
-          "custom-screen.delete",
-          "entry.delete",
-        ].includes(action.type)
-      )
-    ) {
-      return plan;
-    }
+    return activeSurfacePlan.status === "ready" && activeSurfacePlan.actions.length > 0
+      ? activeSurfacePlan
+      : null;
+  }
+  const rawDraft = buildCmsOperationDraftFromPrompt(prompt, context);
+  if (!rawDraft) return null;
+  const policyAdjustedDraft = applyPromptImpliedProviderDraftFilters(prompt, rawDraft);
+  const draft =
+    policyAdjustedDraft.operation === "update" &&
+    readOnlyPrompt &&
+    !policyAdjustedDraft.mutation
+      ? normalizeCmsOperationDraft({
+          ...policyAdjustedDraft,
+          operation: "inspect",
+          constraints: {
+            destructive: false,
+            requiresConfirmation: false,
+          },
+        })
+      : policyAdjustedDraft;
+  const hasExplicitTarget = Boolean(
+    draft.targetQuery?.exactName ||
+      draft.targetQuery?.slug ||
+      draft.targetQuery?.prefix ||
+      draft.targetQuery?.text ||
+      draft.targetQuery?.active ||
+      (Array.isArray(draft.mutation?.patch?.items) && draft.mutation.patch.items.length > 0) ||
+      (draft.filters && draft.filters.length > 0)
+  );
+  if (!hasExplicitTarget) return null;
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan && (inspectionPlan.inspection?.candidates.length ?? 0) > 0) {
+    return inspectionPlan;
+  }
+  const mutationPlan = mapCmsOperationToActionPlan({ prompt, draft, context });
+  if (mutationPlan?.responseKind === "action_plan" && mutationPlan.actions.length > 0) {
+    return mutationPlan;
   }
   if (
-    !includesAny(normalizedPrompt, [
-      "selected block",
-      "wybrany blok",
-      "wybranego bloku",
-      "headline",
-      "naglowek",
-      "nagłówek",
-      "cta",
-      "button",
-      "przycisk",
-    ])
+    mutationPlan?.status === "needs_input" &&
+    (isLikelyDeletePrompt(normalizeAssistantPlannerPrompt(prompt)) ||
+      includesAny(normalizeAssistantPlannerPrompt(prompt), ["archive", "archiwizuj", "zarchiwizuj"]))
   ) {
-    return null;
+    return mutationPlan;
   }
-  const plan = planAssistantActions({
-    prompt: input.prompt,
-    context: input.context,
-  });
-  if (
-    plan.status !== "ready" ||
-    !plan.actions.some(
-      (action) =>
-        action.type === "widget-template.block.patch" ||
-        action.type === "page.widget.patch" ||
-        action.type === "custom-screen.widget.patch"
-    )
-  ) {
-    return null;
-  }
-  return plan;
+  return null;
 };
 
 const hasPlannerWord = (value: string, word: string) =>
@@ -3400,29 +3340,6 @@ const extractNamedIdValue = (prompt: string, labels: string[]) => {
   return null;
 };
 
-const buildProviderPreferredListingFieldPlan = (input: AssistantProviderDraftPlanInput) => {
-  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
-  if (
-    !includesAny(normalizedPrompt, ["listing", "template", "query"]) ||
-    !includesAny(normalizedPrompt, ["layout", "limit"])
-  ) {
-    return null;
-  }
-  const plan = planAssistantActions({
-    prompt: input.prompt,
-    context: input.context,
-  });
-  if (
-    plan.status !== "ready" ||
-    !plan.actions.some(
-      (action) => action.type === "listing-template.update" || action.type === "listing-query.update"
-    )
-  ) {
-    return null;
-  }
-  return plan;
-};
-
 const withProviderPlannerMetadata = (
   plan: AssistantActionPlan,
   input: AssistantProviderDraftPlanInput
@@ -3436,93 +3353,9 @@ const withProviderPlannerMetadata = (
     },
     assumptions: [
       ...plan.assumptions,
-      "Provider path used deterministic local routing before model inference.",
+      "Provider path used deterministic local policy routing or recovery.",
     ],
   });
-
-const buildProviderPreferredReadOnlyStatusPlan = (
-  input: AssistantProviderDraftPlanInput,
-  context: ReturnType<typeof buildAssistantAdminContext>
-) => {
-  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
-  if (
-    !hasPlannerWord(normalizedPrompt, "czy") ||
-    !includesAny(normalizedPrompt, [
-      "publiczny",
-      "publiczne",
-      "public",
-      "opublikowany",
-      "opublikowana",
-      "published",
-      "widoczny",
-      "widoczna",
-      "visible",
-    ])
-  ) {
-    return null;
-  }
-
-  for (const form of context.resourceCatalog?.forms ?? []) {
-    if (!normalizeAssistantPlannerPrompt(input.prompt).includes(normalizeAssistantPlannerPrompt(form.name))) {
-      continue;
-    }
-    const filters = includesAny(normalizedPrompt, ["publiczny", "publiczne", "public"])
-      ? [{ field: "visibility" as const, operator: "eq" as const, value: "public" }]
-      : includesAny(normalizedPrompt, ["internal", "wewnetrzny", "wewnętrzny"])
-        ? [{ field: "visibility" as const, operator: "eq" as const, value: "internal" }]
-        : includesAny(normalizedPrompt, ["opublikowany", "opublikowana", "published"])
-          ? [{ field: "status" as const, operator: "eq" as const, value: "published" }]
-          : [];
-    const draft = normalizeCmsOperationDraft({
-      operation: "inspect",
-      resourceKind: "form",
-      targetQuery: { exactName: form.name, text: form.name },
-      ...(filters.length > 0 ? { filters } : {}),
-    });
-    return buildGenericCmsInspectionPlan(input.prompt, draft, context);
-  }
-
-  return null;
-};
-
-const buildProviderPreferredReadOnlySearchPlan = (
-  input: AssistantProviderDraftPlanInput,
-  context: ReturnType<typeof buildAssistantAdminContext>
-) => {
-  const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
-  if (
-    !includesAny(normalizedPrompt, ["znajdz", "znajdź", "find", "search"]) ||
-    !includesAny(normalizedPrompt, ["slowo", "słowo", "word", "nazwa", "nazwie", "tytul", "tytuł", "tytule"])
-  ) {
-    return null;
-  }
-  const draft = buildCmsOperationDraftFromPrompt(input.prompt, context);
-  if (!draft || (draft.operation !== "inspect" && draft.operation !== "find")) return null;
-  if (!draft.targetQuery?.exactName && !draft.targetQuery?.text && !draft.targetQuery?.slug && !draft.targetQuery?.prefix) {
-    return null;
-  }
-  return buildGenericCmsInspectionPlan(input.prompt, draft, context);
-};
-
-const buildProviderPreferredPolicyPlan = (
-  input: AssistantProviderDraftPlanInput,
-  context: ReturnType<typeof buildAssistantAdminContext>
-) => {
-  const inspectionPlan = buildGenericCmsInspectionOperationPlan(input.prompt, context);
-  if ((inspectionPlan?.inspection?.candidates.length ?? 0) > 0) return inspectionPlan;
-  const mutationPlan = buildGenericCmsFallbackMutationPlan(input.prompt, context);
-  if (mutationPlan?.responseKind === "action_plan" && mutationPlan.actions.length > 0) {
-    return mutationPlan;
-  }
-  if (
-    mutationPlan?.status === "needs_input" &&
-    (isLikelyDeletePrompt(normalizeAssistantPlannerPrompt(input.prompt)) ||
-      includesAny(normalizeAssistantPlannerPrompt(input.prompt), ["archive", "archiwizuj", "zarchiwizuj"]))
-  ) {
-    return mutationPlan;
-  }
-  return null;
-};
 
 const buildExplicitMediaReferencePlan = (input: AssistantActionPlanInput): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(input.prompt);
@@ -3793,14 +3626,6 @@ export const planAssistantActionsWithProviderDraft = async (
   const context = buildAssistantAdminContext(input.context);
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
   if (planningStatePlan) return withProviderPlannerMetadata(planningStatePlan, input);
-  const activeSurfacePlan = buildProviderPreferredActiveSurfacePlan(input);
-  if (activeSurfacePlan) return withProviderPlannerMetadata(activeSurfacePlan, input);
-  const listingFieldPlan = buildProviderPreferredListingFieldPlan(input);
-  if (listingFieldPlan) return withProviderPlannerMetadata(listingFieldPlan, input);
-  const readOnlyStatusPlan = buildProviderPreferredReadOnlyStatusPlan(input, context);
-  if (readOnlyStatusPlan) return withProviderPlannerMetadata(readOnlyStatusPlan, input);
-  const readOnlySearchPlan = buildProviderPreferredReadOnlySearchPlan(input, context);
-  if (readOnlySearchPlan) return withProviderPlannerMetadata(readOnlySearchPlan, input);
   if (
     extractExpectedCountWithPolicy(input.prompt) !== null &&
     (isLikelyDeletePrompt(normalizeAssistantPlannerPrompt(input.prompt)) ||
@@ -3811,8 +3636,17 @@ export const planAssistantActionsWithProviderDraft = async (
   if (isBroadDestructivePromptWithPolicy(input.prompt)) {
     return planAssistantActions(input);
   }
-  const policyPlan = buildProviderPreferredPolicyPlan(input, context);
-  if (policyPlan) return withProviderPlannerMetadata(policyPlan, input);
+  const localPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+  if (localPolicyPlan) {
+    return normalizeAssistantActionPlan({
+      ...localPolicyPlan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: false,
+        providerId: input.provider?.id ?? null,
+      },
+    });
+  }
 
   if (!input.llmAvailable || !input.provider) {
     return planAssistantActions(input);
@@ -3852,8 +3686,15 @@ export const planAssistantActionsWithProviderDraft = async (
         if (localInspection && (localInspection.inspection?.candidates.length ?? 0) > 0) {
           return withProviderPlannerMetadata(localInspection, input);
         }
+        const recoveredPlan = buildProviderLocalRecoveryPlan(input);
+        if (recoveredPlan) return recoveredPlan;
       }
-      if (operationPlan.status === "needs_input" || operationPlan.actions.length === 0) {
+      if (
+        operationPlan.status === "needs_input" ||
+        (operationPlan.actions.length === 0 &&
+          operationPlan.responseKind !== "inspection" &&
+          operationPlan.responseKind !== "docs")
+      ) {
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
         if (recoveredPlan) return recoveredPlan;
       }
@@ -3863,56 +3704,18 @@ export const planAssistantActionsWithProviderDraft = async (
       if (hasDestructiveCountMismatchWithPolicy(input.prompt, operationPlan)) {
         return planAssistantActions(input);
       }
+      if (hasActionCountMismatchWithPolicy(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
+      if (hasPromptDestructiveIntentMismatchWithPolicy(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
       if (hasPromptImpliedFieldMismatchWithPolicy(input.prompt, operationPlan)) {
-        return planAssistantActions(input);
-      }
-      if (
-        isUnsupportedPostMutationPrompt(
-          normalizeAssistantPlannerPrompt(input.prompt),
-          context
-        ) &&
-        operationPlan.actions.length > 0
-      ) {
-        return planAssistantActions(input);
-      }
-      if (
-        isUnsupportedMediaUploadPrompt(normalizeAssistantPlannerPrompt(input.prompt)) &&
-        operationPlan.actions.length > 0
-      ) {
         return planAssistantActions(input);
       }
       return operationPlan;
     }
-    const adaptedPlan = adaptProviderDraftPlan({
-      prompt: input.prompt,
-      draft,
-    });
-    if (adaptedPlan.actions.length === 0 && canRecoverUnsupportedProviderActionDraftWithPolicy(draft)) {
-      const recoveredPlan = buildProviderLocalRecoveryPlan(input);
-      if (recoveredPlan) return recoveredPlan;
-    }
-    if (
-      isUnsupportedPostMutationPrompt(
-        normalizeAssistantPlannerPrompt(input.prompt),
-        context
-      ) &&
-      adaptedPlan.actions.length > 0
-    ) {
-      return planAssistantActions(input);
-    }
-    if (
-      isUnsupportedMediaUploadPrompt(normalizeAssistantPlannerPrompt(input.prompt)) &&
-      adaptedPlan.actions.length > 0
-    ) {
-      return planAssistantActions(input);
-    }
-    if (hasDestructiveCountMismatchWithPolicy(input.prompt, adaptedPlan)) {
-      return planAssistantActions(input);
-    }
-    if (hasPromptImpliedFieldMismatchWithPolicy(input.prompt, adaptedPlan)) {
-      return planAssistantActions(input);
-    }
-    return adaptedPlan;
+    return planAssistantActions(input);
   } catch {
     return planAssistantActions(input);
   }

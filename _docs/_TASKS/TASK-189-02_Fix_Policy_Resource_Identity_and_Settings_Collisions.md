@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Policy
 **Estimated Effort:** Large
 **Dependencies:** TASK-189-01
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -79,3 +79,17 @@ No child task files.
 - `_docs/SECURITY_SPEC.md`
 - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - Changelog entry on completion.
+
+## Completion Notes (2026-04-19)
+
+- Added optional `resourceKey` to `CmsOperationDraft` plus policy-aware normalization/repair.
+- Provider draft JSON schema now exposes strict policy resource keys.
+- Resolver policy now keeps exact policy entries for shared-kind settings/admin surfaces.
+- Quoted target text is ignored during resource alias scoring so fixture names such as `openrouter` do not hijack resource identity.
+- Settings/API key/webhook/security/admin surface tests now cover exact policy identity.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

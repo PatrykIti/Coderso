@@ -74,6 +74,7 @@ export type CmsOperationConstraints = {
 export type CmsOperationDraft = {
   operation: CmsOperation;
   resourceKind: CmsResourceKind;
+  resourceKey?: string;
   surfaceHint?: string;
   filters?: CmsOperationFilter[];
   targetQuery?: CmsOperationTargetQuery;
@@ -94,6 +95,7 @@ const constraintsKeys = new Set(["expectedCount", "destructive", "requiresConfir
 const draftKeys = new Set([
   "operation",
   "resourceKind",
+  "resourceKey",
   "surfaceHint",
   "filters",
   "targetQuery",
@@ -238,6 +240,7 @@ export const normalizeCmsOperationDraft = (value: unknown): CmsOperationDraft =>
   return {
     operation: operation as CmsOperation,
     resourceKind: resourceKind as CmsResourceKind,
+    ...(input.resourceKey !== undefined ? { resourceKey: readOptionalText(input.resourceKey) } : {}),
     ...(input.surfaceHint !== undefined ? { surfaceHint: readOptionalText(input.surfaceHint) } : {}),
     ...(input.filters !== undefined ? { filters: normalizeFilters(input.filters) } : {}),
     ...(input.targetQuery !== undefined
@@ -248,6 +251,18 @@ export const normalizeCmsOperationDraft = (value: unknown): CmsOperationDraft =>
       ? { constraints: normalizeConstraints(input.constraints) }
       : {}),
   };
+};
+
+export const normalizeCmsOperationDraftWithPolicy = (
+  value: unknown,
+  policy: AssistantOperationPolicy
+): CmsOperationDraft => {
+  const draft = normalizeCmsOperationDraft(value);
+  if (!draft.resourceKey) return draft;
+  const resource = policy.resources[draft.resourceKey];
+  if (!resource || resource.coverage.state === "not-applicable") fail();
+  if (resource.kind !== draft.resourceKind) fail();
+  return draft;
 };
 
 export const isCmsOperationDraft = (value: unknown): value is CmsOperationDraft => {
@@ -291,12 +306,26 @@ export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | nul
     return normalizeCmsOperationDraft({
       operation: value.operation,
       resourceKind: value.resourceKind,
+      ...(value.resourceKey !== undefined ? { resourceKey: value.resourceKey } : {}),
       ...(value.surfaceHint !== undefined ? { surfaceHint: value.surfaceHint } : {}),
       ...(filters && filters.length > 0 ? { filters } : {}),
       ...(targetQuery ? { targetQuery } : {}),
       ...(mutation ? { mutation } : {}),
       ...(constraints ? { constraints } : {}),
     });
+  } catch {
+    return null;
+  }
+};
+
+export const repairCmsOperationDraftWithPolicy = (
+  value: unknown,
+  policy: AssistantOperationPolicy
+): CmsOperationDraft | null => {
+  const draft = repairCmsOperationDraft(value);
+  if (!draft) return null;
+  try {
+    return normalizeCmsOperationDraftWithPolicy(draft, policy);
   } catch {
     return null;
   }
@@ -325,6 +354,12 @@ export const buildCmsOperationDraftJsonSchema = (
 ): Record<string, unknown> => {
   const operationEnum = policyEnum(policy, cmsOperationValues, (resource) => resource.operations);
   const resourceKindEnum = policyEnum(policy, cmsResourceKindValues, (resource) => [resource.kind]);
+  const resourceKeyEnum = policy
+    ? Object.entries(policy.resources)
+        .filter(([, resource]) => resource.coverage.state !== "not-applicable")
+        .map(([key]) => key)
+        .sort()
+    : [];
   const filterFieldEnum = policyEnum(policy, cmsOperationFilterFieldValues, (resource) =>
     Object.values(resource.filters).map((filter) => filter.field)
   );
@@ -332,7 +367,7 @@ export const buildCmsOperationDraftJsonSchema = (
   return {
   type: "object",
   additionalProperties: false,
-  required: ["operation", "resourceKind", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
+  required: ["operation", "resourceKind", "resourceKey", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
   properties: {
     operation: {
       type: "string",
@@ -342,6 +377,14 @@ export const buildCmsOperationDraftJsonSchema = (
       type: "string",
       enum: resourceKindEnum,
     },
+    resourceKey: resourceKeyEnum.length > 0
+      ? {
+          anyOf: [
+            { type: "string", enum: resourceKeyEnum },
+            { type: "null" },
+          ],
+        }
+      : { type: ["string", "null"] },
     surfaceHint: { type: ["string", "null"] },
     filters: {
       anyOf: [

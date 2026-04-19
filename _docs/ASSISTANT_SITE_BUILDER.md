@@ -89,6 +89,9 @@ permissions, idempotency, and conflict-aware execution.
 - Provider planning prefers a strict CMS operation draft response. The backend
   validates and repairs/falls back locally before any target resolution or action
   planning can proceed.
+- Provider output is operation-draft-only. Provider-supplied `actions[]`, ids,
+  and executor payloads are rejected or ignored; the backend must reconstruct any
+  executable plan locally from policy and trusted context.
 - Provider prompt guidance, provider-facing resource registry metadata, and the
   strict CMS operation draft JSON schema are generated from
   `assistantOperationPolicy`; gated/redacted surfaces are described from policy

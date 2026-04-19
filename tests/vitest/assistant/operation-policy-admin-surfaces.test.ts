@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { expect, test } from "vitest";
 
 import { settingsSidebarItems } from "../../../core/admin/ui/settings/SettingsSidebar";
+import { buildCmsOperationDraftFromPrompt } from "../../../core/services/assistant/cmsTargetResolver";
 import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
 import { adminSurfacePolicies } from "../../../core/services/assistant/operationPolicy/adminSurfacePolicies";
 import { normalizeAssistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/policySchema";
@@ -144,4 +145,23 @@ test("adminSurfacePolicies exports every settings sidebar item through canonical
   for (const route of settingsRoutes) {
     expect(routes.has(route), route).toBe(true);
   }
+});
+
+test("settings shared-kind prompts keep exact policy resource identity", () => {
+  expect(buildCmsOperationDraftFromPrompt("pokaż API Keys")).toMatchObject({
+    resourceKind: "settings-surface",
+    resourceKey: "settings-api-keys",
+  });
+  expect(buildCmsOperationDraftFromPrompt("pokaż assistant settings provider key")).toMatchObject({
+    resourceKind: "settings-surface",
+    resourceKey: "settings-assistant",
+  });
+  expect(buildCmsOperationDraftFromPrompt("pokaż security csrf settings")).toMatchObject({
+    resourceKind: "settings-surface",
+    resourceKey: "settings-security",
+  });
+  expect(buildCmsOperationDraftFromPrompt("pokaż webhook secret")).toMatchObject({
+    resourceKind: "settings-surface",
+    resourceKey: "settings-webhooks",
+  });
 });

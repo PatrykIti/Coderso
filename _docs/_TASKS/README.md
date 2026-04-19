@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 12 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 938 tasks
+- **Done:** 943 tasks
 
 ---
 
@@ -38,11 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Remove provider action-array fallback, fix exact policy identity, and collapse duplicate planner heuristics |
-| TASK-189-01 | Remove Provider Action Array Fallback | High | Medium | Provider output must be operation-draft-only and cannot supply executable actions |
-| TASK-189-02 | Fix Policy Resource Identity and Settings Collisions | High | Large | Preserve exact policy keys for shared-kind settings/admin surfaces |
-| TASK-189-03 | Remove Parallel Planner Heuristics | High | Large | Collapse CMS/admin planning into policy draft -> resolver -> safety -> mapper |
-| TASK-189-04 | Docs, Tests, and Closure | High | Medium | Final docs, changelog, board, targeted suites, and live matrix closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -69,6 +64,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Done: provider action arrays removed, exact policy identity fixed, provider-side parallel heuristics collapsed |
+| TASK-189-04 | Docs, Tests, and Closure | High | Medium | Done: docs, changelog, targeted Vitest, lint/typecheck, and live assistant matrix synced |
+| TASK-189-03 | Remove Parallel Planner Heuristics | High | Large | Done: provider-side local-first one-offs replaced by one policy-backed operation path |
+| TASK-189-02 | Fix Policy Resource Identity and Settings Collisions | High | Large | Done: shared-kind settings/admin resources keep exact policy keys through draft/resolver/guidance |
+| TASK-189-01 | Remove Provider Action Array Fallback | High | Medium | Done: provider `actions[]` no longer adapt into executable plans |
 | TASK-188 | Assistant Operation Policy Engine | High | Large | Done: operation policy is source of truth for provider guidance, resolver/filtering, mapping/safety, follow-up, and coverage |
 | TASK-188-10 | Docs, Changelog, and Closure | High | Medium | Done: final docs, changelog, board, and OpenAI/OpenRouter live validation synced |
 | TASK-188-09 | Policy Engine Cutover and Heuristic Removal | High | Large | Done: legacy CMS registry and remaining duplicated planner count/resource guards removed |

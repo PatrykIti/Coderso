@@ -387,7 +387,7 @@ export const cmsOperationFixtures: CmsOperationFixture[] = [
     },
     expected: {
       status: "needs_input",
-      summaryIncludes: "unsupported actions",
+      responseKind: "needs_input",
     },
   },
 ];

@@ -12,12 +12,23 @@ import {
   matchesCandidateWithPolicy,
   matchesFiltersWithPolicy,
   normalizeResolverText,
+  resolveResourcePolicyEntryFromPromptWithPolicy,
   resolveResourceKindFromPromptWithPolicy,
 } from "../../../core/services/assistant/operationPolicy/resolverPolicy";
 
 test("resolver policy resolves resource operation and count aliases from operation policy", () => {
   expect(resolveResourceKindFromPromptWithPolicy("usun dwie strony")).toBe("page");
   expect(resolveResourceKindFromPromptWithPolicy("pokaż API Keys")).toBe("settings-surface");
+  expect(resolveResourcePolicyEntryFromPromptWithPolicy("pokaż API Keys")?.key).toBe("settings-api-keys");
+  expect(resolveResourcePolicyEntryFromPromptWithPolicy("assistant settings provider key")?.key).toBe(
+    "settings-assistant"
+  );
+  expect(resolveResourcePolicyEntryFromPromptWithPolicy("security csrf settings")?.key).toBe(
+    "settings-security"
+  );
+  expect(resolveResourcePolicyEntryFromPromptWithPolicy("webhook secret")?.key).toBe(
+    "settings-webhooks"
+  );
   expect(inferOperationWithPolicy(normalizeResolverText("usun dwie strony"))).toBe("delete");
   expect(inferOperationWithPolicy(normalizeResolverText("czy istnieje model Products"))).toBe("inspect");
   expect(inferRequestedCountWithPolicy(normalizeResolverText("usun dwie strony"))).toBe(2);

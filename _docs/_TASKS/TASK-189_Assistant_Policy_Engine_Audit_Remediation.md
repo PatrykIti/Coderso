@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Architecture + Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-188
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -114,3 +114,18 @@ Policy resource identity must be stable and collision-free. A policy entry may e
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New changelog entries for completed leaves and final closure.
+
+## Completion Notes (2026-04-19)
+
+- Removed the provider executable `actions[]` adapter path and deleted `actionPlanProviderAdapter.ts`.
+- Added exact `resourceKey` support for CMS operation drafts so shared-kind settings/admin policies no longer collapse to the first `settings-surface`.
+- Removed provider-side local-first one-off branches and replaced them with a single policy-backed local operation preplan/recovery path.
+- Moved duplicated CMS resource target aliases into `assistantOperationPolicy` resource aliases.
+- Updated docs and live/provider tests to describe operation-draft-only provider output.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun run test:assistant:live`

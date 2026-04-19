@@ -329,7 +329,6 @@ Zamiast tego:
 - `core/services/assistant/actionPlannerService.ts` orkiestruje prompt -> typed plan,
 - `core/services/assistant/actionPlanSchema.ts` waliduje strict nested action-plan schema,
 - `core/services/assistant/actionPlanHeuristics.ts` trzyma pure prompt/context heuristics,
-- `core/services/assistant/actionPlanProviderAdapter.ts` mapuje untrusted provider draft JSON do lokalnego strict planu albo typed questions,
 - `core/services/assistant/actionRegistry.ts` trzyma whitelistowany registry action handlers,
 - `core/services/assistant/actionExecutionStore.ts` zapisuje replay-safe idempotency results w DB,
 - `core/services/assistant/actionExecutorService.ts` reuse’uje obecne serwisy domenowe,
@@ -345,6 +344,10 @@ Zamiast tego:
 - Legacy `cmsResourceRegistry.ts` has been removed; resource aliases, operations,
   filters, field intents, follow-up counts, safety rules, and coverage metadata
   are read from `assistantOperationPolicy`.
+- TASK-189 closed the policy remediation after the TASK-188 audit: provider output
+  is operation-draft-only, provider `actions[]` are not adapted into executable
+  plans, shared-kind settings/admin resources keep exact policy identity, and
+  provider-side local-first CMS/admin one-offs were removed.
 - TASK-188 closed the policy cutover: provider guidance, resolver/filtering,
   action mapping/safety, follow-up state, and live coverage validation now use
   the operation policy as the source of truth. Route/domain RBAC, CSRF, strict
@@ -401,12 +404,17 @@ Runtime admin context:
 
 Planner schema/recovery:
 - Planner output jest normalizowany przez strict schema przed zwroceniem z `planAssistantActions`.
-- Provider draft output jest traktowany jako untrusted input; unknown fields/actions, secret-like keys i malformed drafts wracaja jako typed `needs_input` questions zamiast executable actions.
-- Provider adapter nie wykonuje network calli i nie omija lokalnej walidacji akcji.
+- Provider draft output jest traktowany jako untrusted input and must be a
+  `CmsOperationDraft`; provider-supplied `actions[]`, arbitrary executor inputs,
+  secret-like keys, and malformed drafts cannot become executable actions.
 - `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It packages prompt text, docs evidence, advisory runtime context, resource catalog summaries, and model-capability output contracts for provider planning calls.
 - Provider planning packages are passed through `assistantRedaction.ts` before the provider boundary.
-- `planAssistantActionsWithProviderDraft` is the async helper for controlled provider draft planning. It requires injected provider availability, maps provider JSON through `actionPlanProviderAdapter.ts`, and falls back to the deterministic local planner on provider errors/unavailability.
-- Provider draft adapter repair fills safe optional action labels and preserves typed provider questions when strict schema validation fails.
+- `planAssistantActionsWithProviderDraft` is the async helper for controlled
+  provider operation-draft planning. It requires injected provider availability,
+  validates or repairs provider JSON as a CMS operation draft through
+  `cmsOperationDraftSchema.ts`, resolves targets locally through policy, and
+  falls back to the deterministic local planner on provider errors,
+  unavailability, malformed drafts, or unsafe mismatches.
 - Assistant action plans can carry strict planner metadata (`local`, `provider`, or `fallback`) so the admin review UI can explain whether a plan came from provider draft or local deterministic planning.
 - Assistant action plans can also carry strict read-only `inspection` metadata for
   CMS resource candidate lists. These plans have no actions and are not executable.
@@ -457,7 +465,9 @@ Action family contract registry:
   - `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
   - `menu.structure.patch`.
 - These contracts declare schema owners, required permissions, strict reject-unknown expectations, anti-abuse notes, and secret-handling rules.
-- Contract-only action types are not part of `assistantActionTypes`; strict plan schema and provider draft adaptation continue to reject them until their preview/execute adapters land in later `TASK-170` slices.
+- Contract-only action types are not part of `assistantActionTypes`; strict plan
+  schema and provider operation-draft mapping continue to reject them until their
+  preview/execute adapters land in later `TASK-170` slices.
 - Contract-only action families can still produce non-executable preview metadata through `createContractOnlyActionPreviewMetadata`, which returns a machine-readable `assistant_action_contract_only` conflict and permission dependencies for future adapters/UI work.
 - `entry.upsert-draft` is the first promoted action from this registry. It is executable, draft-only, uses existing content entry services, and does not publish content.
 - `custom-screen.delete` is executable for explicit delete requests resolved from server-side resource catalog context; execute rechecks target id/name/prefix before calling the custom screen domain delete service.

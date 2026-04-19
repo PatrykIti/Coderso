@@ -5,6 +5,7 @@ import {
   isCmsOperationDraft,
   repairCmsOperationDraft,
   normalizeCmsOperationDraft,
+  normalizeCmsOperationDraftWithPolicy,
 } from "../../../core/services/assistant/cmsOperationDraftSchema";
 import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
 
@@ -98,6 +99,45 @@ test("normalizeCmsOperationDraft rejects unknown fields and unsupported operatio
   expect(isCmsOperationDraft({ operation: "inspect", resourceKind: "secret" })).toBe(false);
 });
 
+test("normalizeCmsOperationDraftWithPolicy validates exact resource keys", () => {
+  expect(
+    normalizeCmsOperationDraftWithPolicy(
+      {
+        operation: "inspect",
+        resourceKind: "settings-surface",
+        resourceKey: "settings-api-keys",
+      },
+      assistantOperationPolicy
+    )
+  ).toMatchObject({
+    operation: "inspect",
+    resourceKind: "settings-surface",
+    resourceKey: "settings-api-keys",
+  });
+
+  expect(() =>
+    normalizeCmsOperationDraftWithPolicy(
+      {
+        operation: "inspect",
+        resourceKind: "page",
+        resourceKey: "settings-api-keys",
+      },
+      assistantOperationPolicy
+    )
+  ).toThrow("cms_operation_draft_invalid");
+
+  expect(() =>
+    normalizeCmsOperationDraftWithPolicy(
+      {
+        operation: "inspect",
+        resourceKind: "settings-surface",
+        resourceKey: "settings-missing",
+      },
+      assistantOperationPolicy
+    )
+  ).toThrow("cms_operation_draft_invalid");
+});
+
 test("repairCmsOperationDraft keeps safe fields from model-shaped drafts", () => {
   expect(
     repairCmsOperationDraft({
@@ -148,7 +188,7 @@ test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () 
   expect(schema).toMatchObject({
     type: "object",
     additionalProperties: false,
-    required: ["operation", "resourceKind", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
+    required: ["operation", "resourceKind", "resourceKey", "surfaceHint", "filters", "targetQuery", "mutation", "constraints"],
     properties: {
       operation: {
         enum: expect.arrayContaining(["inspect", "delete", "update"]),
@@ -173,7 +213,7 @@ test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () 
 
 test("buildCmsOperationDraftJsonSchema can narrow provider enums from operation policy", () => {
   const schema = buildCmsOperationDraftJsonSchema(assistantOperationPolicy);
-  const properties = schema.properties as Record<string, { enum?: string[] }>;
+  const properties = schema.properties as Record<string, { enum?: string[]; anyOf?: Array<{ enum?: string[] }> }>;
 
   expect(properties.operation?.enum).toEqual(
     expect.arrayContaining(["inspect", "find", "create", "update", "delete", "configure"])
@@ -183,4 +223,7 @@ test("buildCmsOperationDraftJsonSchema can narrow provider enums from operation 
   );
   expect(properties.resourceKind?.enum).not.toContain("post");
   expect(properties.resourceKind?.enum).not.toContain("appointments");
+  expect(properties.resourceKey?.anyOf?.[0]?.enum).toEqual(
+    expect.arrayContaining(["settings-api-keys", "settings-assistant", "page"])
+  );
 });

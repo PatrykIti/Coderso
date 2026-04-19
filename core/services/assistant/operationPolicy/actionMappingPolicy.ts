@@ -7,12 +7,12 @@ import type {
   AssistantPolicyField,
   AssistantResourcePolicy,
 } from "./policyTypes";
-import { getResolverResourcePolicy, normalizeResolverText } from "./resolverPolicy";
+import { getResolverResourcePolicyForDraft, normalizeResolverText } from "./resolverPolicy";
 
 export const getActionMappingResourcePolicy = (
   draft: CmsOperationDraft,
   policy: AssistantOperationPolicy = assistantOperationPolicy
-): AssistantResourcePolicy | null => getResolverResourcePolicy(draft.resourceKind, policy);
+): AssistantResourcePolicy | null => getResolverResourcePolicyForDraft(draft, policy);
 
 export const findPolicyActionForDraft = (
   draft: CmsOperationDraft,

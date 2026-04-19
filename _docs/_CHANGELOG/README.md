@@ -25,6 +25,11 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 711 | 2026-04-19 | TASK-189 policy remediation closure | Assistant/Core |
+| 710 | 2026-04-19 | TASK-189-04 docs tests closure | Docs/QA |
+| 709 | 2026-04-19 | TASK-189-03 planner heuristic removal | Assistant/Core |
+| 708 | 2026-04-19 | TASK-189-02 policy resource identity | Assistant/Core |
+| 707 | 2026-04-19 | TASK-189-01 provider action array removal | Assistant/Core |
 | 706 | 2026-04-19 | TASK-188 policy engine closure | Assistant/Core |
 | 705 | 2026-04-19 | TASK-188-10 policy closure docs | Docs/QA |
 | 704 | 2026-04-19 | TASK-188-09 policy cutover | Assistant/Core |

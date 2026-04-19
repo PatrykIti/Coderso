@@ -2213,7 +2213,7 @@ test("planAssistantActions accepts enriched resource catalog context without DB 
   expect(plan.intentId).toBe("product-catalog");
 });
 
-test("planAssistantActionsWithProviderDraft maps provider JSON through strict adapter", async () => {
+test("planAssistantActionsWithProviderDraft rejects provider action arrays and uses local policy fallback", async () => {
   const plan = await planAssistantActionsWithProviderDraft({
     prompt: "create one draft product entry",
     llmAvailable: true,
@@ -2244,9 +2244,9 @@ test("planAssistantActionsWithProviderDraft maps provider JSON through strict ad
     ),
   });
 
-  expect(plan.status).toBe("ready");
-  expect(plan.intentId).toBe("provider-entry");
-  expect(plan.actions[0]?.type).toBe("entry.upsert-draft");
+  expect(plan.actions).toEqual([]);
+  expect(JSON.stringify(plan)).not.toContain("entry.upsert-draft");
+  expect(JSON.stringify(plan)).not.toContain("provider-entry");
 });
 
 test("planAssistantActionsWithProviderDraft recovers empty provider inspection through policy local inspection", async () => {
@@ -2568,7 +2568,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
   ]);
 });
 
-test("planAssistantActionsWithProviderDraft prefers local read-only word search before provider inference", async () => {
+test("planAssistantActionsWithProviderDraft recovers provider misses with local read-only word search", async () => {
   let providerCalls = 0;
   const provider: AssistantProvider = {
     id: "fake",
@@ -2897,7 +2897,7 @@ test("planAssistantActions reads listing query limit outside quoted target names
   });
 });
 
-test("planAssistantActionsWithProviderDraft prefers active widget template block context before provider inference", async () => {
+test("planAssistantActionsWithProviderDraft recovers active widget template block context after provider miss", async () => {
   let providerCalls = 0;
   const provider: AssistantProvider = {
     id: "fake",
@@ -2963,7 +2963,7 @@ test("planAssistantActionsWithProviderDraft prefers active widget template block
   });
 });
 
-test("planAssistantActionsWithProviderDraft prefers active widget template delete context before provider inference", async () => {
+test("planAssistantActionsWithProviderDraft recovers active widget template delete context after provider miss", async () => {
   let providerCalls = 0;
   const provider: AssistantProvider = {
     id: "fake",
@@ -3057,7 +3057,7 @@ test("planAssistantActionsWithProviderDraft falls back on provider errors", asyn
   expect(plan.intentId).toBe("services-directory");
 });
 
-test("planAssistantActionsWithProviderDraft recovers unsafe provider drafts as questions", async () => {
+test("planAssistantActionsWithProviderDraft ignores unsafe provider action arrays", async () => {
   const plan = await planAssistantActionsWithProviderDraft({
     prompt: "create catalog",
     llmAvailable: true,
@@ -3073,6 +3073,6 @@ test("planAssistantActionsWithProviderDraft recovers unsafe provider drafts as q
     ),
   });
 
-  expect(plan.status).toBe("needs_input");
-  expect(plan.summary).toContain("unsupported actions");
+  expect(plan.status).toBe("ready");
+  expect(JSON.stringify(plan)).not.toContain("database.drop");
 });
