@@ -2688,6 +2688,10 @@ Generic mutation planning maps resolved CMS operation drafts to existing typed
 actions where a safe action contract already exists. Unsupported resources,
 ambiguous targets, missing field values, or broad destructive prompts return
 `needs_input` rather than arbitrary patches.
+The generic action mapper must also find an executable action and field mapping
+in `assistantOperationPolicy`; strict action schemas remain the final validator
+for every returned action. Bulk/count and filtered-all destructive behavior is
+evaluated by policy safety rules before any multi-action plan is returned.
 Generic CMS operation drafts can include `surfaceHint` and allowlisted `filters`.
 Resource aliases, filter aliases, surface-only read fallback, OR-term matching,
 and count words are resolved through `assistantOperationPolicy` via

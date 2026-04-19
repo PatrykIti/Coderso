@@ -327,6 +327,28 @@ test("mapCmsOperationToActionPlan maps generic update drafts to existing typed a
   });
 });
 
+test("mapCmsOperationToActionPlan resolves update fields through policy aliases", () => {
+  expect(planFor({
+    operation: "update",
+    resourceKind: "page",
+    targetQuery: { exactName: "Pysiek Mysiek" },
+    mutation: { fieldIntent: "show in nav", value: true },
+  })?.actions[0]).toMatchObject({
+    type: "page.update",
+    input: { id: "page-pysiek", patch: { settings: { showInNav: true } } },
+  });
+
+  expect(planFor({
+    operation: "update",
+    resourceKind: "seo-document",
+    targetQuery: { exactName: "Products" },
+    mutation: { fieldIntent: "meta description", value: "Browse products." },
+  })?.actions[0]).toMatchObject({
+    type: "seo.document.update",
+    input: { id: "seo-products", patch: { description: "Browse products." } },
+  });
+});
+
 test("mapCmsOperationToActionPlan fails closed for broad destructive prompts", () => {
   const plan = planFor({
     operation: "delete",

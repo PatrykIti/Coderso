@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Action Mapping + Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-188-01, TASK-188-02, TASK-188-04
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -80,3 +80,17 @@ export function mapPolicyAction({ operation, target, field, resourcePolicy }) {
 - `_docs/SECURITY_SPEC.md`
 - `_docs/CMS_API.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `operationPolicy/actionMappingPolicy.ts` for executable action lookup and policy field intent resolution.
+- Added `operationPolicy/safetyPolicy.ts` for broad destructive detection, explicit count extraction, destructive count mismatch, field-mismatch provider guards, counted multi-target allowance, and filtered-all destructive allowance.
+- Updated `cmsOperationActionMapper.ts` to check policy executable actions before returning typed actions and to resolve update patch fields through policy metadata.
+- Updated provider post-validation guards in `actionPlannerService.ts` to use policy safety helpers instead of local broad/count/field heuristics.
+- Kept strict action schemas as the final action validator.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

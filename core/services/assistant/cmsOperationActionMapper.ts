@@ -8,6 +8,16 @@ import {
   type CmsResolvedTargetCandidate,
   resolveCmsOperationTargets,
 } from "./cmsTargetResolver";
+import {
+  isPolicyActionExecutable,
+  policyPatchPathStartsWith,
+  resolvePolicyFieldIntent,
+  findPolicyFieldForDraft,
+} from "./operationPolicy/actionMappingPolicy";
+import {
+  canMapExpectedCountMultiWithPolicy,
+  canMapFilteredAllWithPolicy,
+} from "./operationPolicy/safetyPolicy";
 
 const readString = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : null;
@@ -103,19 +113,27 @@ const readMutationBoolean = (draft: CmsOperationDraft) => {
 };
 
 const fieldIntent = (draft: CmsOperationDraft) =>
-  (draft.mutation?.fieldIntent ?? "").trim().toLowerCase();
+  resolvePolicyFieldIntent(draft);
 
 const buildPageUpdatePatch = (
   draft: CmsOperationDraft
-): { title?: string; slug?: string; status?: "draft" | "published" } | null => {
+): Extract<AssistantPlannedAction, { type: "page.update" }>["input"]["patch"] | null => {
   const value = readMutationText(draft);
-  if (!value) return null;
+  const bool = readMutationBoolean(draft);
   const field = fieldIntent(draft);
-  if (field === "slug" || field === "url") {
+  const policyField = findPolicyFieldForDraft(draft);
+  if (policyPatchPathStartsWith(policyField, "settings")) {
+    if (field === "settings.showinnav" && bool !== null) {
+      return { settings: { showInNav: bool } };
+    }
+    return null;
+  }
+  if (!value) return null;
+  if (field === "slug" || field === "url" || policyPatchPathStartsWith(policyField, "slug")) {
     const slug = normalizePageSlug(value);
     return slug ? { slug } : null;
   }
-  if (field === "status") {
+  if (field === "status" || policyPatchPathStartsWith(policyField, "status")) {
     if (value === "draft" || value === "published") return { status: value };
     return null;
   }
@@ -141,13 +159,17 @@ const buildFormUpdatePatch = (
 ): Extract<AssistantPlannedAction, { type: "form.update" }>["input"]["patch"] | null => {
   const value = readMutationText(draft);
   const field = fieldIntent(draft);
+  const policyField = findPolicyFieldForDraft(draft);
   if (!value) return null;
-  if (field === "slug") return { slug: value };
-  if (field === "status" && (value === "draft" || value === "published" || value === "archived")) {
+  if (field === "slug" || policyPatchPathStartsWith(policyField, "slug")) return { slug: value };
+  if (
+    (field === "status" || policyPatchPathStartsWith(policyField, "status")) &&
+    (value === "draft" || value === "published" || value === "archived")
+  ) {
     return { status: value };
   }
   if (
-    (field === "access" || field === "submissionaccess") &&
+    (field === "access" || field === "submissionaccess" || policyPatchPathStartsWith(policyField, "submissionAccess")) &&
     (value === "public" || value === "internal")
   ) {
     return { submissionAccess: value };
@@ -157,11 +179,17 @@ const buildFormUpdatePatch = (
 
 const buildListingQueryUpdatePatch = (draft: CmsOperationDraft) => {
   const field = fieldIntent(draft);
+  const policyField = findPolicyFieldForDraft(draft);
   const number = readMutationNumber(draft);
   const bool = readMutationBoolean(draft);
   const text = readMutationText(draft);
-  if (field === "limit" && number !== null) return { limit: number };
-  if ((field === "includedrafts" || field === "drafts") && bool !== null) {
+  if ((field === "limit" || policyPatchPathStartsWith(policyField, "limit")) && number !== null) {
+    return { limit: number };
+  }
+  if (
+    (field === "includedrafts" || field === "drafts" || policyPatchPathStartsWith(policyField, "includeDrafts")) &&
+    bool !== null
+  ) {
     return { includeDrafts: bool };
   }
   return text ? { name: text } : null;
@@ -170,9 +198,13 @@ const buildListingQueryUpdatePatch = (draft: CmsOperationDraft) => {
 const buildListingTemplateUpdatePatch = (draft: CmsOperationDraft) => {
   const value = readMutationText(draft);
   const field = fieldIntent(draft);
+  const policyField = findPolicyFieldForDraft(draft);
   if (!value) return null;
-  if (field === "slug") return { slug: value };
-  if (field === "layout" && ["grid", "list", "table", "calendar", "map"].includes(value)) {
+  if (field === "slug" || policyPatchPathStartsWith(policyField, "slug")) return { slug: value };
+  if (
+    (field === "layout" || policyPatchPathStartsWith(policyField, "layout")) &&
+    ["grid", "list", "table", "calendar", "map"].includes(value)
+  ) {
     return { layout: value as "grid" | "list" | "table" | "calendar" | "map" };
   }
   return { name: value };
@@ -183,9 +215,17 @@ const buildWidgetTemplateUpdatePatch = (
 ): Extract<AssistantPlannedAction, { type: "widget-template.update" }>["input"]["patch"] | null => {
   const value = readMutationText(draft);
   const field = fieldIntent(draft);
+  const policyField = findPolicyFieldForDraft(draft);
   if (!value) return null;
-  if (field === "status" && (value === "draft" || value === "published")) return { status: value };
-  if (field === "category") return { category: value };
+  if (
+    (field === "status" || policyPatchPathStartsWith(policyField, "status")) &&
+    (value === "draft" || value === "published")
+  ) {
+    return { status: value };
+  }
+  if (field === "category" || policyPatchPathStartsWith(policyField, "category")) {
+    return { category: value };
+  }
   if (field === "description") return { description: value };
   return { name: value };
 };
@@ -194,18 +234,28 @@ const buildMenuItemUpdatePatch = (draft: CmsOperationDraft) => {
   const value = readMutationText(draft);
   if (!value) return null;
   const field = fieldIntent(draft);
-  return field === "href" || field === "url" || field === "slug"
-    ? { href: value }
-    : { label: value };
+  const policyField = findPolicyFieldForDraft(draft);
+  if (field === "href" || field === "url" || field === "slug" || policyPatchPathStartsWith(policyField, "href")) {
+    return { href: value };
+  }
+  if (field === "parentid" || policyPatchPathStartsWith(policyField, "parentId")) {
+    return { parentId: value };
+  }
+  return { label: value };
 };
 
 const buildSeoUpdatePatch = (draft: CmsOperationDraft) => {
   const value = readMutationText(draft);
   if (!value) return null;
   const field = fieldIntent(draft);
-  return field === "description" || field === "opis"
-    ? { description: value }
-    : { title: value };
+  const policyField = findPolicyFieldForDraft(draft);
+  if (field === "description" || field === "opis" || policyField?.action?.patchPath?.at(-1) === "description") {
+    return { description: value };
+  }
+  if (policyField?.action?.patchPath?.at(-1) === "canonicalUrl") return { canonicalUrl: value };
+  if (policyField?.action?.patchPath?.at(-1) === "robots") return { robots: value };
+  if (policyField?.action?.patchPath?.at(-1) === "slug") return { slug: value };
+  return { title: value };
 };
 
 const actionId = (type: string, id: string) => `${type.replaceAll(".", "-")}-${id}`;
@@ -216,8 +266,6 @@ const operationVerb = (operation: CmsOperationDraft["operation"]) => {
   if (operation === "update") return "Update";
   return "Run";
 };
-
-const hasAllSignal = (prompt: string) => /\b(all|wszystkie|wszyscy|wszystkich)\b/i.test(prompt);
 
 const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
 
@@ -331,6 +379,7 @@ const buildCreateActionForItem = (
   index: number
 ): AssistantPlannedAction | null => {
   if (draft.resourceKind === "page") {
+    if (!isPolicyActionExecutable(draft, "page.upsert")) return null;
     if (!hasOnlyKeys(item, ["title", "slug", "status", "introTitle", "introBody", "ctaLabel", "blocks"])) {
       return null;
     }
@@ -368,6 +417,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "form") {
+    if (!isPolicyActionExecutable(draft, "form.upsert")) return null;
     if (!hasOnlyKeys(item, ["name", "slug", "status", "description", "successMessage", "submissionAccess", "fields"])) {
       return null;
     }
@@ -395,6 +445,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "entry") {
+    if (!isPolicyActionExecutable(draft, "entry.upsert-draft")) return null;
     if (!hasOnlyKeys(item, ["contentTypeSlug", "title", "slug", "values"])) return null;
     const contentTypeSlug = readRequiredTextField(item, "contentTypeSlug");
     const title = readRequiredTextField(item, "title");
@@ -411,6 +462,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "content-type") {
+    if (!isPolicyActionExecutable(draft, "content-type.upsert")) return null;
     if (!hasOnlyKeys(item, ["slug", "name", "schema"])) return null;
     const slug = readRequiredTextField(item, "slug");
     const name = readRequiredTextField(item, "name");
@@ -426,6 +478,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "custom-screen") {
+    if (!isPolicyActionExecutable(draft, "custom-screen.upsert")) return null;
     if (!hasOnlyKeys(item, ["name", "contentTypeSlug", "status", "showInSidebar", "sidebarLabel", "blocks", "bindings"])) {
       return null;
     }
@@ -455,6 +508,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "listing-query") {
+    if (!isPolicyActionExecutable(draft, "listing-query.upsert")) return null;
     if (!hasOnlyKeys(item, ["name", "description", "contentTypeSlug", "fields", "includeDrafts", "limit", "sort"])) {
       return null;
     }
@@ -481,6 +535,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "listing-template") {
+    if (!isPolicyActionExecutable(draft, "listing-template.upsert")) return null;
     if (!hasOnlyKeys(item, ["name", "slug", "description", "layout", "config"])) return null;
     const name = readRequiredTextField(item, "name");
     const slug = readRequiredTextField(item, "slug");
@@ -503,6 +558,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "menu-item") {
+    if (!isPolicyActionExecutable(draft, "menu.item.upsert")) return null;
     if (!hasOnlyKeys(item, ["menuId", "label", "href", "parentId", "orderIndex", "settings"])) return null;
     const menuId = readRequiredTextField(item, "menuId");
     const label = readRequiredTextField(item, "label");
@@ -526,6 +582,7 @@ const buildCreateActionForItem = (
   }
 
   if (draft.resourceKind === "seo-document") {
+    if (!isPolicyActionExecutable(draft, "seo.document.upsert")) return null;
     if (!hasOnlyKeys(item, ["targetType", "targetId", "seo"])) return null;
     const targetType = item.targetType;
     const targetId = readRequiredTextField(item, "targetId");
@@ -613,6 +670,7 @@ const buildActionForExactTarget = (
   target: CmsResolvedTargetCandidate
 ): AssistantPlannedAction | null => {
   if (draft.resourceKind === "page" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "page.delete")) return null;
     return {
       id: actionId("page.delete", target.id),
       type: "page.delete",
@@ -627,6 +685,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "page" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "page.update")) return null;
     const patch = buildPageUpdatePatch(draft);
     if (!patch) return null;
     return {
@@ -644,6 +703,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "content-type" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "content-type.delete")) return null;
     const entryCount = readDetailNumber(target, "entryCount") ?? 0;
     if (entryCount > 0) return null;
     return {
@@ -660,6 +720,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "custom-screen" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "custom-screen.delete")) return null;
     return {
       id: actionId("custom-screen.delete", target.id),
       type: "custom-screen.delete",
@@ -673,6 +734,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "custom-screen" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "custom-screen.update")) return null;
     const patch = buildCustomScreenUpdatePatch(draft);
     const contentTypeId = readDetailString(target, "contentTypeId");
     if (!patch || !contentTypeId) return null;
@@ -691,6 +753,9 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "form" && (draft.operation === "delete" || draft.operation === "archive")) {
+    if (!isPolicyActionExecutable(draft, draft.operation === "archive" ? "form.archive" : "form.delete")) {
+      return null;
+    }
     if (!target.slug) return null;
     return {
       id: actionId(draft.operation === "archive" ? "form.archive" : "form.delete", target.id),
@@ -706,6 +771,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "form" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "form.update")) return null;
     const patch = buildFormUpdatePatch(draft);
     if (!patch || !target.slug) return null;
     return {
@@ -723,6 +789,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "listing-query" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "listing-query.delete")) return null;
     return {
       id: actionId("listing-query.delete", target.id),
       type: "listing-query.delete",
@@ -732,6 +799,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "listing-query" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "listing-query.update")) return null;
     const patch = buildListingQueryUpdatePatch(draft);
     if (!patch) return null;
     return {
@@ -743,6 +811,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "listing-template" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "listing-template.delete")) return null;
     if (!target.slug) return null;
     return {
       id: actionId("listing-template.delete", target.id),
@@ -758,6 +827,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "listing-template" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "listing-template.update")) return null;
     const patch = buildListingTemplateUpdatePatch(draft);
     if (!patch || !target.slug) return null;
     return {
@@ -775,6 +845,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "widget-template" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "widget-template.delete")) return null;
     return {
       id: actionId("widget-template.delete", target.id),
       type: "widget-template.delete",
@@ -789,6 +860,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "widget-template" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "widget-template.update")) return null;
     const patch = buildWidgetTemplateUpdatePatch(draft);
     if (!patch) return null;
     return {
@@ -806,6 +878,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "menu-item" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "menu.item.delete")) return null;
     const menuId = readDetailString(target, "menuId");
     if (!menuId) return null;
     return {
@@ -823,6 +896,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "menu-item" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "menu.item.update")) return null;
     const menuId = readDetailString(target, "menuId");
     const patch = buildMenuItemUpdatePatch(draft);
     if (!menuId || !patch) return null;
@@ -842,6 +916,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "seo-document" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "seo.document.delete")) return null;
     const targetType = readDetailString(target, "targetType");
     const targetId = readDetailString(target, "targetId");
     if (targetType !== "page" && targetType !== "entry") return null;
@@ -861,6 +936,7 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "seo-document" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "seo.document.update")) return null;
     const targetType = readDetailString(target, "targetType");
     const targetId = readDetailString(target, "targetId");
     const patch = buildSeoUpdatePatch(draft);
@@ -900,12 +976,7 @@ export const mapCmsOperationToActionPlan = (input: {
   }
   const resolution = resolveCmsOperationTargets(input.draft, input.context);
   if (
-    resolution.status === "ambiguous" &&
-    (input.draft.operation === "delete" ||
-      input.draft.operation === "archive" ||
-      input.draft.operation === "update") &&
-    input.draft.constraints?.expectedCount === resolution.candidates.length &&
-    resolution.candidates.length > 1
+    canMapExpectedCountMultiWithPolicy(input.draft, resolution)
   ) {
     const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates
@@ -933,13 +1004,7 @@ export const mapCmsOperationToActionPlan = (input: {
     }
   }
   if (
-    resolution.status === "ambiguous" &&
-    (input.draft.operation === "delete" || input.draft.operation === "archive") &&
-    input.draft.constraints?.expectedCount === undefined &&
-    input.draft.filters &&
-    input.draft.filters.length > 0 &&
-    hasAllSignal(input.prompt) &&
-    resolution.candidates.length > 1
+    canMapFilteredAllWithPolicy(input.prompt, input.draft, resolution)
   ) {
     const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates

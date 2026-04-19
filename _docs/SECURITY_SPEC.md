@@ -317,6 +317,7 @@ Rotacja klucza:
   - assistant operation policy (`core/services/assistant/operationPolicy/adminSurfacePolicies.ts`) marks admin/settings/security/tool surfaces as `live-gated` or `live-read-only` unless a typed action contract exists,
   - settings, users, roles, backups, redirects, import/export, API keys, webhooks, email, storage, and integrations remain non-executable from LLM Guide prompts until a typed contract is added,
   - secret-bearing admin surfaces set `secrets.redacted=true` and `providerAllowed=false` in policy so provider-facing prompt/schema generation has an explicit denylist source,
+  - CMS action mapping checks `assistantOperationPolicy` before returning executable typed actions, and destructive/bulk/provider post-validation guards use `operationPolicy/safetyPolicy.ts`,
   - provider draft execution through `planAssistantActionsWithProviderDraft` requires provider availability, prefers strict CMS operation drafts, uses strict local adapter validation, and falls back to deterministic local planning on provider failures,
   - provider structured output is selected by provider/model capability profile and remains provider-agnostic at the planner boundary,
   - OpenAI and OpenRouter direct credentials are read from encrypted integration config for production and from test-only env vars only in opt-in live tests,
