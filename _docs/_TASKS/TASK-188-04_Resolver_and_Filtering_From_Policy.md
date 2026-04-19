@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Resolver
 **Estimated Effort:** Large
 **Dependencies:** TASK-188-01, TASK-188-02
-**Status:** To Do
+**Status:** Done (2026-04-19)
 
 ---
 
@@ -79,3 +79,17 @@ export function matchesFiltersWithPolicy(candidate, filters, resourcePolicy) {
 - `_docs/CMS_API.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - changelog on completion
+
+## Completion Notes (2026-04-19)
+
+- Added `operationPolicy/resolverPolicy.ts` as the policy-owned resolver adapter for operation aliases, resource aliases, filter aliases, count words, candidate matching, filter matching, and surface-only read fallback.
+- Updated `cmsTargetResolver.ts` to stop reading `cmsResourceRegistry` and to delegate resource resolution, operation inference, prompt filters, requested counts, field intents, candidate matching, and filter matching to policy-backed helpers.
+- Changed resolver filtering to fail closed for filters not declared by the resource policy.
+- Added Vitest coverage for policy-driven resolver aliases, prompt filter inference, filter canonicalization, OR matching, surface-only fallback, and unknown-filter denial.
+- Runtime action mapping remains unchanged for the next TASK-188 phase.
+
+## Validation (2026-04-19)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

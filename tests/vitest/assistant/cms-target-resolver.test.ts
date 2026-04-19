@@ -364,3 +364,18 @@ test("resolveCmsOperationTargets applies form visibility filters", () => {
     ],
   });
 });
+
+test("resolveCmsOperationTargets fails closed for filters outside resource policy", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "page",
+    surfaceHint: "Pages",
+    filters: [{ field: "visibility", operator: "eq", value: "public" }],
+    targetQuery: null,
+  });
+
+  expect(resolveCmsOperationTargets(draft, context)).toMatchObject({
+    status: "no_match",
+    candidates: [],
+  });
+});

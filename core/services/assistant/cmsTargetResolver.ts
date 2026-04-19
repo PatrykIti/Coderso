@@ -4,15 +4,25 @@ import type {
 } from "./actionPlanTypes";
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
 import {
-  type CmsOperation,
   type CmsOperationDraft,
   type CmsResourceKind,
   normalizeCmsOperationDraft,
 } from "./cmsOperationDraftSchema";
 import {
-  getCmsResourceRegistryEntry,
-  resolveCmsResourceKindFromPrompt,
-} from "./cmsResourceRegistry";
+  findFieldPolicyByAliases,
+  getResolverResourcePolicy,
+  includesPrefixIntentWithPolicy,
+  inferActiveResourceKindWithPolicy,
+  inferFiltersFromPromptWithPolicy,
+  inferOperationWithPolicy,
+  inferRequestedCountWithPolicy,
+  isSurfaceOnlyReadQueryWithPolicy,
+  matchesCandidateWithPolicy,
+  matchesFiltersWithPolicy,
+  normalizeResolverText,
+  resolveFieldIntentWithPolicy,
+  resolveResourceKindFromPromptWithPolicy,
+} from "./operationPolicy/resolverPolicy";
 
 export type CmsResolvedTargetCandidate = {
   kind: CmsResourceKind;
@@ -50,63 +60,7 @@ export type CmsTargetResolution =
       reason: string;
     };
 
-const inspectSignals = [
-  "czy widzisz",
-  "widzisz",
-  "jakie",
-  "ktore",
-  "które",
-  "which",
-  "find",
-  "show",
-  "list",
-  "pokaż",
-  "pokaz",
-  "znajdz",
-  "znajdź",
-  "czy jest",
-];
-
-const deleteSignals = ["usun", "usuń", "usuw", "skasuj", "kasuj", "delete", "remove"];
-const archiveSignals = ["archive", "archiwizuj", "zarchiwizuj"];
-const publishSignals = ["publish", "opublikuj"];
-const updateSignals = [
-  "zmien",
-  "zmień",
-  "update",
-  "rename",
-  "ustaw",
-  "set",
-  "ukryj",
-  "hide",
-  "show",
-  "pokaz",
-  "pokaż",
-];
-const createSignals = ["stworz", "stwórz", "utworz", "utwórz", "create", "build", "set up"];
-const prefixSignals = ["prefix", "prefixem", "prefiks", "prefiksem", "starts with", "zaczyna"];
-
-const countWords = new Map<string, number>([
-  ["jeden", 1],
-  ["jedna", 1],
-  ["one", 1],
-  ["dwa", 2],
-  ["dwie", 2],
-  ["dwom", 2],
-  ["dwóm", 2],
-  ["two", 2],
-  ["trzy", 3],
-  ["three", 3],
-]);
-
-const normalizeText = (value: string) =>
-  value
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-
-const includesAny = (value: string, candidates: string[]) =>
-  candidates.some((candidate) => value.includes(candidate));
+const normalizeText = normalizeResolverText;
 
 const extractQuotedValues = (prompt: string) =>
   [...prompt.matchAll(/['"“”]([^'"“”]+)['"“”]/g)]
@@ -123,69 +77,16 @@ const extractNamedQuotedValue = (prompt: string, labels: string[]) => {
   return null;
 };
 
-const extractRequestedCount = (normalizedPrompt: string) => {
-  const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
-  if (digitMatch?.[1]) return Number(digitMatch[1]);
-  for (const [word, count] of countWords) {
-    if (new RegExp(`(^|\\s)${word}(\\s|$)`).test(normalizedPrompt)) {
-      return count;
-    }
-  }
-  return undefined;
-};
-
 const cleanupWildcardPrefix = (value: string) =>
   value
     .replace(/(?:\s|^)[x*]{2,}$/i, "")
     .replace(/\s+\*+$/g, "")
     .trim();
 
-const inferOperation = (normalizedPrompt: string): CmsOperation | null => {
-  if (includesAny(normalizedPrompt, deleteSignals)) return "delete";
-  if (includesAny(normalizedPrompt, archiveSignals)) return "archive";
-  if (includesAny(normalizedPrompt, publishSignals)) return "publish";
-  if (includesAny(normalizedPrompt, updateSignals)) return "update";
-  if (includesAny(normalizedPrompt, createSignals)) return "create";
-  if (includesAny(normalizedPrompt, inspectSignals)) return "inspect";
-  return null;
-};
-
-const inferActiveResourceKind = (
-  context?: AssistantActionContext | AssistantAdminContext
-): CmsResourceKind | null => {
-  const activeSurface = context?.activeSurface ?? null;
-  if (activeSurface?.kind === "page") return "page";
-  if (activeSurface?.kind === "custom-screen") return "custom-screen";
-  if (activeSurface?.kind === "widget-template") return "widget-template";
-  const selected = context?.runtimeSnapshot?.selectedResource;
-  if (selected?.kind === "entry" || selected?.kind === "custom-screen-entry") return "entry";
-  if (selected?.kind === "form") return "form";
-  if (selected?.kind === "listing-query") return "listing-query";
-  if (selected?.kind === "listing-template") return "listing-template";
-  if (selected?.kind === "content-type") return "content-type";
-  if (selected?.kind === "menu-item") return "menu-item";
-  if (selected?.kind === "seo-document") return "seo-document";
-  return null;
-};
-
 const normalizeSlug = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   return trimmed.startsWith("/") ? trimmed : null;
-};
-
-const inferFiltersFromPrompt = (normalizedPrompt: string) => {
-  const filters = [];
-  if (includesAny(normalizedPrompt, ["published", "opublikowane", "opublikowana", "opublikowany"])) {
-    filters.push({ field: "status" as const, operator: "eq" as const, value: "published" });
-  }
-  if (includesAny(normalizedPrompt, ["public", "publiczne", "publiczny"])) {
-    filters.push({ field: "visibility" as const, operator: "eq" as const, value: "public" });
-  }
-  if (includesAny(normalizedPrompt, ["internal", "wewnetrzne", "wewnętrzne"])) {
-    filters.push({ field: "visibility" as const, operator: "eq" as const, value: "internal" });
-  }
-  return filters;
 };
 
 export const buildCmsOperationDraftFromPrompt = (
@@ -195,20 +96,21 @@ export const buildCmsOperationDraftFromPrompt = (
   const normalizedPrompt = normalizeText(prompt);
   if (!normalizedPrompt) return null;
 
-  const operation = inferOperation(normalizedPrompt);
+  const operation = inferOperationWithPolicy(normalizedPrompt);
   const resourceKind =
-    resolveCmsResourceKindFromPrompt(prompt) ?? inferActiveResourceKind(context);
+    resolveResourceKindFromPromptWithPolicy(prompt) ?? inferActiveResourceKindWithPolicy(context);
   if (!operation || !resourceKind) return null;
+  const resourcePolicy = getResolverResourcePolicy(resourceKind);
 
   const quotedValues = extractQuotedValues(prompt);
   const firstQuoted = quotedValues[0];
-  const activeContextMatches = inferActiveResourceKind(context) === resourceKind;
+  const activeContextMatches = inferActiveResourceKindWithPolicy(context) === resourceKind;
   const usesActiveTarget =
     /\b(this|current|active|ten|te|ta|tej)\b/.test(normalizedPrompt) ||
     (operation === "update" && activeContextMatches && quotedValues.length === 1);
   const targetValue = firstQuoted ? cleanupWildcardPrefix(firstQuoted) : undefined;
   const isPrefixQuery =
-    includesAny(normalizedPrompt, prefixSignals) ||
+    includesPrefixIntentWithPolicy(normalizedPrompt) ||
     Boolean(firstQuoted && cleanupWildcardPrefix(firstQuoted) !== firstQuoted.trim());
   const slug = targetValue ? normalizeSlug(targetValue) : null;
   const secondQuoted = quotedValues[1];
@@ -218,9 +120,18 @@ export const buildCmsOperationDraftFromPrompt = (
     operation === "update" && usesActiveTarget && !secondQuoted ? undefined : targetValue;
 
   if (operation === "create" && resourceKind === "page") {
-    const title = extractNamedQuotedValue(prompt, ["title", "tytul", "tytuł", "tytulem", "tytułem"]) ?? firstQuoted;
-    const pageSlug = extractNamedQuotedValue(prompt, ["slug", "url", "sciezka", "ścieżka"]);
-    const statusValue = extractNamedQuotedValue(prompt, ["status"]);
+    const title = extractNamedQuotedValue(
+      prompt,
+      findFieldPolicyByAliases(resourcePolicy, ["title", "tytul", "tytuł", "tytulem", "tytułem"])
+    ) ?? firstQuoted;
+    const pageSlug = extractNamedQuotedValue(
+      prompt,
+      findFieldPolicyByAliases(resourcePolicy, ["slug", "url", "sciezka", "ścieżka"])
+    );
+    const statusValue = extractNamedQuotedValue(
+      prompt,
+      findFieldPolicyByAliases(resourcePolicy, ["status"])
+    );
     const introTitle = extractNamedQuotedValue(prompt, ["introTitle", "intro title", "naglowek", "nagłówek"]) ?? title;
     const introBody = extractNamedQuotedValue(prompt, ["introBody", "intro body", "opis", "tresc", "treść"]);
     if (title && pageSlug && introTitle && introBody) {
@@ -253,9 +164,18 @@ export const buildCmsOperationDraftFromPrompt = (
   }
 
   if (operation === "create" && resourceKind === "form") {
-    const name = extractNamedQuotedValue(prompt, ["name", "nazwa", "nazwie", "formularz"]) ?? firstQuoted;
-    const formSlug = extractNamedQuotedValue(prompt, ["slug", "url"]);
-    const statusValue = extractNamedQuotedValue(prompt, ["status"]);
+    const name = extractNamedQuotedValue(
+      prompt,
+      findFieldPolicyByAliases(resourcePolicy, ["name", "nazwa", "nazwie", "formularz"])
+    ) ?? firstQuoted;
+    const formSlug = extractNamedQuotedValue(
+      prompt,
+      findFieldPolicyByAliases(resourcePolicy, ["slug", "url"])
+    );
+    const statusValue = extractNamedQuotedValue(
+      prompt,
+      findFieldPolicyByAliases(resourcePolicy, ["status"])
+    );
     const submissionAccessValue = extractNamedQuotedValue(prompt, [
       "submissionAccess",
       "submission access",
@@ -296,13 +216,13 @@ export const buildCmsOperationDraftFromPrompt = (
       });
     }
   }
+  const inferredFilters = inferFiltersFromPromptWithPolicy(normalizedPrompt, resourcePolicy);
+  const requestedCount = inferRequestedCountWithPolicy(normalizedPrompt);
 
   return normalizeCmsOperationDraft({
     operation,
     resourceKind,
-    ...(inferFiltersFromPrompt(normalizedPrompt).length > 0
-      ? { filters: inferFiltersFromPrompt(normalizedPrompt) }
-      : {}),
+    ...(inferredFilters.length > 0 ? { filters: inferredFilters } : {}),
     targetQuery: {
       ...(queryValue && isPrefixQuery ? { prefix: queryValue } : {}),
       ...(queryValue && !isPrefixQuery && !slug ? { exactName: queryValue } : {}),
@@ -313,21 +233,13 @@ export const buildCmsOperationDraftFromPrompt = (
     ...(operation === "update" && mutationValue
       ? {
           mutation: {
-            fieldIntent: includesAny(normalizedPrompt, ["slug", "url"])
-              ? "slug"
-              : includesAny(normalizedPrompt, ["status"])
-                ? "status"
-                : includesAny(normalizedPrompt, ["title", "tytul", "tytuł", "nazwa", "nazwe", "nazwę"])
-                  ? "title"
-                  : "title",
+            fieldIntent: resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy),
             value: mutationValue,
           },
         }
       : {}),
     constraints: {
-      ...(extractRequestedCount(normalizedPrompt)
-        ? { expectedCount: extractRequestedCount(normalizedPrompt) }
-        : {}),
+      ...(requestedCount ? { expectedCount: requestedCount } : {}),
       destructive: operation === "delete" || operation === "archive",
       requiresConfirmation: operation === "delete" || operation === "archive",
     },
@@ -591,177 +503,12 @@ const activeCandidateForKind = (
 
 const normalizeCandidateValue = (value: string | null) => (value ? normalizeText(value) : "");
 
-const splitTextQueryTerms = (value: string) => {
-  const normalized = normalizeText(value);
-  if (!/\s(?:or|lub|albo)\s|\|/.test(normalized)) return [normalized];
-  return normalized
-    .split(/\s+(?:or|lub|albo)\s+|\|/u)
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-
-const matchesCandidate = (
-  candidate: CmsResolvedTargetCandidate,
-  query: NonNullable<CmsOperationDraft["targetQuery"]>
-) => {
-  const candidates = [
-    candidate.id,
-    candidate.label,
-    candidate.slug ?? "",
-  ].map(normalizeCandidateValue);
-  if (query.slug) return normalizeCandidateValue(candidate.slug) === normalizeText(query.slug);
-  if (query.exactName) {
-    const target = normalizeText(query.exactName);
-    return candidates.includes(target);
-  }
-  if (query.prefix) {
-    const target = normalizeText(query.prefix);
-    return candidates.some((value) => value.startsWith(target));
-  }
-  if (query.text) {
-    const targets = splitTextQueryTerms(query.text);
-    return targets.some((target) => candidates.some((value) => value.includes(target)));
-  }
-  return true;
-};
-
-const normalizeFilterValue = (value: string | boolean | string[]) =>
-  Array.isArray(value)
-    ? value.map((item) => normalizeText(item))
-    : typeof value === "string"
-      ? normalizeText(value)
-      : value;
-
-const includesFilterValue = (
-  filterValue: string | boolean | string[],
-  expected: string | boolean
-) => {
-  const normalized = normalizeFilterValue(filterValue);
-  if (Array.isArray(normalized)) {
-    return normalized.includes(typeof expected === "string" ? normalizeText(expected) : String(expected));
-  }
-  if (typeof normalized === "string" && typeof expected === "string") {
-    return normalized === normalizeText(expected);
-  }
-  return normalized === expected;
-};
-
-const matchesFilter = (candidate: CmsResolvedTargetCandidate, draft: CmsOperationDraft) => {
-  const filters = draft.filters ?? [];
-  if (filters.length === 0) return true;
-  for (const filter of filters) {
-    if (draft.resourceKind === "custom-screen") {
-      if (filter.field === "status") {
-        const expectsActive =
-          includesFilterValue(filter.value, "active") ||
-          includesFilterValue(filter.value, "published") ||
-          includesFilterValue(filter.value, "opublikowane");
-        if (expectsActive && candidate.status !== "active") return false;
-        continue;
-      }
-      if (filter.field === "showInSidebar" || filter.field === "visibility") {
-        const expectsVisible =
-          includesFilterValue(filter.value, true) ||
-          includesFilterValue(filter.value, "true") ||
-          includesFilterValue(filter.value, "visible") ||
-          includesFilterValue(filter.value, "widoczne");
-        if (expectsVisible && candidate.details?.showInSidebar !== true) return false;
-        continue;
-      }
-    }
-    if (draft.resourceKind === "page" && filter.field === "status") {
-      if (
-        (includesFilterValue(filter.value, "published") ||
-          includesFilterValue(filter.value, "opublikowana")) &&
-        candidate.status !== "published"
-      ) {
-        return false;
-      }
-      continue;
-    }
-    if (draft.resourceKind === "form") {
-      if (filter.field === "status") {
-        const expected = normalizeFilterValue(filter.value);
-        const values = Array.isArray(expected) ? expected : [expected];
-        if (!values.includes(normalizeText(candidate.status ?? ""))) return false;
-        continue;
-      }
-      if (filter.field === "visibility") {
-        const expectsPublic =
-          includesFilterValue(filter.value, "public") ||
-          includesFilterValue(filter.value, "publiczny");
-        const expectsInternal =
-          includesFilterValue(filter.value, "internal") ||
-          includesFilterValue(filter.value, "wewnetrzny") ||
-          includesFilterValue(filter.value, "wewnętrzny") ||
-          includesFilterValue(filter.value, "wewnetrzne") ||
-          includesFilterValue(filter.value, "wewnętrzne");
-        const submissionAccess = candidate.details?.submissionAccess;
-        if (expectsPublic && submissionAccess !== "public") return false;
-        if (expectsInternal && submissionAccess !== "internal") return false;
-        continue;
-      }
-    }
-    return false;
-  }
-  return true;
-};
-
-const isSurfaceOnlyReadQuery = (
-  draft: CmsOperationDraft,
-  query: NonNullable<CmsOperationDraft["targetQuery"]>
-) => {
-  if (draft.operation !== "inspect" && draft.operation !== "find") return false;
-  if (!query.text || query.exactName || query.prefix || query.slug || query.active) return false;
-  const text = normalizeText(query.text);
-  if (/\s(?:or|lub|albo)\s|\|/.test(text)) return false;
-  const surfaceText = normalizeText(draft.surfaceHint ?? "");
-  const broadSurfaceTokens = new Set([
-    "admin",
-    "ui",
-    "admin ui",
-    "section",
-    "sekcja",
-    "sekcji",
-    "surface",
-    "visible",
-    "widoczne",
-    "widzisz",
-    "jakie",
-    "ktore",
-    "które",
-    "screens",
-    "ekrany",
-    "pages",
-    "strony",
-    "forms",
-    "formularze",
-    "engine",
-    "w",
-    "we",
-    "in",
-    "the",
-    "all",
-    "wszystkie",
-    "opublikowane",
-    "published",
-  ]);
-  const tokens = text.split(/[^a-z0-9ąćęłńóśźż]+/u).filter(Boolean);
-  const isOnlySurfaceWords = tokens.every(
-    (token) => broadSurfaceTokens.has(token) || token.length <= 2
-  );
-  return (
-    Boolean(surfaceText && (text === surfaceText || (text.includes(surfaceText) && isOnlySurfaceWords))) ||
-    isOnlySurfaceWords
-  );
-};
-
 export const resolveCmsOperationTargets = (
   draft: CmsOperationDraft,
   context: AssistantAdminContext
 ): CmsTargetResolution => {
-  const entry = getCmsResourceRegistryEntry(draft.resourceKind);
-  if (!entry || !entry.supportedOperations.includes(draft.operation)) {
+  const resourcePolicy = getResolverResourcePolicy(draft.resourceKind);
+  if (!resourcePolicy || !resourcePolicy.operations.includes(draft.operation)) {
     return {
       status: "unsupported",
       draft,
@@ -777,7 +524,7 @@ export const resolveCmsOperationTargets = (
         status: "no_match",
         draft,
         candidates: [],
-        reason: `No active ${entry.label.toLowerCase()} context is available.`,
+        reason: `No active ${resourcePolicy.label.toLowerCase()} context is available.`,
       };
     }
   }
@@ -788,7 +535,9 @@ export const resolveCmsOperationTargets = (
     query.active && !activeCandidate && (draft.operation === "inspect" || draft.operation === "find")
       ? { ...query, active: undefined }
       : query;
-  const directMatches = allCandidates.filter((item) => matchesCandidate(item, matchQuery));
+  const directMatches = allCandidates.filter((item) =>
+    matchesCandidateWithPolicy(item, matchQuery, resourcePolicy)
+  );
   const readOnlyPartialMatches =
     directMatches.length === 0 &&
     query.exactName &&
@@ -811,16 +560,22 @@ export const resolveCmsOperationTargets = (
           normalizeCandidateValue(item.label).includes(normalizeText(query.exactName ?? ""))
         )
       : directMatches;
-  const filteredMatches = matches.filter((item) => matchesFilter(item, draft));
-  const filteredAllCandidates = allCandidates.filter((item) => matchesFilter(item, draft));
-  const effectiveMatches = filteredMatches.length > 0 ? filteredMatches : matches;
+  const hasFilters = (draft.filters ?? []).length > 0;
+  const filteredMatches = matches.filter((item) =>
+    matchesFiltersWithPolicy(item, draft.filters, resourcePolicy)
+  );
+  const filteredAllCandidates = allCandidates.filter((item) =>
+    matchesFiltersWithPolicy(item, draft.filters, resourcePolicy)
+  );
+  const effectiveMatches = hasFilters ? filteredMatches : matches;
   if (
     matches.length === 0 &&
-    isSurfaceOnlyReadQuery(draft, query) &&
+    isSurfaceOnlyReadQueryWithPolicy(draft, query, resourcePolicy) &&
     (draft.operation === "inspect" || draft.operation === "find") &&
-    allCandidates.length > 0
+    allCandidates.length > 0 &&
+    (!hasFilters || filteredAllCandidates.length > 0)
   ) {
-    const candidates = filteredAllCandidates.length > 0 ? filteredAllCandidates : allCandidates;
+    const candidates = hasFilters ? filteredAllCandidates : allCandidates;
     return {
       status: "candidates",
       draft,
@@ -833,7 +588,7 @@ export const resolveCmsOperationTargets = (
       status: "no_match",
       draft,
       candidates: [],
-      reason: `No ${entry.label.toLowerCase()} matched the requested target.`,
+      reason: `No ${resourcePolicy.label.toLowerCase()} matched the requested target.`,
     };
   }
   const expectedCount = draft.constraints?.expectedCount;

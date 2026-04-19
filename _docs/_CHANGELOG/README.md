@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 699 | 2026-04-19 | TASK-188-04 resolver filtering from policy | Assistant/Core |
 | 698 | 2026-04-19 | TASK-188-03 provider guidance from policy | Assistant/Provider |
 | 697 | 2026-04-19 | TASK-188-02 policy migration closure | Assistant/Core |
 | 696 | 2026-04-19 | TASK-188-02-04 coderso planned gated policy | Assistant/Core |

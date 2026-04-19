@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 15 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 5 tasks
-- **Done:** 930 tasks
+- **Done:** 931 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-188 | Assistant Operation Policy Engine | High | Large | Umbrella: replace scattered LLM Guide heuristics with central typed policy engine |
-| TASK-188-04 | Resolver and Filtering From Policy | High | Large | Drive target resolution and filters from policy |
 | TASK-188-05 | Action Mapping and Safety Rules From Policy | High | Large | Drive typed action mapping and destructive rules from policy |
 | TASK-188-06 | Planning State and Follow-Up Policy | High | Medium | Move pronouns/counts/follow-up selection into policy |
 | TASK-188-07 | Navigation Coverage and Live Matrix From Policy | High | Medium | Generate/validate live coverage matrix from policy |
@@ -72,6 +71,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-188-04 | Resolver and Filtering From Policy | High | Large | Done: CMS target resolver now uses policy-backed resource aliases, filters, counts, matching, and surface fallback |
 | TASK-188-03 | Provider Guidance and JSON Schema From Policy | High | Medium | Done: provider registry, guidance, prompt policy JSON, and draft schema enums are derived from policy |
 | TASK-188-02 | Policy Migration for Current CMS Resources | High | Large | Done: current CMS/admin/settings/Coderso routes are represented in operation policy metadata |
 | TASK-188-02-04 | Coderso Planned and Gated Modules Policy Migration | High | Medium | Done: Coderso preview/planned modules and remaining gated routes are represented in policy |

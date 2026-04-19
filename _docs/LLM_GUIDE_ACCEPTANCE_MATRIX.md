@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Last Updated:** 2026-04-19
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188-02, TASK-188-03
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188-02, TASK-188-03, TASK-188-04
 
 ---
 
@@ -24,8 +24,8 @@ Rules:
 | Area | Owner Lane | Reason |
 |---|---|---|
 | Prompt classification and blueprint plan shape | Vitest | Pure planner/blueprint logic |
-| Generic CMS operation draft and target resolution | Vitest | Pure operation draft schema, registry aliases, and target resolver |
-| Surface hints and CMS filters | Vitest + Bun live smoke | Draft schema + provider guidance + resolver filters for custom screens/pages/forms plus live natural prompts |
+| Generic CMS operation draft and target resolution | Vitest | Pure operation draft schema, policy aliases, and target resolver |
+| Surface hints and CMS filters | Vitest + Bun live smoke | Draft schema + provider guidance + policy-driven resolver filters for custom screens/pages/forms plus live natural prompts |
 | Read-only CMS inspection plans | Vitest | Strict plan schema + admin review UI; no executor path |
 | LLM Guide mode route contract | Vitest | UI sends LLM Guide prompts to action planning; docs-only stays on chat |
 | Provider CMS operation draft package | Vitest | Fake-provider context/adapter coverage with strict local validation |
