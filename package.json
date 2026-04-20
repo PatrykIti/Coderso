@@ -10,7 +10,10 @@
     "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
-    "lint": "bun --cwd core lint && bun --cwd core lint:types && bun --cwd store lint",
+    "lint": "bun run lint:core && bun run lint:repo",
+    "lint:core": "bun --cwd core lint && bun --cwd core lint:types",
+    "lint:repo": "bun run lint:repo:types",
+    "lint:repo:types": "tsc -p tsconfig.json --noEmit",
     "test": "bun run test:bun && bun run test:vitest",
     "test:full": "bun run test:bun && bun run test:vitest",
     "test:bun": "bun test tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",
@@ -46,6 +49,7 @@
     "gates:coderso:security": "bun scripts/coderso-release-gates.ts --gate security"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.6",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
