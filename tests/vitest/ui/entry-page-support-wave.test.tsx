@@ -519,6 +519,8 @@ test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", as
       seoDescription="Meta"
       onSeoDescriptionChange={onSeoDescriptionChange}
       checklist={{
+        missingRequiredFields: [],
+        blockingIssues: [],
         items: [
           { id: "seo", label: "SEO", status: "warning", detail: "Needs work" },
         ],
@@ -627,6 +629,7 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
             wrapper: {
               container: "default",
               maxWidth: undefined,
+              padding: { top: "none", bottom: "none" },
               background: {
                 color: "#ffffff",
                 image: null,
@@ -707,7 +710,7 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
     expect(onRestore).toHaveBeenCalledWith("rev-1");
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
   }
 });
 
