@@ -30,7 +30,8 @@ test("ensurePostDocumentForRead falls back to legacy when document is invalid", 
     document: { version: 99 },
   });
 
-  expect(data.document).toBeObject();
+  expect(typeof data.document).toBe("object");
+  expect(data.document).not.toBeNull();
   const document = data.document as { version: number; blocks: Array<{ content: unknown }> };
   expect(document.version).toBe(1);
   expect(document.blocks[0]?.content).toBe("Fallback body");
@@ -65,7 +66,8 @@ test("ensurePostDocumentForWrite keeps document and hydrates content fallback", 
     },
   });
 
-  expect(data.document).toBeObject();
+  expect(typeof data.document).toBe("object");
+  expect(data.document).not.toBeNull();
   expect(data.content).toBe("Intro paragraph");
   expect(data.excerpt).toBe("Read this first");
 });
