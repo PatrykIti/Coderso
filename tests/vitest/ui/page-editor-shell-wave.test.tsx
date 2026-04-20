@@ -991,7 +991,7 @@ test("PageEditor uses image background fallback, starts without selection for em
         title: "Fallback blocks page",
       }),
       currentData: undefined,
-    } as PageDetail;
+    } as unknown as PageDetail;
     act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
@@ -1007,9 +1007,12 @@ test("PageEditor uses image background fallback, starts without selection for em
     clickButton(view.container, "settings-save");
     await flush();
 
-    const settingsSavePayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1] as {
-      data?: { blocks?: unknown[]; settings?: Record<string, unknown> };
-    };
+    const settingsSavePayload = (
+      pageEditorState.updatePage.mock.calls as unknown as Array<
+        [unknown, { data?: { blocks?: unknown[]; settings?: Record<string, unknown> } }]
+      >
+    ).at(-1)?.[1];
+    if (!settingsSavePayload) throw new Error("missing_settings_save_payload");
     expect(settingsSavePayload.data?.blocks).toHaveLength(2);
     expect(settingsSavePayload.data?.settings).toMatchObject({
       template: "landing",
@@ -1022,9 +1025,12 @@ test("PageEditor uses image background fallback, starts without selection for em
     clickButton(view.container, "settings-autosave");
     await flush();
 
-    const autosavePayload = pageEditorState.autosavePage.mock.calls.at(-1)?.[1] as {
-      data?: { blocks?: unknown[]; settings?: Record<string, unknown> };
-    };
+    const autosavePayload = (
+      pageEditorState.autosavePage.mock.calls as unknown as Array<
+        [unknown, { data?: { blocks?: unknown[]; settings?: Record<string, unknown> } }]
+      >
+    ).at(-1)?.[1];
+    if (!autosavePayload) throw new Error("missing_settings_autosave_payload");
     expect(autosavePayload.data?.blocks).toHaveLength(2);
     expect(autosavePayload.data?.settings).toMatchObject({
       template: "landing",
