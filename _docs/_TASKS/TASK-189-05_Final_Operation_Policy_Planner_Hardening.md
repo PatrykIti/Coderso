@@ -164,12 +164,14 @@ Keep these planner areas:
   - listing template layout prompts keep `layout` instead of being mapped to
     `slug`,
   - selected-block `dataPath` patches are not overwritten by prompt field aliases,
+  - provider inspection/read-only drafts are rejected as unsafe when the original
+    prompt is destructive,
   - the DB-backed user settings suite has a wider timeout for slower local runs.
 
 ## Follow-up Validation (2026-04-20)
 
 - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
 - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
-- `set -a && source .env && set +a && TEST_OPENROUTER_API_KEY= TEST_OPENROUTER_MODEL= bun test tests/integration/assistant-live` (local harness skipped DB-backed suites)
+- `bun run test:assistant:live`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

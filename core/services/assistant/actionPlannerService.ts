@@ -700,6 +700,23 @@ const tryPlanProviderCmsOperationDraft = (
 const hasFilterField = (draft: CmsOperationDraft, field: string) =>
   draft.filters?.some((filter) => filter.field === field) ?? false;
 
+const findPromptFieldPolicy = (
+  normalizedPrompt: string,
+  resourcePolicy: ReturnType<typeof getResolverResourcePolicyForDraft>
+) => {
+  if (!resourcePolicy) return null;
+  return Object.values(resourcePolicy.fields)
+    .map((field) => {
+      const bestAliasLength = [field.field, ...field.aliases]
+        .map((alias) => normalizeAssistantPlannerPrompt(alias))
+        .filter((alias) => alias && includesAny(normalizedPrompt, [alias]))
+        .reduce((best, alias) => Math.max(best, alias.length), 0);
+      return bestAliasLength > 0 ? { field, score: bestAliasLength } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .sort((left, right) => right.score - left.score)[0]?.field ?? null;
+};
+
 const coercePolicyMutationValue = (
   value: string | number | boolean | null | undefined,
   valueType: string | undefined
@@ -723,13 +740,7 @@ const applyPromptImpliedDraftHintsWithPolicy = (
   const resourcePolicy = getResolverResourcePolicyForDraft(draft);
   const inferredFilters = inferFiltersFromPromptWithPolicy(normalizedPrompt, resourcePolicy)
     .filter((filter) => !hasFilterField(draft, filter.field));
-  const promptFieldPolicy = resourcePolicy
-    ? Object.values(resourcePolicy.fields).find((field) =>
-        [field.field, ...field.aliases].some((alias) =>
-          includesAny(normalizedPrompt, [alias])
-        )
-      )
-    : null;
+  const promptFieldPolicy = findPromptFieldPolicy(normalizedPrompt, resourcePolicy);
   const inferredFieldIntent =
     draft.operation === "update" && draft.mutation?.value !== undefined
       ? draft.mutation.patch

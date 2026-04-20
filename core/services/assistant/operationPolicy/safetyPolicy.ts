@@ -55,11 +55,12 @@ export const hasPromptDestructiveIntentMismatchWithPolicy = (
   prompt: string,
   plan: AssistantActionPlan
 ) => {
-  if (plan.actions.length === 0) return false;
   const normalized = normalizeResolverText(prompt);
   const destructivePrompt =
     promptContainsAny(normalized, deleteAliases) || promptContainsAny(normalized, archiveAliases);
-  return destructivePrompt && !hasDestructiveActions(plan);
+  if (!destructivePrompt) return false;
+  if (plan.status === "needs_input" || plan.responseKind === "gated") return false;
+  return !hasDestructiveActions(plan);
 };
 
 export const hasDestructiveCountMismatchWithPolicy = (
