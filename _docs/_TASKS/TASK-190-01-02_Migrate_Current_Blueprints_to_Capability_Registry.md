@@ -36,6 +36,10 @@ Register capabilities for:
 - product catalog,
 - portfolio projects,
 - services directory,
+- house projects detail page template,
+- product detail page template,
+- portfolio/case-study detail page template,
+- services detail page template,
 - lead capture,
 - product inquiry form,
 - editorial content hub,
@@ -50,6 +54,10 @@ export const blueprintCapabilities = normalizeBlueprintCapabilities([
   productCatalogCapability,
   portfolioProjectsCapability,
   servicesDirectoryCapability,
+  houseProjectsDetailPageCapability,
+  productDetailPageCapability,
+  portfolioDetailPageCapability,
+  servicesDetailPageCapability,
   leadCaptureCapability,
   inquiryFormCapability,
   editorialContentHubCapability,
@@ -76,6 +84,8 @@ export const findCapabilitiesProviding = (provide: BlueprintProvideKind) =>
 ## Testing Requirements
 
 - Registry contains all current blueprints.
+- Registry contains first-class `detail-page` capabilities for catalog-family
+  packs.
 - Registry ids are unique.
 - Current blueprint builder output is unchanged.
 - Gated booking/payment capabilities are non-executable.

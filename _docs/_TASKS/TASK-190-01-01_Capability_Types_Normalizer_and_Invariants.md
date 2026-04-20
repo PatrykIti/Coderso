@@ -31,6 +31,7 @@ Define:
 - `BlueprintCapability`
 - `BlueprintProvide`
 - `BlueprintRequirement`
+- `BlueprintResourceKind`
 - `BlueprintResourceContribution`
 - `BlueprintPageSectionContribution`
 - `BlueprintAdminContribution`
@@ -46,6 +47,11 @@ Required invariants:
 - executable actions must be existing assistant action types.
 - gated contributions cannot include executable action payloads.
 - resource keys are stable and deterministic.
+- `detail-page` is a first-class resource kind, separate from `page`.
+- `public-detail-page` is a first-class provide kind for catalog detail
+  templates.
+- UI can label `detail-page` as "Detail Template", but manifests use the
+  technical kind consistently.
 - no secret-like keys in defaults.
 
 ## Pseudocode
@@ -98,6 +104,8 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
 - Unknown keys reject.
 - Duplicate resource keys reject.
 - Unknown action type rejects.
+- Unknown resource kind rejects.
+- `detail-page` resource kind accepts only detail page document contributions.
 - Secret-like defaults reject.
 - Gated fragments cannot include executable payloads.
 

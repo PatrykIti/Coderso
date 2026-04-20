@@ -28,16 +28,32 @@ No child task files.
 ```ts
 export const assembleCompositionActions = (graph): AssistantPlannedAction[] => {
   return [
-    maybeContentRouteAction(graph),
+    contentRouteAction(graph.route),
     contentTypeUpsertAction(graph.schema),
     customScreenUpsertAction(graph.adminSurface),
     listingQueryUpsertAction(graph.query),
     listingTemplateUpsertAction(graph.template),
-    pageUpsertAction(graph.page),
+    pageUpsertAction(graph.listPage),
+    detailPageUpsertAction(graph.detailPage),
+    ...formUpsertActions(graph.forms),
+    ...menuActions(graph.menus),
+    ...seoActions(graph.seo),
     ...gatedModuleNotes(graph.gated),
   ].filter(Boolean);
 };
 ```
+
+Ordering rules:
+
+- `setting.content-route.upsert` runs before `detail-page.upsert` so route
+  ownership and `detailPageId` can be resolved deterministically.
+- `content-type.upsert` runs before `detail-page.upsert` so bindings can verify
+  schema fields.
+- `page.upsert` remains for list/landing pages.
+- `detail-page.upsert` remains for detail templates and must not be collapsed
+  into `page.upsert`.
+- forms/menus/SEO run after primary page/detail resources so they can reference
+  stable resource ids and public URLs.
 
 ## Security Contract
 
@@ -55,6 +71,10 @@ export const assembleCompositionActions = (graph): AssistantPlannedAction[] => {
 - Assembled plan validates.
 - Existing single preset plans unchanged.
 - Mixed prompt plan action order stable.
+- `detailPageUpsertAction(graph.detailPage)` is emitted for catalog outcomes
+  with public detail routes.
+- Assembler does not emit `detail-page.upsert` before route/content type
+  dependencies.
 - Gated modules produce non-executable metadata/questions.
 
 ## Documentation Updates Required

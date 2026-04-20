@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 43 tasks
+- **To Do:** 44 tasks
 - **In Progress:** 5 tasks
 - **Done:** 951 tasks
 
@@ -62,6 +62,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05-03-04 | Detail Page Preview, Cache, and Invalidation | High | Medium | Technical leaf: preview token flow plus entry/detail cache invalidation |
 | TASK-190-05-03-05 | Detail Page Action Schema and Executor Adapter | High | Large | Technical leaf: strict typed detail-page upsert action and executor integration |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
+| TASK-190-05-03-07 | Detail Page Route Linking and Internal Admin API | High | Large | Technical leaf: content route detailPageId round-trip plus internal detail page CRUD/revision routes |
 | TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
 | TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |

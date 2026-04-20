@@ -57,13 +57,37 @@ export type BlueprintCapability = {
 };
 ```
 
+Resource/surface kinds must include first-class detail templates:
+
+```ts
+type BlueprintResourceKind =
+  | "content-type"
+  | "entry"
+  | "relation"
+  | "custom-screen"
+  | "listing-query"
+  | "listing-template"
+  | "page"
+  | "detail-page"
+  | "form"
+  | "menu"
+  | "seo"
+  | "widget-template"
+  | "site-kit";
+```
+
+UI labels may call this resource "Detail Template", but the technical
+resource/action kind is `detail-page`.
+
 ## Acceptance Criteria
 
 1. Every current business blueprint has manifest metadata.
 2. Manifest validation rejects unknown keys and unsafe resource declarations.
 3. Registry can list capabilities by family, provide type, resource type, and
    gated/executable mode.
-4. No current generated action output changes in this task.
+4. Registry supports `detail-page` resources and `public-detail-page`
+   capabilities.
+5. No current generated action output changes in this task.
 
 ## Security Contract
 
@@ -83,6 +107,7 @@ export type BlueprintCapability = {
 
 - Vitest manifest normalization tests.
 - Registry snapshot tests for current blueprint packs.
+- `detail-page` resource kind and `public-detail-page` provide kind are accepted.
 - Invariant tests:
   - stable ids,
   - no duplicate capability ids,

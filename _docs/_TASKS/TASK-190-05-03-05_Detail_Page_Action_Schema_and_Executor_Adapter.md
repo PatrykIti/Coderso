@@ -23,11 +23,22 @@ No child task files.
 
 - Update `core/services/assistant/actionPlanTypes.ts`
 - Update `core/services/assistant/actionPlanSchema.ts`
+- Update `core/services/assistant/actionRegistry.ts`
 - Update `core/services/assistant/actionFamilyContracts.ts`
 - Update `core/services/assistant/actionExecutorService.ts`
 - Update `core/services/assistant/actionUndoManifest.ts` if detail documents
   need rollback metadata.
+- Update `core/admin/services/assistantClient.ts` for cache invalidation after
+  `detail-page.upsert`.
+- Update `core/admin/ui/assistant/components/ActionPlanReview.tsx` labels.
+- Update `core/admin/ui/assistant/components/ActionExecutionResult.tsx` labels.
+- Update `core/admin/services/cachePolicy.ts` with:
+  - `detailPages:list`
+  - `detailPages:detail:<id>`
+- Update `_docs/ADMIN_CACHE.md`
+- Update `_docs/ADMIN_CACHE_MAP.md`
 - Add `tests/vitest/assistant/action-plan-schema.test.ts` cases.
+- Add `tests/vitest/assistant/action-registry.test.ts` cases.
 - Add `tests/unit/assistant/actionExecutorService.test.ts` cases.
 
 ## Action Contract
@@ -72,6 +83,7 @@ Execute must:
 - verify route does not collide unsafely,
 - upsert document idempotently,
 - invalidate relevant site cache,
+- invalidate admin detail page list/detail cache keys,
 - return admin/public preview metadata.
 
 ## Security Contract
@@ -95,6 +107,10 @@ Execute must:
 - Execute creates/upserts document idempotently.
 - Execute rejects route collision.
 - Undo manifest captures safe rollback metadata if applicable.
+- Action registry includes `detail-page.upsert`.
+- Review/result UI labels render `detail-page.upsert` as "Detail page".
+- Assistant execution cache invalidates `detailPages:list` and
+  `detailPages:detail:<id>`.
 
 ## Documentation Updates Required
 

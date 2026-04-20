@@ -33,6 +33,8 @@ No child task files.
 - Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates.
 - Update `core/services/settings/settingsService.ts` only to support safe route
   references to detail page documents, not to store full documents in settings.
+- Update `core/services/assistant/actionPlanTypes.ts` and
+  `actionPlanSchema.ts` for `setting.content-route.upsert.detailPageId`.
 
 ## Data Contract
 
@@ -89,6 +91,23 @@ Rules:
 - Preview reads `current_document` only through valid preview/admin context.
 - `site.contentRoutes` can reference `detailPageId` for matching but does not
   own the document.
+- `ContentRouteSetting` must preserve `detailPageId` through settings
+  normalization, admin client reads/writes, and route matching:
+
+```ts
+type ContentRouteSetting = {
+  type: string;
+  listPath: string;
+  detailPath: string;
+  enabled: boolean;
+  detailPageId?: string | null;
+};
+```
+
+- `setting.content-route.upsert` can set, update, preserve, or clear
+  `detailPageId`.
+- `contentRouteMatcher` returns `detailPageId` with detail route matches.
+- Site Settings UI/client round-trips `detailPageId` without dropping it.
 - The service layer owns normalize/create/update/publish/unpublish helpers.
 - Detail page documents follow the same history contract shape as Pages:
   - `kind = publish` for publish snapshots,
@@ -133,6 +152,11 @@ Normalization rules:
 - Publish creates a `publish` revision and updates `published_document`.
 - Autosave keeps only the latest autosave revision.
 - Restore/discard revision semantics match the Pages revision contract.
+- `ContentRouteSetting.detailPageId` normalizes and round-trips through
+  settings service/client/UI.
+- `setting.content-route.upsert` preserves existing `detailPageId` unless a
+  patch explicitly changes it.
+- `contentRouteMatcher` exposes `detailPageId` for runtime detail resolution.
 - Unknown keys reject.
 - Duplicate block ids reject.
 - Binding to missing block rejects.

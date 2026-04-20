@@ -207,6 +207,7 @@ Technical leaf tasks:
   - `TASK-190-05-03-04_Detail_Page_Preview_Cache_and_Invalidation.md`
   - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
   - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
+  - `TASK-190-05-03-07_Detail_Page_Route_Linking_and_Internal_Admin_API.md`
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md`
@@ -320,3 +321,5 @@ Technical leaf tasks:
 13. Generated collection outputs remain manually editable through a collection
     workspace that reuses existing Page Builder, Entries, Custom Screen,
     Listing, Form, SEO, and route editors where possible.
+14. Detail page route linking, internal admin APIs, action registry/cache/UI
+    labels, and capability manifests are explicit for `detail-page`.

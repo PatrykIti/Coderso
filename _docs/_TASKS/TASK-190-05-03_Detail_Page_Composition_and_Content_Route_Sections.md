@@ -35,6 +35,7 @@ of generic entry detail output.
 - `TASK-190-05-03-04_Detail_Page_Preview_Cache_and_Invalidation.md`
 - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
 - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
+- `TASK-190-05-03-07_Detail_Page_Route_Linking_and_Internal_Admin_API.md`
 
 ## Product Contract
 
@@ -114,6 +115,8 @@ Storage direction:
 - `detail_page_documents` is the required storage contract.
 - `site.contentRoutes` remains the route matcher and may reference a
   `detailPageId`, but it must not store the full detail page document.
+- `ContentRouteSetting.detailPageId` is the canonical stable link from a
+  content detail route to a detail page document.
 - Detail page documents must have their own draft/published lifecycle,
   versioned JSON document payload, stable id, content type ownership, and route
   pattern.
@@ -152,6 +155,8 @@ New modules:
 - `core/services/content/detailPageDocumentService.ts`
 - `core/services/content/detailPageRuntimeResolver.ts`
 - `core/site/renderDetailPage.tsx`
+- `core/server/routes/detailPageRoutes.ts`
+- `core/server/validation/detailPageSchemas.ts`
 
 Touched existing modules:
 
@@ -176,9 +181,11 @@ Touched existing modules:
 4. Add preview/cache/invalidation integration.
 5. Add required `detail-page.upsert` typed action schema/executor to
    create/update detail page documents.
-6. Add manual Collection Workspace / Detail Template editing integration in
+6. Add internal admin detail page API and `detailPageId` content-route
+   round-trip.
+7. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
-7. Add composer fixtures and DB-backed public runtime acceptance tests.
+8. Add composer fixtures and DB-backed public runtime acceptance tests.
 
 ## Security Contract
 
