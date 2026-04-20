@@ -14,20 +14,24 @@ const backupsState = vi.hoisted(() => ({
     {
       id: "backup-1",
       kind: "manual",
-      status: "ready",
+      status: "complete",
+      storageDriver: "local",
+      artifactPath: "/tmp/backup-1.zip",
       sizeBytes: 1024,
+      error: null,
       createdAt: "2026-03-15T08:00:00.000Z",
+      finishedAt: "2026-03-15T08:01:00.000Z",
     },
-  ] as BackupItem[],
+  ],
   scheduleResult: {
     id: "schedule-1",
     enabled: true,
     frequency: "daily",
-    timeOfDay: "02:00",
     retentionDays: 30,
-    includeAssets: true,
+    storageDriver: "local",
+    createdAt: "2026-03-15T07:00:00.000Z",
     updatedAt: "2026-03-15T07:00:00.000Z",
-  } as BackupSchedule,
+  },
   nextListError: null as unknown,
   nextScheduleError: null as unknown,
   nextCreateError: null as unknown,
@@ -95,20 +99,24 @@ const backupsState = vi.hoisted(() => ({
       {
         id: "backup-1",
         kind: "manual",
-        status: "ready",
+        status: "complete",
+        storageDriver: "local",
+        artifactPath: "/tmp/backup-1.zip",
         sizeBytes: 1024,
+        error: null,
         createdAt: "2026-03-15T08:00:00.000Z",
+        finishedAt: "2026-03-15T08:01:00.000Z",
       },
-    ] as BackupItem[];
+    ];
     backupsState.scheduleResult = {
       id: "schedule-1",
       enabled: true,
       frequency: "daily",
-      timeOfDay: "02:00",
       retentionDays: 30,
-      includeAssets: true,
+      storageDriver: "local",
+      createdAt: "2026-03-15T07:00:00.000Z",
       updatedAt: "2026-03-15T07:00:00.000Z",
-    } as BackupSchedule;
+    };
     backupsState.nextListError = null;
     backupsState.nextScheduleError = null;
     backupsState.nextCreateError = null;
