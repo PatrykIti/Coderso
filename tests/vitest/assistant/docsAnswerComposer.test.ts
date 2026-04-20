@@ -4,7 +4,7 @@ import { composeDocsAnswer } from "../../../core/services/assistant/docsAnswerCo
 import type { DocsSearchHit } from "../../../core/services/assistant/docsTypes";
 
 const makeHit = (
-  overrides: Partial<DocsSearchHit> & {
+  overrides: Omit<Partial<DocsSearchHit>, "chunk"> & {
     chunk?: Partial<DocsSearchHit["chunk"]>;
   }
 ): DocsSearchHit => ({
