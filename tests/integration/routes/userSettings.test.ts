@@ -18,10 +18,13 @@ const makeRouter = () => {
 test("registerUserSettingsRoutes wires endpoints", () => {
   const { router, routes } = makeRouter();
 
-  registerUserSettingsRoutes(router, {
+  registerUserSettingsRoutes(
+    router as unknown as Parameters<typeof registerUserSettingsRoutes>[0],
+    {
     requireAuth: () => async () => undefined,
     validate: () => undefined,
-  });
+    } as unknown as Parameters<typeof registerUserSettingsRoutes>[1]
+  );
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 

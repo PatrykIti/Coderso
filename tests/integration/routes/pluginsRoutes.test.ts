@@ -21,9 +21,9 @@ const makeRouter = () => {
 test("registerPluginsRoutes wires endpoints", () => {
   const { router, routes } = makeRouter();
 
-  registerPluginsRoutes(router, {
+  registerPluginsRoutes(router as unknown as Parameters<typeof registerPluginsRoutes>[0], {
     requirePermission: () => async () => undefined,
-  });
+  } as unknown as Parameters<typeof registerPluginsRoutes>[1]);
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
@@ -38,9 +38,9 @@ test("registerPluginsRoutes wires endpoints", () => {
 test("manifest validate route returns ApiError for invalid payload", async () => {
   const { router, routes } = makeRouter();
 
-  registerPluginsRoutes(router, {
+  registerPluginsRoutes(router as unknown as Parameters<typeof registerPluginsRoutes>[0], {
     requirePermission: () => async () => undefined,
-  });
+  } as unknown as Parameters<typeof registerPluginsRoutes>[1]);
 
   const validateRoute = routes.find(
     (route) => route.method === "POST" && route.path === "/plugins/manifest/validate"

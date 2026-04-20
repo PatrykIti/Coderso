@@ -22,10 +22,10 @@ const makeRouter = () => {
 test("registerAuthRoutes wires auth endpoints", () => {
   const { router, routes } = makeRouter();
 
-  registerAuthRoutes(router, {
+  registerAuthRoutes(router as unknown as Parameters<typeof registerAuthRoutes>[0], {
     requireAuth: async () => undefined,
     validate: () => undefined,
-  });
+  } as unknown as Parameters<typeof registerAuthRoutes>[1]);
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
