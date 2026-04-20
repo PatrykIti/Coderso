@@ -8,6 +8,10 @@ import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/bluep
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
 import { buildEditorialContentHubPlan } from "../../../core/services/assistant/blueprints/editorialContentHubBlueprint";
 import {
+  resolveCustomScreenCapabilities,
+  type CustomScreenCapabilities,
+} from "../../../core/services/customScreens/capabilities";
+import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
 } from "../../../core/services/assistant/actionExecutorService";
@@ -18,11 +22,20 @@ import {
 } from "../../../core/services/assistant/siteBuilderExecutor";
 import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
+import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
+import type { WidgetBlock } from "../../../core/widgets/types";
 
 const createDeps = () => {
   let contentRoutes: ContentRouteSetting[] = [];
-  const contentTypes: Array<{ id: string; name: string; slug: string; schema: unknown }> = [];
+  const contentTypes: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    schema: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
   const customScreens: Array<{
     id: string;
     name: string;
@@ -31,9 +44,9 @@ const createDeps = () => {
     showInSidebar: boolean;
     sidebarLabel: string | null;
     schemaVersion: 1;
-    blocks: Array<Record<string, unknown>>;
-    bindings: Array<Record<string, unknown>>;
-    capabilities: { mode: "record-view"; writableBindingFields: string[] };
+    blocks: WidgetBlock[];
+    bindings: CustomScreenBinding[];
+    capabilities: CustomScreenCapabilities;
     createdAt: Date;
     updatedAt: Date;
   }> = [];
@@ -157,16 +170,19 @@ const createDeps = () => {
       if (key === "site.contentRoutes") {
         contentRoutes = (value as ContentRouteSetting[]).slice();
       }
-      return { key, value };
+      return { key, value, updatedAt: new Date("2026-04-10T12:00:00.000Z") };
     },
     getContentTypeBySlug: async (slug: string) =>
       contentTypes.find((entry) => entry.slug === slug) ?? null,
     createContentType: async (input: { name: string; slug: string; schema: unknown }) => {
+      const now = new Date("2026-04-10T12:00:00.000Z");
       const record = {
         id: `ct-${contentTypes.length + 1}`,
         name: input.name,
         slug: input.slug,
         schema: input.schema,
+        createdAt: now,
+        updatedAt: now,
       };
       contentTypes.push(record);
       return record;
@@ -197,8 +213,8 @@ const createDeps = () => {
       status?: "draft" | "active";
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
-      blocks?: Array<Record<string, unknown>> | null;
-      bindings?: Array<Record<string, unknown>> | null;
+      blocks?: WidgetBlock[] | null;
+      bindings?: CustomScreenBinding[] | null;
     }) => {
       const now = new Date("2026-04-10T12:00:00.000Z");
       const record = {
@@ -211,7 +227,10 @@ const createDeps = () => {
         schemaVersion: 1 as const,
         blocks: input.blocks ?? [],
         bindings: input.bindings ?? [],
-        capabilities: { mode: "record-view" as const, writableBindingFields: [] },
+        capabilities: resolveCustomScreenCapabilities({
+          blocks: input.blocks ?? [],
+          bindings: input.bindings ?? [],
+        }),
         createdAt: now,
         updatedAt: now,
       };
@@ -226,8 +245,8 @@ const createDeps = () => {
         status?: "draft" | "active";
         showInSidebar?: boolean;
         sidebarLabel?: string | null;
-        blocks?: Array<Record<string, unknown>> | null;
-        bindings?: Array<Record<string, unknown>> | null;
+        blocks?: WidgetBlock[] | null;
+        bindings?: CustomScreenBinding[] | null;
       }
     ) => {
       const existing = customScreens.find((entry) => entry.id === id) ?? null;
@@ -237,8 +256,12 @@ const createDeps = () => {
       if (input.status !== undefined) existing.status = input.status;
       if (input.showInSidebar !== undefined) existing.showInSidebar = input.showInSidebar;
       if (input.sidebarLabel !== undefined) existing.sidebarLabel = input.sidebarLabel;
-      if (input.blocks !== undefined) existing.blocks = input.blocks;
-      if (input.bindings !== undefined) existing.bindings = input.bindings;
+      if (input.blocks !== undefined) existing.blocks = input.blocks ?? [];
+      if (input.bindings !== undefined) existing.bindings = input.bindings ?? [];
+      existing.capabilities = resolveCustomScreenCapabilities({
+        blocks: existing.blocks,
+        bindings: existing.bindings,
+      });
       existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
       return existing;
     },

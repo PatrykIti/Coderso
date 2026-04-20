@@ -4,6 +4,9 @@ import {
   deleteContentType,
   getContentTypeBySlug,
   updateContentType,
+  type ContentTypeRecord,
+  type CreateContentTypeInput,
+  type UpdateContentTypeInput,
 } from "../content/typeService";
 import {
   createCustomScreen,
@@ -549,10 +552,13 @@ const buildSimplePageData = (input: {
 type ActionExecutorDeps = {
   getSetting: typeof getSetting;
   setSetting: typeof setSetting;
-  getContentTypeBySlug: typeof getContentTypeBySlug;
-  createContentType: typeof createContentType;
-  deleteContentType: typeof deleteContentType;
-  updateContentType: typeof updateContentType;
+  getContentTypeBySlug: (slug: string) => Promise<ContentTypeRecord | null>;
+  createContentType: (input: CreateContentTypeInput) => Promise<ContentTypeRecord>;
+  deleteContentType: (id: string) => Promise<ContentTypeRecord | null>;
+  updateContentType: (
+    id: string,
+    input: UpdateContentTypeInput
+  ) => Promise<ContentTypeRecord | null>;
   listCustomScreens: typeof listCustomScreens;
   createCustomScreen: typeof createCustomScreen;
   updateCustomScreen: typeof updateCustomScreen;

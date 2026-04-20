@@ -7,6 +7,8 @@ import {
   type ContentSchema,
 } from "./validation";
 
+export type ContentTypeRecord = typeof contentTypes.$inferSelect;
+
 export type CreateContentTypeInput = {
   name: string;
   slug: string;
@@ -45,17 +47,17 @@ export async function listContentTypes() {
     .orderBy(contentTypes.createdAt);
 }
 
-export async function getContentType(id: string) {
+export async function getContentType(id: string): Promise<ContentTypeRecord | null> {
   const [row] = await db.select().from(contentTypes).where(eq(contentTypes.id, id));
-  return row ?? null;
+  return (row as ContentTypeRecord | undefined) ?? null;
 }
 
-export async function getContentTypeBySlug(slug: string) {
+export async function getContentTypeBySlug(slug: string): Promise<ContentTypeRecord | null> {
   const [row] = await db
     .select()
     .from(contentTypes)
     .where(eq(contentTypes.slug, slug));
-  return row ?? null;
+  return (row as ContentTypeRecord | undefined) ?? null;
 }
 
 export async function createContentType(input: CreateContentTypeInput) {
@@ -76,7 +78,7 @@ export async function createContentType(input: CreateContentTypeInput) {
 export async function updateContentType(
   id: string,
   input: UpdateContentTypeInput
-) {
+): Promise<ContentTypeRecord | null> {
   if (input.schema) {
     assertContentSchema(input.schema);
     invalidateValidator(id);
@@ -93,15 +95,15 @@ export async function updateContentType(
     .where(eq(contentTypes.id, id))
     .returning();
 
-  return row ?? null;
+  return (row as ContentTypeRecord | undefined) ?? null;
 }
 
-export async function deleteContentType(id: string) {
+export async function deleteContentType(id: string): Promise<ContentTypeRecord | null> {
   const [row] = await db
     .delete(contentTypes)
     .where(eq(contentTypes.id, id))
     .returning();
 
   invalidateValidator(id);
-  return row ?? null;
+  return (row as ContentTypeRecord | undefined) ?? null;
 }
