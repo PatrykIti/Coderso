@@ -4,6 +4,11 @@ import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
+import type {
+  ListingQueryRecord,
+  ListingTemplateRecord,
+} from "../../../core/admin/services/listingsClient";
 import type { ContentListData } from "../../../core/widgets/core/contentList";
 
 const contentListState = vi.hoisted(() => ({
@@ -11,8 +16,16 @@ const contentListState = vi.hoisted(() => ({
     {
       id: "articles",
       name: "Articles",
+      slug: "articles",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      createdAt: "2026-03-08T10:00:00.000Z",
+      updatedAt: "2026-03-08T10:00:00.000Z",
     },
-  ],
+  ] satisfies ContentTypeSummary[],
   listingQueries: [
     {
       id: "query-1",
@@ -29,7 +42,7 @@ const contentListState = vi.hoisted(() => ({
       createdAt: "2026-03-08T10:00:00.000Z",
       updatedAt: "2026-03-08T10:00:00.000Z",
     },
-  ],
+  ] satisfies ListingQueryRecord[],
   listingTemplates: [
     {
       id: "template-1",
@@ -55,7 +68,7 @@ const contentListState = vi.hoisted(() => ({
       createdAt: "2026-03-08T10:00:00.000Z",
       updatedAt: "2026-03-08T10:00:00.000Z",
     },
-  ],
+  ] satisfies ListingTemplateRecord[],
   contentTypesError: null as unknown,
   listingsError: null as unknown,
   reset() {
@@ -715,6 +728,7 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     return (
       <ContentListAdvancedEditor
         value={value}
+        variant="cards"
         onChange={(next) => {
           onChangeSpy(next);
           setValue(next);
@@ -1162,9 +1176,9 @@ test("ContentList editors surface content type and listings loading errors", asy
     const [value, setValue] = useState<ContentListData>({} as ContentListData);
     return (
       <>
-        <ContentListWizardEditor value={value} onChange={setValue} />
-        <ContentListVisualEditor value={value} onChange={setValue} />
-        <ContentListAdvancedEditor value={value} onChange={setValue} />
+        <ContentListWizardEditor value={value} onChange={setValue} variant="cards" />
+        <ContentListVisualEditor value={value} onChange={setValue} variant="cards" />
+        <ContentListAdvancedEditor value={value} onChange={setValue} variant="cards" />
       </>
     );
   };
@@ -1199,7 +1213,7 @@ test("ContentList editors fall back to generic loading messages for unexpected e
 
   const Harness = () => {
     const [value, setValue] = useState<ContentListData>({} as ContentListData);
-    return <ContentListWizardEditor value={value} onChange={setValue} />;
+    return <ContentListWizardEditor value={value} onChange={setValue} variant="cards" />;
   };
 
   const view = mount(<Harness />);
