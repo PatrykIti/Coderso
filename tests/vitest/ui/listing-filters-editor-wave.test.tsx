@@ -343,6 +343,7 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
       <>
         <ListingFiltersWizardEditor
           value={value}
+          variant="default"
           onChange={(next) => {
             onChangeSpy(next);
             setValue(next);
@@ -350,6 +351,7 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
         />
         <ListingFiltersVisualEditor
           value={value}
+          variant="default"
           onChange={(next) => {
             onChangeSpy(next);
             setValue(next);
@@ -357,6 +359,7 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
         />
         <ListingFiltersAdvancedEditor
           value={value}
+          variant="default"
           onChange={(next) => {
             onChangeSpy(next);
             setValue(next);
@@ -496,9 +499,9 @@ test("ListingFilters editors surface listing query loading errors", async () => 
     const [value, setValue] = useState<ListingFiltersData>({} as ListingFiltersData);
     return (
       <>
-        <ListingFiltersWizardEditor value={value} onChange={setValue} />
-        <ListingFiltersVisualEditor value={value} onChange={setValue} />
-        <ListingFiltersAdvancedEditor value={value} onChange={setValue} />
+        <ListingFiltersWizardEditor value={value} onChange={setValue} variant="default" />
+        <ListingFiltersVisualEditor value={value} onChange={setValue} variant="default" />
+        <ListingFiltersAdvancedEditor value={value} onChange={setValue} variant="default" />
       </>
     );
   };
@@ -554,7 +557,7 @@ test("ListingFilters visual editor covers loading state, query reset, facet opti
       setValue(next);
     };
 
-    return <ListingFiltersVisualEditor value={value} onChange={handleChange} />;
+    return <ListingFiltersVisualEditor value={value} onChange={handleChange} variant="default" />;
   };
 
   const view = mount(<Harness />);
@@ -708,7 +711,7 @@ test("ListingFilters editors show fallback text for non-API query loading failur
 
   const Harness = () => {
     const [value, setValue] = useState<ListingFiltersData>({} as ListingFiltersData);
-    return <ListingFiltersWizardEditor value={value} onChange={setValue} />;
+    return <ListingFiltersWizardEditor value={value} onChange={setValue} variant="default" />;
   };
 
   const view = mount(<Harness />);
