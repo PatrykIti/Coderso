@@ -202,6 +202,10 @@ import {
   createDividerWidget,
   dividerDefaults,
 } from "../../../core/widgets/core/divider";
+import type { WidgetDefinition } from "../../../core/widgets/types";
+
+const asBlockSettingsWidget = <T,>(widget: WidgetDefinition<T>) =>
+  widget as unknown as WidgetDefinition;
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderAdminUi(<WidgetTemplateEditorPage />);
@@ -234,7 +238,7 @@ test("widget template block settings render navigation visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "nav-1",
         type: "navigation",
@@ -263,7 +267,7 @@ test("widget template block settings render footer visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "footer-1",
         type: "footer",
@@ -292,7 +296,7 @@ test("widget template block settings render timeline visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "timeline-1",
         type: "timeline",
@@ -322,7 +326,7 @@ test("widget template block settings render compare timeline visual sections", (
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "compare-1",
         type: "compare-timeline",
@@ -352,7 +356,7 @@ test("widget template block settings render newsletter visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "newsletter-1",
         type: "newsletter",
@@ -383,7 +387,7 @@ test("widget template block settings render feature grid visual sections", () =>
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "feature-grid-1",
         type: "feature-grid",
@@ -413,7 +417,7 @@ test("widget template block settings render section visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "section-1",
         type: "section",
@@ -442,7 +446,7 @@ test("widget template block settings render grid columns visual sections", () =>
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "grid-columns-1",
         type: "grid-columns",
@@ -475,7 +479,7 @@ test("widget template block settings render stack visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "stack-1",
         type: "stack",
@@ -507,7 +511,7 @@ test("widget template block settings render split layout visual sections", () =>
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "split-layout-1",
         type: "split-layout",
@@ -540,7 +544,7 @@ test("widget template block settings render spacer visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "spacer-1",
         type: "spacer",
@@ -569,7 +573,7 @@ test("widget template block settings render divider visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "divider-1",
         type: "divider",
@@ -598,7 +602,7 @@ test("widget template block settings render testimonials visual sections", () =>
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "testimonials-1",
         type: "testimonials",
@@ -628,7 +632,7 @@ test("widget template block settings render pricing plans visual sections", () =
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "pricing-1",
         type: "pricing-plans",
@@ -658,7 +662,7 @@ test("widget template block settings render faq accordion visual sections", () =
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "faq-1",
         type: "faq-accordion",
@@ -688,7 +692,7 @@ test("widget template block settings render cta banner visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "cta-1",
         type: "cta-banner",
@@ -718,7 +722,7 @@ test("widget template block settings render logo cloud visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "logo-cloud-1",
         type: "logo-cloud",
@@ -748,7 +752,7 @@ test("widget template block settings render gallery mosaic visual sections", () 
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "gallery-mosaic-1",
         type: "gallery-mosaic",
@@ -778,7 +782,7 @@ test("widget template block settings render stats kpi visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "stats-kpi-1",
         type: "stats-kpi",
@@ -809,7 +813,7 @@ test("widget template block settings render team visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "team-1",
         type: "team",
@@ -840,7 +844,7 @@ test("widget template block settings render rich text section visual sections", 
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "rich-text-1",
         type: "rich-text-section",
@@ -872,7 +876,7 @@ test("widget template block settings render contact visual sections", () => {
 
   const html = renderAdminUi(
     <BlockSettings
-      widget={widget}
+      widget={asBlockSettingsWidget(widget)}
       block={{
         id: "contact-1",
         type: "contact",
