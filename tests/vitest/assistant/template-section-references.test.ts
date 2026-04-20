@@ -252,7 +252,7 @@ test("hydrateAssistantActiveSurfaceContext loads referenced page template summar
         warnings: [],
       },
     },
-    deps
+    deps as unknown as Parameters<typeof hydrateAssistantActiveSurfaceContext>[1]
   );
 
   expect(templateLoads.sort()).toEqual(["template-a", "template-b"]);

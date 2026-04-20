@@ -64,7 +64,7 @@ test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserve
         warnings: [],
       },
     },
-    deps
+    deps as unknown as Parameters<typeof hydrateAssistantActiveSurfaceContext>[1]
   );
 
   expect(context?.activeSurface).toMatchObject({
@@ -101,7 +101,7 @@ test("hydrateAssistantActiveSurfaceContext drops missing active resources", asyn
         warnings: [],
       },
     },
-    deps
+    deps as unknown as Parameters<typeof hydrateAssistantActiveSurfaceContext>[1]
   );
 
   expect(context?.activeSurface).toBeNull();
