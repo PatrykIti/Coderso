@@ -171,14 +171,14 @@ test("utility helpers normalize csv and source defaults", () => {
 
   expect(
     normalizeSourceForEditor(
-      {
+      ({
         limit: 99,
         search: "  camera  ",
         collectionIds: [" featured ", "", "featured", "sale"],
         status: ["draft", "invalid", "published"],
         sortField: "invalid",
         sortDir: "invalid",
-      },
+      } as unknown as NormalizedCommerceWidgetSource),
       {
         limit: 6,
         sortField: "title",
