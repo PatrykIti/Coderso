@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import type { AssistantActionContext } from "../../../core/services/assistant/actionPlanTypes";
+import { normalizePageLayoutSettings } from "../../../core/services/pages/layoutSettings";
 import type { WidgetBlock } from "../../../core/widgets/types";
 import {
   canConnectToLiveDatabase,
@@ -95,8 +96,10 @@ const createTemplateFixture = async (
       status: "published",
       blocks: [createTemplateBlock(input.name)],
       settings: {
-        wrapperContainer: "default",
-        sectionGap: "md",
+        layout: normalizePageLayoutSettings({
+          wrapper: { container: "default" },
+          sections: { gap: "md" },
+        }),
       },
     },
     input.actorId
@@ -116,6 +119,7 @@ const buildWidgetTemplateContext = async (
     activeTemplateId ? getWidgetTemplate(activeTemplateId) : Promise.resolve(null),
   ]);
   const activeBlock = activeTemplate?.blocks[0] ?? null;
+  const activeLayout = activeTemplate?.settings.layout;
   return {
     page: activeTemplate
       ? `/admin/coderso/widgets/templates/${activeTemplate.id}`
@@ -190,9 +194,9 @@ const buildWidgetTemplateContext = async (
             templateName: null,
           })),
           settings: {
-            wrapperContainer: activeTemplate.settings.wrapperContainer,
-            sectionGap: activeTemplate.settings.sectionGap,
-            hasBackgroundMedia: Boolean(activeTemplate.settings.backgroundMediaId),
+            wrapperContainer: activeLayout?.wrapper.container ?? "default",
+            sectionGap: activeLayout?.sections.gap ?? "none",
+            hasBackgroundMedia: activeLayout?.wrapper.background.media.type !== "none",
           },
           warnings: [],
         }
