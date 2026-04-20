@@ -6,6 +6,7 @@ import { expect, test, vi } from "vitest";
 
 import { AdvancedPanel } from "../../../core/admin/ui/pages/builder/AdvancedPanel";
 import type { Block, LayoutValue, WidgetDefinition } from "../../../core/admin/ui/pages/builder/types";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -46,7 +47,7 @@ vi.mock("../../../core/admin/ui/pages/builder/LayoutPanel", () => ({
       data-layout-padding-top={value.padding.top}
       onClick={() =>
         onChange({
-          container: "wide",
+          container: "full",
           padding: { top: "sm", bottom: "lg" },
           margin: { top: "none", bottom: "md" },
           background: { color: "transparent", image: null },
@@ -122,17 +123,13 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
         onChange: onDataChange,
         variant,
         onVariantChange,
-      }: {
-        onChange: (value: Record<string, unknown>) => void;
-        variant: string;
-        onVariantChange: (next: string) => void;
-      }) => (
+      }: WidgetEditorProps<Record<string, unknown>>) => (
         <div>
           <span>{variant}</span>
           <button type="button" onClick={() => onDataChange({ title: "Updated" })}>
             change-data
           </button>
-          <button type="button" onClick={() => onVariantChange("secondary")}>
+          <button type="button" onClick={() => onVariantChange?.("secondary")}>
             change-variant
           </button>
         </div>
