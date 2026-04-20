@@ -62,8 +62,8 @@ const postShellState = vi.hoisted(() => ({
     resetPreferences: vi.fn(),
   },
   editor: {
-    error: "Post editor error",
-    autosaveError: "Autosave paused",
+    error: "Post editor error" as string | null,
+    autosaveError: "Autosave paused" as string | null,
     loading: false,
     title: "Post A",
     status: "draft",
@@ -82,7 +82,7 @@ const postShellState = vi.hoisted(() => ({
       selectedBlockId: "block-1",
       saving: false,
     },
-    selectedBlock: { id: "block-1", type: "paragraph" },
+    selectedBlock: { id: "block-1", type: "paragraph" } as { id: string; type: string } | null,
     postId: "post-1",
     post: { updatedAt: "2026-03-08T10:00:00.000Z" },
     insertFocusToken: 1,
@@ -588,7 +588,7 @@ test("PostBlockEditorShell handles move-to-trash confirm flow and list-view inte
     expect(postShellState.layout.openDetails).toHaveBeenCalledWith("block");
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
   }
 });
 
@@ -632,7 +632,7 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
     expect(postShellState.editor.moveToTrash).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
   }
 });
 
@@ -693,7 +693,7 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
     });
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
     window.localStorage.clear();
     postShellState.layout.focusMode = false;
     postShellState.layout.state.focusMode = false;
