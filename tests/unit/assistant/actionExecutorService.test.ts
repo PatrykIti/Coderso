@@ -11,6 +11,11 @@ import {
   resolveCustomScreenCapabilities,
   type CustomScreenCapabilities,
 } from "../../../core/services/customScreens/capabilities";
+import type {
+  ListingQuery,
+  ListingQueryCreateInput,
+  ListingQueryUpdateInput,
+} from "../../../core/services/content/queryBuilderService";
 import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
@@ -20,11 +25,16 @@ import {
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
 } from "../../../core/services/assistant/siteBuilderExecutor";
-import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
+import type {
+  AssistantActionPlan,
+  AssistantPlannedAction,
+} from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 import type { WidgetBlock } from "../../../core/widgets/types";
+
+type ExecutorDeps = NonNullable<Parameters<typeof dryRunAssistantActionPlan>[1]>;
 
 const createDeps = () => {
   let contentRoutes: ContentRouteSetting[] = [];
@@ -54,7 +64,7 @@ const createDeps = () => {
     id: string;
     name: string;
     description: string | null;
-    query: Record<string, unknown>;
+    query: ListingQuery;
     createdAt: Date;
     updatedAt: Date;
   }> = [];
@@ -272,17 +282,14 @@ const createDeps = () => {
       return deleted ?? null;
     },
     listListingQueries: async () => listingQueries,
-    createListingQuery: async (input: {
-      name: string;
-      description: string | null;
-      query: Record<string, unknown>;
-    }) => {
+    createListingQuery: async (input: unknown) => {
+      const parsed = input as ListingQueryCreateInput;
       const now = new Date("2026-04-10T12:00:00.000Z");
       const record = {
         id: `query-${listingQueries.length + 1}`,
-        name: input.name,
-        description: input.description,
-        query: input.query,
+        name: parsed.name,
+        description: parsed.description,
+        query: parsed.query,
         createdAt: now,
         updatedAt: now,
       };
@@ -291,13 +298,14 @@ const createDeps = () => {
     },
     updateListingQuery: async (
       id: string,
-      input: { name?: string; description?: string | null; query?: Record<string, unknown> }
+      input: unknown
     ) => {
+      const parsed = input as ListingQueryUpdateInput;
       const existing = listingQueries.find((entry) => entry.id === id) ?? null;
       if (!existing) return null;
-      if (input.name !== undefined) existing.name = input.name;
-      if (input.description !== undefined) existing.description = input.description;
-      if (input.query !== undefined) existing.query = input.query;
+      if (parsed.name !== undefined) existing.name = parsed.name;
+      if (parsed.description !== undefined) existing.description = parsed.description;
+      if (parsed.query !== undefined) existing.query = parsed.query;
       return existing;
     },
     deleteListingQuery: async (id: string) => {
@@ -605,7 +613,11 @@ const createDeps = () => {
     ) => {
       const existing = entries.find((entry) => entry.id === id) ?? null;
       if (!existing) return null;
-      if (input.status !== undefined && input.status !== "scheduled") {
+      if (
+        input.status !== undefined &&
+        input.status !== "scheduled" &&
+        input.status !== "archived"
+      ) {
         existing.status = input.status;
       }
       if (input.seo) {
@@ -862,7 +874,7 @@ const createDeps = () => {
     })) as typeof validateGuidedSiteBuilderRun,
   };
 
-  return Object.assign(deps, {
+  const testDeps = Object.assign(deps, {
     __state: {
       contentRoutes,
       contentTypes,
@@ -881,6 +893,7 @@ const createDeps = () => {
       formFields,
     },
   });
+  return testDeps as unknown as typeof testDeps & ExecutorDeps;
 };
 
 test("dryRunAssistantActionPlan previews create operations for house projects catalog", async () => {
@@ -1708,9 +1721,15 @@ test("executeAssistantActionPlan patches widget template block data and preserve
     deps
   );
 
-  expect(deps.__state.widgetTemplates[0]?.blocks[0]?.data.headline).toBe("New headline");
-  expect(deps.__state.widgetTemplates[0]?.blocks[0]?.data.body).toBe("Keep body");
-  expect(deps.__state.widgetTemplates[0]?.blocks[1]?.data.title).toBe("Keep sibling");
+  const firstBlockData = deps.__state.widgetTemplates[0]?.blocks[0]?.data as
+    | Record<string, unknown>
+    | undefined;
+  const secondBlockData = deps.__state.widgetTemplates[0]?.blocks[1]?.data as
+    | Record<string, unknown>
+    | undefined;
+  expect(firstBlockData?.headline).toBe("New headline");
+  expect(firstBlockData?.body).toBe("Keep body");
+  expect(secondBlockData?.title).toBe("Keep sibling");
 });
 
 test("executeAssistantActionPlan deletes listing queries and templates through explicit delete actions", async () => {
@@ -2260,18 +2279,21 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
   expect(executed.results[0]?.publicHref).toBe("/products");
   expect(deps.__state.menuItemsByMenu.get("menu-primary")).toHaveLength(1);
 
+  const menuAction = plan.actions[0];
+  if (!menuAction || menuAction.type !== "menu.item.upsert") {
+    throw new Error("missing_menu_action");
+  }
+  const updatedAction: Extract<AssistantPlannedAction, { type: "menu.item.upsert" }> = {
+    ...menuAction,
+    input: {
+      ...menuAction.input,
+      label: "Products Catalog",
+    },
+  };
   const updatedPlan: AssistantActionPlan = {
     ...plan,
     id: "plan-menu-item-update",
-    actions: [
-      {
-        ...plan.actions[0]!,
-        input: {
-          ...plan.actions[0]!.input,
-          label: "Products Catalog",
-        },
-      },
-    ],
+    actions: [updatedAction],
   };
   const updatePreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(updatePreview.changes[0]?.operation).toBe("update");
@@ -2426,22 +2448,25 @@ test("executeAssistantActionPlan upserts seo documents for known targets", async
   expect(deps.__state.seoDocuments[0]?.slug).toBe("/products");
   expect(deps.__state.seoDocuments[0]?.title).toBe("Products Catalog");
 
+  const seoAction = plan.actions[0];
+  if (!seoAction || seoAction.type !== "seo.document.upsert") {
+    throw new Error("missing_seo_action");
+  }
+  const updatedAction: Extract<AssistantPlannedAction, { type: "seo.document.upsert" }> = {
+    ...seoAction,
+    input: {
+      ...seoAction.input,
+      seo: {
+        title: "Products Catalog",
+        description: "Browse updated products.",
+        robots: "index,follow",
+      },
+    },
+  };
   const updatedPlan: AssistantActionPlan = {
     ...plan,
     id: "plan-seo-document-update",
-    actions: [
-      {
-        ...plan.actions[0]!,
-        input: {
-          ...plan.actions[0]!.input,
-          seo: {
-            title: "Products Catalog",
-            description: "Browse updated products.",
-            robots: "index,follow",
-          },
-        },
-      },
-    ],
+    actions: [updatedAction],
   };
   const updatePreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(updatePreview.changes[0]?.operation).toBe("update");
@@ -2872,7 +2897,7 @@ test("executeAssistantActionPlan patches listing query filters without rewriting
     deps
   );
   expect(deps.__state.listingQueries[0]?.query.filters).toEqual(filters);
-  expect(deps.__state.listingQueries[0]?.query.limit).toBe(12);
+  expect(deps.__state.listingQueries[0]?.query.pagination.limit).toBe(12);
 
   const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
@@ -3253,23 +3278,26 @@ test("executeAssistantActionPlan upserts safe form automation without duplicates
     message: "Thanks for your message.",
   });
 
+  const formAction = plan.actions[0];
+  if (!formAction || formAction.type !== "form.automation.upsert") {
+    throw new Error("missing_form_action");
+  }
+  const updatedAction: Extract<AssistantPlannedAction, { type: "form.automation.upsert" }> = {
+    ...formAction,
+    input: {
+      ...formAction.input,
+      action: {
+        ...formAction.input.action,
+        config: {
+          message: "Thanks. We will reply soon.",
+        },
+      },
+    },
+  };
   const updatedPlan: AssistantActionPlan = {
     ...plan,
     id: "plan-form-automation-update",
-    actions: [
-      {
-        ...plan.actions[0]!,
-        input: {
-          ...plan.actions[0]!.input,
-          action: {
-            ...plan.actions[0]!.input.action,
-            config: {
-              message: "Thanks. We will reply soon.",
-            },
-          },
-        },
-      },
-    ],
+    actions: [updatedAction],
   };
 
   await executeAssistantActionPlan(
@@ -3379,16 +3407,15 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
 test("executeAssistantActionPlan replays persisted idempotency result", async () => {
   const plan = buildHouseProjectsCatalogPlan();
   const deps = createDeps();
-  let saved:
-    | {
-        idempotencyKey: string;
-        actorId: string;
-        planId: string;
-        planHash: string;
-        result: Awaited<ReturnType<typeof executeAssistantActionPlan>>;
-        undoItems?: AssistantUndoManifestItem[];
-      }
-    | null = null;
+  type SavedExecution = {
+    idempotencyKey: string;
+    actorId: string;
+    planId: string;
+    planHash: string;
+    result: Awaited<ReturnType<typeof executeAssistantActionPlan>>;
+    undoItems?: AssistantUndoManifestItem[];
+  };
+  let saved: SavedExecution | null = null;
 
   const persistentDeps = Object.assign(deps, {
     getExecutionResult: async (input: {
@@ -3437,12 +3464,13 @@ test("executeAssistantActionPlan replays persisted idempotency result", async ()
     persistentDeps
   );
 
-  expect(saved?.planId).toBe(plan.id);
-  expect(saved?.result.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
-  expect(saved?.undoItems?.length).toBe(first.results.length);
+  const savedRecord = saved as unknown as SavedExecution;
+  expect(savedRecord.planId).toBe(plan.id);
+  expect(savedRecord.result.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
+  expect(savedRecord.undoItems?.length).toBe(first.results.length);
   expect(
-    saved?.undoItems?.some(
-      (item) =>
+    savedRecord.undoItems?.some(
+      (item: AssistantUndoManifestItem) =>
         item.actionType === "content-type.upsert" &&
         item.resourceType === "content-type" &&
         item.undoStrategy === "delete"
