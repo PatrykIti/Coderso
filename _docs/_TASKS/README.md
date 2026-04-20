@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 36 tasks
+- **To Do:** 42 tasks
 - **In Progress:** 5 tasks
 - **Done:** 950 tasks
 
@@ -55,7 +55,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05 | Page Section and Widget Composer | High | Large | Business area: compose public page sections from existing widget contracts |
 | TASK-190-05-01 | Page Section Library and Composition Slots | High | Medium | Technical leaf: section kinds, slots, and widget capability map |
 | TASK-190-05-02 | Page Upsert Composition Adapter | High | Large | Technical leaf: convert composed sections into page.upsert-compatible payloads |
-| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Large | Technical leaf: compose detail page sections and route-aware field bindings |
+| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | Technical program: first-class public detail page contract, bindings, runtime, preview/cache, action adapter, and acceptance |
+| TASK-190-05-03-01 | Detail Page Model and Schema Contract | High | Large | Technical leaf: strict versioned detail page document model and normalizer |
+| TASK-190-05-03-02 | Detail Page Bindings and Field Resolver | High | Large | Technical leaf: safe entry field/meta/computed bindings into widget props |
+| TASK-190-05-03-03 | Detail Page Runtime Renderer and Route Resolution | High | Large | Technical leaf: public runtime detail renderer with legacy fallback |
+| TASK-190-05-03-04 | Detail Page Preview, Cache, and Invalidation | High | Medium | Technical leaf: preview token flow plus entry/detail cache invalidation |
+| TASK-190-05-03-05 | Detail Page Action Schema and Executor Adapter | High | Large | Technical leaf: strict typed detail-page upsert action and executor integration |
+| TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
 | TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |

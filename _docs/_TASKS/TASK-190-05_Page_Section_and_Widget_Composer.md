@@ -25,6 +25,12 @@ Business value:
 - `TASK-190-05-01_Page_Section_Library_and_Composition_Slots.md`
 - `TASK-190-05-02_Page_Upsert_Composition_Adapter.md`
 - `TASK-190-05-03_Detail_Page_Composition_and_Content_Route_Sections.md`
+  - `TASK-190-05-03-01_Detail_Page_Model_and_Schema_Contract.md`
+  - `TASK-190-05-03-02_Detail_Page_Bindings_and_Field_Resolver.md`
+  - `TASK-190-05-03-03_Detail_Page_Runtime_Renderer_and_Route_Resolution.md`
+  - `TASK-190-05-03-04_Detail_Page_Preview_Cache_and_Invalidation.md`
+  - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
+  - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
 
 ## Architecture
 
@@ -33,6 +39,11 @@ New owner files:
 - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
 - `core/services/assistant/blueprints/blueprintWidgetCapabilityMap.ts`
 - `core/services/assistant/blueprints/blueprintDetailPageComposer.ts`
+- `core/services/assistant/blueprints/blueprintDetailPageTypes.ts`
+- `core/services/assistant/blueprints/blueprintDetailPageSchema.ts`
+- `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
+- `core/services/content/detailPageRuntimeResolver.ts`
+- `core/site/renderDetailPage.tsx`
 - `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
 - `tests/vitest/assistant/blueprint-detail-page-composer.test.ts`
 
@@ -41,6 +52,9 @@ Touched existing files:
 - `core/services/assistant/actionPlanTypes.ts`
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
+- `core/server/publicSite.tsx`
+- `core/site/contentRouteMatcher.ts`
+- `core/services/settings/settingsService.ts`
 - `core/widgets/core/*`
 
 ## Acceptance Criteria
@@ -50,7 +64,12 @@ Touched existing files:
 3. `page.upsert` can accept composed blocks or current catalog-page inputs.
 4. Listing filters and content-list can be composed in one page.
 5. Missing widget capabilities return gated/needs-input, not invalid blocks.
-6. Detail page route sections are modeled separately from listing/landing sections.
+6. Detail page route sections are first-class public runtime documents, not only
+   metadata.
+7. Detail page renderer resolves entry-field bindings into widget props and
+   falls back to legacy entry detail rendering when no detail document exists.
+8. Detail page preview/cache/invalidation behavior is covered by Bun runtime
+   tests.
 
 ## Security Contract
 
@@ -67,8 +86,10 @@ Touched existing files:
 ## Testing Requirements
 
 - Vitest section composition tests.
+- Vitest detail page schema, binding, and fixture tests.
 - Widget schema validation tests.
 - Bun dry-run/execute page upsert tests when block assembly changes.
+- Bun public detail page runtime, preview, and cache invalidation tests.
 
 ## Documentation Updates Required
 

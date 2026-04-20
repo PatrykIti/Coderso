@@ -195,6 +195,12 @@ Technical leaf tasks:
 - `TASK-190-05-01_Page_Section_Library_and_Composition_Slots.md`
 - `TASK-190-05-02_Page_Upsert_Composition_Adapter.md`
 - `TASK-190-05-03_Detail_Page_Composition_and_Content_Route_Sections.md`
+  - `TASK-190-05-03-01_Detail_Page_Model_and_Schema_Contract.md`
+  - `TASK-190-05-03-02_Detail_Page_Bindings_and_Field_Resolver.md`
+  - `TASK-190-05-03-03_Detail_Page_Runtime_Renderer_and_Route_Resolution.md`
+  - `TASK-190-05-03-04_Detail_Page_Preview_Cache_and_Invalidation.md`
+  - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
+  - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
 - `TASK-190-07-01_Composition_Action_Assembler.md`
@@ -212,8 +218,8 @@ Technical leaf tasks:
 3. Add deterministic candidate extraction and ranking.
 4. Run composer shadow mode and plan routing cutover.
 5. Add composition graph and conflict model.
-6. Add merge engines for schemas, facets, card config, page/detail sections, and admin
-   surfaces.
+6. Add merge engines for schemas, facets, card config, page sections, admin
+   surfaces, and the first-class detail page runtime contract.
 7. Add action assembly that reuses current typed actions plus review diagnostics.
 8. Add no-duplicate and existing-resource reuse checks.
 9. Add fixtures, authoring docs, observability, and live/provider evaluation coverage.
@@ -287,8 +293,11 @@ Technical leaf tasks:
    action contracts.
 3. Multiple blueprint capabilities can be selected for one prompt.
 4. Composer can produce one deterministic action plan from selected capabilities.
-5. Field/facet/card/page/admin conflicts are explicit and test-covered.
+5. Field/facet/card/page/detail-page/admin conflicts are explicit and
+   test-covered.
 6. Gated domains are included only as non-executable plan items.
 7. Existing resources are reused or updated rather than duplicated.
 8. Provider planning can suggest composition drafts but cannot supply actions.
 9. At least five representative mixed prompts are covered by fixture tests.
+10. Composed catalog outcomes can render visually controlled public detail pages
+    through the runtime, with legacy detail rendering preserved as fallback.
