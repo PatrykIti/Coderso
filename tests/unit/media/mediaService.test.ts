@@ -40,7 +40,7 @@ function buildUploadFile(
     type,
     size: content.length,
     arrayBuffer: async () =>
-      content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength),
+      content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength) as ArrayBuffer,
   };
 }
 
