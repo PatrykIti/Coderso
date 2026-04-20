@@ -4,17 +4,28 @@ import {
   autosavePage,
   clearPagesCache,
   createPage,
+  deletePage,
   duplicatePage,
+  getCachedPageDetail,
+  getCachedPages,
+  getPageTemplateOptions,
   getPageCached,
   discardPageRevision,
   listPageRevisions,
   listPages,
   listPagesCached,
   previewPage,
+  publishPage,
   restorePageRevision,
+  unpublishPage,
+  updatePage,
 } from "../../../core/admin/services/pagesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import {
+  subscribeCacheEvents,
+  type CacheEvent,
+} from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -25,6 +36,7 @@ const jsonResponse = (payload: unknown, status = 200) =>
 const createLocalStorage = () => {
   const store = new Map<string, string>();
   return {
+    store,
     getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
       store.set(key, value);
@@ -38,6 +50,82 @@ const createLocalStorage = () => {
 const resetCaches = () => {
   clearPagesCache();
 };
+
+const setCacheValue = (
+  storage: ReturnType<typeof createLocalStorage>,
+  key: string,
+  value: unknown
+) => {
+  storage.setItem(key, JSON.stringify({ value, savedAt: Date.now() }));
+};
+
+const readCacheValue = (storage: ReturnType<typeof createLocalStorage>, key: string) => {
+  const raw = storage.getItem(key);
+  return raw ? (JSON.parse(raw) as { value: unknown }).value : null;
+};
+
+const installLocalStorage = () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  return {
+    storage,
+    restore: () => {
+      if (originalLocal === undefined) {
+        delete (globalThis as { localStorage?: unknown }).localStorage;
+      } else {
+        (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+      }
+      resetCaches();
+    },
+  };
+};
+
+const installFetch = (
+  handler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+) => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return handler(input, init);
+  };
+  return {
+    calls,
+    restore: () => {
+      globalThis.fetch = originalFetch;
+    },
+  };
+};
+
+const pageSummary = (overrides: Partial<{
+  id: string;
+  title: string;
+  slug: string;
+  status: "draft" | "published" | "scheduled" | "archived";
+  updatedAt: string;
+  author: null;
+}> = {}) => ({
+  id: overrides.id ?? "page-1",
+  title: overrides.title ?? "Home",
+  slug: overrides.slug ?? "/",
+  status: overrides.status ?? "draft",
+  updatedAt: overrides.updatedAt ?? "2026-02-14T00:00:00.000Z",
+  author: overrides.author ?? null,
+});
+
+const pageDetail = (overrides: Partial<{
+  id: string;
+  title: string;
+  slug: string;
+  status: "draft" | "published" | "scheduled" | "archived";
+  currentData: Record<string, unknown>;
+  updatedAt: string;
+  author: null;
+}> = {}) => ({
+  ...pageSummary(overrides),
+  currentData: overrides.currentData ?? { blocks: [] },
+});
 
 test("listPages hits GET /pages", async () => {
   const originalFetch = globalThis.fetch;
@@ -348,5 +436,285 @@ test("getPageCached reads from local storage", async () => {
       (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
     resetCaches();
+  }
+});
+
+test("listPagesCached dedupes in-flight reads and force refreshes cache", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  let resolveFirst: ((response: Response) => void) | null = null;
+  const firstResponse = new Promise<Response>((resolve) => {
+    resolveFirst = resolve;
+  });
+  const fetchMock = installFetch(async () => firstResponse);
+
+  try {
+    resetCaches();
+    const first = listPagesCached();
+    const second = listPagesCached();
+    expect(fetchMock.calls).toHaveLength(1);
+
+    resolveFirst?.(jsonResponse([pageSummary({ id: "page-1", title: "Cached" })]));
+    expect(await first).toEqual([pageSummary({ id: "page-1", title: "Cached" })]);
+    expect(await second).toEqual([pageSummary({ id: "page-1", title: "Cached" })]);
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({ id: "page-1", title: "Cached" }),
+    ]);
+
+    fetchMock.restore();
+    const forcedFetch = installFetch(async () =>
+      jsonResponse([pageSummary({ id: "page-2", title: "Forced" })])
+    );
+    const forced = await listPagesCached({ force: true });
+    expect(forcedFetch.calls).toHaveLength(1);
+    expect(forced).toEqual([pageSummary({ id: "page-2", title: "Forced" })]);
+    forcedFetch.restore();
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("getPageCached forced fetch primes list and detail caches", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch(async () =>
+    jsonResponse(
+      pageDetail({
+        id: "page-7",
+        title: "Fetched detail",
+        slug: "/fetched-detail",
+        currentData: { blocks: [{ id: "b1" }] },
+      })
+    )
+  );
+
+  try {
+    resetCaches();
+    const result = await getPageCached("page-7", { force: true });
+    expect(fetchMock.calls[0]?.input).toBe("/admin/api/pages/page-7");
+    expect(result.title).toBe("Fetched detail");
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-7"))).toMatchObject({
+      id: "page-7",
+      title: "Fetched detail",
+    });
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({
+        id: "page-7",
+        title: "Fetched detail",
+        slug: "/fetched-detail",
+      }),
+    ]);
+    expect(getCachedPageDetail("page-7")?.title).toBe("Fetched detail");
+    expect(getCachedPages()?.[0]?.id).toBe("page-7");
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("page mutations synchronize list/detail caches and broadcast cache events", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const events: CacheEvent[] = [];
+  const unsubscribe = subscribeCacheEvents((event) => events.push(event));
+  const responses = new Map<string, unknown>([
+    ["/admin/api/pages/page-1/publish", { ok: true }],
+    ["/admin/api/pages/page-1/unpublish", { ok: true }],
+    [
+      "/admin/api/pages/page-1/duplicate",
+      pageDetail({
+        id: "page-copy",
+        title: "Updated Home (copy)",
+        slug: "/copy",
+      }),
+    ],
+    [
+      "/admin/api/pages/page-1/revisions/rev-1/restore",
+      {
+        ok: true,
+        restored: true,
+        revision: {
+          id: "rev-1",
+          pageId: "page-1",
+          version: 2,
+          kind: "autosave",
+          data: { blocks: [] },
+          createdAt: "2026-02-14T00:00:00.000Z",
+          createdBy: null,
+        },
+        page: pageDetail({
+          id: "page-1",
+          title: "Restored Home",
+          slug: "/restored-home",
+        }),
+      },
+    ],
+    ["/admin/api/pages/page-1", { ok: true }],
+  ]);
+  const fetchMock = installFetch(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    if (url === "/admin/api/pages/page-1") {
+      const method = init?.method ?? "GET";
+      if (method === "DELETE") return jsonResponse({ ok: true });
+      return jsonResponse(
+        pageDetail({
+          id: "page-1",
+          title: "Updated Home",
+          status: "draft",
+          currentData: { blocks: [{ id: "updated" }] },
+        })
+      );
+    }
+    return jsonResponse(responses.get(url) ?? { ok: true });
+  });
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    setCacheValue(storage, cacheKeys.pagesList, [
+      pageSummary({ id: "page-1", title: "Home", status: "draft" }),
+    ]);
+    setCacheValue(
+      storage,
+      cacheKeys.pageDetail("page-1"),
+      pageDetail({ id: "page-1", title: "Home", status: "draft" })
+    );
+
+    await updatePage("page-1", { title: "Updated Home" });
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toMatchObject({
+      title: "Updated Home",
+    });
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({ id: "page-1", title: "Updated Home", status: "draft" }),
+    ]);
+
+    await publishPage("page-1");
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toMatchObject({
+      status: "published",
+    });
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({ id: "page-1", title: "Updated Home", status: "published" }),
+    ]);
+
+    await unpublishPage("page-1");
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toMatchObject({
+      status: "draft",
+    });
+
+    await duplicatePage("page-1");
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({
+        id: "page-copy",
+        title: "Updated Home (copy)",
+        slug: "/copy",
+      }),
+      pageSummary({ id: "page-1", title: "Updated Home", status: "draft" }),
+    ]);
+
+    await restorePageRevision("page-1", "rev-1");
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toMatchObject({
+      title: "Restored Home",
+      slug: "/restored-home",
+    });
+
+    await deletePage("page-1");
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({
+        id: "page-copy",
+        title: "Updated Home (copy)",
+        slug: "/copy",
+      }),
+    ]);
+    expect(storage.getItem(cacheKeys.pageDetail("page-1"))).toBeNull();
+
+    const eventPairs = events.map((event) => `${event.action}:${event.key}`);
+    expect(eventPairs).toEqual(
+      expect.arrayContaining([
+        `update:${cacheKeys.pagesList}`,
+        `update:${cacheKeys.pageDetail("page-1")}`,
+        `update:${cacheKeys.pageDetail("page-copy")}`,
+        `invalidate:${cacheKeys.pagesList}`,
+        `invalidate:${cacheKeys.pageDetail("page-1")}`,
+      ])
+    );
+    expect(fetchMock.calls.some((call) => String(call.input).endsWith("/auth/csrf"))).toBe(true);
+  } finally {
+    unsubscribe();
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("noop mutation responses do not corrupt existing page caches", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    return jsonResponse(null);
+  });
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    const cachedList = [pageSummary({ id: "page-1", title: "Stable" })];
+    const cachedDetail = pageDetail({ id: "page-1", title: "Stable" });
+    setCacheValue(storage, cacheKeys.pagesList, cachedList);
+    setCacheValue(storage, cacheKeys.pageDetail("page-1"), cachedDetail);
+
+    await updatePage("page-1", { title: "Ignored" });
+    await duplicatePage("page-1");
+    await restorePageRevision("page-1", "rev-1");
+
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual(cachedList);
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toEqual(
+      cachedDetail
+    );
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("clearPagesCache clears memory and local list cache", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch(async () =>
+    jsonResponse([pageSummary({ id: "page-network", title: "Network" })])
+  );
+
+  try {
+    resetCaches();
+    setCacheValue(storage, cacheKeys.pagesList, [
+      pageSummary({ id: "page-1", title: "Cached" }),
+    ]);
+
+    expect(await listPagesCached()).toEqual([
+      pageSummary({ id: "page-1", title: "Cached" }),
+    ]);
+    clearPagesCache();
+    expect(storage.getItem(cacheKeys.pagesList)).toBeNull();
+    expect(await listPagesCached()).toEqual([
+      pageSummary({ id: "page-network", title: "Network" }),
+    ]);
+    expect(fetchMock.calls).toHaveLength(1);
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("getPageTemplateOptions hits template options endpoint", async () => {
+  const fetchMock = installFetch(async () =>
+    jsonResponse({
+      themeName: "default",
+      templates: [{ key: "landing", label: "Landing" }],
+    })
+  );
+
+  try {
+    const result = await getPageTemplateOptions();
+    expect(fetchMock.calls[0]?.input).toBe("/admin/api/pages/template-options");
+    expect(fetchMock.calls[0]?.init?.method).toBe("GET");
+    expect(result.templates[0]?.key).toBe("landing");
+  } finally {
+    fetchMock.restore();
   }
 });

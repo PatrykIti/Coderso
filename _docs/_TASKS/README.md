@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 32 tasks
 - **In Progress:** 5 tasks
-- **Done:** 944 tasks
+- **Done:** 950 tasks
 
 ---
 
@@ -89,6 +89,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-191 | Pages Test Coverage Hardening | High | Large | Done: Pages route/runtime/client/cache/builder coverage hardened with final QA and coverage validation |
+| TASK-191-05 | QA, Docs, Changelog, and Closure | Medium | Small | Done: final targeted Bun/Vitest matrices, full Vitest coverage, lint/typecheck, board, and changelog synced |
+| TASK-191-04 | Page Builder Branch Coverage Closure | Medium | Medium | Done: helper no-op/fallback branches and AdvancedPanel missing-state fallbacks covered |
+| TASK-191-03 | Pages Admin Client Cache Coverage | High | Medium | Done: `pagesClient` list/detail cache, mutation broadcasts, noop handling, and template options coverage expanded |
+| TASK-191-02 | Public Page Runtime and Preview Coverage | High | Medium | Done: public runtime renders published data, preview renders current draft data, and unsafe preview/page states are covered |
+| TASK-191-01 | Pages Admin Route Contract and Security Coverage | High | Medium | Done: route permissions, validation, auth-required, lifecycle, audit, and error-path coverage added for `/pages*` |
 | TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Done: provider action arrays removed, exact policy identity fixed, provider-side parallel heuristics collapsed |
 | TASK-189-05 | Final Operation Policy Planner Hardening | High | Large | Done: planner-owned CMS/admin branches and provider repair fallback removed; policy path is enforced |
 | TASK-189-04 | Docs, Tests, and Closure | High | Medium | Done: docs, changelog, targeted Vitest, lint/typecheck, and live assistant matrix synced |

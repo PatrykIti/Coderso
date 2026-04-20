@@ -10,13 +10,17 @@ import {
   addRepeatableSlotInstance,
   appendSlotBlock,
   createBlock,
+  deleteBlockById,
   duplicateBlock,
   findBlockById,
+  flattenBlocks,
   insertBlockAfterId,
   moveBlockIntoSlot,
   removeRepeatableSlotInstance,
   reorderBlocks,
   reorderBlocksAtPath,
+  stripEditor,
+  updateBlockById,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -201,6 +205,20 @@ test("reorderBlocks moves items", () => {
   expect(reordered[1].id).toBe("a");
 });
 
+test("block helper no-op paths preserve existing references", () => {
+  const items = [blockA, blockB];
+
+  expect(reorderBlocks(items, 0, 0)).toBe(items);
+  expect(reorderBlocks(items, -1, 1)).toBe(items);
+  expect(reorderBlocks(items, 0, 10)).toBe(items);
+  expect(updateBlockById(items, "missing", (block) => ({ ...block, id: "x" }))).toBe(items);
+  expect(deleteBlockById(items, "missing")).toEqual({ blocks: items, deleted: false });
+  expect(duplicateBlock(items, "missing")).toBe(items);
+  expect(moveBlockIntoSlot(items, "a", "a", "default")).toBe(items);
+  expect(moveBlockIntoSlot(items, "missing", "a", "default")).toBe(items);
+  expect(moveBlockIntoSlot(items, "a", "missing", "default")).toBe(items);
+});
+
 test("duplicateBlock inserts clone", () => {
   const duplicated = duplicateBlock([blockA, blockB], "a");
   expect(duplicated).toHaveLength(3);
@@ -230,6 +248,20 @@ test("insertBlockAfterId inserts after nested block", () => {
   const nested = insertBlockAfterId([parent], "child-a", childB);
   const slotItems = nested[0].slots?.default ?? [];
   expect(slotItems[1]?.id).toBe("child-b");
+});
+
+test("insertBlockAfterId appends when target id is null or missing", () => {
+  const nextA: Block = { ...createBlock("hero"), id: "next-a" };
+  const nextB: Block = { ...createBlock("newsletter"), id: "next-b" };
+
+  expect(insertBlockAfterId([blockA], null, nextA).map((block) => block.id)).toEqual([
+    "a",
+    "next-a",
+  ]);
+  expect(insertBlockAfterId([blockA], "missing", nextB).map((block) => block.id)).toEqual([
+    "a",
+    "next-b",
+  ]);
 });
 
 test("reorderBlocksAtPath reorders nested children", () => {
@@ -519,6 +551,51 @@ test("repeatable slot helpers enforce min and max limits", () => {
     "column:2"
   );
   expect(blockedByMin[0]?.slots?.["column:2"]).toEqual([]);
+});
+
+test("repeatable slot helpers ignore invalid definitions and slot ids", () => {
+  registerWidget(repeatableDefinition);
+  const parent: Block = { ...createBlock("layout-columns"), id: "parent" };
+  const original = [parent];
+
+  expect(addRepeatableSlotInstance(original, "missing", "column")).toBe(original);
+  expect(addRepeatableSlotInstance(original, "parent", "missing")).toEqual(original);
+  expect(removeRepeatableSlotInstance(original, "missing", "column:1")).toBe(original);
+  expect(removeRepeatableSlotInstance(original, "parent", "not-repeatable")).toEqual(original);
+  expect(removeRepeatableSlotInstance(original, "parent", "column:9")).toEqual(original);
+});
+
+test("moveBlockIntoSlot blocks moving a parent into its own descendant", () => {
+  const child: Block = { ...createBlock("newsletter"), id: "child" };
+  const parent: Block = {
+    ...createBlock("hero"),
+    id: "parent",
+    slots: { default: [child] },
+  };
+  const items = [parent];
+
+  expect(moveBlockIntoSlot(items, "parent", "child", "default")).toBe(items);
+});
+
+test("flattenBlocks and stripEditor traverse nested slots and legacy children", () => {
+  const slotChild: Block = { ...createBlock("newsletter"), id: "slot-child" };
+  const legacyChild: Block = { ...createBlock("timeline"), id: "legacy-child" };
+  const parent: Block = {
+    ...createBlock("hero"),
+    id: "parent",
+    slots: { default: [slotChild] },
+    children: [legacyChild],
+  };
+
+  expect(flattenBlocks([parent]).map((block) => block.id)).toEqual([
+    "parent",
+    "slot-child",
+  ]);
+
+  const stripped = stripEditor([parent]);
+  expect("editor" in stripped[0]).toBe(false);
+  expect("editor" in stripped[0].slots!.default[0]).toBe(false);
+  expect("editor" in stripped[0].children![0]).toBe(false);
 });
 
 test("grid columns supports nested insert and reorder per repeatable column slot", () => {
