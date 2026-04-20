@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 32 tasks
+- **To Do:** 36 tasks
 - **In Progress:** 5 tasks
 - **Done:** 950 tasks
 
@@ -45,6 +45,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | Business area: choose primary and adjunct blueprint candidates from prompt/context |
 | TASK-190-02-01 | Prompt Candidate Extraction and Ranking | High | Large | Technical leaf: deterministic signals, scores, and candidate order |
 | TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Technical leaf: provider can suggest capability ids only, never actions |
+| TASK-190-02-03 | Composer Shadow Mode and Routing Cutover | High | Large | Technical leaf: shadow compare composer output before progressive routing cutover |
 | TASK-190-03 | Composition Graph and Conflict Policy | High | Large | Business area: intermediate graph plus explicit conflicts before action assembly |
 | TASK-190-03-01 | Composition Graph Contract and Deterministic Order | High | Medium | Technical leaf: graph node model and stable ordering |
 | TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | Technical leaf: slug/field/route/permission conflict handling |
@@ -54,15 +55,18 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05 | Page Section and Widget Composer | High | Large | Business area: compose public page sections from existing widget contracts |
 | TASK-190-05-01 | Page Section Library and Composition Slots | High | Medium | Technical leaf: section kinds, slots, and widget capability map |
 | TASK-190-05-02 | Page Upsert Composition Adapter | High | Large | Technical leaf: convert composed sections into page.upsert-compatible payloads |
+| TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Large | Technical leaf: compose detail page sections and route-aware field bindings |
 | TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
 | TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | Business area: assemble strict action plans and reuse existing resources |
 | TASK-190-07-01 | Composition Action Assembler | High | Large | Technical leaf: graph-to-action-plan adapter over existing typed actions |
 | TASK-190-07-02 | No-Duplicate Idempotency and Existing Resource Reuse | High | Large | Technical leaf: existing resource matcher and DB-backed no-duplicate guards |
+| TASK-190-07-03 | Composition Review Metadata and Diagnostics | High | Medium | Technical leaf: explain primary/adjunct/gated choices and merge diagnostics in review metadata |
 | TASK-190-08 | Evaluation, Docs, and Closure | High | Large | Business area: fixtures, red-team corpus, live matrix, docs, and closure |
 | TASK-190-08-01 | Composition Fixture Matrix and Red-Team Corpus | High | Medium | Technical leaf: mixed prompt fixtures and provider safety cases |
 | TASK-190-08-02 | Docs, Changelog, and Closure | High | Medium | Technical leaf: final docs, changelog, board, and gates |
+| TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Technical leaf: authoring guide plus redacted composer diagnostics/observability |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |

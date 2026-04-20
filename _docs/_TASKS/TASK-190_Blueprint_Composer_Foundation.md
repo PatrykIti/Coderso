@@ -187,18 +187,22 @@ Technical leaf tasks:
 - `TASK-190-01-02_Migrate_Current_Blueprints_to_Capability_Registry.md`
 - `TASK-190-02-01_Prompt_Candidate_Extraction_and_Ranking.md`
 - `TASK-190-02-02_Provider_Context_and_Structured_Composition_Draft.md`
+- `TASK-190-02-03_Composer_Shadow_Mode_and_Routing_Cutover.md`
 - `TASK-190-03-01_Composition_Graph_Contract_and_Deterministic_Order.md`
 - `TASK-190-03-02_Conflict_Resolver_Stable_Keys_and_Needs_Input.md`
 - `TASK-190-04-01_Content_Schema_Field_Merge_Engine.md`
 - `TASK-190-04-02_Listing_Facet_and_Card_Config_Merge_Engine.md`
 - `TASK-190-05-01_Page_Section_Library_and_Composition_Slots.md`
 - `TASK-190-05-02_Page_Upsert_Composition_Adapter.md`
+- `TASK-190-05-03_Detail_Page_Composition_and_Content_Route_Sections.md`
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
 - `TASK-190-07-01_Composition_Action_Assembler.md`
 - `TASK-190-07-02_No_Duplicate_Idempotency_and_Existing_Resource_Reuse.md`
+- `TASK-190-07-03_Composition_Review_Metadata_and_Diagnostics.md`
 - `TASK-190-08-01_Composition_Fixture_Matrix_and_Red_Team_Corpus.md`
 - `TASK-190-08-02_Docs_Changelog_and_Closure.md`
+- `TASK-190-08-03_Capability_Authoring_Guide_and_Observability.md`
 
 ## Implementation Order
 
@@ -206,12 +210,13 @@ Technical leaf tasks:
 2. Migrate current blueprint packs into manifest metadata without changing
    generated actions.
 3. Add deterministic candidate extraction and ranking.
-4. Add composition graph and conflict model.
-5. Add merge engines for schemas, facets, card config, page sections, and admin
+4. Run composer shadow mode and plan routing cutover.
+5. Add composition graph and conflict model.
+6. Add merge engines for schemas, facets, card config, page/detail sections, and admin
    surfaces.
-6. Add action assembly that reuses current typed actions.
-7. Add no-duplicate and existing-resource reuse checks.
-8. Add fixtures, docs, and live/provider evaluation coverage.
+7. Add action assembly that reuses current typed actions plus review diagnostics.
+8. Add no-duplicate and existing-resource reuse checks.
+9. Add fixtures, authoring docs, observability, and live/provider evaluation coverage.
 
 ## Security Contract
 

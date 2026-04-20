@@ -26,6 +26,7 @@ Business value:
 
 - `TASK-190-02-01_Prompt_Candidate_Extraction_and_Ranking.md`
 - `TASK-190-02-02_Provider_Context_and_Structured_Composition_Draft.md`
+- `TASK-190-02-03_Composer_Shadow_Mode_and_Routing_Cutover.md`
 
 ## Architecture
 
@@ -34,8 +35,10 @@ New owner files:
 - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
 - `core/services/assistant/blueprints/blueprintPromptSignals.ts`
 - `core/services/assistant/blueprints/blueprintProviderContext.ts`
+- `core/services/assistant/blueprints/blueprintComposerShadow.ts`
 - `tests/vitest/assistant/blueprint-candidate-resolver.test.ts`
 - `tests/vitest/assistant/blueprint-provider-context.test.ts`
+- `tests/vitest/assistant/blueprint-composer-shadow.test.ts`
 
 Candidate sketch:
 
@@ -56,6 +59,7 @@ type BlueprintCandidate = {
 3. Adjunct capabilities are deterministic and ordered.
 4. Provider may suggest candidate ids but cannot invent capabilities.
 5. Existing single-blueprint prompts keep their current selected primary.
+6. Composer can run in shadow mode before routing cutover.
 
 ## Security Contract
 

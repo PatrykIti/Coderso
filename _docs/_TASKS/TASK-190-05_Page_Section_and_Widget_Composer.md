@@ -24,6 +24,7 @@ Business value:
 
 - `TASK-190-05-01_Page_Section_Library_and_Composition_Slots.md`
 - `TASK-190-05-02_Page_Upsert_Composition_Adapter.md`
+- `TASK-190-05-03_Detail_Page_Composition_and_Content_Route_Sections.md`
 
 ## Architecture
 
@@ -31,7 +32,9 @@ New owner files:
 
 - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
 - `core/services/assistant/blueprints/blueprintWidgetCapabilityMap.ts`
+- `core/services/assistant/blueprints/blueprintDetailPageComposer.ts`
 - `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
+- `tests/vitest/assistant/blueprint-detail-page-composer.test.ts`
 
 Touched existing files:
 
@@ -47,6 +50,7 @@ Touched existing files:
 3. `page.upsert` can accept composed blocks or current catalog-page inputs.
 4. Listing filters and content-list can be composed in one page.
 5. Missing widget capabilities return gated/needs-input, not invalid blocks.
+6. Detail page route sections are modeled separately from listing/landing sections.
 
 ## Security Contract
 

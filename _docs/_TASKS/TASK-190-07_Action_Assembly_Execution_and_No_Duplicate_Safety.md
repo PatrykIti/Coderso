@@ -23,6 +23,7 @@ Business value:
 
 - `TASK-190-07-01_Composition_Action_Assembler.md`
 - `TASK-190-07-02_No_Duplicate_Idempotency_and_Existing_Resource_Reuse.md`
+- `TASK-190-07-03_Composition_Review_Metadata_and_Diagnostics.md`
 
 ## Architecture
 
@@ -30,7 +31,9 @@ New owner files:
 
 - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
 - `core/services/assistant/blueprints/blueprintExistingResourceMatcher.ts`
+- `core/services/assistant/blueprints/blueprintCompositionMetadata.ts`
 - `tests/vitest/assistant/blueprint-action-assembler.test.ts`
+- `tests/vitest/assistant/blueprint-composition-metadata.test.ts`
 - `tests/unit/assistant/blueprintCompositionExecutor.test.ts`
 
 Touched files:
@@ -47,6 +50,7 @@ Touched files:
 3. Duplicate resource keys are detected before action assembly.
 4. Existing resource catalog can switch create into update/reuse where supported.
 5. Dry-run explains composed resources and gated modules.
+6. Review metadata explains primary/adjunct/gated choices and merge decisions.
 
 ## Security Contract
 

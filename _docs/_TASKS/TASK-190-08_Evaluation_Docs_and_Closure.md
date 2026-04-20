@@ -24,6 +24,7 @@ Business value:
 
 - `TASK-190-08-01_Composition_Fixture_Matrix_and_Red_Team_Corpus.md`
 - `TASK-190-08-02_Docs_Changelog_and_Closure.md`
+- `TASK-190-08-03_Capability_Authoring_Guide_and_Observability.md`
 
 ## Architecture
 
@@ -34,6 +35,7 @@ Owner files:
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
+- `_docs/BLUEPRINT_COMPOSER.md`
 
 ## Acceptance Criteria
 
@@ -42,6 +44,7 @@ Owner files:
 3. Gated modules are represented but non-executable.
 4. Provider matrix passes for OpenAI/OpenRouter where configured.
 5. Docs and changelog are synchronized.
+6. Capability authoring guide and diagnostics/redaction rules are documented.
 
 ## Security Contract
 
