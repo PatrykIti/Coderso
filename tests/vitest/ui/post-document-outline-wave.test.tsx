@@ -66,7 +66,9 @@ test("PostDocumentOutline renders warning labels, outline checks, and select cal
             level: 2,
             text: "Introduction",
             anchorId: "introduction",
-            warnings: [{ code: "empty_heading", message: "Heading should not be empty" }],
+            warnings: [
+              { code: "empty_heading", itemId: "heading-1", message: "Heading should not be empty" },
+            ],
           },
           {
             id: "heading-2",
@@ -75,14 +77,14 @@ test("PostDocumentOutline renders warning labels, outline checks, and select cal
             text: "Appendix",
             anchorId: "appendix",
             warnings: [
-              { code: "multiple_h1", message: "Only one H1 is allowed" },
-              { code: "skipped_heading_level", message: "Do not skip levels" },
+              { code: "multiple_h1", itemId: "heading-2", message: "Only one H1 is allowed" },
+              { code: "skipped_heading_level", itemId: "heading-2", message: "Do not skip levels" },
             ],
           },
         ],
         warnings: [
-          { code: "multiple_h1", message: "Only one H1 is allowed" },
-          { code: "skipped_heading_level", message: "Do not skip levels" },
+          { code: "multiple_h1", itemId: "heading-2", message: "Only one H1 is allowed" },
+          { code: "skipped_heading_level", itemId: "heading-2", message: "Do not skip levels" },
         ],
       }}
       selectedBlockId="block-1"
@@ -126,7 +128,7 @@ test("PostDocumentOutline hides outline checks when hints are disabled and shows
             warnings: [],
           },
         ],
-        warnings: [{ code: "multiple_h1", message: "Only one H1 is allowed" }],
+        warnings: [{ code: "multiple_h1", itemId: "heading-1", message: "Only one H1 is allowed" }],
       }}
       selectedBlockId={null}
       onSelectBlock={() => undefined}
