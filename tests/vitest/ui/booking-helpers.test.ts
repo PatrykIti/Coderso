@@ -94,7 +94,7 @@ describe("bookingHelpers", () => {
       "2026-03-10T09:00:00.000Z"
     );
     expect(formatReservationStatus("no_show")).toBe("No Show");
-    expect(formatResourceType("room")).toBe("Room");
+    expect(formatResourceType("bay")).toBe("Bay");
     expect(dayLabel(1)).toBe("Monday");
     expect(dayLabel(99)).toBe("Day 99");
   });
