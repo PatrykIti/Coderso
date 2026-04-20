@@ -63,6 +63,12 @@ const StubVisual: ComponentType<WidgetEditorProps<Record<string, unknown>>> = ()
 );
 const StubEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
+const asEditor = <T,>() =>
+  StubEditor as unknown as ComponentType<WidgetEditorProps<T>>;
+
+const asVisualPanelWidget = <T,>(widget: WidgetDefinition<T>) =>
+  widget as unknown as WidgetDefinition;
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const baseBlock: Block = {
@@ -169,7 +175,7 @@ test("VisualPanel uses navigation editor variant controls", () => {
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={block}
       onChange={() => undefined}
     />
@@ -182,9 +188,9 @@ test("VisualPanel uses navigation editor variant controls", () => {
 
 test("VisualPanel uses footer editor variant controls", () => {
   const widget = createFooterWidget({
-    wizard: StubEditor,
-    visual: StubEditor,
-    advanced: StubEditor,
+    wizard: asEditor<typeof footerDefaults>(),
+    visual: asEditor<typeof footerDefaults>(),
+    advanced: asEditor<typeof footerDefaults>(),
   });
   const block: Block = {
     id: "footer-1",
@@ -199,7 +205,7 @@ test("VisualPanel uses footer editor variant controls", () => {
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={block}
       onChange={() => undefined}
     />
@@ -227,7 +233,7 @@ test("VisualPanel uses timeline editor variant controls", () => {
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={block}
       onChange={() => undefined}
     />
@@ -256,7 +262,7 @@ test("VisualPanel uses compare timeline editor variant controls", () => {
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={block}
       onChange={() => undefined}
     />
@@ -285,7 +291,7 @@ test("VisualPanel uses newsletter editor variant controls", () => {
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={block}
       onChange={() => undefined}
     />
@@ -314,7 +320,7 @@ test("VisualPanel uses contact editor variant controls", () => {
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={block}
       onChange={() => undefined}
     />
@@ -347,7 +353,7 @@ test("VisualPanel falls back to the first widget variant and renders described o
 
   const html = renderAdminUi(
     <VisualPanel
-      widget={widget}
+      widget={asVisualPanelWidget(widget)}
       block={{ ...baseBlock, variant: undefined } as Block}
       onChange={() => undefined}
     />
@@ -374,7 +380,7 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
       >
         Editor update data
       </button>
-      <button type="button" onClick={() => onVariantChange("split")}>
+      <button type="button" onClick={() => onVariantChange?.("split")}>
         Editor update variant
       </button>
     </div>
@@ -394,7 +400,7 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
   };
 
   const { container, cleanup } = mount(
-    <VisualPanel widget={widget} block={baseBlock} onChange={onChange} />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={baseBlock} onChange={onChange} />
   );
 
   const splitVariantButton = Array.from(container.querySelectorAll("button")).find((button) =>
