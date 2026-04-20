@@ -126,7 +126,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -179,6 +179,11 @@ const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+const templateTimestamps = {
+  createdAt: "2026-04-20T00:00:00.000Z",
+  updatedAt: "2026-04-20T00:00:00.000Z",
+};
 
 test("ThemeTemplateDrawer create mode updates tokens, inverts base colors, saves, and cancels", async () => {
   const { ThemeTemplateDrawer } = await import(
@@ -243,6 +248,7 @@ test("ThemeTemplateDrawer edit mode renders template values and respects saving 
     id: "tpl-1",
     name: "Studio",
     description: "Editorial palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#101010", surface: "#1b1b1b", border: "#303030", text: "#fafafa" },
       typography: {
@@ -337,6 +343,7 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
     id: "tpl-2",
     name: "Editorial",
     description: "Editorial palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#101010", surface: "#1b1b1b", border: "#303030", text: "#fafafa" },
       typography: {
@@ -439,7 +446,12 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
 
     clickButtonByText(view.container, "Save Template");
 
-    const payload = onSave.mock.calls[0]?.[0];
+    const payload = (
+      onSave.mock.calls as unknown as Array<[
+        { name?: string; description?: string | null; tokens: typeof template.tokens },
+      ]>
+    )[0]?.[0];
+    if (!payload) throw new Error("missing_template_payload");
     expect(payload.name).toBe("Editorial");
     expect(payload.description).toBe("Editorial palette");
     expect(payload.tokens.typography).toEqual(
@@ -470,6 +482,7 @@ test("ThemeTemplateDrawer updates top bar, card, and state color tokens", async 
     id: "tpl-3",
     name: "Studio",
     description: "Admin palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#101010", surface: "#1b1b1b", border: "#303030", text: "#fafafa" },
       typography: {
@@ -566,6 +579,7 @@ test("ThemeTemplateDrawer normalizes text-entered color values without hash pref
     id: "tpl-4",
     name: "Signal",
     description: "Signal palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#101010", surface: "#1b1b1b", border: "#303030", text: "#fafafa" },
       typography: {
@@ -670,6 +684,7 @@ test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while p
     id: "tpl-5",
     name: "Terminal",
     description: "Terminal palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#111111", surface: "#222222", border: "#333333", text: "#eeeeee" },
       typography: {
@@ -759,6 +774,7 @@ test("ThemeTemplateDrawer updates remaining typography, button, and input token 
     id: "tpl-6",
     name: "Contrast",
     description: "High contrast admin palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#111111", surface: "#1f1f1f", border: "#333333", text: "#eeeeee" },
       typography: {
@@ -958,6 +974,7 @@ test("ThemeTemplateDrawer updates remaining input and navigation fields from tex
     id: "tpl-6",
     name: "Transit",
     description: "Navigation-heavy palette",
+    ...templateTimestamps,
     tokens: {
       base: { bg: "#111111", surface: "#1b1b1b", border: "#2f2f2f", text: "#f5f5f5" },
       typography: {
