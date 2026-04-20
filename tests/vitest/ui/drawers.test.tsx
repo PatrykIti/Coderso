@@ -22,6 +22,9 @@ const accessLog: AccessLogItem = {
   device: { label: "Chrome / macOS", icon: Monitor },
   timestamp: { date: "Jan 28", time: "09:00" },
   status: "success",
+  method: "GET",
+  path: "/admin",
+  statusCode: 200,
 };
 
 const widget: WidgetItem = {
@@ -29,6 +32,9 @@ const widget: WidgetItem = {
   name: "Hero",
   category: "layout",
   categoryLabel: "Layout",
+  complexity: "composite",
+  audience: "beginner",
+  module: "core",
   source: "core",
 };
 
@@ -52,6 +58,16 @@ const templates = [
         surface: "#f8fafc",
         text: "#0f172a",
         border: "#e2e8f0",
+      },
+      typography: {
+        mutedText: "#64748b",
+        sans: "Inter",
+        display: "Inter",
+        sm: "0.875rem",
+        md: "1rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
       },
       buttons: {
         primary: { bg: "#1d4ed8", text: "#fff", hoverBg: "#1e40af", hoverText: "#fff" },
@@ -188,7 +204,7 @@ test("IntegrationDrawer renders integration", () => {
 
 test("EmailLogsDrawer renders delivery logs", () => {
   const html = renderAdminUi(
-    <EmailLogsDrawer open onOpenChange={() => undefined} />
+    <EmailLogsDrawer open onOpenChange={() => undefined} logs={[]} />
   );
 
   expect(html).toContain("Delivery Logs");
