@@ -168,7 +168,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -181,7 +181,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -194,7 +194,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -206,7 +206,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const clickButton = (element: Element | undefined) => {
+const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
   act(() => {
     element.click();
@@ -915,14 +915,14 @@ test("Testimonials editors fall back when normalized header, style, and item fie
       )?.value
     ).toBe("");
     expect(
-      (findTextareaByPlaceholder(view.container, "Customer quote") as HTMLTextAreaElement | undefined)
+      (findTextareaByPlaceholder(view.container, "Customer quote") as HTMLTextAreaElement | null | undefined)
         ?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Author name") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(view.container, "Author name") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Role or position") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(view.container, "Role or position") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
     expect(
       (
@@ -932,7 +932,7 @@ test("Testimonials editors fall back when normalized header, style, and item fie
       )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Acme Studio") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(view.container, "Acme Studio") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
     expect(
       (findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"])[0] as
@@ -940,7 +940,7 @@ test("Testimonials editors fall back when normalized header, style, and item fie
         | undefined)?.value
     ).toBe("0");
     expect(
-      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)
+      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("sm");
     expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");

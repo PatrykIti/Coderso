@@ -42,7 +42,7 @@ const flush = async () => {
 const findButton = (container: HTMLElement, text: string) =>
   Array.from(container.querySelectorAll("button")).find((button) =>
     button.textContent?.includes(text)
-  ) as HTMLButtonElement | undefined;
+  ) as HTMLButtonElement | null | undefined;
 
 const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(

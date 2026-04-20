@@ -69,7 +69,7 @@ const mount = (node: React.ReactNode) => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -82,7 +82,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -94,7 +94,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const toggleCheckbox = (element: Element | undefined) => {
+const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     element.click();
@@ -362,8 +362,8 @@ test("ProductGallery editors fall back to default layout values and empty runtim
     const columnsSelect = findSelectByLabel(view.container, "Columns");
     const cardStyleSelect = findSelectByLabel(view.container, "Card style");
 
-    expect((columnsSelect as HTMLSelectElement | undefined)?.value).toBe("3");
-    expect((cardStyleSelect as HTMLSelectElement | undefined)?.value).toBe("outlined");
+    expect((columnsSelect as HTMLSelectElement | null | undefined)?.value).toBe("3");
+    expect((cardStyleSelect as HTMLSelectElement | null | undefined)?.value).toBe("outlined");
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Resolved items: 0 · Total: 0")
     );

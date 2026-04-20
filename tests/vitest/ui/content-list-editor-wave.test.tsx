@@ -292,7 +292,7 @@ const flush = async () => {
   });
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -303,7 +303,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -314,7 +314,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -324,7 +324,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -408,7 +408,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
     await flush();
 
     const variantSelect = findSelectsByOptions(view.container, ["cards", "list", "compact"])[0];
-    expect((variantSelect as HTMLSelectElement | undefined)?.value).toBe("cards");
+    expect((variantSelect as HTMLSelectElement | null | undefined)?.value).toBe("cards");
 
     act(() => {
       setSelectValue(
@@ -1056,18 +1056,18 @@ test("ContentList editors fall back to default source, style, field, and runtime
 
   try {
     expect(
-      (findSelectsByOptions(view.container, ["legacy", "listing"])[0] as HTMLSelectElement | undefined)
+      (findSelectsByOptions(view.container, ["legacy", "listing"])[0] as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("legacy");
     expect(
-      (findSelectsByOptions(view.container, ["cards", "list", "compact"])[0] as HTMLSelectElement | undefined)
+      (findSelectsByOptions(view.container, ["cards", "list", "compact"])[0] as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("cards");
-    expect((findNumberInputs(view.container)[0] as HTMLInputElement | undefined)?.value).toBe("6");
-    expect((findSelectsByOptions(view.container, ["1", "2", "3"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findNumberInputs(view.container)[0] as HTMLInputElement | null | undefined)?.value).toBe("6");
+    expect((findSelectsByOptions(view.container, ["1", "2", "3"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
       "3"
     );
-    expect((findSelectsByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectsByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
       "md"
     );
     expect(
@@ -1079,7 +1079,7 @@ test("ContentList editors fall back to default source, style, field, and runtime
       (findSelectsByOptions(
         view.container,
         ["published", "all", "draft", "scheduled", "archived"]
-      )[0] as HTMLSelectElement | undefined)?.value
+      )[0] as HTMLSelectElement | null | undefined)?.value
     ).toBe("published");
     expect(
       (findSelectsByOptions(
@@ -1092,12 +1092,12 @@ test("ContentList editors fall back to default source, style, field, and runtime
           "title-asc",
           "title-desc",
         ]
-      )[0] as HTMLSelectElement | undefined)?.value
+      )[0] as HTMLSelectElement | null | undefined)?.value
     ).toBe("published-desc");
-    expect((findInputByPlaceholder(view.container, "Read more") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(view.container, "Read more") as HTMLInputElement | null | undefined)?.value).toBe(
       "Read more"
     );
-    expect((findInputByPlaceholder(view.container, "No items found") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(view.container, "No items found") as HTMLInputElement | null | undefined)?.value).toBe(
       ""
     );
     expect(
@@ -1105,31 +1105,31 @@ test("ContentList editors fall back to default source, style, field, and runtime
         findTextareaByPlaceholder(
           view.container,
           "Adjust filters or publish entries for this content type."
-        ) as HTMLTextAreaElement | undefined
+        ) as HTMLTextAreaElement | null | undefined
       )?.value
     ).toBe("");
-    expect((findCheckboxByLabelText(view.container, "Show image") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findCheckboxByLabelText(view.container, "Show image") as HTMLInputElement | null | undefined)?.checked).toBe(
       true
     );
-    expect((findCheckboxByLabelText(view.container, "Show excerpt") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findCheckboxByLabelText(view.container, "Show excerpt") as HTMLInputElement | null | undefined)?.checked).toBe(
       true
     );
-    expect((findCheckboxByLabelText(view.container, "Show meta") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findCheckboxByLabelText(view.container, "Show meta") as HTMLInputElement | null | undefined)?.checked).toBe(
       true
     );
-    expect((findCheckboxByLabelText(view.container, "Show CTA link") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findCheckboxByLabelText(view.container, "Show CTA link") as HTMLInputElement | null | undefined)?.checked).toBe(
       true
     );
-    expect((findCheckboxByLabelText(view.container, "Featured only") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findCheckboxByLabelText(view.container, "Featured only") as HTMLInputElement | null | undefined)?.checked).toBe(
       false
     );
-    expect((findInputByPlaceholder(view.container, "var(--color-bg)") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(view.container, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value).toBe(
       ""
     );
-    expect((findInputByPlaceholder(view.container, "var(--color-border)") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(view.container, "var(--color-border)") as HTMLInputElement | null | undefined)?.value).toBe(
       ""
     );
-    expect((findInputByPlaceholder(view.container, "var(--color-text)") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(view.container, "var(--color-text)") as HTMLInputElement | null | undefined)?.value).toBe(
       ""
     );
     expect(view.container.textContent).toContain('"items": []');

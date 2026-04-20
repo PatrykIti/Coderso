@@ -976,7 +976,7 @@ test("PageEditor uses image background fallback, starts without selection for em
       (candidate) =>
         candidate instanceof HTMLDivElement
         && candidate.style.backgroundImage.includes("page-bg.png")
-    ) as HTMLDivElement | undefined;
+    ) as HTMLDivElement | null | undefined;
     if (!backgroundShell) {
       throw new Error("Missing background shell");
     }

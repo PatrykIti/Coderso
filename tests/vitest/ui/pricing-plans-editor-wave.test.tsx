@@ -196,7 +196,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -209,7 +209,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -222,7 +222,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -234,7 +234,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -353,7 +353,7 @@ test("PricingPlans wizard editor covers variant changes, header updates, and pla
           "three-plans",
           "four-plans",
           "comparison-rows",
-        ]) as HTMLSelectElement | undefined
+        ]) as HTMLSelectElement | null | undefined
       )?.value
     ).toBe("comparison-rows");
     expect(latestValue.header?.title).toBe("Simple pricing");
@@ -768,15 +768,15 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
       (findInputByPlaceholder(
         wizardView.container,
         pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
-      ) as HTMLInputElement | undefined)?.value
+      ) as HTMLInputElement | null | undefined)?.value
     ).toBe(pricingPlansDefaults.header?.title);
-    expect((findSelectByOptions(wizardView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(wizardView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "2"
     );
-    expect((findInputByPlaceholder(wizardView.container, "Plan 1") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(wizardView.container, "Plan 1") as HTMLInputElement | null | undefined)?.value).toBe(
       "Starter"
     );
-    expect((findInputsByPlaceholder(wizardView.container, "$49")[0] as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputsByPlaceholder(wizardView.container, "$49")[0] as HTMLInputElement | null | undefined)?.value).toBe(
       "$19"
     );
 
@@ -806,16 +806,16 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
       (findInputByPlaceholder(
         visualView.container,
         pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
-      ) as HTMLInputElement | undefined)?.value
+      ) as HTMLInputElement | null | undefined)?.value
     ).toBe(pricingPlansDefaults.header?.title);
     expect(
       (findTextareaByPlaceholder(
         visualView.container,
         pricingPlansDefaults.header?.description ??
           "Compare pricing tiers and pick the option matching your team stage."
-      ) as HTMLTextAreaElement | undefined)?.value
+      ) as HTMLTextAreaElement | null | undefined)?.value
     ).toBe(pricingPlansDefaults.header?.description);
-    expect((findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "2"
     );
     expect(visualView.container.textContent).toContain("No features yet.");
@@ -823,7 +823,7 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
     clickButtonByText(visualView.container, "Four Plans");
     expect(visualView.container.textContent).toContain("Selected");
     expect(
-      (findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | undefined)?.value
+      (findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | null | undefined)?.value
     ).toBe("2");
   } finally {
     visualView.cleanup();
@@ -838,10 +838,10 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
   );
 
   try {
-    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "md"
     );
-    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "lg"
     );
   } finally {

@@ -191,7 +191,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -204,7 +204,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -217,7 +217,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -229,7 +229,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
+const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     if (element.checked !== checked) {
@@ -315,7 +315,7 @@ test("RichTextSection wizard editor normalizes the variant and updates copy fiel
 
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
-    expect((selects[0] as HTMLSelectElement | undefined)?.value).toBe("single-column");
+    expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("single-column");
 
     setSelectValue(selects[0], "article");
     expect(latestVariant).toBe("article");
@@ -473,9 +473,9 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     ).filter((button) => button.textContent?.includes("Move down"));
 
     expect(latestValue.body?.blocks).toHaveLength(richTextBlockMax);
-    expect((addButton as HTMLButtonElement | undefined)?.disabled).toBe(true);
-    expect((moveUpButtons[0] as HTMLButtonElement | undefined)?.disabled).toBe(true);
-    expect((moveDownButtons.at(-1) as HTMLButtonElement | undefined)?.disabled).toBe(true);
+    expect((addButton as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
+    expect((moveUpButtons[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
+    expect((moveDownButtons.at(-1) as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
 
     const readerSection = findSectionByTitle(view.container, "Reader options");
     const readerToggles = Array.from(readerSection?.querySelectorAll('input[type="checkbox"]') ?? []);
@@ -510,8 +510,8 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     const colorInputs = Array.from(
       typographySection?.querySelectorAll('input[type="color"]') ?? []
     );
-    expect((colorInputs[0] as HTMLInputElement | undefined)?.value).toBe("#0f172a");
-    expect((colorInputs[1] as HTMLInputElement | undefined)?.value).toBe("#ffffff");
+    expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#0f172a");
+    expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
 
     setInputValue(colorInputs[0], "#112233");
     setInputValue(colorInputs[1], "#445566");
@@ -601,14 +601,14 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
 
     const readerSection = findSectionByTitle(view.container, "Reader options");
     const readerToggles = Array.from(readerSection?.querySelectorAll('input[type="checkbox"]') ?? []);
-    expect((readerToggles[0] as HTMLInputElement | undefined)?.checked).toBe(false);
-    expect((readerToggles[1] as HTMLInputElement | undefined)?.checked).toBe(false);
+    expect((readerToggles[0] as HTMLInputElement | null | undefined)?.checked).toBe(false);
+    expect((readerToggles[1] as HTMLInputElement | null | undefined)?.checked).toBe(false);
 
     const typographySection = findSectionByTitle(view.container, "Typography and colors");
     const typographySelects = Array.from(typographySection?.querySelectorAll("select") ?? []);
-    expect((typographySelects[0] as HTMLSelectElement | undefined)?.value).toBe("md");
-    expect((typographySelects[1] as HTMLSelectElement | undefined)?.value).toBe("normal");
-    expect((typographySelects[2] as HTMLSelectElement | undefined)?.value).toBe("md");
+    expect((typographySelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("md");
+    expect((typographySelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("normal");
+    expect((typographySelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("md");
     expect(findInputByPlaceholder(typographySection ?? view.container, "var(--color-text)")?.value).toBe("");
     expect(findInputByPlaceholder(typographySection ?? view.container, "transparent")?.value).toBe("");
 
@@ -625,9 +625,9 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
 
     const tokensSection = findSectionByTitle(view.container, "Technical typography tokens");
     const tokenSelects = Array.from(tokensSection?.querySelectorAll("select") ?? []);
-    expect((tokenSelects[0] as HTMLSelectElement | undefined)?.value).toBe("md");
-    expect((tokenSelects[1] as HTMLSelectElement | undefined)?.value).toBe("normal");
-    expect((tokenSelects[2] as HTMLSelectElement | undefined)?.value).toBe("md");
+    expect((tokenSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("md");
+    expect((tokenSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("normal");
+    expect((tokenSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("md");
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/richTextSection");

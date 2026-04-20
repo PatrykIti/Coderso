@@ -192,7 +192,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -203,7 +203,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -338,7 +338,7 @@ test("MediaToolbar forwards search, filters, upload preference, and view actions
 
     act(() => {
       setInputValue(inputs[0], "gallery");
-      (inputs[1] as HTMLInputElement | undefined)?.click();
+      (inputs[1] as HTMLInputElement | null | undefined)?.click();
       buttons.find((button) => button.textContent?.includes("All Files"))?.click();
       buttons.find((button) => button.textContent?.includes("Documents"))?.click();
       buttons.find((button) => button.textContent?.includes("Audio"))?.click();

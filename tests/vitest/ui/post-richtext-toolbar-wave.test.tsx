@@ -150,7 +150,7 @@ const clickByAriaLabel = (container: HTMLElement, label: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -260,10 +260,10 @@ test("PostRichTextToolbar hides advanced row when profile has no advanced action
   try {
     const boldButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.getAttribute("aria-label") === "Bold"
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     const alignLeftButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.getAttribute("aria-label") === "Align left"
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
 
     expect(boldButton?.disabled).toBe(true);
     expect(alignLeftButton?.disabled).toBe(true);
@@ -461,16 +461,16 @@ test("PostRichTextToolbar keeps grouped controls inert when disabled", () => {
   try {
     const typeButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.textContent?.includes("Type")
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     const textButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.textContent?.includes("Text")
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     const listButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.textContent?.includes("List")
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     const codeButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.textContent?.includes("Code")
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
 
     expect(typeButton?.disabled).toBe(true);
     expect(textButton?.disabled).toBe(true);

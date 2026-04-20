@@ -193,7 +193,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -206,7 +206,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -219,7 +219,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -231,7 +231,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
+const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     if (element.checked !== checked) {
@@ -240,7 +240,7 @@ const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
   });
 };
 
-const clickButton = (element: Element | undefined) => {
+const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
   act(() => {
     element.click();
@@ -574,14 +574,14 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
 
     const colorsSection = getSectionByTitle(container, "Colors and emphasis");
     const colorInput = Array.from(colorsSection.querySelectorAll('input[type="color"]'))[0];
-    expect((colorInput as HTMLInputElement | undefined)?.value).toBe("#ffffff");
+    expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
 
     setInputValue(colorInput, "#112233");
     expect(getLatestValue().style?.background).toBe("#112233");
-    expect((colorInput as HTMLInputElement | undefined)?.value).toBe("#112233");
+    expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#112233");
 
     setInputValue(getInputByPlaceholder(colorsSection, "transparent"), "paper");
-    expect((colorInput as HTMLInputElement | undefined)?.value).toBe("#ffffff");
+    expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
 
     const spacingSection = getSectionByTitle(container, "Spacing and alignment");
     const spacingSelect = getSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]);

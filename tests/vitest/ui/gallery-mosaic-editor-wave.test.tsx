@@ -172,7 +172,7 @@ const mount = (node: React.ReactNode) => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error("Expected HTMLInputElement");
   }
@@ -185,7 +185,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) {
     throw new Error("Expected HTMLTextAreaElement");
   }
@@ -201,7 +201,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) {
     throw new Error("Expected HTMLSelectElement");
   }
@@ -213,7 +213,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLElement)) {
     throw new Error("Expected HTMLElement");
   }

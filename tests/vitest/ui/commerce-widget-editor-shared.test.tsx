@@ -78,7 +78,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error("Expected HTMLInputElement");
   }
@@ -94,7 +94,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) {
     throw new Error("Expected HTMLTextAreaElement");
   }
@@ -110,7 +110,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) {
     throw new Error("Expected HTMLSelectElement");
   }
@@ -125,7 +125,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const toggleCheckbox = (element: Element | undefined) => {
+const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error("Expected HTMLInputElement");
   }

@@ -129,7 +129,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -142,7 +142,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -482,10 +482,10 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
   const view = mount(<Harness />);
 
   try {
-    expect((findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
       "minimal"
     );
-    expect((findInputByPlaceholder(view.container, "Column 1 title") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(view.container, "Column 1 title") as HTMLInputElement | null | undefined)?.value).toBe(
       "Column 1"
     );
     expect(view.container.textContent).toContain("No social links configured.");
@@ -518,15 +518,15 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
 
     const advancedLayoutPanel = findPanelByTitle(view.container, "Layout tokens");
     const selects = findSelectsByOptions(advancedLayoutPanel as ParentNode, ["left", "center", "right"]);
-    expect((selects[0] as HTMLSelectElement | undefined)?.value).toBe("left");
-    expect((selects[1] as HTMLSelectElement | undefined)?.value).toBe("right");
-    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["5xl", "6xl", "7xl"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+    expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("left");
+    expect((selects[1] as HTMLSelectElement | null | undefined)?.value).toBe("right");
+    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["5xl", "6xl", "7xl"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
       "6xl"
     );
-    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["4", "6", "8"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["4", "6", "8"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
       "6"
     );
-    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["8", "10", "12"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["8", "10", "12"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
       "10"
     );
   } finally {

@@ -190,7 +190,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -203,7 +203,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -216,7 +216,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -228,7 +228,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
+const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
   act(() => {
@@ -671,11 +671,11 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
 
   try {
     expect(
-      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("Send message");
     expect(
-      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe(contactDefaults.contact?.phone);
   } finally {
@@ -734,11 +734,11 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
     }
 
     expect(
-      (findInputByPlaceholder(colorsSection, "transparent or #f8fafc") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(colorsSection, "transparent or #f8fafc") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe(contactDefaults.style?.background);
     expect(
-      (findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe(contactDefaults.style?.surfaceColor);
     expect(
@@ -771,7 +771,7 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
 
   try {
     expect(
-      (advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | undefined)
+      (advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | null | undefined)
         ?.checked
     ).toBe(false);
     expect(
@@ -850,15 +850,15 @@ test("Contact editors fall back to empty/default UI values when normalized paylo
         | undefined)?.value
     ).toBe("form-left");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(wizardView.container, "hello@example.com") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "hello@example.com") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
     expect(

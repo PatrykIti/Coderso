@@ -149,7 +149,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
@@ -159,7 +159,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
@@ -168,7 +168,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const toggleCheckbox = (element: Element | undefined, checked: boolean) => {
+const toggleCheckbox = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
   act(() => {
@@ -176,7 +176,7 @@ const toggleCheckbox = (element: Element | undefined, checked: boolean) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -367,13 +367,13 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     const borderInput = findInputByPlaceholder(view.container, "var(--color-border)");
     const summaryInput = findInputByPlaceholder(view.container, "var(--color-text)");
 
-    expect((surfaceInput as HTMLInputElement | undefined)?.value).toBe(
+    expect((surfaceInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.surfaceColor
     );
-    expect((borderInput as HTMLInputElement | undefined)?.value).toBe(
+    expect((borderInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.borderColor
     );
-    expect((summaryInput as HTMLInputElement | undefined)?.value).toBe(
+    expect((summaryInput as HTMLInputElement | null | undefined)?.value).toBe(
       accordionDefaults.style?.summaryTextColor
     );
 

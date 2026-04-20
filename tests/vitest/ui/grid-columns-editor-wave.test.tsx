@@ -170,7 +170,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
@@ -180,7 +180,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
@@ -189,7 +189,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
+const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
   act(() => {
@@ -197,7 +197,7 @@ const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
   });
 };
 
-const clickButton = (element: Element | undefined) => {
+const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
   act(() => {
     element.click();
@@ -563,8 +563,8 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     const backgroundTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-surface)");
     const borderTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
     const colorInputs = Array.from(surfaceSection.querySelectorAll('input[type="color"]'));
-    expect((colorInputs[0] as HTMLInputElement | undefined)?.value).toBe("#f8fafc");
-    expect((colorInputs[1] as HTMLInputElement | undefined)?.value).toBe("#cbd5e1");
+    expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#f8fafc");
+    expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#cbd5e1");
 
     setInputValue(colorInputs[0], "#0f172a");
     setInputValue(colorInputs[1], "#475569");
@@ -764,7 +764,7 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
     expect(advancedSelects[2]?.value).toBe("6");
     expect(advancedSelects[3]?.value).toBe("1");
     expect(advancedSelects[4]?.value).toBe("4");
-    expect((advancedCardizeToggle as HTMLInputElement | undefined)?.checked).toBe(true);
+    expect((advancedCardizeToggle as HTMLInputElement | null | undefined)?.checked).toBe(true);
   } finally {
     wizardView.cleanup();
     visualEmptyView.cleanup();

@@ -314,7 +314,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   });
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(
@@ -327,7 +327,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(
@@ -340,7 +340,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(
@@ -1221,8 +1221,8 @@ test("PostEditorCanvas title focus clears selection and image toolbar falls back
     });
 
     const selects = Array.from(view.container.querySelectorAll("select"));
-    expect((selects[0] as HTMLSelectElement | undefined)?.value).toBe("none");
-    expect((selects[1] as HTMLSelectElement | undefined)?.value).toBe("50");
+    expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("none");
+    expect((selects[1] as HTMLSelectElement | null | undefined)?.value).toBe("50");
 
     expect(onSelectBlock).toHaveBeenCalledWith(null);
     expect(onUpdateBlockAttrs).not.toHaveBeenCalled();
@@ -1269,7 +1269,7 @@ test("PostEditorCanvas routes delete and replace-image controls without deselect
   try {
     const deleteButton = Array.from(view.container.querySelectorAll("button")).find(
       (button) => button.getAttribute("aria-label") === "Delete block: Image"
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     if (!deleteButton) {
       throw new Error("missing delete button");
     }
@@ -1501,7 +1501,7 @@ test("PostEditorCanvas uses document typography for selected callout blocks and 
 
     const button = Array.from(previewView.container.querySelectorAll("button")).find((candidate) =>
       candidate.textContent?.includes("Read more")
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     expect(button?.className).toContain("underline-offset-4");
     expect(button?.className).toContain("h-11");
 

@@ -184,7 +184,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -197,7 +197,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -210,7 +210,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -222,14 +222,14 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
-const toggleCheckbox = (element: Element | undefined) => {
+const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     element.click();
@@ -471,7 +471,7 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     expect(markersSection?.textContent).toContain("No highlight segments configured.");
 
     const targetTrackSelect = findSelectByOptions(markersSection as ParentNode, ["a", "b"]);
-    expect((targetTrackSelect as HTMLSelectElement | undefined)?.value).toBe("b");
+    expect((targetTrackSelect as HTMLSelectElement | null | undefined)?.value).toBe("b");
 
     clickButtonByText(markersSection as ParentNode, "Discover", 0);
     clickButtonByText(markersSection as ParentNode, "Build", 1);

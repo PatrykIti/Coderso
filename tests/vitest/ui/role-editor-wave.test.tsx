@@ -258,7 +258,7 @@ test("RoleEditor edit mode clears full access, toggles specific permissions, and
 
     const firstEnabledCheckbox = Array.from(
       view.container.querySelectorAll('input[type="checkbox"]')
-    ).find((checkbox) => !(checkbox as HTMLInputElement).disabled) as HTMLInputElement | undefined;
+    ).find((checkbox) => !(checkbox as HTMLInputElement).disabled) as HTMLInputElement | null | undefined;
     if (!firstEnabledCheckbox) {
       throw new Error("Missing permission checkbox");
     }
@@ -306,14 +306,14 @@ test("RoleEditor respects canManageRoles=false and keeps controls inert", () => 
     const clear = buttons.find((button) => button.textContent?.includes("Clear"));
     const save = buttons.find((button) => button.textContent?.includes("Save role"));
 
-    expect((selectAll as HTMLButtonElement | undefined)?.disabled).toBe(true);
-    expect((clear as HTMLButtonElement | undefined)?.disabled).toBe(true);
-    expect((save as HTMLButtonElement | undefined)?.disabled).toBe(true);
+    expect((selectAll as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
+    expect((clear as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
+    expect((save as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
 
     act(() => {
-      (selectAll as HTMLButtonElement | undefined)?.click();
-      (clear as HTMLButtonElement | undefined)?.click();
-      (save as HTMLButtonElement | undefined)?.click();
+      (selectAll as HTMLButtonElement | null | undefined)?.click();
+      (clear as HTMLButtonElement | null | undefined)?.click();
+      (save as HTMLButtonElement | null | undefined)?.click();
     });
 
     expect(onSave).not.toHaveBeenCalled();

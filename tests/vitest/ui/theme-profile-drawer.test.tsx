@@ -156,7 +156,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -167,7 +167,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -380,7 +380,7 @@ test("ThemeProfileDrawer edit mode disables save while saving and handles no-tem
     expect(emptyView.container.textContent).toContain("No themes available");
     const saveButton = Array.from(emptyView.container.querySelectorAll("button")).find((candidate) =>
       candidate.textContent?.includes("Saving...")
-    ) as HTMLButtonElement | undefined;
+    ) as HTMLButtonElement | null | undefined;
     expect(saveButton?.disabled).toBe(true);
   } finally {
     emptyView.cleanup();

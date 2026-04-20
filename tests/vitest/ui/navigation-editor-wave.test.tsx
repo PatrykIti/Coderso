@@ -423,7 +423,7 @@ const flush = async () => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -436,7 +436,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -448,7 +448,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLElement)) return;
   act(() => {
     element.click();
@@ -1358,14 +1358,14 @@ test("Navigation editors fall back to default source, items, behavior, and layou
       )?.value
     ).toBe("manual");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Item 1 label") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "Item 1 label") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("Home");
     expect(
-      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | null | undefined)?.value
     ).toBe("/");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Nextless") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(wizardView.container, "Nextless") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
   } finally {
@@ -1391,7 +1391,7 @@ test("Navigation editors fall back to default source, items, behavior, and layou
       normalizeText("CTA is disabled for the Simple variant.")
     );
     expect(
-      (findInputByPlaceholder(visualView.container, "Item 1 label") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(visualView.container, "Item 1 label") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("Home");
     expect(
@@ -1399,16 +1399,16 @@ test("Navigation editors fall back to default source, items, behavior, and layou
         findSelectByOptions(
           mobileSection as ParentNode,
           ["expanded", "drawer", "minimal"]
-        ) as HTMLSelectElement | undefined
+        ) as HTMLSelectElement | null | undefined
       )?.value
     ).toBe("expanded");
     expect(
       (
-        findCheckboxes(mobileSection as ParentNode)[0] as HTMLInputElement | undefined
+        findCheckboxes(mobileSection as ParentNode)[0] as HTMLInputElement | null | undefined
       )?.checked
     ).toBe(false);
     expect(
-      (findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
     expect(
@@ -1430,12 +1430,12 @@ test("Navigation editors fall back to default source, items, behavior, and layou
         findSelectByOptions(
           colorsSection as ParentNode,
           ["normal", "medium", "semibold", "bold"]
-        ) as HTMLSelectElement | undefined
+        ) as HTMLSelectElement | null | undefined
       )?.value
     ).toBe("medium");
     expect(
       (
-        findCheckboxes(surfaceSection as ParentNode)[0] as HTMLInputElement | undefined
+        findCheckboxes(surfaceSection as ParentNode)[0] as HTMLInputElement | null | undefined
       )?.checked
     ).toBe(false);
   } finally {
@@ -1452,7 +1452,7 @@ test("Navigation editors fall back to default source, items, behavior, and layou
         findSelectByOptions(
           advancedView.container,
           ["left", "center", "right"]
-        ) as HTMLSelectElement | undefined
+        ) as HTMLSelectElement | null | undefined
       )?.value
     ).toBe("right");
     expect(
@@ -1460,7 +1460,7 @@ test("Navigation editors fall back to default source, items, behavior, and layou
         findSelectByOptions(
           advancedView.container,
           ["5xl", "6xl", "7xl"]
-        ) as HTMLSelectElement | undefined
+        ) as HTMLSelectElement | null | undefined
       )?.value
     ).toBe("6xl");
     expect(

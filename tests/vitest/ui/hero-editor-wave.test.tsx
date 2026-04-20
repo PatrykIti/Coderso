@@ -315,7 +315,7 @@ const flush = async () => {
   });
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -326,7 +326,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -337,7 +337,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -347,7 +347,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -1086,7 +1086,7 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
 
     clickElement(findButtonsByText(firstView.container, "Add variant preset")[0]);
     expect(
-      (findInputByPlaceholder(firstView.container, "Homepage Hero") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(firstView.container, "Homepage Hero") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("centered preset");
 
@@ -1096,7 +1096,7 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
     clickElement(findButtonContainingText(firstView.container, "Media Left"));
     clickElement(findButtonsByText(firstView.container, "Add variant preset")[0]);
     expect(
-      (findInputByPlaceholder(firstView.container, "Homepage Hero") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(firstView.container, "Homepage Hero") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("media-left preset");
   } finally {

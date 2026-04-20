@@ -201,7 +201,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
   const view = mount(<Harness />);
 
   try {
-    expect((findLabelInput(view.container, "Flow key") as HTMLInputElement | undefined)?.value).toBe("booking-flow");
+    expect((findLabelInput(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value).toBe("booking-flow");
 
     setInputValue(findLabelInput(view.container, "Flow key"), "concierge-flow");
     setInputValue(findLabelInput(view.container, "Title"), "Priority booking");
@@ -328,11 +328,11 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
     );
 
     expect(textInputs.every((input) => input.value === "")).toBe(true);
-    expect((findLabelTextarea(view.container, "Description") as HTMLTextAreaElement | undefined)?.value).toBe("");
-    expect((findToggleByText(view.container, "Show phone field") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findLabelTextarea(view.container, "Description") as HTMLTextAreaElement | null | undefined)?.value).toBe("");
+    expect((findToggleByText(view.container, "Show phone field") as HTMLInputElement | null | undefined)?.checked).toBe(
       true
     );
-    expect((findToggleByText(view.container, "Show notes field") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findToggleByText(view.container, "Show notes field") as HTMLInputElement | null | undefined)?.checked).toBe(
       true
     );
   } finally {

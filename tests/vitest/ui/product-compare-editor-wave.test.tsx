@@ -69,7 +69,7 @@ const mount = (node: React.ReactNode) => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -82,7 +82,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -94,7 +94,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const toggleCheckbox = (element: Element | undefined) => {
+const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     element.click();
@@ -248,7 +248,7 @@ test("ProductCompare editors cover source controls, field toggles, label normali
     expect(latestValue.resolved?.rows).toHaveLength(1);
 
     expect(
-      (findInputByLabel(view.container, "Price") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Price") as HTMLInputElement | null | undefined)?.value
     ).toBe("Price");
     expect(normalizeText(view.container.textContent)).toContain(normalizeText("Current limit: 5."));
 
@@ -319,7 +319,7 @@ test("ProductCompare editors fall back to hardcoded wizard limit and empty runti
       normalizeText("Resolved rows: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
   } finally {
     view.cleanup();
@@ -360,7 +360,7 @@ test("ProductCompare advanced editor falls back when normalized resolved summary
       normalizeText("Resolved rows: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
   } finally {
     view.cleanup();

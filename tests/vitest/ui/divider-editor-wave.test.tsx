@@ -143,7 +143,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -156,7 +156,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -288,7 +288,7 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
 
   try {
     const wizardStyle = findSelectsByOptions(view.container, ["line", "dashed", "label-center"])[0];
-    expect((wizardStyle as HTMLSelectElement | undefined)?.value).toBe("line");
+    expect((wizardStyle as HTMLSelectElement | null | undefined)?.value).toBe("line");
     setSelectValue(wizardStyle, "label-center");
     expect(currentVariant).toBe("label-center");
 

@@ -162,7 +162,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -175,7 +175,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -188,7 +188,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -200,7 +200,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -694,10 +694,10 @@ test("Team editors render sparse defaults and ignore variant changes without a h
         | HTMLSelectElement
         | undefined)?.value
     ).toBe("cards");
-    expect((findSelectByOptions(wizardView.container, ["1", "12"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(wizardView.container, ["1", "12"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "1"
     );
-    expect((findInputByPlaceholder(wizardView.container, "Member 1 name") as HTMLInputElement | undefined)?.value).toBe(
+    expect((findInputByPlaceholder(wizardView.container, "Member 1 name") as HTMLInputElement | null | undefined)?.value).toBe(
       "Team Member 1"
     );
   } finally {
@@ -713,25 +713,25 @@ test("Team editors render sparse defaults and ignore variant changes without a h
     clickButtonByText(structureSection as ParentNode, "Compact List");
 
     expect(
-      (findInputByPlaceholder(visualView.container, "Meet the team") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(visualView.container, "Meet the team") as HTMLInputElement | null | undefined)?.value
     ).toBe(teamDefaults.header?.title);
     expect(
       (findTextareaByPlaceholder(
         visualView.container,
         "Introduce key people behind delivery, support, and strategy."
-      ) as HTMLTextAreaElement | undefined)?.value
+      ) as HTMLTextAreaElement | null | undefined)?.value
     ).toBe(teamDefaults.header?.description);
     expect(
-      (findInputByPlaceholder(visualView.container, "Anna Kowalska") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(visualView.container, "Anna Kowalska") as HTMLInputElement | null | undefined)?.value
     ).toBe("Team Member 1");
     expect(
-      (findInputByPlaceholder(visualView.container, "Head of Product") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(visualView.container, "Head of Product") as HTMLInputElement | null | undefined)?.value
     ).toBe("Role");
     expect(
       (findTextareaByPlaceholder(
         visualView.container,
         "Short bio describing responsibilities and value."
-      ) as HTMLTextAreaElement | undefined)?.value
+      ) as HTMLTextAreaElement | null | undefined)?.value
     ).toBe("Short bio describing responsibilities and value.");
     expect(findSectionByTitle(visualView.container, "Social links")?.textContent).toContain(
       "No social links configured."
@@ -745,20 +745,20 @@ test("Team editors render sparse defaults and ignore variant changes without a h
   );
 
   try {
-    expect((findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "3"
     );
-    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "md"
     );
-    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | undefined)?.value).toBe(
+    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | null | undefined)?.value).toBe(
       "lg"
     );
     expect(
-      (findInputByPlaceholder(advancedView.container, "var(--color-bg)") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(advancedView.container, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value
     ).toBe(teamDefaults.style?.cardSurface);
     expect(
-      (findInputByPlaceholder(advancedView.container, "var(--color-border)") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(advancedView.container, "var(--color-border)") as HTMLInputElement | null | undefined)?.value
     ).toBe(teamDefaults.style?.cardBorder);
   } finally {
     advancedView.cleanup();
@@ -805,10 +805,10 @@ test("Team editors fall back when normalized style is missing and social labels 
       "Member 1"
     );
     expect(
-      (findInputByPlaceholder(visualView.container, "var(--color-bg)") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(visualView.container, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value
     ).toBe(teamDefaults.style?.cardSurface);
     expect(
-      (findInputByPlaceholder(visualView.container, "var(--color-border)") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(visualView.container, "var(--color-border)") as HTMLInputElement | null | undefined)?.value
     ).toBe(teamDefaults.style?.cardBorder);
   } finally {
     visualView.cleanup();
@@ -820,13 +820,13 @@ test("Team editors fall back when normalized style is missing and social labels 
 
   try {
     expect(
-      (findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | undefined)?.value
+      (findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | null | undefined)?.value
     ).toBe("3");
     expect(
-      (findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | undefined)?.value
+      (findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | null | undefined)?.value
     ).toBe("md");
     expect(
-      (findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | undefined)?.value
+      (findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | null | undefined)?.value
     ).toBe("lg");
   } finally {
     advancedView.cleanup();

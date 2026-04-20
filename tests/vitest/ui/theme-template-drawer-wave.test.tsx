@@ -155,14 +155,14 @@ const findColorTextInputByLabel = (
   );
   const label = labels[index];
   const inputs = label?.parentElement?.parentElement?.querySelectorAll("input");
-  return (inputs?.[1] as HTMLInputElement | undefined) ?? null;
+  return (inputs?.[1] as HTMLInputElement | null | undefined) ?? null;
 };
 
 const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).find(
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  ) as HTMLInputElement | undefined;
+  ) as HTMLInputElement | null | undefined;
 
 const clickButtonByText = (container: HTMLElement, text: string) => {
   const button = Array.from(container.querySelectorAll("button")).find((candidate) =>

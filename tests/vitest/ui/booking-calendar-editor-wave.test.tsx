@@ -187,13 +187,13 @@ test("BookingCalendar wizard editor normalizes defaults and clamps interval chan
 
   try {
     expect(
-      (findInputByLabel(view.container, "Flow key") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.flowId);
     expect(
-      (findInputByLabel(view.container, "Title") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Title") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.title);
     expect(
-      (findTextareaByLabel(view.container, "Description") as HTMLTextAreaElement | undefined)
+      (findTextareaByLabel(view.container, "Description") as HTMLTextAreaElement | null | undefined)
         ?.value
     ).toBe(bookingCalendarDefaults.description);
     expect(
@@ -256,10 +256,10 @@ test("BookingCalendar visual editor updates status-copy fields from normalized d
 
   try {
     expect(
-      (findInputByLabel(view.container, "Loading") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Loading") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.loadingMessage);
     expect(
-      (findInputByLabel(view.container, "No slots") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "No slots") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.emptySlotsMessage);
     expect(
       (
@@ -269,7 +269,7 @@ test("BookingCalendar visual editor updates status-copy fields from normalized d
       )?.value
     ).toBe(bookingCalendarDefaults.missingSelectionMessage);
     expect(
-      (findInputByLabel(view.container, "Error") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Error") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.errorMessage);
 
     setInputValue(findInputByLabel(view.container, "Title"), " Availability calendar ");
@@ -366,7 +366,7 @@ test("BookingCalendar advanced editor normalizes resolved payload and runtime er
       normalizeText("Services: 1 · Resources: 1")
     );
     expect(
-      (findInputByLabel(view.container, "Slots endpoint") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Slots endpoint") as HTMLInputElement | null | undefined)?.value
     ).toBe(bookingCalendarDefaults.slotsEndpoint);
     expect(
       (

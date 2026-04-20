@@ -166,7 +166,7 @@ test("MediaDetailsPanel forwards edited metadata and action callbacks", () => {
 
   try {
     const inputs = Array.from(view.container.querySelectorAll("input"));
-    expect((inputs[1] as HTMLInputElement | undefined)?.value).toBe(
+    expect((inputs[1] as HTMLInputElement | null | undefined)?.value).toBe(
       "workspace-original.jpg"
     );
     expect(view.container.textContent).toContain("2400 x 1600");

@@ -69,7 +69,7 @@ const mount = (node: React.ReactNode) => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -82,7 +82,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -94,7 +94,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const toggleCheckbox = (element: Element | undefined) => {
+const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
   act(() => {
     element.click();
@@ -201,10 +201,10 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       normalizeText("Resolved items: 1 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Limit") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Limit") as HTMLInputElement | null | undefined)?.value
     ).toBe("12");
     expect(
-      (findSelectByLabel(view.container, "Sort field") as HTMLSelectElement | undefined)?.value
+      (findSelectByLabel(view.container, "Sort field") as HTMLSelectElement | null | undefined)?.value
     ).toBe("updatedAt");
     expect(
       (
@@ -214,7 +214,7 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       )?.value
     ).toBe("desc");
     expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | undefined)?.checked
+      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)?.checked
     ).toBe(true);
     expect(
       (
@@ -309,7 +309,7 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
       )?.checked
     ).toBe(true);
     expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | undefined)?.checked
+      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)?.checked
     ).toBe(false);
     expect(
       (
@@ -375,13 +375,13 @@ test("ProductTable editors fall back to hardcoded wizard limit and empty runtime
 
   try {
     expect(
-      (findInputByLabel(view.container, "Limit") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Limit") as HTMLInputElement | null | undefined)?.value
     ).toBe("12");
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Resolved items: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
   } finally {
     view.cleanup();
@@ -413,13 +413,13 @@ test("ProductTable visual and advanced editors honor explicit toggle states and 
   );
 
   try {
-    expect((findInputByLabel(visualView.container, "Show slug") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findInputByLabel(visualView.container, "Show slug") as HTMLInputElement | null | undefined)?.checked).toBe(
       false
     );
-    expect((findInputByLabel(visualView.container, "Show status") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findInputByLabel(visualView.container, "Show status") as HTMLInputElement | null | undefined)?.checked).toBe(
       false
     );
-    expect((findInputByLabel(visualView.container, "Show stock") as HTMLInputElement | undefined)?.checked).toBe(
+    expect((findInputByLabel(visualView.container, "Show stock") as HTMLInputElement | null | undefined)?.checked).toBe(
       false
     );
     expect(
@@ -535,7 +535,7 @@ test("ProductTable editors restore default labels and empty state when fields ar
 
   try {
     expect(
-      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | undefined)?.checked
+      (findInputByLabel(view.container, "Show slug") as HTMLInputElement | null | undefined)?.checked
     ).toBe(false);
     expect(
       (
@@ -572,19 +572,19 @@ test("ProductTable editors restore default labels and empty state when fields ar
     expect(latestValue.resolved).not.toHaveProperty("error");
 
     expect(
-      (findInputByLabel(view.container, "Product") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Product") as HTMLInputElement | null | undefined)?.value
     ).toBe("Product");
     expect(
-      (findInputByLabel(view.container, "Price") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Price") as HTMLInputElement | null | undefined)?.value
     ).toBe("Price");
     expect(
-      (findInputByLabel(view.container, "Status") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Status") as HTMLInputElement | null | undefined)?.value
     ).toBe("Status");
     expect(
-      (findInputByLabel(view.container, "Title") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Title") as HTMLInputElement | null | undefined)?.value
     ).toBe("No products available");
     expect(
-      (findInputByLabel(view.container, "Description") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Description") as HTMLInputElement | null | undefined)?.value
     ).toBe("Publish products or adjust source query.");
     expect(
       (
@@ -637,7 +637,7 @@ test("ProductTable advanced editor falls back when normalized resolved summary i
       normalizeText("Resolved items: 0 · Total: 0")
     );
     expect(
-      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
   } finally {
     view.cleanup();

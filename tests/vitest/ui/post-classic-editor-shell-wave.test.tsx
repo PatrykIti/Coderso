@@ -501,7 +501,7 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
       setTextareaValue(textareas[1], "Updated excerpt");
       setTextareaValue(textareas[2], "Updated body");
       setInputValue(inputs.find((input) => input.placeholder === "media-id"), "media-2");
-      (inputs.find((input) => input.type === "checkbox") as HTMLInputElement | undefined)?.click();
+      (inputs.find((input) => input.type === "checkbox") as HTMLInputElement | null | undefined)?.click();
       buttons.find((button) => button.textContent === "Save draft")?.click();
     });
     await flush();

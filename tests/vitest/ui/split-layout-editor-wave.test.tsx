@@ -112,7 +112,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -124,7 +124,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setCheckboxValue = (element: Element | undefined, checked: boolean) => {
+const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
   act(() => {
@@ -268,9 +268,9 @@ test("SplitLayout wizard editor normalizes malformed defaults and ignores preset
       "12",
     ])[0];
 
-    expect((presetSelect as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((collapseSelect as HTMLSelectElement | undefined)?.value).toBe("stack");
-    expect((gapSelect as HTMLSelectElement | undefined)?.value).toBe("6");
+    expect((presetSelect as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((collapseSelect as HTMLSelectElement | null | undefined)?.value).toBe("stack");
+    expect((gapSelect as HTMLSelectElement | null | undefined)?.value).toBe("6");
 
     setSelectValue(collapseSelect, "keep");
     setSelectValue(gapSelect, "10");
@@ -324,12 +324,12 @@ test("SplitLayout visual editor normalizes fallback tokens, updates mobile contr
     )[0];
     const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
 
-    expect((ratioSelects[0] as HTMLSelectElement | undefined)?.value).toBe("60-40");
-    expect((ratioSelects[1] as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((collapseSelect as HTMLSelectElement | undefined)?.value).toBe("stack");
-    expect((reverseToggle as HTMLInputElement | undefined)?.checked).toBe(false);
-    expect((spacingSelects[0] as HTMLSelectElement | undefined)?.value).toBe("6");
-    expect((spacingSelects[1] as HTMLSelectElement | undefined)?.value).toBe("stretch");
+    expect((ratioSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("60-40");
+    expect((ratioSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((collapseSelect as HTMLSelectElement | null | undefined)?.value).toBe("stack");
+    expect((reverseToggle as HTMLInputElement | null | undefined)?.checked).toBe(false);
+    expect((spacingSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("6");
+    expect((spacingSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
 
     clickByText(view.container, "50 / 50");
 
@@ -407,9 +407,9 @@ test("SplitLayout editor controls fall back to safe tokens when normalized value
       "12",
     ])[0];
 
-    expect((wizardPreset as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((wizardCollapse as HTMLSelectElement | undefined)?.value).toBe("stack");
-    expect((wizardGap as HTMLSelectElement | undefined)?.value).toBe("6");
+    expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((wizardCollapse as HTMLSelectElement | null | undefined)?.value).toBe("stack");
+    expect((wizardGap as HTMLSelectElement | null | undefined)?.value).toBe("6");
 
     const visualRatioSection = findSectionByTitle(visualView.container, "Variant and pane ratio");
     const visualMobileSection = findSectionByTitle(
@@ -429,20 +429,20 @@ test("SplitLayout editor controls fall back to safe tokens when normalized value
       (visualSpacingSection as ParentNode).querySelectorAll("select")
     );
 
-    expect((visualRatioSelects[0] as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((visualRatioSelects[1] as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((visualCollapse as HTMLSelectElement | undefined)?.value).toBe("stack");
-    expect((visualSpacingSelects[0] as HTMLSelectElement | undefined)?.value).toBe("6");
-    expect((visualSpacingSelects[1] as HTMLSelectElement | undefined)?.value).toBe("stretch");
+    expect((visualRatioSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((visualRatioSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((visualCollapse as HTMLSelectElement | null | undefined)?.value).toBe("stack");
+    expect((visualSpacingSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("6");
+    expect((visualSpacingSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
 
     const advancedSection = findSectionByTitle(advancedView.container, "Technical split tokens");
     const advancedSelects = Array.from((advancedSection as ParentNode).querySelectorAll("select"));
 
-    expect((advancedSelects[0] as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((advancedSelects[1] as HTMLSelectElement | undefined)?.value).toBe("50-50");
-    expect((advancedSelects[2] as HTMLSelectElement | undefined)?.value).toBe("stack");
-    expect((advancedSelects[3] as HTMLSelectElement | undefined)?.value).toBe("6");
-    expect((advancedSelects[4] as HTMLSelectElement | undefined)?.value).toBe("stretch");
+    expect((advancedSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((advancedSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
+    expect((advancedSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("stack");
+    expect((advancedSelects[3] as HTMLSelectElement | null | undefined)?.value).toBe("6");
+    expect((advancedSelects[4] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
   } finally {
     wizardView.cleanup();
     visualView.cleanup();
@@ -522,7 +522,7 @@ test("SplitLayout editors cover variant changes, mobile behavior, spacing, and a
 
   try {
     const presetSelect = findSelectsByOptions(view.container, ["50-50", "40-60", "60-40"])[0];
-    expect((presetSelect as HTMLSelectElement | undefined)?.value).toBe("50-50");
+    expect((presetSelect as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
     setSelectValue(presetSelect, "60-40");
     expect(currentVariant).toBe("60-40");
 

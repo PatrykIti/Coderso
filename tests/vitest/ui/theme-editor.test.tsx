@@ -154,7 +154,7 @@ const findColorTextInputByLabel = (container: HTMLElement, labelText: string) =>
     element.textContent?.includes(labelText)
   );
   const inputs = label?.parentElement?.parentElement?.querySelectorAll("input");
-  return (inputs?.[1] as HTMLInputElement | undefined) ?? null;
+  return (inputs?.[1] as HTMLInputElement | null | undefined) ?? null;
 };
 
 const clickButtonByText = (container: HTMLElement, text: string) => {

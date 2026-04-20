@@ -1431,7 +1431,7 @@ test("PostRichTextAdapter applies placeholder and editor typography classes for 
       (candidate) =>
         candidate.textContent?.includes("Start writing")
         && candidate.className.includes("pointer-events-none")
-    ) as HTMLDivElement | undefined;
+    ) as HTMLDivElement | null | undefined;
     const editor = getEditor(serifView.container);
     if (!placeholder || !editor) {
       throw new Error("missing serif editor nodes");
@@ -1459,7 +1459,7 @@ test("PostRichTextAdapter applies placeholder and editor typography classes for 
       (candidate) =>
         candidate.textContent?.includes("Start writing")
         && candidate.className.includes("pointer-events-none")
-    ) as HTMLDivElement | undefined;
+    ) as HTMLDivElement | null | undefined;
     const editor = getEditor(monoView.container);
     if (!placeholder || !editor) {
       throw new Error("missing mono editor nodes");

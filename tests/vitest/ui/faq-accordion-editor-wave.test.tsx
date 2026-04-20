@@ -206,7 +206,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-const setInputValue = (element: Element | undefined, value: string) => {
+const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -219,7 +219,7 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | undefined, value: string) => {
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
@@ -232,7 +232,7 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const setSelectValue = (element: Element | undefined, value: string) => {
+const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
     HTMLSelectElement.prototype,
@@ -244,7 +244,7 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   });
 };
 
-const toggleCheckbox = (element: Element | undefined, checked: boolean) => {
+const toggleCheckbox = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
   act(() => {
@@ -252,7 +252,7 @@ const toggleCheckbox = (element: Element | undefined, checked: boolean) => {
   });
 };
 
-const clickElement = (element: Element | undefined) => {
+const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -452,9 +452,9 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
 
   try {
     const colorInputs = Array.from(view.container.querySelectorAll("input[type='color']"));
-    expect((colorInputs[0] as HTMLInputElement | undefined)?.value).toBe("#ffffff");
-    expect((colorInputs[1] as HTMLInputElement | undefined)?.value).toBe("#e2e8f0");
-    expect((colorInputs[2] as HTMLInputElement | undefined)?.value).toBe("#e2e8f0");
+    expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
+    expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
+    expect((colorInputs[2] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
 
     clickElement(findButtonByText(view.container, "Two Column"));
     expect(view.getVariant()).toBe("two-column");
@@ -467,7 +467,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     expect(view.getValue().items).toHaveLength(1);
 
     const removeButtonsWhenSingle = findButtonsByText(view.container, "Remove");
-    expect((removeButtonsWhenSingle[0] as HTMLButtonElement | undefined)?.disabled).toBe(true);
+    expect((removeButtonsWhenSingle[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
 
     clickElement(findButtonByText(view.container, "Add item"));
     expect(view.getValue().items).toHaveLength(2);
@@ -522,7 +522,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     clickElement(findButtonsByText(view.container, "Remove")[1]);
 
     const removeButtonsAfterDelete = findButtonsByText(view.container, "Remove");
-    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | undefined)?.disabled).toBe(true);
+    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
@@ -734,7 +734,7 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
         | undefined)?.value
     ).toBe("single-column");
     expect(
-      (findInputByPlaceholder(view.container, "Frequently asked questions") as HTMLInputElement | undefined)
+      (findInputByPlaceholder(view.container, "Frequently asked questions") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
     expect(
@@ -745,13 +745,13 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
       )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Question 1") as HTMLInputElement | undefined)?.value
+      (findInputByPlaceholder(view.container, "Question 1") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
     expect(
-      (findTextareaByPlaceholder(view.container, "Answer 1") as HTMLTextAreaElement | undefined)?.value
+      (findTextareaByPlaceholder(view.container, "Answer 1") as HTMLTextAreaElement | null | undefined)?.value
     ).toBe("");
     expect(
-      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)
+      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("sm");
     expect(
