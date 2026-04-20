@@ -577,10 +577,10 @@ test("FieldSettingsPanel forwards general, logic, style, and duplicate actions",
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
     const selects = Array.from(view.container.querySelectorAll("select"));
-    const buttons = Array.from(view.container.querySelectorAll("button"));
+    const buttons = Array.from(view.container.querySelectorAll("button")) as HTMLButtonElement[];
     const switches = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
+    ) as HTMLInputElement[];
 
     act(() => {
       setInputValue(inputs[0], "Work email");
@@ -673,8 +673,8 @@ test("FormSettingsPanel forwards metadata, presets, step titles, and retry contr
     const selects = Array.from(view.container.querySelectorAll("select"));
     const checkboxes = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
-    const buttons = Array.from(view.container.querySelectorAll("button"));
+    ) as HTMLInputElement[];
+    const buttons = Array.from(view.container.querySelectorAll("button")) as HTMLButtonElement[];
 
     act(() => {
       setInputValue(inputs[0], "Support");
