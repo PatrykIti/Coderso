@@ -25,6 +25,9 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
   null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+type GridColumnsColumn = NonNullable<GridColumnsData["columns"]>[number];
+type GridColumnsLayout = NonNullable<GridColumnsData["layout"]>;
+type GridColumnsStyle = NonNullable<GridColumnsData["style"]>;
 
 test("grid columns renders defaults", () => {
   const html = renderToString(
@@ -41,18 +44,18 @@ test("grid columns normalization keeps deterministic ids and bounds", () => {
   const normalized = normalizeGridColumnsData({
     columns: [
       { id: "1", label: "Lead", desktopSpan: "8", tabletSpan: "6", mobileSpan: "12" },
-      { id: "1", label: "", desktopSpan: "13" as GridColumnsData["columns"][number]["desktopSpan"] },
+      { id: "1", label: "", desktopSpan: "13" as GridColumnsColumn["desktopSpan"] },
       { id: "3", label: "Support", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
     ],
     layout: {
-      gapX: "7" as GridColumnsData["layout"]["gapX"],
-      gapY: "7" as GridColumnsData["layout"]["gapY"],
-      align: "unsupported" as GridColumnsData["layout"]["align"],
+      gapX: "7" as GridColumnsLayout["gapX"],
+      gapY: "7" as GridColumnsLayout["gapY"],
+      align: "unsupported" as GridColumnsLayout["align"],
     },
     style: {
-      columnBorderWidth: "9" as GridColumnsData["style"]["columnBorderWidth"],
-      columnRadius: "bad" as GridColumnsData["style"]["columnRadius"],
-      columnPadding: "42" as GridColumnsData["style"]["columnPadding"],
+      columnBorderWidth: "9" as GridColumnsStyle["columnBorderWidth"],
+      columnRadius: "bad" as GridColumnsStyle["columnRadius"],
+      columnPadding: "42" as GridColumnsStyle["columnPadding"],
     },
   });
 
