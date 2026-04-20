@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
+- **To Do:** 9 tasks
 - **In Progress:** 6 tasks
-- **Done:** 946 tasks
+- **Done:** 947 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-191-03 | Pages Admin Client Cache Coverage | High | Medium | Expand Vitest coverage for `pagesClient` cache, mutation broadcasts, detail sync, and CSRF paths |
 | TASK-191-04 | Page Builder Branch Coverage Closure | Medium | Medium | Close useful Vitest branch gaps in builder helpers and editor leaf components |
 | TASK-191-05 | QA, Docs, Changelog, and Closure | Medium | Small | Final targeted validation, coverage reporting, changelog, docs, and board closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
@@ -68,6 +67,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-191-03 | Pages Admin Client Cache Coverage | High | Medium | Done: `pagesClient` list/detail cache, mutation broadcasts, noop handling, and template options coverage expanded |
 | TASK-191-02 | Public Page Runtime and Preview Coverage | High | Medium | Done: public runtime renders published data, preview renders current draft data, and unsafe preview/page states are covered |
 | TASK-191-01 | Pages Admin Route Contract and Security Coverage | High | Medium | Done: route permissions, validation, auth-required, lifecycle, audit, and error-path coverage added for `/pages*` |
 | TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Done: provider action arrays removed, exact policy identity fixed, provider-side parallel heuristics collapsed |

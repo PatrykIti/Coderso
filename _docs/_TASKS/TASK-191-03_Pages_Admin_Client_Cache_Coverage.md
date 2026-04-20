@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI + Pages Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-20)
 
 ---
 
@@ -76,3 +76,21 @@ in-flight dedupe, cache clearing, null/noop responses, or cache bus broadcasts.
   changes.
 - `_docs/_TASKS/README.md` when status changes.
 - `_docs/_CHANGELOG/*` on completion.
+
+## Completion Notes (2026-04-20)
+
+- Expanded `tests/vitest/admin/pagesClient.test.ts` from endpoint smoke coverage
+  to cache lifecycle coverage.
+- Covered in-flight list dedupe, forced list refresh, detail fetch cache
+  hydration, mutation list/detail synchronization, cache bus broadcasts, noop
+  mutation responses, cache clearing, and template-options fetch behavior.
+- Targeted `pagesClient.ts` coverage now reports `100%` lines, `100%`
+  functions, and `76.36%` branches in the focused coverage run.
+- No admin cache contract changes were required.
+
+## Validation (2026-04-20)
+
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/admin/pagesClient.test.ts`
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts --coverage tests/vitest/admin/pagesClient.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
