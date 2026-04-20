@@ -26,13 +26,13 @@ export type LiveProviderRuntime = {
   provider: AssistantProvider;
 };
 
-export type LiveProviderEnv = Pick<
-  NodeJS.ProcessEnv,
+type LiveProviderEnvKey =
   | "TEST_OPENAI_API_KEY"
   | "TEST_OPENAI_MODEL"
   | "TEST_OPENROUTER_API_KEY"
-  | "TEST_OPENROUTER_MODEL"
->;
+  | "TEST_OPENROUTER_MODEL";
+
+export type LiveProviderEnv = NodeJS.ProcessEnv & Partial<Record<LiveProviderEnvKey, string>>;
 
 export type LivePlanInput = {
   prompt: string;
@@ -49,7 +49,7 @@ export type ExecuteLivePlanInput = {
   idempotencyKey: string;
 };
 
-const readEnv = (env: LiveProviderEnv, key: keyof LiveProviderEnv) => {
+const readEnv = (env: LiveProviderEnv, key: LiveProviderEnvKey) => {
   const value = env[key];
   return typeof value === "string" && value.trim() ? value.trim() : null;
 };
