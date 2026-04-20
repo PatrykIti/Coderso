@@ -10,7 +10,7 @@ const createEntry = (data: Record<string, unknown>) => ({
   typeId: "post-type",
   title: "Entry title",
   slug: "entry-title",
-  status: "published",
+  status: "published" as const,
   data,
   tags: [],
   taxonomy: undefined,
@@ -165,7 +165,8 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
     }
   );
 
-  expect(result.runtime?.rejectedTokens).toEqual([]);
-  expect(Object.prototype.hasOwnProperty.call(result.runtime ?? {}, "searchQuery")).toBe(false);
-  expect(Object.prototype.hasOwnProperty.call(result.runtime ?? {}, "page")).toBe(false);
+  const runtime = "runtime" in result ? result.runtime : undefined;
+  expect(runtime?.rejectedTokens).toEqual([]);
+  expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "searchQuery")).toBe(false);
+  expect(Object.prototype.hasOwnProperty.call(runtime ?? {}, "page")).toBe(false);
 });
