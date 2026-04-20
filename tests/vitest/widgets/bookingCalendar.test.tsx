@@ -42,9 +42,12 @@ test("booking calendar renders selectors from resolved payload", () => {
             {
               id: "service-1",
               name: "Oil change",
+              description: null,
               durationMinutes: 30,
               bufferBeforeMinutes: 0,
               bufferAfterMinutes: 0,
+              priceCents: null,
+              currency: null,
               resourceIds: ["resource-1"],
             },
           ],

@@ -10,7 +10,8 @@ const page = {
   id: "page-1",
   title: "Home",
   slug: "/",
-  status: "draft",
+  status: "draft" as const,
+  createdAt: "2026-02-14T00:00:00.000Z",
   updatedAt: "2026-02-14T00:00:00.000Z",
   author: null,
 };

@@ -8,9 +8,12 @@ import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouter
 
 const entry = {
   id: "entry-1",
+  typeId: "type-1",
   title: "Hello",
   slug: "hello",
-  status: "draft",
+  status: "draft" as const,
+  data: {},
+  createdAt: "2026-02-14T00:00:00.000Z",
   updatedAt: "2026-02-14T00:00:00.000Z",
   author: null,
 };

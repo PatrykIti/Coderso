@@ -42,7 +42,7 @@ test("split layout normalization keeps deterministic defaults", () => {
   const normalized = normalizeSplitLayoutData(
     {
       ratio: {
-        desktop: "invalid" as SplitLayoutData["ratio"]["desktop"],
+        desktop: "invalid" as NonNullable<SplitLayoutData["ratio"]>["desktop"],
       },
       collapseMobile: "bad" as SplitLayoutData["collapseMobile"],
       gap: "bad" as SplitLayoutData["gap"],

@@ -14,6 +14,7 @@ test("WebhooksPage renders table and drawer content", () => {
         onOpenChange={() => undefined}
         mode="create"
         webhook={null}
+        onSave={async () => undefined}
       />
     </>
   );

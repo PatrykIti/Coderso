@@ -44,7 +44,7 @@ test("stack normalization keeps deterministic variant flow defaults", () => {
     {
       direction: { mobile: "row" },
       gap: {
-        desktop: "unknown" as StackData["gap"]["desktop"],
+        desktop: "unknown" as NonNullable<StackData["gap"]>["desktop"],
       },
       align: "bad" as StackData["align"],
       justify: "bad" as StackData["justify"],

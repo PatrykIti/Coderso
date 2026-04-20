@@ -36,7 +36,7 @@ test("ExportDialog renders fields", () => {
 
 test("BackupNowDialog renders options", () => {
   const html = renderAdminUi(
-    <BackupNowDialog open onOpenChange={() => undefined} />
+    <BackupNowDialog open onOpenChange={() => undefined} onCreate={async () => true} isSubmitting={false} />
   );
 
   expect(html).toContain("Create Backup Now");
