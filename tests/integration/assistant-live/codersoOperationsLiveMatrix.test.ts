@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { AssistantActionContext } from "../../../core/services/assistant/actionPlanTypes";
 
 import {
   createEnabledLiveProviderRuntimes,
@@ -26,7 +27,7 @@ const context = {
     widgets: [],
     warnings: [],
   },
-} as const;
+} as unknown as AssistantActionContext;
 
 const assertGated = async (provider: LiveProviderRuntime, prompt: string) => {
   const plan = await planWithLiveProvider({
