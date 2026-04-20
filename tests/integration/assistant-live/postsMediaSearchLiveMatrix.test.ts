@@ -101,7 +101,13 @@ const createMediaRowFixture = async (
 
 const assertNoExecutableActions = (plan: Awaited<ReturnType<typeof planWithLiveProvider>>, provider: string) => {
   expect(plan.actions, provider).toEqual([]);
-  expect(plan.responseKind === "needs_input" || plan.responseKind === "inspection" || plan.responseKind === "docs", provider).toBe(true);
+  expect(
+    plan.responseKind === "needs_input" ||
+      plan.responseKind === "inspection" ||
+      plan.responseKind === "docs" ||
+      plan.responseKind === "gated",
+    provider
+  ).toBe(true);
 };
 
 const runPostsMediaSearchForProvider = async (provider: LiveProviderRuntime) => {

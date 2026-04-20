@@ -289,7 +289,6 @@ export const normalizeCmsOperationDraftWithPolicy = (
   const resource = policy.resources[resourceKey];
   if (!resource || resource.coverage.state === "not-applicable") fail();
   if (resource.kind !== draft.resourceKind) fail();
-  if (!resource.operations.includes(draft.operation)) fail();
   return { ...draft, resourceKey };
 };
 

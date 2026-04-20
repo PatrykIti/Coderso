@@ -723,9 +723,18 @@ const applyPromptImpliedDraftHintsWithPolicy = (
   const resourcePolicy = getResolverResourcePolicyForDraft(draft);
   const inferredFilters = inferFiltersFromPromptWithPolicy(normalizedPrompt, resourcePolicy)
     .filter((filter) => !hasFilterField(draft, filter.field));
+  const promptFieldPolicy = resourcePolicy
+    ? Object.values(resourcePolicy.fields).find((field) =>
+        [field.field, ...field.aliases].some((alias) =>
+          includesAny(normalizedPrompt, [alias])
+        )
+      )
+    : null;
   const inferredFieldIntent =
-    draft.operation === "update" && draft.mutation?.value !== undefined && !draft.mutation.fieldIntent
-      ? resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy)
+    draft.operation === "update" && draft.mutation?.value !== undefined
+      ? draft.mutation.patch
+        ? draft.mutation.fieldIntent
+        : promptFieldPolicy?.field ?? draft.mutation.fieldIntent ?? resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy)
       : draft.mutation?.fieldIntent;
   const fieldPolicy = inferredFieldIntent && resourcePolicy
     ? Object.values(resourcePolicy.fields).find((field) => field.field === inferredFieldIntent)

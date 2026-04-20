@@ -173,7 +173,7 @@ testIfDb("set/get/list user settings", async () => {
   expect(list["assistant.ui.enabled"]).toBe(false);
   expect(list["assistant.ui.avatarEnabled"]).toBe(true);
   expect(list["assistant.ui.avatarAsset"]).toBe("assistant-bot.glb");
-});
+}, 15_000);
 
 testIfDb("rejects unknown key", async () => {
   const userId = randomUUID();

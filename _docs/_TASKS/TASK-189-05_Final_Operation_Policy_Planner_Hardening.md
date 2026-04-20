@@ -154,3 +154,22 @@ Keep these planner areas:
 - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+## Follow-up Fixes (2026-04-20)
+
+- Fixed live-regression cases reported after TASK-189-05:
+  - admin/security/store/theme/dashboard prompts no longer throw on gated or
+    unsupported operation drafts,
+  - post/media gated plans are accepted as non-executable live results,
+  - listing template layout prompts keep `layout` instead of being mapped to
+    `slug`,
+  - selected-block `dataPath` patches are not overwritten by prompt field aliases,
+  - the DB-backed user settings suite has a wider timeout for slower local runs.
+
+## Follow-up Validation (2026-04-20)
+
+- `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
+- `set -a && source .env && set +a && TEST_OPENROUTER_API_KEY= TEST_OPENROUTER_MODEL= bun test tests/integration/assistant-live` (local harness skipped DB-backed suites)
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
