@@ -23,7 +23,7 @@ test("solution kits catalog provides complete starter packs for each kit", () =>
     expect(kit.manifest?.requiredModules.length).toBeGreaterThan(0);
 
     for (const form of kit.resourceBlueprint.forms) {
-      expect(form.fields.length).toBeGreaterThan(0);
+      expect((form.fields ?? []).length).toBeGreaterThan(0);
     }
 
     for (const page of kit.resourceBlueprint.pages) {
@@ -46,11 +46,12 @@ test("solution kit resource blueprint keys are unique and internally consistent"
     expect(new Set(menuLocations).size).toBe(menuLocations.length);
 
     for (const menu of kit.resourceBlueprint.menus) {
-      const itemKeys = menu.items.map((item) => item.key);
+      const items = menu.items ?? [];
+      const itemKeys = items.map((item) => item.key);
       expect(new Set(itemKeys).size).toBe(itemKeys.length);
 
       const knownKeys = new Set(itemKeys);
-      for (const item of menu.items) {
+      for (const item of items) {
         expect(Boolean(item.href) || Boolean(item.pageSlug)).toBe(true);
 
         if (item.pageSlug) {
