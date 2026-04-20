@@ -32,7 +32,7 @@ No child task files.
 
 ## Action Contract
 
-Preferred action:
+Required action:
 
 ```ts
 type AssistantDetailPageUpsertAction = {
@@ -50,12 +50,10 @@ type AssistantDetailPageUpsertAction = {
 };
 ```
 
-Alternative:
-
-- Extend `page.upsert` only if detail pages are stored as Pages and there is no
-  separate detail document service.
-- Do not overload `page.upsert` with opaque detail metadata if it makes route
-  ownership ambiguous.
+`page.upsert` must not be overloaded with detail page document payloads.
+`page.upsert` remains the action for normal/static/list/landing Pages. Detail
+templates use `detail-page.upsert` so runtime ownership, bindings, preview,
+cache invalidation, and manual editing stay explicit.
 
 Dry-run must show:
 
@@ -92,6 +90,7 @@ Execute must:
 ## Testing Requirements
 
 - Schema accepts valid action and rejects unknown fields.
+- `page.upsert` rejects opaque detail page document payloads.
 - Dry-run reports missing content type/field conflicts.
 - Execute creates/upserts document idempotently.
 - Execute rejects route collision.

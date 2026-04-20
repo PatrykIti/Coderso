@@ -63,8 +63,11 @@ rendered by public runtime.
 ```ts
 type DetailPageDocument = {
   schemaVersion: 1;
+  id: string;
+  name: string;
   contentTypeSlug: string;
   routePattern: string;
+  status: "draft" | "published";
   titlePattern: string;
   seo?: {
     titlePattern?: string;
@@ -108,11 +111,14 @@ type DetailPageBinding = {
 
 Storage direction:
 
-- Prefer a dedicated `detailPages`/`detail_page_documents` contract if the
-  implementation determines current settings/content-route storage is too
-  limited.
-- If stored inside `site.contentRoutes`, it must be versioned and validated as
-  `detailPage`, not ad-hoc JSON.
+- `detail_page_documents` is the required storage contract.
+- `site.contentRoutes` remains the route matcher and may reference a
+  `detailPageId`, but it must not store the full detail page document.
+- Detail page documents must have their own draft/published lifecycle,
+  versioned JSON document payload, stable id, content type ownership, and route
+  pattern.
+- DB changes require full migration artifacts: SQL migration, meta snapshot, and
+  journal update.
 - The contract must be non-destructive and backward compatible with current
   content routes.
 
@@ -157,16 +163,22 @@ Touched existing modules:
 - `core/server/publicSite.tsx`
 - `core/site/contentRouteMatcher.ts`
 - `core/services/settings/settingsService.ts`
-- `core/db/schema.ts` and migrations if a new table is introduced.
+- `core/db/schema.ts`
+- SQL migration plus Drizzle meta snapshot/journal artifacts for
+  `detail_page_documents`.
 
 ## Implementation Order
 
-1. Define the versioned detail page document and strict normalizers.
+1. Define the versioned detail page document, dedicated DB storage, and strict
+   normalizers.
 2. Define binding resolution from entry fields/meta/computed sources.
 3. Add runtime resolver and public renderer with legacy fallback.
 4. Add preview/cache/invalidation integration.
-5. Extend typed action schema/executor to create/update detail page documents.
-6. Add composer fixtures and DB-backed public runtime acceptance tests.
+5. Add required `detail-page.upsert` typed action schema/executor to
+   create/update detail page documents.
+6. Add manual Collection Workspace / Detail Template editing integration in
+   `TASK-190-06-03`.
+7. Add composer fixtures and DB-backed public runtime acceptance tests.
 
 ## Security Contract
 
@@ -216,7 +228,7 @@ Touched existing modules:
   - action schema tests,
   - provider draft rejection tests where relevant.
 - Bun:
-  - DB-backed detail page document persistence if a table is introduced,
+  - DB-backed detail page document persistence,
   - public runtime detail render tests,
   - preview token detail render tests,
   - cache invalidation tests for entry updates and detail document updates,

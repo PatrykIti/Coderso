@@ -168,6 +168,12 @@ type BlueprintCompositionPlan = {
    - Existing resource catalog and planning state must be used to update/reuse
      resources where possible.
 
+7. **Manual CMS editing remains first-class**
+   - Generated collection resources must remain editable through admin UI.
+   - The composer must open or link to a collection workspace after execution.
+   - Detail templates reuse the Page Builder shell in detail-template mode, not
+     a parallel editor stack.
+
 ## Sub-Tasks
 
 Business-area tasks:
@@ -203,6 +209,7 @@ Technical leaf tasks:
   - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
+- `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md`
 - `TASK-190-07-01_Composition_Action_Assembler.md`
 - `TASK-190-07-02_No_Duplicate_Idempotency_and_Existing_Resource_Reuse.md`
 - `TASK-190-07-03_Composition_Review_Metadata_and_Diagnostics.md`
@@ -226,6 +233,8 @@ Technical leaf tasks:
 9. Run full plan composer shadow/cutover only after graph, merge, action
    assembly, and no-duplicate fixtures pass.
 10. Add fixtures, authoring docs, observability, and live/provider evaluation coverage.
+11. Add manual collection workspace coverage so generated collections remain
+    editable without the assistant.
 
 ## Security Contract
 
@@ -308,3 +317,6 @@ Technical leaf tasks:
     `actionPlanSchema` and dry-run parity fixtures.
 12. Full composed-plan routing also requires no-duplicate checks and fixture
     coverage for selected primary/adjunct/gated capability combinations.
+13. Generated collection outputs remain manually editable through a collection
+    workspace that reuses existing Page Builder, Entries, Custom Screen,
+    Listing, Form, SEO, and route editors where possible.

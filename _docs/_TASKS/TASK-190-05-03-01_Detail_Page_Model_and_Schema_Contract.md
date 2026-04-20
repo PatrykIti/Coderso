@@ -27,9 +27,11 @@ No child task files.
 - Add `core/services/assistant/blueprints/blueprintDetailPageTypes.ts`
 - Add `core/services/assistant/blueprints/blueprintDetailPageSchema.ts`
 - Add `tests/vitest/assistant/blueprint-detail-page-schema.test.ts`
-- Update `core/services/settings/settingsService.ts` only if detail documents are
-  embedded in `site.contentRoutes`.
-- Add DB schema/migrations only if choosing dedicated detail page storage.
+- Update `core/db/schema.ts`
+- Add SQL migration for `detail_page_documents`
+- Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates.
+- Update `core/services/settings/settingsService.ts` only to support safe route
+  references to detail page documents, not to store full documents in settings.
 
 ## Data Contract
 
@@ -49,6 +51,34 @@ export type DetailPageDocument = {
   related?: DetailRelatedSource[];
 };
 ```
+
+Storage contract:
+
+```ts
+detail_page_documents: {
+  id,
+  name,
+  content_type_id,
+  content_type_slug,
+  route_pattern,
+  status,
+  current_document,
+  published_document,
+  created_at,
+  updated_at,
+  published_at
+}
+```
+
+Rules:
+
+- `current_document` stores the editable draft document.
+- `published_document` stores the public runtime document.
+- Public runtime reads `published_document` only.
+- Preview reads `current_document` only through valid preview/admin context.
+- `site.contentRoutes` can reference `detailPageId` for matching but does not
+  own the document.
+- The service layer owns normalize/create/update/publish/unpublish helpers.
 
 Normalization rules:
 
@@ -81,6 +111,7 @@ Normalization rules:
 ## Testing Requirements
 
 - Valid document normalizes deterministically.
+- DB migration artifacts are present and valid.
 - Unknown keys reject.
 - Duplicate block ids reject.
 - Binding to missing block rejects.

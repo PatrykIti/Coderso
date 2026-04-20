@@ -59,7 +59,7 @@ type BlueprintCandidate = {
 3. Adjunct capabilities are deterministic and ordered.
 4. Provider may suggest candidate ids but cannot invent capabilities.
 5. Existing single-blueprint prompts keep their current selected primary.
-6. Composer can run in shadow mode before routing cutover.
+6. Candidate shadow mode can run before full graph/merge/action assembly cutover.
 
 ## Security Contract
 

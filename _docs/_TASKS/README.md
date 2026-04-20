@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 42 tasks
+- **To Do:** 43 tasks
 - **In Progress:** 5 tasks
 - **Done:** 951 tasks
 
@@ -65,6 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
 | TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |
+| TASK-190-06-03 | Collection Workspace and Template Editor | High | Large | Technical leaf: admin workspace tying model, entries, list page, detail template, filters/cards, forms, screen, SEO, routes, and preview together |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | Business area: assemble strict action plans and reuse existing resources |
 | TASK-190-07-01 | Composition Action Assembler | High | Large | Technical leaf: graph-to-action-plan adapter over existing typed actions |
 | TASK-190-07-02 | No-Duplicate Idempotency and Existing Resource Reuse | High | Large | Technical leaf: existing resource matcher and DB-backed no-duplicate guards |
