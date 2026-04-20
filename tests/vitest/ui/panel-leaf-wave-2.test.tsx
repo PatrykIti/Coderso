@@ -333,7 +333,7 @@ test("PostEditorSettingsDialog forwards preference changes, reset, and close", (
 
     const checkboxes = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
+    ) as HTMLInputElement[];
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
@@ -591,7 +591,9 @@ test("ApiKeysTable and StorageProviderCard handle actions and keyboard selection
   const onRotate = vi.fn();
   const onRevoke = vi.fn();
   const onSelect = vi.fn();
-  const Icon = () => <svg />;
+  const Icon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>(
+    (props, ref) => <svg ref={ref} {...props} />
+  );
 
   const emptyHtml = renderToString(<ApiKeysTable items={[]} isLoading />);
   expect(emptyHtml).toContain("Loading API keys...");
