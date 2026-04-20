@@ -5,9 +5,13 @@ import {
   hydrateProductGalleryRuntimeData,
   hydrateProductTableRuntimeData,
 } from "../../../core/services/commerce/commerceWidgetRuntime";
+import type { resolveCommerceRuntimeProducts } from "../../../core/services/commerce/commerceRuntimeResolver";
 import { productCompareDefaults } from "../../../core/widgets/core/productCompare";
 import { productGalleryDefaults } from "../../../core/widgets/core/productGallery";
 import { productTableDefaults } from "../../../core/widgets/core/productTable";
+
+type RuntimeProductsResult = Awaited<ReturnType<typeof resolveCommerceRuntimeProducts>>;
+type RuntimeProductsInput = Parameters<typeof resolveCommerceRuntimeProducts>[0];
 
 const sampleRows = [
   {
@@ -51,7 +55,7 @@ test("hydrateProductGalleryRuntimeData resolves cards and total", async () => {
       preview: false,
     },
     {
-      resolveRuntimeProducts: async (input) => {
+      resolveRuntimeProducts: async (input: RuntimeProductsInput = {}) => {
         calls.push((input.query ?? {}) as Record<string, unknown>);
         return {
           total: 1,
@@ -69,7 +73,7 @@ test("hydrateProductGalleryRuntimeData resolves cards and total", async () => {
               title: "Starter Home",
               slug: "starter-home",
               excerpt: "Compact modern home.",
-              status: "published",
+              status: "published" as const,
               pricing: {
                 amount: 120000,
                 currency: "USD",
@@ -85,7 +89,7 @@ test("hydrateProductGalleryRuntimeData resolves cards and total", async () => {
               collectionIds: ["collection-1"],
             },
           ],
-        };
+        } as unknown as RuntimeProductsResult;
       },
     }
   );
@@ -114,7 +118,7 @@ test("hydrateProductCompareRuntimeData maps compare payload rows", async () => {
         },
         rows: sampleRows,
         cards: [],
-      }),
+      }) as unknown as RuntimeProductsResult,
     }
   );
 
@@ -179,7 +183,7 @@ test("commerce widget runtime uses cache between widgets for identical query", a
             collectionIds: ["collection-1"],
           },
         ],
-      };
+      } as unknown as RuntimeProductsResult;
     },
   };
 
