@@ -60,7 +60,7 @@ const roles = [
     name: "Owner",
     permissions: ["*"],
   },
-] as const;
+];
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -129,10 +129,11 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
         name: "Ada Lovelace",
         email: "ada@example.com",
         roleIds: ["role-admin", "role-missing"],
+        status: "active",
         mfaEnabled: false,
         lastActive: "Today at 10:15",
       }}
-      roles={roles as unknown as typeof roles}
+      roles={roles}
       onEditUser={onEditUser}
       onResetPassword={onResetPassword}
     />
@@ -166,10 +167,11 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
         name: "Grace Hopper",
         email: "grace@example.com",
         roleIds: ["role-owner"],
+        status: "active",
         mfaEnabled: true,
         lastActive: "Yesterday",
       }}
-      roles={roles as unknown as typeof roles}
+      roles={roles}
       canManageUsers={false}
       onEditUser={onEditUser}
       onResetPassword={onResetPassword}
