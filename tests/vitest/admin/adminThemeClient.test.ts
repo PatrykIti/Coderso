@@ -43,6 +43,16 @@ const resetCaches = () => {
 
 const sampleTokens = {
   base: { bg: "#fff", surface: "#fff", text: "#000", border: "#ddd" },
+  typography: {
+    mutedText: "#666",
+    sans: "Inter",
+    display: "Inter",
+    sm: "0.875rem",
+    md: "1rem",
+    lg: "1.125rem",
+    xl: "1.25rem",
+    "2xl": "1.5rem",
+  },
   buttons: {
     primary: { bg: "#000", text: "#fff", hoverBg: "#111", hoverText: "#fff" },
     secondary: { bg: "#111", text: "#fff", hoverBg: "#222", hoverText: "#fff" },
