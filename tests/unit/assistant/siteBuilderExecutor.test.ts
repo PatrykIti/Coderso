@@ -5,6 +5,7 @@ import {
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
 } from "../../../core/services/assistant/siteBuilderExecutor";
+import type { GuidedSiteBuilderPlanInput } from "../../../core/services/assistant/siteBuilderPlanAdapter";
 import { getSolutionKitFromCatalog } from "../../../core/services/kits/solutionKitsCatalog";
 import type {
   ApplySolutionKitInstallInput,
@@ -74,12 +75,12 @@ const getCatalogKit = (id: "automotive-workshop"): SolutionKitDefinition => {
 test("previewGuidedSiteBuilderPlan is deterministic and keeps fixed steps", () => {
   const input = {
     businessType: "automotive_workshop" as const,
-    goals: ["lead_generation", "online_booking"] as const,
+    goals: ["lead_generation", "online_booking"],
     locale: "pl",
     siteName: "AutoFix",
     selectedKitId: "automotive-workshop" as const,
-    enabledStepIds: ["pages"] as const,
-  };
+    enabledStepIds: ["pages"],
+  } satisfies GuidedSiteBuilderPlanInput;
 
   const first = previewGuidedSiteBuilderPlan(input);
   const second = previewGuidedSiteBuilderPlan(input);
@@ -94,6 +95,8 @@ test("previewGuidedSiteBuilderPlan is deterministic and keeps fixed steps", () =
 
 test("executeGuidedSiteBuilder filters kit resources by enabled steps and returns validation", async () => {
   const selectedKit = getCatalogKit("automotive-workshop");
+  const selectedManifest = selectedKit.manifest;
+  if (!selectedManifest) throw new Error("missing_test_manifest");
   let capturedApplyInput: ApplySolutionKitInstallInput | null = null;
 
   const executionResult = {
@@ -113,7 +116,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
         restore: 0,
       },
     },
-    manifest: selectedKit.manifest,
+    manifest: selectedManifest,
     templateInstall: {
       summary: {
         total: 0,
@@ -126,6 +129,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
           noop: 0,
         },
       },
+      items: [],
       results: [],
       rollbackPlan: [],
     },
@@ -154,6 +158,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
             title: "Settings",
             description: "Apply settings",
             editable: false,
+            affectsResources: [],
           },
           {
             id: "content-model",
@@ -161,6 +166,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
             title: "Content model",
             description: "Apply content model",
             editable: true,
+            affectsResources: ["content_type"],
           },
           {
             id: "pages",
@@ -168,6 +174,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
             title: "Pages",
             description: "Apply pages",
             editable: true,
+            affectsResources: ["page"],
           },
           {
             id: "forms",
@@ -175,6 +182,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
             title: "Forms",
             description: "Apply forms",
             editable: true,
+            affectsResources: ["form"],
           },
           {
             id: "navigation",
@@ -182,6 +190,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
             title: "Navigation",
             description: "Apply navigation",
             editable: true,
+            affectsResources: ["menu"],
           },
           {
             id: "qa",
@@ -189,6 +198,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
             title: "QA",
             description: "Run checks",
             editable: false,
+            affectsResources: [],
           },
         ],
         settingsPatch: { "site.locale": "en" },
@@ -204,16 +214,17 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
     }
   );
 
-  expect(capturedApplyInput).toBeTruthy();
-  expect(capturedApplyInput?.kitDefinitionOverride?.resourceBlueprint.pages.length).toBeGreaterThan(0);
-  expect(capturedApplyInput?.kitDefinitionOverride?.resourceBlueprint.templates).toEqual(
+  const captured = capturedApplyInput as unknown as ApplySolutionKitInstallInput;
+  expect(captured).toBeTruthy();
+  expect(captured.kitDefinitionOverride?.resourceBlueprint.pages.length).toBeGreaterThan(0);
+  expect(captured.kitDefinitionOverride?.resourceBlueprint.templates).toEqual(
     selectedKit.resourceBlueprint.templates ?? []
   );
-  expect(capturedApplyInput?.kitDefinitionOverride?.resourceBlueprint.contentTypes).toHaveLength(0);
-  expect(capturedApplyInput?.kitDefinitionOverride?.resourceBlueprint.forms).toHaveLength(0);
-  expect(capturedApplyInput?.kitDefinitionOverride?.resourceBlueprint.menus).toHaveLength(0);
+  expect(captured.kitDefinitionOverride?.resourceBlueprint.contentTypes).toHaveLength(0);
+  expect(captured.kitDefinitionOverride?.resourceBlueprint.forms).toHaveLength(0);
+  expect(captured.kitDefinitionOverride?.resourceBlueprint.menus).toHaveLength(0);
 
-  const runOptions = capturedApplyInput?.runOptions as
+  const runOptions = captured.runOptions as
     | { assistantSiteBuilder?: { enabledStepIds?: string[] } }
     | undefined;
   expect(runOptions?.assistantSiteBuilder?.enabledStepIds).toEqual(["settings", "pages", "qa"]);
