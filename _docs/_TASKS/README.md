@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 8 tasks
-- **In Progress:** 6 tasks
-- **Done:** 948 tasks
+- **To Do:** 7 tasks
+- **In Progress:** 5 tasks
+- **Done:** 950 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-191-05 | QA, Docs, Changelog, and Closure | Medium | Small | Final targeted validation, coverage reporting, changelog, docs, and board closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -53,7 +52,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-191 | Pages Test Coverage Hardening | High | Large | In progress: starting with admin route/security contract coverage for Pages |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -66,6 +64,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-191 | Pages Test Coverage Hardening | High | Large | Done: Pages route/runtime/client/cache/builder coverage hardened with final QA and coverage validation |
+| TASK-191-05 | QA, Docs, Changelog, and Closure | Medium | Small | Done: final targeted Bun/Vitest matrices, full Vitest coverage, lint/typecheck, board, and changelog synced |
 | TASK-191-04 | Page Builder Branch Coverage Closure | Medium | Medium | Done: helper no-op/fallback branches and AdvancedPanel missing-state fallbacks covered |
 | TASK-191-03 | Pages Admin Client Cache Coverage | High | Medium | Done: `pagesClient` list/detail cache, mutation broadcasts, noop handling, and template options coverage expanded |
 | TASK-191-02 | Public Page Runtime and Preview Coverage | High | Medium | Done: public runtime renders published data, preview renders current draft data, and unsafe preview/page states are covered |

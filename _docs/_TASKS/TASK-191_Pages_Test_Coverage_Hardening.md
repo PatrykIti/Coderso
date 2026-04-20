@@ -5,7 +5,7 @@
 **Category:** QA + CMS/Pages + Runtime + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-002, TASK-010, TASK-053, TASK-105-05, TASK-184-02
-**Status:** In Progress (2026-04-20)
+**Status:** Done (2026-04-20)
 
 ---
 
@@ -136,3 +136,27 @@ Page Editor and Builder
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New `_docs/_CHANGELOG/*` entries when leaves complete.
+
+## Completion Notes (2026-04-20)
+
+- Completed all `TASK-191` leaves:
+  - `TASK-191-01` Pages admin route/security coverage.
+  - `TASK-191-02` public page runtime and preview coverage.
+  - `TASK-191-03` Pages admin client cache coverage.
+  - `TASK-191-04` Page Builder branch coverage closure.
+  - `TASK-191-05` final QA/docs/changelog closure.
+- No product/API/cache/runtime contract changes were required; the work added
+  tests and task/changelog documentation only.
+- Final full Vitest coverage snapshot:
+  - total: `74.85%` lines / `61.98%` branches,
+  - `core/admin/services/pagesClient.ts`: `100%` lines / `76.36%` branches,
+  - `core/admin/ui/pages/*`: `95.81%` lines / `83.10%` branches,
+  - `core/admin/ui/pages/builder/*`: `96.99%` lines / `83.29%` branches.
+
+## Validation (2026-04-20)
+
+- `set -a && source .env && set +a && bun test tests/unit/pages tests/integration/routes/pages.test.ts tests/integration/runtime/pages-runtime.test.ts tests/unit/security/csrf.test.ts tests/unit/security/rateLimit.test.ts tests/security/codersoSecurityGate.test.ts`
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-preview.test.tsx`
+- `set -a && source .env && set +a && bun run test:coverage`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

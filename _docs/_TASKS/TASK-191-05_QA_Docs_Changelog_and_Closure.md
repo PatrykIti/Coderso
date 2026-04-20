@@ -5,7 +5,7 @@
 **Category:** QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-191-01, TASK-191-02, TASK-191-03, TASK-191-04
-**Status:** To Do
+**Status:** Done (2026-04-20)
 
 ---
 
@@ -76,3 +76,20 @@ test before closing.
 - `_docs/TESTING_STRATEGY.md`, `_docs/CMS_API.md`, `_docs/PREVIEW_SPEC.md`,
   `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md` only if leaf tasks changed
   their contracts.
+
+## Completion Notes (2026-04-20)
+
+- Re-ran the final targeted Bun and Vitest Pages/Page Builder matrices.
+- Re-ran full Vitest coverage through `bun run test:coverage`.
+- Re-ran `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Updated task board and changelog index for all completed `TASK-191` leaves
+  and closure.
+- No source-of-truth product docs required changes because no contracts changed.
+
+## Validation (2026-04-20)
+
+- `set -a && source .env && set +a && bun test tests/unit/pages tests/integration/routes/pages.test.ts tests/integration/runtime/pages-runtime.test.ts tests/unit/security/csrf.test.ts tests/unit/security/rateLimit.test.ts tests/security/codersoSecurityGate.test.ts`
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-preview.test.tsx`
+- `set -a && source .env && set +a && bun run test:coverage`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
