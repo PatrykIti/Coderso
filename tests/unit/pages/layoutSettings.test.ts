@@ -33,7 +33,8 @@ test("normalizePageDataLayout preserves existing settings keys", () => {
   const settings = normalized.settings as Record<string, unknown>;
   expect(settings.template).toBe("landing");
   expect(settings.showInNav).toBe(true);
-  expect(settings.layout).toBeObject();
+  expect(typeof settings.layout).toBe("object");
+  expect(settings.layout).not.toBeNull();
 });
 
 test("getPageLayoutSettingsFromData normalizes invalid tokens", () => {
