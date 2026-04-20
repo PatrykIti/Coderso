@@ -422,7 +422,7 @@ test("settings leaf components forward copy, field changes, and revoke actions",
   const onPasswordChange = vi.fn();
   const onTogglePassword = vi.fn();
   const onRevoke = vi.fn();
-  const SessionIcon = () => <svg />;
+  const SessionIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => <svg ref={ref} {...props} />);
 
   const view = mount(
     <>
@@ -518,7 +518,7 @@ test("settings leaf components forward copy, field changes, and revoke actions",
 });
 
 test("sessions table renders loading and empty fallbacks", () => {
-  const SessionIcon = () => <svg />;
+  const SessionIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => <svg ref={ref} {...props} />);
   const html = renderToString(
     <>
       <SessionsTable
