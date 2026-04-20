@@ -101,11 +101,31 @@ vi.mock("@/components/ui/scroll-area", () => ({
 }));
 
 const formsState = vi.hoisted(() => ({
-  current: { items: [], isLoading: false, error: null as string | null },
+  current: {
+    items: [] as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      slug: string;
+      status: string;
+    }>,
+    isLoading: false,
+    error: null as string | null,
+  },
 }));
 
 const templatesState = vi.hoisted(() => ({
-  current: { items: [], isLoading: false, error: null as string | null },
+  current: {
+    items: [] as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      category: string;
+      status: string;
+    }>,
+    isLoading: false,
+    error: null as string | null,
+  },
 }));
 
 const widgetPickerState = vi.hoisted(() => ({
