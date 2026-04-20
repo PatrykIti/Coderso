@@ -63,6 +63,7 @@ testIfDb("create/update/disable user", async () => {
 
   expect(created?.roleIds).toContain(role.id);
   userId = created?.id;
+  if (!created) throw new Error("missing_created_user");
 
   const updated = await updateUser(created.id, { name: "Updated" });
   expect(updated?.name).toBe("Updated");

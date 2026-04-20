@@ -38,6 +38,7 @@ testIfDb("create/update/delete role", async () => {
   });
 
   roleId = created?.id;
+  if (!created) throw new Error("missing_created_role");
 
   const updated = await updateRole(created.id, {
     description: "Updated role",
