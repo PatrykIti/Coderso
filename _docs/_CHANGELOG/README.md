@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 717 | 2026-04-20 | TASK-191-04 page builder branch coverage | QA/Page Builder |
 | 716 | 2026-04-20 | TASK-191-03 pages client cache coverage | QA/Admin Pages |
 | 715 | 2026-04-20 | TASK-191-02 public page runtime coverage | QA/Runtime Pages |
 | 714 | 2026-04-20 | TASK-191-01 pages route coverage | QA/CMS Pages |

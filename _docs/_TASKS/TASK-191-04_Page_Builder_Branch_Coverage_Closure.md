@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI + Page Builder
 **Estimated Effort:** Medium
 **Dependencies:** TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-20)
 
 ---
 
@@ -88,3 +88,23 @@ contract from `_docs/PAGE_MODEL.md`.
 - `_docs/PAGE_MODEL.md` only if a tested builder behavior reveals a contract gap.
 - `_docs/_TASKS/README.md` when status changes.
 - `_docs/_CHANGELOG/*` on completion.
+
+## Completion Notes (2026-04-20)
+
+- Expanded Page Builder helper coverage for no-op move/update/delete/duplicate
+  branches, fallback insertion, invalid repeatable slots, parent-to-descendant
+  move prevention, flatten traversal, and editor stripping for nested
+  slots/legacy children.
+- Added `AdvancedPanel` fallback coverage for missing variant, missing
+  visibility, and invalid layout sanitization.
+- Focused Page Builder coverage now reports `96.24%` lines and `80.79%`
+  branches for `core/admin/ui/pages/builder/*`; `blockUtils.ts` reports
+  `98.31%` lines and `80.45%` branches in the focused coverage run.
+- No Page Builder model contract changes were required.
+
+## Validation (2026-04-20)
+
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/pageBuilder`
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts --coverage tests/vitest/pageBuilder`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

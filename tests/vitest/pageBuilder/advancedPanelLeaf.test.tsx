@@ -32,10 +32,18 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/LayoutPanel", () => ({
-  LayoutPanel: ({ onChange }: { onChange: (next: LayoutValue) => void }) => (
+  LayoutPanel: ({
+    value,
+    onChange,
+  }: {
+    value: LayoutValue;
+    onChange: (next: LayoutValue) => void;
+  }) => (
     <button
       type="button"
       data-layout-panel="true"
+      data-layout-container={value.container}
+      data-layout-padding-top={value.padding.top}
       onClick={() =>
         onChange({
           container: "wide",
@@ -180,6 +188,78 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
       visibility: {
         enabled: true,
         devices: ["desktop", "mobile", "tablet"],
+      },
+    });
+  } finally {
+    cleanup();
+  }
+});
+
+test("AdvancedPanel falls back for missing variant, visibility, and invalid layout", () => {
+  const onChange = vi.fn();
+  const block = {
+    id: "block-fallback",
+    type: "hero",
+    data: { title: "Fallback" },
+    layout: {
+      container: "invalid",
+      padding: { top: "bad", bottom: "bad" },
+      margin: { top: "bad", bottom: "bad" },
+      background: { color: "transparent", image: null },
+    },
+    editor: {
+      mode: "advanced",
+      wizardCompleted: true,
+    },
+  } as unknown as Block;
+
+  const widget = {
+    type: "hero",
+    title: "Hero",
+    description: "Hero block",
+    category: "layout",
+    complexity: "composite",
+    audience: "beginner",
+    module: "marketing",
+    variants: [],
+    defaults: {},
+    schema: { type: "object", additionalProperties: true },
+    editor: {
+      wizard: () => null,
+      visual: () => null,
+      advanced: ({ variant }: { variant: string }) => (
+        <span data-variant-fallback={variant}>advanced-editor</span>
+      ),
+    },
+    render: () => null,
+  } satisfies WidgetDefinition;
+
+  const { container, cleanup } = mount(
+    <AdvancedPanel block={block} widget={widget} onChange={onChange} />
+  );
+
+  try {
+    const layoutButton = container.querySelector("button[data-layout-panel='true']");
+    expect(layoutButton?.getAttribute("data-layout-container")).toBe("default");
+    expect(layoutButton?.getAttribute("data-layout-padding-top")).toBe("md");
+    expect(container.querySelector("[data-variant-fallback]")?.getAttribute("data-variant-fallback")).toBe("");
+
+    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
+    expect(switches.map((item) => item.getAttribute("data-switch-checked"))).toEqual([
+      "true",
+      "true",
+      "true",
+    ]);
+
+    act(() => {
+      switches[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...block,
+      visibility: {
+        devices: ["desktop", "tablet"],
+        enabled: true,
       },
     });
   } finally {
