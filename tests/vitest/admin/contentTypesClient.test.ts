@@ -168,14 +168,14 @@ test("listContentTypesCached returns cached items without fetch", async () => {
         id: "ct-1",
         name: "Blog",
         slug: "blog",
-        schema: { type: "object", additionalProperties: false, properties: {} },
+        schema: { type: "object", additionalProperties: false as const, properties: {} },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },
     ];
     // Prime cache and read without hitting fetch.
     clearContentTypesCache();
-    primeContentTypesCache(cached);
+    primeContentTypesCache(cached as unknown as Parameters<typeof primeContentTypesCache>[0]);
 
     const result = await listContentTypesCached();
     expect(result).toEqual(cached);
@@ -202,12 +202,12 @@ test("getContentTypeCached returns cached entry by id", async () => {
         id: "ct-2",
         name: "Docs",
         slug: "docs",
-        schema: { type: "object", additionalProperties: false, properties: {} },
+        schema: { type: "object", additionalProperties: false as const, properties: {} },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },
     ];
-    primeContentTypesCache(cached);
+    primeContentTypesCache(cached as unknown as Parameters<typeof primeContentTypesCache>[0]);
 
     const result = await getContentTypeCached("ct-2");
     expect(result?.id).toBe("ct-2");
