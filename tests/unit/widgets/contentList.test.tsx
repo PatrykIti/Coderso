@@ -45,6 +45,19 @@ const createEntry = (
   ...patch,
 });
 
+const contentTypeRecord = {
+  id: "type-1",
+  name: "Articles",
+  slug: "articles",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {},
+  },
+  createdAt: new Date("2026-02-18T12:00:00.000Z"),
+  updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+};
+
 test("content list renders source placeholder without content type", () => {
   const html = renderToString(<ContentListBlock data={contentListDefaults} variant="cards" />);
 
@@ -384,10 +397,7 @@ test("content list listing mode resolves rows from saved query", async () => {
           },
         ],
       }),
-      getContentTypeById: async () => ({
-        id: "type-1",
-        slug: "articles",
-      }),
+      getContentTypeById: async () => contentTypeRecord,
       getContentTypeBySlug: async () => null,
     }
   );
@@ -397,8 +407,12 @@ test("content list listing mode resolves rows from saved query", async () => {
   expect(resolved.items[0]?.title).toBe("Oil service");
   expect(resolved.items[0]?.href).toBe("/articles/oil-service");
   expect(resolved.sourceTypeSlug).toBe("articles");
-  expect(resolved.listingQueryId).toBe("listing-query-1");
-  expect(resolved.listingTemplateId).toBe("listing-template-1");
+  const listingResolved = resolved as typeof resolved & {
+    listingQueryId: string;
+    listingTemplateId: string;
+  };
+  expect(listingResolved.listingQueryId).toBe("listing-query-1");
+  expect(listingResolved.listingTemplateId).toBe("listing-template-1");
 });
 
 test("content list listing mode resolves posts source without content-type lookup", async () => {
@@ -560,10 +574,7 @@ test("content list listing bindings can hide blocks via conditions", async () =>
           },
         ],
       }),
-      getContentTypeById: async () => ({
-        id: "type-1",
-        slug: "articles",
-      }),
+      getContentTypeById: async () => contentTypeRecord,
       getContentTypeBySlug: async () => null,
     }
   );
