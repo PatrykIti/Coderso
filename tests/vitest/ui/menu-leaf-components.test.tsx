@@ -131,10 +131,10 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
     onSelect?: (item: { id: string; label: string }, eventTimeStamp: number) => void;
     onEdit?: (item: { id: string; label: string }) => void;
     onDelete?: (item: { id: string; label: string }) => void;
-    onDragStart?: (item: { id: string; label: string }, event: DragEvent<HTMLDivElement>) => void;
-    onDragEnd?: (event: DragEvent<HTMLDivElement>) => void;
-    onDragOver?: (item: { id: string; label: string }, event: DragEvent<HTMLDivElement>) => void;
-    onDrop?: (item: { id: string; label: string }, event: DragEvent<HTMLDivElement>) => void;
+    onDragStart?: (item: { id: string; label: string }, event: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd?: (event: React.DragEvent<HTMLDivElement>) => void;
+    onDragOver?: (item: { id: string; label: string }, event: React.DragEvent<HTMLDivElement>) => void;
+    onDrop?: (item: { id: string; label: string }, event: React.DragEvent<HTMLDivElement>) => void;
   }) => (
     <div data-menu-row={item.id}>
       <span>{item.label}</span>
@@ -152,7 +152,7 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
         onClick={() =>
           onDragStart?.(
             item,
-            { timeStamp: 100 } as DragEvent<HTMLDivElement>
+            { timeStamp: 100 } as React.DragEvent<HTMLDivElement>
           )
         }
       >
@@ -168,7 +168,7 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
               currentTarget: {
                 getBoundingClientRect: () => ({ left: 0 }),
               },
-            } as DragEvent<HTMLDivElement>
+            } as React.DragEvent<HTMLDivElement>
           )
         }
       >
@@ -179,7 +179,7 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
         onClick={() =>
           onDrop?.(
             item,
-            { timeStamp: 150 } as DragEvent<HTMLDivElement>
+            { timeStamp: 150 } as React.DragEvent<HTMLDivElement>
           )
         }
       >
@@ -187,7 +187,7 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
       </button>
       <button
         type="button"
-        onClick={() => onDragEnd?.({ timeStamp: 200 } as DragEvent<HTMLDivElement>)}
+        onClick={() => onDragEnd?.({ timeStamp: 200 } as React.DragEvent<HTMLDivElement>)}
       >
         drag-end-{item.id}
       </button>
@@ -310,12 +310,12 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
   const item = {
     id: "item-1",
     label: "Home",
-    href: null,
+    href: "",
     pageId: "page-1",
     parentId: null,
     orderIndex: 0,
     settings: {
-      visibility: "all",
+      visibility: "all" as const,
     },
     linkType: "page" as const,
   };
