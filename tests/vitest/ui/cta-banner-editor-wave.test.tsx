@@ -731,7 +731,7 @@ test("CtaBanner editors render defensive empty and default fallbacks for sparse 
     visualMount.cleanup();
   }
 
-  const advancedMount = mount(<CtaBannerAdvancedEditor value={{}} onChange={vi.fn()} />);
+  const advancedMount = mount(<CtaBannerAdvancedEditor value={{}} onChange={vi.fn()} variant="centered" />);
 
   try {
     expect(getInputByPlaceholder(advancedMount.container, "background token").value).toBe("");

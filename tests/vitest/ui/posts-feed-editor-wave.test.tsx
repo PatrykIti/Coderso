@@ -472,9 +472,9 @@ test("PostsFeed editors surface post loading errors", async () => {
     const [value, setValue] = useState<PostsFeedData>({} as PostsFeedData);
     return (
       <>
-        <PostsFeedWizardEditor value={value} onChange={setValue} />
-        <PostsFeedVisualEditor value={value} onChange={setValue} />
-        <PostsFeedAdvancedEditor value={value} onChange={setValue} />
+        <PostsFeedWizardEditor value={value} onChange={setValue} variant="cards" />
+        <PostsFeedVisualEditor value={value} onChange={setValue} variant="cards" />
+        <PostsFeedAdvancedEditor value={value} onChange={setValue} variant="cards" />
       </>
     );
   };

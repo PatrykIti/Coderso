@@ -1163,6 +1163,7 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
     return (
       <HeroAdvancedEditor
         value={value}
+        variant="centered"
         onChange={(next) => {
           onChangeSpy(next);
           setValue(next);

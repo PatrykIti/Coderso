@@ -926,9 +926,9 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
     const [value, setValue] = useState<EntryTeaserData>({} as EntryTeaserData);
     return (
       <>
-        <EntryTeaserWizardEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} />
-        <EntryTeaserVisualEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} />
-        <EntryTeaserAdvancedEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} />
+        <EntryTeaserWizardEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} variant="horizontal" />
+        <EntryTeaserVisualEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} variant="horizontal" />
+        <EntryTeaserAdvancedEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} variant="horizontal" />
       </>
     );
   };

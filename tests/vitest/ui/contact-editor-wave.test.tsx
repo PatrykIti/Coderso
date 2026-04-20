@@ -597,6 +597,7 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
     return (
       <ContactAdvancedEditor
         value={value}
+        variant="form-left"
         onChange={(next) => {
           latestValue = next;
           onChangeSpy(next);
@@ -766,7 +767,7 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
   }
 
   const advancedView = mount(
-    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} />
+    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} variant="form-left" />
   );
 
   try {
@@ -901,7 +902,7 @@ test("Contact editors fall back to empty/default UI values when normalized paylo
   }
 
   const advancedView = mount(
-    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} />
+    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} variant="form-left" />
   );
 
   try {
