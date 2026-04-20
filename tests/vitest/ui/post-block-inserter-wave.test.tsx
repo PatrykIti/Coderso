@@ -15,17 +15,7 @@ vi.mock("@/components/ui/badge", () => ({
 vi.mock("@/components/ui/button", () => ({
   Button: forwardRef<
     HTMLButtonElement,
-    {
-      children: React.ReactNode;
-      onClick?: () => void;
-      onFocus?: () => void;
-      disabled?: boolean;
-      className?: string;
-      role?: string;
-      "aria-selected"?: boolean;
-      tabIndex?: number;
-      [key: string]: unknown;
-    }
+    React.ButtonHTMLAttributes<HTMLButtonElement>
   >(function MockButton(
     { children, onClick, onFocus, disabled, className, ...props },
     ref
