@@ -82,7 +82,7 @@ test("footer widget exposes slot definitions", () => {
     { id: "column-3", label: "Column 3" },
     { id: "bottom", label: "Bottom Strip" },
   ]);
-  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
 test("footer schema accepts legal and social fields", () => {

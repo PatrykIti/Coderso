@@ -35,7 +35,7 @@ test("resolveNavigationRuntimeData falls back to defaults when manual items are 
   expect(resolved.items.map((item) => ({ label: item.label, href: item.href }))).toEqual(
     navigationDefaults.items
   );
-  expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBeTrue();
+  expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBe(true);
 });
 
 test("resolveNavigationRuntimeData resolves pages index when at least 2 pages match", async () => {
@@ -87,7 +87,7 @@ test("resolveNavigationRuntimeData falls back to manual links when pages index i
   expect(resolved.items.map((item) => ({ label: item.label, href: item.href }))).toEqual(
     navigationDefaults.items
   );
-  expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBeTrue();
+  expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBe(true);
 });
 
 test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug", async () => {

@@ -134,7 +134,7 @@ test("timeline widget uses visual-owned variant controls", () => {
     advanced: TimelineAdvancedEditor,
   });
 
-  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
 test("timeline visual editor renders section-based IA", () => {

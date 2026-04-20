@@ -86,10 +86,10 @@ test("previewGuidedSiteBuilderPlan is deterministic and keeps fixed steps", () =
 
   expect(first).toEqual(second);
   expect(first.enabledStepIds).toEqual(["settings", "pages", "qa"]);
-  expect(first.actions.some((action) => action.target === "form")).toBeFalse();
-  expect(first.actions.some((action) => action.target === "content_type")).toBeFalse();
-  expect(first.actions.some((action) => action.stepId === "settings")).toBeTrue();
-  expect(first.actions.some((action) => action.stepId === "qa")).toBeTrue();
+  expect(first.actions.some((action) => action.target === "form")).toBe(false);
+  expect(first.actions.some((action) => action.target === "content_type")).toBe(false);
+  expect(first.actions.some((action) => action.stepId === "settings")).toBe(true);
+  expect(first.actions.some((action) => action.stepId === "qa")).toBe(true);
 });
 
 test("executeGuidedSiteBuilder filters kit resources by enabled steps and returns validation", async () => {
@@ -220,7 +220,7 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
 
   expect(result.validation.status).toBe("ok");
   expect(result.validation.unresolvedItems).toHaveLength(0);
-  expect(result.actions.some((action) => action.target === "template")).toBeTrue();
+  expect(result.actions.some((action) => action.target === "template")).toBe(true);
 });
 
 test("validateGuidedSiteBuilderRun reports unresolved checks for failed items", async () => {
@@ -263,8 +263,8 @@ test("validateGuidedSiteBuilderRun reports unresolved checks for failed items", 
 
   expect(validation.status).toBe("failed");
   expect(validation.unresolvedItems).toContain("1 install item(s) failed.");
-  expect(validation.checks.some((check) => check.id === "step.forms" && check.status === "warning")).toBeTrue();
-  expect(validation.checks.some((check) => check.id === "step.qa")).toBeTrue();
+  expect(validation.checks.some((check) => check.id === "step.forms" && check.status === "warning")).toBe(true);
+  expect(validation.checks.some((check) => check.id === "step.qa")).toBe(true);
 });
 
 test("validateGuidedSiteBuilderRun throws when run does not exist", async () => {

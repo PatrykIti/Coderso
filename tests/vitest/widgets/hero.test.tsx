@@ -38,7 +38,7 @@ test("hero validator rejects invalid variant", () => {
   });
   registerWidget(widget);
 
-  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 
   expect(() =>
     normalizeWidgetBlock({

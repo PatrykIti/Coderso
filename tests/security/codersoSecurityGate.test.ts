@@ -60,10 +60,10 @@ test("security gate: public submissions require captcha for forms and booking", 
     isAuthenticated: false,
   });
 
-  expect(forms.allow).toBeTrue();
-  expect(forms.requireCaptcha).toBeTrue();
-  expect(booking.allow).toBeTrue();
-  expect(booking.requireCaptcha).toBeTrue();
+  expect(forms.allow).toBe(true);
+  expect(forms.requireCaptcha).toBe(true);
+  expect(booking.allow).toBe(true);
+  expect(booking.requireCaptcha).toBe(true);
 });
 
 test("security gate: internal submissions require session or scoped API key", () => {
@@ -76,9 +76,9 @@ test("security gate: internal submissions require session or scoped API key", ()
     isAuthenticated: false,
   });
 
-  expect(formWithoutAuth.allow).toBeFalse();
+  expect(formWithoutAuth.allow).toBe(false);
   expect(formWithoutAuth.reason).toBe("auth_required");
-  expect(bookingWithoutAuth.allow).toBeFalse();
+  expect(bookingWithoutAuth.allow).toBe(false);
   expect(bookingWithoutAuth.reason).toBe("auth_required");
 
   const formWithApiKey = evaluateSubmissionAccess({
@@ -92,10 +92,10 @@ test("security gate: internal submissions require session or scoped API key", ()
     apiKeyScopes: [bookingAccessDefaults.requiredApiKeyScope],
   });
 
-  expect(formWithApiKey.allow).toBeTrue();
-  expect(formWithApiKey.requireCaptcha).toBeFalse();
-  expect(bookingWithApiKey.allow).toBeTrue();
-  expect(bookingWithApiKey.requireCaptcha).toBeFalse();
+  expect(formWithApiKey.allow).toBe(true);
+  expect(formWithApiKey.requireCaptcha).toBe(false);
+  expect(bookingWithApiKey.allow).toBe(true);
+  expect(bookingWithApiKey.requireCaptcha).toBe(false);
 });
 
 test("security gate: form and booking nonce contracts reject missing and tampered tokens", () => {

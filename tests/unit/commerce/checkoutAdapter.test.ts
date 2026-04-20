@@ -221,6 +221,6 @@ test("registerCheckoutAdapter rejects duplicate keys and reserved internal key",
     })
   ).toThrow("commerce_checkout_adapter_reserved_key");
 
-  expect(unregisterCheckoutAdapter(INTERNAL_NOOP_CHECKOUT_ADAPTER_KEY)).toBeFalse();
-  expect(unregisterCheckoutAdapter("provider_once")).toBeTrue();
+  expect(unregisterCheckoutAdapter(INTERNAL_NOOP_CHECKOUT_ADAPTER_KEY)).toBe(false);
+  expect(unregisterCheckoutAdapter("provider_once")).toBe(true);
 });

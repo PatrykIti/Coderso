@@ -80,7 +80,7 @@ testIfDb("page settings autosave keeps only the latest snapshot and can be resto
     },
     userId!
   );
-  expect(first.reusedRevision).toBeFalse();
+  expect(first.reusedRevision).toBe(false);
   expect(first.revision.kind).toBe("autosave");
 
   const second = await autosavePage(
@@ -100,7 +100,7 @@ testIfDb("page settings autosave keeps only the latest snapshot and can be resto
     },
     userId!
   );
-  expect(second.reusedRevision).toBeFalse();
+  expect(second.reusedRevision).toBe(false);
   expect(second.revision.version).toBe(2);
 
   const revisions = await listRevisions(page.id);
@@ -110,7 +110,7 @@ testIfDb("page settings autosave keeps only the latest snapshot and can be resto
   expect(revisions[0]?.slug).toBe("/landing-draft-two");
 
   const restored = await restoreRevision(page.id, revisions[0]!.id);
-  expect(restored.restored).toBeTrue();
+  expect(restored.restored).toBe(true);
   expect(restored.page.title).toBe("Landing draft two");
   expect(restored.page.slug).toBe("/landing-draft-two");
 

@@ -162,7 +162,7 @@ test("navigation widget exposes right slot and visual variant ownership", () => 
   });
 
   expect(widget.slots).toEqual([{ id: "right", label: "Right Actions" }]);
-  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
 test("navigation wizard shows CTA fields only for CTA variants", () => {

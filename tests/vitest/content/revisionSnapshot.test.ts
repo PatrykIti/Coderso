@@ -41,7 +41,7 @@ test("areRevisionSnapshotsEqual preserves array order semantics", () => {
     ],
   };
 
-  expect(areRevisionSnapshotsEqual(ordered, ordered)).toBeTrue();
-  expect(areRevisionSnapshotsEqual(ordered, reordered)).toBeFalse();
+  expect(areRevisionSnapshotsEqual(ordered, ordered)).toBe(true);
+  expect(areRevisionSnapshotsEqual(ordered, reordered)).toBe(false);
 });
 

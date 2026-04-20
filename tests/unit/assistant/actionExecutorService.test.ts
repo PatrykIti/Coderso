@@ -866,8 +866,8 @@ test("dryRunAssistantActionPlan previews create operations for house projects ca
 
   expect(preview.readyToExecute).toBe(true);
   expect(preview.changes).toHaveLength(6);
-  expect(preview.changes.every((change) => change.operation === "create")).toBeTrue();
-  expect(preview.warnings.some((warning) => warning.includes("system list route"))).toBeTrue();
+  expect(preview.changes.every((change) => change.operation === "create")).toBe(true);
+  expect(preview.warnings.some((warning) => warning.includes("system list route"))).toBe(true);
 });
 
 test("executeAssistantActionPlan creates and reuses draft entry actions", async () => {
@@ -3347,7 +3347,7 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
   expect(first.summary.failed).toBe(0);
   expect(first.summary.create).toBe(6);
   expect(first.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
-  expect(first.results.some((item) => item.publicHref === "/projekty-domow")).toBeTrue();
+  expect(first.results.some((item) => item.publicHref === "/projekty-domow")).toBe(true);
   expect(second.summary).toEqual(first.summary);
   expect(second.results).toEqual(first.results);
   expect(second.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });

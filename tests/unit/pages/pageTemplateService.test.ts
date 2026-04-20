@@ -28,5 +28,5 @@ test("normalizePageTemplateKey strips leading/trailing separators and falls back
 
 test("listPageTemplateOptions always includes default key", async () => {
   const result = await listPageTemplateOptions({ themeName: "default" });
-  expect(result.templates.some((item) => item.key === DEFAULT_PAGE_TEMPLATE_KEY)).toBeTrue();
+  expect(result.templates.some((item) => item.key === DEFAULT_PAGE_TEMPLATE_KEY)).toBe(true);
 });

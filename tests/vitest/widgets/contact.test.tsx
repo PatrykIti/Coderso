@@ -139,7 +139,7 @@ test("contact validator accepts expanded model fields", () => {
     visual: StubEditor,
     advanced: StubEditor,
   });
-  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
 test("contact validator rejects unsupported form field", () => {
