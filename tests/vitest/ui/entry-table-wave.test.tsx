@@ -115,11 +115,15 @@ import { EntryTable } from "../../../core/admin/ui/entries/EntryTable";
 
 const baseEntry = {
   id: "entry-1",
+  typeId: "type-1",
   title: "Hello",
   slug: "hello",
   status: "draft" as const,
+  data: {},
+  createdAt: "2026-03-06T10:00:00.000Z",
   updatedAt: "not-a-date",
   author: {
+    id: "author-1",
     name: "Ada Lovelace",
     email: "ada@example.com",
   },
@@ -173,7 +177,7 @@ test("EntryTable renders button and static title branches plus author and date f
           title: "World",
           slug: "world",
           status: "published",
-          updatedAt: null,
+          updatedAt: "",
           author: null,
         },
       ]}
