@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 7 tasks
 - **In Progress:** 5 tasks
-- **Done:** 943 tasks
+- **Done:** 944 tasks
 
 ---
 
@@ -65,6 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Done: provider action arrays removed, exact policy identity fixed, provider-side parallel heuristics collapsed |
+| TASK-189-05 | Final Operation Policy Planner Hardening | High | Large | Done: planner-owned CMS/admin branches and provider repair fallback removed; policy path is enforced |
 | TASK-189-04 | Docs, Tests, and Closure | High | Medium | Done: docs, changelog, targeted Vitest, lint/typecheck, and live assistant matrix synced |
 | TASK-189-03 | Remove Parallel Planner Heuristics | High | Large | Done: provider-side local-first one-offs replaced by one policy-backed operation path |
 | TASK-189-02 | Fix Policy Resource Identity and Settings Collisions | High | Large | Done: shared-kind settings/admin resources keep exact policy keys through draft/resolver/guidance |

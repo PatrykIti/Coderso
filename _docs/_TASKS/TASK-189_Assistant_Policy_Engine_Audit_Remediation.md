@@ -27,6 +27,7 @@ The goal of TASK-189 is to remove the parallel path, keep only the policy-normal
 - `TASK-189-02_Fix_Policy_Resource_Identity_and_Settings_Collisions.md`
 - `TASK-189-03_Remove_Parallel_Planner_Heuristics.md`
 - `TASK-189-04_Docs_Tests_and_Closure.md`
+- `TASK-189-05_Final_Operation_Policy_Planner_Hardening.md`
 
 ## Architecture
 
@@ -122,6 +123,11 @@ Policy resource identity must be stable and collision-free. A policy entry may e
 - Removed provider-side local-first one-off branches and replaced them with a single policy-backed local operation preplan/recovery path.
 - Moved duplicated CMS resource target aliases into `assistantOperationPolicy` resource aliases.
 - Updated docs and live/provider tests to describe operation-draft-only provider output.
+- TASK-189-05 removed the remaining planner-owned CMS/admin branches, provider
+  draft repair, first-kind shared-resource fallback, and post/media one-off gates.
+  `actionPlannerService.ts` is now orchestration plus product blueprint dispatch;
+  CMS/admin behavior flows through operation policy, resolver, mapper, and safety
+  helpers.
 
 ## Validation (2026-04-19)
 
@@ -129,3 +135,7 @@ Policy resource identity must be stable and collision-free. A policy entry may e
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `set -a && source .env && set +a && bun run test:assistant:live`
+- TASK-189-05 follow-up validation:
+  - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`

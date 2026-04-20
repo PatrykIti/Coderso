@@ -9,6 +9,8 @@ import {
   resolveCmsOperationTargets,
 } from "./cmsTargetResolver";
 import {
+  findPolicyActionForDraft,
+  getActionMappingResourcePolicy,
   isPolicyActionExecutable,
   policyPatchPathStartsWith,
   resolvePolicyFieldIntent,
@@ -54,9 +56,9 @@ const buildNeedsInputPlan = (
   reason: string,
   candidates: CmsResolvedTargetCandidate[]
 ): AssistantActionPlan => ({
-  id: `plan-cms-${draft.resourceKind}-${draft.operation}-needs-input`,
+  id: `plan-${draft.resourceKind}-${draft.operation}-needs-input`,
   status: "needs_input",
-  intentId: `cms-${draft.resourceKind}-${draft.operation}-needs-input`,
+  intentId: `${draft.resourceKind}-${draft.operation}-needs-input`,
   responseKind: "needs_input",
   promptKind: "refinement_request",
   intentFamily: "unknown",
@@ -88,6 +90,68 @@ const buildNeedsInputPlan = (
   ],
   actions: [],
 });
+
+const buildPolicyBlockedPlan = (
+  prompt: string,
+  draft: CmsOperationDraft,
+  mode: "gated" | "read-only",
+  reason: string
+): AssistantActionPlan => ({
+  id: `plan-${draft.resourceKey ?? draft.resourceKind}-${draft.operation}-${mode}`,
+  status: "needs_input",
+  intentId: `${draft.resourceKey ?? draft.resourceKind}-${draft.operation}-${mode}`,
+  responseKind: mode === "gated" ? "gated" : "needs_input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: mode === "gated" ? "CMS operation is gated by policy" : "CMS operation is read-only",
+  answer: [
+    reason,
+    "",
+    "No executable action was planned.",
+  ].join("\n"),
+  summary: reason,
+  confidence: 0.68,
+  assumptions: [
+    "The operation policy is the source of truth for this resource/action.",
+    `Original prompt: ${prompt.trim() || "empty prompt"}`,
+  ],
+  questions: [
+    {
+      id: "policy-gated-operation",
+      label: "Should this remain non-executable?",
+      description:
+        "Add or promote a typed local action contract before this resource/action can execute.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildPolicyModePlan = (
+  prompt: string,
+  draft: CmsOperationDraft
+): AssistantActionPlan | null => {
+  const policy = getActionMappingResourcePolicy(draft);
+  const action = findPolicyActionForDraft(draft);
+  if (!policy || !action) return null;
+  if (action.mode === "gated") {
+    return buildPolicyBlockedPlan(
+      prompt,
+      draft,
+      "gated",
+      `${policy.label} ${draft.operation} is gated by assistant operation policy.`
+    );
+  }
+  if (action.mode === "read-only" && draft.operation !== "inspect" && draft.operation !== "find") {
+    return buildPolicyBlockedPlan(
+      prompt,
+      draft,
+      "read-only",
+      `${policy.label} ${draft.operation} is read-only in assistant operation policy.`
+    );
+  }
+  return null;
+};
 
 const normalizePageSlug = (value: string) => {
   const trimmed = value.trim();
@@ -291,6 +355,81 @@ const readCreateItems = (draft: CmsOperationDraft) => {
   if (records.length !== items.length) return null;
   if (records.some(containsSecretLikeKey)) return null;
   return records;
+};
+
+const readMediaReferencePatch = (draft: CmsOperationDraft) => {
+  const patch = draft.mutation?.patch;
+  if (!isRecord(patch) || containsSecretLikeKey(patch)) return null;
+  const mediaId = readRequiredTextField(patch, "mediaId");
+  const targetType = patch.targetType;
+  const targetId = readRequiredTextField(patch, "targetId");
+  const field = readRequiredTextField(patch, "field");
+  if (!mediaId || targetType !== "entry" || !targetId || !field) return null;
+  return { mediaId, targetType: "entry" as const, targetId, field };
+};
+
+const readBlockPatch = (draft: CmsOperationDraft) => {
+  const patch = draft.mutation?.patch;
+  if (!isRecord(patch) || containsSecretLikeKey(patch)) return null;
+  const blockId = readRequiredTextField(patch, "blockId");
+  const expectedBlockType = readOptionalTextField(patch, "expectedBlockType");
+  const value = readRequiredTextField(patch, "value");
+  const dataPathValue = patch.dataPath;
+  if (!Array.isArray(dataPathValue) || !dataPathValue.every((item) => typeof item === "string")) {
+    return null;
+  }
+  const dataPath = dataPathValue.map((item) => item.trim()).filter(Boolean);
+  if (!blockId || dataPath.length === 0 || !value) return null;
+  return {
+    blockId,
+    expectedBlockType,
+    dataPath,
+    value,
+  };
+};
+
+const buildExplicitOperationActionPlan = (input: {
+  prompt: string;
+  draft: CmsOperationDraft;
+}): AssistantActionPlan | null => {
+  if (input.draft.resourceKind === "media" && input.draft.operation === "update") {
+    if (!isPolicyActionExecutable(input.draft, "media.reference.attach")) return null;
+    const reference = readMediaReferencePatch(input.draft);
+    if (!reference) {
+      return buildNeedsInputPlan(
+        input.prompt,
+        input.draft,
+        "Media reference attach requires explicit mediaId, targetType, targetId, and field.",
+        []
+      );
+    }
+    const action: AssistantPlannedAction = {
+      id: actionId("media.reference.attach", `${reference.targetId}-${reference.field}`),
+      type: "media.reference.attach",
+      title: "Attach media reference",
+      description: "Attach an existing media asset to an entry field.",
+      input: reference,
+    };
+    return {
+      id: `plan-${action.id}`,
+      status: "ready",
+      intentId: "media-reference-attach",
+      responseKind: "action_plan",
+      promptKind: "refinement_request",
+      intentFamily: "unknown",
+      title: "Attach media reference",
+      answer: "I can prepare this media reference through the reviewed LLM Guide action flow.",
+      summary: `Attach media ${reference.mediaId} to ${reference.targetType} ${reference.targetId}.`,
+      confidence: 0.78,
+      assumptions: [
+        "The prompt provided explicit existing media and target ids.",
+        "Dry-run must verify both resources before execution.",
+      ],
+      questions: [],
+      actions: [action],
+    };
+  }
+  return null;
 };
 
 const readRequiredTextField = (record: Record<string, unknown>, key: string) =>
@@ -646,9 +785,9 @@ const buildCreateActionPlan = (input: {
     );
   }
   return {
-    id: `plan-cms-${input.draft.resourceKind}-create-multi`,
+    id: `plan-${input.draft.resourceKind}-create-multi`,
     status: "ready",
-    intentId: `cms-${input.draft.resourceKind}-create`,
+    intentId: `${input.draft.resourceKind}-create`,
     responseKind: "action_plan",
     promptKind: "setup_request",
     intentFamily: "unknown",
@@ -675,7 +814,7 @@ const buildActionForExactTarget = (
       id: actionId("page.delete", target.id),
       type: "page.delete",
       title: `Delete ${target.label}`,
-      description: "Delete the resolved page selected from trusted CMS context.",
+      description: "Delete the active page selected from admin context.",
       input: {
         id: target.id,
         title: target.label,
@@ -685,6 +824,26 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "page" && draft.operation === "update") {
+    const policyField = findPolicyFieldForDraft(draft);
+    if (policyField?.action?.type === "page.widget.patch") {
+      if (!isPolicyActionExecutable(draft, "page.widget.patch")) return null;
+      const patch = readBlockPatch(draft);
+      if (!patch) return null;
+      return {
+        id: actionId("page.widget.patch", patch.blockId),
+        type: "page.widget.patch",
+        title: `Patch ${target.label}`,
+        description: "Patch selected page widget block data.",
+        input: {
+          pageSlug: target.slug ?? "",
+          operation: "patch-data",
+          blockId: patch.blockId,
+          expectedBlockType: patch.expectedBlockType,
+          dataPath: patch.dataPath,
+          value: patch.value,
+        },
+      };
+    }
     if (!isPolicyActionExecutable(draft, "page.update")) return null;
     const patch = buildPageUpdatePatch(draft);
     if (!patch) return null;
@@ -698,6 +857,44 @@ const buildActionForExactTarget = (
         title: target.label,
         slug: target.slug ?? "",
         expectedStatus: target.status,
+        patch,
+      },
+    };
+  }
+  if (draft.resourceKind === "entry" && draft.operation === "delete") {
+    if (!isPolicyActionExecutable(draft, "entry.delete")) return null;
+    return {
+      id: actionId("entry.delete", target.id),
+      type: "entry.delete",
+      title: "Delete active entry",
+      description: "Delete the active entry selected from admin context.",
+      input: {
+        id: target.id,
+        contentTypeSlug: readDetailString(target, "contentTypeSlug"),
+      },
+    };
+  }
+  if (draft.resourceKind === "entry" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "entry.update")) return null;
+    const value = readMutationText(draft);
+    if (!value) return null;
+    const field = fieldIntent(draft);
+    const policyField = findPolicyFieldForDraft(draft);
+    const patch =
+      field === "slug" || policyPatchPathStartsWith(policyField, "slug")
+        ? { slug: value }
+        : (field === "status" || policyPatchPathStartsWith(policyField, "status")) &&
+            (value === "draft" || value === "published" || value === "archived")
+          ? { status: value as "draft" | "published" | "archived" }
+          : { title: value };
+    return {
+      id: actionId("entry.update", target.id),
+      type: "entry.update",
+      title: `Update ${target.label}`,
+      description: "Update the active entry selected from trusted CMS context.",
+      input: {
+        id: target.id,
+        contentTypeSlug: readDetailString(target, "contentTypeSlug"),
         patch,
       },
     };
@@ -734,6 +931,27 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "custom-screen" && draft.operation === "update") {
+    const policyField = findPolicyFieldForDraft(draft);
+    if (policyField?.action?.type === "custom-screen.widget.patch") {
+      if (!isPolicyActionExecutable(draft, "custom-screen.widget.patch")) return null;
+      const patch = readBlockPatch(draft);
+      if (!patch) return null;
+      return {
+        id: actionId("custom-screen.widget.patch", patch.blockId),
+        type: "custom-screen.widget.patch",
+        title: `Patch ${target.label}`,
+        description: "Patch selected custom screen widget block data.",
+        input: {
+          id: target.id,
+          name: target.label,
+          expectedStatus: target.status,
+          blockId: patch.blockId,
+          expectedBlockType: patch.expectedBlockType,
+          dataPath: patch.dataPath,
+          value: patch.value,
+        },
+      };
+    }
     if (!isPolicyActionExecutable(draft, "custom-screen.update")) return null;
     const patch = buildCustomScreenUpdatePatch(draft);
     const contentTypeId = readDetailString(target, "contentTypeId");
@@ -850,7 +1068,7 @@ const buildActionForExactTarget = (
       id: actionId("widget-template.delete", target.id),
       type: "widget-template.delete",
       title: `Delete ${target.label}`,
-      description: "Delete a widget template selected from trusted CMS context.",
+      description: "Delete the active reusable widget template selected from admin context.",
       input: {
         id: target.id,
         name: target.label,
@@ -860,6 +1078,27 @@ const buildActionForExactTarget = (
     };
   }
   if (draft.resourceKind === "widget-template" && draft.operation === "update") {
+    const policyField = findPolicyFieldForDraft(draft);
+    if (policyField?.action?.type === "widget-template.block.patch") {
+      if (!isPolicyActionExecutable(draft, "widget-template.block.patch")) return null;
+      const patch = readBlockPatch(draft);
+      if (!patch) return null;
+      return {
+        id: actionId("widget-template.block.patch", patch.blockId),
+        type: "widget-template.block.patch",
+        title: `Patch ${target.label}`,
+        description: "Patch selected reusable widget template block data.",
+        input: {
+          id: target.id,
+          name: target.label,
+          expectedStatus: target.status,
+          blockId: patch.blockId,
+          expectedBlockType: patch.expectedBlockType,
+          dataPath: patch.dataPath,
+          value: patch.value,
+        },
+      };
+    }
     if (!isPolicyActionExecutable(draft, "widget-template.update")) return null;
     const patch = buildWidgetTemplateUpdatePatch(draft);
     if (!patch) return null;
@@ -964,6 +1203,13 @@ export const mapCmsOperationToActionPlan = (input: {
   draft: CmsOperationDraft;
   context: AssistantAdminContext;
 }): AssistantActionPlan | null => {
+  const policyModePlan = buildPolicyModePlan(input.prompt, input.draft);
+  if (policyModePlan) return policyModePlan;
+  const explicitPlan = buildExplicitOperationActionPlan({
+    prompt: input.prompt,
+    draft: input.draft,
+  });
+  if (explicitPlan) return explicitPlan;
   if (input.draft.operation === "create") {
     return buildCreateActionPlan({ prompt: input.prompt, draft: input.draft });
   }
@@ -984,9 +1230,9 @@ export const mapCmsOperationToActionPlan = (input: {
       .filter((action): action is AssistantPlannedAction => Boolean(action));
     if (actions.length === resolution.candidates.length) {
       return {
-        id: `plan-cms-${input.draft.resourceKind}-${input.draft.operation}-multi`,
+        id: `plan-${input.draft.resourceKind}-${input.draft.operation}-multi`,
         status: "ready",
-        intentId: `cms-${input.draft.resourceKind}-${input.draft.operation}`,
+        intentId: `${input.draft.resourceKind}-${input.draft.operation}`,
         responseKind: "action_plan",
         promptKind: "refinement_request",
         intentFamily: "unknown",
@@ -1012,9 +1258,9 @@ export const mapCmsOperationToActionPlan = (input: {
       .filter((action): action is AssistantPlannedAction => Boolean(action));
     if (actions.length === resolution.candidates.length) {
       return {
-        id: `plan-cms-${input.draft.resourceKind}-${input.draft.operation}-filtered-all`,
+        id: `plan-${input.draft.resourceKind}-${input.draft.operation}-filtered-all`,
         status: "ready",
-        intentId: `cms-${input.draft.resourceKind}-${input.draft.operation}`,
+        intentId: `${input.draft.resourceKind}-${input.draft.operation}`,
         responseKind: "action_plan",
         promptKind: "refinement_request",
         intentFamily: "unknown",

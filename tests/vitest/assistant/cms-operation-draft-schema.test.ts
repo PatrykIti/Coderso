@@ -3,7 +3,6 @@ import { expect, test } from "vitest";
 import {
   buildCmsOperationDraftJsonSchema,
   isCmsOperationDraft,
-  repairCmsOperationDraft,
   normalizeCmsOperationDraft,
   normalizeCmsOperationDraftWithPolicy,
 } from "../../../core/services/assistant/cmsOperationDraftSchema";
@@ -138,48 +137,28 @@ test("normalizeCmsOperationDraftWithPolicy validates exact resource keys", () =>
   ).toThrow("cms_operation_draft_invalid");
 });
 
-test("repairCmsOperationDraft keeps safe fields from model-shaped drafts", () => {
-  expect(
-    repairCmsOperationDraft({
-      operation: "inspect",
-      resourceKind: "custom-screen",
-      surfaceHint: "Screens",
-      filters: [
-        { field: "showInSidebar", operator: "eq", value: true },
-        { field: "status", operator: "in", value: ["active", "published"] },
-      ],
-      "optional targetQuery": {
-        filters: [{ field: "showInSidebar", operator: "eq", value: true }],
-        exactName: "House Projects",
+test("normalizeCmsOperationDraftWithPolicy rejects repaired or ambiguous provider drafts", () => {
+  expect(() =>
+    normalizeCmsOperationDraftWithPolicy(
+      {
+        operation: "inspect",
+        resourceKind: "custom-screen",
+        actions: [{ type: "database.drop", input: {} }],
       },
-      constraints: {
-        returnFields: ["name"],
-        expectedCount: 1,
-      },
-    })
-  ).toEqual({
-    operation: "inspect",
-    resourceKind: "custom-screen",
-    surfaceHint: "Screens",
-    filters: [
-      { field: "showInSidebar", operator: "eq", value: true },
-      { field: "status", operator: "in", value: ["active", "published"] },
-    ],
-    targetQuery: {
-      exactName: "House Projects",
-    },
-    constraints: {
-      expectedCount: 1,
-    },
-  });
+      assistantOperationPolicy
+    )
+  ).toThrow("cms_operation_draft_invalid");
 
-  expect(
-    repairCmsOperationDraft({
-      operation: "inspect",
-      resourceKind: "custom-screen",
-      apiKey: "never",
-    })
-  ).toBeNull();
+  expect(() =>
+    normalizeCmsOperationDraftWithPolicy(
+      {
+        operation: "inspect",
+        resourceKind: "settings-surface",
+        resourceKey: null,
+      },
+      assistantOperationPolicy
+    )
+  ).toThrow("cms_operation_draft_invalid");
 });
 
 test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () => {
@@ -213,17 +192,16 @@ test("buildCmsOperationDraftJsonSchema exposes provider-safe strict schema", () 
 
 test("buildCmsOperationDraftJsonSchema can narrow provider enums from operation policy", () => {
   const schema = buildCmsOperationDraftJsonSchema(assistantOperationPolicy);
-  const properties = schema.properties as Record<string, { enum?: string[]; anyOf?: Array<{ enum?: string[] }> }>;
+  const properties = schema.properties as Record<string, { enum?: string[]; type?: string }>;
 
   expect(properties.operation?.enum).toEqual(
     expect.arrayContaining(["inspect", "find", "create", "update", "delete", "configure"])
   );
   expect(properties.resourceKind?.enum).toEqual(
-    expect.arrayContaining(["page", "settings-surface", "solution-kit"])
+    expect.arrayContaining(["page", "settings-surface", "solution-kit", "post", "media"])
   );
-  expect(properties.resourceKind?.enum).not.toContain("post");
-  expect(properties.resourceKind?.enum).not.toContain("appointments");
-  expect(properties.resourceKey?.anyOf?.[0]?.enum).toEqual(
+  expect(properties.resourceKey).toMatchObject({ type: "string" });
+  expect(properties.resourceKey?.enum).toEqual(
     expect.arrayContaining(["settings-api-keys", "settings-assistant", "page"])
   );
 });

@@ -137,7 +137,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     ),
     expected: {
       status: "needs_input",
-      intentId: "cms-custom-screen-delete-needs-input",
+      intentId: "custom-screen-delete-needs-input",
       summaryIncludes: "not precise enough",
     },
   },
@@ -357,7 +357,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     ),
     expected: {
       status: "needs_input",
-      intentId: "generic-guide-needs-input",
+      intentId: "entry-create-needs-input",
     },
   },
   {

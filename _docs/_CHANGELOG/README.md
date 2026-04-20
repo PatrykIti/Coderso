@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 712 | 2026-04-19 | TASK-189-05 final policy planner hardening | Assistant/Core |
 | 711 | 2026-04-19 | TASK-189 policy remediation closure | Assistant/Core |
 | 710 | 2026-04-19 | TASK-189-04 docs tests closure | Docs/QA |
 | 709 | 2026-04-19 | TASK-189-03 planner heuristic removal | Assistant/Core |

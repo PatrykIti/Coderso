@@ -13,9 +13,8 @@ test("buildProviderPolicyGuidance exposes provider-safe policy resources", () =>
 
   expect(guidance.schemaVersion).toBe(1);
   expect(guidance.draft.resourceKinds).toEqual(
-    expect.arrayContaining(["page", "custom-screen", "settings-surface", "solution-kit"])
+    expect.arrayContaining(["page", "custom-screen", "settings-surface", "solution-kit", "post", "media"])
   );
-  expect(guidance.draft.resourceKinds).not.toContain("post");
   expect(guidance.resources.some((resource) => resource.key === "appointments")).toBe(false);
 
   const settings = guidance.resources.find((resource) => resource.key === "settings-api-keys");

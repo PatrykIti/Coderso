@@ -257,6 +257,7 @@ export const cmsOperationFixtures: CmsOperationFixture[] = [
     providerDraft: {
       operation: "delete",
       resourceKind: "custom-screen",
+      resourceKey: "custom-screen",
       targetQuery: { exactName: "Products Screen" },
     },
     expected: {
@@ -350,6 +351,7 @@ export const cmsOperationFixtures: CmsOperationFixture[] = [
     providerDraft: {
       operation: "delete",
       resourceKind: "seo-document",
+      resourceKey: "seo-document",
       targetQuery: { exactName: "Products" },
     },
     expected: {

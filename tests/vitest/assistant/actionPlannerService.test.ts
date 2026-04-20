@@ -779,14 +779,13 @@ test("planAssistantActions asks for page instance vs template target on ambiguou
   });
 
   expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("page-template-target-needs-input");
+  expect(plan.intentId).toBe("page-update-needs-input");
   expect(plan.actions).toEqual([]);
   expect(plan.questions).toEqual([
     {
-      id: "page-template-target",
-      label: "Should I edit only this page instance or the reusable template?",
-      description:
-        "Choose page instance for a local page change, or reusable template for a change that can affect every page using that template.",
+      id: "cms-operation-target",
+      label: "Which exact CMS resource should I use?",
+      description: "Choose one exact candidate, provide a stricter name, or add the expected count.",
       required: true,
     },
   ]);
@@ -814,27 +813,15 @@ test("planAssistantActions routes explicit template-section page instance edits 
   });
 });
 
-test("planAssistantActions routes explicit template-wide edits to referenced reusable template block patch", () => {
+test("planAssistantActions gates template-wide edits without generic planner fallback", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku template everywhere na 'New headline'",
     context: createPageWithReferencedTemplateContext(),
   });
 
-  expect(plan.status).toBe("ready");
-  expect(plan.intentId).toBe("page-referenced-template-block-patch");
-  expect(plan.actions[0]).toMatchObject({
-    id: "widget-template-block-patch-hero-1",
-    type: "widget-template.block.patch",
-    input: {
-      id: "template-1",
-      name: "Hero Template",
-      expectedStatus: "published",
-      blockId: "hero-1",
-      expectedBlockType: "hero",
-      dataPath: ["headline"],
-      value: "New headline",
-    },
-  });
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("widget-template-update-needs-input");
+  expect(plan.actions).toEqual([]);
 });
 
 test("planAssistantActions asks for selected block before page widget data patch", () => {
@@ -860,7 +847,7 @@ test("planAssistantActions asks for selected block before page widget data patch
   });
 
   expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("page-widget-patch-needs-input");
+  expect(plan.intentId).toBe("page-update-needs-input");
 });
 
 test("planAssistantActions builds widget template delete plan from active template context", () => {
@@ -1041,7 +1028,7 @@ test("planAssistantActions asks for explicit template target outside reusable te
   });
 
   expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("widget-template-edit-needs-input");
+  expect(plan.intentId).toBe("widget-template-update-needs-input");
 });
 
 test("planAssistantActions builds custom screen update plan from active screen context", () => {
@@ -1266,7 +1253,7 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
 
   expect(plan.status).toBe("needs_input");
   expect(plan.intentId).toBe("content-type-delete-needs-input");
-  expect(plan.summary).toContain("Content type deletion");
+  expect(plan.summary).toContain("not precise enough");
   expect(plan.actions).toEqual([]);
 });
 
@@ -2083,7 +2070,7 @@ test("planAssistantActions gates direct post mutation prompts", () => {
   });
 
   expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("post-mutation-needs-input");
+  expect(plan.intentId).toBe("post-create-gated");
   expect(plan.actions).toEqual([]);
 });
 
@@ -2094,7 +2081,7 @@ test("planAssistantActions gates media upload prompts", () => {
   });
 
   expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("media-upload-needs-input");
+  expect(plan.intentId).toBe("media-create-gated");
   expect(plan.actions).toEqual([]);
 });
 

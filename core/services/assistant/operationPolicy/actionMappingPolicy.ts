@@ -25,8 +25,6 @@ export const findPolicyActionForDraft = (
     Object.values(resourcePolicy.actions).find(
       (action) =>
         action.operation === draft.operation &&
-        action.mode === "executable" &&
-        action.type !== "none" &&
         (!actionType || action.type === actionType)
     ) ?? null
   );
@@ -36,7 +34,10 @@ export const isPolicyActionExecutable = (
   draft: CmsOperationDraft,
   actionType: AssistantPlannedAction["type"],
   policy: AssistantOperationPolicy = assistantOperationPolicy
-) => Boolean(findPolicyActionForDraft(draft, actionType, policy));
+) => {
+  const action = findPolicyActionForDraft(draft, actionType, policy);
+  return Boolean(action && action.mode === "executable" && action.type !== "none");
+};
 
 export const findPolicyFieldForDraft = (
   draft: CmsOperationDraft,

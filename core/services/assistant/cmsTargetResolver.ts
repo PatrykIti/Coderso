@@ -24,6 +24,7 @@ import {
   resolveFieldIntentWithPolicy,
   getResolverResourcePolicyForDraft,
 } from "./operationPolicy/resolverPolicy";
+import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPolicy";
 
 export type CmsResolvedTargetCandidate = {
   kind: CmsResourceKind;
@@ -63,6 +64,9 @@ export type CmsTargetResolution =
 
 const normalizeText = normalizeResolverText;
 
+const includesAny = (value: string, candidates: string[]) =>
+  candidates.some((candidate) => value.includes(normalizeText(candidate)));
+
 const extractQuotedValues = (prompt: string) =>
   [...prompt.matchAll(/['"“”]([^'"“”]+)['"“”]/g)]
     .map((match) => match[1]?.trim())
@@ -78,11 +82,54 @@ const extractNamedQuotedValue = (prompt: string, labels: string[]) => {
   return null;
 };
 
+const extractExplicitMediaReference = (prompt: string) => {
+  const mediaId = extractNamedQuotedValue(prompt, ["mediaId", "media id", "media"]);
+  const targetId = extractNamedQuotedValue(prompt, ["entryId", "entry id", "targetId", "target id"]);
+  const field = extractNamedQuotedValue(prompt, ["field", "pole"]);
+  if (!mediaId || !targetId || !field) return null;
+  return {
+    mediaId,
+    targetType: "entry" as const,
+    targetId,
+    field,
+  };
+};
+
+const resolveBlockDataPath = (normalizedPrompt: string, blockType?: string | null) => {
+  const promptWithoutQuotedValues = normalizedPrompt.replace(/['"“”][^'"“”]+['"“”]/g, " ");
+  if (/\bheadline\b/.test(promptWithoutQuotedValues)) return ["headline"];
+  if (
+    /\btitle\b/.test(promptWithoutQuotedValues) ||
+    includesAny(promptWithoutQuotedValues, ["tytul", "tytuł", "naglowek", "nagłówek"])
+  ) {
+    return blockType === "hero" ? ["headline"] : ["title"];
+  }
+  if (
+    /\blabel\b/.test(promptWithoutQuotedValues) ||
+    includesAny(promptWithoutQuotedValues, ["etykiet", "cta", "button", "przycisk"])
+  ) {
+    return ["label"];
+  }
+  if (/\bdescription\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["opis"])) {
+    return ["description"];
+  }
+  if (/\btext\b/.test(promptWithoutQuotedValues) || includesAny(promptWithoutQuotedValues, ["tekst"])) {
+    return ["text"];
+  }
+  return null;
+};
+
 const cleanupWildcardPrefix = (value: string) =>
   value
     .replace(/(?:\s|^)[x*]{2,}$/i, "")
     .replace(/\s+\*+$/g, "")
     .trim();
+
+const extractFirstNumber = (prompt: string) => {
+  const promptWithoutQuotedValues = prompt.replace(/['"“”][^'"“”]+['"“”]/g, " ");
+  const match = promptWithoutQuotedValues.match(/\b(\d{1,4})\b/);
+  return match?.[1] ? Number(match[1]) : null;
+};
 
 const normalizeSlug = (value: string) => {
   const trimmed = value.trim();
@@ -98,7 +145,11 @@ export const buildCmsOperationDraftFromPrompt = (
   if (!normalizedPrompt) return null;
 
   const operation = inferOperationWithPolicy(normalizedPrompt);
-  const resourceEntry = resolveResourcePolicyEntryFromPromptWithPolicy(prompt);
+  const explicitMediaReference = extractExplicitMediaReference(prompt);
+  const resourceEntry =
+    operation === "update" && explicitMediaReference && assistantOperationPolicy.resources.media
+      ? { key: "media", resource: assistantOperationPolicy.resources.media }
+      : resolveResourcePolicyEntryFromPromptWithPolicy(prompt);
   const resourceKind =
     (resourceEntry?.resource.kind as CmsResourceKind | undefined) ??
     inferActiveResourceKindWithPolicy(context);
@@ -109,8 +160,10 @@ export const buildCmsOperationDraftFromPrompt = (
   const firstQuoted = quotedValues[0];
   const activeContextMatches = inferActiveResourceKindWithPolicy(context) === resourceKind;
   const usesActiveTarget =
-    /\b(this|current|active|ten|te|ta|tej)\b/.test(normalizedPrompt) ||
-    (operation === "update" && activeContextMatches && quotedValues.length === 1);
+    /\b(this|current|active|aktywny|aktywna|aktywne|aktywną|aktywnym|obecny|obecna|bieżący|bieżąca|ten|te|ta|tej)\b/u.test(normalizedPrompt) ||
+    ((operation === "update" || operation === "delete" || operation === "archive") &&
+      activeContextMatches &&
+      (quotedValues.length <= 1 || !firstQuoted));
   const targetValue = firstQuoted ? cleanupWildcardPrefix(firstQuoted) : undefined;
   const isPrefixQuery =
     includesPrefixIntentWithPolicy(normalizedPrompt) ||
@@ -121,6 +174,78 @@ export const buildCmsOperationDraftFromPrompt = (
     secondQuoted ?? (operation === "update" && usesActiveTarget ? firstQuoted : undefined);
   const queryValue =
     operation === "update" && usesActiveTarget && !secondQuoted ? undefined : targetValue;
+  const rawFieldIntent =
+    operation === "update" ? resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy) : undefined;
+  const blockField = Object.values(resourcePolicy?.fields ?? {}).find(
+    (field) => field.action?.patchPath?.[0] === "dataPath"
+  );
+  const fieldIntent =
+    operation === "update" &&
+    blockField &&
+    includesAny(normalizedPrompt, ["block", "blok", "bloku", "wybrany blok", "wybranego bloku", "headline"])
+      ? blockField.field
+      : rawFieldIntent;
+  const fieldPolicy = fieldIntent
+    ? Object.values(resourcePolicy?.fields ?? {}).find((field) => field.field === fieldIntent)
+    : null;
+  const inferredMutationValue =
+    mutationValue ??
+    (fieldPolicy?.valueType === "number"
+      ? extractFirstNumber(prompt)
+      : fieldPolicy?.valueType === "boolean" && includesAny(normalizedPrompt, ["hide", "ukryj", "wyłącz", "wylacz"])
+        ? false
+        : fieldPolicy?.valueType === "boolean" && includesAny(normalizedPrompt, ["show", "pokaz", "pokaż", "włącz", "wlacz"])
+          ? true
+          : undefined);
+  const activeSurface = context?.activeSurface ?? null;
+  const blockPatch =
+    operation === "update" &&
+    fieldPolicy?.action?.patchPath?.[0] === "dataPath" &&
+    typeof inferredMutationValue === "string" &&
+    activeSurface?.kind === resourceKind
+      ? (() => {
+          const selectedBlockId = activeSurface.selectedBlockId;
+          const block = selectedBlockId
+            ? activeSurface.blocks.find((entry) => entry.id === selectedBlockId) ?? null
+            : null;
+          const wantsPageInstance = includesAny(normalizedPrompt, [
+            "only this page",
+            "this page only",
+            "current page",
+            "tylko ta strona",
+            "tylko na tej stronie",
+            "tylko tutaj",
+            "lokalnie",
+            "bez zmiany szablonu",
+          ]);
+          const wantsReusableTemplate = includesAny(normalizedPrompt, [
+            "reusable template",
+            "template-wide",
+            "template everywhere",
+            "global",
+            "w szablonie",
+            "dla wszystkich stron",
+            "na wszystkich stronach",
+          ]);
+          if (
+            activeSurface.kind === "page" &&
+            block?.type === "template-section" &&
+            (!wantsPageInstance || wantsReusableTemplate)
+          ) {
+            return { templateTargetAmbiguous: true };
+          }
+          const dataPath = resolveBlockDataPath(normalizedPrompt, block?.type);
+          if (!selectedBlockId || !dataPath) {
+            return { missingSelectedBlock: true };
+          }
+          return {
+            blockId: selectedBlockId,
+            expectedBlockType: block?.type ?? null,
+            dataPath,
+            value: inferredMutationValue,
+          };
+        })()
+      : null;
 
   if (operation === "create" && resourceKind === "page") {
     const title = extractNamedQuotedValue(
@@ -141,6 +266,7 @@ export const buildCmsOperationDraftFromPrompt = (
       return normalizeCmsOperationDraft({
         operation,
         resourceKind,
+        ...(resourceEntry ? { resourceKey: resourceEntry.key } : {}),
         mutation: {
           patch: {
             items: [
@@ -190,6 +316,7 @@ export const buildCmsOperationDraftFromPrompt = (
       return normalizeCmsOperationDraft({
         operation,
         resourceKind,
+        ...(resourceEntry ? { resourceKey: resourceEntry.key } : {}),
         mutation: {
           patch: {
             items: [
@@ -219,8 +346,28 @@ export const buildCmsOperationDraftFromPrompt = (
       });
     }
   }
+  if (operation === "update" && resourceKind === "media") {
+    if (explicitMediaReference) {
+      return normalizeCmsOperationDraft({
+        operation,
+        resourceKind,
+        ...(resourceEntry ? { resourceKey: resourceEntry.key } : {}),
+        mutation: {
+          fieldIntent: "reference",
+          patch: explicitMediaReference,
+        },
+        constraints: {
+          destructive: false,
+          requiresConfirmation: false,
+        },
+      });
+    }
+  }
   const inferredFilters = inferFiltersFromPromptWithPolicy(normalizedPrompt, resourcePolicy);
-  const requestedCount = inferRequestedCountWithPolicy(normalizedPrompt);
+  const requestedCount =
+    operation === "update" && fieldPolicy?.valueType === "number"
+      ? undefined
+      : inferRequestedCountWithPolicy(normalizedPrompt);
 
   return normalizeCmsOperationDraft({
     operation,
@@ -234,11 +381,12 @@ export const buildCmsOperationDraftFromPrompt = (
       ...(queryValue ? { text: queryValue } : {}),
       ...(!queryValue && usesActiveTarget ? { active: true } : {}),
     },
-    ...(operation === "update" && mutationValue
+    ...(operation === "update" && inferredMutationValue !== undefined
       ? {
           mutation: {
-            fieldIntent: resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy),
-            value: mutationValue,
+            fieldIntent,
+            value: inferredMutationValue,
+            ...(blockPatch ? { patch: blockPatch } : {}),
           },
         }
       : {}),
@@ -461,6 +609,31 @@ const activeCandidateForKind = (
   kind: CmsResourceKind,
   context: AssistantAdminContext
 ): CmsResolvedTargetCandidate | null => {
+  if (kind === "entry") {
+    const selected = context.runtimeSnapshot?.selectedResource;
+    if (selected?.kind !== "entry" && selected?.kind !== "custom-screen-entry") return null;
+    const segments = (context.route ?? "").split("/").filter(Boolean);
+    const entriesIndex = segments.findIndex((segment) => segment === "entries");
+    const contentTypeSlug =
+      selected.kind === "entry" && entriesIndex >= 0 ? segments[entriesIndex + 1] ?? null : null;
+    return {
+      kind,
+      id: selected.id,
+      label: selected.id,
+      slug: null,
+      status: null,
+      adminHref: context.route ?? null,
+      details: {
+        contentTypeSlug,
+      },
+    };
+  }
+  const selected = context.runtimeSnapshot?.selectedResource;
+  if (selected?.kind === kind) {
+    return candidatesForKind(kind, context.resourceCatalog, context).find(
+      (candidate) => candidate.id === selected.id
+    ) ?? null;
+  }
   if (kind === "page" && context.activeSurface?.kind === "page") {
     const page = context.activeSurface.page;
     return {

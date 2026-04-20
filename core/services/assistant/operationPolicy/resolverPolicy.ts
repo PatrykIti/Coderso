@@ -6,6 +6,7 @@ import type {
   CmsOperationTargetQuery,
   CmsResourceKind,
 } from "../cmsOperationDraftSchema";
+import { cmsResourceKindValues } from "../cmsOperationDraftSchema";
 import type { CmsResolvedTargetCandidate } from "../cmsTargetResolver";
 import { assistantOperationPolicy } from "./assistantOperationPolicy";
 import type {
@@ -35,7 +36,19 @@ const operationAliases: Record<CmsOperation, string[]> = {
     "exists",
   ],
   find: ["find", "search", "szukaj", "znajdz", "znajdź"],
-  create: ["stworz", "stwórz", "utworz", "utwórz", "create", "build", "set up"],
+  create: [
+    "stworz",
+    "stwórz",
+    "utworz",
+    "utwórz",
+    "create",
+    "build",
+    "set up",
+    "upload",
+    "wgraj",
+    "przeslij",
+    "prześlij",
+  ],
   update: [
     "zmien",
     "zmień",
@@ -48,6 +61,10 @@ const operationAliases: Record<CmsOperation, string[]> = {
     "show",
     "pokaz",
     "pokaż",
+    "attach",
+    "podlacz",
+    "podłącz",
+    "dodaj",
   ],
   delete: ["usun", "usuń", "usuw", "skasuj", "kasuj", "delete", "remove"],
   archive: ["archive", "archiwizuj", "zarchiwizuj"],
@@ -184,22 +201,7 @@ export const resolveResourceKindFromPromptWithPolicy = (
   null;
 
 const isCmsResourceKind = (value: unknown): value is CmsResourceKind =>
-  typeof value === "string" &&
-  [
-    "page",
-    "entry",
-    "content-type",
-    "custom-screen",
-    "widget-template",
-    "listing-query",
-    "listing-template",
-    "form",
-    "menu-item",
-    "seo-document",
-    "media",
-    "settings-surface",
-    "solution-kit",
-  ].includes(value);
+  typeof value === "string" && (cmsResourceKindValues as readonly string[]).includes(value);
 
 export const inferRequestedCountWithPolicy = (
   normalizedPrompt: string,

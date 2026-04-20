@@ -15,6 +15,16 @@ export const cmsOperationValues = [
 export type CmsOperation = (typeof cmsOperationValues)[number];
 
 export const cmsResourceKindValues = [
+  "access-log",
+  "admin-search",
+  "analytics",
+  "appointments",
+  "audit-log",
+  "backup",
+  "booking",
+  "coderso-filters",
+  "coderso-search",
+  "commerce",
   "page",
   "entry",
   "content-type",
@@ -26,8 +36,21 @@ export const cmsResourceKindValues = [
   "menu-item",
   "seo-document",
   "media",
+  "dashboard",
+  "i18n",
+  "import-export",
+  "mega-menu",
+  "plugin-store",
+  "popup",
+  "portal",
+  "post",
+  "redirect",
+  "reviews",
+  "role",
   "settings-surface",
   "solution-kit",
+  "theme",
+  "user",
 ] as const;
 
 export type CmsResourceKind = (typeof cmsResourceKindValues)[number];
@@ -102,8 +125,6 @@ const draftKeys = new Set([
   "mutation",
   "constraints",
 ]);
-const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
-
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
@@ -258,11 +279,18 @@ export const normalizeCmsOperationDraftWithPolicy = (
   policy: AssistantOperationPolicy
 ): CmsOperationDraft => {
   const draft = normalizeCmsOperationDraft(value);
-  if (!draft.resourceKey) return draft;
-  const resource = policy.resources[draft.resourceKey];
+  const resourceEntries = Object.entries(policy.resources).filter(
+    ([, resource]) =>
+      resource.coverage.state !== "not-applicable" && resource.kind === draft.resourceKind
+  );
+  const resolvedKey = draft.resourceKey ?? (resourceEntries.length === 1 ? resourceEntries[0]?.[0] : undefined);
+  if (!resolvedKey) fail();
+  const resourceKey = resolvedKey as string;
+  const resource = policy.resources[resourceKey];
   if (!resource || resource.coverage.state === "not-applicable") fail();
   if (resource.kind !== draft.resourceKind) fail();
-  return draft;
+  if (!resource.operations.includes(draft.operation)) fail();
+  return { ...draft, resourceKey };
 };
 
 export const isCmsOperationDraft = (value: unknown): value is CmsOperationDraft => {
@@ -271,63 +299,6 @@ export const isCmsOperationDraft = (value: unknown): value is CmsOperationDraft 
     return true;
   } catch {
     return false;
-  }
-};
-
-const containsSecretLikeKey = (value: unknown): boolean => {
-  if (Array.isArray(value)) return value.some(containsSecretLikeKey);
-  if (!isRecord(value)) return false;
-  return Object.entries(value).some(([key, nested]) => {
-    if (secretKeyPattern.test(key)) return true;
-    return containsSecretLikeKey(nested);
-  });
-};
-
-const pickRecord = (value: unknown, allowed: Set<string>) => {
-  if (!isRecord(value)) return undefined;
-  const result: Record<string, unknown> = {};
-  for (const [key, nested] of Object.entries(value)) {
-    if (allowed.has(key)) result[key] = nested;
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-};
-
-export const repairCmsOperationDraft = (value: unknown): CmsOperationDraft | null => {
-  if (!isRecord(value) || containsSecretLikeKey(value)) return null;
-  const filters = Array.isArray(value.filters)
-    ? value.filters
-        .map((item) => pickRecord(item, filterKeys))
-        .filter((item): item is Record<string, unknown> => Boolean(item))
-    : undefined;
-  const targetQuery = pickRecord(value.targetQuery ?? value["optional targetQuery"], targetQueryKeys);
-  const mutation = pickRecord(value.mutation ?? value["optional mutation"], mutationKeys);
-  const constraints = pickRecord(value.constraints ?? value["optional constraints"], constraintsKeys);
-  try {
-    return normalizeCmsOperationDraft({
-      operation: value.operation,
-      resourceKind: value.resourceKind,
-      ...(value.resourceKey !== undefined ? { resourceKey: value.resourceKey } : {}),
-      ...(value.surfaceHint !== undefined ? { surfaceHint: value.surfaceHint } : {}),
-      ...(filters && filters.length > 0 ? { filters } : {}),
-      ...(targetQuery ? { targetQuery } : {}),
-      ...(mutation ? { mutation } : {}),
-      ...(constraints ? { constraints } : {}),
-    });
-  } catch {
-    return null;
-  }
-};
-
-export const repairCmsOperationDraftWithPolicy = (
-  value: unknown,
-  policy: AssistantOperationPolicy
-): CmsOperationDraft | null => {
-  const draft = repairCmsOperationDraft(value);
-  if (!draft) return null;
-  try {
-    return normalizeCmsOperationDraftWithPolicy(draft, policy);
-  } catch {
-    return null;
   }
 };
 
@@ -378,13 +349,8 @@ export const buildCmsOperationDraftJsonSchema = (
       enum: resourceKindEnum,
     },
     resourceKey: resourceKeyEnum.length > 0
-      ? {
-          anyOf: [
-            { type: "string", enum: resourceKeyEnum },
-            { type: "null" },
-          ],
-        }
-      : { type: ["string", "null"] },
+      ? { type: "string", enum: resourceKeyEnum }
+      : { type: "string" },
     surfaceHint: { type: ["string", "null"] },
     filters: {
       anyOf: [

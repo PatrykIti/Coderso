@@ -348,6 +348,13 @@ Zamiast tego:
   is operation-draft-only, provider `actions[]` are not adapted into executable
   plans, shared-kind settings/admin resources keep exact policy identity, and
   provider-side local-first CMS/admin one-offs were removed.
+- TASK-189-05 hardened that cutover by removing the remaining planner-owned
+  CMS/admin resource branches from `actionPlannerService.ts`. The planner now
+  orchestrates local/provider `CmsOperationDraft` construction plus product
+  blueprint dispatch; CMS/admin aliases, gated/read-only behavior, active target
+  resolution, selected-block patches, media references, post/media gating,
+  safety checks, and action mapping are owned by `assistantOperationPolicy`,
+  `cmsTargetResolver.ts`, and `cmsOperationActionMapper.ts`.
 - TASK-188 closed the policy cutover: provider guidance, resolver/filtering,
   action mapping/safety, follow-up state, and live coverage validation now use
   the operation policy as the source of truth. Route/domain RBAC, CSRF, strict
@@ -406,7 +413,9 @@ Planner schema/recovery:
 - Planner output jest normalizowany przez strict schema przed zwroceniem z `planAssistantActions`.
 - Provider draft output jest traktowany jako untrusted input and must be a
   `CmsOperationDraft`; provider-supplied `actions[]`, arbitrary executor inputs,
-  secret-like keys, and malformed drafts cannot become executable actions.
+  secret-like keys, unknown fields, missing/ambiguous `resourceKey`, and malformed
+  drafts cannot become executable actions. Provider drafts are not repaired into
+  valid drafts after TASK-189-05.
 - `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It packages prompt text, docs evidence, advisory runtime context, resource catalog summaries, and model-capability output contracts for provider planning calls.
 - Provider planning packages are passed through `assistantRedaction.ts` before the provider boundary.
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled

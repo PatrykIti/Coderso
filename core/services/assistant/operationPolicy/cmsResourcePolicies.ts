@@ -48,9 +48,24 @@ export const pagePolicy: AssistantResourcePolicy = {
     },
     showInNav: {
       field: "settings.showInNav",
-      aliases: ["navigation", "nav", "menu", "show in nav", "pokaz w menu", "pokaż w menu"],
+      aliases: [
+        "navigation",
+        "nawigacja",
+        "nawigacji",
+        "nav",
+        "menu",
+        "show in nav",
+        "pokaz w menu",
+        "pokaż w menu",
+      ],
       valueType: "boolean",
       action: { type: "page.update", patchPath: ["settings", "showInNav"] },
+    },
+    blockData: {
+      field: "blockData",
+      aliases: ["widget", "block", "blok", "headline", "title", "label", "description", "text", "tekst"],
+      valueType: "record",
+      action: { type: "page.widget.patch", patchPath: ["dataPath"] },
     },
   },
   actions: {
@@ -165,7 +180,7 @@ export const listingQueryPolicy: AssistantResourcePolicy = {
   fields: {
     name: {
       field: "name",
-      aliases: ["name", "nazwa"],
+      aliases: ["name", "nazwa", "nazwe", "nazwę"],
       valueType: "string",
       action: { type: "listing-query.update", patchPath: ["name"] },
     },
@@ -222,7 +237,7 @@ export const listingTemplatePolicy: AssistantResourcePolicy = {
   fields: {
     name: {
       field: "name",
-      aliases: ["name", "nazwa"],
+      aliases: ["name", "nazwa", "nazwe", "nazwę"],
       valueType: "string",
       action: { type: "listing-template.update", patchPath: ["name"] },
     },
@@ -283,7 +298,7 @@ export const contentTypePolicy: AssistantResourcePolicy = {
   fields: {
     name: {
       field: "name",
-      aliases: ["name", "nazwa"],
+      aliases: ["name", "nazwa", "nazwe", "nazwę"],
       valueType: "string",
       action: { type: "content-type.upsert", patchPath: ["name"] },
     },
@@ -435,7 +450,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
   fields: {
     name: {
       field: "name",
-      aliases: ["name", "nazwa"],
+      aliases: ["name", "nazwa", "nazwe", "nazwę"],
       valueType: "string",
       action: { type: "custom-screen.update", patchPath: ["name"] },
     },
@@ -454,7 +469,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
     },
     blockData: {
       field: "blockData",
-      aliases: ["widget", "block", "blok"],
+      aliases: ["widget", "block", "blok", "headline", "title", "label", "description", "text", "tekst"],
       valueType: "record",
       action: { type: "custom-screen.widget.patch", patchPath: ["dataPath"] },
     },
@@ -510,10 +525,10 @@ export const widgetTemplatePolicy: AssistantResourcePolicy = {
     },
   },
   fields: {
-    name: { field: "name", aliases: ["name", "nazwa"], valueType: "string", action: { type: "widget-template.update", patchPath: ["name"] } },
+    name: { field: "name", aliases: ["name", "nazwa", "nazwe", "nazwę"], valueType: "string", action: { type: "widget-template.update", patchPath: ["name"] } },
     category: { field: "category", aliases: ["category", "kategoria"], valueType: "string", action: { type: "widget-template.update", patchPath: ["category"] } },
     status: { field: "status", aliases: ["status"], valueType: "enum", enumValues: ["draft", "published"], action: { type: "widget-template.update", patchPath: ["status"] } },
-    blockData: { field: "blockData", aliases: ["block", "blok", "headline"], valueType: "record", action: { type: "widget-template.block.patch", patchPath: ["dataPath"] } },
+    blockData: { field: "blockData", aliases: ["block", "blok", "headline", "title", "label", "description", "text", "tekst"], valueType: "record", action: { type: "widget-template.block.patch", patchPath: ["dataPath"] } },
   },
   actions: {
     update: { operation: "update", type: "widget-template.update", target: "active", mode: "executable" },
@@ -534,7 +549,7 @@ export const mediaPolicy: AssistantResourcePolicy = {
   label: "Media",
   aliases: ["media", "asset", "assets", "image", "obraz", "plik"],
   routes: ["/admin/media"],
-  operations: ["inspect", "find", "update"],
+  operations: ["inspect", "find", "create", "update"],
   readPermissions: ["media:read"],
   executePermissions: ["media:read", "content:write"],
   filters: {},

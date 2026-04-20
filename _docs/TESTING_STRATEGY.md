@@ -91,6 +91,10 @@ then that test should move to Vitest.
 - TASK-188 policy cutover suites under `tests/vitest/assistant/*` own the pure
   policy/schema/resolver/mapper/follow-up/coverage contracts; opt-in Bun live
   suites remain the guard for real OpenAI/OpenRouter behavior.
+- TASK-189-05 keeps final planner hardening in the Vitest-owned assistant lane:
+  provider draft strictness, exact `resourceKey`, policy gated/read-only behavior,
+  active target resolution, selected-block patch mapping, and no provider repair
+  fallback are validated in `tests/vitest/assistant/*`.
 
 ### Vitest Happy-DOM Guardrails
 
