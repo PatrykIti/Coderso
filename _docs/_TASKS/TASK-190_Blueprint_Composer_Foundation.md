@@ -304,5 +304,7 @@ Technical leaf tasks:
 9. At least five representative mixed prompts are covered by fixture tests.
 10. Composed catalog outcomes can render visually controlled public detail pages
     through the runtime, with legacy detail rendering preserved as fallback.
-11. Full composed-plan routing is not enabled until assembled plans pass
-    `actionPlanSchema`, dry-run parity, no-duplicate checks, and fixture coverage.
+11. Composer cutover cannot happen before assembled plans pass
+    `actionPlanSchema` and dry-run parity fixtures.
+12. Full composed-plan routing also requires no-duplicate checks and fixture
+    coverage for selected primary/adjunct/gated capability combinations.
