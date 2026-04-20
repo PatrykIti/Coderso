@@ -117,7 +117,7 @@ const buildPageContext = async (): Promise<AssistantActionContext> => {
       schemaVersion: 1,
       route: "/admin/pages",
       activeHref: "/admin/pages",
-      area: "main",
+      area: "other",
       codersoModule: null,
       selectedResource: null,
       visibleActions: [],

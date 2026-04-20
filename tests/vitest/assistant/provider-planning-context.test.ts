@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 
+import type { AssistantActionContext } from "../../../core/services/assistant/actionPlanTypes";
 import { buildProviderPlanningPromptPackage } from "../../../core/services/assistant/providerPlanningContext";
 
 const resourceCatalog = {
@@ -105,7 +106,7 @@ const resourceCatalog = {
     },
   ],
   warnings: [],
-} as const;
+} as unknown as AssistantActionContext["resourceCatalog"];
 
 test("buildProviderPlanningPromptPackage creates bounded deterministic context", () => {
   const prompt = buildProviderPlanningPromptPackage({

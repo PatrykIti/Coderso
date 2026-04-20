@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 
+import type { AssistantActionContext } from "../../../core/services/assistant/actionPlanTypes";
 import { planAssistantActionsWithProviderDraft } from "../../../core/services/assistant/actionPlannerService";
 import { createOpenRouterProvider } from "../../../core/services/assistant/providers/openRouterProvider";
 
@@ -86,7 +87,7 @@ const catalog = {
   seoDocuments: [],
   widgets: [],
   warnings: [],
-} as const;
+} as unknown as AssistantActionContext["resourceCatalog"];
 
 const cases = [
   {

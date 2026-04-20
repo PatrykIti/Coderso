@@ -38,7 +38,7 @@ test("buildSiteBuilderPlan output is deterministic for identical input", () => {
     businessType: "small_ecommerce",
     goals: ["sell_products", "catalog_showcase", "reviews_social_proof"],
     locale: "en",
-  } as const;
+  } satisfies Parameters<typeof buildSiteBuilderPlan>[0];
 
   const left = buildSiteBuilderPlan(input);
   const right = buildSiteBuilderPlan(input);

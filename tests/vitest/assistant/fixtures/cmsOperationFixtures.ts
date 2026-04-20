@@ -1,4 +1,6 @@
-import type { AssistantActionContext } from "../../../../core/services/assistant/actionPlanTypes";
+import type {
+  AssistantActionContext,
+} from "../../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../../core/services/assistant/providers/providerTypes";
 
 export type CmsOperationFixture = {
@@ -167,7 +169,7 @@ const baseCatalog = {
     },
   ],
   warnings: [],
-} as const;
+} as unknown as AssistantActionContext["resourceCatalog"];
 
 const baseContext: AssistantActionContext = {
   page: "/admin/coderso",
