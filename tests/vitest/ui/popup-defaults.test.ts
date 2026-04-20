@@ -47,9 +47,11 @@ test("popup default factories return isolated baseline objects", () => {
 
   const a = createDefaultPopupInput();
   const b = createDefaultPopupInput();
-  a.trigger.delaySeconds = 10;
+  const triggerA = a.trigger as Extract<typeof a.trigger, { type: "time_delay" }>;
+  const triggerB = b.trigger as Extract<typeof b.trigger, { type: "time_delay" }>;
+  triggerA.delaySeconds = 10;
 
-  expect(b.trigger.delaySeconds).toBe(3);
+  expect(triggerB.delaySeconds).toBe(3);
   expect(a).toMatchObject({
     name: "",
     slug: "",
