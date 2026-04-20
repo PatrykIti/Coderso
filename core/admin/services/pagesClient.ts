@@ -248,13 +248,11 @@ export async function autosavePage(id: string, payload: PageAutosavePayload) {
 export async function publishPage(id: string, data?: Record<string, unknown>) {
   const result = await apiRequest<{ ok: boolean }>(
     `/pages/${id}/publish`,
-    data
-      ? {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data }),
-        }
-      : { method: "POST" },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data ? { data } : {}),
+    },
     { withCsrf: true }
   );
   if (result?.ok) {

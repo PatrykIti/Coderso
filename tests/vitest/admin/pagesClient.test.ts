@@ -204,6 +204,34 @@ test("previewPage posts ttlMinutes with CSRF", async () => {
   }
 });
 
+test("publishPage posts empty object payload when publishing from list", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true });
+  };
+
+  try {
+    resetCsrfToken();
+    await publishPage("page-1");
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/pages/page-1/publish");
+    expect(calls[1]?.init?.method).toBe("POST");
+    const headers = new Headers(calls[1]?.init?.headers);
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(calls[1]?.init?.body as string)).toEqual({});
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("duplicatePage posts to duplicate endpoint", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
