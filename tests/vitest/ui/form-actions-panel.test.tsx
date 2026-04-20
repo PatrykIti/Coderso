@@ -216,6 +216,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const contentTypeOptions = [
+  {
+    id: "articles",
+    name: "Articles",
+    slug: "articles",
+    schema: {
+      type: "object" as const,
+      additionalProperties: false as const,
+      properties: {},
+    },
+    createdAt: "2026-03-08T10:00:00.000Z",
+    updatedAt: "2026-03-08T10:00:00.000Z",
+  },
+];
+
 test("FormActionsPanel adds every action type and exposes matching config editors", async () => {
   const { FormActionsPanel } = await import(
     "../../../core/admin/ui/forms/FormActionsPanel"
@@ -229,7 +244,7 @@ test("FormActionsPanel adds every action type and exposes matching config editor
     return (
       <FormActionsPanel
         actions={actions}
-        contentTypes={[{ id: "articles", name: "Articles" }]}
+        contentTypes={contentTypeOptions}
         onOpenLogs={onOpenLogs}
         onChange={(next) => {
           onChangeSpy(next);
@@ -353,7 +368,7 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
     return (
       <FormActionsPanel
         actions={actions}
-        contentTypes={[{ id: "articles", name: "Articles" }]}
+        contentTypes={contentTypeOptions}
         onOpenLogs={onOpenLogs}
         onChange={(next) => {
           onChangeSpy(next);
@@ -542,7 +557,7 @@ test("FormActionsPanel supports fallback labels, action relabeling, move-down or
       label: "Custom action",
       enabled: true,
       continueOnError: true,
-      condition: { operator: "unexpected" } as FormActionInput["condition"],
+      condition: { operator: "unexpected" } as unknown as FormActionInput["condition"],
       config: {
         message: "Fallback message",
       },
@@ -555,7 +570,7 @@ test("FormActionsPanel supports fallback labels, action relabeling, move-down or
     return (
       <FormActionsPanel
         actions={actions}
-        contentTypes={[{ id: "articles", name: "Articles" }]}
+        contentTypes={contentTypeOptions}
         onOpenLogs={() => undefined}
         onChange={(next) => {
           onChangeSpy(next);
