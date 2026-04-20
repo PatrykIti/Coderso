@@ -15,6 +15,11 @@ import {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 
 async function canConnect() {
   try {
@@ -59,7 +64,7 @@ afterAll(async () => {
   await cleanup();
 });
 
-testIfDb(
+testIfDbWithOptions(
   "autosavePost creates revisions and deduplicates identical snapshots",
   async () => {
     const actor = await createActor();
@@ -122,7 +127,7 @@ testIfDb(
   { timeout: 15_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "restorePostRevision restores older snapshot and is idempotent",
   async () => {
     const actor = await createActor();

@@ -22,6 +22,11 @@ import { runPostsBackfill } from "../../../core/services/posts/migration/postsBa
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 
 async function canConnect() {
   try {
@@ -253,7 +258,7 @@ afterAll(async () => {
   await cleanup();
 });
 
-testIfDb(
+testIfDbWithOptions(
   "runPostsBackfill dry-run reports migration plan without writing posts rows",
   async () => {
     const legacy = await createLegacyPostFixture();
@@ -278,7 +283,7 @@ testIfDb(
   { timeout: 20_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "runPostsBackfill migrates legacy post data and remains idempotent",
   async () => {
     const legacy = await createLegacyPostFixture();
@@ -366,7 +371,7 @@ testIfDb(
   { timeout: 25_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "runPostsBackfill reports slug conflicts and skips conflicting legacy rows",
   async () => {
     const legacy = await createLegacyPostFixture({
