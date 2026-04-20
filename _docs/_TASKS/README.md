@@ -45,7 +45,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | Business area: choose primary and adjunct blueprint candidates from prompt/context |
 | TASK-190-02-01 | Prompt Candidate Extraction and Ranking | High | Large | Technical leaf: deterministic signals, scores, and candidate order |
 | TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Technical leaf: provider can suggest capability ids only, never actions |
-| TASK-190-02-03 | Composer Shadow Mode and Routing Cutover | High | Large | Technical leaf: shadow compare composer output before progressive routing cutover |
+| TASK-190-02-03 | Composer Candidate Shadow Mode and Deferred Routing Cutover | High | Large | Technical leaf: candidate-only shadow diagnostics; full plan cutover waits for graph/merge/action assembly |
 | TASK-190-03 | Composition Graph and Conflict Policy | High | Large | Business area: intermediate graph plus explicit conflicts before action assembly |
 | TASK-190-03-01 | Composition Graph Contract and Deterministic Order | High | Medium | Technical leaf: graph node model and stable ordering |
 | TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | Technical leaf: slug/field/route/permission conflict handling |

@@ -216,13 +216,16 @@ Technical leaf tasks:
 2. Migrate current blueprint packs into manifest metadata without changing
    generated actions.
 3. Add deterministic candidate extraction and ranking.
-4. Run composer shadow mode and plan routing cutover.
+4. Run candidate-level composer shadow mode only; keep production routing on
+   the existing planner.
 5. Add composition graph and conflict model.
 6. Add merge engines for schemas, facets, card config, page sections, admin
    surfaces, and the first-class detail page runtime contract.
 7. Add action assembly that reuses current typed actions plus review diagnostics.
 8. Add no-duplicate and existing-resource reuse checks.
-9. Add fixtures, authoring docs, observability, and live/provider evaluation coverage.
+9. Run full plan composer shadow/cutover only after graph, merge, action
+   assembly, and no-duplicate fixtures pass.
+10. Add fixtures, authoring docs, observability, and live/provider evaluation coverage.
 
 ## Security Contract
 
@@ -301,3 +304,5 @@ Technical leaf tasks:
 9. At least five representative mixed prompts are covered by fixture tests.
 10. Composed catalog outcomes can render visually controlled public detail pages
     through the runtime, with legacy detail rendering preserved as fallback.
+11. Full composed-plan routing is not enabled until assembled plans pass
+    `actionPlanSchema`, dry-run parity, no-duplicate checks, and fixture coverage.

@@ -1,4 +1,4 @@
-# TASK-190-02-03: Composer Shadow Mode and Routing Cutover
+# TASK-190-02-03: Composer Candidate Shadow Mode and Deferred Routing Cutover
 # FileName: TASK-190-02-03_Composer_Shadow_Mode_and_Routing_Cutover.md
 
 **Priority:** High
@@ -11,10 +11,16 @@
 
 ## Overview
 
-Introduce a safe rollout path for the blueprint composer. The composer must first
-run in shadow mode beside the current single-blueprint planner so we can compare
-candidate selection, generated graph, conflicts, and action assembly without
-changing user-visible behavior.
+Introduce the first safe rollout step for the blueprint composer.
+
+This leaf is **candidate/draft shadow mode only**. It runs the new capability
+candidate resolver beside the current single-blueprint planner and records
+comparison diagnostics without changing user-visible behavior.
+
+Full composed plan cutover is explicitly deferred until graph, merge engines,
+page/detail/admin composition, action assembly, no-duplicate checks, and fixture
+coverage exist (`TASK-190-03` through `TASK-190-07`, validated in
+`TASK-190-08`).
 
 This prevents a big-bang cutover in `actionPlannerService.ts`.
 
@@ -24,13 +30,26 @@ No child task files.
 
 ## Business Behavior
 
-Before cutover:
+Before full composer availability:
 - existing single-blueprint prompts still return current plans,
-- composer runs and records comparison metadata in tests/diagnostics only,
-- mismatches become fixtures, not production regressions.
+- candidate composer runs and records comparison metadata in tests/diagnostics
+  only,
+- shadow diagnostics compare:
+  - current `intentFamily`,
+  - current `intentId`,
+  - selected primary capability id,
+  - selected adjunct capability ids,
+  - selected gated capability ids,
+  - candidate score/reason snapshots,
+- mismatches become fixtures, not production regressions,
+- no graph, merge, action assembly, dry-run, execute, or user-visible plan
+  routing changes happen in this leaf.
 
-During cutover:
-- selected prompt families can opt into composer routing one by one,
+Deferred full plan cutover:
+- selected prompt families may opt into composer routing only after
+  `TASK-190-03..190-07` are implemented,
+- assembled composer plans must pass `normalizeAssistantActionPlan`,
+- dry-run parity and no-duplicate checks must be green,
 - fallback to legacy blueprint builder remains available for a bounded period,
 - no provider-generated action payloads are introduced.
 
@@ -42,29 +61,33 @@ After cutover:
 
 - `core/services/assistant/actionPlannerService.ts`
 - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
-- `core/services/assistant/blueprints/blueprintCompositionGraph.ts`
 - Add `core/services/assistant/blueprints/blueprintComposerShadow.ts`
 - Add `tests/vitest/assistant/blueprint-composer-shadow.test.ts`
-- Add `tests/vitest/assistant/blueprint-composer-cutover.test.ts`
+- Add `tests/vitest/assistant/blueprint-candidate-shadow.test.ts`
 
 ## Technical Scope
 
 Add:
-- `runBlueprintComposerShadow(input)`
-- `compareBlueprintPlans(currentPlan, composerPlan)`
-- `shouldUseBlueprintComposer(input, featureFlags?)`
+- `runBlueprintCandidateShadow(input)`
+- `compareBlueprintCandidateSelection(currentPlan, candidates)`
+- `shouldRunBlueprintCandidateShadow(input, featureFlags?)`
 - test-only diagnostic snapshot fields:
   - current `intentId`,
+  - current `intentFamily`,
   - composer primary candidate,
   - adjunct candidate ids,
-  - graph conflicts,
-  - planned action type list,
+  - gated candidate ids,
+  - candidate scores,
+  - candidate reasons,
   - mismatch reason.
 
 Feature/cutover controls:
-- default off for production until tests cover parity,
+- candidate shadow mode default off outside tests/dev diagnostics,
 - env/test override for fixtures,
-- per-family allowlist for progressive rollout.
+- per-family allowlist for candidate shadow diagnostics,
+- full `shouldUseBlueprintComposer(...)` plan routing remains hard-disabled in
+  this leaf and moves to the action-assembly/evaluation closure after
+  `TASK-190-07`.
 
 ## Pseudocode
 
@@ -74,22 +97,30 @@ export const planAssistantActions = (input) => {
 
   const currentPlan = planWithCurrentBlueprintRouting(input, context);
 
-  if (shouldRunBlueprintComposerShadow(input)) {
-    const composerPlan = tryPlanWithBlueprintComposer(input, context);
-    recordShadowComparison({
+  if (shouldRunBlueprintCandidateShadow(input)) {
+    const candidates = resolveBlueprintCandidates({
       prompt: input.prompt,
+      context,
+    });
+    recordCandidateShadowComparison({
       currentPlan,
-      composerPlan,
+      candidates,
     });
   }
 
-  if (shouldUseBlueprintComposer(input)) {
-    const composerPlan = tryPlanWithBlueprintComposer(input, context);
-    if (composerPlan) return normalizeAssistantActionPlan(composerPlan);
-  }
-
+  // Full plan routing remains owned by TASK-190-07/190-08 after graph,
+  // merge engines, action assembly, and no-duplicate checks exist.
   return currentPlan;
 };
+```
+
+Full routing cutover pseudocode belongs to `TASK-190-07` / `TASK-190-08`:
+
+```ts
+if (shouldUseBlueprintComposer(input) && composerPlanIsReady(input)) {
+  const composerPlan = composeBlueprintActionPlan(input, context);
+  return normalizeAssistantActionPlan(composerPlan);
+}
 ```
 
 ## Security Contract
@@ -99,21 +130,25 @@ export const planAssistantActions = (input) => {
 - RBAC: no new permissions; shadow mode cannot execute.
 - CSRF: unchanged.
 - Rate-limit bucket: existing assistant bucket.
-- Reject-unknown validation: composer output must pass strict schema before
-  comparison or cutover.
-- Anti-abuse: shadow mode cannot mutate and cannot call execute/dry-run.
+- Reject-unknown validation: provider/candidate draft output must pass strict
+  candidate schema before comparison.
+- Anti-abuse: candidate shadow mode cannot assemble actions, mutate, dry-run,
+  execute, or route user-visible responses.
 - Public-write hardening: not applicable.
 - Secret handling: shadow diagnostics must not include provider keys, sessions,
   cookies, raw submissions, or secret-like settings.
 
 ## Testing Requirements
 
-- Existing single-blueprint fixtures match current plan action types in shadow.
-- Composer mismatch fixtures are deterministic.
-- Cutover flag routes only allowlisted families.
-- Fallback path remains available when composer returns conflicts.
-- No shadow metadata leaks into production response unless explicitly enabled in
-  test-only diagnostics.
+- Existing single-blueprint fixtures keep current plan action types while
+  candidate shadow runs.
+- Candidate selection snapshots are deterministic.
+- Candidate shadow flag runs only allowlisted families.
+- Full plan routing stays disabled in this leaf.
+- No candidate shadow metadata leaks into production response unless explicitly
+  enabled in test-only diagnostics.
+- Full composed plan cutover tests are deferred to `TASK-190-07` and
+  `TASK-190-08`.
 
 ## Documentation Updates Required
 
