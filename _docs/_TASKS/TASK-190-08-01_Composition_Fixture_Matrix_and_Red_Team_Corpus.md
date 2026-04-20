@@ -26,6 +26,7 @@ No child task files.
 ## Fixture Categories
 
 - single primary only,
+- Mabudo-like house-project catalog composition,
 - primary + lead capture,
 - primary + portfolio proof,
 - primary + editorial hub,
@@ -33,6 +34,67 @@ No child task files.
 - primary + multiple adjuncts,
 - conflict cases,
 - provider injection cases.
+
+## Required Mabudo-Like Fixture
+
+Add a canonical fixture for a prompt such as:
+
+```text
+Zrob mi strone jak Mabudo: katalog projektow domow z filtrami,
+kartami, stronami szczegolowymi, formularzem zapytania, realizacjami,
+poradnikiem, menu i wygodna edycja w adminie.
+```
+
+The expected resource graph must include:
+
+- standard pages:
+  - home,
+  - about,
+  - contact,
+  - house-project listing page,
+  - realization/case-study listing page when selected,
+- posts/editorial hub when the prompt asks for poradnik/blog guidance,
+- content types:
+  - house projects,
+  - project categories or collections,
+  - realizations/case studies when selected,
+- sample entries for generated content types when fixture mode asks for seeded
+  examples,
+- relations:
+  - project -> category/collection,
+  - project -> related projects,
+  - project -> realization/case study when selected,
+- custom screens:
+  - admin screen for house project records,
+  - admin screen for related case studies when selected,
+- listings:
+  - published house-project query,
+  - card template for project cards,
+  - filters/facets for area, rooms, price/status/style/category where present,
+- detail pages:
+  - `detail_page_documents` entry for `/projekty-domow/:slug`,
+  - bindings for title, hero image, gallery, area, rooms, floors, price/status,
+    CTA/form context, related projects,
+- forms:
+  - project inquiry form using existing public form hardening,
+  - contact form if contact page is generated,
+- menus:
+  - main menu with generated public pages,
+  - footer menu with generated public pages,
+- widget templates or reusable sections:
+  - hero,
+  - CTA,
+  - FAQ/proof/testimonial sections when selected,
+- SEO/routes:
+  - SEO docs or patterns for generated pages and detail pages,
+  - content routes with list and detail route patterns,
+- collection workspace:
+  - one workspace linking model, entries, list page, detail template,
+    filters/cards, forms, admin screen, SEO, routes, and preview,
+- no duplicate resources on rerun.
+
+The fixture should assert resource keys and action types, not brittle generated
+copy. Text copy may be asserted only for stable product labels.
 
 ## Pseudocode
 
@@ -64,7 +126,9 @@ test.each(blueprintCompositionFixtures)(fixture.name, async () => {
   - SQL/path injection,
   - secret field request,
   - destructive mixed prompt,
-  - duplicate slug request.
+  - duplicate slug request,
+  - Mabudo-like prompt with provider-supplied executable actions,
+  - Mabudo-like rerun that tries to create duplicate collection resources.
 
 ## Documentation Updates Required
 

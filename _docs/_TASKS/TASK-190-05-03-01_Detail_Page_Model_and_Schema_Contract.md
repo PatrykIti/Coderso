@@ -29,6 +29,7 @@ No child task files.
 - Add `tests/vitest/assistant/blueprint-detail-page-schema.test.ts`
 - Update `core/db/schema.ts`
 - Add SQL migration for `detail_page_documents`
+- Add SQL migration for `detail_page_revisions`
 - Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates.
 - Update `core/services/settings/settingsService.ts` only to support safe route
   references to detail page documents, not to store full documents in settings.
@@ -68,6 +69,16 @@ detail_page_documents: {
   updated_at,
   published_at
 }
+
+detail_page_revisions: {
+  id,
+  detail_page_id,
+  version,
+  kind,
+  document,
+  created_at,
+  created_by
+}
 ```
 
 Rules:
@@ -79,6 +90,13 @@ Rules:
 - `site.contentRoutes` can reference `detailPageId` for matching but does not
   own the document.
 - The service layer owns normalize/create/update/publish/unpublish helpers.
+- Detail page documents follow the same history contract shape as Pages:
+  - `kind = publish` for publish snapshots,
+  - `kind = autosave` for the latest unsaved editor snapshot,
+  - restore applies `current_document` and returns the detail page to draft,
+  - discard is allowed only for autosave revisions,
+  - retention uses the same min/max policy as Pages unless a later task
+    explicitly changes it.
 
 Normalization rules:
 
@@ -112,6 +130,9 @@ Normalization rules:
 
 - Valid document normalizes deterministically.
 - DB migration artifacts are present and valid.
+- Publish creates a `publish` revision and updates `published_document`.
+- Autosave keeps only the latest autosave revision.
+- Restore/discard revision semantics match the Pages revision contract.
 - Unknown keys reject.
 - Duplicate block ids reject.
 - Binding to missing block rejects.

@@ -30,12 +30,42 @@ No child task files.
 
 ## Preview Contract
 
-Options:
+Detail pages have two distinct preview modes.
 
-- Prefer existing `/preview?type=content&token=...` for entry preview when the
-  target is an entry and a detail page document exists.
-- If a separate target is needed, add a strict target type only after updating
-  `previewService`, `previewUrls`, and docs.
+### Detail Template Preview
+
+Use a dedicated preview target for editing the detail template itself:
+
+```text
+/preview?type=detail-page&token=<token>&entryId=<entry-id>&device=desktop
+```
+
+Rules:
+
+- `token` targets `detail_page_documents.id`.
+- `entryId` selects the sample entry used to resolve bindings.
+- Runtime renders `current_document`, not `published_document`.
+- The sample entry must be published by default.
+- If previewing against a draft entry is needed, use content preview mode with a
+  valid content preview token instead of trusting `entryId`.
+- `device` is optional and uses the existing `desktop|tablet|mobile` contract.
+
+### Entry Detail Preview
+
+Use the existing content preview target for previewing a specific entry:
+
+```text
+/preview?type=content&token=<entry-token>&detailPageId=<detail-page-id>&device=desktop
+```
+
+Rules:
+
+- `token` targets the content entry or post.
+- Runtime resolves the entry draft allowed by the token.
+- `detailPageId` is optional; when omitted, runtime uses the active published
+  detail document for the entry content type.
+- Runtime never trusts arbitrary route/detail document ids from query params
+  without validating the token target and content type relationship.
 
 Preview must:
 
@@ -43,6 +73,13 @@ Preview must:
 - render the same detail document pipeline as public runtime,
 - pass `device=desktop|tablet|mobile` into block visibility logic,
 - return `410` for expired token and `404` for disabled preview/missing target.
+
+Implementation notes:
+
+- Update `previewService` target types to include `detail-page`.
+- Update `previewUrls` builders for detail-template preview URLs.
+- Update `_docs/PREVIEW_SPEC.md` and `_docs/CMS_API.md`.
+- Do not log preview tokens or sample entry data in diagnostics.
 
 ## Cache Contract
 
@@ -79,6 +116,12 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 ## Testing Requirements
 
 - Valid content preview token renders composed detail page draft.
+- Valid detail-page preview token renders `current_document` with a selected
+  published sample entry.
+- Detail-page preview with a draft sample entry and no content preview token
+  returns `404`.
+- Entry preview with `detailPageId` verifies the detail page belongs to the
+  entry content type.
 - Expired token returns `410`.
 - Preview disabled returns `404`.
 - Public cache invalidates when entry/detail document changes.
