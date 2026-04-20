@@ -5,7 +5,7 @@
 **Category:** QA + CMS/Pages + Runtime
 **Estimated Effort:** Medium
 **Dependencies:** TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-20)
 
 ---
 
@@ -83,3 +83,21 @@ and widget resolved payloads. The missing piece is the server runtime path in
 - `_docs/ARCHITECTURE.md` only if the runtime pipeline contract changes.
 - `_docs/_TASKS/README.md` when status changes.
 - `_docs/_CHANGELOG/*` on completion.
+
+## Completion Notes (2026-04-20)
+
+- Added `tests/integration/runtime/pages-runtime.test.ts` for real public
+  `handlePublicRequest` behavior.
+- Covered published page rendering from `publishedData` while draft runtime
+  preview renders `currentData`.
+- Covered draft page 404s, published rows without `publishedData`, missing or
+  invalid preview query data, expired preview tokens, disabled preview mode, and
+  content-route precedence over page slugs.
+- No public runtime or preview contract changes were required.
+
+## Validation (2026-04-20)
+
+- `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/unit/pages/previewService.test.ts tests/unit/pages/pageService.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

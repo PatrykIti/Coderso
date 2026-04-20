@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 715 | 2026-04-20 | TASK-191-02 public page runtime coverage | QA/Runtime Pages |
 | 714 | 2026-04-20 | TASK-191-01 pages route coverage | QA/CMS Pages |
 | 713 | 2026-04-20 | TASK-189-05 live regression fixes | Assistant/Core |
 | 712 | 2026-04-19 | TASK-189-05 final policy planner hardening | Assistant/Core |
