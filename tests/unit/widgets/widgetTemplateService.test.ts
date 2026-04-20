@@ -43,7 +43,11 @@ testIfDb("create/update/list/delete widget templates", async () => {
         wrapper: {
           container: "full",
           padding: { top: "sm", bottom: "sm" },
-          background: { color: "#f8fafc", image: null },
+          background: {
+            color: "#f8fafc",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
         },
         sections: {
           gap: "sm",
@@ -71,7 +75,11 @@ testIfDb("create/update/list/delete widget templates", async () => {
           container: "default",
           maxWidth: "5xl",
           padding: { top: "md", bottom: "md" },
-          background: { color: "#111827", image: null },
+          background: {
+            color: "#111827",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
         },
         sections: {
           gap: "md",

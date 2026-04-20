@@ -51,7 +51,11 @@ testIfDb("getWidgetTemplatePreviewModel returns blocks for preview", async () =>
         wrapper: {
           container: "full",
           padding: { top: "none", bottom: "none" },
-          background: { color: "#f1f5f9", image: null },
+          background: {
+            color: "#f1f5f9",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
         },
         sections: {
           gap: "none",

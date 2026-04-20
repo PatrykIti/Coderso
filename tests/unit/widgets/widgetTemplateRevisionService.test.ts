@@ -46,7 +46,11 @@ testIfDb("widget template revisions create/update/restore", async () => {
         wrapper: {
           container: "full",
           padding: { top: "none", bottom: "none" },
-          background: { color: "#ffffff", image: null },
+          background: {
+            color: "#ffffff",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
         },
         sections: {
           gap: "none",
@@ -75,7 +79,11 @@ testIfDb("widget template revisions create/update/restore", async () => {
           container: "default",
           maxWidth: "5xl",
           padding: { top: "md", bottom: "md" },
-          background: { color: "#e2e8f0", image: null },
+          background: {
+            color: "#e2e8f0",
+            image: null,
+            media: { type: "none", source: "external", src: null },
+          },
         },
         sections: {
           gap: "sm",
