@@ -15,7 +15,12 @@ import { deletePage, getPageBySlug } from "../../../core/services/pages/pageServ
 import { getSetting, setSetting, type ContentRouteSetting } from "../../../core/services/settings/settingsService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
-const testIfDb = hasDb ? test : test.skip;
+const testIfDb = (hasDb ? test : test.skip) as typeof test;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 
 async function canConnect() {
   try {
@@ -131,6 +136,8 @@ const clonePlanWithToken = (token: string) => {
             introTitle: `Katalog Projektów Domów ${token}`,
           },
         };
+      default:
+        return action;
     }
   });
 
@@ -216,7 +223,7 @@ afterAll(async () => {
   createdUserIds.clear();
 });
 
-testIfDb(
+testIfDbWithOptions(
   "executeAssistantActionPlan persists resources and reruns without duplicates",
   async () => {
     originalContentRoutes =
@@ -377,8 +384,9 @@ testIfDb(
     expect(refinement.summary.update).toBeGreaterThan(0);
 
     const refinedPage = await getPageBySlug(pageSlug);
-    const blocks = Array.isArray(refinedPage?.currentData?.blocks)
-      ? (refinedPage?.currentData?.blocks as Array<{ type?: string }>)
+    const refinedData = refinedPage?.currentData as { blocks?: unknown } | undefined;
+    const blocks = Array.isArray(refinedData?.blocks)
+      ? (refinedData.blocks as Array<{ type?: string }>)
       : [];
     expect(blocks.some((block) => block.type === "listing-filters")).toBe(true);
   },
