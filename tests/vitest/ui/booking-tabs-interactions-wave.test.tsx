@@ -151,10 +151,12 @@ import { BookingSlotPreviewTab } from "../../../core/admin/ui/booking/components
 const resource = {
   id: "resource-1",
   name: "Room A",
-  type: "room",
+  slug: "room-a",
+  type: "bay",
   timezone: "Europe/Warsaw",
   status: "active",
   capacity: 4,
+  settings: {},
   createdAt: "2026-03-06T10:00:00.000Z",
   updatedAt: "2026-03-06T10:00:00.000Z",
 } as const;
@@ -298,7 +300,6 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
           endsAt: "2026-03-06T12:00:00.000Z",
           reason: "Maintenance",
           createdAt: "2026-03-06T08:00:00.000Z",
-          updatedAt: "2026-03-06T08:00:00.000Z",
         },
       ]}
       blackoutsLoading={false}
@@ -385,6 +386,7 @@ test("BookingReservationsTab routes status and manual reservation form callbacks
           id: "reservation-1",
           serviceId: service.id,
           resourceId: resource.id,
+          formSubmissionId: null,
           status: "confirmed",
           startsAt: "2026-03-06T10:00:00.000Z",
           endsAt: "2026-03-06T11:00:00.000Z",
@@ -393,6 +395,7 @@ test("BookingReservationsTab routes status and manual reservation form callbacks
           customerEmail: "ada@example.com",
           customerPhone: "+48123123123",
           notes: "Window seat",
+          metadata: {},
           createdAt: "2026-03-06T08:00:00.000Z",
           updatedAt: "2026-03-06T08:00:00.000Z",
         },
@@ -509,7 +512,7 @@ test("BookingServicesTab routes service form, edit/delete, assignment, and save 
     const inputs = Array.from(
       view.container.querySelectorAll('input:not([type="checkbox"])')
     );
-    const checkboxes = Array.from(view.container.querySelectorAll('input[type="checkbox"]'));
+    const checkboxes = Array.from(view.container.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[];
     const textarea = view.container.querySelector("textarea");
 
     clickByText(view.container, "Edit");
