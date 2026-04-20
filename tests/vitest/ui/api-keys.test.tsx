@@ -16,7 +16,7 @@ test("ApiKeysPage renders header and table", () => {
 
 test("ApiKeyDialog renders create form", () => {
   const html = renderAdminUi(
-    <ApiKeyDialog open onOpenChange={() => undefined} />
+    <ApiKeyDialog open onOpenChange={() => undefined} onCreate={async () => undefined} />
   );
 
   expect(html).toContain("Create API Key");
