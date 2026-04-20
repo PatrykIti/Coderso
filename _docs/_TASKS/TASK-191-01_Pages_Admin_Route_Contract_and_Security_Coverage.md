@@ -5,7 +5,7 @@
 **Category:** QA + CMS/Pages + Admin API
 **Estimated Effort:** Medium
 **Dependencies:** TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-20)
 
 ---
 
@@ -82,3 +82,23 @@ CSRF/rate-limit assertions that live outside `pageRoutes.ts`.
 - `_docs/SECURITY_SPEC.md` only if route security expectations change.
 - `_docs/_TASKS/README.md` when status changes.
 - `_docs/_CHANGELOG/*` on completion.
+
+## Completion Notes (2026-04-20)
+
+- Expanded `tests/integration/routes/pages.test.ts` from registration-only
+  coverage into route permission, validation, auth-required, DB-backed
+  lifecycle, audit, and known error-path coverage.
+- Covered the Pages lifecycle through registered route handlers:
+  create, detail, update, autosave, publish, preview, revision list, restore,
+  autosave discard, duplicate, unpublish, and delete.
+- Verified security support through the existing global CSRF/rate-limit suites;
+  the CSRF suite explicitly exercises `/admin/api/pages`.
+- No API contract changes were required.
+
+## Validation (2026-04-20)
+
+- `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/pages tests/integration/routes/pages.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/security/csrf.test.ts tests/unit/security/rateLimit.test.ts tests/security/codersoSecurityGate.test.ts tests/integration/routes/pages.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

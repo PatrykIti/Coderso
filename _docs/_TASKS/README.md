@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 13 tasks
-- **In Progress:** 5 tasks
-- **Done:** 944 tasks
+- **To Do:** 11 tasks
+- **In Progress:** 6 tasks
+- **Done:** 945 tasks
 
 ---
 
@@ -38,8 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-191 | Pages Test Coverage Hardening | High | Large | Close remaining Pages route/runtime/client/cache/builder coverage gaps found in the audit |
-| TASK-191-01 | Pages Admin Route Contract and Security Coverage | High | Medium | Add Bun route handler, validation, permission, auth, and audit coverage for `/pages*` |
 | TASK-191-02 | Public Page Runtime and Preview Coverage | High | Medium | Add Bun runtime coverage for published pages, draft 404s, and tokenized preview current-data rendering |
 | TASK-191-03 | Pages Admin Client Cache Coverage | High | Medium | Expand Vitest coverage for `pagesClient` cache, mutation broadcasts, detail sync, and CSRF paths |
 | TASK-191-04 | Page Builder Branch Coverage Closure | Medium | Medium | Close useful Vitest branch gaps in builder helpers and editor leaf components |
@@ -58,6 +56,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-191 | Pages Test Coverage Hardening | High | Large | In progress: starting with admin route/security contract coverage for Pages |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -70,6 +69,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-191-01 | Pages Admin Route Contract and Security Coverage | High | Medium | Done: route permissions, validation, auth-required, lifecycle, audit, and error-path coverage added for `/pages*` |
 | TASK-189 | Assistant Policy Engine Audit Remediation | High | Large | Done: provider action arrays removed, exact policy identity fixed, provider-side parallel heuristics collapsed |
 | TASK-189-05 | Final Operation Policy Planner Hardening | High | Large | Done: planner-owned CMS/admin branches and provider repair fallback removed; policy path is enforced |
 | TASK-189-04 | Docs, Tests, and Closure | High | Medium | Done: docs, changelog, targeted Vitest, lint/typecheck, and live assistant matrix synced |
