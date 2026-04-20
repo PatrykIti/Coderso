@@ -9,7 +9,16 @@ import {
   parseListingQueryUpdateInput,
 } from "../../../core/services/content/queryBuilderService";
 
-const buildEntriesQuery = () => ({
+type ListingQueryFixture = {
+  source: string;
+  sourceConfig: Record<string, unknown>;
+  filters: Array<{ field: string; op: string; value?: unknown }>;
+  sort: Array<{ field: string; dir: string }>;
+  pagination: { limit: number; offset: number };
+  fields: string[];
+};
+
+const buildEntriesQuery = (): ListingQueryFixture => ({
   source: "entries",
   sourceConfig: {
     contentTypeId: "  type-post  ",
