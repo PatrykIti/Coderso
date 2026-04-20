@@ -33,6 +33,7 @@ export const cmsResourceKindValues = [
   "listing-query",
   "listing-template",
   "form",
+  "menu",
   "menu-item",
   "seo-document",
   "media",

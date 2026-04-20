@@ -19,6 +19,33 @@ const createDeps = (overrides: Partial<AssistantResourceCatalogDeps> = {}) => {
         },
       ];
     },
+    listPosts: async () => {
+      calls.push("posts");
+      return [
+        {
+          id: "post-public",
+          title: "Published Post",
+          slug: "published-post",
+          status: "published",
+          publishedAt: "2026-04-20T10:00:00.000Z",
+          updatedAt: "2026-04-20T11:00:00.000Z",
+        },
+      ];
+    },
+    listEntries: async (typeId: string) => {
+      calls.push(`entries:${typeId}`);
+      return [
+        {
+          id: "entry-product",
+          typeId,
+          title: "Product Entry",
+          slug: "product-entry",
+          status: "published",
+          publishedAt: "2026-04-20T10:00:00.000Z",
+          updatedAt: "2026-04-20T11:00:00.000Z",
+        },
+      ];
+    },
     listContentTypes: async () => {
       calls.push("contentTypes");
       return [
@@ -147,6 +174,55 @@ const createDeps = (overrides: Partial<AssistantResourceCatalogDeps> = {}) => {
         },
       ];
     },
+    listMedia: async () => {
+      calls.push("media");
+      return [
+        {
+          id: "media-1",
+          originalName: "hero.png",
+          title: "Hero",
+          type: "image",
+          mimeType: "image/png",
+          size: 123,
+        },
+      ];
+    },
+    listCommerceProducts: async () => {
+      calls.push("commerceProducts");
+      return [
+        {
+          id: "product-1",
+          title: "Product",
+          slug: "product",
+          status: "published",
+          pricing: { amount: 199, currency: "PLN" },
+          stock: { state: "in_stock" },
+        },
+      ];
+    },
+    listCommerceCollections: async () => {
+      calls.push("commerceCollections");
+      return [
+        {
+          id: "collection-1",
+          name: "Featured",
+          slug: "featured",
+          productCount: 1,
+        },
+      ];
+    },
+    listSolutionKits: async () => {
+      calls.push("solutionKits");
+      return [
+        {
+          id: "services-directory",
+          title: "Services Directory",
+          shortDescription: "Services kit",
+          recommendedModules: ["engine", "entries"],
+          features: ["Directory"],
+        },
+      ];
+    },
     ...overrides,
   };
 
@@ -163,23 +239,35 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
   );
 
   expect(calls.sort()).toEqual([
+    "commerceCollections",
+    "commerceProducts",
     "contentTypes",
     "customScreens",
+    "entries:ct-products",
     "forms",
     "listingQueries",
     "listingTemplates",
+    "media",
     "menus",
     "pages",
+    "posts",
     "seoDocuments",
+    "solutionKits",
     "widgets",
   ]);
   expect(snapshot.generatedAt).toBe("2026-04-11T10:00:00.000Z");
   expect(snapshot.contentTypes[0]?.slug).toBe("products");
   expect(snapshot.pages?.[0]?.slug).toBe("/products");
+  expect(snapshot.posts?.[0]?.slug).toBe("published-post");
+  expect(snapshot.entries?.[0]?.slug).toBe("product-entry");
   expect(snapshot.forms[0]?.fields[0]?.name).toBe("email");
   expect(snapshot.menus[0]?.items[0]?.label).toBe("Products");
   expect(snapshot.seoDocuments[0]?.slug).toBe("/products");
   expect(snapshot.widgets[0]?.id).toBe("content-list");
+  expect(snapshot.media?.[0]?.originalName).toBe("hero.png");
+  expect(snapshot.commerce?.products[0]?.slug).toBe("product");
+  expect(snapshot.commerce?.collections[0]?.slug).toBe("featured");
+  expect(snapshot.solutionKits?.[0]?.id).toBe("services-directory");
   expect(snapshot.warnings).toEqual([]);
 });
 

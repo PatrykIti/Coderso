@@ -34,6 +34,7 @@ test("assistantOperationPolicy includes migrated CMS and admin resources", () =>
     "listing-template",
     "media",
     "mega-menu",
+    "menu",
     "menu-item",
     "page",
     "plugin-store",

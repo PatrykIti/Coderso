@@ -399,11 +399,15 @@ export const buildCmsOperationDraftFromPrompt = (
 };
 
 const pageHref = (id: string) => `/admin/pages/${encodeURIComponent(id)}`;
+const postHref = (id: string) => `/admin/coderso/posts/${encodeURIComponent(id)}`;
 const customScreenHref = (id: string) => `/admin/coderso/custom-screens/${encodeURIComponent(id)}`;
 const formHref = (id: string) => `/admin/coderso/forms/${encodeURIComponent(id)}`;
 const listingHref = (id: string) => `/admin/coderso/listings/${encodeURIComponent(id)}`;
 const widgetTemplateHref = (id: string) =>
   `/admin/coderso/widgets/templates/${encodeURIComponent(id)}`;
+const mediaHref = (id: string) => `/admin/media/${encodeURIComponent(id)}`;
+const commerceProductHref = (id: string) => `/admin/coderso/commerce/${encodeURIComponent(id)}`;
+const solutionKitHref = (id: string) => `/admin/coderso/solution-kits/${encodeURIComponent(id)}`;
 
 const candidate = (input: CmsResolvedTargetCandidate): CmsResolvedTargetCandidate => input;
 
@@ -436,6 +440,22 @@ const candidatesForKind = (
           adminHref: pageHref(page.id),
         }));
       }
+    }
+  }
+  if (kind === "post") {
+    for (const post of catalog?.posts ?? []) {
+      result.push(candidate({
+        kind,
+        id: post.id,
+        label: post.title,
+        slug: post.slug,
+        status: post.status,
+        adminHref: postHref(post.id),
+        details: {
+          publishedAt: post.publishedAt,
+          updatedAt: post.updatedAt,
+        },
+      }));
     }
   }
   if (kind === "custom-screen") {
@@ -484,6 +504,23 @@ const candidatesForKind = (
         adminHref: `/admin/coderso/engine/${encodeURIComponent(contentType.id)}`,
         details: {
           entryCount: contentType.entryCount,
+        },
+      }));
+    }
+  }
+  if (kind === "entry") {
+    for (const entry of catalog?.entries ?? []) {
+      result.push(candidate({
+        kind,
+        id: entry.id,
+        label: entry.title,
+        slug: entry.slug,
+        status: entry.status,
+        adminHref: `/admin/coderso/entries/${encodeURIComponent(entry.typeId)}/${encodeURIComponent(entry.id)}`,
+        details: {
+          typeId: entry.typeId,
+          publishedAt: entry.publishedAt,
+          updatedAt: entry.updatedAt,
         },
       }));
     }
@@ -566,6 +603,40 @@ const candidatesForKind = (
       }
     }
   }
+  if (kind === "media") {
+    for (const item of catalog?.media ?? []) {
+      result.push(candidate({
+        kind,
+        id: item.id,
+        label: item.title || item.originalName,
+        slug: null,
+        status: item.type,
+        adminHref: mediaHref(item.id),
+        details: {
+          originalName: item.originalName,
+          mimeType: item.mimeType,
+          size: item.size,
+          alt: item.alt,
+        },
+      }));
+    }
+  }
+  if (kind === "menu") {
+    for (const menu of catalog?.menus ?? []) {
+      result.push(candidate({
+        kind,
+        id: menu.id,
+        label: menu.name,
+        slug: menu.location,
+        status: null,
+        adminHref: `/admin/menus/${encodeURIComponent(menu.id)}`,
+        details: {
+          location: menu.location,
+          itemCount: menu.itemCount,
+        },
+      }));
+    }
+  }
   if (kind === "menu-item") {
     for (const menu of catalog?.menus ?? []) {
       for (const item of menu.items) {
@@ -583,6 +654,55 @@ const candidatesForKind = (
           },
         }));
       }
+    }
+  }
+  if (kind === "commerce") {
+    for (const product of catalog?.commerce?.products ?? []) {
+      result.push(candidate({
+        kind,
+        id: product.id,
+        label: product.title,
+        slug: product.slug,
+        status: product.status,
+        adminHref: commerceProductHref(product.id),
+        details: {
+          commerceType: "product",
+          currency: product.currency,
+          priceAmount: product.priceAmount,
+          stockState: product.stockState,
+        },
+      }));
+    }
+    for (const collection of catalog?.commerce?.collections ?? []) {
+      result.push(candidate({
+        kind,
+        id: collection.id,
+        label: collection.name,
+        slug: collection.slug,
+        status: "collection",
+        adminHref: "/admin/coderso/commerce",
+        details: {
+          commerceType: "collection",
+          productCount: collection.productCount,
+        },
+      }));
+    }
+  }
+  if (kind === "solution-kit") {
+    for (const kit of catalog?.solutionKits ?? []) {
+      result.push(candidate({
+        kind,
+        id: kit.id,
+        label: kit.title,
+        slug: kit.id,
+        status: null,
+        adminHref: solutionKitHref(kit.id),
+        details: {
+          shortDescription: kit.shortDescription,
+          recommendedModules: kit.recommendedModules.join(", "),
+          features: kit.features.join(", "),
+        },
+      }));
     }
   }
   if (kind === "seo-document") {

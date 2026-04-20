@@ -44,6 +44,24 @@ const context = buildAssistantAdminContext({
         status: "published",
       },
     ],
+    posts: [
+      {
+        id: "post-public",
+        title: "Public Post",
+        slug: "public-post",
+        status: "published",
+        publishedAt: "2026-04-20T10:00:00.000Z",
+        updatedAt: "2026-04-20T11:00:00.000Z",
+      },
+      {
+        id: "post-draft",
+        title: "Draft Post",
+        slug: "draft-post",
+        status: "draft",
+        publishedAt: null,
+        updatedAt: "2026-04-20T12:00:00.000Z",
+      },
+    ],
     contentTypes: [],
     customScreens: [
       {
@@ -140,6 +158,20 @@ test("resolveCmsOperationTargets resolves exact and prefix candidates", () => {
   expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([
     "House Projects",
     "House Projects Archive",
+  ]);
+});
+
+test("resolveCmsOperationTargets returns post candidates from resource catalog", () => {
+  const draft = normalizeCmsOperationDraft({
+    operation: "inspect",
+    resourceKind: "post",
+  });
+
+  const resolution = resolveCmsOperationTargets(draft, context);
+  expect(resolution.status).toBe("candidates");
+  expect(resolution.candidates.map((candidate) => candidate.label)).toEqual([
+    "Draft Post",
+    "Public Post",
   ]);
 });
 

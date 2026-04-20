@@ -27,6 +27,25 @@ export type AssistantPageSummary = {
   status: string;
 };
 
+export type AssistantPostSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  publishedAt: string | null;
+  updatedAt: string | null;
+};
+
+export type AssistantEntrySummary = {
+  id: string;
+  typeId: string;
+  title: string;
+  slug: string;
+  status: string;
+  publishedAt: string | null;
+  updatedAt: string | null;
+};
+
 export type AssistantCustomScreenBindingSummary = {
   widgetId: string;
   field: string;
@@ -134,6 +153,44 @@ export type AssistantWidgetSummary = {
   status: "draft" | "published";
 };
 
+export type AssistantMediaSummary = {
+  id: string;
+  title: string;
+  originalName: string;
+  type: string;
+  mimeType: string;
+  size: number | null;
+  alt: string | null;
+  createdAt: string | null;
+};
+
+export type AssistantCommerceProductSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  currency: string | null;
+  priceAmount: number | null;
+  stockState: string | null;
+  updatedAt: string | null;
+};
+
+export type AssistantCommerceCollectionSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  productCount: number | null;
+  updatedAt: string | null;
+};
+
+export type AssistantSolutionKitSummary = {
+  id: string;
+  title: string;
+  shortDescription: string | null;
+  recommendedModules: string[];
+  features: string[];
+};
+
 export type AssistantTemplateSectionReferenceSummary = {
   templateId: string;
   templateName: string | null;
@@ -175,6 +232,8 @@ export type AssistantResourceCatalogSnapshot = {
   generatedAt: string;
   budget: AssistantResourceCatalogBudget;
   pages?: AssistantPageSummary[];
+  posts?: AssistantPostSummary[];
+  entries?: AssistantEntrySummary[];
   contentTypes: AssistantContentTypeSummary[];
   customScreens: AssistantCustomScreenSummary[];
   listings: {
@@ -185,5 +244,11 @@ export type AssistantResourceCatalogSnapshot = {
   menus: AssistantMenuSummary[];
   seoDocuments: AssistantSeoDocumentSummary[];
   widgets: AssistantWidgetSummary[];
+  media?: AssistantMediaSummary[];
+  commerce?: {
+    products: AssistantCommerceProductSummary[];
+    collections: AssistantCommerceCollectionSummary[];
+  };
+  solutionKits?: AssistantSolutionKitSummary[];
   warnings: string[];
 };

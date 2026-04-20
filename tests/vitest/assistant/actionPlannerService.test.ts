@@ -7,7 +7,10 @@ import {
   planAssistantActions,
   planAssistantActionsWithProviderDraft,
 } from "../../../core/services/assistant/actionPlannerService";
-import type { AssistantActionContext } from "../../../core/services/assistant/actionPlanTypes";
+import type {
+  AssistantActionContext,
+  AssistantPlannedAction,
+} from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../core/services/assistant/providers/providerTypes";
 
 const createFakeProvider = (text: string): AssistantProvider => ({
@@ -588,7 +591,11 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
     "custom-screen.delete",
     "custom-screen.delete",
   ]);
-  expect(plan.actions.map((action) => action.input.name)).toEqual([
+  const deleteActions = plan.actions.filter(
+    (action): action is Extract<AssistantPlannedAction, { type: "custom-screen.delete" }> =>
+      action.type === "custom-screen.delete"
+  );
+  expect(deleteActions.map((action) => action.input.name)).toEqual([
     "House Projects",
     "House Projects Archive",
   ]);
@@ -2058,6 +2065,190 @@ test("planAssistantActions builds editorial content hub without post mutations",
   expect(plan.intentId).toBe("editorial-content-hub");
   expect(plan.actions.map((action) => action.type)).toEqual(["page.upsert"]);
   expect(JSON.stringify(plan.actions)).toContain("posts-feed");
+});
+
+test("planAssistantActions inspects posts from resource catalog", () => {
+  const plan = planAssistantActions({
+    prompt: "pokaz mi wszystkie posty",
+    context: {
+      page: "/admin/coderso/posts",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-20T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        posts: [
+          {
+            id: "post-public",
+            title: "Public Post",
+            slug: "public-post",
+            status: "published",
+            publishedAt: "2026-04-20T10:00:00.000Z",
+            updatedAt: "2026-04-20T11:00:00.000Z",
+          },
+          {
+            id: "post-draft",
+            title: "Draft Post",
+            slug: "draft-post",
+            status: "draft",
+            publishedAt: null,
+            updatedAt: "2026-04-20T12:00:00.000Z",
+          },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.resourceKind).toBe("post");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual([
+    "Draft Post",
+    "Public Post",
+  ]);
+  expect(plan.actions).toEqual([]);
+});
+
+test("planAssistantActions inspects left-menu resource catalog sections", () => {
+  const resourceCatalog: AssistantActionContext["resourceCatalog"] = {
+    schemaVersion: 1,
+    generatedAt: "2026-04-20T10:00:00.000Z",
+    budget: {
+      maxItemsPerGroup: 50,
+      maxFieldsPerResource: 24,
+      truncated: false,
+    },
+    pages: [],
+    posts: [],
+    entries: [
+      {
+        id: "entry-product",
+        typeId: "ct-products",
+        title: "Product Entry",
+        slug: "product-entry",
+        status: "published",
+        publishedAt: "2026-04-20T10:00:00.000Z",
+        updatedAt: "2026-04-20T11:00:00.000Z",
+      },
+    ],
+    contentTypes: [],
+    customScreens: [
+      {
+        id: "screen-products",
+        name: "Products Screen",
+        contentTypeId: "ct-products",
+        status: "active",
+        showInSidebar: true,
+        sidebarLabel: "Products",
+        writableBindingFields: [],
+        bindings: [],
+      },
+    ],
+    listings: { queries: [], templates: [] },
+    forms: [],
+    menus: [
+      {
+        id: "menu-primary",
+        name: "Primary",
+        location: "primary",
+        itemCount: 1,
+        items: [
+          {
+            id: "menu-home",
+            label: "Home",
+            href: "/",
+            pageId: null,
+            parentId: null,
+            orderIndex: 0,
+            depth: 0,
+          },
+        ],
+      },
+    ],
+    seoDocuments: [],
+    widgets: [],
+    media: [
+      {
+        id: "media-1",
+        title: "Hero",
+        originalName: "hero.png",
+        type: "image",
+        mimeType: "image/png",
+        size: 123,
+        alt: "Hero alt",
+        createdAt: "2026-04-20T10:00:00.000Z",
+      },
+    ],
+    commerce: {
+      products: [
+        {
+          id: "commerce-product",
+          title: "Product",
+          slug: "product",
+          status: "published",
+          currency: "PLN",
+          priceAmount: 199,
+          stockState: "in_stock",
+          updatedAt: "2026-04-20T10:00:00.000Z",
+        },
+      ],
+      collections: [
+        {
+          id: "commerce-collection",
+          name: "Featured",
+          slug: "featured",
+          productCount: 1,
+          updatedAt: "2026-04-20T10:00:00.000Z",
+        },
+      ],
+    },
+    solutionKits: [
+      {
+        id: "services-directory",
+        title: "Services Directory",
+        shortDescription: "Services kit",
+        recommendedModules: ["engine", "entries"],
+        features: ["Directory"],
+      },
+    ],
+    warnings: [],
+  };
+  const cases = [
+    { prompt: "pokaz menu", resourceKind: "menu", labels: ["Primary"] },
+    { prompt: "pokaz media", resourceKind: "media", labels: ["Hero"] },
+    { prompt: "pokaz entries", resourceKind: "entry", labels: ["Product Entry"] },
+    { prompt: "pokaz screens", resourceKind: "custom-screen", labels: ["Products Screen"] },
+    { prompt: "pokaz commerce", resourceKind: "commerce", labels: ["Featured", "Product"] },
+    { prompt: "pokaz solution kits", resourceKind: "solution-kit", labels: ["Services Directory"] },
+  ] as const;
+
+  for (const item of cases) {
+    const plan = planAssistantActions({
+      prompt: item.prompt,
+      context: {
+        page: "/admin",
+        locale: "pl-PL",
+        resourceCatalog,
+      },
+    });
+
+    expect(plan.responseKind, item.prompt).toBe("inspection");
+    expect(plan.inspection?.resourceKind, item.prompt).toBe(item.resourceKind);
+    expect(plan.inspection?.candidates.map((candidate) => candidate.label), item.prompt).toEqual(item.labels);
+    expect(plan.actions, item.prompt).toEqual([]);
+  }
 });
 
 test("planAssistantActions gates direct post mutation prompts", () => {

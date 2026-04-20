@@ -383,10 +383,15 @@ Resource catalog context:
 - `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.
 - Route enrichuje wtedy context o `resourceCatalog` z:
   - content types,
+  - entries,
+  - posts,
   - custom screens,
   - listing queries/templates,
   - forms + fields,
   - menus + bounded menu items,
+  - media summaries,
+  - commerce product/collection summaries,
+  - solution kit summaries,
   - existing SEO documents,
   - widgets/templates.
 - Snapshot jest schema-versioned, deterministic, limitowany budzetem i redaguje secret-like keys.

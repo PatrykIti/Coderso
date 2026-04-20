@@ -16,6 +16,8 @@ export type AssistantMenuWithItemsRaw = {
 
 export type AssistantResourceCatalogDeps = {
   listPages: () => Promise<unknown[]>;
+  listPosts?: () => Promise<unknown[]>;
+  listEntries?: (typeId: string) => Promise<unknown[]>;
   listContentTypes: () => Promise<unknown[]>;
   listCustomScreens: () => Promise<unknown[]>;
   listListingQueries: () => Promise<unknown[]>;
@@ -24,12 +26,18 @@ export type AssistantResourceCatalogDeps = {
   listMenusWithItems: () => Promise<AssistantMenuWithItemsRaw[]>;
   listSeoDocuments: () => Promise<unknown[]>;
   listWidgetCatalog: () => Promise<unknown[]>;
+  listMedia?: () => Promise<unknown[]>;
+  listCommerceProducts?: () => Promise<unknown[]>;
+  listCommerceCollections?: () => Promise<unknown[]>;
+  listSolutionKits?: () => Promise<unknown[]>;
 };
 
 export type AssistantResourceCatalogInput = AssistantResourceCatalogNormalizeOptions;
 
 type CatalogGroup =
   | "pages"
+  | "posts"
+  | "entries"
   | "content_types"
   | "custom_screens"
   | "listing_queries"
@@ -37,7 +45,11 @@ type CatalogGroup =
   | "forms"
   | "menus"
   | "seo_documents"
-  | "widgets";
+  | "widgets"
+  | "media"
+  | "commerce_products"
+  | "commerce_collections"
+  | "solution_kits";
 
 const safeLoadGroup = async (
   group: CatalogGroup,
@@ -52,6 +64,28 @@ const safeLoadGroup = async (
   }
 };
 
+const safeLoadEntries = async (
+  contentTypes: unknown[],
+  deps: AssistantResourceCatalogDeps,
+  warnings: string[]
+) => {
+  if (!deps.listEntries) return [];
+  const result: unknown[] = [];
+  for (const contentType of contentTypes) {
+    const typeId =
+      contentType && typeof contentType === "object" && !Array.isArray(contentType)
+        ? (contentType as Record<string, unknown>).id
+        : null;
+    if (typeof typeId !== "string" || !typeId.trim()) continue;
+    try {
+      result.push(...(await deps.listEntries(typeId)));
+    } catch {
+      warnings.push(`entries_${typeId}_unavailable`);
+    }
+  }
+  return result;
+};
+
 export async function buildAssistantResourceCatalogSnapshot(
   input: AssistantResourceCatalogInput,
   deps: AssistantResourceCatalogDeps
@@ -59,6 +93,7 @@ export async function buildAssistantResourceCatalogSnapshot(
   const warnings: string[] = [];
   const [
     pages,
+    posts,
     contentTypes,
     customScreens,
     listingQueries,
@@ -67,8 +102,13 @@ export async function buildAssistantResourceCatalogSnapshot(
     menus,
     seoDocuments,
     widgets,
+    media,
+    commerceProducts,
+    commerceCollections,
+    solutionKits,
   ] = await Promise.all([
     safeLoadGroup("pages", deps.listPages, warnings),
+    deps.listPosts ? safeLoadGroup("posts", deps.listPosts, warnings) : Promise.resolve([]),
     safeLoadGroup("content_types", deps.listContentTypes, warnings),
     safeLoadGroup("custom_screens", deps.listCustomScreens, warnings),
     safeLoadGroup("listing_queries", deps.listListingQueries, warnings),
@@ -77,12 +117,25 @@ export async function buildAssistantResourceCatalogSnapshot(
     safeLoadGroup("menus", deps.listMenusWithItems, warnings),
     safeLoadGroup("seo_documents", deps.listSeoDocuments, warnings),
     safeLoadGroup("widgets", deps.listWidgetCatalog, warnings),
+    deps.listMedia ? safeLoadGroup("media", deps.listMedia, warnings) : Promise.resolve([]),
+    deps.listCommerceProducts
+      ? safeLoadGroup("commerce_products", deps.listCommerceProducts, warnings)
+      : Promise.resolve([]),
+    deps.listCommerceCollections
+      ? safeLoadGroup("commerce_collections", deps.listCommerceCollections, warnings)
+      : Promise.resolve([]),
+    deps.listSolutionKits
+      ? safeLoadGroup("solution_kits", deps.listSolutionKits, warnings)
+      : Promise.resolve([]),
   ]);
+  const entries = await safeLoadEntries(contentTypes, deps, warnings);
 
   const snapshot = normalizeAssistantResourceCatalog(
     {
       contentTypes,
       pages,
+      posts,
+      entries,
       customScreens,
       listingQueries,
       listingTemplates,
@@ -90,6 +143,10 @@ export async function buildAssistantResourceCatalogSnapshot(
       menus,
       seoDocuments,
       widgets,
+      media,
+      commerceProducts,
+      commerceCollections,
+      solutionKits,
     },
     input
   );
@@ -115,6 +172,11 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     menuService,
     seoService,
     widgetCatalogService,
+    postsService,
+    entryService,
+    mediaService,
+    commerceService,
+    solutionKitsService,
   ] = await Promise.all([
     import("../content/typeService"),
     import("../pages/pageService"),
@@ -125,10 +187,17 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     import("../menus/menuService"),
     import("../seo/seoService"),
     import("../widgets/widgetCatalogService"),
+    import("../content/postsService"),
+    import("../content/entryService"),
+    import("../media/mediaService"),
+    import("../commerce/commerceService"),
+    import("../kits/solutionKitsService"),
   ]);
 
   return buildAssistantResourceCatalogSnapshot(input, {
     listPages: pageService.listPages,
+    listPosts: postsService.listPosts,
+    listEntries: entryService.listEntries,
     listContentTypes: typeService.listContentTypes,
     listCustomScreens: customScreenService.listCustomScreens,
     listListingQueries: listingQueryService.listListingQueries,
@@ -153,5 +222,9 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     },
     listSeoDocuments: seoService.listExistingSeoDocuments,
     listWidgetCatalog: widgetCatalogService.listWidgetCatalog,
+    listMedia: mediaService.listMedia,
+    listCommerceProducts: commerceService.listCommerceProducts,
+    listCommerceCollections: commerceService.listCommerceCollections,
+    listSolutionKits: async () => solutionKitsService.listSolutionKits(),
   });
 }

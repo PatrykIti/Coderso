@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 719 | 2026-04-20 | TASK-192 assistant admin resource catalog repair | Assistant/Core |
 | 718 | 2026-04-20 | TASK-191 pages coverage closure | QA/CMS Pages |
 | 717 | 2026-04-20 | TASK-191-04 page builder branch coverage | QA/Page Builder |
 | 716 | 2026-04-20 | TASK-191-03 pages client cache coverage | QA/Admin Pages |

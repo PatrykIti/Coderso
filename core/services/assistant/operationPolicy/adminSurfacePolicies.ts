@@ -164,6 +164,32 @@ export const dashboardPolicy: AssistantResourcePolicy = surfacePolicy({
   notes: "Dashboard prompts stay non-executable/read-only.",
 });
 
+export const menuPolicy: AssistantResourcePolicy = surfacePolicy({
+  kind: "menu",
+  label: "Menus",
+  aliases: ["menu", "menus", "navigation", "nawigacja"],
+  routes: ["/admin/menus"],
+  operations: ["inspect", "find", "create", "update", "delete"],
+  readPermissions: ["menus:read"],
+  executePermissions: ["menus:write"],
+  fields: {
+    name: field("name", ["name", "nazwa"], "string"),
+    location: field("location", ["location", "lokalizacja"], "string"),
+    itemCount: field("itemCount", ["items", "pozycje"], "number"),
+  },
+  actions: {
+    inspect: readOnlyAction("inspect"),
+    find: readOnlyAction("find"),
+    create: gatedAction("create"),
+    update: gatedAction("update"),
+    delete: gatedAction("delete"),
+  },
+  destructive: exactDestructivePolicy,
+  coverageState: "live-execute",
+  task: "TASK-184-08",
+  notes: "Menu summaries are read-only; menu item inspect/update/delete live matrix covers executable item actions.",
+});
+
 export const menuItemPolicy: AssistantResourcePolicy = surfacePolicy({
   kind: "menu-item",
   label: "Menu Items",
@@ -585,6 +611,7 @@ export const settingsIntegrationsPolicy: AssistantResourcePolicy = settingsSurfa
 
 export const adminSurfacePolicies = {
   dashboard: dashboardPolicy,
+  menu: menuPolicy,
   "menu-item": menuItemPolicy,
   "admin-search": adminSearchPolicy,
   "seo-document": seoDocumentPolicy,

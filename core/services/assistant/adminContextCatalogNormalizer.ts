@@ -1,20 +1,26 @@
 import type {
   AssistantContentTypeSummary,
+  AssistantCommerceCollectionSummary,
+  AssistantCommerceProductSummary,
   AssistantCustomScreenBindingSummary,
   AssistantCustomScreenSummary,
+  AssistantEntrySummary,
   AssistantFormSummary,
   AssistantListingQuerySummary,
   AssistantListingSortSummary,
   AssistantListingTemplateSummary,
+  AssistantMediaSummary,
   AssistantMenuItemSummary,
   AssistantMenuSummary,
   AssistantPageSummary,
+  AssistantPostSummary,
   AssistantReferencedWidgetTemplateBlockSummary,
   AssistantReferencedWidgetTemplateSummary,
   AssistantResourceCatalogBudget,
   AssistantResourceCatalogSnapshot,
   AssistantResourceFieldSummary,
   AssistantSeoDocumentSummary,
+  AssistantSolutionKitSummary,
   AssistantTemplateSectionReferenceSummary,
   AssistantWidgetSlotSummary,
   AssistantWidgetSummary,
@@ -23,6 +29,8 @@ import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettin
 
 export type AssistantResourceCatalogRawInput = {
   pages?: unknown;
+  posts?: unknown;
+  entries?: unknown;
   contentTypes?: unknown;
   customScreens?: unknown;
   listingQueries?: unknown;
@@ -31,6 +39,10 @@ export type AssistantResourceCatalogRawInput = {
   menus?: unknown;
   seoDocuments?: unknown;
   widgets?: unknown;
+  media?: unknown;
+  commerceProducts?: unknown;
+  commerceCollections?: unknown;
+  solutionKits?: unknown;
 };
 
 export type AssistantResourceCatalogNormalizeOptions = {
@@ -66,6 +78,11 @@ const readBoolean = (value: unknown, fallback = false) =>
 
 const readNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const readIsoDate = (value: unknown) => {
+  if (value instanceof Date) return value.toISOString();
+  return readString(value);
+};
 
 const readArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 
@@ -178,6 +195,38 @@ const normalizePage = (value: Record<string, unknown>): AssistantPageSummary | n
     title,
     slug,
     status: readString(value.status) ?? "unknown",
+  };
+};
+
+const normalizePost = (value: Record<string, unknown>): AssistantPostSummary | null => {
+  const id = readString(value.id);
+  const title = readString(value.title);
+  const slug = readString(value.slug);
+  if (!id || !title || !slug) return null;
+  return {
+    id,
+    title,
+    slug,
+    status: readString(value.status) ?? "unknown",
+    publishedAt: readIsoDate(value.publishedAt),
+    updatedAt: readIsoDate(value.updatedAt),
+  };
+};
+
+const normalizeEntry = (value: Record<string, unknown>): AssistantEntrySummary | null => {
+  const id = readString(value.id);
+  const typeId = readString(value.typeId);
+  const title = readString(value.title);
+  const slug = readString(value.slug);
+  if (!id || !typeId || !title || !slug) return null;
+  return {
+    id,
+    typeId,
+    title,
+    slug,
+    status: readString(value.status) ?? "unknown",
+    publishedAt: readIsoDate(value.publishedAt),
+    updatedAt: readIsoDate(value.updatedAt),
   };
 };
 
@@ -437,6 +486,82 @@ const normalizeWidget = (value: Record<string, unknown>): AssistantWidgetSummary
     surfaces: readStringArray(value.surfaces),
     requires: readStringArray(value.requires),
     status: value.status === "draft" ? "draft" : "published",
+  };
+};
+
+const normalizeMedia = (value: Record<string, unknown>): AssistantMediaSummary | null => {
+  const id = readString(value.id);
+  const originalName = readString(value.originalName) ?? readString(value.key);
+  if (!id || !originalName) return null;
+  return {
+    id,
+    title: readString(value.title) ?? originalName,
+    originalName,
+    type: readString(value.type) ?? "file",
+    mimeType: readString(value.mimeType) ?? "application/octet-stream",
+    size: readNumber(value.size),
+    alt: readSafeString(value.alt),
+    createdAt: readIsoDate(value.createdAt),
+  };
+};
+
+const normalizeCommerceMoney = (value: unknown) => {
+  if (!isRecord(value)) return { amount: null, currency: null };
+  return {
+    amount: readNumber(value.amount),
+    currency: readString(value.currency),
+  };
+};
+
+const normalizeCommerceProduct = (
+  value: Record<string, unknown>
+): AssistantCommerceProductSummary | null => {
+  const id = readString(value.id);
+  const title = readString(value.title);
+  const slug = readString(value.slug);
+  if (!id || !title || !slug) return null;
+  const pricing = normalizeCommerceMoney(value.pricing);
+  const stock = isRecord(value.stock) ? value.stock : {};
+  return {
+    id,
+    title,
+    slug,
+    status: readString(value.status) ?? "unknown",
+    currency: pricing.currency,
+    priceAmount: pricing.amount,
+    stockState: readString(stock.state),
+    updatedAt: readIsoDate(value.updatedAt),
+  };
+};
+
+const normalizeCommerceCollection = (
+  value: Record<string, unknown>
+): AssistantCommerceCollectionSummary | null => {
+  const id = readString(value.id);
+  const name = readString(value.name);
+  const slug = readString(value.slug);
+  if (!id || !name || !slug) return null;
+  return {
+    id,
+    name,
+    slug,
+    productCount: readNumber(value.productCount),
+    updatedAt: readIsoDate(value.updatedAt),
+  };
+};
+
+const normalizeSolutionKit = (
+  value: Record<string, unknown>
+): AssistantSolutionKitSummary | null => {
+  const id = readString(value.id);
+  const title = readString(value.title);
+  if (!id || !title) return null;
+  return {
+    id,
+    title,
+    shortDescription: readSafeString(value.shortDescription),
+    recommendedModules: readStringArray(value.recommendedModules),
+    features: readStringArray(value.features),
   };
 };
 
@@ -726,6 +851,24 @@ export function normalizeAssistantResourceCatalog(
     ),
     "pages"
   );
+  const posts = clamp(
+    sortByKey(
+      readRecordArray(raw.posts)
+        .map(normalizePost)
+        .filter((entry): entry is AssistantPostSummary => Boolean(entry)),
+      (entry) => entry.slug
+    ),
+    "posts"
+  );
+  const entries = clamp(
+    sortByKey(
+      readRecordArray(raw.entries)
+        .map(normalizeEntry)
+        .filter((entry): entry is AssistantEntrySummary => Boolean(entry)),
+      (entry) => `${entry.typeId}:${entry.slug}`
+    ),
+    "entries"
+  );
   const contentTypes = clamp(
     sortByKey(
       readRecordArray(raw.contentTypes)
@@ -802,12 +945,50 @@ export function normalizeAssistantResourceCatalog(
     ),
     "widgets"
   );
+  const media = clamp(
+    sortByKey(
+      readRecordArray(raw.media)
+        .map(normalizeMedia)
+        .filter((entry): entry is AssistantMediaSummary => Boolean(entry)),
+      (entry) => entry.originalName
+    ),
+    "media"
+  );
+  const commerceProducts = clamp(
+    sortByKey(
+      readRecordArray(raw.commerceProducts)
+        .map(normalizeCommerceProduct)
+        .filter((entry): entry is AssistantCommerceProductSummary => Boolean(entry)),
+      (entry) => entry.slug
+    ),
+    "commerce_products"
+  );
+  const commerceCollections = clamp(
+    sortByKey(
+      readRecordArray(raw.commerceCollections)
+        .map(normalizeCommerceCollection)
+        .filter((entry): entry is AssistantCommerceCollectionSummary => Boolean(entry)),
+      (entry) => entry.slug
+    ),
+    "commerce_collections"
+  );
+  const solutionKits = clamp(
+    sortByKey(
+      readRecordArray(raw.solutionKits)
+        .map(normalizeSolutionKit)
+        .filter((entry): entry is AssistantSolutionKitSummary => Boolean(entry)),
+      (entry) => entry.id
+    ),
+    "solution_kits"
+  );
 
   return {
     schemaVersion: 1,
     generatedAt: options.generatedAt ?? new Date().toISOString(),
     budget,
     pages,
+    posts,
+    entries,
     contentTypes,
     customScreens,
     listings: {
@@ -818,6 +999,12 @@ export function normalizeAssistantResourceCatalog(
     menus,
     seoDocuments,
     widgets,
+    media,
+    commerce: {
+      products: commerceProducts,
+      collections: commerceCollections,
+    },
+    solutionKits,
     warnings: [...new Set(warnings)].sort((left, right) => left.localeCompare(right)),
   };
 }

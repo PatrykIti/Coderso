@@ -14,6 +14,29 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
           currentData: { secretToken: "never expose" },
         },
       ],
+      posts: [
+        {
+          id: "post-public",
+          title: "Published Post",
+          slug: "published-post",
+          status: "published",
+          publishedAt: "2026-04-20T10:00:00.000Z",
+          updatedAt: "2026-04-20T11:00:00.000Z",
+          data: { secretToken: "never expose" },
+        },
+      ],
+      entries: [
+        {
+          id: "entry-product",
+          typeId: "ct-products",
+          title: "Product Entry",
+          slug: "product-entry",
+          status: "published",
+          publishedAt: "2026-04-20T10:00:00.000Z",
+          updatedAt: "2026-04-20T11:00:00.000Z",
+          data: { apiKey: "never expose" },
+        },
+      ],
       contentTypes: [
         {
           id: "ct-products",
@@ -175,6 +198,47 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
           render: () => null,
         },
       ],
+      media: [
+        {
+          id: "media-1",
+          originalName: "hero.png",
+          title: "Hero",
+          type: "image",
+          mimeType: "image/png",
+          size: 123,
+          alt: "Hero alt",
+          url: "https://example.test/private-token",
+        },
+      ],
+      commerceProducts: [
+        {
+          id: "commerce-product",
+          title: "Product",
+          slug: "product",
+          status: "published",
+          pricing: { amount: 199, currency: "PLN" },
+          stock: { state: "in_stock" },
+          paymentSecret: "never expose",
+        },
+      ],
+      commerceCollections: [
+        {
+          id: "commerce-collection",
+          name: "Featured",
+          slug: "featured",
+          productCount: 1,
+        },
+      ],
+      solutionKits: [
+        {
+          id: "services-directory",
+          title: "Services Directory",
+          shortDescription: "Services kit",
+          recommendedModules: ["engine", "entries"],
+          features: ["Directory"],
+          apiKey: "never expose",
+        },
+      ],
     },
     {
       generatedAt: "2026-04-11T10:00:00.000Z",
@@ -204,6 +268,23 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         id: "page-products",
         title: "Products",
         slug: "/products",
+        status: "published",
+      },
+    ],
+    posts: [
+      {
+        id: "post-public",
+        title: "Published Post",
+        slug: "published-post",
+        status: "published",
+      },
+    ],
+    entries: [
+      {
+        id: "entry-product",
+        typeId: "ct-products",
+        title: "Product Entry",
+        slug: "product-entry",
         status: "published",
       },
     ],
@@ -271,6 +352,47 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         name: "Content List",
         variants: ["cards"],
         surfaces: ["page-builder", "widget-library"],
+      },
+    ],
+    media: [
+      {
+        id: "media-1",
+        originalName: "hero.png",
+        title: "Hero",
+        type: "image",
+        mimeType: "image/png",
+        size: 123,
+        alt: "Hero alt",
+      },
+    ],
+    commerce: {
+      products: [
+        {
+          id: "commerce-product",
+          title: "Product",
+          slug: "product",
+          status: "published",
+          currency: "PLN",
+          priceAmount: 199,
+          stockState: "in_stock",
+        },
+      ],
+      collections: [
+        {
+          id: "commerce-collection",
+          name: "Featured",
+          slug: "featured",
+          productCount: 1,
+        },
+      ],
+    },
+    solutionKits: [
+      {
+        id: "services-directory",
+        title: "Services Directory",
+        shortDescription: "Services kit",
+        recommendedModules: ["engine", "entries"],
+        features: ["Directory"],
       },
     ],
   });
