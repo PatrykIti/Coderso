@@ -11,12 +11,7 @@ import { PostEditorDocumentTools } from "../../../core/admin/ui/posts/editor/hea
 vi.mock("@/components/ui/button", () => ({
   Button: React.forwardRef<
     HTMLButtonElement,
-    {
-      children: React.ReactNode;
-      onClick?: () => void;
-      disabled?: boolean;
-      [key: string]: unknown;
-    }
+    React.ButtonHTMLAttributes<HTMLButtonElement>
   >(({ children, onClick, disabled, ...props }, ref) => (
     <button type="button" ref={ref} onClick={onClick} disabled={disabled} {...props}>
       {children}
