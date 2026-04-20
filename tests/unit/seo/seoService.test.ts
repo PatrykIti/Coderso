@@ -97,3 +97,38 @@ testIfDb("listExistingSeoDocuments and deleteSeoDocument do not create missing d
   expect(deleted?.id).toBe(doc.id);
   await expect(getSeoDocumentByTarget("page", pageId)).resolves.toBeNull();
 });
+
+testIfDb("listExistingSeoDocuments prioritizes existing target titles over orphan docs", async () => {
+  if (!pageId) throw new Error("missing_test_page");
+  const matchedDoc = await upsertSeoDocument({
+    targetType: "page",
+    targetId: pageId,
+    slug: "/seo-test",
+    title: null,
+  });
+  if (!matchedDoc) throw new Error("missing_matched_seo_doc");
+  const orphanTargetId = randomUUID();
+  const [orphanDoc] = await db
+    .insert(seoDocuments)
+    .values({
+      targetType: "page",
+      targetId: orphanTargetId,
+      slug: `/entry-${orphanTargetId}`,
+      title: null,
+      status: "warning",
+      issues: [],
+    })
+    .returning();
+  if (!orphanDoc) throw new Error("missing_orphan_seo_doc");
+
+  const list = await listExistingSeoDocuments();
+  const matchedIndex = list.findIndex((row) => row.id === matchedDoc.id);
+  const orphanIndex = list.findIndex((row) => row.id === orphanDoc.id);
+  expect(list[matchedIndex]?.targetTitle).toBe("SEO Test Page");
+  expect(matchedIndex).toBeGreaterThanOrEqual(0);
+  expect(orphanIndex).toBeGreaterThanOrEqual(0);
+  expect(matchedIndex).toBeLessThan(orphanIndex);
+
+  await db.delete(seoDocuments).where(eq(seoDocuments.id, orphanDoc.id));
+  await db.delete(seoDocuments).where(eq(seoDocuments.id, matchedDoc.id));
+});

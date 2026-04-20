@@ -157,12 +157,19 @@ expect(deleteActions.map((action) => action.input.name)).toEqual([...]);
   resources instead of falling into update needs-input.
 - Fixed the TypeScript narrowing issue in `actionPlannerService.test.ts` by
   filtering to `custom-screen.delete` actions before reading `input.name`.
+- Follow-up: SEO Manager resource catalog now hydrates current SEO targets with
+  target titles and sorts matched target documents before orphan/stale SEO docs,
+  so assistant inspections show readable page/entry names instead of technical
+  `/entry-uuid` slugs where a live target exists.
 
 ## Validation (2026-04-20)
 
 - `bun --cwd core lint:types`
 - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/cms-operation-action-mapper.test.ts tests/vitest/assistant/cms-operation-draft-schema.test.ts tests/vitest/assistant/operation-policy-resolver.test.ts tests/vitest/assistant/operation-policy-safety.test.ts tests/vitest/assistant/operation-policy-follow-up.test.ts tests/vitest/assistant/operation-policy-provider-guidance.test.ts tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/assistant/operation-policy-coverage.test.ts tests/vitest/assistant/live-coverage-matrix.test.ts tests/vitest/assistant/cms-operation-fixtures.test.ts tests/vitest/assistant/operation-policy-cms-resources.test.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts tests/vitest/assistant/admin-context-catalogs.test.ts`
 - `bun --cwd core lint`
+- `set -a && source .env && set +a && bun test tests/unit/seo/seoService.test.ts`
+- DB-backed smoke with `.env` verified `co widzisz w seo manager?` returns
+  readable SEO target titles before stale/orphan technical slugs.
 - DB-backed smoke with `.env` verified real default catalog counts and inspection
   responses for:
   - `pokaz menu`,

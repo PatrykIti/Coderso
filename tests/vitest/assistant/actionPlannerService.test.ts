@@ -2251,6 +2251,55 @@ test("planAssistantActions inspects left-menu resource catalog sections", () => 
   }
 });
 
+test("planAssistantActions uses SEO target titles instead of technical entry slugs", () => {
+  const plan = planAssistantActions({
+    prompt: "co widzisz w seo manager?",
+    context: {
+      page: "/admin/seo",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-20T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [
+          {
+            id: "seo-entry",
+            targetType: "entry",
+            targetId: "entry-123",
+            targetTitle: "Modern House Project",
+            slug: "/entry-123",
+            title: null,
+            status: "warning",
+          },
+        ],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.resourceKind).toBe("seo-document");
+  expect(plan.inspection?.candidates[0]).toMatchObject({
+    label: "Modern House Project",
+    slug: "/entry-123",
+    status: "warning",
+  });
+  expect(plan.answer).toContain("Modern House Project");
+});
+
 test("planAssistantActions gates direct post mutation prompts", () => {
   const plan = planAssistantActions({
     prompt: "utworz post blogowy o tytule Test",

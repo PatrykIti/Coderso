@@ -23,6 +23,15 @@ const normalizeSlug = (value: string | null) => {
   return value.startsWith("/") ? value : `/${value}`;
 };
 
+const targetLookupKeys = (target: TargetRow) => {
+  const keys = new Set([`${target.targetType}:${target.id}`]);
+  if (target.slug) {
+    keys.add(`${target.targetType}:${target.slug}`);
+    keys.add(`${target.targetType}:${target.slug.replace(/^\//, "")}`);
+  }
+  return [...keys];
+};
+
 const toIssue = (code: string, severity: SeoIssue["severity"], message: string): SeoIssue => ({
   code,
   severity,
@@ -203,18 +212,31 @@ export async function listExistingSeoDocuments(): Promise<SeoListItem[]> {
     loadTargets(),
     db.select().from(seoDocuments).orderBy(desc(seoDocuments.updatedAt)),
   ]);
-  const targetByKey = new Map(
-    targets.map((target) => [`${target.targetType}:${target.id}`, target])
-  );
+  const targetByKey = new Map<string, TargetRow>();
+  for (const target of targets) {
+    for (const key of targetLookupKeys(target)) {
+      targetByKey.set(key, target);
+    }
+  }
 
-  return rows.map((row) => {
-    const doc = mapDocument(row);
-    const target = targetByKey.get(`${doc.targetType}:${doc.targetId}`);
-    return {
-      ...doc,
-      targetTitle: target?.title ?? doc.title ?? doc.slug ?? doc.targetId,
-    };
-  });
+  return rows
+    .map((row) => {
+      const doc = mapDocument(row);
+      const target =
+        targetByKey.get(`${doc.targetType}:${doc.targetId}`) ??
+        (doc.slug ? targetByKey.get(`${doc.targetType}:${doc.slug}`) : undefined) ??
+        (doc.slug ? targetByKey.get(`${doc.targetType}:${doc.slug.replace(/^\//, "")}`) : undefined);
+      return {
+        ...doc,
+        targetTitle: target?.title ?? doc.title ?? doc.slug ?? doc.targetId,
+        targetFound: Boolean(target),
+      };
+    })
+    .sort((left, right) => {
+      if (left.targetFound !== right.targetFound) return left.targetFound ? -1 : 1;
+      return right.updatedAt.getTime() - left.updatedAt.getTime();
+    })
+    .map(({ targetFound: _targetFound, ...item }) => item);
 }
 
 export async function getSeoDocument(id: string): Promise<SeoDocument | null> {

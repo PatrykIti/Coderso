@@ -220,7 +220,7 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
         }))
       );
     },
-    listSeoDocuments: seoService.listExistingSeoDocuments,
+    listSeoDocuments: seoService.listSeoDocuments,
     listWidgetCatalog: widgetCatalogService.listWidgetCatalog,
     listMedia: mediaService.listMedia,
     listCommerceProducts: commerceService.listCommerceProducts,
