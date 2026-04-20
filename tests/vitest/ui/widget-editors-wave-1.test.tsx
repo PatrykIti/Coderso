@@ -319,6 +319,7 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
     <TemplateSectionWizardEditor
       value={{ templateId: "", templateName: "", resolved: undefined } as never}
       onChange={onChange}
+      variant="default"
     />
   );
 
@@ -341,6 +342,7 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
           resolved: { blocks: [{ id: "block-1" }] },
         } as never}
         onChange={onChange}
+        variant="default"
       />
       <TemplateSectionAdvancedEditor
         value={{
@@ -349,6 +351,7 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
           resolved: { blocks: [{ id: "block-1" }] },
         } as never}
         onChange={onChange}
+        variant="default"
       />
     </>
   );
@@ -386,9 +389,9 @@ test("AppointmentForm editors update flow, copy, visibility, and advanced runtim
   const onChange = vi.fn();
   const view = mount(
     <>
-      <AppointmentFormWizardEditor value={{} as never} onChange={onChange} />
-      <AppointmentFormVisualEditor value={{} as never} onChange={onChange} />
-      <AppointmentFormAdvancedEditor value={{} as never} onChange={onChange} />
+      <AppointmentFormWizardEditor value={{} as never} onChange={onChange} variant="default" />
+      <AppointmentFormVisualEditor value={{} as never} onChange={onChange} variant="default" />
+      <AppointmentFormAdvancedEditor value={{} as never} onChange={onChange} variant="default" />
     </>
   );
 
@@ -397,7 +400,7 @@ test("AppointmentForm editors update flow, copy, visibility, and advanced runtim
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
+    ) as HTMLInputElement[];
 
     act(() => {
       setInputValue(inputs[0], "booking-flow");
@@ -456,7 +459,7 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
+    ) as HTMLInputElement[];
     const variantSelect = findSelectByOptions(view.container, [
       "cards",
       "list",
@@ -512,7 +515,7 @@ test("ContentList editors cover legacy/listing source modes and visual options",
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
+    ) as HTMLInputElement[];
     const variantSelect = findSelectByOptions(view.container, [
       "cards",
       "list",
