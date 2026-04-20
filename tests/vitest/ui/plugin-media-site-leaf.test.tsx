@@ -291,6 +291,7 @@ test("PluginList renders rows, links, and selection callbacks", () => {
           policy: "manual",
           lastUpdated: "2026-03-06",
           enabled: true,
+          permissions: [],
         },
       ]}
       selectedName="SEO Optimizer"
@@ -366,6 +367,7 @@ test("SiteRouteEditor renders missing state and forwards route updates", () => {
       name="Articles"
       slug="articles"
       route={{
+        type: "articles",
         enabled: true,
         listPath: "/articles",
         detailPath: "/articles/:slug",
