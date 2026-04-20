@@ -16,7 +16,7 @@ const pagePostState = vi.hoisted(() => {
     id: "page-1",
     title: "Landing",
     slug: "/landing",
-    status: "draft" as const,
+    status: "draft" as "draft" | "published" | "scheduled" | "archived",
     updatedAt: "2026-03-06T12:00:00.000Z",
     author: { id: "author-1", name: "Admin", email: "admin@example.com" },
   };
@@ -26,7 +26,7 @@ const pagePostState = vi.hoisted(() => {
     typeId: "post-type",
     title: "Product launch",
     slug: "product-launch",
-    status: "draft" as const,
+    status: "draft" as "draft" | "published" | "archived" | "scheduled",
     data: {},
     tags: ["news"],
     scheduledAt: null,
@@ -602,10 +602,10 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
 
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const selects = Array.from(view.container.querySelectorAll("select"));
-    const buttons = Array.from(view.container.querySelectorAll("button"));
+    const buttons = Array.from(view.container.querySelectorAll("button")) as HTMLButtonElement[];
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
-    );
+    ) as HTMLInputElement[];
 
     act(() => {
       setInputValue(
@@ -843,8 +843,8 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
     expect(view.container.textContent).toContain("Delete page denied.");
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
-    delete (window as Window & { open?: unknown }).open;
+    Reflect.deleteProperty(window, "confirm");
+    Reflect.deleteProperty(window, "open");
   }
 });
 
@@ -1125,7 +1125,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     ).toBe("false");
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
   }
 });
 
@@ -1289,8 +1289,8 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
     expect(view.container.textContent).toContain("Delete denied.");
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
-    delete (window as Window & { open?: unknown }).open;
+    Reflect.deleteProperty(window, "confirm");
+    Reflect.deleteProperty(window, "open");
   }
 });
 
@@ -1367,6 +1367,6 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     expect(pagePostState.getUserSettings).toHaveBeenCalled();
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
   }
 });
