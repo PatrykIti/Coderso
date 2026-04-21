@@ -31,6 +31,19 @@ No child task files.
   composer
 - Add `tests/vitest/assistant/blueprint-page-section-library.test.ts`
 
+Owner rule:
+
+- `core/widgets/modulePackMatrix.ts` and existing widget/preset metadata remain
+  the source of truth for which module packs, section presets, composite
+  widgets, and surfaces actually exist.
+- `blueprintPageSectionTypes.ts` owns only the assistant-facing normalized alias
+  and merge-slot vocabulary used during composition review/planning.
+- `blueprintPageSectionLibrary.ts` owns deterministic mapping from those
+  assistant-facing aliases to existing widget/preset contracts.
+- If a business-facing alias cannot be mapped from current widget/preset
+  metadata, extend that existing metadata with a minimal helper seam instead of
+  hardcoding section support in the blueprint layer.
+
 ## Reuse Rules
 
 - `blueprintPageSectionLibrary.ts` derives section availability from existing
@@ -44,19 +57,27 @@ No child task files.
   contract.
 - Missing section coverage should stay gated/needs-input rather than creating ad
   hoc pseudo-sections outside the widget registry/module pack contract.
+- `slot` is planner-owned ordering metadata only. It helps merge/composition but
+  does not become a new product/runtime source of truth for Pages, widget
+  presets, or public rendering.
+- Widget defaults and section seed data must come from existing widget
+  schema/default owners wherever possible; the assistant layer must not fork
+  those defaults into a second config registry.
 
-## Section Kinds
+## Initial Assistant Aliases
 
-- `hero`
-- `steps`
-- `listing-filters`
-- `content-list`
-- `cta`
-- `form-embed`
-- `testimonials`
-- `contact`
-- `faq`
-- `posts-feed`
+- `hero` -> current `hero` widget / preset coverage.
+- `listing-filters` -> current listing filter/query widget coverage.
+- `content-list` -> current `content-list` widget / listing preset coverage.
+- `cta` -> current CTA-oriented widget/preset coverage such as `cta-banner`.
+- `form-embed` -> current `form-embed` / contact-oriented widget coverage.
+- `testimonials` -> current `testimonials` widget/preset coverage.
+- `contact` -> current `contact` widget/preset coverage.
+- `faq` -> current `faq-accordion` widget/preset coverage.
+- `posts-feed` -> current `posts-feed` widget/preset coverage.
+- `steps` -> allowed only when existing widget/preset metadata exposes a
+  deterministic mapping; otherwise the composer returns `needs_input` or
+  `gated`, not a synthetic assistant-only pseudo-section.
 
 ## Pseudocode
 
@@ -70,6 +91,15 @@ type BlueprintPageSectionContribution = {
   mergeKey?: string;
 };
 ```
+
+Rules:
+
+- `slot` is owned by `blueprintPageSectionTypes.ts` as merge-order metadata for
+  composition only.
+- `widgetType` must resolve to an already registered widget valid for the
+  current page-facing surface.
+- `data` must normalize through the existing widget schema/default owner; this
+  leaf must not create a parallel section-defaults registry.
 
 ## Security Contract
 
@@ -87,6 +117,10 @@ type BlueprintPageSectionContribution = {
 - Section schema tests.
 - Slot ordering tests.
 - Missing widget capability tests.
+- Alias-to-widget/preset mapping tests prove the assistant layer reuses current
+  widget/preset metadata instead of becoming a second registry.
+- Unsupported aliases such as `steps` stay `needs_input` / `gated` until the
+  current widget/preset owner seam exposes a deterministic mapping.
 - Section-library resolution stays aligned with current widget pack / preset
   metadata instead of drifting into a second section registry.
 

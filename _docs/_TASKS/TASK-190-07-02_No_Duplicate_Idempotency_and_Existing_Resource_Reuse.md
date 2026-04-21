@@ -64,6 +64,10 @@ Rules:
   collection-link metadata from current owner contracts. If an owner seam does
   not yet expose enough information, extend that seam with stable link metadata
   instead of falling back to `name`-only matching.
+- persistence of `compositionKey`, `collectionRole`, canonical list-page links,
+  or equivalent collection metadata stays with current page/custom-screen/
+  detail-page owner seams; this slice only consumes those persisted fields in
+  bounded catalogs and matcher logic.
 - Non-unique fields such as listing query `name` or custom screen `name` are
   advisory labels only; they are not sufficient for silent reuse.
 - `blueprintExistingResourceMatcher.ts` consumes these summaries for reuse and

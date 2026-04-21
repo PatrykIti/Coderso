@@ -40,6 +40,14 @@ No child task files.
 - Update `core/admin/utils/adminPaths.ts`
 - Update `core/admin/ui/navigation/sidebarConfig.ts` only if existing Engine
   helpers need a canonical workspace link helper
+- Update current page owner seams only if explicit persisted canonical
+  list-page/supporting-resource linkage is missing today; keep that ownership in
+  page-owned contracts rather than `collectionWorkspaceService.ts`
+- Update current custom-screen owner seams only if explicit stable metadata such
+  as `collectionRole` / `compositionKey` is required for canonical admin-screen
+  resolution
+- Update current detail-page owner seams only if explicit persisted secondary
+  references are needed beyond route-level `detailPageId` linkage
 - Update `tests/integration/routes/contentTypes.test.ts`
 - Update `tests/vitest/admin/contentTypesClient.test.ts`
 - Update `tests/vitest/admin/adminPrefetch.test.ts`
@@ -80,6 +88,32 @@ Reuse rule:
   Engine prefetch family through that shared helper, not route-local hover
   hooks or page-level effect fetches.
 
+Owner rule:
+
+- `collectionWorkspaceService.ts` owns aggregated read-model assembly and
+  deterministic resolution only.
+- `contentTypeRoutes.ts` owns the server read endpoint only.
+- `site.contentRoutes` remains the owner of:
+  - canonical route row selection by content type,
+  - `detailPageId` linkage,
+  - validation/round-trip through settings service, Site Settings UI/client, and
+    `setting.content-route.upsert`.
+- The page owner seam (`page.upsert` / `page.update` / page service / page admin
+  editor) owns persisted canonical list-page linkage and any page-level explicit
+  references to listing query/template or supporting resources.
+- The detail-page owner seam (`detail-page.upsert` / detail-page document
+  service / detail-page admin client) owns persisted references declared inside
+  detail-page documents.
+- The custom-screen owner seam owns any explicit `collectionRole`,
+  `compositionKey`, or equivalent stable metadata needed to resolve a canonical
+  admin screen safely.
+- The workspace service must only read these owner contracts. It must never
+  invent, persist, or backfill canonical links in browser cache, local state, or
+  route-local helpers.
+- If owner-contract extensions are needed, they must land physically in those
+  owner seams first and then be consumed by `collectionWorkspaceService.ts`;
+  the workspace slice does not get to "temporarily" own that metadata.
+
 ## Canonical Resource Linking Contract
 
 Workspace root:
@@ -113,7 +147,7 @@ Deterministic resolution order:
    - canonical list page is the public page explicitly linked by the current
      collection setup contract, not the hidden runtime listing endpoint itself,
    - preferred source of truth is explicit persisted collection-link metadata on
-     the current owner seam,
+     the current page owner seam, not workspace-only state,
    - compatibility fallback for current catalog-family packs is allowed only
      when all of the following are true:
      - the current collection setup uses the known hidden-list pattern
@@ -131,19 +165,27 @@ Deterministic resolution order:
 4. Listing query/template:
    - first read explicit references from the canonical public page data/block
      contract,
+   - the canonical page owner seam is authoritative for page-attached
+     listing-query / listing-template references,
+   - if the current page contract cannot express that deterministically, extend
+     the existing page/widget contract rather than add workspace-only mapping
+     state,
    - if no explicit reference exists, allow only deterministic fallback:
      - one matching listing query for the content type,
      - one matching listing template referenced by the canonical public page,
    - otherwise return `unresolved` plus bounded candidates.
 5. Admin screen:
-   - canonical admin screen may resolve only when exactly one screen is a safe
-     deterministic match for the collection content type and workspace role;
+   - canonical admin screen may resolve from explicit stable metadata on the
+     custom-screen owner seam first,
+   - only if that metadata does not exist yet, canonical admin screen may
+     resolve when exactly one screen is a safe deterministic match for the
+     collection content type and workspace role;
      otherwise return `unresolved` plus bounded candidates.
 6. Forms/CTA and supporting pages:
    - derive from canonical page/detail-template references first,
    - when current owner contracts do not yet carry enough deterministic links,
-     extend those contracts with explicit collection-link metadata under the
-     current owner seam,
+     extend the current page/detail-page/custom-screen owner seams with explicit
+     collection-link metadata under those seams,
    - do not guess from slug prefixes or title similarity alone.
 
 Rules:
@@ -153,6 +195,8 @@ Rules:
 - public list-page resolution must prefer explicit persisted links; the
   detail-route-prefix fallback above is compatibility-only and must bail out to
   `unresolved` on the first sign of ambiguity,
+- workspace resolution must never silently promote a compatibility fallback into
+  persisted canonical metadata,
 - hidden runtime list endpoints and public landing pages remain separate
   resources in the workspace read model when the current blueprint contract
   keeps them separate,
@@ -222,6 +266,11 @@ type CollectionWorkspaceSummary = {
   detail-route-prefix fallback is compatibility-only for current catalog-family
   presets and must return `unresolved` when multiple or non-exact candidates
   exist.
+- `collectionWorkspaceService.ts` reads canonical links from current owner seams
+  and never persists or backfills inferred links on its own.
+- canonical list-page / page-level listing references round-trip through the
+  page owner seam before the workspace consumes them; they are not browser-only
+  annotations.
 - page/listing query/template/admin screen return `unresolved` + `candidates`
   when multiple plausible matches exist.
 - forms/secondary pages/editorial/proof/SEO links come from explicit canonical

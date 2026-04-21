@@ -123,6 +123,22 @@ Program rules:
 - if Detail Template editing publishes a dedicated assistant surface, the
   technical `kind` should be `detail-page`; "Detail Template" remains a UI
   label.
+- persisted canonical collection links and stable collection metadata stay with
+  current owner seams:
+  - `site.contentRoutes` owns canonical route row selection and
+    `detailPageId` linkage,
+  - the page owner seam owns explicit canonical list-page linkage and any
+    persisted page-level references to listing/query/template or supporting
+    resources,
+  - the detail-page owner seam owns explicit references declared inside
+    detail-page documents,
+  - the custom-screen owner seam owns explicit stable metadata such as
+    `collectionRole`, `compositionKey`, or equivalent canonical screen-link
+    fields when needed.
+- the workspace program may extend those existing owner seams where the current
+  persisted contract is not strong enough, but it must not create a
+  workspace-only registry, browser-owned source of truth, or assistant-only
+  persistence path.
 - linked secondary resources remain part of the workspace outcome, but
   deterministic linkage must come from explicit persisted references or owner-
   contract extensions, not browser-only inference.
@@ -172,7 +188,10 @@ Program rules:
 
 ## Testing Requirements
 
-- Vitest route + aggregated collection workspace read model tests.
+- Bun route tests for the collection-workspace endpoint under the existing
+  content-type route family.
+- Vitest aggregated read-model, client-cache, and workspace UI tests where the
+  touched modules stay Bun-free.
 - Vitest detail template editor tests.
 - Vitest assistant runtime-context tests if workspace/detail-page active
   surface support changes.
