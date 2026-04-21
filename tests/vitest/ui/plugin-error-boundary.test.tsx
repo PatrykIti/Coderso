@@ -105,6 +105,6 @@ test("PluginErrorBoundary isolates crashes and forwards disable action", () => {
   }
 });
 
-function Crash() {
+const Crash: React.FC = () => {
   throw new Error("plugin crashed");
-}
+};

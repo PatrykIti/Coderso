@@ -21,7 +21,7 @@ test("ContentTypeTable renders name as edit link", () => {
   const html = renderToString(
     <AdminRouterProvider initialPath="/admin/coderso/engine">
       <AdminBasePathProvider value="/admin">
-        <ContentTypeTable rows={[row]} basePath="/admin" />
+        <ContentTypeTable rows={[row] as unknown as Parameters<typeof ContentTypeTable>[0]["rows"]} basePath="/admin" />
       </AdminBasePathProvider>
     </AdminRouterProvider>
   );

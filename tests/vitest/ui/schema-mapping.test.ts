@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import type { ContentField } from "../../../core/admin/ui/content-types/SchemaBuilder";
 
 import {
   buildSchemaFromFields,
@@ -64,7 +65,7 @@ test("schema mapping preserves relation metadata", () => {
     },
   ] as const;
 
-  const schema = buildSchemaFromFields(fields);
+  const schema = buildSchemaFromFields(fields as unknown as ContentField[]);
   const seoSchema = schema.properties["seo-title"];
   expect(
     (

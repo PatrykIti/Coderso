@@ -6,6 +6,7 @@ import { applyWizardSelection, createBlock } from "../../../core/admin/ui/pages/
 test("applyWizardSelection sets variant and mode", () => {
   const block = createBlock("hero");
   const updated = applyWizardSelection(block, "centered");
+  if (!updated.editor) throw new Error("missing_editor_state");
 
   expect(updated.variant).toBe("centered");
   expect(updated.editor.mode).toBe("visual");

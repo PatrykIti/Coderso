@@ -935,12 +935,11 @@ test("Testimonials editors fall back when normalized header, style, and item fie
       (findInputByPlaceholder(view.container, "Acme Studio") as HTMLInputElement | null | undefined)?.value
     ).toBe("");
     expect(
-      (findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"])[0] as
-        | HTMLSelectElement
-        | undefined)?.value
+      (findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"]) as
+        unknown as HTMLSelectElement | undefined)?.value
     ).toBe("0");
     expect(
-      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)
+      (findSelectByOptions(view.container, ["sm", "md", "lg"]) as unknown as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("sm");
     expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");

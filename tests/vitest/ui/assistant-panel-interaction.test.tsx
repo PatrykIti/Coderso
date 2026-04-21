@@ -154,6 +154,8 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
         targetKey: "house-projects",
         operation: "create",
         summary: "Create content type",
+        conflicts: [],
+        dependencies: [],
         warnings: [],
       },
     ],
