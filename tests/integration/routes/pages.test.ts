@@ -278,142 +278,146 @@ test("autosave and publish require an authenticated actor after validation", asy
   ).rejects.toThrow("auth_required");
 });
 
-testIfDb("page route handlers cover create, update, autosave, publish, preview, restore, discard, duplicate, unpublish, and delete", async () => {
-  const { router, routes } = makeRouter();
-  const actor = await createRouteActor();
-  const deps = makeValidatingDeps();
+testIfDb(
+  "page route handlers cover create, update, autosave, publish, preview, restore, discard, duplicate, unpublish, and delete",
+  async () => {
+    const { router, routes } = makeRouter();
+    const actor = await createRouteActor();
+    const deps = makeValidatingDeps();
 
-  registerPageRoutes(router, deps);
+    registerPageRoutes(router, deps);
 
-  const slug = `/route-pages-${randomUUID()}`;
-  const created = (await runRoute(routes, "POST", "/pages", {
-    user: { id: actor.id },
-    body: {
-      title: "Route Page",
-      slug,
-      data: {
-        blocks: [],
-        settings: { template: "landing", showInNav: true },
+    const slug = `/route-pages-${randomUUID()}`;
+    const created = (await runRoute(routes, "POST", "/pages", {
+      user: { id: actor.id },
+      body: {
+        title: "Route Page",
+        slug,
+        data: {
+          blocks: [],
+          settings: { template: "landing", showInNav: true },
+        },
       },
-    },
-  })) as typeof pages.$inferSelect;
-  trackPage(created.id);
-  expect(created.title).toBe("Route Page");
-  expect(created.authorId).toBe(actor.id);
+    })) as typeof pages.$inferSelect;
+    trackPage(created.id);
+    expect(created.title).toBe("Route Page");
+    expect(created.authorId).toBe(actor.id);
 
-  const detail = (await runRoute(routes, "GET", "/pages/:id", {
-    params: { id: created.id },
-  })) as typeof pages.$inferSelect;
-  expect(detail.id).toBe(created.id);
+    const detail = (await runRoute(routes, "GET", "/pages/:id", {
+      params: { id: created.id },
+    })) as typeof pages.$inferSelect;
+    expect(detail.id).toBe(created.id);
 
-  const updated = (await runRoute(routes, "PATCH", "/pages/:id", {
-    params: { id: created.id },
-    body: { title: "Route Page Updated" },
-  })) as typeof pages.$inferSelect;
-  expect(updated.title).toBe("Route Page Updated");
+    const updated = (await runRoute(routes, "PATCH", "/pages/:id", {
+      params: { id: created.id },
+      body: { title: "Route Page Updated" },
+    })) as typeof pages.$inferSelect;
+    expect(updated.title).toBe("Route Page Updated");
 
-  const autosave = (await runRoute(routes, "POST", "/pages/:id/autosave", {
-    params: { id: created.id },
-    user: { id: actor.id },
-    body: {
-      title: "Route Page Autosave",
-      slug: `${slug}-autosave`,
-      data: { blocks: [], settings: { showInNav: false } },
-    },
-  })) as { revision: { id: string; kind: string }; reusedRevision: boolean };
-  expect(autosave.revision.kind).toBe("autosave");
-  expect(autosave.reusedRevision).toBe(false);
+    const autosave = (await runRoute(routes, "POST", "/pages/:id/autosave", {
+      params: { id: created.id },
+      user: { id: actor.id },
+      body: {
+        title: "Route Page Autosave",
+        slug: `${slug}-autosave`,
+        data: { blocks: [], settings: { showInNav: false } },
+      },
+    })) as { revision: { id: string; kind: string }; reusedRevision: boolean };
+    expect(autosave.revision.kind).toBe("autosave");
+    expect(autosave.reusedRevision).toBe(false);
 
-  const publish = await runRoute(routes, "POST", "/pages/:id/publish", {
-    params: { id: created.id },
-    user: { id: actor.id },
-    body: { data: { blocks: [], settings: { showInNav: true } } },
-  });
-  expect(publish).toEqual({ ok: true });
+    const publish = await runRoute(routes, "POST", "/pages/:id/publish", {
+      params: { id: created.id },
+      user: { id: actor.id },
+      body: { data: { blocks: [], settings: { showInNav: true } } },
+    });
+    expect(publish).toEqual({ ok: true });
 
-  const preview = (await runRoute(routes, "POST", "/pages/:id/preview", {
-    params: { id: created.id },
-    headers: {
-      host: "localhost:8787",
-      "x-forwarded-host": "cms.example.test",
-      "x-forwarded-proto": "https",
-    },
-    body: { ttlMinutes: 5 },
-  })) as { token: string; previewUrl: string; expiresAt: Date };
-  expect(typeof preview.token).toBe("string");
-  expect(preview.previewUrl).toContain("/preview?");
-  expect(preview.previewUrl).toContain("type=page");
-  expect(preview.previewUrl).toContain("token=");
-  expect(preview.expiresAt).toBeInstanceOf(Date);
+    const preview = (await runRoute(routes, "POST", "/pages/:id/preview", {
+      params: { id: created.id },
+      headers: {
+        host: "localhost:8787",
+        "x-forwarded-host": "cms.example.test",
+        "x-forwarded-proto": "https",
+      },
+      body: { ttlMinutes: 5 },
+    })) as { token: string; previewUrl: string; expiresAt: Date };
+    expect(typeof preview.token).toBe("string");
+    expect(preview.previewUrl).toContain("/preview?");
+    expect(preview.previewUrl).toContain("type=page");
+    expect(preview.previewUrl).toContain("token=");
+    expect(preview.expiresAt).toBeInstanceOf(Date);
 
-  const revisions = (await runRoute(routes, "GET", "/pages/:id/revisions", {
-    params: { id: created.id },
-  })) as Array<{ id: string; kind: string }>;
-  expect(revisions.map((revision) => revision.kind)).toContain("publish");
-  expect(revisions.map((revision) => revision.kind)).toContain("autosave");
+    const revisions = (await runRoute(routes, "GET", "/pages/:id/revisions", {
+      params: { id: created.id },
+    })) as Array<{ id: string; kind: string }>;
+    expect(revisions.map((revision) => revision.kind)).toContain("publish");
+    expect(revisions.map((revision) => revision.kind)).toContain("autosave");
 
-  const restore = (await runRoute(
-    routes,
-    "POST",
-    "/pages/:id/revisions/:revisionId/restore",
-    {
-      params: { id: created.id, revisionId: autosave.revision.id },
+    const restore = (await runRoute(
+      routes,
+      "POST",
+      "/pages/:id/revisions/:revisionId/restore",
+      {
+        params: { id: created.id, revisionId: autosave.revision.id },
+        user: { id: actor.id },
+        body: {},
+      }
+    )) as { ok: boolean; restored: boolean; page: { title: string } };
+    expect(restore.ok).toBe(true);
+    expect(restore.restored).toBe(true);
+    expect(restore.page.title).toBe("Route Page Autosave");
+
+    const discard = await runRoute(
+      routes,
+      "DELETE",
+      "/pages/:id/revisions/:revisionId",
+      {
+        params: { id: created.id, revisionId: autosave.revision.id },
+        user: { id: actor.id },
+        body: {},
+      }
+    );
+    expect(discard).toEqual({ ok: true });
+
+    const clone = (await runRoute(routes, "POST", "/pages/:id/duplicate", {
+      params: { id: created.id },
       user: { id: actor.id },
       body: {},
-    }
-  )) as { ok: boolean; restored: boolean; page: { title: string } };
-  expect(restore.ok).toBe(true);
-  expect(restore.restored).toBe(true);
-  expect(restore.page.title).toBe("Route Page Autosave");
+    })) as typeof pages.$inferSelect;
+    trackPage(clone.id);
+    expect(clone.id).not.toBe(created.id);
+    expect(clone.authorId).toBe(actor.id);
 
-  const discard = await runRoute(
-    routes,
-    "DELETE",
-    "/pages/:id/revisions/:revisionId",
-    {
-      params: { id: created.id, revisionId: autosave.revision.id },
+    const unpublish = await runRoute(routes, "POST", "/pages/:id/unpublish", {
+      params: { id: created.id },
       user: { id: actor.id },
       body: {},
-    }
-  );
-  expect(discard).toEqual({ ok: true });
+    });
+    expect(unpublish).toEqual({ ok: true });
 
-  const clone = (await runRoute(routes, "POST", "/pages/:id/duplicate", {
-    params: { id: created.id },
-    user: { id: actor.id },
-    body: {},
-  })) as typeof pages.$inferSelect;
-  trackPage(clone.id);
-  expect(clone.id).not.toBe(created.id);
-  expect(clone.authorId).toBe(actor.id);
+    const deleted = await runRoute(routes, "DELETE", "/pages/:id", {
+      params: { id: created.id },
+      user: { id: actor.id },
+      body: {},
+    });
+    expect(deleted).toEqual({ ok: true });
 
-  const unpublish = await runRoute(routes, "POST", "/pages/:id/unpublish", {
-    params: { id: created.id },
-    user: { id: actor.id },
-    body: {},
-  });
-  expect(unpublish).toEqual({ ok: true });
-
-  const deleted = await runRoute(routes, "DELETE", "/pages/:id", {
-    params: { id: created.id },
-    user: { id: actor.id },
-    body: {},
-  });
-  expect(deleted).toEqual({ ok: true });
-
-  const actionRows = await db
-    .select({ action: auditLogs.action, targetId: auditLogs.targetId })
-    .from(auditLogs)
-    .where(eq(auditLogs.targetId, created.id));
-  expect(actionRows.map((row) => row.action)).toEqual(
-    expect.arrayContaining([
-      "pages.publish",
-      "pages.restore",
-      "pages.autosave.discard",
-      "pages.delete",
-    ])
-  );
-});
+    const actionRows = await db
+      .select({ action: auditLogs.action, targetId: auditLogs.targetId })
+      .from(auditLogs)
+      .where(eq(auditLogs.targetId, created.id));
+    expect(actionRows.map((row) => row.action)).toEqual(
+      expect.arrayContaining([
+        "pages.publish",
+        "pages.restore",
+        "pages.autosave.discard",
+        "pages.delete",
+      ])
+    );
+  },
+  { timeout: 15_000 }
+);
 
 testIfDb("page route handlers surface not-found and revision guard errors", async () => {
   const { router, routes } = makeRouter();

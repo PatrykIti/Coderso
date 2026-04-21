@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 720 | 2026-04-21 | TASK-193 pages bun route timeout stabilization | QA/CMS Pages |
 | 719 | 2026-04-20 | TASK-192 assistant admin resource catalog repair | Assistant/Core |
 | 718 | 2026-04-20 | TASK-191 pages coverage closure | QA/CMS Pages |
 | 717 | 2026-04-20 | TASK-191-04 page builder branch coverage | QA/Page Builder |

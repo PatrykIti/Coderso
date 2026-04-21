@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 44 tasks
 - **In Progress:** 5 tasks
-- **Done:** 951 tasks
+- **Done:** 952 tasks
 
 ---
 
@@ -101,6 +101,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-193 | Pages Bun Route Timeout Stabilization | Medium | Small | Done: DB-backed Pages route lifecycle coverage now uses an explicit Bun test timeout without changing route behavior |
 | TASK-192 | Assistant Admin Menu Resource Catalog Repair | High | Medium | Done: assistant catalog exposes posts, entries, full menus, media, commerce, solution kits, and screens for read-only inspection |
 | TASK-191 | Pages Test Coverage Hardening | High | Large | Done: Pages route/runtime/client/cache/builder coverage hardened with final QA and coverage validation |
 | TASK-191-05 | QA, Docs, Changelog, and Closure | Medium | Small | Done: final targeted Bun/Vitest matrices, full Vitest coverage, lint/typecheck, board, and changelog synced |
