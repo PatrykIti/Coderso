@@ -416,7 +416,7 @@ testIfDb(
       ])
     );
   },
-  { timeout: 15_000 }
+  15_000
 );
 
 testIfDb("page route handlers surface not-found and revision guard errors", async () => {
