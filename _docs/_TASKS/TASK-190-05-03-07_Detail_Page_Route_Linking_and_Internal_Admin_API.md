@@ -40,6 +40,25 @@ POST   /admin/api/detail-pages/:id/revisions/:revisionId/restore
 DELETE /admin/api/detail-pages/:id/revisions/:revisionId
 ```
 
+Preview endpoint response contract:
+
+```json
+{
+  "token": "preview-token",
+  "previewUrl": "/preview?type=detail-page&token=preview-token&entryId=entry-id",
+  "expiresAt": "2026-04-21T12:00:00.000Z"
+}
+```
+
+Rules:
+
+- `previewUrl` follows the same absolute/relative base URL resolution policy as
+  existing page/content/widget-template preview endpoints.
+- `entryId` is required for detail-template preview issuance so the runtime can
+  resolve bindings against a stable sample entry.
+- `expiresAt` uses the existing preview TTL rules unless a later task defines a
+  stricter detail-page-specific policy.
+
 Route-linking contract:
 
 ```ts
@@ -105,9 +124,9 @@ Route boundary maps through centralized `mapDetailPageError`.
 - Auth model: authenticated admin session / scoped internal API key where
   supported.
 - RBAC:
-- read/list/revisions require `content:read`,
-- preview token issuance requires `content:read`,
-- create/update/autosave/restore/discard require `content:write`,
+  - read/list/revisions require `content:read`,
+  - preview token issuance requires `content:read`,
+  - create/update/autosave/restore/discard require `content:write`,
   - publish/unpublish require `content:publish`.
 - CSRF: all mutating routes require existing admin CSRF middleware.
 - Rate-limit bucket: `admin_read` for GET, `admin_write` for mutations.
@@ -131,6 +150,8 @@ Route boundary maps through centralized `mapDetailPageError`.
 - `mapDetailPageError` covers known errors.
 - Create/update/publish/unpublish/autosave/revision flow works through route
   handlers.
+- `POST /admin/api/detail-pages/:id/preview` returns `token`, `previewUrl`, and
+  `expiresAt` with the expected detail-page preview target shape.
 - Settings round-trip preserves `detailPageId`.
 - `setting.content-route.upsert` preserves existing `detailPageId` unless
   explicitly changed.
