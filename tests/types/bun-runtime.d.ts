@@ -15,6 +15,12 @@ interface ImportMeta {
 }
 
 declare namespace Bun {
+  type BunFile = Blob & {
+    readonly type: string;
+    exists(): Promise<boolean>;
+    text(): Promise<string>;
+  };
+
   type SpawnOptions = {
     cmd?: string[];
     cwd?: string;
@@ -35,10 +41,16 @@ declare namespace Bun {
     stop(force?: boolean): void;
   };
 
+  type ServeOptions = {
+    port?: number;
+    fetch(request: Request): Response | Promise<Response>;
+  };
+
   const argv: string[];
 
   function spawn(command: string[], options?: SpawnOptions): Subprocess;
   function spawn(options: SpawnOptions & { cmd: string[] }): Subprocess;
+  function file(path: string): BunFile;
   function write(path: string, data: string): Promise<number>;
-  function serve(options: unknown): Server;
+  function serve(options: ServeOptions): Server;
 }
