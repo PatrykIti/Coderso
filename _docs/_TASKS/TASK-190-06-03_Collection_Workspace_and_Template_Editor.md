@@ -100,13 +100,20 @@ Ownership split:
 
 Program rules:
 
-- `collectionsClient.ts` owns collection-level summaries and linked resource
-  read aggregation only, and it reads from the server-owned collection workspace
-  endpoint rather than becoming a client-side source of truth.
+- `contentTypesClient.ts` owns collection-workspace summary helpers and cached
+  read access for the server-owned collection workspace endpoint. If extraction
+  is needed, it stays inside the current content-types service family instead of
+  becoming a parallel `collectionsClient.ts` owner.
 - detail template save/autosave/publish/preview/revisions stay in dedicated
   detail-page admin service wrappers.
 - keep the workspace under the existing `Engine` route family and admin-path
   helpers.
+- workspace UI files live under the existing `core/admin/ui/content-types/*`
+  family so the feature extends current `Coderso/Engine` ownership instead of
+  creating a second admin namespace.
+- `adminPrefetch.ts` remains the owner of hover/focus warmup for the Engine
+  route family; the workspace route extends that seam instead of adding route-
+  local prefetch logic.
 - do not create a fourth large block editor stack just for detail templates.
 - if workspace/detail template becomes assistant-visible, extend the current
   `adminContextService`, `assistantActionSchemas`, and `useAssistantAdminContext`

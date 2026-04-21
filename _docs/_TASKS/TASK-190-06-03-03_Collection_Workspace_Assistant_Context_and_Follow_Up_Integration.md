@@ -93,6 +93,13 @@ Rules:
   truth for canonical linked resources,
 - assistant route/provider packaging extends the current bounded context package
   with `collectionWorkspace` only after server-side rehydration/validation,
+- `assistantRoutes.ts` keeps explicit surface permission branches. Read planning
+  for `activeSurface.kind = "detail-page"` follows page parity:
+  - require `content:read` because the surface is content-owned,
+  - require `widgets:read` because the surface exposes widget/template block
+    structure and template references,
+  - implement this as an explicit `detail-page` branch rather than loosening the
+    global page/widget-template/custom-screen checks,
 - if a later dedicated detail-template child route is added under the same
   workspace family, it may additionally resolve `selectedResource.kind =
   "detail-page"` through the current route helpers, but this leaf must work
@@ -103,8 +110,13 @@ Rules:
 
 - Visibility: internal assistant planning context only.
 - Auth model: existing assistant admin session flow.
-- RBAC: runtime snapshot remains advisory; server-side hydration and action
-  execution remain authoritative.
+- RBAC:
+  - runtime snapshot remains advisory; server-side hydration and action
+    execution remain authoritative,
+  - `detail-page` active-surface read context uses explicit page-parity gating
+    (`content:read`) plus `widgets:read`,
+  - write/publish authority remains owned by the eventual action family or
+    internal detail-page routes, not by client-side active-surface state.
 - CSRF: unchanged.
 - Rate-limit bucket: assistant.
 - Reject-unknown validation: route context payload is strict.
@@ -118,6 +130,9 @@ Rules:
 - workspace route is recognized as `codersoModule: "engine"`.
 - `assistantActionSchemas.ts` accepts the new `detail-page` active-surface shape
   and bounded `collectionWorkspace` context shape.
+- `/assistant/actions/plan` keeps explicit permission parity for
+  `activeSurface.kind = "detail-page"`: `content:read` plus `widgets:read`,
+  without broadening unrelated surface checks.
 - active surface can publish and rehydrate `detail-page`.
 - workspace-root route with `selectedResource.kind = "content-type"` still keeps
   `activeSurface.kind = "detail-page"` only through the explicit

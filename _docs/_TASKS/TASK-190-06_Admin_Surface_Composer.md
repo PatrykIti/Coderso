@@ -45,8 +45,8 @@ New owner files:
 
 - `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts`
 - `core/services/assistant/blueprints/blueprintBindingComposer.ts`
-- `core/admin/ui/collections/CollectionWorkspacePage.tsx`
-- `core/admin/ui/collections/DetailTemplateEditorPage.tsx`
+- `core/admin/ui/content-types/CollectionWorkspacePage.tsx`
+- `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
 - `tests/vitest/assistant/blueprint-admin-surface-composer.test.ts`
 - `tests/vitest/ui/collection-workspace.test.tsx`
 
@@ -59,9 +59,11 @@ Touched existing files:
 - `core/services/assistant/providerPlanningContext.ts`
 - `core/server/routes/assistantRoutes.ts`
 - `core/server/validation/assistantActionSchemas.ts`
+- `core/admin/services/contentTypesClient.ts`
 - `core/services/customScreens/capabilities.ts`
 - `core/admin/ui/widgets/registry.ts`
 - `core/admin/utils/adminPaths.ts`
+- `core/admin/utils/adminPrefetch.ts`
 - `core/admin/ui/navigation/sidebarConfig.ts`
 
 ## Acceptance Criteria

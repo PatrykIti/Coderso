@@ -23,8 +23,8 @@ No child task files.
 
 ## Files to Change
 
-- Add `core/admin/ui/collections/DetailTemplateEditorPage.tsx`
-- Add `core/admin/ui/collections/detailTemplateEditorModel.ts`
+- Add `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
+- Add `core/admin/ui/content-types/detailTemplateEditorModel.ts`
 - Reuse `core/admin/services/detailPagesClient.ts`
 - Extract shared builder/editor helpers only where current editors already share
   behavior
@@ -56,6 +56,9 @@ Rules:
   entry preview requirements,
 - editor chrome and lifecycle behavior should come from extracted shared seams
   where practical,
+- route shell, cache warmup, and admin navigation ownership stay in the current
+  `Coderso/Engine` / `content-types` family; `detailPagesClient.ts` remains the
+  owner only for detail-page document CRUD/preview/revision lifecycle,
 - no ad-hoc route-local fetch helpers; use dedicated detail-page admin client
   wrappers,
 - no assumption that all current editors are already one unified shell.

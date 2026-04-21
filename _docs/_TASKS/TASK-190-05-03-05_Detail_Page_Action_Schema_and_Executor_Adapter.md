@@ -70,12 +70,19 @@ type AssistantDetailPageUpsertAction = {
   title: string;
   description: string;
   input: {
-    status: "draft" | "published";
     document: DetailPageDocument;
     expectedExistingId?: string | null;
   };
 };
 ```
+
+Status ownership rule:
+
+- `DetailPageDocument.status` is the single status owner for this resource.
+- `detail-page.upsert` must not duplicate publish state in a second
+  `input.status` field.
+- Execute/dry-run metadata may summarize the effective status, but the strict
+  action input contract carries that value only through `input.document.status`.
 
 `page.upsert` must not be overloaded with detail page document payloads.
 `page.upsert` remains the action for normal/static/list/landing Pages. Detail
@@ -101,11 +108,14 @@ Execute must:
 - revalidate document,
 - verify content type exists,
 - verify the document id/content type contract is safe and deterministic,
+- derive the persisted publish state from `document.status` instead of a second
+  action-level status field,
 - upsert document idempotently,
 - invalidate relevant site cache,
 - return admin/public preview metadata,
 - return normalized execution metadata (`detailPageId`, `contentTypeSlug`,
-  status/public-impact summary) needed by the later admin client/cache layer,
+  effective status/public-impact summary) needed by the later admin
+  client/cache layer,
 - leave runtime route ownership unchanged until a later
   `setting.content-route.upsert` links `detailPageId`.
 
@@ -133,6 +143,8 @@ layer, but generic policy registration itself is deferred to
 ## Testing Requirements
 
 - Schema accepts valid action and rejects unknown fields.
+- Schema rejects a second top-level `input.status` when `document.status`
+  already owns the publish state.
 - `page.upsert` rejects opaque detail page document payloads.
 - Dry-run reports missing content type/field conflicts.
 - Execute creates/upserts document idempotently.

@@ -30,25 +30,28 @@ No child task files.
 - Update `core/server/routes/contentTypeRoutes.ts`
 - Add server validation for the collection workspace response only if the repo
   keeps route-level response schemas in a dedicated helper
-- Add `core/admin/services/collectionsClient.ts`
+- Update `core/admin/services/contentTypesClient.ts`
 - Update `core/admin/services/cachePolicy.ts`
-- Add `core/admin/ui/collections/CollectionWorkspacePage.tsx`
-- Add `core/admin/ui/collections/CollectionOverview.tsx`
-- Add `core/admin/ui/collections/CollectionReadinessChecklist.tsx`
+- Update `core/admin/utils/adminPrefetch.ts`
+- Add `core/admin/ui/content-types/CollectionWorkspacePage.tsx`
+- Add `core/admin/ui/content-types/CollectionOverview.tsx`
+- Add `core/admin/ui/content-types/CollectionReadinessChecklist.tsx`
 - Update `core/admin/app/AdminApp.tsx`
 - Update `core/admin/utils/adminPaths.ts`
 - Update `core/admin/ui/navigation/sidebarConfig.ts` only if existing Engine
   helpers need a canonical workspace link helper
 - Update `tests/integration/routes/contentTypes.test.ts`
-- Add `tests/vitest/admin/collectionsClient.test.ts`
+- Update `tests/vitest/admin/contentTypesClient.test.ts`
+- Update `tests/vitest/admin/adminPrefetch.test.ts`
 - Add `tests/vitest/ui/collection-workspace.test.tsx`
 
 Reuse rule:
 
 - The bounded collection workspace summary is server-owned and hangs off the
-  existing content-type route family; `collectionsClient.ts` is a wrapper over
-  that read model endpoint, not a client-side scatter-gather fallback.
-- `collectionsClient.ts` owns only client-side read caching/hydration for that
+  existing content-type route family; client access extends
+  `contentTypesClient.ts` instead of introducing a parallel `collectionsClient.ts`
+  wrapper or a client-side scatter-gather fallback.
+- `contentTypesClient.ts` owns only client-side read caching/hydration for that
   server-owned summary. It must follow the current admin cache contract
   (`localStorage` cache + background revalidation + `cacheBus` events), not a
   workspace-only fetch/cache transport.
@@ -56,8 +59,10 @@ Reuse rule:
   family, for example `contentTypes:collectionWorkspace:<contentTypeId>`, so
   the workspace extends current `Engine` ownership instead of creating a
   parallel top-level `collections:*` cache namespace.
-- `collectionsClient.ts` aggregates existing read owners such as
-  `contentTypesClient`, `siteSettingsClient`, `pagesClient`, `listingsClient`,
+- `contentTypesClient.ts` exposes narrow helpers such as
+  `getContentTypeCollectionWorkspace(...)` /
+  `getContentTypeCollectionWorkspaceCached(...)` and aggregates existing read
+  owners such as `siteSettingsClient`, `pagesClient`, `listingsClient`,
   `customScreensClient`, and later `detailPagesClient` through one existing
   server-owned read model.
 - The workspace read model extends those contracts; it does not create a second
@@ -68,7 +73,12 @@ Reuse rule:
 - Mutation owners that already know a collection/content-type identity
   (site-settings routes, listings, custom screens, detail pages, etc.) remain
   responsible for invalidating the workspace cache key under their current owner
-  seams; `collectionsClient.ts` must not become a centralized mutation broker.
+  seams; `contentTypesClient.ts` workspace helpers must not become a
+  centralized mutation broker.
+- `adminPrefetch.ts` remains the owner of route warmup. The new
+  `/coderso/engine/:contentTypeId/collection` route must extend the existing
+  Engine prefetch family through that shared helper, not route-local hover
+  hooks or page-level effect fetches.
 
 ## Canonical Resource Linking Contract
 
@@ -197,12 +207,17 @@ type CollectionWorkspaceSummary = {
 ## Testing Requirements
 
 - workspace route registers under the existing Engine family.
-- `collectionsClient` resolves canonical route/detail/list resources
+- `contentTypesClient` resolves collection-workspace reads under the current
+  content-type service family and does not introduce a parallel `collections`
+  client namespace.
+- `contentTypesClient` resolves canonical route/detail/list resources
   deterministically from one server-owned collection workspace summary instead
   of inventing a parallel lookup flow in the browser.
-- `collectionsClient` uses the current admin cache contract with a dedicated
+- `contentTypesClient` uses the current admin cache contract with a dedicated
   workspace cache key under the existing content-type family plus
   background-revalidation and cache-bus invalidate/update handling.
+- `adminPrefetch.ts` keeps workspace warmup inside the existing Engine prefetch
+  seam; no route-local prefetch flow is introduced for the collection route.
 - canonical public list page prefers explicit collection linkage; the
   detail-route-prefix fallback is compatibility-only for current catalog-family
   presets and must return `unresolved` when multiple or non-exact candidates

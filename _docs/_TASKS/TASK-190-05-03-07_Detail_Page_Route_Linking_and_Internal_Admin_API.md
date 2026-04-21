@@ -58,6 +58,10 @@ Rules:
 - preview issuance requires a sample entry id in the internal admin request, but
   the runtime sample-entry context is stored server-side in
   `preview_tokens.context` rather than trusted from raw query params.
+- `POST /admin/api/detail-pages/:id/preview` always issues the dedicated
+  `type=detail-page` preview token for draft/current detail-template preview; it
+  must not synthesize `type=content&detailPageId=...` URLs as a back door to
+  `current_document`.
 - `expiresAt` uses the existing preview TTL rules unless a later task defines a
   stricter detail-page-specific policy.
 - The `detail-page` preview target and query contract are owned by
@@ -141,8 +145,8 @@ Admin client rule:
 - `detailPagesClient.ts` must follow the current admin cache contract already
   used by pages/custom screens: local cache hydrate, background revalidation,
   and `cacheBus` broadcast invalidate/update events.
-- Do not push detail-page CRUD into `collectionsClient.ts` or ad-hoc local fetch
-  helpers.
+- Do not push detail-page CRUD into collection-workspace helpers owned by
+  `contentTypesClient.ts` or ad-hoc local fetch helpers.
 
 Preview storage rule:
 

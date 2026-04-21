@@ -128,8 +128,16 @@ Rules:
 - Runtime resolves the entry draft allowed by the token.
 - `detailPageId` is optional; when omitted, runtime uses the active published
   detail document for the entry content type.
+- When `detailPageId` is provided, runtime may use only a published detail page
+  document that belongs to the previewed entry content type.
+- `type=content` preview must never expose `current_document` of a detail-page
+  draft through `detailPageId`. Draft detail-template preview remains owned by
+  the dedicated `type=detail-page` preview token / internal admin path.
 - Runtime never trusts arbitrary route/detail document ids from query params
-  without validating the token target and content type relationship.
+  without validating the token target, content type relationship, and published
+  status of the referenced detail page.
+- Invalid, mismatched, or unpublished `detailPageId` returns `404` instead of
+  silently falling back to a draft or unrelated template.
 
 Preview must:
 
@@ -144,6 +152,9 @@ Implementation notes:
 - Extend preview token storage/validation so detail-page preview can carry the
   server-issued sample entry context inside `preview_tokens.context` instead of
   relying on raw query params.
+- `publicSite.tsx` / detail runtime resolution must treat `detailPageId` on
+  `type=content` preview as a published-document override only; reading
+  `current_document` requires the dedicated `type=detail-page` preview token.
 - Update `previewUrls` builders for detail-template preview URLs.
 - Update `_docs/PREVIEW_SPEC.md` and `_docs/CMS_API.md`.
 - Do not log preview tokens or sample entry data in diagnostics.
@@ -177,7 +188,12 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 - CSRF: not applicable.
 - Rate-limit bucket: `public_read`.
 - Reject-unknown validation: preview query is strict.
-- Anti-abuse: cache keys derive from normalized safe paths only.
+- Anti-abuse:
+  - cache keys derive from normalized safe paths only,
+  - `type=content` preview cannot be used as a side channel to render
+    unpublished detail-page drafts,
+  - detail-template draft preview requires the dedicated detail-page preview
+    token issued from the internal admin flow.
 - Secret handling: preview/cache diagnostics cannot log tokens or secret fields.
 
 ## Testing Requirements
@@ -191,6 +207,10 @@ export async function invalidateDetailPageCacheForEntry(entry) {
   returns `404`.
 - Entry preview with `detailPageId` verifies the detail page belongs to the
   entry content type.
+- Entry preview with `detailPageId` accepts only published detail-page
+  documents; unpublished/draft detail pages return `404`.
+- Entry preview token alone cannot render `current_document` of a detail-page
+  draft; that path requires the dedicated `type=detail-page` preview token.
 - Expired token returns `410`.
 - Preview disabled returns `404`.
 - Public cache invalidates when entry/detail document changes.
