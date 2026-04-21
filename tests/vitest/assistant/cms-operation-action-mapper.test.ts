@@ -370,7 +370,11 @@ test("mapCmsOperationToActionPlan maps counted partial page deletes to multiple 
 
   expect(plan?.status).toBe("ready");
   expect(plan?.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
-  expect(plan?.actions.map((action) => action.input.title)).toEqual([
+  expect(
+    plan?.actions.map((action) =>
+      action.type === "page.delete" ? action.input.title : null
+    )
+  ).toEqual([
     "Katalog Projektów Domów 33151341",
     "Katalog Projektów Domów a3afbe30",
   ]);
