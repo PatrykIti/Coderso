@@ -121,8 +121,11 @@ type ContentRouteSetting = {
 };
 ```
 
-- `setting.content-route.upsert` can set, update, preserve, or clear
-  `detailPageId`.
+- `setting.content-route.upsert` stays the current route action and is extended
+  rather than replaced:
+  - omitted `detailPageId` preserves the current route link,
+  - `detailPageId: null` clears the link,
+  - `detailPageId: "<id>"` sets/replaces the link.
 - `contentRouteMatcher` returns `detailPageId` with detail route matches.
 - Site Settings UI/client round-trips `detailPageId` without dropping it.
 - `detailPageId` is part of the settings/admin route-editor contract, not a

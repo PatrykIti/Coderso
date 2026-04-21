@@ -26,9 +26,6 @@ No child task files.
 - Update `core/services/assistant/actionRegistry.ts`
 - Update `core/services/assistant/actionFamilyContracts.ts`
 - Update `core/services/assistant/actionExecutorService.ts`
-- Update `core/services/assistant/operationPolicy/cmsResourcePolicies.ts`
-- Update `core/services/assistant/cmsTargetResolver.ts`
-- Update `core/services/assistant/providerPlanningContext.ts`
 - Update `core/services/assistant/actionUndoManifest.ts` if detail documents
   need rollback metadata.
 - Update `core/admin/services/assistantClient.ts` for cache invalidation after
@@ -43,7 +40,6 @@ No child task files.
 - Update `_docs/ADMIN_CACHE_MAP.md`
 - Add `tests/vitest/assistant/action-plan-schema.test.ts` cases.
 - Add `tests/vitest/assistant/action-registry.test.ts` cases.
-- Update `tests/vitest/assistant/provider-planning-context.test.ts`
 - Update `tests/vitest/assistant/actionPlannerService.test.ts`
 - Add `tests/unit/assistant/actionExecutorService.test.ts` cases.
 
@@ -53,22 +49,18 @@ No child task files.
 already own generic resource planning. Do not add a bespoke planner branch just
 for detail pages.
 
-Required integration points:
+Required integration points in this leaf:
 
 - `actionRegistry.ts` remains the executable action owner.
 - `actionFamilyContracts.ts` remains the label/contract owner.
-- `cmsResourcePolicies.ts` must register `detail-page` as a first-class policy
-  resource so provider guidance, review metadata, and later generic resource
-  flows do not rely on one-off hardcoding.
-- `cmsTargetResolver.ts` may consume `detail-page` targets only through trusted
-  resource catalog entries or active-surface context, never through raw
-  prompt-only fuzzy ids.
-- `providerPlanningContext.ts` must expose redacted `detail-page` resource
-  metadata through the existing policy-driven registry/package flow instead of a
-  second prompt-packaging path.
+- the first reviewed `detail-page.upsert` path may be composer-owned and does
+  not need to pretend that `detail-page` is already a generic CMS resource
+  family,
+- generic policy/target-resolver/provider packaging for `detail-page` is split
+  into `TASK-190-05-03-08`,
 - Resource catalog transport and active-surface hydration for `detail-page`
-  remain owned by `TASK-190-07-02` and `TASK-190-06-03`; this leaf must plug
-  into those seams, not replace them.
+  remain owned by `TASK-190-07-02` and `TASK-190-06-03-03`; this leaf must not
+  replace those seams with ad-hoc lookups.
 
 ## Action Contract
 
@@ -120,7 +112,9 @@ Execute must:
   `setting.content-route.upsert` links `detailPageId`.
 
 Policy metadata for this resource family should use the technical kind
-`detail-page` and the UI label "Detail Template" only at the presentation layer.
+`detail-page` and the UI label "Detail Template" only at the presentation
+layer, but generic policy registration itself is deferred to
+`TASK-190-05-03-08`.
 
 ## Security Contract
 
@@ -131,7 +125,10 @@ Policy metadata for this resource family should use the technical kind
 - CSRF: existing assistant execute route.
 - Rate-limit bucket: assistant.
 - Reject-unknown validation: action input and document are strict.
-- Anti-abuse: no provider-to-executor payload; action must be locally assembled.
+- Anti-abuse:
+  - no provider-to-executor payload,
+  - action must be locally assembled,
+  - no fuzzy prompt-only id matching in this leaf.
 - Public-write hardening: embedded forms reuse existing form hardening.
 - Secret handling: action preview/audit redacts secret-like binding fields.
 
@@ -139,8 +136,6 @@ Policy metadata for this resource family should use the technical kind
 
 - Schema accepts valid action and rejects unknown fields.
 - `page.upsert` rejects opaque detail page document payloads.
-- Policy metadata and provider planning context can describe `detail-page`
-  without introducing provider-owned actions.
 - Dry-run reports missing content type/field conflicts.
 - Execute creates/upserts document idempotently.
 - Execute rejects content-type/id mismatches and incompatible existing detail
@@ -148,8 +143,8 @@ Policy metadata for this resource family should use the technical kind
 - Undo manifest captures safe rollback metadata if applicable.
 - Action registry includes `detail-page.upsert`.
 - Review/result UI labels render `detail-page.upsert` as "Detail page".
-- Generic planner integration continues to flow through the existing
-  policy/target-resolver seams instead of a special-case detail-page branch.
+- Base reviewed planner integration continues to flow through the existing
+  action-plan seams without adding a second detail-page executor path.
 - Assistant execution cache invalidates `detailPages:list` and
   `detailPages:detail:<id>` once the dedicated admin detail-page client wrappers
   from the admin/API slice exist.

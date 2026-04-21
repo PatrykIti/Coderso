@@ -273,9 +273,13 @@ Technical leaf tasks:
   - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
   - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
   - `TASK-190-05-03-07_Detail_Page_Route_Linking_and_Internal_Admin_API.md`
+  - `TASK-190-05-03-08_Detail_Page_Generic_Assistant_Resource_Integration.md`
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md`
+  - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md`
+  - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
+  - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
 - `TASK-190-07-01_Composition_Action_Assembler.md`
 - `TASK-190-07-02_No_Duplicate_Idempotency_and_Existing_Resource_Reuse.md`
 - `TASK-190-07-03_Composition_Review_Metadata_and_Diagnostics.md`

@@ -39,6 +39,7 @@ Reuse rule:
   - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
   - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
   - `TASK-190-05-03-07_Detail_Page_Route_Linking_and_Internal_Admin_API.md`
+  - `TASK-190-05-03-08_Detail_Page_Generic_Assistant_Resource_Integration.md`
 
 ## Architecture
 
@@ -83,8 +84,14 @@ Touched existing files:
    detail rendering when no detail document exists.
 9. Runtime route ownership stays in `site.contentRoutes` plus `detailPageId`;
    detail page documents do not become a second route registry.
-10. Detail page preview/cache/invalidation behavior is covered by Bun runtime
-   tests.
+10. `setting.content-route.upsert` is extended rather than replaced; omitted
+    `detailPageId` preserves the current link, `null` clears it, and a string
+    sets it.
+11. Generic assistant resource support for `detail-page` is a later explicit
+    slice; base composer/runtime/admin flow does not pretend that support
+    already exists.
+12. Detail page preview/cache/invalidation behavior is covered by Bun runtime
+    tests.
 
 ## Security Contract
 

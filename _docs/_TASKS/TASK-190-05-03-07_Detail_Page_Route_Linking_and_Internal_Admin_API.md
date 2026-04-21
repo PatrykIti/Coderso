@@ -81,9 +81,10 @@ Rules:
   detail URLs. `detail_page_documents` do not define canonical route state in
   parallel.
 - `detailPageId` links one content detail route to one detail page document.
-- `setting.content-route.upsert` can set or clear `detailPageId`.
-- Updating a content route must preserve `detailPageId` unless explicitly
-  changed.
+- `setting.content-route.upsert` is extended in place:
+  - omitted `detailPageId` preserves the current link,
+  - `detailPageId: null` clears the link,
+  - `detailPageId: "<id>"` sets/replaces the link.
 - `contentRouteMatcher` returns `detailPageId` for detail route matches.
 - `settingsService.normalizeContentRoutes` rejects invalid `detailPageId`
   values.
@@ -206,8 +207,9 @@ Route boundary maps through centralized `mapDetailPageError`.
 - Detail-page preview reuses the `preview_tokens.context` storage contract from
   `TASK-190-05-03-04`; this leaf does not invent a second persisted store.
 - Settings round-trip preserves `detailPageId`.
-- `setting.content-route.upsert` preserves existing `detailPageId` unless
-  explicitly changed.
+- `setting.content-route.upsert` preserves existing `detailPageId` when the
+  field is omitted, clears it when `null`, and replaces it when a string id is
+  provided.
 - `contentRouteMatcher` returns `detailPageId`.
 - Site Settings UI/client round-trips `detailPageId`.
 - Public runtime rejects content type/detail page mismatch.

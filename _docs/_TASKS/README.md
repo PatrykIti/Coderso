@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 44 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 5 tasks
 - **Done:** 952 tasks
 
@@ -63,10 +63,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05-03-05 | Detail Page Action Schema and Executor Adapter | High | Large | Technical leaf: strict typed detail-page upsert action and executor integration |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-05-03-07 | Detail Page Route Linking and Internal Admin API | High | Large | Technical leaf: content route detailPageId round-trip plus internal detail page CRUD/revision routes |
+| TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |
 | TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
 | TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |
-| TASK-190-06-03 | Collection Workspace and Template Editor | High | Large | Technical leaf: admin workspace tying model, entries, list page, detail template, filters/cards, forms, screen, SEO, routes, and preview together |
+| TASK-190-06-03 | Collection Workspace and Template Editor | High | Large | Technical program: workspace route/read model, canonical links, detail-template editor seams, and assistant context integration |
+| TASK-190-06-03-01 | Collection Workspace Route, Read Model, and Canonical Resource Linking | High | Medium | Technical leaf: route plus aggregated workspace read model with deterministic canonical resource resolution |
+| TASK-190-06-03-02 | Detail Template Editor Surface and Shared Builder Seams | High | Large | Technical leaf: detail-page editor mode built from extracted page/template/screen editor seams |
+| TASK-190-06-03-03 | Collection Workspace Assistant Context and Follow-Up Integration | High | Medium | Technical leaf: workspace/detail-page active-surface integration through current assistant context seams |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | Business area: assemble strict action plans and reuse existing resources |
 | TASK-190-07-01 | Composition Action Assembler | High | Large | Technical leaf: graph-to-action-plan adapter over existing typed actions |
 | TASK-190-07-02 | No-Duplicate Idempotency and Existing Resource Reuse | High | Large | Technical leaf: existing resource matcher and DB-backed no-duplicate guards |

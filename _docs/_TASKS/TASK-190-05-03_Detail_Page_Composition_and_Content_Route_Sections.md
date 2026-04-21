@@ -46,6 +46,7 @@ detail rendering system.
 - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
 - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
 - `TASK-190-05-03-07_Detail_Page_Route_Linking_and_Internal_Admin_API.md`
+- `TASK-190-05-03-08_Detail_Page_Generic_Assistant_Resource_Integration.md`
 
 ## Product Contract
 
@@ -213,7 +214,10 @@ Touched existing modules:
    `site.contentRoutes`.
 8. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
-9. Add composer fixtures and DB-backed public runtime acceptance tests.
+9. Add generic assistant resource/policy integration for `detail-page` only
+   after the base action/admin/runtime flow exists; do not couple the first
+   reviewed action promotion to the later generic CMS resource vocabulary.
+10. Add composer fixtures and DB-backed public runtime acceptance tests.
 
 ## Security Contract
 

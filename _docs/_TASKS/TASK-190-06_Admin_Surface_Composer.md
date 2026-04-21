@@ -35,6 +35,9 @@ Business value:
 - `TASK-190-06-01_Admin_Screen_Layout_Composer.md`
 - `TASK-190-06-02_Admin_Bindings_Routes_and_Permission_Safety.md`
 - `TASK-190-06-03_Collection_Workspace_and_Template_Editor.md`
+  - `TASK-190-06-03-01_Collection_Workspace_Route_Read_Model_and_Canonical_Resource_Linking.md`
+  - `TASK-190-06-03-02_Detail_Template_Editor_Surface_and_Shared_Builder_Seams.md`
+  - `TASK-190-06-03-03_Collection_Workspace_Assistant_Context_and_Follow_Up_Integration.md`
 
 ## Architecture
 
@@ -72,20 +75,27 @@ Touched existing files:
    entries, canonical list page, canonical detail template, canonical
    filters/cards, forms, admin screen, SEO/routes, preview, and any linked
    secondary resources.
-7. Detail template editing reuses the Page Builder shell instead of creating a
-   second incompatible editor stack.
-8. Composed admin screens use the current `custom-screen-builder` widget surface
+7. Collection workspace canonical links are deterministic; when the repo does
+   not have enough information, the workspace returns unresolved state plus
+   bounded candidates instead of guessing by name.
+8. Detail template editing reuses extracted builder primitives and current page
+   / widget-template / custom-screen editor patterns instead of creating a
+   fourth incompatible editor stack.
+9. If collection workspace becomes assistant-visible for follow-up prompts, it
+   extends the current admin-context / `activeSurface` seams rather than a new
+   route-to-surface workflow.
+10. Initial workspace/detail-template context support does not require generic
+    `detail-page` resource promotion to land in the same slice.
+11. Composed admin screens use the current `custom-screen-builder` widget surface
    plus shared layout primitives already allowed there; they do not bypass
    current surface scoping.
-9. The resulting composed screen still yields a valid derived mode/capability
+12. The resulting composed screen still yields a valid derived mode/capability
    state through the current custom-screen capability helper instead of a new
    parallel mode heuristic.
-10. If collection workspace becomes assistant-visible for follow-up prompts, it
-    extends the current admin-context / `activeSurface` seams rather than a new
-    route-to-surface workflow.
-11. Detail Template editing, if assistant-visible, uses the same technical
-    `detail-page` resource kind as action/policy/catalog slices instead of
-    inventing a second `detail-template` transport type.
+13. Detail Template editing, if assistant-visible, uses the same technical
+    `detail-page` surface label as the later action/policy/catalog family, but
+    the initial workspace/editor slice does not depend on generic resource
+    promotion landing in the same step.
 
 ## Security Contract
 
