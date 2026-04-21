@@ -72,7 +72,8 @@ The expected resource graph must include:
   - card template for project cards,
   - filters/facets for area, rooms, price/status/style/category where present,
 - detail pages:
-  - `detail_page_documents` entry for `/projekty-domow/:slug`,
+  - canonical `detail_page_documents` entry linked from the
+    `/projekty-domow/:slug` content route through `detailPageId`,
   - bindings for title, hero image, gallery, area, rooms, floors, price/status,
     CTA/form context, related projects,
 - forms:
@@ -89,8 +90,9 @@ The expected resource graph must include:
   - SEO docs or patterns for generated pages and detail pages,
   - content routes with list and detail route patterns,
 - collection workspace:
-  - one workspace linking model, entries, list page, detail template,
-    filters/cards, forms, admin screen, SEO, routes, and preview,
+  - one workspace linking canonical resources plus linked secondary resources
+    for model, entries, list page, detail template, filters/cards, forms,
+    admin screen, SEO, routes, and preview,
 - no duplicate resources on rerun.
 
 The fixture should assert resource keys and action types, not brittle generated

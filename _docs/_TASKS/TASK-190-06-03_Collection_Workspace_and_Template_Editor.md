@@ -44,6 +44,27 @@ No child task files.
 Users must be able to manage generated collections without prompting the
 assistant again.
 
+One workspace maps to one content type / collection root. The workspace must
+distinguish between:
+
+- canonical collection resources:
+  - content model,
+  - canonical content route link,
+  - canonical list page,
+  - canonical detail template,
+  - canonical listing query,
+  - canonical listing template,
+  - canonical admin screen,
+- linked secondary resources:
+  - zero-many forms/CTAs,
+  - zero-many supporting pages,
+  - zero-many SEO docs/patterns,
+  - zero-many editorial/proof/case-study resources,
+  - zero-many secondary screens or helper resources.
+
+Do not model hybrid outcomes as if every tab could only ever point at one
+singleton resource with no linked secondary modules.
+
 Canonical route:
 
 ```text
@@ -73,14 +94,18 @@ Source-of-truth mapping:
 
 - Fields -> `content_types.schema`
 - Entries -> `content_entries`
-- List Page -> `pages`
-- Detail Template -> `detail_page_documents`
-- Filters -> `listing_queries`
-- Cards -> `listing_templates`
-- Forms -> `forms`
-- Admin Screen -> `custom_screens`
-- SEO -> `seo_documents` and detail SEO pattern
-- Routes -> `site.contentRoutes`
+- List Page -> canonical `pages` record + linked supporting pages where present
+- Detail Template -> canonical `detail_page_documents` record linked from
+  `site.contentRoutes.detailPageId`
+- Filters -> canonical `listing_queries` record + linked secondary query assets
+- Cards -> canonical `listing_templates` record + linked secondary template
+  assets where present
+- Forms -> zero-many `forms`
+- Admin Screen -> canonical `custom_screens` record + linked secondary screens
+  where present
+- SEO -> zero-many `seo_documents` plus detail SEO pattern owned by the detail
+  page document
+- Routes -> canonical `site.contentRoutes` row for the content type
 
 ## Architecture
 
@@ -122,6 +147,15 @@ Existing UI to reuse:
 - Form editor for inquiry forms.
 - SEO manager pieces for SEO documents/patterns.
 - Runtime preview dialog for sample entry preview.
+
+Assistant-context rule:
+
+- keep the workspace under the existing `Engine` route family and admin-path
+  helpers,
+- if this route should become assistant-visible for follow-up prompts, extend
+  the current `adminContextService`, `assistantActionSchemas`, and
+  `useAssistantAdminContext` seams instead of inventing a parallel
+  collection-context transport.
 
 Implementation rule:
 
@@ -207,7 +241,8 @@ the shared extraction exists.
 ## Testing Requirements
 
 - Vitest:
-  - collection workspace renders linked resources and readiness checklist,
+  - collection workspace renders canonical resources, linked secondary
+    resources, and readiness checklist,
   - empty/missing-resource states are explicit,
   - detail template editor loads sample entries and forwards preview/save/publish
     actions,

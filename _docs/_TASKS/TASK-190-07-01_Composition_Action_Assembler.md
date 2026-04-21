@@ -28,13 +28,13 @@ No child task files.
 ```ts
 export const assembleCompositionActions = (graph): AssistantPlannedAction[] => {
   return [
-    contentRouteAction(graph.route),
     contentTypeUpsertAction(graph.schema),
-    customScreenUpsertAction(graph.adminSurface),
     listingQueryUpsertAction(graph.query),
     listingTemplateUpsertAction(graph.template),
-    pageUpsertAction(graph.listPage),
+    customScreenUpsertAction(graph.adminSurface),
     detailPageUpsertAction(graph.detailPage),
+    contentRouteAction(graph.route, graph.detailPage?.id),
+    pageUpsertAction(graph.listPage),
     ...formUpsertActions(graph.forms),
     ...menuActions(graph.menus),
     ...seoActions(graph.seo),
@@ -45,10 +45,12 @@ export const assembleCompositionActions = (graph): AssistantPlannedAction[] => {
 
 Ordering rules:
 
-- `setting.content-route.upsert` runs before `detail-page.upsert` so route
-  ownership and `detailPageId` can be resolved deterministically.
 - `content-type.upsert` runs before `detail-page.upsert` so bindings can verify
   schema fields.
+- `detail-page.upsert` runs before `setting.content-route.upsert` so the route
+  link can reference a known stable `detailPageId`.
+- Live runtime route switch happens only in `setting.content-route.upsert`; if
+  `detail-page.upsert` fails, the existing public route must remain unchanged.
 - `page.upsert` remains for list/landing pages.
 - `detail-page.upsert` remains for detail templates and must not be collapsed
   into `page.upsert`.
@@ -73,7 +75,9 @@ Ordering rules:
 - Mixed prompt plan action order stable.
 - `detailPageUpsertAction(graph.detailPage)` is emitted for catalog outcomes
   with public detail routes.
-- Assembler does not emit `detail-page.upsert` before route/content type
+- Assembler does not emit `setting.content-route.upsert.detailPageId` before the
+  referenced `detail-page.upsert` / `content-type.upsert` dependencies.
+- Assembler does not emit `detail-page.upsert` before content type
   dependencies.
 - Gated modules produce non-executable metadata/questions.
 

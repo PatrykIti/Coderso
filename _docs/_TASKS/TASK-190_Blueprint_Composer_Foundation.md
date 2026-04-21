@@ -67,8 +67,17 @@ means:
 - current executable blueprint packs remain the starting point,
 - current public content detail runtime is reused and extended where it matches
   the detail-page business need,
+- detail-page domain types/schema/normalizer/runtime/admin API stay under one
+  domain owner in `core/services/content/*`; blueprint code only composes inputs
+  against that contract,
+- public detail route ownership stays in `site.contentRoutes`; detail-page
+  documents are linked from routes through `detailPageId` instead of defining a
+  second runtime routing source of truth,
 - current page/widget-template/custom-screen editor patterns are reused for
-  manual editing surfaces.
+  manual editing surfaces,
+- collection workspace and any assistant follow-up context must extend the
+  current `adminPaths` / `prefetchAdminRoute` / admin-context seams rather than
+  introducing parallel route-to-surface workflows.
 
 ## Business Goal
 
@@ -202,6 +211,9 @@ type BlueprintCompositionPlan = {
    - The composer must open or link to a collection workspace after execution.
    - Detail templates reuse the Page Builder shell in detail-template mode, not
      a parallel editor stack.
+   - Collection workspace must model canonical collection resources plus
+     zero-many linked secondary resources instead of assuming every hybrid
+     outcome collapses to one form/page/template per tab.
 
 8. **Reuse existing owner seams**
    - Current blueprint setup remains the product foundation for full-site
@@ -210,6 +222,11 @@ type BlueprintCompositionPlan = {
    - Current content detail rendering remains the runtime entry point and theme
      override seam; any new detail-page document contract must plug into that
      flow rather than bypass it.
+   - Detail-page domain contract stays owned by content services; blueprint
+     manifests/composers may reference `detail-page` resources but must not
+     define a second domain schema/normalizer for the same resource.
+   - Runtime route ownership stays with `site.contentRoutes` plus
+     `detailPageId`; detail-page documents do not become a second route registry.
    - Generic CMS/admin mutation planning remains owned by operation policy and
      `cms_operation_draft`; blueprint composition is a separate setup path, not a
      second generic mutation planner.

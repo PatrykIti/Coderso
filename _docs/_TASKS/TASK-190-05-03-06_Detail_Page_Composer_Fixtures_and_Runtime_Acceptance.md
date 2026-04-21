@@ -51,11 +51,14 @@ Required local fixtures:
 ## Acceptance Criteria
 
 1. Composer creates a valid detail page document for each supported fixture.
-2. Runtime renders composed detail pages for published entries.
-3. Draft entries do not render publicly.
-4. Preview renders draft detail data only with valid token.
-5. Existing legacy content detail routes still work without a detail document.
-6. Gated domains appear in review metadata but not executable actions.
+2. Canonical content routes link to detail page documents through
+   `site.contentRoutes.detailPageId`, with no second route source-of-truth in
+   the document itself.
+3. Runtime renders composed detail pages for published entries.
+4. Draft entries do not render publicly.
+5. Preview renders draft detail data only with valid token.
+6. Existing legacy content detail routes still work without a detail document.
+7. Gated domains appear in review metadata but not executable actions.
 
 ## Security Contract
 

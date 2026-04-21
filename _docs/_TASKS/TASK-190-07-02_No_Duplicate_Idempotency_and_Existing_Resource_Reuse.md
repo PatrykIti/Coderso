@@ -29,11 +29,9 @@ No child task files.
 export const matchExistingCompositionResources = (graph, catalog) => ({
   contentType: findBySlug(catalog.contentTypes, graph.contentType.slug),
   page: findBySlug(catalog.pages, graph.page.slug),
-  detailPage: findDetailPageByTypeAndRoute(
-    catalog.detailPages,
-    graph.detailPage?.contentTypeSlug,
-    graph.detailPage?.routePattern
-  ),
+  detailPage:
+    findById(catalog.detailPages, graph.detailPage?.id) ??
+    findCanonicalDetailPageByType(catalog.detailPages, graph.detailPage?.contentTypeSlug),
   listingQuery: findByName(catalog.listings.queries, graph.query.name),
   listingTemplate: findBySlug(catalog.listings.templates, graph.template.slug),
   customScreen: findByName(catalog.customScreens, graph.admin.name),
@@ -55,7 +53,8 @@ export const matchExistingCompositionResources = (graph, catalog) => ({
 
 - DB-backed no-duplicate tests.
 - Existing resource update/reuse tests.
-- Existing detail page document update/reuse tests.
+- Existing detail page document update/reuse tests keyed by stable detail page
+  id and content-type ownership, not a second route-pattern owner.
 - Idempotency replay tests.
 - Conflict when existing resource is incompatible.
 

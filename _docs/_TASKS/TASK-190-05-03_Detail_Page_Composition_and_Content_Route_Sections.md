@@ -70,7 +70,9 @@ schema-first detail page document and turns it into validated widget blocks.
 
 Add a detail page authoring document that is linked from `site.contentRoutes`,
 owned by the assistant/admin setup flow, and resolved by the existing public
-content detail runtime.
+content detail runtime. The document owns public-detail composition data, but it
+does not become a second runtime route registry; runtime path ownership remains
+in `site.contentRoutes` through `detailPageId`.
 
 ```ts
 type DetailPageDocument = {
@@ -78,7 +80,6 @@ type DetailPageDocument = {
   id: string;
   name: string;
   contentTypeSlug: string;
-  routePattern: string;
   status: "draft" | "published";
   titlePattern: string;
   seo?: {
@@ -128,15 +129,20 @@ Storage direction:
   `detailPageId`, but it must not store the full detail page document.
 - `ContentRouteSetting.detailPageId` is the canonical stable link from a
   content detail route to a detail page document.
+- `site.contentRoutes` is the only runtime route owner for public content
+  detail URLs. Detail page documents do not own canonical route patterns in
+  parallel.
 - Detail page documents must have their own draft/published lifecycle,
-  versioned JSON document payload, stable id, content type ownership, and route
-  pattern.
+  versioned JSON document payload, stable id, and content type ownership.
 - DB changes require full migration artifacts: SQL migration, meta snapshot, and
   journal update.
 - The contract must be non-destructive and backward compatible with current
   content routes.
 - `DetailPageDocument` is an assistant/admin-managed collection resource; it is
   not a replacement for theme-file-based content detail templates.
+- Any route snapshot shown in admin/read-model UX is derived from the linked
+  `site.contentRoutes` row, not stored as a second authoritative runtime
+  contract inside `detail_page_documents`.
 - When a detail page document is absent, current theme override support for
   `content` detail templates remains the fallback behavior.
 
@@ -163,10 +169,10 @@ preview token allows it.
 
 New modules:
 
-- `core/services/assistant/blueprints/blueprintDetailPageTypes.ts`
-- `core/services/assistant/blueprints/blueprintDetailPageSchema.ts`
 - `core/services/assistant/blueprints/blueprintDetailPageComposer.ts`
-- `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
+- `core/services/content/detailPageTypes.ts`
+- `core/services/content/detailPageSchema.ts`
+- `core/services/content/detailPageBindingResolver.ts`
 - `core/services/content/detailPageDocumentService.ts`
 - `core/services/content/detailPageRuntimeResolver.ts`
 - `core/server/routes/detailPageRoutes.ts`
@@ -190,19 +196,24 @@ Touched existing modules:
 ## Implementation Order
 
 1. Define the versioned detail page document, dedicated DB storage, and strict
-   normalizers.
+   normalizers under one content-domain owner, including stable id rules for
+   composer-created documents.
 2. Define binding resolution from entry fields/meta/computed sources using the
    existing dot-path binding model.
 3. Add runtime resolver and plug it into the current content-detail runtime
    entry point with legacy fallback.
-4. Add preview/cache/invalidation integration.
-5. Add required `detail-page.upsert` typed action schema/executor to
-   create/update detail page documents.
-6. Add internal admin detail page API and `detailPageId` content-route
-   round-trip.
-7. Add manual Collection Workspace / Detail Template editing integration in
+4. Add required `detail-page.upsert` typed action schema/executor to
+   create/update detail page documents without mutating route ownership.
+5. Add internal admin detail page API plus explicit stable-id behavior for
+   assistant/composer upserts and manual admin create flows.
+6. Extend preview/cache/invalidation with detail-page-specific preview context
+   stored server-side, not trusted from ad-hoc query params.
+7. Add `detailPageId` content-route round-trip and runtime linkage after the
+   detail page document exists; live route ownership must stay in
+   `site.contentRoutes`.
+8. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
-8. Add composer fixtures and DB-backed public runtime acceptance tests.
+9. Add composer fixtures and DB-backed public runtime acceptance tests.
 
 ## Security Contract
 

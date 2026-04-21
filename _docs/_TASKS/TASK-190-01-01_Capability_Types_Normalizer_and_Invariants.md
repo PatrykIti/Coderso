@@ -55,6 +55,9 @@ Required invariants:
   templates.
 - UI can label `detail-page` as "Detail Template", but manifests use the
   technical kind consistently.
+- `detail-page` in manifests is capability metadata only; the actual detail page
+  document types/schema/normalizer remain owned by the content domain rather
+  than a second schema in `assistant/blueprints`.
 - no secret-like keys in defaults.
 
 ## Pseudocode
@@ -109,6 +112,8 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
 - Unknown action type rejects.
 - Unknown resource kind rejects.
 - `detail-page` resource kind accepts only detail page document contributions.
+- capability metadata for `detail-page` does not redefine the content-domain
+  detail page schema/normalizer.
 - current-pack detail-page metadata without a matching gated/latent declaration
   rejects.
 - Secret-like defaults reject.

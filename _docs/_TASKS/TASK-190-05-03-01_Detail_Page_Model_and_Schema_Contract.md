@@ -29,9 +29,9 @@ No child task files.
 
 ## Files to Change
 
-- Add `core/services/assistant/blueprints/blueprintDetailPageTypes.ts`
-- Add `core/services/assistant/blueprints/blueprintDetailPageSchema.ts`
-- Add `tests/vitest/assistant/blueprint-detail-page-schema.test.ts`
+- Add `core/services/content/detailPageTypes.ts`
+- Add `core/services/content/detailPageSchema.ts`
+- Add `tests/vitest/content/detailPageSchema.test.ts`
 - Update `core/db/schema.ts`
 - Add SQL migration for `detail_page_documents`
 - Add SQL migration for `detail_page_revisions`
@@ -61,7 +61,6 @@ export type DetailPageDocument = {
   id: string;
   name: string;
   contentTypeSlug: string;
-  routePattern: string;
   status: "draft" | "published";
   titlePattern: string;
   seo?: DetailPageSeo;
@@ -80,7 +79,6 @@ detail_page_documents: {
   name,
   content_type_id,
   content_type_slug,
-  route_pattern,
   status,
   current_document,
   published_document,
@@ -108,6 +106,8 @@ Rules:
 - Preview reads `current_document` only through valid preview/admin context.
 - `site.contentRoutes` can reference `detailPageId` for matching but does not
   own the document.
+- `site.contentRoutes` remains the only runtime route owner; detail-page
+  documents do not store canonical public route state in parallel.
 - `ContentRouteSetting` must preserve `detailPageId` through settings
   normalization, admin client reads/writes, and route matching:
 
@@ -128,6 +128,10 @@ type ContentRouteSetting = {
 - `detailPageId` is part of the settings/admin route-editor contract, not a
   server-only extension; the owner set includes settings normalization, admin
   client serialization, route-editor form state, and route matching.
+- Composer-created detail pages use stable deterministic ids so later action
+  assembly can link `site.contentRoutes.detailPageId` without waiting on an
+  opaque DB-generated id. Manual admin create may generate an id server-side,
+  but the normalized id must be returned before any route-link mutation.
 - The service layer owns normalize/create/update/publish/unpublish helpers.
 - Detail page documents follow the same history contract shape as Pages:
   - `kind = publish` for publish snapshots,
@@ -142,7 +146,6 @@ Normalization rules:
 - `schemaVersion` must be `1`.
 - `id` is stable and deterministic for composer output.
 - `contentTypeSlug` must be a safe content type slug.
-- `routePattern` must be a safe relative route and contain `:slug` or `:id`.
 - `blocks[].id` must be unique across the tree.
 - `bindings[].id` must be unique.
 - `bindings[].blockId` must point to an existing block.
@@ -160,7 +163,8 @@ Normalization rules:
 - Rate-limit bucket: unchanged.
 - Reject-unknown validation: all detail page model levels use strict
   normalization.
-- Anti-abuse: route patterns and prop paths are safe-relative and allowlisted.
+- Anti-abuse: ids and prop paths are strict; route linkage remains validated in
+  the settings/content-route owner seam instead of a second route contract here.
 - Public-write hardening: not applicable; no public write endpoint.
 - Secret handling: secret-like field names are rejected or require explicit
   redaction metadata.
@@ -182,7 +186,6 @@ Normalization rules:
 - Unknown keys reject.
 - Duplicate block ids reject.
 - Binding to missing block rejects.
-- Unsafe route patterns reject.
 - Unsafe prop paths reject.
 - Shared dot-path semantics stay compatible with the current custom-screen
   binding contract.

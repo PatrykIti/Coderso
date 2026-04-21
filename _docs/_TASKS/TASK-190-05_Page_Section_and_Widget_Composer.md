@@ -47,9 +47,9 @@ New owner files:
 - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
 - `core/services/assistant/blueprints/blueprintWidgetCapabilityMap.ts`
 - `core/services/assistant/blueprints/blueprintDetailPageComposer.ts`
-- `core/services/assistant/blueprints/blueprintDetailPageTypes.ts`
-- `core/services/assistant/blueprints/blueprintDetailPageSchema.ts`
-- `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
+- `core/services/content/detailPageTypes.ts`
+- `core/services/content/detailPageSchema.ts`
+- `core/services/content/detailPageBindingResolver.ts`
 - `core/services/content/detailPageRuntimeResolver.ts`
 - `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
 - `tests/vitest/assistant/blueprint-detail-page-composer.test.ts`
@@ -76,10 +76,14 @@ Touched existing files:
 5. Missing widget capabilities return gated/needs-input, not invalid blocks.
 6. Detail page route sections are first-class public runtime documents, not only
    metadata.
-7. Detail page renderer resolves entry-field bindings into widget props through
+7. Detail-page domain types/schema/normalizer stay under one content-domain
+   owner; blueprint composition consumes that contract instead of redefining it.
+8. Detail page renderer resolves entry-field bindings into widget props through
    the existing content-detail runtime seam and falls back to legacy entry
    detail rendering when no detail document exists.
-8. Detail page preview/cache/invalidation behavior is covered by Bun runtime
+9. Runtime route ownership stays in `site.contentRoutes` plus `detailPageId`;
+   detail page documents do not become a second route registry.
+10. Detail page preview/cache/invalidation behavior is covered by Bun runtime
    tests.
 
 ## Security Contract

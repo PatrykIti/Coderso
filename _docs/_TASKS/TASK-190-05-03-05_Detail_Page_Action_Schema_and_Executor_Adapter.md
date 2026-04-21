@@ -53,8 +53,6 @@ type AssistantDetailPageUpsertAction = {
   title: string;
   description: string;
   input: {
-    contentTypeSlug: string;
-    routePattern: string;
     status: "draft" | "published";
     document: DetailPageDocument;
     expectedExistingId?: string | null;
@@ -66,11 +64,15 @@ type AssistantDetailPageUpsertAction = {
 `page.upsert` remains the action for normal/static/list/landing Pages. Detail
 templates use `detail-page.upsert` so runtime ownership, bindings, preview,
 cache invalidation, and manual editing stay explicit.
+Composer-created detail page documents must carry a stable id so a later
+`setting.content-route.upsert.detailPageId` step can link the canonical route
+deterministically. `detail-page.upsert` owns document upsert only; it does not
+become a second route-owner mutation.
 
 Dry-run must show:
 
 - content type,
-- route pattern,
+- detail page id,
 - blocks/sections summary,
 - bindings summary,
 - related sources,
@@ -81,11 +83,13 @@ Execute must:
 
 - revalidate document,
 - verify content type exists,
-- verify route does not collide unsafely,
+- verify the document id/content type contract is safe and deterministic,
 - upsert document idempotently,
 - invalidate relevant site cache,
 - invalidate admin detail page list/detail cache keys,
-- return admin/public preview metadata.
+- return admin/public preview metadata,
+- leave runtime route ownership unchanged until a later
+  `setting.content-route.upsert` links `detailPageId`.
 
 ## Security Contract
 
@@ -106,7 +110,8 @@ Execute must:
 - `page.upsert` rejects opaque detail page document payloads.
 - Dry-run reports missing content type/field conflicts.
 - Execute creates/upserts document idempotently.
-- Execute rejects route collision.
+- Execute rejects content-type/id mismatches and incompatible existing detail
+  page ownership.
 - Undo manifest captures safe rollback metadata if applicable.
 - Action registry includes `detail-page.upsert`.
 - Review/result UI labels render `detail-page.upsert` as "Detail page".

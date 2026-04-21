@@ -26,6 +26,7 @@ No child task files.
 ## Files to Change
 
 - Update `core/server/publicSite.tsx`
+- Update `core/services/pages/previewService.ts`
 - Update `core/server/utils/previewUrls.ts` if detail preview needs additional
   query metadata.
 - Update `core/site/cache/siteCache.ts`
@@ -41,17 +42,19 @@ Detail pages have two distinct preview modes.
 Use a dedicated preview target for editing the detail template itself:
 
 ```text
-/preview?type=detail-page&token=<token>&entryId=<entry-id>&device=desktop
+/preview?type=detail-page&token=<token>&device=desktop
 ```
 
 Rules:
 
 - `token` targets `detail_page_documents.id`.
-- `entryId` selects the sample entry used to resolve bindings.
+- preview issuance stores `sampleEntryId` in preview-token metadata or a linked
+  preview session row; runtime must not trust an arbitrary sample entry id from
+  query params.
 - Runtime renders `current_document`, not `published_document`.
 - The sample entry must be published by default.
 - If previewing against a draft entry is needed, use content preview mode with a
-  valid content preview token instead of trusting `entryId`.
+  valid content preview token instead of trusting raw sample-entry query input.
 - `device` is optional and uses the existing `desktop|tablet|mobile` contract.
 
 ### Entry Detail Preview
@@ -81,6 +84,8 @@ Preview must:
 Implementation notes:
 
 - Update `previewService` target types to include `detail-page`.
+- Extend preview token storage/validation so detail-page preview can carry the
+  server-issued sample entry context instead of relying on raw query params.
 - Update `previewUrls` builders for detail-template preview URLs.
 - Update `_docs/PREVIEW_SPEC.md` and `_docs/CMS_API.md`.
 - Do not log preview tokens or sample entry data in diagnostics.
@@ -121,7 +126,7 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 
 - Valid content preview token renders composed detail page draft.
 - Valid detail-page preview token renders `current_document` with a selected
-  published sample entry.
+  published sample entry from server-issued preview context.
 - Detail-page preview with a draft sample entry and no content preview token
   returns `404`.
 - Entry preview with `detailPageId` verifies the detail page belongs to the

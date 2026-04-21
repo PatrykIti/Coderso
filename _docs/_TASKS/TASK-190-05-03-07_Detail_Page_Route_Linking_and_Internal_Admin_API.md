@@ -45,7 +45,7 @@ Preview endpoint response contract:
 ```json
 {
   "token": "preview-token",
-  "previewUrl": "/preview?type=detail-page&token=preview-token&entryId=entry-id",
+  "previewUrl": "/preview?type=detail-page&token=preview-token",
   "expiresAt": "2026-04-21T12:00:00.000Z"
 }
 ```
@@ -54,8 +54,9 @@ Rules:
 
 - `previewUrl` follows the same absolute/relative base URL resolution policy as
   existing page/content/widget-template preview endpoints.
-- `entryId` is required for detail-template preview issuance so the runtime can
-  resolve bindings against a stable sample entry.
+- preview issuance requires a sample entry id in the internal admin request, but
+  the runtime sample-entry context is stored server-side in preview-token
+  metadata/session rather than trusted from raw query params.
 - `expiresAt` uses the existing preview TTL rules unless a later task defines a
   stricter detail-page-specific policy.
 - The `detail-page` preview target and query contract are owned by
@@ -76,6 +77,9 @@ type ContentRouteSetting = {
 
 Rules:
 
+- `site.contentRoutes` is the canonical runtime route owner for public content
+  detail URLs. `detail_page_documents` do not define canonical route state in
+  parallel.
 - `detailPageId` links one content detail route to one detail page document.
 - `setting.content-route.upsert` can set or clear `detailPageId`.
 - Updating a content route must preserve `detailPageId` unless explicitly
@@ -94,6 +98,7 @@ Rules:
 - Add `core/server/validation/detailPageSchemas.ts`
 - Add `core/services/content/detailPageDocumentService.ts`
 - Add `core/services/content/detailPageRevisionService.ts`
+- Update `core/services/pages/previewService.ts`
 - Add `core/admin/services/detailPagesClient.ts`
 - Update `core/server/routes/index.ts`
 - Update `core/services/settings/settingsService.ts`
@@ -125,6 +130,17 @@ Admin client rule:
   resource family.
 - Do not push detail-page CRUD into `collectionsClient.ts` or ad-hoc local fetch
   helpers.
+
+ID contract:
+
+- `POST /admin/api/detail-pages` may accept an explicit `id` for
+  assistant/composer parity; when omitted for manual admin create, the service
+  generates one and returns the normalized id in the response.
+- `detail-page.upsert` and composer flows should use stable deterministic ids so
+  route-link mutations can reference `detailPageId` without waiting for an
+  opaque DB-generated value.
+- Runtime route linking must happen through `setting.content-route.upsert`
+  after the referenced detail page document id is known.
 
 ## Error Contract
 
@@ -176,6 +192,8 @@ Route boundary maps through centralized `mapDetailPageError`.
   `expiresAt` with the expected detail-page preview target shape.
 - The preview handler reuses the `detail-page` preview target/query contract
   introduced in `TASK-190-05-03-04`.
+- Detail-page preview stores sample-entry context server-side instead of
+  exposing it as an untrusted query parameter.
 - Settings round-trip preserves `detailPageId`.
 - `setting.content-route.upsert` preserves existing `detailPageId` unless
   explicitly changed.

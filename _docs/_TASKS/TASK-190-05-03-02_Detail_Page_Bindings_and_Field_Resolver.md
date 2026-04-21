@@ -19,18 +19,22 @@ This leaf should reuse the existing binding path semantics already used by
 custom screens. Do not invent a separate array-path DSL for detail pages if the
 current dot-path contract can cover the same business need.
 
+The binding/domain owner stays under `core/services/content/*`. Blueprint
+composition may consume this resolver, but it must not introduce a second
+binding contract under `assistant/blueprints`.
+
 ## Sub-Tasks
 
 No child task files.
 
 ## Files to Change
 
-- Add `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
+- Add `core/services/content/detailPageBindingResolver.ts`
 - Add `core/services/content/detailPageRuntimeResolver.ts`
 - Extract shared safe binding-path helpers if the current
   `core/services/customScreens/bindingResolver.ts` logic needs to be reused by
   both surfaces.
-- Add `tests/vitest/assistant/blueprint-detail-binding-resolver.test.ts`
+- Add `tests/vitest/content/detailPageBindingResolver.test.ts`
 - Add `tests/unit/content/detailPageRuntimeResolver.test.ts` if resolver imports
   DB/runtime dependencies.
 

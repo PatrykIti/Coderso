@@ -26,9 +26,9 @@ Business value:
 - Editors get one coherent admin screen, not one screen per fragment.
 - Business-specific modules can add field groups without duplicate surfaces.
 - Future presets can share admin UX composition.
-- Collection authors get one workspace that ties together model, records, list
-  page, detail template, cards/filters, forms, admin screen, SEO, routes, and
-  preview.
+- Collection authors get one workspace that ties together canonical collection
+  resources plus linked secondary modules instead of a second parallel workflow
+  for hybrid outcomes.
 
 ## Sub-Tasks
 
@@ -66,8 +66,9 @@ Touched existing files:
 4. Missing fields produce conflicts, not invalid bindings.
 5. Existing custom-screen upsert behavior remains backward-compatible.
 6. Collection workspace links or embeds the existing editors for fields,
-   entries, list page, detail template, filters/cards, forms, admin screen,
-   SEO/routes, and preview.
+   entries, canonical list page, canonical detail template, canonical
+   filters/cards, forms, admin screen, SEO/routes, preview, and any linked
+   secondary resources.
 7. Detail template editing reuses the Page Builder shell instead of creating a
    second incompatible editor stack.
 8. Composed admin screens use the current `custom-screen-builder` widget surface
@@ -76,6 +77,9 @@ Touched existing files:
 9. The resulting composed screen still yields a valid derived mode/capability
    state through the current custom-screen capability helper instead of a new
    parallel mode heuristic.
+10. If collection workspace becomes assistant-visible for follow-up prompts, it
+    extends the current admin-context / `activeSurface` seams rather than a new
+    route-to-surface workflow.
 
 ## Security Contract
 

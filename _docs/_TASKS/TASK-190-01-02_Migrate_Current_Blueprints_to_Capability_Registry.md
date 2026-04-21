@@ -45,7 +45,8 @@ Register capabilities for:
 Catalog-family capabilities may also declare future `detail-page` /
 `public-detail-page` contributions, but only as gated/latent manifest metadata.
 This task must not make detail pages look like a currently executable standalone
-pack before the detail-page runtime/action/admin slices land.
+pack before the detail-page runtime/action/admin slices land, and it must not
+introduce a second detail-page contract under `assistant/blueprints`.
 
 ## Pseudocode
 
@@ -84,6 +85,9 @@ export const findCapabilitiesProviding = (provide: BlueprintProvideKind) =>
 - Catalog-family manifests can expose first-class `detail-page` metadata only as
   gated/latent future contributions, without changing today's executable pack
   contract.
+- Registry metadata for `detail-page` points at the existing content-domain
+  resource concept; it does not define a parallel schema owner in blueprint
+  files.
 - Registry ids are unique.
 - Current blueprint builder output is unchanged.
 - Gated booking/payment capabilities are non-executable.

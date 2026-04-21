@@ -19,6 +19,9 @@ fallback.
 The runtime entry point stays the existing content detail flow. This leaf
 extends `core/site/renderPublicEntry.tsx` and `core/server/publicSite.tsx`
 rather than creating a second parallel route renderer for content detail pages.
+Route ownership stays with `site.contentRoutes` plus `detailPageId`; runtime
+must not consult a second canonical route definition inside detail page
+documents.
 
 ## Sub-Tasks
 
@@ -29,7 +32,7 @@ No child task files.
 - Update `core/server/publicSite.tsx`
 - Update `core/site/renderPublicEntry.tsx`
 - Update `core/site/contentRouteMatcher.ts` only if route match metadata needs
-  detail page ids.
+  detail page ids from `site.contentRoutes`.
 - Update `core/services/content/detailPageRuntimeResolver.ts`
 - Add `tests/integration/runtime/detail-page-runtime.test.tsx`
 
