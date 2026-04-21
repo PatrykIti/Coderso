@@ -65,7 +65,7 @@ testIfDb("add and list allowlist entries", async () => {
 testIfDb("isIpAllowed respects allowlist", async () => {
   const subnet = Math.floor(Math.random() * 200);
   const cidr = `172.16.${subnet}.0/24`;
-  const entry = await addAllowlistEntry(cidr, "Test", null);
+  const entry = await addAllowlistEntry(cidr, "Test", undefined);
   expect(entry).not.toBeNull();
   if (entry) entryIds.push(entry.id);
 

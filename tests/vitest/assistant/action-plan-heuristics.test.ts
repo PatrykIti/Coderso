@@ -13,6 +13,8 @@ const createContext = (
   locale: null,
   resourceCatalog: null,
   runtimeSnapshot: null,
+  activeSurface: null,
+  planningState: null,
   area: "other",
   codersoModule: null,
   ...input,

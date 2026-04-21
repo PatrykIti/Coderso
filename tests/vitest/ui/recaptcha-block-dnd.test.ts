@@ -49,7 +49,7 @@ test("executeRecaptcha loads the script before executing", async () => {
     grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> };
   }).grecaptcha = { execute };
 
-  appendedScript?.dispatchEvent(new Event("load"));
+  (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("load"));
 
   await expect(promise).resolves.toBe("token-2");
   expect(execute).toHaveBeenCalledWith("site-key", { action: "signup" });
@@ -66,7 +66,7 @@ test("executeRecaptcha rejects when the script load fails or grecaptcha is unava
     );
 
     const promise = executeRecaptcha("site-key", "login");
-    appendedScript?.dispatchEvent(new Event("error"));
+    (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("error"));
 
     await expect(promise).rejects.toThrow("recaptcha_load_failed");
   }
@@ -85,7 +85,7 @@ test("executeRecaptcha rejects when the script load fails or grecaptcha is unava
   );
 
   const secondPromise = executeRecaptcha("site-key", "login");
-  appendedScript?.dispatchEvent(new Event("load"));
+  (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("load"));
 
   await expect(secondPromise).rejects.toThrow("recaptcha_unavailable");
 });

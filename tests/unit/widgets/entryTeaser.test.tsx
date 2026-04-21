@@ -299,7 +299,11 @@ test("entry teaser listing mode resolves first listing item", async () => {
       }),
       getContentTypeById: async () => ({
         id: "type-1",
+        name: "Entries",
         slug: "entries",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
       }),
       getContentTypeBySlug: async () => null,
     }

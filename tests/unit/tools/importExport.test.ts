@@ -56,7 +56,7 @@ test("previewImport summarizes bundle contents", async () => {
     redirects: [],
   };
 
-  const result = await previewImport(bundle);
+  const result = await previewImport(bundle as unknown as Parameters<typeof previewImport>[0]);
   expect(result.summary.menus).toBe(1);
   expect(result.summary.menuItems).toBe(1);
   expect(result.summary.themeProfiles).toBe(1);

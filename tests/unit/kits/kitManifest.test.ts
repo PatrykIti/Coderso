@@ -43,7 +43,9 @@ const source = {
 };
 
 test("buildSolutionKitManifest creates deterministic includes and checklist", () => {
-  const manifest = buildSolutionKitManifest(source);
+  const manifest = buildSolutionKitManifest(
+    source as unknown as Parameters<typeof buildSolutionKitManifest>[0]
+  );
 
   expect(manifest.id).toBe("custom-kit");
   expect(manifest.vertical).toBe("services-directory");

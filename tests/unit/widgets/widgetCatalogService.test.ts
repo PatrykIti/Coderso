@@ -35,6 +35,7 @@ const template: WidgetTemplateRecord = {
   category: "layout",
   status: "draft",
   blocks: [],
+  settings: { layout: { wrapper: { container: "full", padding: { top: "none", bottom: "none" }, background: { color: "transparent", image: null, media: { type: "none", source: "external", src: null } } }, sections: { gap: "none", defaults: { container: "default", padding: { top: "xl", bottom: "xl" }, margin: { top: "none", bottom: "none" } } }, applyDefaultsToNewBlocks: false } },
   createdAt: new Date(),
   updatedAt: new Date(),
 };

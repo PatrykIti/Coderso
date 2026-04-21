@@ -510,6 +510,6 @@ test("revision drawers render states and gate restore/discard with confirmation"
     expect(confirmSpy).toHaveBeenCalledTimes(3);
   } finally {
     view.cleanup();
-    delete (window as Window & { confirm?: unknown }).confirm;
+    Reflect.deleteProperty(window, "confirm");
   }
 });

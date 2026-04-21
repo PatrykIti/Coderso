@@ -25,7 +25,7 @@ const sampleRow: Record<string, unknown> = {
 };
 
 const createCondition = (
-  patch: Partial<ListingVisibilityCondition>
+  patch: Partial<ListingVisibilityCondition> = {}
 ): ListingVisibilityCondition => ({
   id: "condition-1",
   field: "status",
@@ -171,4 +171,3 @@ test("resolveListingBindingIndex applies conditions and safe fallbacks", () => {
   expect(image?.visible).toBe(false);
   expect(image?.value).toBeUndefined();
 });
-

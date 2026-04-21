@@ -212,7 +212,7 @@ const buildDefinition = (seed: string): SolutionKitDefinition => ({
     ],
     menus: [
       {
-        location: `primary-${seed}`,
+        location: "primary",
         name: `Primary ${seed}`,
         items: [
           { key: "home", label: "Home", pageSlug: `landing-${seed}` },

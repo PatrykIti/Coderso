@@ -182,7 +182,7 @@ const setRawInputValue = (element: Element | null | undefined, value: string) =>
     Object.defineProperty(element, "value", ownDescriptor);
     return;
   }
-  delete (element as HTMLInputElement & { value?: string }).value;
+  Reflect.deleteProperty(element as HTMLInputElement & { value?: string }, "value");
 };
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
