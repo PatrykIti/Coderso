@@ -35,6 +35,18 @@ No child task files.
   references to detail page documents, not to store full documents in settings.
 - Update `core/services/assistant/actionPlanTypes.ts` and
   `actionPlanSchema.ts` for `setting.content-route.upsert.detailPageId`.
+- Update `core/services/assistant/actionFamilyContracts.ts` for the expanded
+  `setting.content-route.upsert` input contract.
+- Update `core/admin/services/siteSettingsClient.ts` so `detailPageId`
+  survives admin read/write round-trips.
+- Update `core/admin/ui/site/siteSettingsValidation.ts`
+- Update `core/admin/ui/site/SiteRouteEditor.tsx`
+- Update `core/admin/ui/site/SiteSettingsPage.tsx`
+- Update `tests/unit/settings/contentRoutesValidation.test.ts`
+- Update `tests/unit/site/contentRouteMatcher.test.ts`
+- Update `tests/vitest/admin/siteSettingsClient.test.ts`
+- Update `tests/vitest/ui/site-settings.test.tsx`
+- Update `tests/vitest/ui/plugin-media-site-leaf.test.tsx`
 
 ## Data Contract
 
@@ -108,6 +120,9 @@ type ContentRouteSetting = {
   `detailPageId`.
 - `contentRouteMatcher` returns `detailPageId` with detail route matches.
 - Site Settings UI/client round-trips `detailPageId` without dropping it.
+- `detailPageId` is part of the settings/admin route-editor contract, not a
+  server-only extension; the owner set includes settings normalization, admin
+  client serialization, route-editor form state, and route matching.
 - The service layer owns normalize/create/update/publish/unpublish helpers.
 - Detail page documents follow the same history contract shape as Pages:
   - `kind = publish` for publish snapshots,
@@ -153,9 +168,11 @@ Normalization rules:
 - Autosave keeps only the latest autosave revision.
 - Restore/discard revision semantics match the Pages revision contract.
 - `ContentRouteSetting.detailPageId` normalizes and round-trips through
-  settings service/client/UI.
-- `setting.content-route.upsert` preserves existing `detailPageId` unless a
-  patch explicitly changes it.
+  settings service, `siteSettingsClient`, Site Settings UI form state, and
+  route-editor validation helpers.
+- `setting.content-route.upsert` schema and action-family metadata accept
+  optional `detailPageId` without dropping it from normalized plan input;
+  preserve/clear execute semantics are owned by `TASK-190-05-03-07`.
 - `contentRouteMatcher` exposes `detailPageId` for runtime detail resolution.
 - Unknown keys reject.
 - Duplicate block ids reject.

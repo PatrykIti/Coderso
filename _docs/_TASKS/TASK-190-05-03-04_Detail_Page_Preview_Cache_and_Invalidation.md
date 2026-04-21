@@ -15,6 +15,10 @@ Extend preview and cache behavior for composed detail pages. Detail page documen
 must preview safely and invalidate public cache when related entries or detail
 documents change.
 
+This leaf owns the `detail-page` preview target and query-string contract.
+Later route/API leaves, including `/admin/api/detail-pages/:id/preview`, must
+reuse this contract instead of introducing a parallel preview target shape.
+
 ## Sub-Tasks
 
 No child task files.

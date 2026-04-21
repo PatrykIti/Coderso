@@ -44,17 +44,15 @@ No child task files.
 Users must be able to manage generated collections without prompting the
 assistant again.
 
-Suggested route:
-
-```text
-/admin/coderso/collections/:contentTypeId
-```
-
-Alternative route is acceptable if it follows canonical admin helpers:
+Canonical route:
 
 ```text
 /admin/coderso/engine/:contentTypeId/collection
 ```
+
+Do not introduce a new top-level `/admin/coderso/collections/*` module in this
+task. If a friendlier alias is ever added later, it must resolve to the same
+canonical route through the shared admin path helpers.
 
 Workspace tabs:
 
@@ -93,10 +91,21 @@ New owner files:
 - `core/admin/ui/collections/CollectionReadinessChecklist.tsx`
 - `core/admin/ui/collections/DetailTemplateEditorPage.tsx`
 - `core/admin/ui/collections/detailTemplateEditorModel.ts`
-- `core/admin/services/collectionsClient.ts`
+- `core/admin/services/collectionsClient.ts` for the aggregated workspace
+  read model only
+- Update `core/admin/app/AdminApp.tsx` to register the canonical
+  `/coderso/engine/:id/collection` route
 - `tests/vitest/ui/collection-workspace.test.tsx`
 - `tests/vitest/ui/detail-template-editor.test.tsx`
 - `tests/vitest/admin/collectionsClient.test.ts`
+
+Client ownership rule:
+
+- `collectionsClient.ts` owns collection-level summaries and linked resource
+  read aggregation.
+- Detail template save/autosave/publish/preview/revisions should stay in
+  dedicated detail-page admin service wrappers, or clearly named per-resource
+  clients, instead of mixing mixed write contracts into `collectionsClient.ts`.
 
 Existing UI to reuse:
 
@@ -114,6 +123,9 @@ Canonical navigation:
 - Links must use `AdminLink`.
 - Prefetch must use `prefetchAdminRoute`.
 - No hand-built admin hrefs or alias logic.
+- Keep the workspace under the existing `Engine` module so current Coderso IA,
+  assistant route-to-surface mapping, and prefetch roots stay coherent; do not
+  add a separate `collections` module/prefetch root in this slice.
 
 ## Manual Editing Flow
 
@@ -180,7 +192,8 @@ Detail-template mode differences:
   - detail template editor loads sample entries and forwards preview/save/publish
     actions,
   - binding panel rejects secret fields and unsafe prop paths,
-  - canonical admin paths are used.
+  - canonical admin route is `/admin/coderso/engine/:contentTypeId/collection`
+    and links use shared admin path helpers.
 - Bun:
   - route/permission tests if new internal endpoints are added,
   - DB-backed save/publish tests for detail template service if not already

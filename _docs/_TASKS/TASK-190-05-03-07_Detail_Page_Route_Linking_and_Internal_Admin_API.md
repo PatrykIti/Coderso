@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Admin API + Detail Pages
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-05
+**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04, TASK-190-05-03-05
 **Status:** To Do
 
 ---
@@ -58,6 +58,9 @@ Rules:
   resolve bindings against a stable sample entry.
 - `expiresAt` uses the existing preview TTL rules unless a later task defines a
   stricter detail-page-specific policy.
+- The `detail-page` preview target and query contract are owned by
+  `TASK-190-05-03-04`. This leaf wires the admin route to that contract and
+  must not redefine preview target semantics in parallel.
 
 Route-linking contract:
 
@@ -95,13 +98,21 @@ Rules:
 - Update `core/services/settings/settingsService.ts`
 - Update `core/services/assistant/actionPlanTypes.ts`
 - Update `core/services/assistant/actionPlanSchema.ts`
+- Update `core/services/assistant/actionFamilyContracts.ts`
 - Update `core/services/assistant/actionExecutorService.ts` for
   `setting.content-route.upsert.detailPageId`
 - Update `core/site/contentRouteMatcher.ts`
 - Update `core/admin/services/siteSettingsClient.ts`
-- Update Site Settings UI route editor if it serializes content routes.
+- Update `core/admin/ui/site/siteSettingsValidation.ts`
+- Update `core/admin/ui/site/SiteRouteEditor.tsx`
+- Update `core/admin/ui/site/SiteSettingsPage.tsx`
 - Add `tests/integration/routes/detailPages.test.ts`
 - Add `tests/unit/content/detailPageDocumentService.test.ts`
+- Update `tests/unit/settings/contentRoutesValidation.test.ts`
+- Update `tests/unit/site/contentRouteMatcher.test.ts`
+- Update `tests/vitest/admin/siteSettingsClient.test.ts`
+- Update `tests/vitest/ui/site-settings.test.tsx`
+- Update `tests/vitest/ui/plugin-media-site-leaf.test.tsx`
 - Add settings/content route round-trip tests.
 
 ## Error Contract
@@ -152,6 +163,8 @@ Route boundary maps through centralized `mapDetailPageError`.
   handlers.
 - `POST /admin/api/detail-pages/:id/preview` returns `token`, `previewUrl`, and
   `expiresAt` with the expected detail-page preview target shape.
+- The preview handler reuses the `detail-page` preview target/query contract
+  introduced in `TASK-190-05-03-04`.
 - Settings round-trip preserves `detailPageId`.
 - `setting.content-route.upsert` preserves existing `detailPageId` unless
   explicitly changed.
