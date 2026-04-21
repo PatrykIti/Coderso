@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin/UI + Collections + Detail Templates
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03, TASK-190-06-01, TASK-190-06-02
+**Dependencies:** TASK-190-05-03, TASK-190-05-03-07, TASK-190-06-01, TASK-190-06-02
 **Status:** To Do
 
 ---

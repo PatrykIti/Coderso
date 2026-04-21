@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** QA + Runtime Acceptance
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-05-03-05
+**Dependencies:** TASK-190-05-03-04, TASK-190-05-03-05, TASK-190-05-03-07
 **Status:** To Do
 
 ---

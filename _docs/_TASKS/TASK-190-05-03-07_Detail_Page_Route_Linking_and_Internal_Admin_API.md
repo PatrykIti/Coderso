@@ -31,6 +31,7 @@ GET    /admin/api/detail-pages?contentTypeSlug=<slug>
 GET    /admin/api/detail-pages/:id
 POST   /admin/api/detail-pages
 PATCH  /admin/api/detail-pages/:id
+POST   /admin/api/detail-pages/:id/preview
 POST   /admin/api/detail-pages/:id/publish
 POST   /admin/api/detail-pages/:id/unpublish
 POST   /admin/api/detail-pages/:id/autosave
@@ -104,8 +105,9 @@ Route boundary maps through centralized `mapDetailPageError`.
 - Auth model: authenticated admin session / scoped internal API key where
   supported.
 - RBAC:
-  - read/list/revisions require `content:read`,
-  - create/update/autosave/restore/discard require `content:write`,
+- read/list/revisions require `content:read`,
+- preview token issuance requires `content:read`,
+- create/update/autosave/restore/discard require `content:write`,
   - publish/unpublish require `content:publish`.
 - CSRF: all mutating routes require existing admin CSRF middleware.
 - Rate-limit bucket: `admin_read` for GET, `admin_write` for mutations.
