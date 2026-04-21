@@ -31,6 +31,7 @@ GET    /admin/api/detail-pages?contentTypeSlug=<slug>
 GET    /admin/api/detail-pages/:id
 POST   /admin/api/detail-pages
 PATCH  /admin/api/detail-pages/:id
+DELETE /admin/api/detail-pages/:id
 POST   /admin/api/detail-pages/:id/preview
 POST   /admin/api/detail-pages/:id/publish
 POST   /admin/api/detail-pages/:id/unpublish
@@ -101,6 +102,7 @@ Rules:
 - Add `core/services/content/detailPageRevisionService.ts`
 - Update `core/services/pages/previewService.ts`
 - Add `core/admin/services/detailPagesClient.ts`
+- Update `core/admin/services/assistantClient.ts`
 - Update `core/server/routes/index.ts`
 - Update `core/services/settings/settingsService.ts`
 - Update `core/services/assistant/actionPlanTypes.ts`
@@ -119,6 +121,7 @@ Rules:
 - Update `tests/unit/settings/contentRoutesValidation.test.ts`
 - Update `tests/unit/site/contentRouteMatcher.test.ts`
 - Add `tests/vitest/admin/detailPagesClient.test.ts`
+- Update `tests/vitest/admin/assistantClient.test.ts`
 - Update `tests/vitest/admin/siteSettingsClient.test.ts`
 - Update `tests/vitest/ui/site-settings.test.tsx`
 - Update `tests/vitest/ui/plugin-media-site-leaf.test.tsx`
@@ -129,6 +132,15 @@ Admin client rule:
 - `detailPagesClient.ts` owns list/detail/get/update/autosave/publish/unpublish/
   revisions/restore/preview wrappers plus cache hydration for the detail-page
   resource family.
+- `cachePolicy.ts` owns the detail-page admin cache keys:
+  - `detailPages:list`
+  - `detailPages:detail:<id>`
+- `assistantClient.ts` owns mapping validated `detail-page.upsert` execution
+  results onto those cache keys so assistant-driven edits reuse the same cache
+  invalidation path as manual admin flows.
+- `detailPagesClient.ts` must follow the current admin cache contract already
+  used by pages/custom screens: local cache hydrate, background revalidation,
+  and `cacheBus` broadcast invalidate/update events.
 - Do not push detail-page CRUD into `collectionsClient.ts` or ad-hoc local fetch
   helpers.
 
@@ -146,11 +158,28 @@ ID contract:
 - `POST /admin/api/detail-pages` may accept an explicit `id` for
   assistant/composer parity; when omitted for manual admin create, the service
   generates one and returns the normalized id in the response.
-- `detail-page.upsert` and composer flows should use stable deterministic ids so
-  route-link mutations can reference `detailPageId` without waiting for an
-  opaque DB-generated value.
+- `detail-page.upsert` and composer flows should use stable deterministic
+  UUID-compatible ids so route-link mutations can reference `detailPageId`
+  without waiting for an opaque DB-generated value.
+- This leaf consumes the UUID-compatible id contract defined in
+  `TASK-190-05-03-01`; route handlers, `detailPagesClient.ts`, and
+  `setting.content-route.upsert` must validate against that shared contract
+  rather than accepting arbitrary string ids.
 - Runtime route linking must happen through `setting.content-route.upsert`
   after the referenced detail page document id is known.
+
+Delete contract:
+
+- The first admin API must keep lifecycle parity with existing internal content
+  resources and therefore includes `DELETE /admin/api/detail-pages/:id`.
+- Delete stays manual-admin/API only in this slice; it does not imply that a
+  generic assistant `detail-page.delete` action exists in the same wave.
+- Delete must not silently mutate route ownership. If the document is still
+  referenced by `site.contentRoutes.detailPageId`, the service returns a
+  machine-readable conflict and the operator must clear the route link first via
+  Site Settings / `setting.content-route.upsert`.
+- After unlink, delete removes the document plus owned revisions and invalidates
+  the same detail-page admin cache keys as other mutations.
 
 ## Error Contract
 
@@ -174,7 +203,7 @@ Route boundary maps through centralized `mapDetailPageError`.
 - RBAC:
   - read/list/revisions require `content:read`,
   - preview token issuance requires `content:read`,
-  - create/update/autosave/restore/discard require `content:write`,
+  - create/update/delete/autosave/restore/discard require `content:write`,
   - publish/unpublish require `content:publish`.
 - CSRF: all mutating routes require existing admin CSRF middleware.
 - Rate-limit bucket: `admin_read` for GET, `admin_write` for mutations.
@@ -196,8 +225,8 @@ Route boundary maps through centralized `mapDetailPageError`.
 
 - Route registration covers all detail page endpoints.
 - `mapDetailPageError` covers known errors.
-- Create/update/publish/unpublish/autosave/revision flow works through route
-  handlers.
+- Create/update/delete/publish/unpublish/autosave/revision flow works through
+  route handlers.
 - `POST /admin/api/detail-pages/:id/preview` returns `token`, `previewUrl`, and
   `expiresAt` with the expected detail-page preview target shape.
 - The preview handler reuses the `detail-page` preview target/query contract
@@ -210,6 +239,11 @@ Route boundary maps through centralized `mapDetailPageError`.
 - `setting.content-route.upsert` preserves existing `detailPageId` when the
   field is omitted, clears it when `null`, and replaces it when a string id is
   provided.
+- Linked detail pages reject delete with a machine-readable route conflict until
+  the canonical route link is cleared through the existing route owner seam.
+- `detailPagesClient.ts` exposes delete and invalidates the detail-page list /
+  detail cache keys through the same admin cache contract as comparable
+  resources.
 - `contentRouteMatcher` returns `detailPageId`.
 - Site Settings UI/client round-trips `detailPageId`.
 - Public runtime rejects content type/detail page mismatch.
@@ -218,6 +252,6 @@ Route boundary maps through centralized `mapDetailPageError`.
 
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cached wrappers are
-  added in the same implementation slice.
+- `_docs/ADMIN_CACHE.md`
+- `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`

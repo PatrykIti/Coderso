@@ -131,10 +131,26 @@ type ContentRouteSetting = {
 - `detailPageId` is part of the settings/admin route-editor contract, not a
   server-only extension; the owner set includes settings normalization, admin
   client serialization, route-editor form state, and route matching.
-- Composer-created detail pages use stable deterministic ids so later action
-  assembly can link `site.contentRoutes.detailPageId` without waiting on an
-  opaque DB-generated id. Manual admin create may generate an id server-side,
-  but the normalized id must be returned before any route-link mutation.
+- `DetailPageDocument.id`, persisted `detail_page_documents.id`, linked
+  `site.contentRoutes.detailPageId`, and shared preview/storage targets must all
+  stay on one UUID-compatible identifier contract.
+- Because current shared storage such as `preview_tokens.target_id` is UUID-based
+  today, this leaf treats UUID compatibility as part of the domain contract, not
+  an implementation accident.
+- Composer-created detail pages use stable deterministic UUID-compatible ids so
+  later action assembly can link `site.contentRoutes.detailPageId` without
+  waiting on an opaque DB-generated value. The default deterministic scheme is
+  UUIDv5 (or equivalent deterministic UUID) derived from stable collection
+  identity such as content type slug + composition key/role.
+- Manual admin create may generate a random UUID server-side, but the
+  normalized id must be returned before any route-link mutation.
+- `detailPageSchema.ts` plus the content-domain service layer own id validation
+  and deterministic-id generation rules. Preview, route-linking, matcher, and
+  admin/API slices consume that contract; they must not redefine id format
+  locally.
+- If a later change wants non-UUID detail-page ids, that change must explicitly
+  widen the affected shared storage owners and migrations instead of silently
+  drifting this contract.
 - The service layer owns normalize/create/update/publish/unpublish helpers.
 - Detail page documents follow the same history contract shape as Pages:
   - `kind = publish` for publish snapshots,
@@ -147,7 +163,8 @@ type ContentRouteSetting = {
 Normalization rules:
 
 - `schemaVersion` must be `1`.
-- `id` is stable and deterministic for composer output.
+- `id` is UUID-compatible.
+- composer-generated `id` is deterministic and UUID-compatible.
 - `contentTypeSlug` must be a safe content type slug.
 - `blocks[].id` must be unique across the tree.
 - `bindings[].id` must be unique.
@@ -175,6 +192,9 @@ Normalization rules:
 ## Testing Requirements
 
 - Valid document normalizes deterministically.
+- Valid UUID-compatible detail-page ids normalize.
+- Non-UUID-compatible detail-page ids reject unless this contract is explicitly
+  widened in a later migration-owning task.
 - DB migration artifacts are present and valid.
 - Publish creates a `publish` revision and updates `published_document`.
 - Autosave keeps only the latest autosave revision.

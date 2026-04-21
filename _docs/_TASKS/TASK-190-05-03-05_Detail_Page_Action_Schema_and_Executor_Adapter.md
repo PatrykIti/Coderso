@@ -28,16 +28,8 @@ No child task files.
 - Update `core/services/assistant/actionExecutorService.ts`
 - Update `core/services/assistant/actionUndoManifest.ts` if detail documents
   need rollback metadata.
-- Update `core/admin/services/assistantClient.ts` for cache invalidation after
-  `detail-page.upsert`, reusing the same cached-client pattern used by other
-  admin resources.
 - Update `core/admin/ui/assistant/components/ActionPlanReview.tsx` labels.
 - Update `core/admin/ui/assistant/components/ActionExecutionResult.tsx` labels.
-- Update `core/admin/services/cachePolicy.ts` with:
-  - `detailPages:list`
-  - `detailPages:detail:<id>`
-- Update `_docs/ADMIN_CACHE.md`
-- Update `_docs/ADMIN_CACHE_MAP.md`
 - Add `tests/vitest/assistant/action-plan-schema.test.ts` cases.
 - Add `tests/vitest/assistant/action-registry.test.ts` cases.
 - Update `tests/vitest/assistant/actionPlannerService.test.ts`
@@ -56,8 +48,13 @@ Required integration points in this leaf:
 - the first reviewed `detail-page.upsert` path may be composer-owned and does
   not need to pretend that `detail-page` is already a generic CMS resource
   family,
+- `actionExecutorService.ts` owns server-side validation, persistence, and
+  normalized execution result metadata for `detail-page.upsert`,
 - generic policy/target-resolver/provider packaging for `detail-page` is split
   into `TASK-190-05-03-08`,
+- admin cached-client wrappers, cache keys, and assistant-side cache
+  invalidation for `detail-page` are explicitly deferred to
+  `TASK-190-05-03-07`,
 - Resource catalog transport and active-surface hydration for `detail-page`
   remain owned by `TASK-190-07-02` and `TASK-190-06-03-03`; this leaf must not
   replace those seams with ad-hoc lookups.
@@ -106,8 +103,9 @@ Execute must:
 - verify the document id/content type contract is safe and deterministic,
 - upsert document idempotently,
 - invalidate relevant site cache,
-- invalidate admin detail page list/detail cache keys,
 - return admin/public preview metadata,
+- return normalized execution metadata (`detailPageId`, `contentTypeSlug`,
+  status/public-impact summary) needed by the later admin client/cache layer,
 - leave runtime route ownership unchanged until a later
   `setting.content-route.upsert` links `detailPageId`.
 
@@ -146,9 +144,9 @@ layer, but generic policy registration itself is deferred to
   while the technical action/resource kind remains `detail-page`.
 - Base reviewed planner integration continues to flow through the existing
   action-plan seams without adding a second detail-page executor path.
-- Assistant execution cache invalidates `detailPages:list` and
-  `detailPages:detail:<id>` once the dedicated admin detail-page client wrappers
-  from the admin/API slice exist.
+- Admin cache key registration, cached-client hydration, and assistant-side
+  cache invalidation for `detail-page` are explicitly deferred to
+  `TASK-190-05-03-07` so the tree stays implementable in dependency order.
 
 ## Documentation Updates Required
 

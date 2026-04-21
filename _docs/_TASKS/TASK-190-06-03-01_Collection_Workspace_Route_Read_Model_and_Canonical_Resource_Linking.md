@@ -31,6 +31,7 @@ No child task files.
 - Add server validation for the collection workspace response only if the repo
   keeps route-level response schemas in a dedicated helper
 - Add `core/admin/services/collectionsClient.ts`
+- Update `core/admin/services/cachePolicy.ts`
 - Add `core/admin/ui/collections/CollectionWorkspacePage.tsx`
 - Add `core/admin/ui/collections/CollectionOverview.tsx`
 - Add `core/admin/ui/collections/CollectionReadinessChecklist.tsx`
@@ -47,6 +48,14 @@ Reuse rule:
 - The bounded collection workspace summary is server-owned and hangs off the
   existing content-type route family; `collectionsClient.ts` is a wrapper over
   that read model endpoint, not a client-side scatter-gather fallback.
+- `collectionsClient.ts` owns only client-side read caching/hydration for that
+  server-owned summary. It must follow the current admin cache contract
+  (`localStorage` cache + background revalidation + `cacheBus` events), not a
+  workspace-only fetch/cache transport.
+- `cachePolicy.ts` owns the workspace cache key under the existing content-type
+  family, for example `contentTypes:collectionWorkspace:<contentTypeId>`, so
+  the workspace extends current `Engine` ownership instead of creating a
+  parallel top-level `collections:*` cache namespace.
 - `collectionsClient.ts` aggregates existing read owners such as
   `contentTypesClient`, `siteSettingsClient`, `pagesClient`, `listingsClient`,
   `customScreensClient`, and later `detailPagesClient` through one existing
@@ -56,6 +65,10 @@ Reuse rule:
 - If current owner contracts do not yet persist enough deterministic collection
   linkage for secondary resources, extend those contracts with explicit stable
   metadata instead of narrowing product scope or guessing in the workspace.
+- Mutation owners that already know a collection/content-type identity
+  (site-settings routes, listings, custom screens, detail pages, etc.) remain
+  responsible for invalidating the workspace cache key under their current owner
+  seams; `collectionsClient.ts` must not become a centralized mutation broker.
 
 ## Canonical Resource Linking Contract
 
@@ -89,11 +102,20 @@ Deterministic resolution order:
 3. Public list/landing page:
    - canonical list page is the public page explicitly linked by the current
      collection setup contract, not the hidden runtime listing endpoint itself,
-   - for current catalog-family packs, prefer the page whose `slug` exactly
-     matches the public detail-route prefix (`detailPath` without the trailing
-     `/:slug`), because existing presets intentionally keep
-     `site.contentRoutes.listPath` on hidden runtime paths such as `/_catalog/*`
-     while `page.upsert` creates a separate public landing/list page,
+   - preferred source of truth is explicit persisted collection-link metadata on
+     the current owner seam,
+   - compatibility fallback for current catalog-family packs is allowed only
+     when all of the following are true:
+     - the current collection setup uses the known hidden-list pattern
+       (`site.contentRoutes.listPath` under `/_catalog/*`),
+     - the public detail route prefix (`detailPath` without the trailing
+       `/:slug`) resolves to exactly one public page slug candidate,
+     - there is no competing explicit link metadata and no second plausible
+       public page candidate,
+   - this prefix-based fallback is a temporary bridge for today's shipped
+     catalog-family presets, not a new general canonical-link heuristic,
+   - if any of those conditions fail, return `unresolved` plus bounded
+     candidates instead of guessing,
    - do not treat `site.contentRoutes.listPath` as the canonical public page
      slug.
 4. Listing query/template:
@@ -118,6 +140,9 @@ Rules:
 
 - never guess canonical resources from naming heuristics when multiple matches
   exist,
+- public list-page resolution must prefer explicit persisted links; the
+  detail-route-prefix fallback above is compatibility-only and must bail out to
+  `unresolved` on the first sign of ambiguity,
 - hidden runtime list endpoints and public landing pages remain separate
   resources in the workspace read model when the current blueprint contract
   keeps them separate,
@@ -175,9 +200,13 @@ type CollectionWorkspaceSummary = {
 - `collectionsClient` resolves canonical route/detail/list resources
   deterministically from one server-owned collection workspace summary instead
   of inventing a parallel lookup flow in the browser.
-- canonical public list page prefers explicit collection linkage or the detail
-  route prefix and must not use exact `slug === listPath` when `listPath`
-  points at a hidden runtime route.
+- `collectionsClient` uses the current admin cache contract with a dedicated
+  workspace cache key under the existing content-type family plus
+  background-revalidation and cache-bus invalidate/update handling.
+- canonical public list page prefers explicit collection linkage; the
+  detail-route-prefix fallback is compatibility-only for current catalog-family
+  presets and must return `unresolved` when multiple or non-exact candidates
+  exist.
 - page/listing query/template/admin screen return `unresolved` + `candidates`
   when multiple plausible matches exist.
 - forms/secondary pages/editorial/proof/SEO links come from explicit canonical
@@ -189,4 +218,6 @@ type CollectionWorkspaceSummary = {
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
+- `_docs/ADMIN_CACHE.md`
+- `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`

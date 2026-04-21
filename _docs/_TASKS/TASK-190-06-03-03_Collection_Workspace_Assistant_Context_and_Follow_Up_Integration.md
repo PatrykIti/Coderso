@@ -65,14 +65,38 @@ Rules:
 
 - workspace route parsing must continue to resolve to
   `area: "coderso"` + `codersoModule: "engine"`,
-- selected resource may remain the collection/content-type shell resource,
+- `AssistantCollectionWorkspaceSummary` remains owned by the server read model
+  from `TASK-190-06-03-01`; this leaf only transports and rehydrates that
+  bounded summary for assistant context, it does not redefine it in the
+  browser,
+- selected resource stays the collection/content-type shell resource for the
+  workspace root; do not repurpose `/admin/coderso/engine/:contentTypeId/collection`
+  to `selectedResource.kind = "detail-page"`,
 - the active detail-template editor publishes `activeSurface.kind = "detail-page"`,
+- `useAssistantAdminContext.ts` must extend the existing
+  `activeSurfaceMatchesRoute(...)` contract with an explicit workspace-aware
+  branch instead of globally relaxing the match rule:
+  - preserve `activeSurface.kind = "detail-page"` only when the current route is
+    inside the collection workspace,
+  - `runtimeSnapshot.selectedResource.kind === "content-type"` for that route,
+  - and the server-hydrated `collectionWorkspace` summary proves that the active
+    detail-page id belongs to that collection content type,
+- the bounded workspace summary therefore needs identity fields required for
+  reconciliation, at minimum:
+  - `contentType.id`,
+  - canonical/current `detailPage.id | null`,
+  - optional `activeDetailPageId | null` when the editor can switch between
+    multiple bounded detail-page candidates within the workspace flow,
 - server hydration for `detail-page` reuses content-domain services,
 - workspace-root follow-up uses the same server-owned collection workspace read
   model from `TASK-190-06-03-01`; the browser must not become the source of
   truth for canonical linked resources,
 - assistant route/provider packaging extends the current bounded context package
   with `collectionWorkspace` only after server-side rehydration/validation,
+- if a later dedicated detail-template child route is added under the same
+  workspace family, it may additionally resolve `selectedResource.kind =
+  "detail-page"` through the current route helpers, but this leaf must work
+  before such a route exists,
 - no second route-to-surface transport is introduced.
 
 ## Security Contract
@@ -95,6 +119,10 @@ Rules:
 - `assistantActionSchemas.ts` accepts the new `detail-page` active-surface shape
   and bounded `collectionWorkspace` context shape.
 - active surface can publish and rehydrate `detail-page`.
+- workspace-root route with `selectedResource.kind = "content-type"` still keeps
+  `activeSurface.kind = "detail-page"` only through the explicit
+  workspace-aware reconciliation rule; matching must not be loosened globally
+  for unrelated routes/surfaces.
 - missing detail page resource clears the active surface instead of trusting
   stale browser state.
 - workspace-root follow-up context is rehydrated server-side from the bounded
