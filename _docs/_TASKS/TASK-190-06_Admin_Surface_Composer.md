@@ -53,6 +53,9 @@ Touched existing files:
 - `core/services/assistant/actionPlanTypes.ts`
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
+- `core/admin/ui/assistant/useAssistantAdminContext.ts`
+- `core/services/assistant/activeSurfaceHydration.ts`
+- `core/server/validation/assistantActionSchemas.ts`
 - `core/services/customScreens/capabilities.ts`
 - `core/admin/ui/widgets/registry.ts`
 - `core/admin/utils/adminPaths.ts`
@@ -80,6 +83,9 @@ Touched existing files:
 10. If collection workspace becomes assistant-visible for follow-up prompts, it
     extends the current admin-context / `activeSurface` seams rather than a new
     route-to-surface workflow.
+11. Detail Template editing, if assistant-visible, uses the same technical
+    `detail-page` resource kind as action/policy/catalog slices instead of
+    inventing a second `detail-template` transport type.
 
 ## Security Contract
 
@@ -96,6 +102,8 @@ Touched existing files:
 
 - Vitest composer unit tests.
 - Vitest collection workspace and detail template editor UI tests.
+- Vitest assistant admin-context tests when workspace/detail-page surface
+  integration changes.
 - Action plan schema tests.
 - Bun executor tests for custom screen upsert with composed sections.
 

@@ -27,11 +27,69 @@ No child task files.
 
 - Update `core/server/publicSite.tsx`
 - Update `core/services/pages/previewService.ts`
+- Update `core/db/schema.ts`
+- Add SQL migration for preview-token context storage
+- Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates for the
+  preview-token storage change
 - Update `core/server/utils/previewUrls.ts` if detail preview needs additional
   query metadata.
 - Update `core/site/cache/siteCache.ts`
 - Update entry/page/detail document services for invalidation hooks.
+- Update `tests/vitest/server/previewUrls.test.ts`
 - Add `tests/integration/runtime/detail-page-preview-cache.test.tsx`
+
+## Preview Storage Contract
+
+This leaf must define the physical persisted contract for server-side
+detail-page preview context instead of leaving it implicit.
+
+Current state:
+
+- preview tokens are already DB-backed through `preview_tokens`,
+- the current storage only keeps `targetType`, `targetId`, `tokenHash`, and
+  `expiresAt`,
+- that is not enough for detail-page preview because runtime must also know
+  which sample entry was selected server-side.
+
+Required implementation contract for this leaf:
+
+```ts
+preview_tokens: {
+  id,
+  target_type,
+  target_id,
+  token_hash,
+  context,
+  expires_at,
+  created_at
+}
+```
+
+`context` is a strict JSON payload owned by `previewService.ts`, not an
+untyped grab bag. For this slice:
+
+```ts
+type PreviewTokenContext =
+  | null
+  | {
+      kind: "detail-page";
+      sampleEntryId: string;
+    };
+```
+
+Rules:
+
+- The default implementation path extends the existing `preview_tokens` table
+  with a nullable JSONB `context` column.
+- `previewService.ts` owns strict write/read validation for `context`.
+- `detail-page` preview uses `preview_tokens.context.sampleEntryId`; runtime
+  must not trust raw `sampleEntryId` query params.
+- This leaf must not introduce a second ad-hoc in-memory preview store.
+- A separate preview-session table is explicitly out of scope unless this task
+  is rewritten to replace the DB-backed token contract everywhere that currently
+  uses `preview_tokens`.
+- DB changes require full migration artifacts in this leaf because current
+  preview storage is persisted today.
 
 ## Preview Contract
 
@@ -48,9 +106,8 @@ Use a dedicated preview target for editing the detail template itself:
 Rules:
 
 - `token` targets `detail_page_documents.id`.
-- preview issuance stores `sampleEntryId` in preview-token metadata or a linked
-  preview session row; runtime must not trust an arbitrary sample entry id from
-  query params.
+- preview issuance stores `sampleEntryId` in `preview_tokens.context`; runtime
+  must not trust an arbitrary sample entry id from query params.
 - Runtime renders `current_document`, not `published_document`.
 - The sample entry must be published by default.
 - If previewing against a draft entry is needed, use content preview mode with a
@@ -85,7 +142,8 @@ Implementation notes:
 
 - Update `previewService` target types to include `detail-page`.
 - Extend preview token storage/validation so detail-page preview can carry the
-  server-issued sample entry context instead of relying on raw query params.
+  server-issued sample entry context inside `preview_tokens.context` instead of
+  relying on raw query params.
 - Update `previewUrls` builders for detail-template preview URLs.
 - Update `_docs/PREVIEW_SPEC.md` and `_docs/CMS_API.md`.
 - Do not log preview tokens or sample entry data in diagnostics.
@@ -127,6 +185,8 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 - Valid content preview token renders composed detail page draft.
 - Valid detail-page preview token renders `current_document` with a selected
   published sample entry from server-issued preview context.
+- Preview token context normalization rejects malformed `detail-page` payloads.
+- DB migration artifacts exist for the preview-token context column.
 - Detail-page preview with a draft sample entry and no content preview token
   returns `404`.
 - Entry preview with `detailPageId` verifies the detail page belongs to the
@@ -140,4 +200,5 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/ARCHITECTURE.md`
+- `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`

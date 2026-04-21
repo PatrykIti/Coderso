@@ -32,8 +32,8 @@ No child task files.
 
 Before full composer availability:
 - existing single-blueprint prompts still return current plans,
-- candidate composer runs and records comparison metadata in tests/diagnostics
-  only,
+- candidate composer runs and records comparison metadata in test-only planner
+  diagnostics only,
 - generic CMS/admin provider planning keeps the existing `cms_operation_draft`
   contract and does not switch response shape in this leaf,
 - shadow diagnostics compare:
@@ -64,6 +64,7 @@ After cutover:
 - `core/services/assistant/actionPlannerService.ts`
 - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
 - Add `core/services/assistant/blueprints/blueprintComposerShadow.ts`
+- Update `tests/vitest/assistant/actionPlannerService.test.ts`
 - Add `tests/vitest/assistant/blueprint-composer-shadow.test.ts`
 - Add `tests/vitest/assistant/blueprint-candidate-shadow.test.ts`
 
@@ -84,7 +85,8 @@ Add:
   - mismatch reason.
 
 Feature/cutover controls:
-- candidate shadow mode default off outside tests/dev diagnostics,
+- candidate shadow mode default off outside tests and explicit local debug
+  toggles,
 - env/test override for fixtures,
 - per-family allowlist for candidate shadow diagnostics,
 - any provider-backed capability-id suggestion remains test/dev/shadow only in
@@ -150,7 +152,7 @@ if (shouldUseBlueprintComposer(input) && composerPlanIsReady(input)) {
 - Candidate shadow flag runs only allowlisted families.
 - Full plan routing stays disabled in this leaf.
 - No candidate shadow metadata leaks into production response unless explicitly
-  enabled in test-only diagnostics.
+  enabled by a local debug flag exercised in Vitest.
 - Full composed plan cutover tests are deferred to `TASK-190-07` and
   `TASK-190-08`.
 

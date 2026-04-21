@@ -122,9 +122,20 @@ New owner files:
   reads/writes/preview/revisions
 - Update `core/admin/app/AdminApp.tsx` to register the canonical
   `/coderso/engine/:id/collection` route
+- Update `core/admin/ui/assistant/activeSurfaceContext.ts`
+- Update `core/admin/ui/assistant/useAssistantAdminContext.ts`
+- Update `core/services/assistant/actionPlanTypes.ts`
+- Update `core/services/assistant/activeSurfaceHydration.ts`
+- Update `core/services/assistant/adminContextService.ts`
+- Update `core/server/validation/assistantActionSchemas.ts` if route context
+  payload gains workspace/detail-page surface metadata
 - `tests/vitest/ui/collection-workspace.test.tsx`
 - `tests/vitest/ui/detail-template-editor.test.tsx`
 - `tests/vitest/admin/collectionsClient.test.ts`
+- Update `tests/vitest/ui/use-assistant-admin-context.test.tsx`
+- Update `tests/vitest/assistant/admin-context-service.test.ts`
+- Update `tests/integration/routes/assistant.test.ts` if assistant route context
+  schema changes
 
 Client ownership rule:
 
@@ -156,6 +167,11 @@ Assistant-context rule:
   the current `adminContextService`, `assistantActionSchemas`, and
   `useAssistantAdminContext` seams instead of inventing a parallel
   collection-context transport.
+- the workspace root stays inside the current `codersoModule: "engine"` family;
+  it must not introduce a new assistant module/category such as `collections`,
+- if Detail Template editing publishes a dedicated assistant surface, the
+  technical `kind` should be `detail-page` so it matches the action/policy
+  resource naming already used elsewhere; "Detail Template" remains a UI label.
 
 Implementation rule:
 
@@ -175,6 +191,38 @@ Canonical navigation:
 - Keep the workspace under the existing `Engine` module so current Coderso IA,
   assistant route-to-surface mapping, and prefetch roots stay coherent; do not
   add a separate `collections` module/prefetch root in this slice.
+
+## Assistant Follow-Up Integration
+
+If Collection Workspace or Detail Template editing becomes assistant-visible,
+the integration must use the existing admin runtime + active-surface transport:
+
+```ts
+type AssistantActiveSurfaceContext =
+  | { kind: "page"; ... }
+  | { kind: "widget-template"; ... }
+  | { kind: "custom-screen"; ... }
+  | { kind: "detail-page"; ... };
+```
+
+Rules:
+
+- Workspace route parsing stays under `/admin/coderso/engine/...`, so current
+  area/module detection continues to resolve to `area: "coderso"` and
+  `codersoModule: "engine"`.
+- `selectedResource` may remain the collection/content-type resource for the
+  workspace shell, while the active Detail Template editor publishes
+  `activeSurface.kind = "detail-page"` through the existing
+  `activeSurfaceContext` store.
+- `activeSurfaceHydration.ts` must rehydrate `detail-page` server-side through
+  content-domain services, the same way page/widget-template/custom-screen
+  surfaces are rehydrated today.
+- `useAssistantAdminContext.ts` must recognize the workspace route and the new
+  `detail-page` surface instead of dropping it as an unknown kind.
+- If assistant route payload shape changes, `assistantActionSchemas.ts` remains
+  the request-schema owner.
+- Do not invent a second browser-local route-to-surface transport just for the
+  collection workspace.
 
 ## Manual Editing Flow
 
@@ -247,6 +295,9 @@ the shared extraction exists.
   - detail template editor loads sample entries and forwards preview/save/publish
     actions,
   - binding panel rejects secret fields and unsafe prop paths,
+  - assistant follow-up context preserves `codersoModule: "engine"` for the
+    workspace route and recognizes `activeSurface.kind = "detail-page"` when
+    the Detail Template editor is active,
   - detail template editor reuses current builder primitives / save-preview-
     revision patterns instead of introducing a fourth unrelated editor flow,
   - canonical admin route is `/admin/coderso/engine/:contentTypeId/collection`

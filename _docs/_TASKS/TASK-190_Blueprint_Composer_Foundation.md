@@ -108,6 +108,7 @@ The assistant should not need one hardcoded preset per combination. It should:
 
 The current builder layer remains valid:
 
+- `core/services/assistant/blueprints/businessBlueprintTypes.ts`
 - `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
 - `core/services/assistant/blueprints/catalogFamilyPresets.ts`
 - `core/services/assistant/blueprints/houseProjectsCatalogBlueprint.ts`
@@ -120,6 +121,9 @@ The current builder layer remains valid:
 - `core/services/assistant/actionPlanTypes.ts`
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
+- `core/services/assistant/operationPolicy/assistantOperationPolicy.ts`
+- `core/services/assistant/adminContextCatalogs.ts`
+- `core/services/assistant/activeSurfaceHydration.ts`
 - `core/server/publicSite.tsx`
 - `core/site/renderPublicEntry.tsx`
 - `core/site/contentRouteMatcher.ts`
@@ -133,6 +137,8 @@ blueprints/
   blueprintCapabilityTypes.ts
   blueprintCapabilityRegistry.ts
   blueprintCandidateResolver.ts
+  blueprintProviderContext.ts
+  blueprintComposerShadow.ts
   blueprintCompositionGraph.ts
   blueprintConflictResolver.ts
   blueprintSchemaMerger.ts
@@ -140,6 +146,8 @@ blueprints/
   blueprintPageSectionComposer.ts
   blueprintAdminSurfaceComposer.ts
   blueprintActionAssembler.ts
+  blueprintExistingResourceMatcher.ts
+  blueprintCompositionMetadata.ts
   blueprintCompositionFixtures.ts
 ```
 
@@ -341,7 +349,7 @@ Technical leaf tasks:
 - Baseline commands:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - targeted `bun run vitest run --config vitest.config.ts tests/vitest/assistant/...`
+  - targeted `bun run vitest run --config vitest.config.ts tests/vitest/assistant/*.test.ts`
   - DB-backed Bun suites when `DATABASE_URL` is available.
 
 ## Documentation Updates Required

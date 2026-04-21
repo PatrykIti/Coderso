@@ -55,8 +55,8 @@ Rules:
 - `previewUrl` follows the same absolute/relative base URL resolution policy as
   existing page/content/widget-template preview endpoints.
 - preview issuance requires a sample entry id in the internal admin request, but
-  the runtime sample-entry context is stored server-side in preview-token
-  metadata/session rather than trusted from raw query params.
+  the runtime sample-entry context is stored server-side in
+  `preview_tokens.context` rather than trusted from raw query params.
 - `expiresAt` uses the existing preview TTL rules unless a later task defines a
   stricter detail-page-specific policy.
 - The `detail-page` preview target and query contract are owned by
@@ -131,6 +131,15 @@ Admin client rule:
 - Do not push detail-page CRUD into `collectionsClient.ts` or ad-hoc local fetch
   helpers.
 
+Preview storage rule:
+
+- This leaf reuses the DB-backed preview-token context contract introduced in
+  `TASK-190-05-03-04`.
+- It must not add a second preview-session store, ad-hoc cache entry, or
+  route-local server state for `sampleEntryId`.
+- The route handler may call preview-service helpers, but physical preview
+  storage remains owned by the shared `preview_tokens` contract.
+
 ID contract:
 
 - `POST /admin/api/detail-pages` may accept an explicit `id` for
@@ -194,6 +203,8 @@ Route boundary maps through centralized `mapDetailPageError`.
   introduced in `TASK-190-05-03-04`.
 - Detail-page preview stores sample-entry context server-side instead of
   exposing it as an untrusted query parameter.
+- Detail-page preview reuses the `preview_tokens.context` storage contract from
+  `TASK-190-05-03-04`; this leaf does not invent a second persisted store.
 - Settings round-trip preserves `detailPageId`.
 - `setting.content-route.upsert` preserves existing `detailPageId` unless
   explicitly changed.

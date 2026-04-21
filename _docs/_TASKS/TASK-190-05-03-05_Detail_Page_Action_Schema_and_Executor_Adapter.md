@@ -26,6 +26,9 @@ No child task files.
 - Update `core/services/assistant/actionRegistry.ts`
 - Update `core/services/assistant/actionFamilyContracts.ts`
 - Update `core/services/assistant/actionExecutorService.ts`
+- Update `core/services/assistant/operationPolicy/cmsResourcePolicies.ts`
+- Update `core/services/assistant/cmsTargetResolver.ts`
+- Update `core/services/assistant/providerPlanningContext.ts`
 - Update `core/services/assistant/actionUndoManifest.ts` if detail documents
   need rollback metadata.
 - Update `core/admin/services/assistantClient.ts` for cache invalidation after
@@ -40,7 +43,32 @@ No child task files.
 - Update `_docs/ADMIN_CACHE_MAP.md`
 - Add `tests/vitest/assistant/action-plan-schema.test.ts` cases.
 - Add `tests/vitest/assistant/action-registry.test.ts` cases.
+- Update `tests/vitest/assistant/provider-planning-context.test.ts`
+- Update `tests/vitest/assistant/actionPlannerService.test.ts`
 - Add `tests/unit/assistant/actionExecutorService.test.ts` cases.
+
+## Assistant Integration Rule
+
+`detail-page.upsert` must integrate through the same assistant seams that
+already own generic resource planning. Do not add a bespoke planner branch just
+for detail pages.
+
+Required integration points:
+
+- `actionRegistry.ts` remains the executable action owner.
+- `actionFamilyContracts.ts` remains the label/contract owner.
+- `cmsResourcePolicies.ts` must register `detail-page` as a first-class policy
+  resource so provider guidance, review metadata, and later generic resource
+  flows do not rely on one-off hardcoding.
+- `cmsTargetResolver.ts` may consume `detail-page` targets only through trusted
+  resource catalog entries or active-surface context, never through raw
+  prompt-only fuzzy ids.
+- `providerPlanningContext.ts` must expose redacted `detail-page` resource
+  metadata through the existing policy-driven registry/package flow instead of a
+  second prompt-packaging path.
+- Resource catalog transport and active-surface hydration for `detail-page`
+  remain owned by `TASK-190-07-02` and `TASK-190-06-03`; this leaf must plug
+  into those seams, not replace them.
 
 ## Action Contract
 
@@ -91,6 +119,9 @@ Execute must:
 - leave runtime route ownership unchanged until a later
   `setting.content-route.upsert` links `detailPageId`.
 
+Policy metadata for this resource family should use the technical kind
+`detail-page` and the UI label "Detail Template" only at the presentation layer.
+
 ## Security Contract
 
 - Visibility: internal assistant action flow.
@@ -108,6 +139,8 @@ Execute must:
 
 - Schema accepts valid action and rejects unknown fields.
 - `page.upsert` rejects opaque detail page document payloads.
+- Policy metadata and provider planning context can describe `detail-page`
+  without introducing provider-owned actions.
 - Dry-run reports missing content type/field conflicts.
 - Execute creates/upserts document idempotently.
 - Execute rejects content-type/id mismatches and incompatible existing detail
@@ -115,6 +148,8 @@ Execute must:
 - Undo manifest captures safe rollback metadata if applicable.
 - Action registry includes `detail-page.upsert`.
 - Review/result UI labels render `detail-page.upsert` as "Detail page".
+- Generic planner integration continues to flow through the existing
+  policy/target-resolver seams instead of a special-case detail-page branch.
 - Assistant execution cache invalidates `detailPages:list` and
   `detailPages:detail:<id>` once the dedicated admin detail-page client wrappers
   from the admin/API slice exist.
@@ -122,6 +157,7 @@ Execute must:
 ## Documentation Updates Required
 
 - `_docs/CMS_API.md`
+- `_docs/ARCHITECTURE.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/_TASKS/README.md`
