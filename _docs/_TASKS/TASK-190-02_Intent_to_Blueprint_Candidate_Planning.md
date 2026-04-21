@@ -15,6 +15,11 @@ Add a candidate planner that reads the prompt and returns ranked blueprint
 capability candidates. This layer decides whether the prompt should use a single
 primary blueprint or a composed set of primary + adjunct modules.
 
+This layer applies to blueprint/setup prompts. It does not replace the existing
+generic CMS/admin mutation path, which remains owned by
+`assistantOperationPolicy`, `cmsOperationDraft`, and the current
+`cms_operation_draft` provider contract.
+
 Business value:
 - Users can ask for combined outcomes naturally.
 - The assistant can recognize "catalog + lead capture + portfolio proof + blog"
@@ -60,6 +65,8 @@ type BlueprintCandidate = {
 4. Provider may suggest candidate ids but cannot invent capabilities.
 5. Existing single-blueprint prompts keep their current selected primary.
 6. Candidate shadow mode can run before full graph/merge/action assembly cutover.
+7. Generic CMS/admin provider planning remains on the current
+   `cms_operation_draft` contract until a later task explicitly widens it.
 
 ## Security Contract
 

@@ -93,6 +93,8 @@ New owner files:
 - `core/admin/ui/collections/detailTemplateEditorModel.ts`
 - `core/admin/services/collectionsClient.ts` for the aggregated workspace
   read model only
+- Reuse `core/admin/services/detailPagesClient.ts` for detail template resource
+  reads/writes/preview/revisions
 - Update `core/admin/app/AdminApp.tsx` to register the canonical
   `/coderso/engine/:id/collection` route
 - `tests/vitest/ui/collection-workspace.test.tsx`
@@ -110,6 +112,8 @@ Client ownership rule:
 Existing UI to reuse:
 
 - Page Builder shell/components for detail template block editing.
+- `PageEditor` and `WidgetTemplateEditorPage` interaction patterns for save,
+  preview, revisions, and remote-update handling.
 - Content type schema components for field edits.
 - Entries/custom screen routes for record edits.
 - Listing query/template editors for filters/cards.

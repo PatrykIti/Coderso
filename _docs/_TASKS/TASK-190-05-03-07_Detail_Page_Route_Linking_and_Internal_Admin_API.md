@@ -94,6 +94,7 @@ Rules:
 - Add `core/server/validation/detailPageSchemas.ts`
 - Add `core/services/content/detailPageDocumentService.ts`
 - Add `core/services/content/detailPageRevisionService.ts`
+- Add `core/admin/services/detailPagesClient.ts`
 - Update `core/server/routes/index.ts`
 - Update `core/services/settings/settingsService.ts`
 - Update `core/services/assistant/actionPlanTypes.ts`
@@ -103,6 +104,7 @@ Rules:
   `setting.content-route.upsert.detailPageId`
 - Update `core/site/contentRouteMatcher.ts`
 - Update `core/admin/services/siteSettingsClient.ts`
+- Update `core/admin/services/cachePolicy.ts`
 - Update `core/admin/ui/site/siteSettingsValidation.ts`
 - Update `core/admin/ui/site/SiteRouteEditor.tsx`
 - Update `core/admin/ui/site/SiteSettingsPage.tsx`
@@ -110,10 +112,19 @@ Rules:
 - Add `tests/unit/content/detailPageDocumentService.test.ts`
 - Update `tests/unit/settings/contentRoutesValidation.test.ts`
 - Update `tests/unit/site/contentRouteMatcher.test.ts`
+- Add `tests/vitest/admin/detailPagesClient.test.ts`
 - Update `tests/vitest/admin/siteSettingsClient.test.ts`
 - Update `tests/vitest/ui/site-settings.test.tsx`
 - Update `tests/vitest/ui/plugin-media-site-leaf.test.tsx`
 - Add settings/content route round-trip tests.
+
+Admin client rule:
+
+- `detailPagesClient.ts` owns list/detail/get/update/autosave/publish/unpublish/
+  revisions/restore/preview wrappers plus cache hydration for the detail-page
+  resource family.
+- Do not push detail-page CRUD into `collectionsClient.ts` or ad-hoc local fetch
+  helpers.
 
 ## Error Contract
 

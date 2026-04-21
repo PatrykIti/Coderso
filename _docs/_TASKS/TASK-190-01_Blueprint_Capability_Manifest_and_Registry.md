@@ -23,6 +23,9 @@ Business value:
 - The assistant can reason about capabilities instead of only selecting one
   preset.
 - Review UI and tests can explain why a module was selected.
+- The registry can describe both current executable setup fragments and
+  future/gated fragments without pretending that unfinished domains already
+  execute today.
 
 ## Sub-Tasks
 
@@ -86,7 +89,8 @@ resource/action kind is `detail-page`.
 3. Registry can list capabilities by family, provide type, resource type, and
    gated/executable mode.
 4. Registry supports `detail-page` resources and `public-detail-page`
-   capabilities.
+   capabilities as first-class metadata, including future/gated contributions
+   that are not part of today's executable packs yet.
 5. No current generated action output changes in this task.
 
 ## Security Contract
@@ -112,6 +116,8 @@ resource/action kind is `detail-page`.
   - stable ids,
   - no duplicate capability ids,
   - no executable action type outside `actionRegistry`,
+  - future detail-page contributions for current packs stay gated/latent until
+    the detail-page runtime/action slices land,
   - gated domains remain gated.
 
 ## Documentation Updates Required

@@ -16,14 +16,18 @@ routes should render composed detail page blocks when a detail page document is
 configured, while preserving the existing legacy entry detail renderer as a
 fallback.
 
+The runtime entry point stays the existing content detail flow. This leaf
+extends `core/site/renderPublicEntry.tsx` and `core/server/publicSite.tsx`
+rather than creating a second parallel route renderer for content detail pages.
+
 ## Sub-Tasks
 
 No child task files.
 
 ## Files to Change
 
-- Add `core/site/renderDetailPage.tsx`
 - Update `core/server/publicSite.tsx`
+- Update `core/site/renderPublicEntry.tsx`
 - Update `core/site/contentRouteMatcher.ts` only if route match metadata needs
   detail page ids.
 - Update `core/services/content/detailPageRuntimeResolver.ts`
@@ -39,7 +43,7 @@ GET /catalog/:slug
   -> if route/detail document exists and entry is renderable:
        resolve detail blocks
        hydrate runtime widgets
-       render public page shell with detail layout
+       render through the existing content-detail runtime shell/theme flow
      else:
        render current legacy entry detail HTML
 ```
@@ -48,8 +52,11 @@ Public runtime rules:
 
 - public output renders published entries only,
 - preview may render draft entry/page data only with valid preview token,
-- detail page shell uses same site CSS/theme/template flow as normal pages,
+- detail page shell uses the same site CSS/theme/template flow already used by
+  `renderPublicEntryDetailHtml`,
 - detail page render must not import admin UI modules,
+- current theme override support for `content detail` templates remains the
+  fallback seam when no linked detail document exists,
 - unknown widgets render existing runtime fallback/warning behavior.
 
 ## Security Contract
@@ -69,6 +76,8 @@ Public runtime rules:
 - Published entry detail renders composed detail blocks.
 - Draft entry is hidden on public runtime.
 - Legacy detail renderer remains fallback when no detail document exists.
+- Existing theme-based content-detail template resolution remains intact for the
+  fallback path.
 - Content route list page behavior remains unchanged.
 - Unknown detail document/widget errors produce deterministic fallback or 404,
   not a crash.

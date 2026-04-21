@@ -46,6 +46,9 @@ Required invariants:
 - `provides[]` is non-empty.
 - executable actions must be existing assistant action types.
 - gated contributions cannot include executable action payloads.
+- future resource/provide metadata may exist before execution support exists, but
+  it must be expressed as gated/latent manifest metadata rather than as ready
+  executable actions.
 - resource keys are stable and deterministic.
 - `detail-page` is a first-class resource kind, separate from `page`.
 - `public-detail-page` is a first-class provide kind for catalog detail
@@ -106,6 +109,8 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
 - Unknown action type rejects.
 - Unknown resource kind rejects.
 - `detail-page` resource kind accepts only detail page document contributions.
+- current-pack detail-page metadata without a matching gated/latent declaration
+  rejects.
 - Secret-like defaults reject.
 - Gated fragments cannot include executable payloads.
 

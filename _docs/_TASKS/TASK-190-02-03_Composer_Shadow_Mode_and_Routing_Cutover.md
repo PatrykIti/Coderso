@@ -34,6 +34,8 @@ Before full composer availability:
 - existing single-blueprint prompts still return current plans,
 - candidate composer runs and records comparison metadata in tests/diagnostics
   only,
+- generic CMS/admin provider planning keeps the existing `cms_operation_draft`
+  contract and does not switch response shape in this leaf,
 - shadow diagnostics compare:
   - current `intentFamily`,
   - current `intentId`,
@@ -85,6 +87,8 @@ Feature/cutover controls:
 - candidate shadow mode default off outside tests/dev diagnostics,
 - env/test override for fixtures,
 - per-family allowlist for candidate shadow diagnostics,
+- any provider-backed capability-id suggestion remains test/dev/shadow only in
+  this slice,
 - full `shouldUseBlueprintComposer(...)` plan routing remains hard-disabled in
   this leaf and moves to the action-assembly/evaluation closure after
   `TASK-190-07`.

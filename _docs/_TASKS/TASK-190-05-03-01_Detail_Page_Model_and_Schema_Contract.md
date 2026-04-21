@@ -18,6 +18,11 @@ binding resolution, or action assembly exists.
 The model must be strict, stable, backward compatible with current content
 routes, and safe for open-source extension.
 
+It is an assistant/admin-owned collection template resource, not a replacement
+for the existing theme-file `content detail` template seam. Public runtime may
+prefer this document when linked from a content route, but current content
+template fallback must remain intact.
+
 ## Sub-Tasks
 
 No child task files.
@@ -141,8 +146,8 @@ Normalization rules:
 - `blocks[].id` must be unique across the tree.
 - `bindings[].id` must be unique.
 - `bindings[].blockId` must point to an existing block.
-- `bindings[].propPath` must be a non-empty path and cannot point to unsafe
-  script/html props.
+- `bindings[].propPath` uses the same safe dot-path string contract as current
+  custom-screen bindings and cannot point to unsafe script/html props.
 - `related[].limit` must be clamped.
 - Unknown keys are rejected at every level.
 
@@ -179,6 +184,8 @@ Normalization rules:
 - Binding to missing block rejects.
 - Unsafe route patterns reject.
 - Unsafe prop paths reject.
+- Shared dot-path semantics stay compatible with the current custom-screen
+  binding contract.
 - Secret-like field binding rejects unless explicitly allowed as non-public.
 
 ## Documentation Updates Required

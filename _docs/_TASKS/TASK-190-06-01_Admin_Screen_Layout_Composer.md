@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Custom Screens
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-04
+**Dependencies:** TASK-190-03-01, TASK-190-04
 **Status:** To Do
 
 ---

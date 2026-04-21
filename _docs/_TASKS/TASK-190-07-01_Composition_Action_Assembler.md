@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Action Assembly
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-04, TASK-190-05, TASK-190-06
+**Dependencies:** TASK-190-03-01, TASK-190-04, TASK-190-05, TASK-190-06
 **Status:** To Do
 
 ---

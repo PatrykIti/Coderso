@@ -44,7 +44,6 @@ New owner files:
 - `core/services/assistant/blueprints/blueprintDetailPageSchema.ts`
 - `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
 - `core/services/content/detailPageRuntimeResolver.ts`
-- `core/site/renderDetailPage.tsx`
 - `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
 - `tests/vitest/assistant/blueprint-detail-page-composer.test.ts`
 
@@ -54,6 +53,7 @@ Touched existing files:
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
 - `core/server/publicSite.tsx`
+- `core/site/renderPublicEntry.tsx`
 - `core/site/contentRouteMatcher.ts`
 - `core/services/settings/settingsService.ts`
 - `core/widgets/core/*`
@@ -67,8 +67,9 @@ Touched existing files:
 5. Missing widget capabilities return gated/needs-input, not invalid blocks.
 6. Detail page route sections are first-class public runtime documents, not only
    metadata.
-7. Detail page renderer resolves entry-field bindings into widget props and
-   falls back to legacy entry detail rendering when no detail document exists.
+7. Detail page renderer resolves entry-field bindings into widget props through
+   the existing content-detail runtime seam and falls back to legacy entry
+   detail rendering when no detail document exists.
 8. Detail page preview/cache/invalidation behavior is covered by Bun runtime
    tests.
 

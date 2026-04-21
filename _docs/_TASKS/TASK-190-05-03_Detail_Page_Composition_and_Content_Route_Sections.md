@@ -27,6 +27,16 @@ hardening, and no provider-defined payloads.
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.
 
+This is not only a theme-template concern. The business scope is still
+assistant-composed site/service setup from a complex prompt, including content
+models, public pages, routes, inquiry modules, and admin surfaces. Detail pages
+are one resource inside that broader setup.
+
+Current `content` list/detail templates remain important here, but only as the
+existing runtime presentation seam. TASK-190 should reuse and extend that seam
+for collection-owned detail documents instead of creating a second unrelated
+detail rendering system.
+
 ## Sub-Tasks
 
 - `TASK-190-05-03-01_Detail_Page_Model_and_Schema_Contract.md`
@@ -58,8 +68,9 @@ schema-first detail page document and turns it into validated widget blocks.
 
 ## Contract Shape
 
-Add a detail page model that can be carried by content route/page actions and
-rendered by public runtime.
+Add a detail page authoring document that is linked from `site.contentRoutes`,
+owned by the assistant/admin setup flow, and resolved by the existing public
+content detail runtime.
 
 ```ts
 type DetailPageDocument = {
@@ -99,7 +110,7 @@ type DetailPageBlock = {
 type DetailPageBinding = {
   id: string;
   blockId: string;
-  propPath: string[];
+  propPath: string;
   source:
     | { kind: "entry-field"; field: string }
     | { kind: "entry-meta"; field: "title" | "slug" | "publishedAt" | "author" }
@@ -124,6 +135,10 @@ Storage direction:
   journal update.
 - The contract must be non-destructive and backward compatible with current
   content routes.
+- `DetailPageDocument` is an assistant/admin-managed collection resource; it is
+  not a replacement for theme-file-based content detail templates.
+- When a detail page document is absent, current theme override support for
+  `content` detail templates remains the fallback behavior.
 
 ## Runtime Flow
 
@@ -136,7 +151,7 @@ request /catalog/:slug
   -> if detailPage document exists:
        resolve entry field bindings into widget data
        hydrate runtime widgets
-       render through public page shell
+       render through the existing content-detail runtime entry point
      else:
        use current legacy entry detail renderer
 ```
@@ -154,7 +169,6 @@ New modules:
 - `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
 - `core/services/content/detailPageDocumentService.ts`
 - `core/services/content/detailPageRuntimeResolver.ts`
-- `core/site/renderDetailPage.tsx`
 - `core/server/routes/detailPageRoutes.ts`
 - `core/server/validation/detailPageSchemas.ts`
 
@@ -166,6 +180,7 @@ Touched existing modules:
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
 - `core/server/publicSite.tsx`
+- `core/site/renderPublicEntry.tsx`
 - `core/site/contentRouteMatcher.ts`
 - `core/services/settings/settingsService.ts`
 - `core/db/schema.ts`
@@ -176,8 +191,10 @@ Touched existing modules:
 
 1. Define the versioned detail page document, dedicated DB storage, and strict
    normalizers.
-2. Define binding resolution from entry fields/meta/computed sources.
-3. Add runtime resolver and public renderer with legacy fallback.
+2. Define binding resolution from entry fields/meta/computed sources using the
+   existing dot-path binding model.
+3. Add runtime resolver and plug it into the current content-detail runtime
+   entry point with legacy fallback.
 4. Add preview/cache/invalidation integration.
 5. Add required `detail-page.upsert` typed action schema/executor to
    create/update detail page documents.

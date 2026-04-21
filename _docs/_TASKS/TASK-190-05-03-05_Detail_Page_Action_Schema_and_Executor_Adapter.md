@@ -29,7 +29,8 @@ No child task files.
 - Update `core/services/assistant/actionUndoManifest.ts` if detail documents
   need rollback metadata.
 - Update `core/admin/services/assistantClient.ts` for cache invalidation after
-  `detail-page.upsert`.
+  `detail-page.upsert`, reusing the same cached-client pattern used by other
+  admin resources.
 - Update `core/admin/ui/assistant/components/ActionPlanReview.tsx` labels.
 - Update `core/admin/ui/assistant/components/ActionExecutionResult.tsx` labels.
 - Update `core/admin/services/cachePolicy.ts` with:
@@ -110,7 +111,8 @@ Execute must:
 - Action registry includes `detail-page.upsert`.
 - Review/result UI labels render `detail-page.upsert` as "Detail page".
 - Assistant execution cache invalidates `detailPages:list` and
-  `detailPages:detail:<id>`.
+  `detailPages:detail:<id>` once the dedicated admin detail-page client wrappers
+  from the admin/API slice exist.
 
 ## Documentation Updates Required
 

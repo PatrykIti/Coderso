@@ -15,6 +15,10 @@ Implement safe binding resolution from content entries to detail page widget
 props. This lets one detail page document render many entries without copying
 entry data into page blocks.
 
+This leaf should reuse the existing binding path semantics already used by
+custom screens. Do not invent a separate array-path DSL for detail pages if the
+current dot-path contract can cover the same business need.
+
 ## Sub-Tasks
 
 No child task files.
@@ -23,6 +27,9 @@ No child task files.
 
 - Add `core/services/assistant/blueprints/blueprintDetailBindingResolver.ts`
 - Add `core/services/content/detailPageRuntimeResolver.ts`
+- Extract shared safe binding-path helpers if the current
+  `core/services/customScreens/bindingResolver.ts` logic needs to be reused by
+  both surfaces.
 - Add `tests/vitest/assistant/blueprint-detail-binding-resolver.test.ts`
 - Add `tests/unit/content/detailPageRuntimeResolver.test.ts` if resolver imports
   DB/runtime dependencies.
@@ -60,6 +67,8 @@ Rules:
 
 - Missing required field returns a typed resolver error.
 - Missing optional field uses fallback.
+- `propPath` uses the current safe dot-path string model, not a new parallel
+  path format.
 - Secret-like fields cannot bind to public blocks.
 - Gallery/image transforms normalize media-like payloads.
 - Currency/area/list transforms are deterministic and locale-safe.
@@ -82,6 +91,8 @@ Rules:
 - Missing required binding returns machine-readable error.
 - Missing optional binding uses fallback.
 - Secret-like field binding rejects.
+- Shared dot-path helpers stay compatible with current custom-screen binding
+  behavior.
 - Related items resolver clamps limits and filters published-only for public
   runtime.
 

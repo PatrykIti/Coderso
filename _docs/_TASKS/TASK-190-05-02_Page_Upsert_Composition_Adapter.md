@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Page Action Adapter
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-01
+**Dependencies:** TASK-190-03-01, TASK-190-05-01
 **Status:** To Do
 
 ---
@@ -21,11 +21,16 @@ No child task files.
 ## Files to Change
 
 - Add `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
-- Update:
-  - `core/services/assistant/actionPlanTypes.ts`
-  - `core/services/assistant/actionPlanSchema.ts`
-  - `core/services/assistant/actionExecutorService.ts`
 - Add `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
+
+Prefer reuse:
+
+- the current `page.upsert` action shape already supports block-backed page
+  payloads and should remain the owner unless this leaf proves a concrete schema
+  gap,
+- do not widen `actionPlanTypes`, `actionPlanSchema`, or
+  `actionExecutorService.ts` in this slice unless existing `page.upsert` cannot
+  represent the composed page payload.
 
 ## Pseudocode
 

@@ -22,6 +22,10 @@ Current state:
   and gated booking/payment paths.
 - Shared typed actions already exist for content models, entries, custom screens,
   listings, pages, forms, menus, SEO, media references, and site kits.
+- Public content list/detail rendering already has a working runtime seam through
+  `site.contentRoutes`, `core/server/publicSite.tsx`, and
+  `core/site/renderPublicEntry.tsx`; this is a runtime presentation contract, not
+  the full assistant composition/orchestration layer.
 - TASK-189 hardened the planner so CMS/admin operations route through operation
   policy instead of provider action arrays or planner-owned legacy branches.
 
@@ -46,6 +50,26 @@ The goal is foundation first. Do not start by expanding individual presets such
 as Mabudo-like house projects. Preset-specific enrichment comes after the
 composer exists and can consume richer capabilities safely.
 
+This task is not limited to theme templates or a narrow detail-template editor.
+The business target remains full assistant-composed setup of a site/service
+within the current typed action boundary:
+
+- content model and route setup,
+- public landing/list/detail pages,
+- supporting modules such as forms, FAQ, editorial, proof, SEO, and menus,
+- admin editing surfaces for the generated resources.
+
+Where the repo already has an owner seam with the same business scope, TASK-190
+must extend that seam instead of creating a parallel system. In practice this
+means:
+
+- generic CMS/admin operations continue to use `assistantOperationPolicy`,
+- current executable blueprint packs remain the starting point,
+- current public content detail runtime is reused and extended where it matches
+  the detail-page business need,
+- current page/widget-template/custom-screen editor patterns are reused for
+  manual editing surfaces.
+
 ## Business Goal
 
 Users should be able to describe outcomes in plain language, including hybrid
@@ -62,6 +86,8 @@ The assistant should not need one hardcoded preset per combination. It should:
 - pick a primary blueprint capability,
 - select secondary capabilities,
 - merge fields/facets/page sections/admin surfaces,
+- compose the resulting public/admin resources into one coherent site/service
+  setup,
 - avoid duplicate resources,
 - expose a clear review plan,
 - gate missing adapter domains instead of pretending they can execute,
@@ -78,13 +104,16 @@ The current builder layer remains valid:
 - `core/services/assistant/blueprints/houseProjectsCatalogBlueprint.ts`
 - `core/services/assistant/blueprints/leadCaptureBlueprint.ts`
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts`
-- `core/services/assistant/blueprints/portfolioProjects...` through catalog presets
+- portfolio projects through `core/services/assistant/blueprints/catalogFamilyPresets.ts`
 - `core/services/assistant/blueprints/editorialContentHubBlueprint.ts`
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts`
 - `core/services/assistant/actionPlannerService.ts`
 - `core/services/assistant/actionPlanTypes.ts`
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
+- `core/server/publicSite.tsx`
+- `core/site/renderPublicEntry.tsx`
+- `core/site/contentRouteMatcher.ts`
 
 ### New Layer
 
@@ -173,6 +202,17 @@ type BlueprintCompositionPlan = {
    - The composer must open or link to a collection workspace after execution.
    - Detail templates reuse the Page Builder shell in detail-template mode, not
      a parallel editor stack.
+
+8. **Reuse existing owner seams**
+   - Current blueprint setup remains the product foundation for full-site
+     generation from complex prompts; the composer generalizes it instead of
+     replacing it with theme-only templating.
+   - Current content detail rendering remains the runtime entry point and theme
+     override seam; any new detail-page document contract must plug into that
+     flow rather than bypass it.
+   - Generic CMS/admin mutation planning remains owned by operation policy and
+     `cms_operation_draft`; blueprint composition is a separate setup path, not a
+     second generic mutation planner.
 
 ## Sub-Tasks
 

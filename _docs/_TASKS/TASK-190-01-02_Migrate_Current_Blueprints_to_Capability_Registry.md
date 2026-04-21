@@ -36,15 +36,16 @@ Register capabilities for:
 - product catalog,
 - portfolio projects,
 - services directory,
-- house projects detail page template,
-- product detail page template,
-- portfolio/case-study detail page template,
-- services detail page template,
 - lead capture,
 - product inquiry form,
 - editorial content hub,
 - booking service gated module,
 - checkout/payment gated module.
+
+Catalog-family capabilities may also declare future `detail-page` /
+`public-detail-page` contributions, but only as gated/latent manifest metadata.
+This task must not make detail pages look like a currently executable standalone
+pack before the detail-page runtime/action/admin slices land.
 
 ## Pseudocode
 
@@ -54,10 +55,6 @@ export const blueprintCapabilities = normalizeBlueprintCapabilities([
   productCatalogCapability,
   portfolioProjectsCapability,
   servicesDirectoryCapability,
-  houseProjectsDetailPageCapability,
-  productDetailPageCapability,
-  portfolioDetailPageCapability,
-  servicesDetailPageCapability,
   leadCaptureCapability,
   inquiryFormCapability,
   editorialContentHubCapability,
@@ -84,8 +81,9 @@ export const findCapabilitiesProviding = (provide: BlueprintProvideKind) =>
 ## Testing Requirements
 
 - Registry contains all current blueprints.
-- Registry contains first-class `detail-page` capabilities for catalog-family
-  packs.
+- Catalog-family manifests can expose first-class `detail-page` metadata only as
+  gated/latent future contributions, without changing today's executable pack
+  contract.
 - Registry ids are unique.
 - Current blueprint builder output is unchanged.
 - Gated booking/payment capabilities are non-executable.
