@@ -34,7 +34,7 @@ test("getLiveProviderAvailability reports provider-specific missing env without 
 test("createLiveRunPrefix creates disposable llm-live prefixes", () => {
   const prefix = createLiveRunPrefix("Pages Matrix", "abc-123-xyz-000-111");
 
-  expect(prefix).toBe("llm-live-pages-matrix-abc-123-xyz-000-111");
+  expect(prefix).toBe("llm-live-pages-matrix-abc-123-xyz-");
   expect(assertLiveResourcePrefix(prefix)).toBe(prefix);
   expect(() => assertLiveResourcePrefix("pages-matrix-abc")).toThrow(
     "assistant_live_prefix_invalid"

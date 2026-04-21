@@ -2897,7 +2897,7 @@ test("executeAssistantActionPlan patches listing query filters without rewriting
     deps
   );
   expect(deps.__state.listingQueries[0]?.query.filters).toEqual(filters);
-  expect(deps.__state.listingQueries[0]?.query.pagination.limit).toBe(12);
+  expect((deps.__state.listingQueries[0]?.query as { limit?: number } | undefined)?.limit).toBe(12);
 
   const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");

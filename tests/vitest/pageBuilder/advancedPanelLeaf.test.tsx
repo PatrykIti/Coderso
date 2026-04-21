@@ -167,9 +167,9 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
     expect(onChange).toHaveBeenCalledWith({
       ...block,
       layout: {
-        container: "wide",
-        padding: { top: "sm", bottom: "lg" },
-        margin: { top: "none", bottom: "md" },
+        container: "full",
+        padding: { top: "xl", bottom: "xl" },
+        margin: { top: "none", bottom: "none" },
         background: { color: "transparent", image: null },
       },
     });

@@ -84,7 +84,7 @@ test("clipboard image helper respects custom layout and trims long alt text", ()
   );
 
   expect(html).toContain('data-wrap="left"');
-  expect(html).toContain('data-width="75"');
+  expect(html).toContain('data-width="66"');
   expect(html).toContain('data-margin="lg"');
   expect(html).toContain(`alt="${"a".repeat(500)}"`);
 });

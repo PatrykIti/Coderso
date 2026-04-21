@@ -405,6 +405,7 @@ test("SiteRouteEditor renders missing state and forwards route updates", () => {
     });
 
     expect(onChange).toHaveBeenCalledWith({
+      type: "articles",
       enabled: false,
       listPath: "/articles",
       detailPath: "/articles/:slug",

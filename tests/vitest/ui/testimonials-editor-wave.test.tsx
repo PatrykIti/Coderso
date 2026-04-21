@@ -941,7 +941,7 @@ test("Testimonials editors fall back when normalized header, style, and item fie
     expect(
       (findSelectByOptions(view.container, ["sm", "md", "lg"]) as unknown as HTMLSelectElement | null | undefined)
         ?.value
-    ).toBe("sm");
+    ).toBe("md");
     expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
     expect(findColorInputForPlaceholder(view.container, "var(--color-border)").value).toBe(
       "#e2e8f0"

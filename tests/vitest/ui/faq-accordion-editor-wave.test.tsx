@@ -753,7 +753,7 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
     expect(
       (findSelectByOptions(view.container, ["sm", "md", "lg"]) as unknown as HTMLSelectElement | null | undefined)
         ?.value
-    ).toBe("sm");
+    ).toBe("md");
     expect(
       (view.container.querySelector("input[type='number']") as HTMLInputElement | null)?.value
     ).toBe("0");

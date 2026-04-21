@@ -385,7 +385,6 @@ test("UserEditor edit mode protects locked roles, updates status, and saves rema
         email: "grace@example.com",
         roleIds: ["admin"],
         status: "active",
-        lastActive: "Never",
       },
       "edit"
     );
@@ -430,7 +429,6 @@ test("UserEditor ignores direct toggle callbacks for already-selected locked rol
         email: "primary@example.com",
         roleIds: ["admin"],
         status: "active",
-        lastActive: "Never",
       },
       "edit"
     );
