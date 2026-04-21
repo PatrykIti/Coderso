@@ -20,6 +20,13 @@ Business value:
 - Future blueprint fragments can contribute sections to the same page.
 - Page output stays composed from existing widget contracts.
 
+Reuse rule:
+
+- page sections are composed from the existing widget registry, composite widget
+  metadata, and current section/page preset coverage,
+- this slice must not create a second source of truth for section readiness next
+  to the current widget pack / preset contract.
+
 ## Sub-Tasks
 
 - `TASK-190-05-01_Page_Section_Library_and_Composition_Slots.md`
@@ -56,6 +63,8 @@ Touched existing files:
 - `core/site/renderPublicEntry.tsx`
 - `core/site/contentRouteMatcher.ts`
 - `core/services/settings/settingsService.ts`
+- `core/widgets/modulePackMatrix.ts` if existing preset metadata needs a helper
+  seam for section composition
 - `core/widgets/core/*`
 
 ## Acceptance Criteria

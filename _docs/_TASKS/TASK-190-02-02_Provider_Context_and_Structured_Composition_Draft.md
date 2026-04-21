@@ -32,6 +32,14 @@ No child task files.
 - Update `core/services/assistant/actionPlannerService.ts`
 - Add `tests/vitest/assistant/blueprint-provider-context.test.ts`
 
+Owner rule:
+
+- `providerPlanningContext.ts` remains the top-level owner of provider prompt
+  packaging.
+- `blueprintProviderContext.ts` may exist only as a narrow blueprint/setup
+  helper consumed by `providerPlanningContext.ts`, not as a second parallel
+  prompt-package entry point.
+
 Scope guard:
 
 - production `/assistant/actions/plan` provider routing continues to request

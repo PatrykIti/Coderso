@@ -15,6 +15,13 @@ Build an admin surface composer for custom screens and record review layouts.
 The composer should combine fields contributed by multiple capabilities into a
 stable editor-friendly admin screen.
 
+This slice must reuse the current `Coderso/Screens` contract rather than create
+an assistant-only variant of admin screens. Composed admin surfaces still land
+in the existing custom-screen model: screen-only widgets come from
+`custom-screen-builder`, bindings follow the current shared binding contract,
+and derived screen mode/capabilities remain owned by the current
+`resolveCustomScreenCapabilities(...)` helper.
+
 Business value:
 - Editors get one coherent admin screen, not one screen per fragment.
 - Business-specific modules can add field groups without duplicate surfaces.
@@ -46,6 +53,8 @@ Touched existing files:
 - `core/services/assistant/actionPlanTypes.ts`
 - `core/services/assistant/actionPlanSchema.ts`
 - `core/services/assistant/actionExecutorService.ts`
+- `core/services/customScreens/capabilities.ts`
+- `core/admin/ui/widgets/registry.ts`
 - `core/admin/utils/adminPaths.ts`
 - `core/admin/ui/navigation/sidebarConfig.ts`
 
@@ -61,6 +70,12 @@ Touched existing files:
    SEO/routes, and preview.
 7. Detail template editing reuses the Page Builder shell instead of creating a
    second incompatible editor stack.
+8. Composed admin screens use the current `custom-screen-builder` widget surface
+   plus shared layout primitives already allowed there; they do not bypass
+   current surface scoping.
+9. The resulting composed screen still yields a valid derived mode/capability
+   state through the current custom-screen capability helper instead of a new
+   parallel mode heuristic.
 
 ## Security Contract
 

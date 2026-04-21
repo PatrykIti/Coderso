@@ -14,6 +14,10 @@
 Compose custom screen blocks from multiple capabilities into one coherent admin
 surface.
 
+The output remains a normal custom-screen definition. This leaf must compose
+with widgets allowed by the current `custom-screen-builder` surface contract and
+preserve compatibility with existing catalog/admin screen layouts.
+
 ## Sub-Tasks
 
 No child task files.
@@ -21,6 +25,8 @@ No child task files.
 ## Files to Change
 
 - Add `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts`
+- Update `core/admin/ui/widgets/registry.ts` only if the current screen-widget
+  surface needs a small helper seam for composer eligibility checks
 - Add `tests/vitest/assistant/blueprint-admin-surface-composer.test.ts`
 
 ## Pseudocode
@@ -52,6 +58,8 @@ export const composeAdminSurface = (graph) => {
 - Stable block ids.
 - Preserve current catalog screen output.
 - Reject missing field references.
+- Composed blocks stay inside the current `custom-screen-builder` widget surface
+  contract.
 
 ## Documentation Updates Required
 

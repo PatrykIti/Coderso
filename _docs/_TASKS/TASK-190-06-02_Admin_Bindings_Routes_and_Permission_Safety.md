@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Admin Safety
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-06-01
+**Dependencies:** TASK-190-03-01, TASK-190-04-01, TASK-190-06-01
 **Status:** To Do
 
 ---
@@ -12,6 +12,10 @@
 ## Overview
 
 Compose bindings, routes, and permission metadata for generated admin surfaces.
+
+Bindings should extend the current custom-screen binding contract, not create a
+parallel admin-binding DSL. Reuse the existing `widgetId + propPath + field +
+mode` model and current safe dot-path semantics wherever possible.
 
 ## Sub-Tasks
 
@@ -21,6 +25,8 @@ No child task files.
 
 - Add `core/services/assistant/blueprints/blueprintBindingComposer.ts`
 - Update `core/services/assistant/actionPlanTypes.ts` only if new binding metadata is required.
+- Update current custom-screen binding helpers only if a small shared extraction
+  is needed for both assistant composition and existing screen behavior
 - Add `tests/vitest/assistant/blueprint-binding-composer.test.ts`
 
 ## Pseudocode
@@ -46,6 +52,8 @@ export const composeBindings = (schema, adminSections) =>
 - Reject-unknown validation: bindings are strict.
 - Anti-abuse: no binding to arbitrary nested secret path.
 - Secret handling: secret-like field bindings reject.
+- Contract compatibility: generated bindings stay compatible with the current
+  custom-screen schema and dot-path safety rules.
 
 ## Testing Requirements
 
@@ -53,6 +61,8 @@ export const composeBindings = (schema, adminSections) =>
 - Missing field rejects.
 - Secret field rejects.
 - Duplicate binding id dedupe.
+- Generated bindings stay compatible with the current custom-screen binding
+  contract and current dot-path helper behavior.
 
 ## Documentation Updates Required
 

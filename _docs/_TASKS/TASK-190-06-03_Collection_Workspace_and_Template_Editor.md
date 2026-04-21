@@ -114,12 +114,23 @@ Existing UI to reuse:
 - Page Builder shell/components for detail template block editing.
 - `PageEditor` and `WidgetTemplateEditorPage` interaction patterns for save,
   preview, revisions, and remote-update handling.
+- `CustomScreenEditorPage` interaction patterns for screen-specific builder
+  affordances, preview gating, and binding-oriented editing.
 - Content type schema components for field edits.
 - Entries/custom screen routes for record edits.
 - Listing query/template editors for filters/cards.
 - Form editor for inquiry forms.
 - SEO manager pieces for SEO documents/patterns.
 - Runtime preview dialog for sample entry preview.
+
+Implementation rule:
+
+- extract and reuse shared builder primitives/patterns first,
+- do not create a fourth large block editor stack just for detail templates,
+- do not assume today's editors are already one unified shell; if a
+  `detail-template` surface mode is introduced, it should sit on extracted
+  shared seams rather than on ad-hoc branching inside one existing editor by
+  default.
 
 Canonical navigation:
 
@@ -139,7 +150,8 @@ Detail template editing should work like this:
 open Collection Workspace
   -> Detail Template tab
   -> select sample entry
-  -> edit blocks through Page Builder shell in detail-template mode
+  -> edit blocks through a detail-template editor built from extracted shared
+     builder primitives and current page/template editor patterns
   -> bind widget props to fields using binding panel
   -> validate bindings and secret/public safety
   -> preview /:slug runtime with sample entry
@@ -147,7 +159,7 @@ open Collection Workspace
   -> publish detail template
 ```
 
-The Page Builder shell should run in `detail-template` mode:
+Target architecture, if a dedicated surface mode is introduced:
 
 ```ts
 type BuilderSurfaceMode = "page" | "widget-template" | "custom-screen" | "detail-template";
@@ -160,6 +172,10 @@ Detail-template mode differences:
 - preview requires a sample entry,
 - save target is `detail_page_documents`, not `pages`,
 - publish affects public detail runtime for the collection.
+
+The important constraint is reuse of shared builder seams and current editor
+patterns, not forcing all current editors to collapse into one component before
+the shared extraction exists.
 
 ## Security Contract
 
@@ -196,6 +212,8 @@ Detail-template mode differences:
   - detail template editor loads sample entries and forwards preview/save/publish
     actions,
   - binding panel rejects secret fields and unsafe prop paths,
+  - detail template editor reuses current builder primitives / save-preview-
+    revision patterns instead of introducing a fourth unrelated editor flow,
   - canonical admin route is `/admin/coderso/engine/:contentTypeId/collection`
     and links use shared admin path helpers.
 - Bun:
