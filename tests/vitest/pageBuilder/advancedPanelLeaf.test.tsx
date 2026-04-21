@@ -168,8 +168,8 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
       ...block,
       layout: {
         container: "full",
-        padding: { top: "xl", bottom: "xl" },
-        margin: { top: "none", bottom: "none" },
+        padding: { top: "sm", bottom: "lg" },
+        margin: { top: "none", bottom: "md" },
         background: { color: "transparent", image: null },
       },
     });
