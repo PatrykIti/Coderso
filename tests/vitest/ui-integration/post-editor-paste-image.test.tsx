@@ -78,7 +78,7 @@ test("clipboard image helper respects custom layout and trims long alt text", ()
     ` ${"a".repeat(600)} `,
     {
       wrap: "left",
-      widthPercent: 75,
+      widthPercent: 66,
       marginPreset: "lg",
     }
   );

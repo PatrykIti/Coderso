@@ -11,7 +11,7 @@ import {
   type SectionData,
 } from "../../../core/widgets/core/section";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
-import type { WidgetEditorProps } from "../../../core/widgets/types";
+import type { WidgetDefinition, WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => null;
@@ -27,6 +27,9 @@ const sectionWidget = createSectionWidget({
   visual: StubSectionEditor,
   advanced: StubSectionEditor,
 });
+
+const asBlockSettingsWidget = <T,>(widget: WidgetDefinition<T>) =>
+  widget as unknown as WidgetDefinition;
 
 const heroBlock: Block = {
   id: "hero-1",
@@ -44,7 +47,7 @@ const heroBlock: Block = {
 
 test("BlockSettings clarifies empty slot availability", () => {
   const html = renderAdminUi(
-    <BlockSettings block={heroBlock} widget={heroWidget} onChange={() => undefined} />
+    <BlockSettings block={heroBlock} widget={asBlockSettingsWidget(heroWidget)} onChange={() => undefined} />
   );
 
   expect(html).toMatch(/Hero Content(?:<!-- -->)? slot/);
@@ -68,7 +71,7 @@ test("BlockSettings shows repeatable slot controls", () => {
           "region:1": [],
         },
       }}
-      widget={sectionWidget}
+      widget={asBlockSettingsWidget(sectionWidget)}
       onChange={() => undefined}
     />
   );

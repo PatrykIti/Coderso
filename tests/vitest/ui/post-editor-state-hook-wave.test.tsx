@@ -971,6 +971,7 @@ test("usePostEditorState guards missing selected blocks, patches non-record attr
 
   const view = mountHook();
   let firstDeletePromise: Promise<boolean> | null = null;
+  let finishDelete: ((value: { ok: boolean }) => void) | null = null;
   try {
     await waitFor(() => view.current().loading === false);
 
@@ -1002,15 +1003,18 @@ test("usePostEditorState guards missing selected blocks, patches non-record attr
       await expect(view.current().moveToTrash()).resolves.toBe(false);
     });
 
-    resolveDelete?.({ ok: true });
+    finishDelete = resolveDelete as unknown as ((value: { ok: boolean }) => void) | null;
+    if (finishDelete) {
+      finishDelete({ ok: true });
+    }
     await act(async () => {
       await expect(firstDeletePromise).resolves.toBe(true);
     });
 
     expect(hookState.deleteCalls).toEqual(["post-1"]);
   } finally {
-    if (resolveDelete) {
-      resolveDelete({ ok: true });
+    if (finishDelete) {
+      finishDelete({ ok: true });
     }
     if (firstDeletePromise) {
       await act(async () => {

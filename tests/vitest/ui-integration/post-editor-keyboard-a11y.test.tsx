@@ -2,6 +2,7 @@ import React from "react";
 import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import type { DocumentInspectorProps } from "../../../core/admin/ui/posts/editor/inspector/DocumentInspector";
 import { PostDetailsSidebar } from "../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar";
 import { PostEditorHeader } from "../../../core/admin/ui/posts/editor/header/PostEditorHeader";
 import { PostEditorLayout } from "../../../core/admin/ui/posts/editor/layout/PostEditorLayout";
@@ -9,7 +10,7 @@ import { PostInserterSidebar } from "../../../core/admin/ui/posts/editor/sidebar
 import { PostListViewSidebar } from "../../../core/admin/ui/posts/editor/sidebars/PostListViewSidebar";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
-const baseDocumentProps = {
+const baseDocumentProps: DocumentInspectorProps = {
   title: "Post title",
   status: "draft",
   slug: "post-title",

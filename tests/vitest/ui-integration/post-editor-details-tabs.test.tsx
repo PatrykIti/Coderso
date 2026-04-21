@@ -2,9 +2,10 @@ import React from "react";
 import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import type { DocumentInspectorProps } from "../../../core/admin/ui/posts/editor/inspector/DocumentInspector";
 import { PostDetailsSidebar } from "../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar";
 
-const baseDocumentProps = {
+const baseDocumentProps: DocumentInspectorProps = {
   title: "Post title",
   status: "draft",
   slug: "post-title",

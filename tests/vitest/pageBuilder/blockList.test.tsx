@@ -524,7 +524,7 @@ test("moveBlockIntoSlot moves block under target slot", () => {
 });
 
 test("createBlock initializes repeatable slots from minimum", () => {
-  const block = createBlock(repeatableDefinition);
+  const block = createBlock(repeatableDefinition as unknown as WidgetDefinition);
   expect(block.slots?.["column:1"]).toEqual([]);
 });
 
