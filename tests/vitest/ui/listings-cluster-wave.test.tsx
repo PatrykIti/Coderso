@@ -1167,7 +1167,7 @@ test("ListingEditorPage reports query-not-found and generic preview failures", a
     "../../../core/admin/ui/listings/ListingEditorPage"
   );
 
-  listingsState.detailResult = null;
+  listingsState.detailResult = null as unknown as typeof listingsState.detailResult;
   const missingView = mount(<ListingEditorPage />);
 
   try {

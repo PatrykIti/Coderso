@@ -5,6 +5,7 @@ import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/
 import type {
   AssistantActionDryRunResult,
   AssistantActionExecutionItem,
+  AssistantActionPlan,
   AssistantActionPreviewChange,
 } from "../../../core/services/assistant/actionPlanTypes";
 
@@ -95,7 +96,7 @@ test("buildAssistantUndoManifestItems marks references and non-mutating actions 
         },
       },
     ],
-  };
+  } as unknown as AssistantActionPlan;
 
   const pageResult: AssistantActionExecutionItem = {
     actionId: pageAction.id,

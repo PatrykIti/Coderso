@@ -8,7 +8,8 @@ import type { AssistantAdminContext } from "../../../core/services/assistant/act
 
 const createContext = (
   input: Partial<AssistantAdminContext>
-): AssistantAdminContext => ({
+): AssistantAdminContext =>
+  ({
   route: null,
   locale: null,
   resourceCatalog: null,
@@ -18,7 +19,7 @@ const createContext = (
   area: "other",
   codersoModule: null,
   ...input,
-});
+}) as AssistantAdminContext;
 
 test("classifyAssistantPrompt keeps docs-only questions non-mutating", () => {
   expect(classifyAssistantPrompt("gdzie zmienie kolory hero widgetu?")).toMatchObject({

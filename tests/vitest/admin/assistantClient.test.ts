@@ -12,6 +12,7 @@ import {
 } from "../../../core/admin/services/assistantClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -599,7 +600,7 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
         },
       },
     ],
-  };
+  } as unknown as AssistantActionPlan;
 
   delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;

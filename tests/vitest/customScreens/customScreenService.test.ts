@@ -119,9 +119,11 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     blocks: [{ id: "section-1", type: "section", data: {} }],
     bindings: [
       {
+        id: "binding-1",
         widgetId: "section-1",
         propPath: "title",
         field: "name",
+        mode: "read",
       },
     ],
   });
