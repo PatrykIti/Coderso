@@ -481,7 +481,10 @@ test("listPagesCached dedupes in-flight reads and force refreshes cache", async 
     const second = listPagesCached();
     expect(fetchMock.calls).toHaveLength(1);
 
-    resolveFirst?.(jsonResponse([pageSummary({ id: "page-1", title: "Cached" })]));
+    const finishFirst = resolveFirst as unknown as ((response: Response) => void) | null;
+    if (finishFirst) {
+      finishFirst(jsonResponse([pageSummary({ id: "page-1", title: "Cached" })]));
+    }
     expect(await first).toEqual([pageSummary({ id: "page-1", title: "Cached" })]);
     expect(await second).toEqual([pageSummary({ id: "page-1", title: "Cached" })]);
     expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([

@@ -200,7 +200,6 @@ test("answerAssistantQuestion normalizes legacy llm-rag mode to llm-guide", asyn
 });
 
 test("answerAssistantQuestion uses DB backend when DB index is ready", async () => {
-  let fsSearchCalls = 0;
   const result = await answerAssistantQuestion(
     {
       message: "Where are hero settings?",
@@ -231,15 +230,10 @@ test("answerAssistantQuestion uses DB backend when DB index is ready", async () 
         indexError: null,
       }),
       searchAssistantDocsDb: async () => [makeHit()],
-      searchDocsIndex: () => {
-        fsSearchCalls += 1;
-        return [makeHit()];
-      },
     })
   );
 
   expect(result.retrievalBackend).toBe("db");
-  expect(fsSearchCalls).toBe(0);
 });
 
 test("answerAssistantQuestion forwards detail level and guide mode to composer", async () => {

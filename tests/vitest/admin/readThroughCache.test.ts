@@ -42,7 +42,10 @@ test("readThroughCache dedupes in-flight requests", async () => {
   const secondPromise = cache.get();
   expect(callCount).toBe(1);
 
-  resolveLoader?.("ok");
+  const finishLoad = resolveLoader as unknown as ((value: string) => void) | null;
+  if (finishLoad) {
+    finishLoad("ok");
+  }
 
   const first = await firstPromise;
   const second = await secondPromise;

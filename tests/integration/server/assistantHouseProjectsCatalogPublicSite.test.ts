@@ -18,6 +18,11 @@ import { startHttpServer } from "../../../core/server/httpServer";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 
 async function canConnect() {
   try {
@@ -125,6 +130,8 @@ const clonePlanWithToken = (token: string) => {
             introTitle: `Katalog Projektów Domów ${token}`,
           },
         };
+      default:
+        return action;
     }
   });
 
@@ -209,7 +216,7 @@ afterAll(async () => {
   createdUserIds.clear();
 });
 
-testIfDb(
+testIfDbWithOptions(
   "executed house-projects plan renders public catalog page and entry detail route",
   async () => {
     originalContentRoutes =
