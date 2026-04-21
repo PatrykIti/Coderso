@@ -142,7 +142,8 @@ layer, but generic policy registration itself is deferred to
   page ownership.
 - Undo manifest captures safe rollback metadata if applicable.
 - Action registry includes `detail-page.upsert`.
-- Review/result UI labels render `detail-page.upsert` as "Detail page".
+- Review/result UI labels render `detail-page.upsert` as "Detail Template"
+  while the technical action/resource kind remains `detail-page`.
 - Base reviewed planner integration continues to flow through the existing
   action-plan seams without adding a second detail-page executor path.
 - Assistant execution cache invalidates `detailPages:list` and

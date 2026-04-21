@@ -26,6 +26,10 @@ No child task files.
 
 ## Files to Change
 
+- Add `core/services/content/collectionWorkspaceService.ts`
+- Update `core/server/routes/contentTypeRoutes.ts`
+- Add server validation for the collection workspace response only if the repo
+  keeps route-level response schemas in a dedicated helper
 - Add `core/admin/services/collectionsClient.ts`
 - Add `core/admin/ui/collections/CollectionWorkspacePage.tsx`
 - Add `core/admin/ui/collections/CollectionOverview.tsx`
@@ -34,8 +38,24 @@ No child task files.
 - Update `core/admin/utils/adminPaths.ts`
 - Update `core/admin/ui/navigation/sidebarConfig.ts` only if existing Engine
   helpers need a canonical workspace link helper
+- Update `tests/integration/routes/contentTypes.test.ts`
 - Add `tests/vitest/admin/collectionsClient.test.ts`
 - Add `tests/vitest/ui/collection-workspace.test.tsx`
+
+Reuse rule:
+
+- The bounded collection workspace summary is server-owned and hangs off the
+  existing content-type route family; `collectionsClient.ts` is a wrapper over
+  that read model endpoint, not a client-side scatter-gather fallback.
+- `collectionsClient.ts` aggregates existing read owners such as
+  `contentTypesClient`, `siteSettingsClient`, `pagesClient`, `listingsClient`,
+  `customScreensClient`, and later `detailPagesClient` through one existing
+  server-owned read model.
+- The workspace read model extends those contracts; it does not create a second
+  CRUD/read owner for pages, routes, listings, screens, or detail templates.
+- If current owner contracts do not yet persist enough deterministic collection
+  linkage for secondary resources, extend those contracts with explicit stable
+  metadata instead of narrowing product scope or guessing in the workspace.
 
 ## Canonical Resource Linking Contract
 
@@ -43,6 +63,12 @@ Workspace root:
 
 ```text
 /admin/coderso/engine/:contentTypeId/collection
+```
+
+Server-owned read endpoint:
+
+```text
+GET /admin/api/content-types/:id/collection-workspace
 ```
 
 The aggregated read model must distinguish:
@@ -60,15 +86,22 @@ Deterministic resolution order:
 2. Detail template:
    - canonical detail template is the document referenced by
      `site.contentRoutes.detailPageId`.
-3. List page:
-   - canonical list page is the `pages` record whose `slug` exactly equals the
-     canonical route `listPath`.
+3. Public list/landing page:
+   - canonical list page is the public page explicitly linked by the current
+     collection setup contract, not the hidden runtime listing endpoint itself,
+   - for current catalog-family packs, prefer the page whose `slug` exactly
+     matches the public detail-route prefix (`detailPath` without the trailing
+     `/:slug`), because existing presets intentionally keep
+     `site.contentRoutes.listPath` on hidden runtime paths such as `/_catalog/*`
+     while `page.upsert` creates a separate public landing/list page,
+   - do not treat `site.contentRoutes.listPath` as the canonical public page
+     slug.
 4. Listing query/template:
-   - first read explicit references from the canonical list page data/block
+   - first read explicit references from the canonical public page data/block
      contract,
    - if no explicit reference exists, allow only deterministic fallback:
      - one matching listing query for the content type,
-     - one matching listing template referenced by the canonical list page,
+     - one matching listing template referenced by the canonical public page,
    - otherwise return `unresolved` plus bounded candidates.
 5. Admin screen:
    - canonical admin screen may resolve only when exactly one screen is a safe
@@ -76,12 +109,21 @@ Deterministic resolution order:
      otherwise return `unresolved` plus bounded candidates.
 6. Forms/CTA and supporting pages:
    - derive from canonical page/detail-template references first,
+   - when current owner contracts do not yet carry enough deterministic links,
+     extend those contracts with explicit collection-link metadata under the
+     current owner seam,
    - do not guess from slug prefixes or title similarity alone.
 
 Rules:
 
 - never guess canonical resources from naming heuristics when multiple matches
   exist,
+- hidden runtime list endpoints and public landing pages remain separate
+  resources in the workspace read model when the current blueprint contract
+  keeps them separate,
+- supporting pages, editorial/proof/case-study resources, and SEO remain in
+  scope, but they must arrive through explicit persisted links or owner-contract
+  extensions rather than workspace-only heuristics,
 - unresolved tabs stay visible and explain what link is missing,
 - candidate lists stay bounded and redacted.
 
@@ -106,6 +148,7 @@ type CollectionWorkspaceSummary = {
   };
   unresolved: string[];
   candidates: {
+    pages: ...[];
     listingQueries: ...[];
     listingTemplates: ...[];
     adminScreens: ...[];
@@ -130,12 +173,15 @@ type CollectionWorkspaceSummary = {
 
 - workspace route registers under the existing Engine family.
 - `collectionsClient` resolves canonical route/detail/list resources
-  deterministically.
-- canonical list page uses exact `slug === listPath`, not fuzzy matching.
-- listing query/template/admin screen return `unresolved` + `candidates` when
-  multiple plausible matches exist.
-- forms/secondary pages are derived from explicit canonical resource references,
-  not slug-prefix guessing.
+  deterministically from one server-owned collection workspace summary instead
+  of inventing a parallel lookup flow in the browser.
+- canonical public list page prefers explicit collection linkage or the detail
+  route prefix and must not use exact `slug === listPath` when `listPath`
+  points at a hidden runtime route.
+- page/listing query/template/admin screen return `unresolved` + `candidates`
+  when multiple plausible matches exist.
+- forms/secondary pages/editorial/proof/SEO links come from explicit canonical
+  resource references or owner-contract extensions, not slug-prefix guessing.
 - workspace summary stays bounded and redacted.
 
 ## Documentation Updates Required

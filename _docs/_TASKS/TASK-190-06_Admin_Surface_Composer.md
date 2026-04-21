@@ -54,10 +54,10 @@ Touched existing files:
 
 - `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
 - `core/services/assistant/actionPlanTypes.ts`
-- `core/services/assistant/actionPlanSchema.ts`
-- `core/services/assistant/actionExecutorService.ts`
 - `core/admin/ui/assistant/useAssistantAdminContext.ts`
 - `core/services/assistant/activeSurfaceHydration.ts`
+- `core/services/assistant/providerPlanningContext.ts`
+- `core/server/routes/assistantRoutes.ts`
 - `core/server/validation/assistantActionSchemas.ts`
 - `core/services/customScreens/capabilities.ts`
 - `core/admin/ui/widgets/registry.ts`
@@ -96,6 +96,10 @@ Touched existing files:
     `detail-page` surface label as the later action/policy/catalog family, but
     the initial workspace/editor slice does not depend on generic resource
     promotion landing in the same step.
+14. This umbrella may extend current owner contracts with deterministic
+    collection-link metadata where needed, but it must not introduce assistant-
+    only registries, duplicate executor paths, or browser-owned source-of-truth
+    state.
 
 ## Security Contract
 
@@ -114,8 +118,8 @@ Touched existing files:
 - Vitest collection workspace and detail template editor UI tests.
 - Vitest assistant admin-context tests when workspace/detail-page surface
   integration changes.
-- Action plan schema tests.
-- Bun executor tests for custom screen upsert with composed sections.
+- Bun assistant route tests only when workspace context payload schemas or
+  server-side rehydration logic change.
 
 ## Documentation Updates Required
 

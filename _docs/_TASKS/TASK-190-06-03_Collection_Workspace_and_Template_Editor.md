@@ -53,6 +53,12 @@ distinguish between:
   - zero-many editorial/proof/case-study resources,
   - zero-many secondary screens or helper resources.
 
+If the current owner contracts do not yet persist enough deterministic
+collection-link metadata for those secondary resources, this program may extend
+the existing contracts under their current owners. Do not reduce the product
+scope to whatever happens to be inferable today, but also do not fill the gap
+with title/slug heuristics or a parallel workspace-only registry.
+
 Do not model hybrid outcomes as if every tab could only ever point at one
 singleton resource with no linked secondary modules.
 
@@ -95,7 +101,8 @@ Ownership split:
 Program rules:
 
 - `collectionsClient.ts` owns collection-level summaries and linked resource
-  read aggregation only.
+  read aggregation only, and it reads from the server-owned collection workspace
+  endpoint rather than becoming a client-side source of truth.
 - detail template save/autosave/publish/preview/revisions stay in dedicated
   detail-page admin service wrappers.
 - keep the workspace under the existing `Engine` route family and admin-path
@@ -109,6 +116,9 @@ Program rules:
 - if Detail Template editing publishes a dedicated assistant surface, the
   technical `kind` should be `detail-page`; "Detail Template" remains a UI
   label.
+- linked secondary resources remain part of the workspace outcome, but
+  deterministic linkage must come from explicit persisted references or owner-
+  contract extensions, not browser-only inference.
 
 ## Acceptance Criteria
 

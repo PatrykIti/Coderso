@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-07-01
+**Dependencies:** TASK-190-05-03-07, TASK-190-07-01
 **Status:** To Do
 
 ---
@@ -57,6 +57,15 @@ Rules:
 - `AssistantResourceCatalogSnapshot` gains a bounded `detailPages` group.
 - Catalog summaries must stay redacted: no raw blocks, no full binding payloads,
   no preview tokens, and no unpublished entry data.
+- This slice extends the existing bounded catalog seam in
+  `adminContextCatalogs.ts` / `adminContextCatalogNormalizer.ts`; it does not
+  add a parallel detail-page lookup store or one-off planner-only service path.
+- Existing-resource reuse must key off deterministic identifiers or explicit
+  collection-link metadata from current owner contracts. If an owner seam does
+  not yet expose enough information, extend that seam with stable link metadata
+  instead of falling back to `name`-only matching.
+- Non-unique fields such as listing query `name` or custom screen `name` are
+  advisory labels only; they are not sufficient for silent reuse.
 - `blueprintExistingResourceMatcher.ts` consumes these summaries for reuse and
   idempotency.
 - `providerPlanningContext.ts` may expose the bounded summaries only through the
@@ -73,12 +82,41 @@ export const matchExistingCompositionResources = (graph, catalog) => ({
   page: findBySlug(catalog.pages, graph.page.slug),
   detailPage:
     findById(catalog.detailPages, graph.detailPage?.id) ??
-    findCanonicalDetailPageByType(catalog.detailPages, graph.detailPage?.contentTypeSlug),
-  listingQuery: findByName(catalog.listings.queries, graph.query.name),
+    findLinkedDetailPage(
+      catalog.detailPages,
+      graph.detailPage?.contentTypeSlug,
+      graph.route?.detailPageId,
+      graph.detailPage?.compositionKey
+    ),
+  listingQuery: findExplicitOrUniqueQuery(
+    catalog.listings.queries,
+    graph.query?.id,
+    graph.query?.compositionKey,
+    graph.page?.listingQueryId,
+    graph.contentType.slug
+  ),
   listingTemplate: findBySlug(catalog.listings.templates, graph.template.slug),
-  customScreen: findByName(catalog.customScreens, graph.admin.name),
+  customScreen: findExplicitOrUniqueScreen(
+    catalog.customScreens,
+    graph.admin?.id,
+    graph.admin?.compositionKey,
+    graph.contentType.id,
+    graph.admin?.role
+  ),
 });
 ```
+
+Matcher rules:
+
+- `page.slug` and `listing-template.slug` remain safe deterministic keys.
+- `listing-query.name` and `custom-screen.name` must not be used as silent reuse
+  keys because current storage only indexes them; they are not unique.
+- `detail-page` fallback by `contentTypeSlug` alone is allowed only when current
+  owner contracts expose exactly one canonical linked detail page for that
+  collection; otherwise the matcher returns `unresolved`.
+- If the current owner seam lacks deterministic link metadata for supporting
+  resources, extend that seam with explicit `compositionKey`, `collectionRole`,
+  or equivalent stable metadata rather than adding fuzzy name heuristics.
 
 ## Security Contract
 
@@ -97,6 +135,9 @@ export const matchExistingCompositionResources = (graph, catalog) => ({
 - Bounded detail-page catalog summaries normalize and round-trip through the
   assistant resource catalog builders.
 - Existing resource update/reuse tests.
+- Non-unique `listing-query.name` and `custom-screen.name` collisions return
+  `unresolved` or equivalent conflict metadata; they do not silently reuse the
+  first match.
 - Existing detail page document update/reuse tests keyed by stable detail page
   id and content-type ownership, not a second route-pattern owner.
 - Idempotency replay tests.
