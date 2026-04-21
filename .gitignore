@@ -15,3 +15,5 @@ coverage/
 *.png
 
 GENERATION_LIST.md
+.claude
+.playwright-cli
