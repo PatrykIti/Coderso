@@ -180,6 +180,8 @@ const template = {
   id: "tpl-wave",
   name: "Studio",
   description: "Editorial palette",
+  createdAt: "2026-04-20T00:00:00.000Z",
+  updatedAt: "2026-04-20T00:00:00.000Z",
   tokens: {
     base: { bg: "#101010", surface: "#1b1b1b", border: "#303030", text: "#fafafa" },
     typography: {

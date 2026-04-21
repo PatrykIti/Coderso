@@ -478,7 +478,9 @@ test("PageSettingsDrawer saves background media URL and default section layout c
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
     const inputs = Array.from(view.container.querySelectorAll("input"));
-    const toggles = Array.from(view.container.querySelectorAll('input[type="checkbox"]'));
+    const toggles = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    ) as HTMLInputElement[];
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
     setInputValue(
