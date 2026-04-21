@@ -51,7 +51,13 @@ type AssistantBlueprintCompositionMetadata = {
   gatedCapabilityIds: string[];
   mergedResources: Array<{
     key: string;
-    kind: "content-type" | "page" | "listing" | "form" | "admin-screen";
+    kind:
+      | "content-type"
+      | "page"
+      | "detail-page"
+      | "listing"
+      | "form"
+      | "admin-screen";
     sourceCapabilityIds: string[];
   }>;
   resolvedConflicts: BlueprintConflict[];
@@ -92,6 +98,7 @@ export const attachCompositionMetadata = (plan, graph, candidates) =>
 - Metadata normalizes.
 - Candidate scores are deterministic in tests.
 - Gated modules appear in metadata but not executable actions.
+- Detail page resources appear as `detail-page`, not generic `page`.
 - No secret-like values are serialized.
 - Existing action plan schema remains backward-compatible.
 

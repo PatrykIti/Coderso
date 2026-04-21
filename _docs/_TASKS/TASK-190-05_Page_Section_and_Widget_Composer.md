@@ -31,6 +31,7 @@ Business value:
   - `TASK-190-05-03-04_Detail_Page_Preview_Cache_and_Invalidation.md`
   - `TASK-190-05-03-05_Detail_Page_Action_Schema_and_Executor_Adapter.md`
   - `TASK-190-05-03-06_Detail_Page_Composer_Fixtures_and_Runtime_Acceptance.md`
+  - `TASK-190-05-03-07_Detail_Page_Route_Linking_and_Internal_Admin_API.md`
 
 ## Architecture
 

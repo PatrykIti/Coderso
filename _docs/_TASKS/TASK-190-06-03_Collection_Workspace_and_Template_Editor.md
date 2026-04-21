@@ -152,8 +152,8 @@ Detail-template mode differences:
 - RBAC:
   - read requires current content/page/listing/form/seo read permissions,
   - write requires the write permission of the edited resource family,
-  - publish detail template requires content/page publish permission if the
-    implementation treats detail pages as public content.
+  - publish detail template requires content/page publish permission because
+    detail pages are a public runtime surface.
 - CSRF: all mutations go through existing internal admin/assistant endpoints.
 - Rate-limit bucket: `admin_read` / `admin_write`.
 - Reject-unknown validation:
