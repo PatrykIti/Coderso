@@ -41,6 +41,7 @@ No child task files.
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
 - `tests/vitest/admin/pagesClient.test.ts`
+- `tests/vitest/pageBuilder/blockSettings.test.tsx`
 - `tests/vitest/ui/page-editor-insert-scroll.test.tsx` if added by
   `TASK-194-03-02`
 - `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` if added by
@@ -81,7 +82,7 @@ No child task files.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
   - if `tests/vitest/pageBuilder/blockToolbar.test.tsx` is added by `TASK-194-04-01`, append it to the same Vitest run
   - if `tests/vitest/ui/page-editor-insert-scroll.test.tsx` is added by
     `TASK-194-03-02`, append it to the same Vitest run
@@ -105,6 +106,10 @@ No child task files.
   - if `AdminApp.tsx` mounts the shared `Toaster`, closure notes must cite a
     real root-render proof (`tests/vitest/ui/admin-app-root.test.tsx` or
     equivalent); a mocked `page-editor-shell-wave` path alone is not enough
+  - wizard and slot-guidance closure notes must cite the real owner paths:
+    `tests/vitest/pageBuilder/wizardPanel.test.tsx` for wizard-copy changes and
+    `tests/vitest/pageBuilder/blockSettings.test.tsx` for slot guidance;
+    mocked `blockSettings-wave.test.tsx` is secondary orchestration evidence
   - builder toolbar accessibility must be proven on the real toolbar component
     (`tests/vitest/pageBuilder/blockToolbar.test.tsx` or an explicitly
     unmocked equivalent), not only through the mocked `blockList` suite
@@ -113,8 +118,9 @@ No child task files.
   - post-insert scroll/highlight closure must reference an unmocked
     `PageEditor -> BlockList` path, not only `page-editor-shell-wave` while it
     still mocks `BlockList`
-  - empty-slot CTA closure must reference a real existing insert-surface path,
-    not only copy snapshots in `blockList.test.tsx`
+  - empty-slot CTA closure must reference a real existing Pages builder
+    insert-surface path (`PageEditor -> LibraryPanel -> WidgetPicker`), not
+    only copy snapshots in `blockList.test.tsx`
   - closure notes must map every `BUG-*` and `UX-*` item from
     `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` to the landed verification evidence or
     explicitly state why an item remains open

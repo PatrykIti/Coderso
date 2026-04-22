@@ -126,6 +126,7 @@ Current owner seams in code:
   - `core/admin/ui/pages/builder/BlockToolbar.tsx`
   - `core/admin/ui/pages/builder/BlockList.tsx`
   - `core/admin/ui/pages/builder/BlockSettings.tsx`
+  - `core/admin/ui/pages/builder/LibraryPanel.tsx`
   - `core/admin/ui/pages/builder/WizardPanel.tsx`
   - `core/admin/ui/pages/builder/WidgetPicker.tsx`
   - `core/widgets/types.ts`
@@ -138,8 +139,12 @@ Reuse-first rule:
   source,
 - reuse existing widget-library category labels and slot constraints instead of
   creating Pages-only copies,
-- reuse existing `WidgetInsertDialog` / `widgetInsertUtils` slot targeting
-  before adding any Pages-only insert flow,
+- reuse the existing Pages builder insert surface
+  (`LibraryPanel.tsx` + `WidgetPicker.tsx`, including the current mobile sheet
+  path in `PageEditor.tsx`) before considering any dialog-based flow,
+- if slot-aware filtering needs shared logic, extract or reuse a small pure
+  helper from existing widget-library utilities instead of cloning compatibility
+  checks into Pages,
 - reuse existing `sonner` component if toast feedback is chosen,
 - keep accessibility fixes on the truthful surface owner first
   (`PageCreateDrawer`, `PageSettingsDrawer`, `PageRevisionDrawer`,
@@ -156,6 +161,10 @@ Owner-responsibility rule:
   incomplete,
 - `PageEditor.tsx` owns save/publish outcome handling and emits feedback through
   an existing surface,
+- `PageEditor.tsx` + `LibraryPanel.tsx` + `WidgetPicker.tsx` are the owner path
+  for Pages slot-insert CTA behavior; do not re-route that fix through an
+  unrelated widget-library dialog without first proving the current builder
+  surface cannot satisfy the contract,
 - `AdminApp.tsx` may own a single shared `Toaster` mount only if the repo
   really lacks one; do not introduce duplicate Pages-only notification mounts,
 - `RuntimePreviewDialog.tsx` owns runtime-preview failure copy and
@@ -202,7 +211,7 @@ Owner-responsibility rule:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
+- `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
   - keep author/cache regression proof on `tests/vitest/admin/pagesClient.test.ts`
     because `pagesClient.ts` owns mutation-driven list/detail cache writes; UI
     suites only confirm the symptom is gone,
@@ -210,6 +219,11 @@ Owner-responsibility rule:
     as `tests/vitest/ui/page-settings-drawer.test.tsx`; mocked
     `page-settings-drawer-wave.test.tsx` can cover behavior and copy changes,
     but it is not sufficient proof that Radix warning regressions are gone,
+  - keep builder guidance proof on real owner paths:
+    `tests/vitest/pageBuilder/wizardPanel.test.tsx` for wizard-copy changes and
+    `tests/vitest/pageBuilder/blockSettings.test.tsx` for slot guidance;
+    mocked `blockSettings-wave.test.tsx` can cover mode orchestration, but it
+    is not sufficient as the sole owner proof,
   - if editor feedback chooses a root-mounted `Toaster`, add a real `AdminApp`
     render proof instead of treating a mocked `PageEditor` shell as sufficient,
   - post-insert scroll/highlight and slot-CTA work must be proven on at least
