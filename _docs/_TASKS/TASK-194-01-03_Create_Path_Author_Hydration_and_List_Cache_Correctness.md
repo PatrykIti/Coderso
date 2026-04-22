@@ -12,7 +12,11 @@
 ## Overview
 
 Fix the `N Unknown` author symptom for newly created Pages without inventing a
-second author contract.
+second author contract. This leaf also has to stop conflating two different
+states in the author column:
+
+- stale authorless cache after create/duplicate,
+- genuinely missing owner data from the persisted list payload.
 
 Current code strongly suggests the problem is client cache semantics, not the
 route permission path:
@@ -42,6 +46,10 @@ No child task files.
   - repair create-path cache priming.
 - `core/admin/services/pagesClient.ts:292-303`
   - apply the same cache rule to duplicate if it reuses the same partial shape.
+- `core/admin/ui/pages/PageTable.tsx:147-163`
+  - render a neutral missing-author fallback for true `author: null` payloads
+    instead of reusing the same `Unknown` label that currently hides cache
+    corruption.
 - `core/admin/ui/pages/PageListPage.tsx:51-56`
   - revisit mount-refresh options once synthetic list cache can be invalidated.
 - `core/admin/ui/pages/PageListPage.tsx:60-72`
@@ -62,7 +70,9 @@ Primary direction:
 - treat create/duplicate mutation responses as detail-cache-worthy but not
   authoritative list-summary data when `author` is unresolved,
 - invalidate or mark the pages list cache stale so the next list mount fetches a
-  real list snapshot.
+  real list snapshot,
+- reserve the neutral missing-author UI only for real server payloads with
+  `author: null`.
 
 Only widen server payloads if the client-only cache fix proves insufficient.
 
@@ -92,6 +102,9 @@ if (created) {
 - `tests/vitest/ui/page-list-cache-behavior.test.tsx`
   - mount refresh semantics stay fast when cache is trustworthy and re-fetch when
     the list cache was invalidated by create/duplicate.
+- `tests/vitest/ui/page-table-wave.test.tsx`
+  - `author: null` uses neutral fallback copy/tooling that is distinct from the
+    stale-cache symptom.
 - `tests/integration/routes/pages.test.ts`
   - keep the existing `authorId` assertion green if server code is touched.
 
@@ -105,5 +118,6 @@ if (created) {
 1. A page created in the current admin flow does not show `Unknown` author on
    the list because of stale client cache.
 2. The fix does not rely on browser-local synthetic author names.
-3. Cached list rendering remains fast, but stale partial mutation payloads stop
+3. Real missing-author payloads render as a neutral, intentional fallback state.
+4. Cached list rendering remains fast, but stale partial mutation payloads stop
    being treated as authoritative list state.

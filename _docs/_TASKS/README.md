@@ -38,15 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-194 | Pages Admin UX Reliability and Polish | High | Large | QA-driven Pages admin fix wave for bulk actions, editor feedback, runtime preview failure states, and builder accessibility/discoverability |
+| TASK-194 | Pages Admin UX Reliability and Polish | High | Large | QA-driven Pages admin fix wave for bulk actions, dialog accessibility, editor feedback, disabled-state clarity, runtime preview recovery, and builder discoverability |
 | TASK-194-01 | Page List Bulk Actions and Author Consistency | High | Large | Critical list reliability: visible-scope selection, bulk apply flow, and create-path author/cache correctness |
 | TASK-194-01-01 | Page Table Selection State and Bulk Bar | High | Medium | Technical leaf: controlled row/header checkboxes, selected-count toolbar, and filtered-scope selection rules |
 | TASK-194-01-02 | Page Bulk Action Execution and Cache Refresh | High | Medium | Technical leaf: bulk publish/unpublish/delete apply flow, confirmations, partial-failure handling, and list refresh |
 | TASK-194-01-03 | Create Path Author Hydration and List Cache Correctness | High | Medium | Technical leaf: stop showing `Unknown` after create/open-after-create because list cache was primed from partial authorless payloads |
-| TASK-194-02 | Page Settings and Create Flow Clarity | High | Medium | Remove misleading loading/jargon states in settings and explain create-form validation affordances |
+| TASK-194-02 | Page Settings and Create Flow Clarity | High | Medium | Remove misleading loading/jargon states in settings, add dialog descriptions, and explain validation/dependent disabled states |
 | TASK-194-02-01 | Template Options Loading Lifecycle and Settings Status Copy | High | Medium | Technical leaf: usable fallback templates must not sit under a permanent blocking loading message |
-| TASK-194-02-02 | Create Drawer Validation Affordance and Autosave Microcopy | Medium | Small | Technical leaf: explain disabled create button requirements and replace autosave jargon with user-facing wording |
-| TASK-194-03 | Page Editor Feedback and Runtime Preview Recovery | High | Medium | Save/publish success feedback, unreachable preview messaging, and post-insert viewport behavior |
+| TASK-194-02-02 | Create Drawer Validation, Dialog Accessibility, and Settings Microcopy | Medium | Small | Technical leaf: explain disabled create/max-width states, replace autosave jargon, and add explicit drawer descriptions |
+| TASK-194-03 | Page Editor Feedback and Runtime Preview Recovery | High | Medium | Save/publish feedback, unreachable preview messaging, and post-insert viewport/highlight behavior |
 | TASK-194-03-01 | Save Publish Success Feedback and Runtime Preview Failure State | High | Medium | Technical leaf: reuse existing toast infra if mounted, otherwise add minimal shared mount and actionable preview failure messaging |
 | TASK-194-03-02 | New Block Insertion Focus and Scroll | Medium | Small | Technical leaf: after add/insert, select the new block and bring it into view instead of leaving it below the fold |
 | TASK-194-04 | Builder Accessibility and Widget Discoverability | High | Medium | Toolbar labels, wizard guidance, slot helper copy, and category grouping for the widget picker |

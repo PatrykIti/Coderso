@@ -29,6 +29,8 @@ umbrella:
   Settings even though the template select is already usable.
 - Medium: widget-card action buttons in the page builder toolbar have no
   `aria-label`, `title`, or tooltip.
+- Low: Radix `DialogContent` / `SheetContent` warnings fire because Pages
+  dialogs and drawers do not provide descriptions consistently.
 
 ### UX gaps
 
@@ -44,6 +46,8 @@ umbrella:
 - Empty slots such as `Hero Content` do not explain what can be inserted or how.
 - Page Settings footer copy uses `autosave snapshot` jargon instead of
   user-facing wording.
+- The disabled `Max width` control does not explain why it is unavailable when
+  `Page width = full`.
 
 This task family must preserve the behaviors that the same report called out as
 already good: instant slug generation, live canvas preview, unsaved-change
@@ -65,19 +69,24 @@ This umbrella covers four owner areas:
 1. Page list correctness:
    - controlled selection state,
    - visible-scope bulk actions,
-   - create/open-after-create cache correctness for authors.
+   - create/open-after-create cache correctness for authors,
+   - truthful missing-author fallback only when the server payload really has no
+     owner.
 2. Page settings/create clarity:
    - template-options loading lifecycle,
    - create-form validation affordances,
-   - autosave wording cleanup.
+   - autosave wording cleanup,
+   - dialog/sheet accessibility descriptions,
+   - dependent-field helper copy for disabled controls.
 3. Page editor feedback and preview recovery:
    - success confirmations,
    - actionable runtime preview failure states,
-   - scroll/focus after insertion.
+   - visible failure feedback,
+   - scroll/focus/highlight after insertion.
 4. Builder accessibility and discoverability:
    - labeled action buttons,
    - clearer wizard-to-visual handoff,
-   - slot helper text,
+   - slot helper CTA text,
    - category groups in the widget picker.
 
 Out of scope:
@@ -102,8 +111,12 @@ Current owner seams in code:
   - `core/admin/ui/pages/PageCreateDrawer.tsx`
   - `core/admin/ui/pages/PageSettingsDrawer.tsx`
   - `core/admin/ui/pages/PageEditor.tsx`
+  - `core/admin/ui/pages/PageRevisionDrawer.tsx`
+  - `core/admin/components/ui/sheet.tsx`
 - Runtime preview:
   - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
+  - `core/admin/components/ui/dialog.tsx`
+  - `core/admin/components/ui/sonner.tsx`
   - `core/server/utils/previewUrls.ts` only if preview URL messaging needs host
     metadata beyond what the client already has
 - Page builder guidance/a11y:
@@ -120,6 +133,8 @@ Reuse-first rule:
   pattern,
 - reuse existing `WidgetCategory` metadata instead of adding a second grouping
   source,
+- reuse existing widget-library category labels and slot constraints instead of
+  creating Pages-only copies,
 - reuse existing `sonner` component if toast feedback is chosen,
 - keep route/service contracts stable unless a client-only fix cannot preserve
   correctness.
@@ -144,7 +159,9 @@ Reuse-first rule:
   - bulk pages behavior must reuse existing per-item permission-protected
     actions unless a dedicated bulk route is explicitly justified later,
   - preview failure messaging must not leak secrets or internal URLs beyond the
-    already-issued preview target.
+    already-issued preview target,
+  - accessibility fixes must not mute or suppress real Radix warnings instead of
+    satisfying the description contract.
 
 ## Implementation Order
 
@@ -161,9 +178,13 @@ Reuse-first rule:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
+  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
 - Bun only when a leaf touches server/service contract:
   - `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts tests/unit/pages`
+  - keep `tests/integration/routes/pages.test.ts` as the route-contract guard
+    for author assignment if the author fix widens any payload
+  - add `tests/unit/pages/previewService.test.ts` only if preview host
+    derivation or server-side preview messaging changes
 
 ## Documentation Updates Required
 
@@ -183,7 +204,7 @@ Reuse-first rule:
 2. Pages created via the current admin flows do not sit in the list as
    `Unknown` because of stale partial cache state.
 3. Page settings/create/editor flows stop presenting misleading loading,
-   disabled, or success/failure states.
+   disabled, dialog-accessibility, or success/failure states.
 4. Builder action buttons, slot guidance, and widget discovery are accessible
    and beginner-readable.
 5. Existing good Pages behaviors from the QA report remain intact.

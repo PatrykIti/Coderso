@@ -51,6 +51,10 @@ No child task files.
 - If the drawer already has at least one valid selectable option, replace the
   blocking copy with a softer background-refresh hint or hide it entirely.
 - Preserve explicit error text when the fetch actually fails.
+- Provide a retry affordance on failure instead of leaving the user with a dead
+  status line.
+- After success, prefer either silence or helper text about the selected
+  template; do not keep any copy that still reads like an unresolved fetch.
 
 ## Implementation Sketch
 
@@ -81,6 +85,7 @@ const templateStatus =
   - fetch fires once on open,
   - success clears loading,
   - failure keeps explicit error copy,
+  - retry reissues the fetch,
   - reopening does not regress into a stale permanent loading message.
 
 ## Documentation Updates Required
@@ -93,4 +98,5 @@ const templateStatus =
 1. A usable template dropdown no longer sits under misleading permanent loading
    copy.
 2. Errors remain explicit when template loading actually fails.
-3. The existing lazy-on-open template fetch path stays intact.
+3. Failed template loads offer a clear retry path.
+4. The existing lazy-on-open template fetch path stays intact.

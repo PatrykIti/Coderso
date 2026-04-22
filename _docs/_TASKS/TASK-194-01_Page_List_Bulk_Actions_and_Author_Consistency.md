@@ -21,7 +21,9 @@ failure here and one medium-severity data-trust issue:
 This subtask must make the list behave like the repo’s existing list patterns:
 selection applies to visible filtered records, bulk actions are explicit and
 confirm destructive work, and the author column reflects current persisted data
-instead of mutation-local placeholders.
+instead of mutation-local placeholders. When the server truly reports no author,
+the list should render a neutral missing-author state rather than the same
+generic `Unknown` copy that currently masks stale cache bugs.
 
 ## Sub-Tasks
 
@@ -37,6 +39,8 @@ instead of mutation-local placeholders.
 - Clear selection when affected rows disappear or after bulk completion.
 - Fix author/cache correctness after create/open-after-create without inventing a
   second author source.
+- Distinguish stale authorless cache from a real missing-owner state in the
+  author cell.
 
 Out of scope:
 
@@ -78,6 +82,7 @@ Out of scope:
   - bulk bar render/clear/apply states,
   - filtered visible-scope selection rules,
   - author/cache correctness after create/open-after-create,
+  - neutral missing-author fallback rendering when `author: null` is real,
   - partial bulk failure messaging.
 - Bun only if route/service payloads change for author hydration.
 

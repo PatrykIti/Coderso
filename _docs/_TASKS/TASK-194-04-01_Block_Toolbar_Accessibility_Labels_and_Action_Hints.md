@@ -50,6 +50,9 @@ No child task files.
   - `Duplicate Hero`
   - `Delete Hero`
 - Disabled buttons should still expose their labels.
+- Keep destructive affordance explicit on delete (for example via destructive
+  hover or title text), aligned with the existing destructive-action language
+  used elsewhere in admin UI.
 
 ## Security Contract
 
@@ -62,7 +65,9 @@ No child task files.
 
 - `tests/vitest/pageBuilder/blockList.test.tsx`
   - toolbar buttons expose `aria-label`/`title`,
-  - disabled move buttons still expose labels.
+  - disabled move buttons still expose labels,
+  - delete action keeps destructive affordance metadata/classing if one is
+    added.
 - `tests/vitest/ui/page-leaf-components.test.tsx`
   - update only if the legacy toolbar remains part of the supported surface.
 
@@ -75,4 +80,5 @@ No child task files.
 
 1. Every icon-only widget-card action has an accessible label.
 2. Labels include enough context for screen readers and hover hints.
-3. Existing action behavior does not change.
+3. Delete remains visually/semantically identifiable as destructive.
+4. Existing action behavior does not change.

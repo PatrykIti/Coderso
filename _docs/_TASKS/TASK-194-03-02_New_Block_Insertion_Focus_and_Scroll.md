@@ -12,7 +12,8 @@
 ## Overview
 
 Bring newly inserted blocks into view so users do not have to hunt for them
-below the fold.
+below the fold. The report also asked for a transient visual anchor so the user
+can immediately spot which block was just inserted.
 
 Current owner seams:
 
@@ -46,6 +47,8 @@ No child task files.
   row into view without reordering or mutating content.
 - Prefer `scrollIntoView({ block: "nearest" | "center" })` on the selected row
   or its main select button.
+- Add a short-lived highlight state/class for the inserted block so the user
+  gets the same visual landing cue even on long canvases.
 
 ## Implementation Sketch
 
@@ -70,10 +73,12 @@ queueMicrotask(() => {
 
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`
   - after add/insert, the selected block id changes to the new block and the
-    scroll/focus hook fires.
+    scroll/focus hook fires,
+  - the temporary highlight state is applied and then clears.
 - `tests/vitest/pageBuilder/blockList.test.tsx`
   - row markers/focus targets exist for selected blocks if new attributes are
-    introduced.
+    introduced,
+  - highlight class/attribute renders for the targeted block only.
 
 ## Documentation Updates Required
 
@@ -83,5 +88,6 @@ queueMicrotask(() => {
 ## Acceptance Criteria
 
 1. Adding a new block scrolls the canvas to the inserted block.
-2. The inserted block is still selected as the details target.
-3. No block order or data semantics change.
+2. The inserted block is visually highlighted for a short, deterministic window.
+3. The inserted block is still selected as the details target.
+4. No block order or data semantics change.

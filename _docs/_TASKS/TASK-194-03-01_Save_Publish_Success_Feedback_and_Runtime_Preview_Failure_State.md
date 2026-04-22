@@ -15,7 +15,9 @@ Make the editor honest about positive and negative outcomes:
 
 - after `Save draft` or `Publish`, the user needs explicit success feedback,
 - when the runtime preview target cannot load, the dialog must explain what went
-  wrong and what to do next.
+  wrong and what to do next,
+- when save/publish fail, the user should get immediate visible failure feedback
+  instead of relying only on subtle shell state.
 
 Current owner seams:
 
@@ -55,13 +57,21 @@ No child task files.
 
 - Prefer the existing `sonner` primitive for success feedback if it can be
   mounted once at the shared admin root.
+- Reuse the same feedback surface for mutation failures where practical; do not
+  add success toast only and leave failures silent.
 - If mounting a global toaster is too invasive for this leaf, use a minimal
-  page-local success banner only as a fallback.
+  page-local success/error banner only as a fallback.
 - Track iframe load readiness separately from preview token generation.
-- When the preview URL points at localhost/loopback and iframe load does not
-  resolve within a grace window, show actionable copy such as:
-  `Frontend server not running at localhost:3000. Start the public frontend and try again.`
-- Keep generic fallback copy for non-local hosts.
+- Preferred preview path:
+  - detect obviously unreachable local preview hosts before showing a broken
+    iframe when the URL already points at `localhost`, `127.0.0.1`, or another
+    loopback host,
+  - otherwise fall back to an iframe-load timeout that swaps the frame for an
+    actionable placeholder instead of leaving a blank/broken embed.
+- The failure placeholder should include:
+  - the host or base URL being tried,
+  - guidance to start the public frontend or change the configured public URL,
+  - a route back to settings if the configured URL is wrong.
 
 ## Implementation Sketch
 
@@ -98,12 +108,17 @@ useEffect(() => {
 
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`
   - save/publish success feedback appears after fulfilled mutation,
+  - save/publish failure feedback appears after rejected mutation,
   - preview API failure still surfaces explicit error,
   - generic preview path remains unchanged when the iframe loads.
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
   - dialog shows iframe sandbox contract,
-  - load-failure copy appears after the unresolved iframe timeout,
-  - local-host guidance and generic-host fallback are both covered.
+  - local-host preflight or unresolved iframe timeout swaps to actionable
+    placeholder copy,
+  - placeholder includes the attempted host/base URL without leaking tokens,
+  - local-host guidance and generic-host fallback are both covered,
+  - the suite keeps the real `Dialog` wrapper in scope so description
+    regressions do not hide behind mocks.
 
 ## Documentation Updates Required
 
@@ -114,5 +129,6 @@ useEffect(() => {
 ## Acceptance Criteria
 
 1. `Save draft` and `Publish` give visible success confirmation.
-2. A preview host that is unreachable results in actionable UI guidance.
-3. Preview failure messaging does not leak tokens or secrets.
+2. Save/publish failures are immediately visible to the user.
+3. A preview host that is unreachable results in actionable UI guidance.
+4. Preview failure messaging does not leak tokens or secrets.

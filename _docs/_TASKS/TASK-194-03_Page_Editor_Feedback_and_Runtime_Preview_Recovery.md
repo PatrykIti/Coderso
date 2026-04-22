@@ -16,7 +16,8 @@ actionable:
 
 - saving and publishing succeed silently,
 - runtime preview failure can collapse into an unhelpful broken iframe,
-- adding a block can leave the new widget off-screen.
+- adding a block can leave the new widget off-screen with no clear visual
+  anchor.
 
 ## Sub-Tasks
 
@@ -26,8 +27,9 @@ actionable:
 ## Scope
 
 - Add visible success confirmation after draft save and publish.
+- Keep failure feedback visible and actionable when save/publish fail.
 - Make preview failure actionable when the preview target host is unreachable.
-- Scroll/focus the newly inserted block into view.
+- Scroll/focus/highlight the newly inserted block into view.
 
 Out of scope:
 
@@ -60,8 +62,9 @@ Out of scope:
 
 - Vitest coverage for:
   - success feedback on save/publish,
+  - visible failure feedback on save/publish,
   - actionable preview failure state,
-  - post-insert scroll/focus behavior,
+  - post-insert scroll/focus/highlight behavior,
   - no regression to existing preview/save/publish settings tests.
 - Bun only if a leaf touches preview URL resolution logic on the server.
 
