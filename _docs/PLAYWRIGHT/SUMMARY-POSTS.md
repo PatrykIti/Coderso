@@ -208,3 +208,47 @@ Dostępne w katalogu `screenshots/` (jeśli dodane):
 - `post-actions-menu.png` — menu (...) z opcjami akcji
 - `posts-search.png` — wyszukiwarka filtruje do "terst*"
 - `bulk-select.png` — bug: Select all nie zaznacza wierszy
+
+---
+
+## Bledy z konsoli real time
+
+```plaintext
+Core HTTP server listening on http://localhost:3000
+36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: select "key", "value", "updated_at" from "settings" where "settings"."key" = $1
+params: site.adminPath
+  query: "select \"key\", \"value\", \"updated_at\" from \"settings\" where \"settings\".\"key\" = $1",
+ params: [
+  "site.adminPath"
+],
+
+      at queryWithCache (/Users/pciechanski/Documents/_moje_projekty/Nextless/node_modules/drizzle-orm/pg-core/session.js:41:15)
+
+448 |     socket = null
+449 | 
+450 |     if (initial)
+451 |       return reconnect()
+452 | 
+453 |     !hadError && (query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
+                                                              ^
+error: write CONNECTION_CLOSED dpg-d5r7o8e3jp1c73fhuqf0-a.frankfurt-postgres.render.com:5432
+   errno: "CONNECTION_CLOSED",
+ address: [ "dpg-d5r7o8e3jp1c73fhuqf0-a.frankfurt-postgres.render.com" ],
+    port: [
+  5432
+],
+    code: "CONNECTION_CLOSED"
+
+      at closed (/Users/pciechanski/Documents/_moje_projekty/Nextless/node_modules/postgres/src/connection.js:453:57)
+      at closed (/Users/pciechanski/Documents/_moje_projekty/Nextless/node_modules/postgres/src/connection.js:662:9)
+      at emit (node:events:95:22)
+      at node:net:1468:20
+POST - http://localhost:3000/admin/api/posts/19e39b8f-33f6-48b2-89ed-febe408bc383/autosave failed
+```
