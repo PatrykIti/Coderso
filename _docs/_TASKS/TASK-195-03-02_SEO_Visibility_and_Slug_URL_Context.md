@@ -90,6 +90,9 @@ No child task files.
   orchestrator-owned path; `PostsListPage` should feed the create drawer and
   `PostBlockEditorShell` should feed the editor inspector, without drawer-local
   fetches or duplicated route guessing.
+- If `publicBaseUrl` is unavailable or the enabled detail route resolves by
+  `:id` instead of `:slug`, show a bounded neutral route hint/pattern rather
+  than a fake concrete public URL.
 - If route-prefix derivation needs reuse, extract one Bun-free helper from the
   current settings/runtime consumers and call it from the shell path instead of
   duplicating route guessing logic in the inspector.
@@ -112,10 +115,14 @@ No child task files.
 
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
   - collapsed SEO summary/badge stays visible,
-  - slug field shows URL context without changing the raw value contract.
+  - slug field shows URL context without changing the raw value contract,
+  - when no trustworthy concrete URL can be derived, the UI falls back to a
+    neutral route hint instead of inventing a full public URL.
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - the current `PostsCreateDrawer` slug field shows the same URL context
-    affordance instead of staying a raw slug-only input.
+    affordance instead of staying a raw slug-only input,
+  - create flow uses the same neutral fallback when `publicBaseUrl` is absent or
+    the route pattern is `:id`-based.
 - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
   - the direct inspector surface shows the slug context on the actual
     `DocumentInspector` seam.
@@ -144,3 +151,5 @@ No child task files.
 4. The slug URL context is derived once on the existing shell/settings path and
    passed into `DocumentInspector` or a shared create/edit helper; this leaf
    does not add a second settings fetch or a hardcoded admin-only route guess.
+5. When current settings/routes cannot support a trustworthy concrete public
+   URL, the UI shows a neutral route hint instead of a misleading full URL.

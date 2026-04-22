@@ -67,7 +67,8 @@ No child task files.
 ## Implementation Notes
 
 - Reclassify `embed` into the Media-facing experience.
-- Move `separator` out of Media if that yields a more intuitive catalog.
+- Move `separator` from `media` to `text` so the category contract is explicit
+  and deterministic.
 - Keep the fix inside current block types only; do not add new post block types
   or runtime renderers in this leaf.
 - Do not fork a second search implementation; keep `searchPostBlockCatalog()`
@@ -92,14 +93,15 @@ No child task files.
 - `tests/vitest/ui/post-block-inserter-wave.test.tsx`
   - category buttons filter visible results,
   - the Media tab exposes only current media-facing existing blocks after the
-    regrouping,
+    regrouping and `Separator` no longer appears there,
   - search stays scoped to the active category,
   - keyboard navigation still works after regrouping.
 - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
   - rendered category labels/items match the updated catalog expectations.
 - `tests/vitest/posts/post-block-catalog-search.test.ts`
   - `searchPostBlockCatalog()` keeps category-scoped filtering,
-  - regrouped catalog order remains deterministic at the owner layer.
+  - regrouped catalog order and explicit `separator -> text` assignment remain
+    deterministic at the owner layer.
 
 ## Documentation Updates Required
 
@@ -110,7 +112,8 @@ No child task files.
 ## Acceptance Criteria
 
 1. The Media tab exposes only current media-facing existing blocks and no longer
-   misclassifies `Separator` as media.
+   misclassifies `Separator` as media; `Separator` belongs to the Text
+   category.
 2. Category-scoped search is regression-covered and deterministic.
 3. Inserter keyboard navigation and item selection remain intact.
 4. Any broader request for new media block types is tracked as a separate,

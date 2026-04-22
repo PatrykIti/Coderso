@@ -67,6 +67,7 @@ No child task files.
   behavior
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+- `tests/vitest/ui-integration/post-editor-keyboard-a11y.test.tsx`
 - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
 - `tests/vitest/posts/post-editor-preferences.test.ts`
@@ -103,6 +104,9 @@ No child task files.
   - focus-mode restore behavior stays deterministic.
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - header labels/tooltips/pressed states reflect the actual panel state.
+- `tests/vitest/ui-integration/post-editor-keyboard-a11y.test.tsx`
+  - the real header/details toggle seam stays keyboard-accessible and keeps the
+    correct panel affordance after discoverability fixes.
 - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
   - restore-state semantics remain compatible with stored preferences.
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`

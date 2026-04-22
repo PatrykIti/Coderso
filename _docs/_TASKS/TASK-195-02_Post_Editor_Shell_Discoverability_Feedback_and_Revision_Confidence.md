@@ -54,12 +54,15 @@ Out of scope:
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
 - `core/admin/ui/posts/editor/hooks/usePostEditorPreferences.ts`
 - `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts`
+- `core/admin/ui/posts/editor/PostEditorTopBar.tsx`
 - `core/admin/components/ui/sonner.tsx`
 - `core/admin/app/AdminApp.tsx`
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+- `tests/vitest/ui-integration/post-editor-keyboard-a11y.test.tsx`
+- `tests/vitest/ui-integration/post-autosave-flow.test.tsx`
 - `tests/vitest/posts/post-editor-preferences.test.ts`
 - `tests/vitest/posts/post-editor-layout-state.test.ts`
 - `tests/vitest/admin/adminApp.test.tsx`

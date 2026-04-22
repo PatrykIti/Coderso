@@ -33,8 +33,12 @@ failures.
 
 Owner boundary:
 
-- `PostEditorActionCluster` and `usePostEditorState` own success/failure state
-  emission for Posts editor actions.
+- `usePostEditorState` owns async success/failure state emission for Posts
+  editor actions.
+- `PostEditorActionCluster` remains the presentational owner for sync-state copy
+  and action affordances; it must not become a second async mutation owner.
+- `PostBlockEditorShell` plus `PostEditorTopBar` own the bridge that threads
+  emitted success/failure state into the rendered header/toast path.
 - `AdminApp` plus the shared `sonner` mount own whether that feedback is
   actually visible in the admin shell.
 - `core/server/routes/postsRoutes.ts` owns the `/posts/:id/autosave` request
@@ -62,6 +66,7 @@ No child task files.
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts:539-545`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts:591-644`
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:366-384`
+- `core/admin/ui/posts/editor/PostEditorTopBar.tsx`
 - `core/admin/components/ui/sonner.tsx`
 - `core/admin/app/AdminApp.tsx`
   - reuse the shared admin toast mount; `AdminApp` is the owner for visible
@@ -69,6 +74,7 @@ No child task files.
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+- `tests/vitest/ui-integration/post-autosave-flow.test.tsx`
 - `tests/vitest/admin/adminApp.test.tsx`
 
 ## Security Contract
@@ -98,6 +104,9 @@ No child task files.
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - header preview/publish/update actions keep their current semantics after the
     feedback wiring changes.
+- `tests/vitest/ui-integration/post-autosave-flow.test.tsx`
+  - existing `Saving...` / `Autosaved at` / `Unsaved changes` confidence copy
+    remains coherent when toast/success feedback is added around the same seam.
 - `tests/vitest/admin/adminApp.test.tsx`
   - the admin shell includes the one shared toast host exactly once.
 
@@ -115,6 +124,8 @@ No child task files.
    console-only noise.
 4. The visible success path reuses the shared admin toast infrastructure instead
    of introducing a Posts-only notification channel.
-5. If replay still reproduces a server/runtime autosave failure after UI
+5. Existing sync-state copy in the header remains consistent with the added
+   success feedback and is still covered by the direct autosave/header tests.
+6. If replay still reproduces a server/runtime autosave failure after UI
    hardening, the task records the exact route/settings owners for a linked
    follow-up instead of claiming the path is fixed in client code.

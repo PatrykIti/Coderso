@@ -66,6 +66,8 @@ No child task files.
 
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - Posts-specific placeholder/ARIA copy renders through the shared filters,
+  - Pages call sites keep their current placeholder/ARIA wording after the
+    shared component is generalized,
   - bulk publish/unpublish/delete clears selection after completion,
   - partial failure surfaces an aggregated list error without hiding successes,
   - cache refresh or refetch happens after bulk apply.

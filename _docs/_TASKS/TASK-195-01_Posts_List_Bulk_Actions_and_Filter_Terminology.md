@@ -47,6 +47,7 @@ Out of scope:
 - `core/admin/ui/posts/PostsListPage.tsx`
 - `core/admin/ui/posts/PostsTable.tsx`
 - `core/admin/ui/pages/PageFilters.tsx`
+- `core/admin/ui/pages/PageListPage.tsx`
 - `core/admin/ui/entries/EntryList.tsx`, `EntryTable.tsx`, and
   `EntryBulkActionsBar.tsx` for pattern reference only
 - `tests/vitest/ui/posts-table-wave.test.tsx`
@@ -73,7 +74,8 @@ Out of scope:
   - post table controlled header/row selection,
   - bulk toolbar render/clear/apply states,
   - visible-scope selection after filters/search,
-  - Posts-specific placeholder/copy wiring through the shared filters.
+  - Posts-specific placeholder/copy/accessible-name wiring through the shared
+    filters while `PageListPage` preserves current Pages wording.
 - Bun only if a route contract widens for bulk behavior.
 
 ## Documentation Updates Required

@@ -32,7 +32,9 @@ catalog today.
 
 ## Scope
 
-- Clarify typography helper copy, tooltiping, and disabled/read-only states.
+- Clarify typography helper copy, tooltiping, and the current disabled-state
+  affordances without inventing a richer inherited/read-only state model that
+  the toolbar contract does not expose today.
 - Reclassify block-catalog items so the Media tab reads like actual media.
 - Keep category-scoped search behavior deterministic and regression-covered.
 - Keep `blockCatalog.ts` as the single owner of category assignment/search
@@ -94,7 +96,7 @@ Out of scope:
 ## Acceptance Criteria
 
 1. Typography controls communicate clearly when they are active, inherited, or
-   read-only.
+   unavailable under the current toolbar contract.
 2. The Media tab contains media-facing items and no longer feels like a
    catch-all bucket.
 3. Category-scoped search remains deterministic and regression-covered.

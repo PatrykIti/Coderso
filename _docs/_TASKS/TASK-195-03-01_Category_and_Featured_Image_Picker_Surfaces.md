@@ -42,6 +42,12 @@ Owner boundary:
   second picker shell.
 - `taxonomyClient.getTaxonomyOverview()` remains the read owner for category
   options.
+- `usePostEditorState` owns the async taxonomy-options/loading/error state for
+  the editor path and maps the chosen value back into the existing metadata
+  payload.
+- `PostBlockEditorShell` remains the orchestration seam that threads picker and
+  taxonomy props into `DocumentInspector`; it should not move taxonomy fetching
+  into the presenter.
 - `MediaPicker` remains the shared media selection surface.
 - `mediaClient` remains the fetch/cache owner beneath `MediaPicker`; this leaf
   should reuse that path instead of adding a Posts-specific media lookup flow.
@@ -56,10 +62,12 @@ No child task files.
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:281-307`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
   - keep mapping from picker output back to the existing posts metadata payload
+    and own taxonomy options/loading/error state
 - `core/admin/services/taxonomyClient.ts:29-67`
   - reuse as-is or add tiny read helpers only if needed
 - `core/admin/ui/media/MediaPicker.tsx:48-260`
-  - reuse directly; avoid a Posts-only media dialog fork
+  - reuse directly with an explicit `image/*` constraint for featured-image
+    selection; avoid a Posts-only media dialog fork
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
 - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
@@ -92,10 +100,13 @@ No child task files.
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
   - picker changes propagate through the details sidebar contract.
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
-  - selected category/media IDs normalize back into the current payload shape.
+  - selected category/media IDs normalize back into the current payload shape,
+  - taxonomy options/loading/error state stays owned by the editor hook rather
+    than the presenter.
 - `tests/vitest/ui/media-picker.test.tsx`
   - shared picker loading, selected-asset, and removal states remain compatible
-    with Posts featured-image usage.
+    with Posts featured-image usage,
+  - featured-image selection is constrained to image assets (`image/*`).
 - `tests/vitest/admin/taxonomyClient.test.ts`
   - taxonomy overview reads stay stable for the picker.
 - `tests/vitest/admin/mediaClient.test.ts`
@@ -111,5 +122,6 @@ No child task files.
 ## Acceptance Criteria
 
 1. Category assignment is done through named options, not manual ID entry.
-2. Featured image selection reuses the media picker and shows the chosen asset.
+2. Featured image selection reuses the media picker, shows the chosen asset, and
+   accepts image assets only.
 3. The underlying posts metadata payload remains backward compatible.
