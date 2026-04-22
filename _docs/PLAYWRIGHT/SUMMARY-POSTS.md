@@ -45,6 +45,8 @@
 
 **Co się dzieje:** "Select all" zaznacza tylko header checkbox, wiersze pozostają niezaznaczone. Brak bulk action toolbar. Identyczny bug jak w sekcji Pages.
 
+**Kierunek naprawy UI:** Checkbox w nagłówku powinien mieć stan pośredni (częściowe zaznaczenie), a kliknięcie go zaznacza/odznacza wszystkie wiersze. Każdy wiersz potrzebuje własnego checkboxa. Po zaznaczeniu co najmniej jednego wiersza — nad tabelą pojawia się pasek akcji grupowych z przyciskami (np. "Opublikuj", "Przenieś do kosza") i licznikiem zaznaczonych elementów.
+
 ---
 
 ### [BUG-2] ŚREDNI: Placeholder wyszukiwarki — błędny tekst (copy-paste)
@@ -53,6 +55,8 @@
 
 **Co się dzieje:** Placeholder mówi `"Search pages by title..."` zamiast `"Search posts by title..."`. Kopiowanie z komponentu Pages bez zmiany tekstu.
 
+**Kierunek naprawy UI:** Zmiana jednego słowa w tekście placeholdera — "pages" → "posts". Rozważyć wyciągnięcie tego tekstu do props komponentu, żeby nie trzeba było pamiętać o zmianach przy kolejnym copy-paste.
+
 ---
 
 ### [BUG-3] ŚREDNI: Zachowanie przycisku "Details" nieintuicyjne
@@ -60,6 +64,8 @@
 **Gdzie:** Edytor posta → przycisk "Details" w toolbarze
 
 **Co się dzieje:** Kliknięcie "Details" otwiera Block Inserter po lewej stronie zamiast przełączać widoczność panelu Post details po prawej. Użytkownik spodziewając się szczegółów posta dostaje inserter bloków — mylące.
+
+**Kierunek naprawy UI:** Przyciski w toolbarze powinny jednoznacznie komunikować co otwierają — ikona i label muszą odpowiadać docelowemu panelowi. "Details" / "Post settings" powinien otwierać prawy panel, a inserter bloków powinien mieć osobny przycisk (np. "+" lub "Add block"). Wyraźne wizualne odróżnienie tych dwóch akcji eliminuje pomyłkę.
 
 ---
 
@@ -72,6 +78,10 @@
 - "Featured Image" to pole `"Media ID (optional)"` — wymaga znania ID pliku z media library
 Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkownika bez dostępu do DB/API.
 
+**Kierunek naprawy UI:**
+- **Kategorie:** pole tekstowe zastąpić dropdownem lub multi-select z listą kategorii pobraną z API. Użytkownik wybiera nazwę, ID jest ukryte.
+- **Featured Image:** zamiast pola na ID — przycisk "Wybierz zdjęcie" otwierający modal z galerią mediów (miniatury). Po wybraniu — wyświetlana miniatura + przycisk "Usuń". To standardowy pattern spotykany w WordPress czy Contentful.
+
 ---
 
 ### [BUG-5] NISKI: Brak powiadomień (toast) po Publish / Update
@@ -79,6 +89,8 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 **Gdzie:** Edytor posta → przyciski "Publish" i "Update"
 
 **Co się dzieje:** Brak widocznego feedbacku (toast) po opublikowaniu lub aktualizacji posta. Jedynym sygnałem jest zmiana badge'a i timestamp. (Ten sam problem co w Pages.)
+
+**Kierunek naprawy UI:** Dodać krótkie powiadomienie toast pojawiające się w rogu ekranu po udanej akcji (np. "Post opublikowany" / "Zmiany zapisane"). Toast znika samodzielnie po 3–4 sekundach. Daje użytkownikowi pewność że akcja się powiodła, bez konieczności szukania zmiany w badge'u.
 
 ---
 
@@ -90,7 +102,7 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 
 **Problem:** Historia wersji pokazuje datę, autora i liczbę bloków ("1 blocks"), ale brak podglądu zawartości. Użytkownik nie wie co jest w danej wersji, zanim ją przywróci.
 
-**Sugestia:** Dodać rozwijany podgląd treści każdej wersji lub "Preview" link przed przyciskiem Restore.
+**Kierunek naprawy UI:** Każdy wpis w historii wersji powinien mieć przycisk "Podgląd" który otwiera treść tej wersji w trybie tylko-do-odczytu — albo jako rozwijany panel poniżej wpisu, albo jako overlay/modal. Przed przywróceniem użytkownik musi wiedzieć co przywraca.
 
 ---
 
@@ -100,7 +112,7 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 
 **Problem:** Edytor otwiera się w focus mode (sidebary ukryte) co jest ustawieniem w Editor Settings. Nowy użytkownik może nie znaleźć sekcji Categories, Tags, Featured Image — są w prawym panelu, który jest ukryty.
 
-**Sugestia:** Rozważyć domyślne wyłączenie focus mode lub wyświetlić onboarding tip przy pierwszym otwarciu.
+**Kierunek naprawy UI:** Zmienić domyślną wartość focus mode na wyłączoną — panele widoczne od razu. Alternatywnie: przy pierwszym otwarciu edytora pokazać krótki tooltip lub highlight wskazujący na ikonę ustawień po prawej, żeby użytkownik wiedział że panel istnieje i jak go otworzyć.
 
 ---
 
@@ -110,7 +122,7 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 
 **Problem:** SEO fields (SEO title, description, canonical URL, robots) są ukryte w zwiniętej sekcji Advanced. Użytkownicy nieświadomi mogą nigdy ich nie uzupełnić — mimo że SEO jest kluczowe.
 
-**Sugestia:** Wynieść SEO poza Advanced lub dodać widoczny indicator w prawym panelu gdy SEO jest niekompletne (np. badge "SEO: 0/3").
+**Kierunek naprawy UI:** Nagłówek sekcji "Advanced" powinien pokazywać badge z informacją o stanie SEO, np. "SEO: 0/3" w kolorze pomarańczowym gdy pola są puste — nawet gdy sekcja jest zwinięta. To zachęca do rozwinięcia i uzupełnienia. Alternatywnie: wynieść SEO jako osobną sekcję na tym samym poziomie co Publishing i Categories.
 
 ---
 
@@ -120,7 +132,7 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 
 **Problem:** Zakładka Media zawiera tylko 2 bloki: Image i Separator. Brak Video, Gallery, Embed YouTube/Vimeo, File download, Audio.
 
-**Sugestia:** Rozszerzyć bibliotekę bloków medialnych lub umożliwić embed zewnętrznych mediów w bardziej intuicyjny sposób (Embed blok co prawda istnieje w Interactive, ale nie jest w Media).
+**Kierunek naprawy UI:** Przenieść blok Embed z zakładki Interactive do Media (lub dodać go do obu) — bo wklejanie linku YouTube to de facto media. Docelowo zakładka Media powinna zawierać: Image, Video, Gallery, Embed, Audio, File. Separator nie jest media — należy do Text.
 
 ---
 
@@ -130,7 +142,7 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 
 **Problem:** Slug posta: `wprowadzenie-do-nextless-cms` (bez `/`). Slug strony: `/homepage` (z `/`). Niespójny format między sekcjami.
 
-**Sugestia:** Ujednolicić format slugów lub jasno wyjaśnić różnicę (dokumentacja lub tooltip przy polu).
+**Kierunek naprawy UI:** Przy polu slug pokazać wizualnie pełną ścieżkę URL jako szary prefix przed polem, np. `example.com/blog/` + `[wprowadzenie-do-nextless-cms]`. Dzięki temu użytkownik widzi kontekst i format jest jasny bez potrzeby ujednolicania wartości w bazie.
 
 ---
 
@@ -140,7 +152,7 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 
 **Problem:** Tekst `"Typography reads from block."` obok dropdownów Sans i Text M sugeruje że ustawienia czcionki są tylko informacyjne i czytane ze stylu bloku, ale nie jest jasne czy użytkownik może je zmienić i co faktycznie kontrolują.
 
-**Sugestia:** Dodać tooltip lub helptext wyjaśniający kiedy i jak działa nadpisanie typografii.
+**Kierunek naprawy UI:** Zastąpić ten tekst ikoną informacji (ⓘ) z tooltipem który wyjaśnia jednym zdaniem co się dzieje. Jeśli dropdowny są tylko-do-odczytu gdy blok ma własny styl — wyszarzyć je i dodać tooltip "Edytuj styl bloku aby zmienić typografię". Wyszarzenie od razu komunikuje że pole nie jest aktywne.
 
 ---
 
@@ -149,6 +161,8 @@ Brak pickerów / dropdownów / przeglądarki mediów. Nieprzydatne dla użytkown
 **Gdzie:** Edytor → Block Inserter → zakładka "All"
 
 **Problem:** Zakładka "All" i wyszukiwarka działają globalnie, ale po wybraniu zakładki (np. "Text") wyszukiwanie filtruje wszystkie bloki zamiast tylko tekstowe. Oczekiwanie: filtrowanie wewnątrz wybranej kategorii.
+
+**Kierunek naprawy UI:** Wyszukiwanie powinno zawężać wyniki do aktywnej zakładki. Gdy wybrana jest zakładka "Text" i użytkownik wpisuje frazę — widzi tylko pasujące bloki tekstowe. Placeholder pola wyszukiwania może się dynamicznie zmieniać: "Szukaj w Text..." zamiast "Szukaj bloków...". Zakładka "All" działa globalnie jak dotąd.
 
 ---
 
