@@ -51,7 +51,10 @@ New owner files:
 - `core/services/content/detailPageTypes.ts`
 - `core/services/content/detailPageSchema.ts`
 - `core/services/content/detailPageBindingResolver.ts`
-- `core/services/content/detailPageRuntimeResolver.ts`
+- add `core/services/content/detailPageRuntimeResolver.ts` only if extracting a
+  shared runtime-facing resolver over the current public runtime owners
+  improves reuse; otherwise keep detail-page runtime resolution inside
+  `core/server/publicSite.tsx` / `core/site/renderPublicEntry.tsx`
 - `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
 - `tests/vitest/assistant/blueprint-detail-page-composer.test.ts`
 

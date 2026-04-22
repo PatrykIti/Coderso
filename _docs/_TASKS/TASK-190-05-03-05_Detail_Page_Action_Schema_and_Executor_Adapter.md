@@ -31,9 +31,13 @@ No child task files.
 - Update `core/admin/ui/assistant/components/ActionPlanReview.tsx` labels.
 - Update `core/admin/ui/assistant/components/ActionExecutionResult.tsx` labels.
 - Add `tests/vitest/assistant/action-plan-schema.test.ts` cases.
+- Update `tests/vitest/assistant/action-family-contracts.test.ts` if the
+  reviewed executable permission/notes metadata changes for `detail-page.upsert`
 - Add `tests/vitest/assistant/action-registry.test.ts` cases.
 - Update `tests/vitest/assistant/actionPlannerService.test.ts`
 - Add `tests/unit/assistant/actionExecutorService.test.ts` cases.
+- Add `tests/unit/assistant/actionExecutorService.db.test.ts` cases for the
+  DB-backed persist/idempotency path
 
 ## Assistant Integration Rule
 
@@ -83,6 +87,16 @@ Status ownership rule:
   `input.status` field.
 - Execute/dry-run metadata may summarize the effective status, but the strict
   action input contract carries that value only through `input.document.status`.
+- because the current reviewed assistant action-family contract exposes static
+  execute-permission metadata, and this action can persist
+  `document.status = "published"`, the safest first implementation should align
+  with the current `page.upsert` permission boundary instead of inventing an
+  implicit conditional publish side path:
+  - `detail-page.upsert` execute contract requires `content:write` plus
+    `content:publish`,
+  - a future draft-only / publish split would need an explicit later action-
+    family refactor, not hidden status-sensitive permission branching inside the
+    first reviewed executor path.
 
 `page.upsert` must not be overloaded with detail page document payloads.
 `page.upsert` remains the action for normal/static/list/landing Pages. Detail
@@ -112,10 +126,13 @@ Execute must:
   action-level status field,
 - upsert document idempotently,
 - invalidate relevant site cache,
-- return admin/public preview metadata,
 - return normalized execution metadata (`detailPageId`, `contentTypeId`,
   `contentTypeSlug`, effective status/public-impact summary) needed by the later
   admin client/cache layer,
+- leave preview token issuance, preview URL building, and sample-entry-backed
+  draft preview responses with the preview/admin owner seams from
+  `TASK-190-05-03-04` and `TASK-190-05-03-07`; this leaf should return only the
+  normalized resource metadata those later owners need,
 - leave runtime route ownership unchanged until a later
   `setting.content-route.upsert` links `detailPageId`.
 
@@ -128,8 +145,14 @@ layer, but generic policy registration itself is deferred to
 
 - Visibility: internal assistant action flow.
 - Auth model: existing admin session.
-- RBAC: execute requires content/page route write permissions matching existing
-  page/content route actions.
+- RBAC:
+  - plan/dry-run follow the existing content-owned read path,
+  - execute keeps the same reviewed content write/publish boundary already used
+    by current page-like assistant actions:
+    - `content:write`,
+    - `content:publish`,
+  - write-only actors must not be able to persist a published detail-page
+    document through this first reviewed upsert path.
 - CSRF: existing assistant execute route.
 - Rate-limit bucket: assistant.
 - Reject-unknown validation: action input and document are strict.
@@ -148,14 +171,23 @@ layer, but generic policy registration itself is deferred to
 - `page.upsert` rejects opaque detail page document payloads.
 - Dry-run reports missing content type/field conflicts.
 - Execute creates/upserts document idempotently.
+- Execute DB tests cover the persisted create/update/idempotency path in
+  `tests/unit/assistant/actionExecutorService.db.test.ts`, not only the pure
+  unit seam.
 - Execute rejects content-type/id mismatches and incompatible existing detail
   page ownership.
 - Undo manifest captures safe rollback metadata if applicable.
 - Action registry includes `detail-page.upsert`.
+- Action-family contract coverage stays aligned with the chosen first reviewed
+  permission boundary (`content:write` + `content:publish`) so this action does
+  not introduce a write-only publish side channel.
 - Review/result UI labels render `detail-page.upsert` as "Detail Template"
   while the technical action/resource kind remains `detail-page`.
 - Base reviewed planner integration continues to flow through the existing
   action-plan seams without adding a second detail-page executor path.
+- This leaf does not issue preview tokens or preview URLs from assistant
+  execute; draft preview issuance remains owned by `TASK-190-05-03-04` /
+  `TASK-190-05-03-07`.
 - Admin cache key registration, cached-client hydration, and assistant-side
   cache invalidation for `detail-page` are explicitly deferred to
   `TASK-190-05-03-07` so the tree stays implementable in dependency order.

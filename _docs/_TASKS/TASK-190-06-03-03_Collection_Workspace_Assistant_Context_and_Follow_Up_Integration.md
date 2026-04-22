@@ -18,6 +18,9 @@ planning without inventing a second browser-local transport.
 This slice is about route/surface context only. It does not by itself promote
 `detail-page` into the generic CMS resource family; that later promotion stays
 separate.
+Generic `detail-page` resource inference across resolver/policy/provider flows
+remains deferred to `TASK-190-05-03-08`; this leaf widens only the existing
+admin-context hydration, permission, and active-surface transport seams.
 
 ## Sub-Tasks
 
@@ -28,8 +31,10 @@ No child task files.
 - Update `core/services/assistant/actionPlanTypes.ts`
 - Update `core/admin/ui/assistant/activeSurfaceContext.ts`
 - Update `core/admin/ui/assistant/useAssistantAdminContext.ts`
-- Update `core/admin/ui/content-types/CollectionWorkspacePage.tsx`
-- Update `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
+- Update `core/admin/ui/content-types/CollectionWorkspacePage.tsx` after
+  `TASK-190-06-03-01` adds the route shell
+- Update `core/admin/ui/content-types/DetailTemplateEditorPage.tsx` after
+  `TASK-190-06-03-02` adds the editor surface
 - Update `core/services/assistant/activeSurfaceHydration.ts`
 - Update `core/services/assistant/adminContextService.ts`
 - Update `core/services/assistant/providerPlanningContext.ts`

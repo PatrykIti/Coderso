@@ -33,7 +33,11 @@ No child task files.
   preview-token storage change
 - Update `core/server/utils/previewUrls.ts`
 - Update `core/site/cache/siteCache.ts`
-- Update entry/page/detail document services for invalidation hooks.
+- Update current mutation owners that already invalidate public output:
+  `core/services/content/entryService.ts`,
+  `core/services/pages/pageService.ts`, and the future detail-page
+  document/admin owner seam so they call the shared `siteCache.ts` helpers
+  instead of introducing route-local invalidation flows.
 - Update `tests/unit/pages/previewService.test.ts`
 - Update `tests/vitest/server/previewUrls.test.ts`
 - Add `tests/integration/runtime/detail-page-preview-cache.test.tsx`

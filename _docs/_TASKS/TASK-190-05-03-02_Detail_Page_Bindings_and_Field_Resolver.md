@@ -30,13 +30,16 @@ No child task files.
 ## Files to Change
 
 - Add `core/services/content/detailPageBindingResolver.ts`
-- Add `core/services/content/detailPageRuntimeResolver.ts`
+- Add `core/services/content/detailPageRuntimeResolver.ts` only if a thin
+  shared runtime-facing wrapper over `detailPageBindingResolver.ts` improves
+  reuse between the current public runtime owners; otherwise keep runtime
+  orchestration in `core/server/publicSite.tsx` / `core/site/renderPublicEntry.tsx`
 - Extract shared safe binding-path helpers if the current
   `core/services/customScreens/bindingResolver.ts` logic needs to be reused by
   both surfaces.
 - Add `tests/vitest/content/detailPageBindingResolver.test.ts`
-- Add `tests/unit/content/detailPageRuntimeResolver.test.ts` if resolver imports
-  DB/runtime dependencies.
+- Add `tests/unit/content/detailPageRuntimeResolver.test.ts` only if that
+  optional extracted resolver lands and imports DB/runtime dependencies.
 
 ## Binding Semantics
 

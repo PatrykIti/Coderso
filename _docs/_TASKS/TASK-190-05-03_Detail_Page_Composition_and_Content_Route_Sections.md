@@ -179,7 +179,10 @@ New modules:
 - `core/services/content/detailPageSchema.ts`
 - `core/services/content/detailPageBindingResolver.ts`
 - `core/services/content/detailPageDocumentService.ts`
-- `core/services/content/detailPageRuntimeResolver.ts`
+- add `core/services/content/detailPageRuntimeResolver.ts` only if a shared
+  extraction from `core/server/publicSite.tsx` / `core/site/renderPublicEntry.tsx`
+  materially improves reuse; otherwise keep detail-page runtime resolution in
+  those current public runtime owners
 - `core/server/routes/detailPageRoutes.ts`
 - `core/server/validation/detailPageSchemas.ts`
 
