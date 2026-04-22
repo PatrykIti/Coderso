@@ -321,6 +321,30 @@ Technical leaf tasks:
 11. Add manual collection workspace coverage so generated collections remain
     editable without the assistant.
 
+## Dependency Notes
+
+- The detail-page owner wave is a hard prerequisite for downstream workspace and
+  generic-resource slices. In practice `TASK-190-05-03-01`,
+  `TASK-190-05-03-04`, `TASK-190-05-03-05`, and `TASK-190-05-03-07` must land
+  before `TASK-190-06-03-*` and `TASK-190-05-03-08` start consuming those
+  seams.
+- `TASK-190-06-03-*` and `TASK-190-05-03-08` are consumer slices. They must not
+  backfill detail-page model/schema, preview-token storage, action/executor
+  ownership, or route-link/admin-API responsibilities that belong to the
+  `TASK-190-05-03-*` owner wave.
+- The dependency graph intentionally uses narrow direct blockers plus transitive
+  blockers. For example `TASK-190-06-03-02` and `TASK-190-06-03-03` depend on
+  `TASK-190-05-03-07`, which already depends on preview/action leaves; that does
+  not make the workspace/editor/context wave safe to start before those
+  transitive seams are physically in place.
+- If deterministic collection-link metadata is missing during implementation,
+  extend the current page/custom-screen/detail-page owner seams first and only
+  then consume that metadata from workspace, matcher, assistant-context, or
+  generic policy/resource slices.
+- Do not shorten this order with browser-only or planner-only heuristics. If a
+  consumer slice cannot resolve canonical links from existing owner seams yet, it
+  should stay `unresolved`/gated until the upstream contract lands.
+
 ## Security Contract
 
 - Visibility: internal assistant planning and execution only.
