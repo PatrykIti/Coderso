@@ -148,6 +148,21 @@ Reuse-first rule:
 - keep route/service contracts stable unless a client-only fix cannot preserve
   correctness.
 
+Owner-responsibility rule:
+
+- `PageCreateDrawer`, `PageSettingsDrawer`, and `PageRevisionDrawer` own their
+  truthful `SheetDescription` copy; do not hide missing-description fixes in a
+  shared wrapper unless repeated repo evidence proves the wrapper contract is
+  incomplete,
+- `PageEditor.tsx` owns save/publish outcome handling and emits feedback through
+  an existing surface,
+- `AdminApp.tsx` may own a single shared `Toaster` mount only if the repo
+  really lacks one; do not introduce duplicate Pages-only notification mounts,
+- `RuntimePreviewDialog.tsx` owns runtime-preview failure copy and
+  `DialogDescription`,
+- `TASK-194-05` must close the loop back to `_docs/PLAYWRIGHT/SUMMARY-PAGES.md`
+  so the source QA report reflects the final verification state.
+
 ## Security Contract
 
 - Visibility: internal admin Pages UI plus existing public read-only preview
@@ -191,6 +206,12 @@ Reuse-first rule:
   - keep author/cache regression proof on `tests/vitest/admin/pagesClient.test.ts`
     because `pagesClient.ts` owns mutation-driven list/detail cache writes; UI
     suites only confirm the symptom is gone,
+  - keep the Pages settings-description proof on a real `Sheet` owner path such
+    as `tests/vitest/ui/page-settings-drawer.test.tsx`; mocked
+    `page-settings-drawer-wave.test.tsx` can cover behavior and copy changes,
+    but it is not sufficient proof that Radix warning regressions are gone,
+  - if editor feedback chooses a root-mounted `Toaster`, add a real `AdminApp`
+    render proof instead of treating a mocked `PageEditor` shell as sufficient,
   - post-insert scroll/highlight and slot-CTA work must be proven on at least
     one unmocked Pages builder path, not only through globally mocked shell
     suites.
@@ -208,6 +229,7 @@ Reuse-first rule:
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md` only if list cache semantics change materially
+- `_docs/PLAYWRIGHT/SUMMARY-PAGES.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry when TASK-194 closes
@@ -223,3 +245,5 @@ Reuse-first rule:
 4. Builder action buttons, slot guidance, and widget discovery are accessible
    and beginner-readable.
 5. Existing good Pages behaviors from the QA report remain intact.
+6. The final closure updates `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` with the
+   landed verification state for the tracked `BUG-*` and `UX-*` items.

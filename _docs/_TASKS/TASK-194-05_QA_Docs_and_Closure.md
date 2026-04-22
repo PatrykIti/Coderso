@@ -12,10 +12,18 @@
 ## Overview
 
 Close the `TASK-194` family with targeted validation, docs parity, changelog,
-and board synchronization.
+board synchronization, and source-report traceability.
 
 This leaf exists so the UX fixes do not stop at local code changes without a
 clear statement of what was validated and what contract text changed.
+
+Closure responsibility note:
+
+- this leaf must close the loop back to `_docs/PLAYWRIGHT/SUMMARY-PAGES.md`,
+  not only the task board and changelog,
+- closure notes must map each report item (`BUG-1..BUG-5`, `UX-1..UX-9`) to the
+  landed leaf/task evidence instead of describing the wave only at umbrella
+  level.
 
 ## Sub-Tasks
 
@@ -37,6 +45,8 @@ No child task files.
   `TASK-194-03-02`
 - `tests/vitest/ui/page-editor-slot-insert-flow.test.tsx` if added by
   `TASK-194-04-02`
+- `tests/vitest/ui/admin-app-root.test.tsx` or an equivalent real `AdminApp`
+  render path if added by `TASK-194-03-01`
 - `tests/vitest/pageBuilder/blockToolbar.test.tsx` if the toolbar leaf ships a
   focused real-component suite
 - `tests/vitest/pageBuilder/blockList.test.tsx`
@@ -51,6 +61,7 @@ No child task files.
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md` only if cache semantics changed
+- `_docs/PLAYWRIGHT/SUMMARY-PAGES.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry for TASK-194
@@ -80,11 +91,20 @@ No child task files.
     in the Pages suites so Radix warning regressions fail in local Vitest, not
     only in Playwright/manual QA
   - preferred real-wrapper paths:
-    - `tests/vitest/ui/drawers.test.tsx` and/or
-      `tests/vitest/ui/page-revision-drawer.test.tsx` for `Sheet`
+    - `tests/vitest/ui/drawers.test.tsx` for `PageCreateDrawer`
+    - `tests/vitest/ui/page-settings-drawer.test.tsx` for
+      `PageSettingsDrawer`
+    - `tests/vitest/ui/page-revision-drawer.test.tsx` for
+      `PageRevisionDrawer`
     - `tests/vitest/ui/runtime-preview-dialog.test.tsx` for `Dialog`
+  - mocked `tests/vitest/ui/page-settings-drawer-wave.test.tsx` may cover field
+    behavior and copy states, but it cannot be the sole closure proof for the
+    settings `SheetDescription` contract
   - author/cache closure notes must cite `tests/vitest/admin/pagesClient.test.ts`
     as the cache-owner proof; symptom-level UI tests are secondary evidence
+  - if `AdminApp.tsx` mounts the shared `Toaster`, closure notes must cite a
+    real root-render proof (`tests/vitest/ui/admin-app-root.test.tsx` or
+    equivalent); a mocked `page-editor-shell-wave` path alone is not enough
   - builder toolbar accessibility must be proven on the real toolbar component
     (`tests/vitest/pageBuilder/blockToolbar.test.tsx` or an explicitly
     unmocked equivalent), not only through the mocked `blockList` suite
@@ -95,6 +115,9 @@ No child task files.
     still mocks `BlockList`
   - empty-slot CTA closure must reference a real existing insert-surface path,
     not only copy snapshots in `blockList.test.tsx`
+  - closure notes must map every `BUG-*` and `UX-*` item from
+    `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` to the landed verification evidence or
+    explicitly state why an item remains open
 - Bun only if server/service code changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts tests/unit/pages`
   - if the preview UI change requires new server-derived host metadata, add the
@@ -108,6 +131,7 @@ No child task files.
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md` only if applicable
+- `_docs/PLAYWRIGHT/SUMMARY-PAGES.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry
@@ -120,4 +144,6 @@ No child task files.
    coverage, which ones were verified on real `Sheet`/`Dialog` wrappers, and
    which ones required Bun-side regression guards.
 3. Docs describe the final user-facing list/settings/editor/builder behavior.
-4. The task board and changelog are synchronized with the final state.
+4. `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` is refreshed with a dated
+   re-verification status for the tracked `BUG-*` and `UX-*` items.
+5. The task board and changelog are synchronized with the final state.

@@ -43,6 +43,16 @@ Current owner seams:
   - shared admin app root is the likely place to mount `Toaster` if it is not
     already rendered elsewhere.
 
+Owner-responsibility note:
+
+- `PageEditor.tsx` remains the single owner of save/publish outcome handling and
+  decides when success/error feedback should fire.
+- `AdminApp.tsx` may own one shared `Toaster` mount if the repo currently lacks
+  it; if this path is chosen, `PageEditor.tsx` emits into that existing shared
+  surface instead of introducing another notification layer.
+- `RuntimePreviewDialog.tsx` owns preview-host diagnostics and
+  `DialogDescription`.
+
 ## Sub-Tasks
 
 No child task files.
@@ -60,15 +70,23 @@ No child task files.
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx:682-785`
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx:787-835`
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx:1-25`
+- `tests/vitest/ui/admin-app-root.test.tsx` or an equivalent real `AdminApp`
+  render path if the shared `Toaster` mount is added there
 
 ## Implementation Direction
 
 - Prefer the existing `sonner` primitive for success feedback if it can be
   mounted once at the shared admin root.
+- Do not create a second Pages-only notification system or duplicate toaster
+  mount.
 - Reuse the same feedback surface for mutation failures where practical; do not
   add success toast only and leave failures silent.
 - If mounting a global toaster is too invasive for this leaf, use a minimal
   page-local success/error banner only as a fallback.
+- Keep owner boundaries explicit:
+  - `PageEditor.tsx` emits feedback after awaited mutations resolve,
+  - `AdminApp.tsx` owns one shared `Toaster` mount only if needed,
+  - `RuntimePreviewDialog.tsx` owns preview diagnostics and descriptive copy.
 - Track iframe load readiness separately from preview token generation.
 - Add an explicit `DialogDescription` on `RuntimePreviewDialog` so the Pages
   preview surface fixes its own a11y warning instead of hiding it in a generic
@@ -121,7 +139,9 @@ useEffect(() => {
   - save/publish success feedback appears after fulfilled mutation,
   - save/publish failure feedback appears after rejected mutation,
   - preview API failure still surfaces explicit error,
-  - generic preview path remains unchanged when the iframe loads.
+  - generic preview path remains unchanged when the iframe loads,
+  - this suite is sufficient for feedback proof only when feedback stays local
+    to the page/editor surface.
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
   - dialog shows iframe sandbox contract,
   - dialog renders explicit description text on the real `Dialog` wrapper,
@@ -131,6 +151,10 @@ useEffect(() => {
   - local-host guidance and generic-host fallback are both covered,
   - the suite keeps the real `Dialog` wrapper in scope so description
     regressions do not hide behind mocks.
+- If `AdminApp.tsx` is touched to mount `Toaster`, add a real root-render test
+  path (`tests/vitest/ui/admin-app-root.test.tsx` or equivalent) that proves
+  the shared mount exists exactly once; a mocked `PageEditor` shell is not
+  enough evidence for that contract.
 
 ## Documentation Updates Required
 
@@ -144,3 +168,6 @@ useEffect(() => {
 2. Save/publish failures are immediately visible to the user.
 3. A preview host that is unreachable results in actionable UI guidance.
 4. Preview failure messaging does not leak tokens or secrets.
+5. Feedback stays on one existing owner path: `PageEditor` emitters plus
+   optionally one shared `AdminApp` toaster mount, with no duplicate Pages-only
+   notification system.

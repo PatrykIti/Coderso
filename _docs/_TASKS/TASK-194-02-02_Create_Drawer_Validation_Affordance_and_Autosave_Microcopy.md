@@ -27,6 +27,13 @@ Ownership note:
 - preview-dialog description coverage belongs to
   `TASK-194-03-01_Save_Publish_Success_Feedback_and_Runtime_Preview_Failure_State.md`
   because `RuntimePreviewDialog.tsx` already owns that surface and its copy.
+- `PageCreateDrawer.tsx` owns create-drawer requirement copy and descriptive
+  text.
+- `PageSettingsDrawer.tsx` owns settings descriptive copy, disabled-field
+  helper text, and footer wording.
+- `PageRevisionDrawer.tsx` owns history-drawer descriptive copy.
+- `core/admin/components/ui/sheet.tsx` is fallback-only; this leaf should fix
+  the existing surface owners first instead of hiding the warnings globally.
 
 ## Sub-Tasks
 
@@ -53,6 +60,8 @@ No child task files.
     prefer owner-surface descriptions first.
 - `tests/vitest/ui/drawers.test.tsx:106-119`
   - keep a real `Sheet` render path for the create drawer.
+- `tests/vitest/ui/page-settings-drawer.test.tsx`
+  - keep a real `Sheet` render path for the settings drawer.
 - `tests/vitest/ui/page-post-list-wave.test.tsx:565-610`
 - `tests/vitest/ui/page-settings-drawer-wave.test.tsx`
 - `tests/vitest/ui/page-revision-drawer.test.tsx`
@@ -68,6 +77,9 @@ No child task files.
   owners rather than hiding the warning.
 - Do not add a Pages-only wrapper abstraction or generated placeholder copy if a
   truthful `SheetDescription` can live on the current surface owner.
+- Reuse the existing real-wrapper test paths before inventing new test-only
+  harnesses; if `page-settings-drawer-wave.test.tsx` stays mocked, pair it with
+  `page-settings-drawer.test.tsx` for the real `Sheet` contract.
 - When `Max width` is disabled, explain the dependency inline or via
   `aria-describedby`; users should not have to infer the `Page width = full`
   rule.
@@ -95,16 +107,21 @@ const createHelp =
 - `tests/vitest/ui/drawers.test.tsx`
   - create drawer renders explicit descriptive copy through the real `Sheet`
     wrapper.
+- `tests/vitest/ui/page-settings-drawer.test.tsx`
+  - settings drawer renders explicit descriptive copy through the real `Sheet`
+    wrapper; this is the owner proof for `PageSettingsDrawer.tsx`.
 - `tests/vitest/ui/page-settings-drawer-wave.test.tsx`
   - disabled `Max width` renders helper copy explaining the dependency,
   - updated footer copy renders in dirty and clean states without changing
-    autosave behavior.
+    autosave behavior,
+  - if this suite keeps mocking `@/components/ui/sheet`, it cannot be the sole
+    proof for the description contract.
 - `tests/vitest/ui/page-revision-drawer.test.tsx`
   - rendered drawer includes explicit descriptive text for the history flow via
     the real `Sheet` wrapper, not only SSR text snapshots.
-- At least one Pages create/history Vitest path in this leaf must render the
-  real `Sheet` wrapper instead of a mock so missing-description regressions fail
-  locally.
+- At least one Pages create/settings/history Vitest path in this leaf must
+  render the real `Sheet` wrapper instead of a mock so missing-description
+  regressions fail locally.
 
 ## Documentation Updates Required
 

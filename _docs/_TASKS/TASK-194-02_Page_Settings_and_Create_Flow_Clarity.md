@@ -28,6 +28,13 @@ Ownership note:
 - runtime preview dialog warnings stay in `TASK-194-03-01` because the dialog
   copy and failure state already belong to the runtime-preview surface owner,
   not the settings/create wave.
+- `PageCreateDrawer.tsx` owns create-drawer requirement copy and description.
+- `PageSettingsDrawer.tsx` owns settings wording, disabled-field guidance, and
+  its truthful `SheetDescription`.
+- `PageRevisionDrawer.tsx` owns history-drawer description copy.
+- `core/admin/components/ui/sheet.tsx` is fallback-only; do not move this work
+  there unless repeated repo evidence proves the shared wrapper contract is the
+  real owner.
 
 ## Sub-Tasks
 
@@ -81,9 +88,14 @@ Out of scope:
   - create/settings/history description / `aria-describedby` coverage,
   - updated autosave wording,
   - no regression to existing settings save/autosave flows,
-  - at least one real `Sheet` path in Pages (`drawers.test.tsx` and/or
-    `page-revision-drawer.test.tsx`) so missing-description regressions fail on
-    the real wrapper, not only on mocked shells.
+  - keep the settings-description proof on a real `Sheet` path such as
+    `tests/vitest/ui/page-settings-drawer.test.tsx`; mocked
+    `page-settings-drawer-wave.test.tsx` can cover field behavior but not be
+    the sole proof for missing-description regressions,
+  - keep create/history coverage on real `Sheet` paths as well
+    (`drawers.test.tsx`, `page-revision-drawer.test.tsx`, or equivalent) so
+    missing-description regressions fail on the real wrapper, not only on
+    mocked shells.
 
 ## Documentation Updates Required
 

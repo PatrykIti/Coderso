@@ -21,6 +21,15 @@ actionable:
 - adding a block can leave the new widget off-screen with no clear visual
   anchor.
 
+Ownership note:
+
+- `PageEditor.tsx` owns mutation outcome handling and remains the emitter of
+  save/publish feedback.
+- `RuntimePreviewDialog.tsx` owns preview failure copy and
+  `DialogDescription`.
+- `AdminApp.tsx` may own a single shared `Toaster` mount only if the repo
+  truly lacks one; do not add a duplicate Pages-only notification system.
+
 ## Sub-Tasks
 
 - `TASK-194-03-01_Save_Publish_Success_Feedback_and_Runtime_Preview_Failure_State.md`
@@ -53,6 +62,8 @@ Out of scope:
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
 - `tests/vitest/pageBuilder/blockList.test.tsx`
+- `tests/vitest/ui/admin-app-root.test.tsx` or an equivalent real `AdminApp`
+  render path only if `TASK-194-03-01` mounts the shared toaster there
 
 ## Security Contract
 
@@ -72,6 +83,9 @@ Out of scope:
   - actionable preview failure state,
   - explicit runtime-preview dialog description on the real `Dialog` wrapper,
   - post-insert scroll/focus/highlight behavior,
+  - if feedback uses a root-mounted `Toaster`, a real `AdminApp` path must own
+    the proof; mocked `PageEditor` shells are not sufficient evidence for the
+    one-time mount contract,
   - at least one unmocked `PageEditor -> BlockList` proof for the
     scroll/highlight contract; mocked shell suites can cover orchestration but
     are not sufficient as the sole evidence,
