@@ -50,7 +50,8 @@ detail rendering system.
 
 ## Product Contract
 
-Detail pages become a first-class public surface owned by the blueprint composer.
+Detail pages become a first-class public surface that the blueprint composer can
+compose through the existing content-domain/detail-page owner seams.
 
 Required user-facing outcomes:
 
@@ -64,8 +65,9 @@ Required user-facing outcomes:
   gallery, testimonial, CTA, and related case studies.
 
 The detail page contract must be beginner-friendly and composite-first. It
-should not expose loose arbitrary block bindings to users. The composer owns the
-schema-first detail page document and turns it into validated widget blocks.
+should not expose loose arbitrary block bindings to users. The composer assembles
+detail-page inputs against the content-owned schema/document contract, and that
+owner seam turns them into validated widget blocks.
 
 ## Contract Shape
 

@@ -81,11 +81,16 @@ Exact browser owner split:
   `AssistantActionContext`; this leaf widens that existing hook in place rather
   than adding a collection-workspace context provider/store.
 - The workspace route itself is the existing source of truth for
-  `collectionWorkspaceHint.contentTypeId`: `buildAssistantAdminRuntimeSnapshot(...)`
-  / `selectedResourceFromRoute(...)` in `useAssistantAdminContext.ts` derive it
-  from `/admin/coderso/engine/:contentTypeId/collection`, so
-  `CollectionWorkspacePage.tsx` must not push the same id through a second
-  browser-local transport.
+  `collectionWorkspaceHint.contentTypeId`, but this leaf must extend
+  `useAssistantAdminContext.ts` with an explicit workspace-aware route match
+  for `/admin/coderso/engine/:contentTypeId/collection` instead of assuming
+  the current generic `selectedResourceFromRoute(...)` helper already provides
+  that distinction today.
+- `buildAssistantAdminRuntimeSnapshot(...)` / `selectedResourceFromRoute(...)`
+  stay the existing route/runtime seam to extend in place; they must not be
+  bypassed by a second collection-workspace context provider, page-local state
+  mirror, or manual `CollectionWorkspacePage.tsx` transport for the same
+  `contentTypeId`.
 - `activeSurfaceContext.ts` remains the only mutable browser-local transport.
   `DetailTemplateEditorPage.tsx` may publish `activeSurface.kind =
   "detail-page"` there, and `useAssistantAdminContext.ts` then derives the
@@ -99,6 +104,11 @@ Rules:
 
 - workspace route parsing must continue to resolve to
   `area: "coderso"` + `codersoModule: "engine"`,
+- `useAssistantAdminContext.ts` must add an explicit workspace-route branch for
+  `/admin/coderso/engine/:contentTypeId/collection` when deriving
+  `collectionWorkspaceHint.contentTypeId`; do not broaden the existing generic
+  `content-type` route match so far that ordinary Engine routes start emitting
+  workspace hints,
 - widen the existing `AssistantActionContext` in place instead of inventing a
   parallel collection-context transport:
   - `collectionWorkspaceHint` is the browser-bound identity hint,
@@ -135,13 +145,22 @@ Rules:
   `TASK-190-05-03-07`; it must not add a second ad-hoc detail-page lookup or
   hydration path inside assistant context just to make follow-up planning work,
 - `useAssistantAdminContext.ts` must extend the existing
-  `activeSurfaceMatchesRoute(...)` contract with an explicit workspace-aware
-  branch instead of globally relaxing the match rule:
-  - preserve `activeSurface.kind = "detail-page"` only when the current route is
-    inside the collection workspace,
-  - `runtimeSnapshot.selectedResource.kind === "content-type"` for that route,
-  - and the server-hydrated `collectionWorkspace` summary proves that the active
-    detail-page id belongs to that collection content type,
+  `activeSurfaceMatchesRoute(...)` contract only enough to keep bounded browser
+  hints scoped to the collection-workspace route instead of globally relaxing
+  the match rule:
+  - preserve browser `activeSurface.kind = "detail-page"` only when the current
+    route is inside the collection workspace,
+  - and `runtimeSnapshot.selectedResource.kind === "content-type"` for that
+    route,
+- final proof that the hinted `activeDetailPageId` belongs to that collection
+  content type is server-owned:
+  - `assistantRoutes.ts`, the server-side workspace loader, and
+    `activeSurfaceHydration.ts` reconcile the browser hint against the
+    server-hydrated `collectionWorkspace` summary and the detail-page read seam,
+  - `useAssistantAdminContext.ts` must not fetch workspace/detail-page data just
+    to prove membership client-side,
+  - stale or mismatched detail-page ids drop to `null` during server
+    rehydration instead of creating a second browser-owned validation flow,
 - the bounded workspace summary therefore needs identity fields required for
   reconciliation, at minimum:
   - `contentType.id`,
@@ -237,18 +256,20 @@ Rules:
   server resources.
 - active surface can round-trip and rehydrate `detail-page` context payloads
   without implying write/publish authority in this slice.
-- workspace-root route with `selectedResource.kind = "content-type"` still keeps
-  `activeSurface.kind = "detail-page"` only through the explicit
-  workspace-aware reconciliation rule; matching must not be loosened globally
-  for unrelated routes/surfaces.
-- missing detail page resource clears the active surface instead of trusting
-  stale browser state.
+- workspace-root route with `selectedResource.kind = "content-type"` keeps only
+  a bounded `detail-page` browser hint through the explicit workspace-aware
+  route gate in `useAssistantAdminContext.ts`; final membership reconciliation
+  remains server-owned and matching must not be loosened globally for unrelated
+  routes/surfaces.
+- missing or mismatched detail page resource clears the active surface during
+  server rehydration instead of trusting stale browser state.
 - workspace-root follow-up context is rehydrated server-side from the bounded
   collection workspace endpoint/package into
   `AssistantActionContext.collectionWorkspace`, not from browser-only state.
 - `useAssistantAdminContext.ts` derives `collectionWorkspaceHint.contentTypeId`
-  from the existing workspace route parsing instead of a second browser-local
-  store or manual page-level publish step.
+  from an explicit workspace-route parse inside the existing hook/route helpers,
+  not from a second browser-local store, manual page-level publish step, or an
+  over-broad reuse of the generic Engine `content-type` route match.
 - browser-supplied `collectionWorkspaceHint` stays an identity-only hint and
   never bypasses server hydration into a direct provider/browser summary path.
 - Optional `collectionWorkspaceHint.activeDetailPageId` is derived only from the
