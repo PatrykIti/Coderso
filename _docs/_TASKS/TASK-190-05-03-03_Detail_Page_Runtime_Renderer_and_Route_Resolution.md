@@ -16,9 +16,18 @@ routes should render composed detail page blocks when a detail page document is
 configured, while preserving the existing legacy entry detail renderer as a
 fallback.
 
-The runtime entry point stays the existing content detail flow. This leaf
-extends `core/site/renderPublicEntry.tsx` and `core/server/publicSite.tsx`
-rather than creating a second parallel route renderer for content detail pages.
+The runtime entry point stays the existing content detail flow, but the current
+repo already has a block-runtime shell for public Pages. This leaf must reuse
+that existing shell instead of inventing a second block renderer inside the
+entry-detail template layer:
+
+- `core/server/publicSite.tsx` remains the route/runtime orchestration owner,
+- `core/site/renderPublicPage.tsx` plus `core/site/pageRuntime.tsx` remain the
+  current page-builder runtime shell for normalized widget blocks,
+- `core/site/renderPublicEntry.tsx` remains the owner of the legacy
+  content-detail template flow and fallback path when no linked detail-page
+  document exists.
+
 Route ownership stays with `site.contentRoutes` plus `detailPageId`; runtime
 must not consult a second canonical route definition inside detail page
 documents.
@@ -30,7 +39,11 @@ No child task files.
 ## Files to Change
 
 - Update `core/server/publicSite.tsx`
-- Update `core/site/renderPublicEntry.tsx`
+- Update `core/site/renderPublicPage.tsx` and/or `core/site/pageRuntime.tsx`
+  when the composed detail-page document can reuse the existing page-builder
+  runtime shell directly
+- Update `core/site/renderPublicEntry.tsx` only for the legacy
+  content-detail-template fallback path or shared entry-detail data shaping
 - Update `core/site/contentRouteMatcher.ts` only if route match metadata needs
   detail page ids from `site.contentRoutes`.
 - Add `core/services/content/detailPageRuntimeResolver.ts` only if extracting
@@ -49,21 +62,26 @@ GET /catalog/:slug
   -> if route/detail document exists and entry is renderable:
        resolve detail blocks
        hydrate runtime widgets
-       render through the existing content-detail runtime shell/theme flow
+       render through the existing page-builder runtime shell/theme flow
+       (`renderPublicPageRuntimeHtml` / `pageRuntime.tsx`)
      else:
-       render current legacy entry detail HTML
+       render current legacy entry detail HTML through `renderPublicEntry.tsx`
 ```
 
 Public runtime rules:
 
 - public output renders published entries only,
 - preview may render draft entry/page data only with valid preview token,
-- detail page shell uses the same site CSS/theme/template flow already used by
-  `renderPublicEntryDetailHtml`,
+- composed detail-page blocks reuse the existing public page-builder runtime
+  shell already used by `renderPublicPageRuntimeHtml(...)` instead of
+  re-implementing `WidgetRenderer` orchestration inside
+  `renderPublicEntry.tsx`,
+- `renderPublicEntry.tsx` remains the fallback/theme-template owner for current
+  content detail output when no linked detail-page document exists,
 - `TASK-190-05-03-07` later wires the validated `detailPageId` settings/client/
   matcher round-trip, but this leaf remains the only runtime owner that
   consumes that route metadata inside `publicSite.tsx` /
-  `renderPublicEntry.tsx`,
+  `renderPublicPage.tsx` / `renderPublicEntry.tsx`,
 - detail page render must not import admin UI modules,
 - current theme override support for `content detail` templates remains the
   fallback seam when no linked detail document exists,
@@ -86,6 +104,9 @@ Public runtime rules:
 - Published entry detail renders composed detail blocks.
 - Draft entry is hidden on public runtime.
 - Legacy detail renderer remains fallback when no detail document exists.
+- Composed detail-page rendering reuses the current page-builder runtime shell;
+  it does not introduce a second widget-runtime stack inside the entry-detail
+  template layer.
 - Existing theme-based content-detail template resolution remains intact for the
   fallback path.
 - Content route list page behavior remains unchanged.

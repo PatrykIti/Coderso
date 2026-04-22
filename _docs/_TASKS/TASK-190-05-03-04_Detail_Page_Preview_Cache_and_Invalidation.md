@@ -123,13 +123,19 @@ Rules:
 Use the existing content preview target for previewing a specific entry:
 
 ```text
-/preview?type=content&token=<entry-token>&detailPageId=<detail-page-id>&device=desktop
+/preview?type=content&token=<entry-token>&contentType=<type-slug>&slug=<entry-slug>&detailPageId=<detail-page-id>&device=desktop
 ```
 
 Rules:
 
 - `token` targets the content entry or post.
 - Runtime resolves the entry draft allowed by the token.
+- the existing shared preview helper currently serializes `contentType` and
+  `slug` for `type=content`; this leaf extends that shared contract additively
+  with `detailPageId` instead of replacing it with a route-local minimal URL,
+- `contentType` and `slug` remain compatibility/path hints owned by the shared
+  preview helper until a later explicit helper cutover says otherwise; token
+  validation stays the runtime authority,
 - `detailPageId` is optional; when omitted, runtime uses the active published
   detail document for the entry content type.
 - When `detailPageId` is provided, runtime may use only a published detail page
@@ -169,6 +175,11 @@ Implementation notes:
   `page` / `content` / `widget-template` preview URLs; this leaf extends that
   existing helper in place for the new `detail-page` target instead of adding a
   route-local URL builder.
+- because `previewUrls.ts` already emits `contentType` / `slug` for
+  `type=content`, this leaf should either keep that compatibility shape and add
+  `detailPageId`, or explicitly cut over the helper/tests/routes in the same
+  implementation wave; it must not silently document a narrower URL while code
+  still emits the existing params.
 - `publicSite.tsx` / detail runtime resolution must treat `detailPageId` on
   `type=content` preview as a published-document override only; reading
   `current_document` requires the dedicated `type=detail-page` preview token.

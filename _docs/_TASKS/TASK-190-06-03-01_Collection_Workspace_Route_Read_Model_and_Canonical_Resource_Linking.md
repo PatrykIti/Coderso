@@ -45,9 +45,9 @@ No child task files.
   `TASK-190-05-02` / page-owned contracts rather than
   `collectionWorkspaceService.ts`
 - Update current custom-screen owner seams only if explicit stable metadata such
-  as `collectionRole` / `compositionKey` is required for canonical admin-screen
-  resolution; land those fields in `TASK-190-06-02` / current custom-screen
-  schema-service-client contracts
+  as exact `collectionRole` / `compositionKey` fields are required for canonical
+  admin-screen resolution; land those exact fields in `TASK-190-06-02` /
+  current custom-screen schema-service-client contracts
 - Update current detail-page owner seams only if explicit persisted secondary
   references are needed beyond route-level `detailPageId` linkage; land those
   fields in `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page
@@ -67,6 +67,11 @@ Reuse rule:
   server-owned summary. It must follow the current admin cache contract
   (`localStorage` cache + background revalidation + `cacheBus` events), not a
   workspace-only fetch/cache transport.
+- `CollectionWorkspacePage.tsx` owns route-level background refresh,
+  `subscribeCacheEvents(...)` handling, and `remoteUpdatePending` style UX
+  state for this route, matching current Page / Custom Screen / Widget Template
+  editor patterns; `contentTypesClient.ts` must not absorb that UI orchestration
+  responsibility.
 - `cachePolicy.ts` owns the workspace cache key under the existing content-type
   family, for example `contentTypes:collectionWorkspace:<contentTypeId>`, so
   the workspace extends current `Engine` ownership instead of creating a
@@ -91,6 +96,14 @@ Reuse rule:
   `/coderso/engine/:contentTypeId/collection` route must extend the existing
   Engine prefetch family through that shared helper, not route-local hover
   hooks or page-level effect fetches.
+- Because current `createAdminPrefetcher(...)` picks the first matching prefix,
+  this leaf must ensure the workspace route does not collapse into the generic
+  `/coderso/engine` warmup path. The implementation must either:
+  - register a more specific workspace prefetch entry ahead of the generic
+    Engine entry, or
+  - teach `adminPrefetch.ts` to prefer the most specific matching route.
+- Do not assume that simply appending a new workspace entry is enough under the
+  current prefix-match implementation.
 
 Owner rule:
 
@@ -104,18 +117,19 @@ Owner rule:
     `setting.content-route.upsert`.
 - The page owner seam (`page.upsert` / `page.update` / page service / page admin
   editor) owns persisted canonical list-page linkage and any page-level explicit
-  references to listing query/template or supporting resources. If those fields
-  do not exist yet, they must land through `TASK-190-05-02` before this leaf
-  consumes them.
+  references to listing query/template or supporting resources. The concrete
+  page-owned seam is `PageData.settings.collectionLink` from
+  `TASK-190-05-02`. If those fields do not exist yet, they must land there
+  before this leaf consumes them.
 - The detail-page owner seam (`detail-page.upsert` / detail-page document
   service / detail-page admin client) owns persisted references declared inside
   detail-page documents. If extra secondary-resource metadata is needed, it must
   land through `TASK-190-05-03-01` / `TASK-190-05-03-07` before this leaf
   consumes it.
 - The custom-screen owner seam owns any explicit `collectionRole`,
-  `compositionKey`, or equivalent stable metadata needed to resolve a canonical
-  admin screen safely. If those fields do not exist yet, they must land through
-  `TASK-190-06-02` before this leaf consumes them.
+  `compositionKey`, and related canonical screen-link metadata needed to resolve
+  a canonical admin screen safely. If those fields do not exist yet, they must
+  land through `TASK-190-06-02` before this leaf consumes them.
 - The workspace service must only read these owner contracts. It must never
   invent, persist, or backfill canonical links in browser cache, local state, or
   route-local helpers.
@@ -160,9 +174,9 @@ Deterministic resolution order:
 3. Public list/landing page:
    - canonical list page is the public page explicitly linked by the current
      collection setup contract, not the hidden runtime listing endpoint itself,
-   - preferred source of truth is explicit persisted collection-link metadata on
-     the current page owner seam from `TASK-190-05-02`, not workspace-only
-     state,
+   - preferred source of truth is explicit persisted collection-link metadata in
+     `PageData.settings.collectionLink` from `TASK-190-05-02`, not
+     workspace-only state,
    - compatibility fallback for current catalog-family packs is allowed only
      when all of the following are true:
      - the current collection setup uses the known hidden-list pattern
@@ -178,13 +192,14 @@ Deterministic resolution order:
    - do not treat `site.contentRoutes.listPath` as the canonical public page
      slug.
 4. Listing query/template:
-   - first read explicit references from the canonical public page data/block
-     contract,
+   - first read explicit references from the canonical public page contract,
+     especially `PageData.settings.collectionLink.listingQueryId` /
+     `listingTemplateId`,
    - the canonical page owner seam is authoritative for page-attached
      listing-query / listing-template references,
-   - if the current page contract cannot express that deterministically, extend
-     the existing page/widget contract rather than add workspace-only mapping
-     state,
+   - if the current page contract still cannot express a needed page-owned link
+     deterministically, extend `PageData.settings.collectionLink` or the
+     current page/widget contract rather than add workspace-only mapping state,
    - if no explicit reference exists, allow only deterministic fallback:
      - one matching listing query for the content type,
      - one matching listing template referenced by the canonical public page,
@@ -282,6 +297,9 @@ type CollectionWorkspaceSummary = {
   background-revalidation and cache-bus invalidate/update handling.
 - `adminPrefetch.ts` keeps workspace warmup inside the existing Engine prefetch
   seam; no route-local prefetch flow is introduced for the collection route.
+- Workspace route warmup resolves through a specific workspace prefetch match and
+  does not get swallowed by the broader `/coderso/engine` prefix entry under the
+  current `adminPrefetch.ts` matcher.
 - canonical public list page prefers explicit collection linkage; the
   detail-route-prefix fallback is compatibility-only for current catalog-family
   presets and must return `unresolved` when multiple or non-exact candidates
@@ -291,11 +309,11 @@ type CollectionWorkspaceSummary = {
 - if canonical list-page linkage or page-level listing refs are needed, they
   round-trip through `TASK-190-05-02` / current page owner seams before the
   workspace consumes them.
-- canonical list-page / page-level listing references round-trip through the
-  page owner seam before the workspace consumes them; they are not browser-only
-  annotations.
-- if `collectionRole`, `compositionKey`, or equivalent canonical screen-link
-  fields are needed, they round-trip through `TASK-190-06-02` / current
+- canonical list-page / page-level listing references round-trip through
+  `PageData.settings.collectionLink` in the page owner seam before the
+  workspace consumes them; they are not browser-only annotations.
+- if canonical screen-link fields are needed, they round-trip through exact
+  `collectionRole` / `compositionKey` fields from `TASK-190-06-02` / current
   custom-screen owner seams before the workspace consumes them.
 - if extra detail-page secondary-resource metadata is needed, it round-trips
   through `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner

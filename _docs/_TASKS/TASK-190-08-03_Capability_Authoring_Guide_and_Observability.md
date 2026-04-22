@@ -37,6 +37,7 @@ Support engineers should be able to inspect why a prompt composed a given plan.
 ## Files to Change
 
 - Add `_docs/BLUEPRINT_COMPOSER.md`
+- Update `_docs/README.md`
 - Update `_docs/ASSISTANT_SITE_BUILDER.md`
 - Update `_docs/ARCHITECTURE.md`
 - Update `_docs/TESTING_STRATEGY.md`
@@ -101,6 +102,7 @@ export const buildBlueprintCompositionDiagnostics = (input) => ({
 ## Documentation Updates Required
 
 - `_docs/BLUEPRINT_COMPOSER.md`
+- `_docs/README.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/TESTING_STRATEGY.md`
 - `_docs/_TASKS/README.md`

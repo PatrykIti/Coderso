@@ -104,6 +104,11 @@ Program rules:
   read access for the server-owned collection workspace endpoint. If extraction
   is needed, it stays inside the current content-types service family instead of
   becoming a parallel `collectionsClient.ts` owner.
+- `CollectionWorkspacePage.tsx` owns route-level background revalidation,
+  `subscribeCacheEvents(...)` wiring, and any `remoteUpdatePending` style UX
+  state for the workspace route, following the same pattern already used by
+  current editor surfaces. `contentTypesClient.ts` stays a thin cached client,
+  not the owner of route-local refresh orchestration.
 - detail template save/autosave/publish/preview/revisions stay in dedicated
   detail-page admin service wrappers.
 - keep the workspace under the existing `Engine` route family and admin-path
@@ -128,13 +133,13 @@ Program rules:
   - `site.contentRoutes` owns canonical route row selection and
     `detailPageId` linkage,
   - `TASK-190-05-02` / current page owner seam own explicit canonical
-    list-page linkage and any persisted page-level references to
-    listing/query/template or supporting resources,
+    list-page linkage and page-attached listing refs through
+    `PageData.settings.collectionLink`,
   - `TASK-190-05-03-01` plus `TASK-190-05-03-07` / current detail-page owner
     seam own explicit references declared inside detail-page documents,
   - `TASK-190-06-02` / current custom-screen owner seam own explicit stable
-    metadata such as `collectionRole`, `compositionKey`, or equivalent
-    canonical screen-link fields when needed.
+    `collectionRole` / `compositionKey` metadata when canonical screen-link
+    fields are needed.
 - the workspace program may extend those existing owner seams where the current
   persisted contract is not strong enough, but it must not create a
   workspace-only registry, browser-owned source of truth, or assistant-only

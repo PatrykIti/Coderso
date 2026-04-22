@@ -28,6 +28,8 @@ No child task files.
 - Update `core/services/assistant/actionPlanTypes.ts`
 - Update `core/admin/ui/assistant/activeSurfaceContext.ts`
 - Update `core/admin/ui/assistant/useAssistantAdminContext.ts`
+- Update `core/admin/ui/content-types/CollectionWorkspacePage.tsx`
+- Update `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
 - Update `core/services/assistant/activeSurfaceHydration.ts`
 - Update `core/services/assistant/adminContextService.ts`
 - Update `core/services/assistant/providerPlanningContext.ts`
@@ -122,6 +124,18 @@ Rules:
 - workspace-root follow-up uses the same server-owned collection workspace read
   model from `TASK-190-06-03-01`; the browser must not become the source of
   truth for canonical linked resources,
+- `CollectionWorkspacePage.tsx` is the producer for the bounded
+  `collectionWorkspace` identity hint in the existing assistant context package:
+  it may publish only `contentTypeId` plus optional `activeDetailPageId`, not a
+  browser-owned copy of the workspace summary,
+- `DetailTemplateEditorPage.tsx` is the producer for
+  `activeSurface.kind = "detail-page"` through the existing
+  `setActiveAssistantSurfaceContext(...)` transport used today by Page /
+  WidgetTemplate / CustomScreen editors,
+- those two pages reuse the existing `activeSurfaceContext.ts` browser transport
+  and `useAssistantAdminContext.ts` packaging flow; they must not introduce a
+  second collection-workspace context store, route-local fetch transport, or
+  browser-owned detail-page summary cache,
 - `adminContextService.ts` and `providerPlanningContext.ts` consume only the
   server-hydrated bounded workspace summary; raw browser
   `collectionWorkspace` payloads must not cross the provider boundary,
@@ -196,6 +210,10 @@ Rules:
 - existing page/widget-template/custom-screen assistant context remains green.
 - no parallel browser-local transport is added for collection workspace
   follow-up.
+- `CollectionWorkspacePage.tsx` publishes only bounded identity hints and
+  `DetailTemplateEditorPage.tsx` publishes the `detail-page` active surface
+  through the existing active-surface transport instead of inventing a second
+  producer path.
 
 ## Documentation Updates Required
 

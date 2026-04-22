@@ -66,10 +66,11 @@ Rules:
   summaries. `contentTypeSlug` and `linkedRouteType` remain route-facing labels
   and compatibility data; they must not become the primary join key for reuse.
 - persistence of canonical list-page links and page-attached listing/query/
-  template references stays with `TASK-190-05-02` / current page owner seams.
-- persistence of `compositionKey`, `collectionRole`, or equivalent stable
-  custom-screen metadata stays with `TASK-190-06-02` / current custom-screen
-  owner seams.
+  template references stays with `TASK-190-05-02` / current page owner seams,
+  concretely `PageData.settings.collectionLink`.
+- persistence of stable custom-screen collection metadata stays with exact
+  `collectionRole` / `compositionKey` fields from `TASK-190-06-02` / current
+  custom-screen owner seams.
 - persistence of detail-page-owned secondary-resource metadata stays with
   `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner seams.
 - this slice only consumes those persisted fields in bounded catalogs and
@@ -132,8 +133,11 @@ Matcher rules:
   content-type owner seam allows slug edits.
 - If the current owner seam lacks deterministic link metadata for supporting
   resources, extend that seam with explicit `compositionKey`, `collectionRole`,
-  canonical list-page linkage, or equivalent stable metadata under the exact
-  owner leaves above rather than adding fuzzy name heuristics.
+  or canonical list-page linkage under the exact owner leaves above rather than
+  adding fuzzy name heuristics.
+- For pages, the concrete persisted owner seam is
+  `PageData.settings.collectionLink`; matcher logic consumes that field rather
+  than introducing a second page-link store.
 - This slice never invents or persists `compositionKey`, `collectionRole`,
   canonical list-page links, or page-attached listing refs inside matcher logic,
   planning state, or provider context.
@@ -161,10 +165,11 @@ Matcher rules:
 - Existing detail page document update/reuse tests keyed by stable detail page
   id and content-type ownership, not a second route-pattern owner.
 - Matcher consumes canonical list-page / supporting-resource linkage from
-  `TASK-190-05-02` / current page owner seams rather than inventing planner-only
-  state.
-- Matcher consumes `collectionRole` / `compositionKey` from `TASK-190-06-02` /
-  current custom-screen owner seams rather than inventing planner-only state.
+  `TASK-190-05-02` / current page owner seams, concretely
+  `PageData.settings.collectionLink`, rather than inventing planner-only state.
+- Matcher consumes exact `collectionRole` / `compositionKey` fields from
+  `TASK-190-06-02` / current custom-screen owner seams rather than inventing
+  planner-only state.
 - Matcher consumes any extra detail-page-owned secondary-resource metadata from
   `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner seams
   rather than inventing planner-only state.

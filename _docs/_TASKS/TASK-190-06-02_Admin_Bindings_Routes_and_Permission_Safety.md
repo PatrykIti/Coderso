@@ -18,8 +18,8 @@ parallel admin-binding DSL. Reuse the existing `widgetId + propPath + field +
 mode` model and current safe dot-path semantics wherever possible.
 
 If canonical admin-screen resolution later needs explicit stable metadata such as
-`collectionRole`, `compositionKey`, or equivalent collection-link fields, this
-leaf owns that extension under the current custom-screen contract:
+`collectionRole` and `compositionKey`, this leaf owns that extension under the
+current custom-screen contract:
 
 - add it to the custom-screen schema/create-update contract,
 - persist it through current custom-screen service/client flows,
@@ -36,8 +36,8 @@ No child task files.
 - Update current custom-screen binding helpers only if a small shared extraction
   is needed for both assistant composition and existing screen behavior
 - Update `core/services/customScreens/customScreenSchemas.ts` only if
-  `collectionRole`, `compositionKey`, or equivalent canonical screen-link
-  metadata must become part of the current custom-screen schema
+  exact `collectionRole` / `compositionKey` canonical screen-link metadata must
+  become part of the current custom-screen schema
 - Update `core/services/customScreens/customScreenService.ts` only if that
   metadata must persist through the current custom-screen owner seam
 - Update `core/admin/services/customScreensClient.ts` only if that metadata must
@@ -47,6 +47,33 @@ No child task files.
   custom-screen schema contract widens in this leaf
 - Update `tests/vitest/customScreens/customScreenService.test.ts` only if the
   current custom-screen persistence contract widens in this leaf
+
+Canonical screen metadata contract:
+
+- If canonical collection-screen resolution needs explicit stable metadata, this
+  leaf freezes the exact field names instead of leaving them as "or equivalent".
+- The metadata belongs to the current top-level custom-screen contract, next to
+  existing fields such as `contentTypeId`, `status`, `showInSidebar`, and
+  `sidebarLabel`; do not create a second nested metadata store or matcher-only
+  extension point.
+- Minimal contract:
+
+```ts
+type CustomScreenCollectionLink = {
+  collectionRole?: "canonical-admin-screen" | "secondary-admin-screen" | null;
+  compositionKey?: string | null;
+};
+```
+
+- `collectionRole` is the canonical/supplementary screen discriminator consumed
+  by workspace and matcher logic.
+- `compositionKey` is the stable adjunct identity key when multiple generated
+  screens belong to the same collection.
+- `customScreenSchemas.ts` owns validation and reject-unknown behavior for these
+  fields, `customScreenService.ts` owns persistence, and
+  `customScreensClient.ts` owns cached round-trip.
+- Workspace, matcher, and assistant-context leaves consume only these persisted
+  fields; they must not invent alternate names or browser-only copies.
 
 ## Pseudocode
 
@@ -82,9 +109,11 @@ export const composeBindings = (schema, adminSections) =>
 - Duplicate binding id dedupe.
 - Generated bindings stay compatible with the current custom-screen binding
   contract and current dot-path helper behavior.
-- Any added `collectionRole` / `compositionKey` metadata round-trips through the
-  current custom-screen schema/service/client contract rather than a workspace-
-  only or matcher-only store.
+- `collectionRole` / `compositionKey` round-trip through the current
+  custom-screen schema/service/client contract rather than a workspace-only or
+  matcher-only store.
+- Downstream consumers read exactly `collectionRole` and `compositionKey`; they
+  do not invent "equivalent" canonical-screen metadata names later in the tree.
 
 ## Documentation Updates Required
 
