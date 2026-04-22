@@ -98,15 +98,30 @@ Touched existing files:
 
 ## Security Contract
 
-- Visibility: internal planning and reviewed page execution.
-- Auth model: existing assistant action flow.
-- RBAC: page writes require current page permissions.
-- CSRF: unchanged.
-- Rate-limit bucket: existing assistant bucket.
-- Reject-unknown validation: composed blocks pass widget schema validation.
+- Visibility: internal planning/reviewed assistant execution plus public read
+  runtime/preview for linked detail pages.
+- Auth model:
+  - planning and execute use the existing assistant/admin session flow,
+  - public detail runtime remains unauthenticated read-only,
+  - draft preview stays on the existing preview-token seam.
+- RBAC:
+  - page-like writes keep the current page/content permission model,
+  - detail-page subleaves may widen current content-owned write/publish
+    contracts only through their named owner seams (`detail-page.upsert`,
+    `setting.content-route.upsert`, internal detail-page routes), not through
+    page-local side channels.
+- CSRF: unchanged for assistant/admin writes; not applicable to public read.
+- Rate-limit bucket:
+  - existing assistant bucket for planning/execution,
+  - `public_read` for linked detail runtime/preview.
+- Reject-unknown validation:
+  - composed blocks pass widget schema validation,
+  - widened detail-page/route contracts stay strict at their named owner seams.
 - Anti-abuse: no raw HTML or scripts unless already supported by strict widget
-  contracts.
-- Secret handling: page blocks cannot contain secret-like values.
+  contracts; public detail rendering and embedded forms reuse the current route,
+  runtime, and form hardening instead of introducing parallel public-write flow.
+- Secret handling: page/detail-page blocks cannot contain secret-like values,
+  and preview/runtime diagnostics must not leak tokens or internal binding data.
 
 ## Testing Requirements
 

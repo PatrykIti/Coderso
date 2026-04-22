@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Docs + QA Closure
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-08-01
+**Dependencies:** TASK-190-08-01, TASK-190-08-03
 **Status:** To Do
 
 ---
@@ -28,6 +28,15 @@ No child task files.
 6. Mixed prompt fixture matrix is green.
 7. Live provider matrix is recorded.
 8. Docs, task board, and changelog are synchronized.
+
+Closure sequencing rule:
+
+- this leaf is the final closure pass after the shared fixture/live-matrix work
+  from `TASK-190-08-01` and the authoring-guide / indexing work from
+  `TASK-190-08-03`,
+- umbrella closure must not be marked complete before `_docs/BLUEPRINT_COMPOSER.md`
+  exists and `_docs/README.md` indexes it through the `TASK-190-08-03` owner
+  seam.
 
 ## Security Contract
 

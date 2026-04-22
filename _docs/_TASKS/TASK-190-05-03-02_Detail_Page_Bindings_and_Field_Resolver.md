@@ -52,6 +52,23 @@ type DetailPageBindingSource =
   | { kind: "computed"; resolver: "detailHref" | "relatedItems" | "formContext" };
 ```
 
+Computed resolver owner split:
+
+- `detailHref` reuses the current public route/detail-path owner seam already
+  used by `contentListResolver.ts` / `entryTeaserResolver.ts`; if a shared
+  helper is needed, extract that small helper under the current
+  `core/services/content/*` runtime seam instead of creating a detail-page-local
+  URL formatter.
+- `relatedItems` reuses existing content/listing read owners, preferably the
+  current `resolveListingContentListRuntimeData(...)` /
+  `mapEntriesToContentListItems(...)` path or a small helper extracted from that
+  seam; it must not introduce a second ad-hoc related-items query DSL or raw
+  detail-page-only DB lookup path.
+- `formContext` reuses `resolveFormRuntimeData(...)` plus the existing
+  `form-embed` resolved payload contract; detail-page binding resolution may
+  only adapt that current output into widget props and must not mint a second
+  nonce/captcha/form-access resolver.
+
 Resolution pseudocode:
 
 ```ts
@@ -79,6 +96,9 @@ Rules:
 - Secret-like fields cannot bind to public blocks.
 - Gallery/image transforms normalize media-like payloads.
 - Currency/area/list transforms are deterministic and locale-safe.
+- Computed resolvers stay thin adapters over the existing content/forms runtime
+  contracts above; they do not become hidden owners of route resolution, nonce
+  issuance, form access policy, or listing-query semantics.
 
 ## Security Contract
 
@@ -100,8 +120,13 @@ Rules:
 - Secret-like field binding rejects.
 - Shared dot-path helpers stay compatible with current custom-screen binding
   behavior.
+- `detailHref` stays aligned with the current content-route/detail-path
+  resolution behavior instead of introducing a second URL-building contract.
+- `formContext` mirrors the existing `resolveFormRuntimeData(...)` output and
+  does not bypass current nonce/access/runtime form hardening.
 - Related items resolver clamps limits and filters published-only for public
-  runtime.
+  runtime by reusing the existing listing/content read seam rather than a
+  detail-page-local query path.
 
 ## Documentation Updates Required
 

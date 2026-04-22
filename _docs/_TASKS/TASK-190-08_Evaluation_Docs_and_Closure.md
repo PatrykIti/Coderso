@@ -73,6 +73,7 @@ Owner files:
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
+- `_docs/BLUEPRINT_COMPOSER.md`
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`

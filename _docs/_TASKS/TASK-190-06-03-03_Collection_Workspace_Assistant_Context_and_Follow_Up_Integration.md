@@ -75,6 +75,26 @@ type AssistantActionContext = {
 };
 ```
 
+Exact browser owner split:
+
+- `useAssistantAdminContext.ts` remains the single browser-side assembler of
+  `AssistantActionContext`; this leaf widens that existing hook in place rather
+  than adding a collection-workspace context provider/store.
+- The workspace route itself is the existing source of truth for
+  `collectionWorkspaceHint.contentTypeId`: `buildAssistantAdminRuntimeSnapshot(...)`
+  / `selectedResourceFromRoute(...)` in `useAssistantAdminContext.ts` derive it
+  from `/admin/coderso/engine/:contentTypeId/collection`, so
+  `CollectionWorkspacePage.tsx` must not push the same id through a second
+  browser-local transport.
+- `activeSurfaceContext.ts` remains the only mutable browser-local transport.
+  `DetailTemplateEditorPage.tsx` may publish `activeSurface.kind =
+  "detail-page"` there, and `useAssistantAdminContext.ts` then derives the
+  optional `collectionWorkspaceHint.activeDetailPageId` from that existing
+  active-surface state only when the current route is the collection workspace.
+- If the workspace flow later needs more browser hint fields, widen
+  `useAssistantAdminContext.ts` plus `assistantActionSchemas.ts` together; do
+  not add a second collection-workspace hint store.
+
 Rules:
 
 - workspace route parsing must continue to resolve to
@@ -147,17 +167,19 @@ Rules:
 - workspace-root follow-up uses the same server-owned collection workspace read
   model from `TASK-190-06-03-01`; the browser must not become the source of
   truth for canonical linked resources,
-- `CollectionWorkspacePage.tsx` is the producer for the bounded
-  `collectionWorkspaceHint` in the existing assistant context package: it may
-  publish only `contentTypeId` plus optional `activeDetailPageId`, not a
-  browser-owned copy of the workspace summary,
+- `CollectionWorkspacePage.tsx` remains a route-shell/UI owner only; it may
+  clear stale active-surface state or pass route-local UI state through current
+  component props, but it must not become a second producer/store for
+  `collectionWorkspaceHint`,
 - `DetailTemplateEditorPage.tsx` is the producer for
-  `activeSurface.kind = "detail-page"` through the existing
+  browser-side mutable detail-page identity only through
+  `activeSurface.kind = "detail-page"` on the existing
   `setActiveAssistantSurfaceContext(...)` transport used today by Page /
   WidgetTemplate / CustomScreen editors,
-- those two pages reuse the existing `activeSurfaceContext.ts` browser transport
-  and `useAssistantAdminContext.ts` packaging flow; they must not introduce a
-  second collection-workspace context store, route-local fetch transport, or
+- `useAssistantAdminContext.ts` packages the final bounded
+  `collectionWorkspaceHint` from the existing route snapshot plus current
+  `activeSurface` state; those pages must not introduce a second
+  collection-workspace context store, route-local fetch transport, or
   browser-owned detail-page summary cache,
 - `adminContextService.ts` and `providerPlanningContext.ts` consume only the
   server-hydrated bounded workspace summary in
@@ -224,8 +246,14 @@ Rules:
 - workspace-root follow-up context is rehydrated server-side from the bounded
   collection workspace endpoint/package into
   `AssistantActionContext.collectionWorkspace`, not from browser-only state.
+- `useAssistantAdminContext.ts` derives `collectionWorkspaceHint.contentTypeId`
+  from the existing workspace route parsing instead of a second browser-local
+  store or manual page-level publish step.
 - browser-supplied `collectionWorkspaceHint` stays an identity-only hint and
   never bypasses server hydration into a direct provider/browser summary path.
+- Optional `collectionWorkspaceHint.activeDetailPageId` is derived only from the
+  existing `activeSurfaceContext.ts` transport when the route is the workspace
+  route; unrelated routes must not inherit stale detail-page ids.
 - browser-owned `collectionWorkspace` summary payloads are rejected at the
   schema boundary; the server-owned bounded workspace summary is derived from
   `TASK-190-06-03-01`.

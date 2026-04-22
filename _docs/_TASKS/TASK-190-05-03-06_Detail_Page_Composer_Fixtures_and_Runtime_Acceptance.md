@@ -29,6 +29,10 @@ Sequencing rule:
 - shared `tests/vitest/assistant/blueprint-composition-fixtures.test.ts`
   remains `TASK-190-08`-owned until that later leaf creates the shared matrix
   file; only then may those cases be folded into the broader corpus,
+- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` remains `TASK-190-08`-owned together
+  with the shared live/provider matrix; this leaf should not update live
+  coverage docs while local deterministic fixtures are still the only owner
+  surface,
 - live matrix updates stay deferred until local deterministic fixtures are
   green.
 
@@ -89,6 +93,5 @@ Required local fixtures:
 ## Documentation Updates Required
 
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
-- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/_TASKS/README.md`

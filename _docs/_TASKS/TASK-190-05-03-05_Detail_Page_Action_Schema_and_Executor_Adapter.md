@@ -30,13 +30,17 @@ No child task files.
   need rollback metadata.
 - Update `core/admin/ui/assistant/components/ActionPlanReview.tsx` labels.
 - Update `core/admin/ui/assistant/components/ActionExecutionResult.tsx` labels.
-- Add `tests/vitest/assistant/action-plan-schema.test.ts` cases.
+- Update `tests/vitest/assistant/action-plan-schema.test.ts` with
+  `detail-page.upsert` cases.
 - Update `tests/vitest/assistant/action-family-contracts.test.ts` if the
   reviewed executable permission/notes metadata changes for `detail-page.upsert`
-- Add `tests/vitest/assistant/action-registry.test.ts` cases.
+- Update `tests/vitest/assistant/action-registry.test.ts` with
+  `detail-page.upsert` cases.
 - Update `tests/vitest/assistant/actionPlannerService.test.ts`
-- Add `tests/unit/assistant/actionExecutorService.test.ts` cases.
-- Add `tests/unit/assistant/actionExecutorService.db.test.ts` cases for the
+- Update `tests/unit/assistant/actionExecutorService.test.ts` with
+  `detail-page.upsert` cases.
+- Update `tests/unit/assistant/actionExecutorService.db.test.ts` with
+  `detail-page.upsert` cases for the
   DB-backed persist/idempotency path
 
 ## Assistant Integration Rule
