@@ -3,6 +3,8 @@ import { expect, test } from "vitest";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import {
   getSiteSettings,
+  resolvePostSlugDisplay,
+  resolvePostSlugRouteContext,
   updateSiteSettings,
 } from "../../../core/admin/services/siteSettingsClient";
 
@@ -195,4 +197,52 @@ test("updateSiteSettings omits undefined fields and keeps explicit string values
     resetCsrfToken();
     globalThis.fetch = originalFetch;
   }
+});
+
+test("post slug helpers derive concrete and fallback route hints", () => {
+  const context = resolvePostSlugRouteContext({
+    publicBaseUrl: "https://nextless.test",
+    contentRoutes: [
+      {
+        type: "posts",
+        listPath: "/blog",
+        detailPath: "/blog/:slug",
+        enabled: true,
+      },
+    ],
+  });
+
+  expect(resolvePostSlugDisplay(context, "launch-post")).toEqual({
+    label: "Public URL",
+    value: "https://nextless.test/blog/launch-post",
+    concrete: true,
+  });
+
+  expect(
+    resolvePostSlugDisplay(
+      {
+        publicBaseUrl: null,
+        detailPathPattern: "/blog/:slug",
+      },
+      "launch-post"
+    )
+  ).toEqual({
+    label: "Route hint",
+    value: "/blog/launch-post",
+    concrete: false,
+  });
+
+  expect(
+    resolvePostSlugDisplay(
+      {
+        publicBaseUrl: "https://nextless.test",
+        detailPathPattern: "/blog/:id",
+      },
+      "launch-post"
+    )
+  ).toEqual({
+    label: "Route hint",
+    value: "https://nextless.test/blog/:id",
+    concrete: false,
+  });
 });

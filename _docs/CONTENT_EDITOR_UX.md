@@ -45,3 +45,35 @@ W panelu szczegolow po prawej stronie (Entry Metadata) znajduje sie blok z krotk
 ## Accessibility
 
 Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
+
+## Posts editor
+
+- Toolbar edytora posta rozdziela:
+  - `Add block` dla insertera,
+  - `Outline` dla przegladu dokumentu,
+  - `Details` dla prawego inspectora posta/bloku.
+- `Details` ma stan pressed/expanded zgodny z prawym panelem i nie dzieli
+  odpowiedzialnosci z inserterem.
+- Publish / Update daje jawny success feedback przez shared admin toast.
+- Gdy autosave nie powiedzie sie, editor pokazuje `Autosave paused` z akcja
+  `Retry now`; draft pozostaje dirty do skutecznego zapisu.
+- Revisions drawer ma bounded read-only preview przed restore.
+
+## Post inspector
+
+- Kategorie sa wybierane z listy kategorii, bez wpisywania surowego term ID.
+- Featured image reuse’uje `MediaPicker` i ogranicza wybor do `image/*`.
+- Sekcja `Advanced` pokazuje badge `SEO {done}/3` nawet w stanie zwinietym.
+- Pole slug pokazuje:
+  - concrete public URL tylko gdy istnieje wiarygodny `publicBaseUrl` i route
+    oparty o `:slug`,
+  - w pozostalych przypadkach neutralny route hint zamiast zmyslonego URL.
+
+## Writing toolbar and inserter
+
+- Typography helper copy nie sugeruje nowego modelu stanu; wyjasnia obecny
+  kontrakt toolbaru i rozroznia stan disabled/unavailable.
+- W inserterze:
+  - `Embed` nalezy do kategorii `Media`,
+  - `Separator` nalezy do kategorii `Text`,
+  - search pozostaje ograniczony do aktywnej kategorii.

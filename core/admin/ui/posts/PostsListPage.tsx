@@ -3,6 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -16,6 +23,11 @@ import {
   type PostSummary,
   unpublishPost,
 } from "@/services/postsClient";
+import {
+  getSiteSettings,
+  resolvePostSlugRouteContext,
+  type PostSlugRouteContext,
+} from "@/services/siteSettingsClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
@@ -69,6 +81,16 @@ export function PostsListPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<"" | "publish" | "unpublish" | "delete">("");
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [bulkFeedback, setBulkFeedback] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const [slugRouteContext, setSlugRouteContext] = useState<PostSlugRouteContext>(() =>
+    resolvePostSlugRouteContext(null)
+  );
   const hasHydratedRef = useRef(hasInitialCache);
 
   const refresh = useCallback(
@@ -126,6 +148,23 @@ export function PostsListPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const settings = await getSiteSettings();
+        if (!active) return;
+        setSlugRouteContext(resolvePostSlugRouteContext(settings));
+      } catch {
+        if (!active) return;
+        setSlugRouteContext(resolvePostSlugRouteContext(null));
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const authorOptions = useMemo(() => {
     const map = new Map<string, string>();
     items.forEach((item) => {
@@ -141,6 +180,29 @@ export function PostsListPage() {
     () => filterPosts(items, searchQuery, statusFilter, authorFilter),
     [items, searchQuery, statusFilter, authorFilter]
   );
+  const visibleIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
+  const isAllSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isIndeterminate = selectedIds.length > 0 && !isAllSelected;
+
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => visibleIds.includes(id)));
+  }, [visibleIds]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds([]);
+    setBulkAction("");
+  }, []);
+
+  const handleTogglePost = useCallback((id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((entryId) => entryId !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleToggleAll = useCallback(() => {
+    setSelectedIds(isAllSelected ? [] : visibleIds);
+  }, [isAllSelected, visibleIds]);
 
   const handleCreate = async (payload: {
     title: string;
@@ -194,6 +256,7 @@ export function PostsListPage() {
 
   const handlePublish = async (id: string) => {
     setError(null);
+    setBulkFeedback(null);
     try {
       await publishPost(id);
       await refresh({ force: true, background: true });
@@ -208,6 +271,7 @@ export function PostsListPage() {
 
   const handleUnpublish = async (id: string) => {
     setError(null);
+    setBulkFeedback(null);
     try {
       await unpublishPost(id);
       await refresh({ force: true, background: true });
@@ -222,6 +286,7 @@ export function PostsListPage() {
 
   const handleDuplicate = async (id: string) => {
     setError(null);
+    setBulkFeedback(null);
     try {
       const clone = await duplicatePost(id);
       navigate(`/coderso/posts/${encodeURIComponent(clone.id)}`);
@@ -240,6 +305,7 @@ export function PostsListPage() {
       if (!confirmed) return;
     }
     setError(null);
+    setBulkFeedback(null);
     try {
       await deletePost(id);
       await refresh({ force: true, background: true });
@@ -249,6 +315,53 @@ export function PostsListPage() {
       } else {
         setError("Failed to delete post.");
       }
+    }
+  };
+
+  const handleBulkApply = async () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+
+    if (bulkAction === "delete" && typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Delete ${selectedIds.length} post${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`
+      );
+      if (!confirmed) return;
+    }
+
+    setError(null);
+    setBulkFeedback(null);
+    setIsBulkWorking(true);
+
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => {
+          if (bulkAction === "publish") return publishPost(id);
+          if (bulkAction === "unpublish") return unpublishPost(id);
+          return deletePost(id);
+        })
+      );
+
+      const failedCount = results.filter((result) => result.status === "rejected").length;
+      const successCount = results.length - failedCount;
+
+      await refresh({ force: true, background: true });
+      clearSelection();
+
+      if (failedCount > 0) {
+        setError(
+          failedCount === results.length
+            ? `Bulk ${bulkAction} failed for ${failedCount} selected post${failedCount === 1 ? "" : "s"}.`
+            : `Bulk ${bulkAction} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
+        );
+        return;
+      }
+
+      setBulkFeedback({
+        title: "Bulk action completed",
+        message: `Successfully applied ${bulkAction} to ${successCount} post${successCount === 1 ? "" : "s"}.`,
+      });
+    } finally {
+      setIsBulkWorking(false);
     }
   };
 
@@ -294,11 +407,54 @@ export function PostsListPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        {bulkFeedback ? (
+          <Alert>
+            <AlertTitle>{bulkFeedback.title}</AlertTitle>
+            <AlertDescription>{bulkFeedback.message}</AlertDescription>
+          </Alert>
+        ) : null}
+        {selectedIds.length > 0 ? (
+          <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold text-foreground">
+                {selectedIds.length} post{selectedIds.length === 1 ? "" : "s"} selected
+              </span>
+              <span className="text-muted-foreground">
+                Apply a bulk action to the visible selection.
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={bulkAction}
+                onValueChange={(value) =>
+                  setBulkAction(value as "" | "publish" | "unpublish" | "delete")
+                }
+              >
+                <SelectTrigger className="h-8 w-full sm:w-[220px]">
+                  <SelectValue placeholder="Bulk actions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="publish">Publish</SelectItem>
+                  <SelectItem value="unpublish">Move to Draft</SelectItem>
+                  <SelectItem value="delete">Delete</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={handleBulkApply} disabled={!bulkAction || isBulkWorking}>
+                {isBulkWorking ? "Applying..." : "Apply"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                Clear selection
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <PageFilters
           search={searchQuery}
           status={statusFilter}
           author={authorFilter}
           authorOptions={authorOptions}
+          searchPlaceholder="Search posts by title..."
+          searchAriaLabel="Search posts by title"
           onSearchChange={setSearchQuery}
           onStatusChange={setStatusFilter}
           onAuthorChange={setAuthorFilter}
@@ -315,6 +471,11 @@ export function PostsListPage() {
                 ? "No posts match your current filters."
                 : undefined
             }
+            selectedIds={selectedIds}
+            isAllSelected={isAllSelected}
+            isIndeterminate={isIndeterminate}
+            onToggleAll={handleToggleAll}
+            onTogglePost={handleTogglePost}
             onEdit={handleEdit}
             onPreview={handlePreview}
             onPublish={handlePublish}
@@ -333,6 +494,7 @@ export function PostsListPage() {
         onOpenAfterCreateChange={handleOpenAfterCreateChange}
         isSubmitting={isSubmitting}
         error={error}
+        slugRouteContext={slugRouteContext}
       />
     </AdminShell>
   );

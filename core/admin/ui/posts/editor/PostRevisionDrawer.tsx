@@ -1,9 +1,11 @@
 import { X } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { PostRevision } from "@/services/postsClient";
+import { postRichTextToPlainText } from "../../../../services/posts/editor/postRichTextSerializer";
 
 type PostRevisionDrawerProps = {
   open: boolean;
@@ -34,6 +36,33 @@ const countBlocks = (revision: PostRevision) => {
   return Array.isArray(blocks) ? blocks.length : 0;
 };
 
+const collectPreviewText = (value: unknown): string => {
+  if (typeof value === "string") return postRichTextToPlainText(value);
+  if (Array.isArray(value)) return value.map((item) => collectPreviewText(item)).join(" ");
+  if (!value || typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+  const directText = typeof record.text === "string" ? postRichTextToPlainText(record.text) : "";
+  const htmlText = typeof record.html === "string" ? postRichTextToPlainText(record.html) : "";
+  const contentText = collectPreviewText(record.content);
+  const nodesText = collectPreviewText(record.nodes);
+  const blocksText = collectPreviewText(record.blocks);
+  const excerptText =
+    typeof record.excerpt === "string" ? postRichTextToPlainText(record.excerpt) : "";
+
+  return [directText, htmlText, excerptText, contentText, nodesText, blocksText]
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(" ");
+};
+
+const resolveRevisionPreview = (revision: PostRevision) => {
+  const text = collectPreviewText(revision.data?.document).replace(/\s+/g, " ").trim();
+  if (text.length === 0) return "No preview available for this revision.";
+  if (text.length <= 180) return text;
+  return `${text.slice(0, 177)}...`;
+};
+
 export function PostRevisionDrawer({
   open,
   onOpenChange,
@@ -43,6 +72,8 @@ export function PostRevisionDrawer({
   restoringId,
   onRestore,
 }: PostRevisionDrawerProps) {
+  const [previewRevisionId, setPreviewRevisionId] = useState<string | null>(null);
+
   const handleRestore = (revisionId: string) => {
     if (typeof window !== "undefined") {
       const confirmed = window.confirm(
@@ -107,7 +138,23 @@ export function PostRevisionDrawer({
                         {countBlocks(revision)} blocks
                       </div>
                     </div>
-                    <div className="flex justify-end">
+                    {previewRevisionId === revision.id ? (
+                      <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+                        {resolveRevisionPreview(revision)}
+                      </div>
+                    ) : null}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setPreviewRevisionId((current) =>
+                            current === revision.id ? null : revision.id
+                          )
+                        }
+                      >
+                        {previewRevisionId === revision.id ? "Hide preview" : "Preview"}
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"

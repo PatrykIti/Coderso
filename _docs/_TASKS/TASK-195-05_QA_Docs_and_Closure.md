@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-195-01, TASK-195-02, TASK-195-03, TASK-195-04
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
@@ -93,3 +93,18 @@ Out of scope:
 4. Any still-reproducible server/runtime autosave failure or broader
    capability gap outside the current leaf scopes is captured in a linked
    follow-up task file with named owners and evidence before closure.
+
+## Completion Notes (2026-04-22)
+
+- TASK-195 leaves were validated in the shipped Vitest lane plus repo-required
+  lint/typecheck checks.
+- Docs, task board, and changelog were synchronized with the final Posts QA
+  contract.
+- No separate Bun route follow-up was required because this wave did not widen
+  posts route/service contracts.
+
+## Validation (2026-04-22)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui/post-editor-layout-hook-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-richtext-inline-typography-selection.test.ts tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx tests/vitest/ui-integration/post-editor-keyboard-a11y.test.tsx tests/vitest/ui-integration/post-autosave-flow.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/posts/post-editor-preferences.test.ts tests/vitest/posts/post-editor-layout-state.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/taxonomyClient.test.ts tests/vitest/admin/adminApp.test.tsx`

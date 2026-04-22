@@ -27,3 +27,18 @@ Gdy zaznaczysz wpisy na liscie:
 
 - Zaznaczenie dotyczy wpisow widocznych po filtrach.
 - W widoku grid selection jest czyszczone, aby uniknac ukrytych zaznaczen.
+
+## Posts list
+
+- Posts korzysta z tego samego wzorca filtrowania i bulk actions co inne listy
+  admina, ale z resource-specific copy:
+  - search placeholder: `Search posts by title...`
+  - accessible search label: `Search posts by title`
+- Checkbox w naglowku zaznacza tylko aktualnie widoczne wiersze po filtrach.
+- Toolbar bulk actions pojawia sie dopiero po zaznaczeniu co najmniej jednego
+  posta i obsluguje:
+  - Publish
+  - Move to Draft
+  - Delete
+- Po bulk action selection jest czyszczone, lista odswiezana, a wynik surfacowany
+  jako success lub partial-failure message.

@@ -57,6 +57,11 @@ const renderTags = (tags: string[] | undefined) => {
 export type PostsTableProps = {
   items: PostSummary[];
   emptyMessage?: string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onTogglePost?: (id: string) => void;
   onEdit: (id: string) => void;
   onPreview: (id: string) => void;
   onPublish: (id: string) => void;
@@ -68,6 +73,11 @@ export type PostsTableProps = {
 export function PostsTable({
   items,
   emptyMessage,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onTogglePost,
   onEdit,
   onPreview,
   onPublish,
@@ -81,7 +91,11 @@ export function PostsTable({
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="w-10 pl-4">
-              <Checkbox aria-label="Select all posts" />
+              <Checkbox
+                aria-label="Select all posts"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
             </TableHead>
             <TableHead className="min-w-[12rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Post title
@@ -117,10 +131,16 @@ export function PostsTable({
               </TableCell>
             </TableRow>
           ) : null}
-          {items.map((post) => (
-            <TableRow key={post.id}>
+          {items.map((post) => {
+            const isSelected = selectedIds.includes(post.id);
+            return (
+            <TableRow key={post.id} className={isSelected ? "bg-muted/30" : undefined}>
               <TableCell className="pl-4">
-                <Checkbox aria-label={`Select ${post.title}`} />
+                <Checkbox
+                  aria-label={`Select ${post.title}`}
+                  checked={isSelected}
+                  onCheckedChange={() => onTogglePost?.(post.id)}
+                />
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
@@ -188,7 +208,8 @@ export function PostsTable({
                 />
               </TableCell>
             </TableRow>
-          ))}
+          );
+          })}
         </TableBody>
       </Table>
     </div>

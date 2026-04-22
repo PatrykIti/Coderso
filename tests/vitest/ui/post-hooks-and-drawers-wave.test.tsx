@@ -448,7 +448,14 @@ test("revision drawers render states and gate restore/discard with confirmation"
             version: 3,
             createdAt: "2026-03-06T12:00:00.000Z",
             createdBy: { name: "Admin", email: "admin@example.com" },
-            data: { document: { blocks: [{ id: "a" }, { id: "b" }] } },
+            data: {
+              document: {
+                blocks: [
+                  { id: "a", content: "<p>First preview block</p>" },
+                  { id: "b", content: "<p>Second preview block</p>" },
+                ],
+              },
+            },
           } as never,
         ]}
         isLoading={false}
@@ -492,11 +499,13 @@ test("revision drawers render states and gate restore/discard with confirmation"
   try {
     expect(view.container.textContent).toContain("Version 3");
     expect(view.container.textContent).toContain("2 blocks");
+    expect(view.container.textContent).toContain("Preview");
     expect(view.container.textContent).toContain("Not saved");
     expect(view.container.textContent).toContain("Title: Landing");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     act(() => {
+      buttons.find((button) => button.textContent === "Preview")?.click();
       buttons.find((button) => button.textContent === "Restore")?.click();
       buttons.find((button) => button.textContent === "Discard")?.click();
       buttons
@@ -504,6 +513,7 @@ test("revision drawers render states and gate restore/discard with confirmation"
         ?.click();
     });
 
+    expect(view.container.textContent).toContain("First preview block");
     expect(onRestorePost).toHaveBeenCalledWith("post-rev-1");
     expect(onDiscardPage).toHaveBeenCalledWith("page-rev-2");
     expect(onRestorePage).not.toHaveBeenCalled();

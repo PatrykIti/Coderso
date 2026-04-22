@@ -275,6 +275,46 @@ vi.mock("@/services/userSettingsClient", () => ({
   }),
 }));
 
+vi.mock("@/services/siteSettingsClient", () => ({
+  getSiteSettings: vi.fn(async () => ({
+    adminBaseUrl: null,
+    publicBaseUrl: "https://nextless.test",
+    adminPath: "/admin",
+    adminRedirectEnabled: false,
+    homepageId: null,
+    notFoundPageId: null,
+    previewEnabled: true,
+    cacheTtlSeconds: 30,
+    contentRoutes: [
+      {
+        type: "posts",
+        listPath: "/blog",
+        detailPath: "/blog/:slug",
+        enabled: true,
+      },
+    ],
+  })),
+  resolvePostSlugRouteContext: (settings: {
+    publicBaseUrl?: string | null;
+    contentRoutes?: Array<{ detailPath: string; enabled: boolean; type: string }>;
+  } | null) => ({
+    publicBaseUrl: settings?.publicBaseUrl ?? null,
+    detailPathPattern:
+      settings?.contentRoutes?.find((route) => route.enabled)?.detailPath ?? "/post/:slug",
+  }),
+  resolvePostSlugDisplay: (
+    context: { publicBaseUrl: string | null; detailPathPattern: string },
+    slug: string
+  ) => ({
+    label: context.publicBaseUrl ? "Public URL" : "Route hint",
+    value:
+      context.publicBaseUrl && slug
+        ? `${context.publicBaseUrl}${context.detailPathPattern.replace(":slug", slug)}`
+        : context.detailPathPattern,
+    concrete: Boolean(context.publicBaseUrl && slug),
+  }),
+}));
+
 vi.mock("@/services/pagesClient", () => ({
   getCachedPages: () =>
     pagePostState.cachedPagesOverride === undefined
@@ -468,6 +508,11 @@ vi.mock("../../../core/admin/ui/posts/PostsTable", () => ({
   PostsTable: ({
     items,
     emptyMessage,
+    selectedIds = [],
+    isAllSelected = false,
+    isIndeterminate = false,
+    onToggleAll,
+    onTogglePost,
     onEdit,
     onPreview,
     onPublish,
@@ -477,6 +522,11 @@ vi.mock("../../../core/admin/ui/posts/PostsTable", () => ({
   }: {
     items: Array<{ id: string; title: string }>;
     emptyMessage?: string;
+    selectedIds?: string[];
+    isAllSelected?: boolean;
+    isIndeterminate?: boolean;
+    onToggleAll?: () => void;
+    onTogglePost?: (id: string) => void;
     onEdit: (id: string) => void;
     onPreview: (id: string) => void;
     onPublish: (id: string) => void;
@@ -486,8 +536,23 @@ vi.mock("../../../core/admin/ui/posts/PostsTable", () => ({
   }) => (
     <div>
       <span>{emptyMessage ?? `posts:${items.length}`}</span>
+      <input
+        type="checkbox"
+        aria-label="Select all posts"
+        checked={isAllSelected}
+        data-indeterminate={String(isIndeterminate)}
+        onChange={() => onToggleAll?.()}
+      />
       {items.map((item) => (
-        <div key={item.id}>{item.title}</div>
+        <div key={item.id}>
+          <input
+            type="checkbox"
+            aria-label={`Select ${item.title}`}
+            checked={selectedIds.includes(item.id)}
+            onChange={() => onTogglePost?.(item.id)}
+          />
+          {item.title}
+        </div>
       ))}
       <button type="button" onClick={() => onEdit(items[0]!.id)}>
         edit-post-row
@@ -592,6 +657,10 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
         openAfterCreate={false}
         onOpenAfterCreateChange={onOpenAfterCreateChange}
         error="Post error"
+        slugRouteContext={{
+          publicBaseUrl: "https://nextless.test",
+          detailPathPattern: "/blog/:slug",
+        }}
       />
     </>
   );
@@ -625,6 +694,8 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
       );
       buttons.find((button) => button.textContent === "Create Post")?.click();
     });
+
+    expect(view.container.textContent).toContain("https://nextless.test/blog/release-notes");
 
     act(() => {
       toggles[1]?.click();
@@ -661,6 +732,8 @@ test("PageFilters forwards query and filter changes", async () => {
       status="draft"
       author="any"
       authorOptions={[{ value: "author-1", label: "Admin" }]}
+      searchPlaceholder="Search posts by title..."
+      searchAriaLabel="Search posts by title"
       onSearchChange={onSearchChange}
       onStatusChange={onStatusChange}
       onAuthorChange={onAuthorChange}
@@ -677,6 +750,8 @@ test("PageFilters forwards query and filter changes", async () => {
       setSelectValue(selects[1], "author-1");
     });
 
+    expect(input?.getAttribute("placeholder")).toBe("Search posts by title...");
+    expect(input?.getAttribute("aria-label")).toBe("Search posts by title");
     expect(onSearchChange).toHaveBeenCalledWith("pricing");
     expect(onStatusChange).toHaveBeenCalledWith("published");
     expect(onAuthorChange).toHaveBeenCalledWith("author-1");
@@ -1040,8 +1115,17 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     ]);
 
     const searchInput = view.container.querySelector(
-      'input[placeholder="Search pages by title..."]'
+      'input[placeholder="Search posts by title..."]'
     );
+    const selectAll = view.container.querySelector('input[aria-label="Select all posts"]');
+
+    act(() => {
+      if (selectAll instanceof HTMLInputElement) {
+        selectAll.click();
+      }
+    });
+
+    expect(view.container.textContent).toContain("2 posts selected");
 
     act(() => {
       setInputValue(searchInput ?? undefined, "unknown");
@@ -1049,6 +1133,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     expect(view.container.textContent).not.toContain("Product launch");
     expect(view.container.textContent).not.toContain("Roadmap");
+    expect(view.container.textContent).not.toContain("posts selected");
 
     act(() => {
       setInputValue(searchInput ?? undefined, "campaign");
@@ -1056,6 +1141,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     expect(view.container.textContent).toContain("Product launch");
     expect(view.container.textContent).not.toContain("Roadmap");
+    expect(view.container.textContent).not.toContain("posts selected");
 
     await act(async () => {
       pagePostState.postSubscribers.forEach((handler) =>
@@ -1123,6 +1209,110 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
         .querySelector("[data-has-open-change='true']")
         ?.getAttribute("data-sheet-open")
     ).toBe("false");
+  } finally {
+    view.cleanup();
+    Reflect.deleteProperty(window, "confirm");
+  }
+});
+
+test("PostsListPage bulk toolbar applies visible-scope actions and clears selection", async () => {
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => true),
+  });
+
+  pagePostState.posts = [
+    {
+      ...pagePostState.posts[0],
+      id: "post-1",
+      title: "Alpha",
+      slug: "alpha",
+      tags: ["alpha"],
+    },
+    {
+      ...pagePostState.posts[0],
+      id: "post-2",
+      title: "Beta",
+      slug: "beta",
+      tags: ["beta"],
+    },
+  ];
+
+  const { PostsListPage } = await import(
+    "../../../core/admin/ui/posts/PostsListPage"
+  );
+
+  const view = mount(<PostsListPage />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const selectAll = view.container.querySelector('input[aria-label="Select all posts"]');
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search posts by title..."]'
+    );
+
+    act(() => {
+      if (selectAll instanceof HTMLInputElement) {
+        selectAll.click();
+      }
+    });
+
+    expect(view.container.textContent).toContain("2 posts selected");
+
+    const bulkSelect = Array.from(view.container.querySelectorAll("select")).find((select) =>
+      select.querySelector('option[value="publish"]')
+    );
+
+    act(() => {
+      setSelectValue(bulkSelect, "publish");
+    });
+
+    await act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Apply")
+        ?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.publishPostCalls).toEqual(["post-1", "post-2"]);
+    expect(view.container.textContent).toContain("Bulk action completed");
+    expect(view.container.textContent).not.toContain("2 posts selected");
+
+    act(() => {
+      setInputValue(searchInput ?? undefined, "beta");
+    });
+
+    const filteredSelectAll = view.container.querySelector('input[aria-label="Select all posts"]');
+
+    act(() => {
+      if (filteredSelectAll instanceof HTMLInputElement) {
+        filteredSelectAll.click();
+      }
+    });
+
+    expect(view.container.textContent).toContain("1 post selected");
+
+    const filteredBulkSelect = Array.from(view.container.querySelectorAll("select")).find((select) =>
+      select.querySelector('option[value="delete"]')
+    );
+
+    act(() => {
+      setSelectValue(filteredBulkSelect, "delete");
+    });
+
+    await act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Apply")
+        ?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.deletePostCalls).toEqual(["post-2"]);
+    expect(view.container.textContent).not.toContain("1 post selected");
   } finally {
     view.cleanup();
     Reflect.deleteProperty(window, "confirm");

@@ -80,7 +80,7 @@ export const POST_BLOCK_CATALOG: PostBlockCatalogItem[] = [
     type: "separator",
     label: "Separator",
     description: "Horizontal divider between sections.",
-    category: "media",
+    category: "text",
     keywords: ["divider", "separator", "line"],
   },
   {
@@ -101,7 +101,7 @@ export const POST_BLOCK_CATALOG: PostBlockCatalogItem[] = [
     type: "embed",
     label: "Embed",
     description: "External media embed URL.",
-    category: "interactive",
+    category: "media",
     keywords: ["embed", "video", "iframe", "external"],
   },
 ];

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 78 tasks
+- **To Do:** 63 tasks
 - **In Progress:** 5 tasks
-- **Done:** 963 tasks
+- **Done:** 978 tasks
 
 ---
 
@@ -38,21 +38,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-195 | Posts Admin QA Recovery and Authoring UX Polish | High | Large | QA-driven Posts fix wave for list bulk actions, editor confidence, inspector affordances, and writing-surface clarity |
-| TASK-195-01 | Posts List Bulk Actions and Filter Terminology | High | Large | Critical list reliability: visible-scope selection, bulk apply flow, and Posts-specific shared filter copy |
-| TASK-195-01-01 | Posts Table Selection State and Bulk Toolbar | High | Medium | Technical leaf: controlled row/header checkboxes, selected-count toolbar, and filtered-scope selection rules |
-| TASK-195-01-02 | Bulk Apply Flow and Shared Filter Copy | High | Medium | Technical leaf: bulk publish/unpublish/delete apply flow, aggregated results, refresh, and shared filter props for Posts wording |
-| TASK-195-02 | Post Editor Shell Discoverability, Feedback, and Revision Confidence | High | Large | Inspector discoverability, explicit publish/update confidence, autosave pause surfacing, and revision preview before restore |
-| TASK-195-02-01 | Inspector Discoverability and Toolbar Action Semantics | High | Medium | Technical leaf: keep Add block vs Details semantics explicit and close hidden-inspector gaps without breaking focus-mode preferences |
-| TASK-195-02-02 | Publish Update Feedback and Autosave Failure Surfacing | High | Medium | Technical leaf: explicit success feedback plus actionable autosave pause/retry states instead of console-only confidence |
-| TASK-195-02-03 | Revision Preview Before Restore | Medium | Medium | Technical leaf: bounded read-only revision preview before restore confirmation |
-| TASK-195-03 | Post Inspector Taxonomy, Media, and SEO Affordances | High | Medium | Replace raw ID inputs with picker-backed affordances and expose SEO/slug context more clearly |
-| TASK-195-03-01 | Category and Featured Image Picker Surfaces | High | Medium | Technical leaf: reuse taxonomy overview and media picker instead of raw category/media IDs |
-| TASK-195-03-02 | SEO Visibility and Slug URL Context | Medium | Small | Technical leaf: collapsed SEO status summary and public URL context for slug editing without changing stored slug semantics |
-| TASK-195-04 | Writing Toolbar and Block Inserter Clarity | Medium | Medium | Typography affordance cleanup, Media tab taxonomy cleanup, and category-search regression coverage |
-| TASK-195-04-01 | Typography Control Affordance and Disabled-State Clarity | Medium | Small | Technical leaf: replace vague inherited-typography copy with explicit affordances and read-only state cues |
-| TASK-195-04-02 | Block Inserter Media Grouping and Category Search Regression | Medium | Medium | Technical leaf: regroup media-facing blocks and lock category-scoped search behavior with regression tests |
-| TASK-195-05 | QA, Docs, and Closure | Medium | Medium | Final Posts QA validation, docs parity, changelog, and board closure for TASK-195 |
+| TASK-196 | Menus Admin IA, Reliability, and Editor Clarity | High | Large | QA-driven Menus fix wave for list-first IA, safer tree editing, and clearer editor feedback |
+| TASK-196-01 | Menus List Screen and Single-Editor Routing | High | Large | Split Menus into `/menus` list and `/menus/:id` editor while removing the in-editor menu switcher |
+| TASK-196-01-01 | Menus List Page, Table, and Create Flow | High | Medium | Technical leaf: list-first Menus surface, existing create dialog on list, and explicit row navigation into editor |
+| TASK-196-01-02 | Single-Menu Editor Route, Back Navigation, and Cache Scope | High | Medium | Technical leaf: route-selected editor only, back link to list, and no active-menu dropdown state |
+| TASK-196-02 | Menu Item Deletion Safety and Tree Readability | High | Medium | Replace native confirm, surface real hierarchy, and clarify drag/edit/delete affordances |
+| TASK-196-02-01 | Delete Confirmation Dialog and Descendant Context | High | Medium | Technical leaf: branded destructive dialog with item label plus descendant impact |
+| TASK-196-02-02 | Nested Tree Indentation and Row Affordance Clarity | High | Medium | Technical leaf: stronger submenu hierarchy plus clearer drag/edit/delete semantics on real tree rows |
+| TASK-196-03 | Editor Feedback and Field Guidance | Medium | Medium | Save visibility and pragmatic guidance for technical-looking Menus fields |
+| TASK-196-03-01 | Save Feedback and Dirty-State Visibility | Medium | Medium | Technical leaf: explicit success/failure confirmation on save while keeping dirty-state context |
+| TASK-196-03-02 | Location and Icon Guidance Without Contract Expansion | Medium | Small | Technical leaf: clearer `Location` and `Icon Name` help without changing the stored string contract |
+| TASK-196-04 | QA, Docs, and Closure | Medium | Medium | Final Menus report replay, docs/cache map sync, changelog, and board closure for TASK-196 |
 | TASK-194 | Pages Admin UX Reliability and Polish | High | Large | QA-driven Pages admin fix wave for bulk actions, dialog accessibility, editor feedback, disabled-state clarity, runtime preview recovery, and builder discoverability |
 | TASK-194-01 | Page List Bulk Actions and Author Consistency | High | Large | Critical list reliability: visible-scope selection, bulk apply flow, and create-path author/cache correctness |
 | TASK-194-01-01 | Page Table Selection State and Bulk Bar | High | Medium | Technical leaf: controlled row/header checkboxes, selected-count toolbar, and filtered-scope selection rules |
@@ -146,6 +142,21 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-196-01 | Menus List Screen and Single-Editor Routing | High | Large | Done: Menus split into `/menus` list and `/menus/:id` editor with route-scoped detail ownership |
 | TASK-196-01-02 | Single-Menu Editor Route, Back Navigation, and Cache Scope | High | Medium | Done: editor now loads one route-selected menu, keeps back navigation visible, and drops cross-menu switching |
 | TASK-196-01-01 | Menus List Page, Table, and Create Flow | High | Medium | Done: Menus list page now owns selection and creation before users enter the editor |
+| TASK-195 | Posts Admin QA Recovery and Authoring UX Polish | High | Large | Done: Posts list bulk actions, editor confidence, inspector affordances, and writing-surface clarity aligned with the QA report |
+| TASK-195-05 | QA, Docs, and Closure | Medium | Medium | Done: final targeted validation, docs parity, changelog, and board closure synced for TASK-195 |
+| TASK-195-04-02 | Block Inserter Media Grouping and Category Search Regression | Medium | Medium | Done: `Embed` moved to Media, `Separator` moved to Text, and category-scoped search stayed deterministic |
+| TASK-195-04-01 | Typography Control Affordance and Disabled-State Clarity | Medium | Small | Done: typography helper copy now matches the current toolbar contract and disabled-state behavior |
+| TASK-195-04 | Writing Toolbar and Block Inserter Clarity | Medium | Medium | Done: toolbar helper copy and block inserter grouping/search are clearer and regression-covered |
+| TASK-195-03-02 | SEO Visibility and Slug URL Context | Medium | Small | Done: collapsed SEO summary plus slug URL/route hint context shipped for create and edit flows |
+| TASK-195-03-01 | Category and Featured Image Picker Surfaces | High | Medium | Done: category selection and image-only featured image picking replaced raw ID entry |
+| TASK-195-03 | Post Inspector Taxonomy, Media, and SEO Affordances | High | Medium | Done: picker-backed inspector controls and clearer SEO/slug affordances shipped |
+| TASK-195-02-03 | Revision Preview Before Restore | Medium | Medium | Done: revision drawer now shows bounded preview before restore |
+| TASK-195-02-02 | Publish Update Feedback and Autosave Failure Surfacing | High | Medium | Done: publish/update success toasts and actionable autosave retry surfacing shipped |
+| TASK-195-02-01 | Inspector Discoverability and Toolbar Action Semantics | High | Medium | Done: Details semantics and shell discoverability are explicit without forking layout state |
+| TASK-195-02 | Post Editor Shell Discoverability, Feedback, and Revision Confidence | High | Large | Done: shell confidence and revision preview gaps from QA are closed |
+| TASK-195-01-02 | Bulk Apply Flow and Shared Filter Copy | High | Medium | Done: bulk publish/unpublish/delete flow and Posts-specific filter copy are live |
+| TASK-195-01-01 | Posts Table Selection State and Bulk Toolbar | High | Medium | Done: controlled selection and filtered-scope bulk toolbar shipped for posts table |
+| TASK-195-01 | Posts List Bulk Actions and Filter Terminology | High | Large | Done: Posts list now supports visible-scope selection, bulk apply flow, and correct shared filter wording |
 | TASK-193 | Pages Bun Route Timeout Stabilization | Medium | Small | Done: DB-backed Pages route lifecycle coverage now uses an explicit Bun test timeout without changing route behavior |
 | TASK-192 | Assistant Admin Menu Resource Catalog Repair | High | Medium | Done: assistant catalog exposes posts, entries, full menus, media, commerce, solution kits, and screens for read-only inspection |
 | TASK-191 | Pages Test Coverage Hardening | High | Large | Done: Pages route/runtime/client/cache/builder coverage hardened with final QA and coverage validation |

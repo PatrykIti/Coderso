@@ -76,6 +76,8 @@ export function PostEditorHeader({
   const inserterShortcut = formatPostEditorShortcutLabel("toggleInserter");
   const outlineShortcut = formatPostEditorShortcutLabel("toggleOutline");
   const detailsShortcut = formatPostEditorShortcutLabel("toggleDetails");
+  const outlineLabel = outlineVisible ? "Hide document overview" : "Show document overview";
+  const detailsLabel = detailsOpen ? "Hide post details" : "Show post details";
   const leftContext =
     breadcrumbs ?? (
       <nav
@@ -180,13 +182,13 @@ export function PostEditorHeader({
             variant={outlineVisible ? "secondary" : "outline"}
             size="sm"
             onClick={onToggleOutline}
-            aria-label="Toggle document overview"
+            aria-label={outlineLabel}
             aria-pressed={outlineVisible}
             aria-expanded={outlineVisible}
             aria-controls="post-editor-document-overview"
             aria-keyshortcuts={formatPostEditorShortcutAria("toggleOutline")}
             data-post-editor-shortcut={outlineShortcut}
-            title={`Document overview (${outlineShortcut})`}
+            title={`${outlineLabel} (${outlineShortcut})`}
           >
             <ListTree className="h-4 w-4" />
             Outline
@@ -194,16 +196,16 @@ export function PostEditorHeader({
           <Button
             ref={detailsButtonRef}
             type="button"
-            variant="outline"
+            variant={detailsOpen ? "secondary" : "outline"}
             size="sm"
             onClick={onToggleDetails}
-            aria-label="Toggle post details"
+            aria-label={detailsLabel}
             aria-pressed={detailsOpen}
             aria-expanded={detailsOpen}
             aria-controls="post-editor-details"
             aria-keyshortcuts={formatPostEditorShortcutAria("toggleDetails")}
             data-post-editor-shortcut={detailsShortcut}
-            title={`Post and block details (${detailsShortcut})`}
+            title={`${detailsLabel} (${detailsShortcut})`}
           >
             <Sidebar className="h-4 w-4" />
             Details

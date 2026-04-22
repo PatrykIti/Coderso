@@ -21,6 +21,17 @@ export type SiteSettingsResponse = {
 
 export type SiteSettingsUpdate = Partial<SiteSettingsResponse>;
 
+export type PostSlugRouteContext = {
+  publicBaseUrl: string | null;
+  detailPathPattern: string;
+};
+
+export type PostSlugDisplay = {
+  label: "Public URL" | "Route hint";
+  value: string;
+  concrete: boolean;
+};
+
 const normalizeOptionalString = (value: unknown) => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -45,6 +56,24 @@ const normalizeOptionalIdInput = (value: string | null | undefined) => {
   if (value === null) return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeBaseUrl = (value: string | null) => {
+  if (!value) return null;
+  return value.endsWith("/") ? value.slice(0, -1) : value;
+};
+
+const resolvePostDetailPathPattern = (routes: SiteContentRoute[]) => {
+  const route = routes.find(
+    (item) => item.enabled && (item.type === "post" || item.type === "posts")
+  );
+  return route?.detailPath ?? "/post/:slug";
+};
+
+const joinBaseAndPath = (baseUrl: string, path: string) => {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? "";
+  if (path.startsWith("/")) return `${normalizedBaseUrl}${path}`;
+  return `${normalizedBaseUrl}/${path}`;
 };
 
 const normalizeContentRoutes = (value: unknown): SiteContentRoute[] => {
@@ -88,6 +117,44 @@ const resolveSiteSettings = (
       Math.floor(normalizeOptionalNumber(payload["site.cacheTtlSeconds"], 30))
     ),
     contentRoutes: normalizeContentRoutes(payload["site.contentRoutes"]),
+  };
+};
+
+export const resolvePostSlugRouteContext = (
+  settings: Pick<SiteSettingsResponse, "publicBaseUrl" | "contentRoutes"> | null | undefined
+): PostSlugRouteContext => ({
+  publicBaseUrl: settings?.publicBaseUrl ?? null,
+  detailPathPattern: resolvePostDetailPathPattern(settings?.contentRoutes ?? []),
+});
+
+export const resolvePostSlugDisplay = (
+  context: PostSlugRouteContext,
+  slug: string
+): PostSlugDisplay => {
+  const normalizedSlug = slug.trim();
+  const normalizedBaseUrl = normalizeBaseUrl(context.publicBaseUrl);
+  const pattern = context.detailPathPattern || "/post/:slug";
+
+  if (normalizedBaseUrl && pattern.includes(":slug") && normalizedSlug.length > 0) {
+    return {
+      label: "Public URL",
+      value: joinBaseAndPath(
+        normalizedBaseUrl,
+        pattern.replace(":slug", encodeURIComponent(normalizedSlug))
+      ),
+      concrete: true,
+    };
+  }
+
+  const routeHint =
+    pattern.includes(":slug") && normalizedSlug.length > 0
+      ? pattern.replace(":slug", normalizedSlug)
+      : pattern;
+
+  return {
+    label: "Route hint",
+    value: normalizedBaseUrl ? joinBaseAndPath(normalizedBaseUrl, routeHint) : routeHint,
+    concrete: false,
   };
 };
 

@@ -16,6 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { MediaPicker } from "@/ui/media/MediaPicker";
+import type { PostSlugDisplay } from "@/services/siteSettingsClient";
 import type { PostStatus } from "@/services/postsClient";
 import { BLOG_SEO_ROBOTS_OPTIONS } from "./inspectorSchemas";
 import { InspectorSection } from "./InspectorSection";
@@ -38,6 +40,10 @@ export type DocumentInspectorProps = {
     categoryName: string | null;
     tagCount: number;
   };
+  categoryOptions?: Array<{ id: string; name: string }>;
+  taxonomyLoading?: boolean;
+  taxonomyError?: string | null;
+  slugDisplay?: PostSlugDisplay | null;
   updatedAt?: string | null;
   scheduledAt?: string | null;
   publishedAt?: string | null;
@@ -83,6 +89,10 @@ export function DocumentInspector({
   categoryId,
   seo,
   taxonomySummary,
+  categoryOptions = [],
+  taxonomyLoading = false,
+  taxonomyError = null,
+  slugDisplay = null,
   updatedAt,
   scheduledAt,
   publishedAt,
@@ -137,12 +147,30 @@ export function DocumentInspector({
           <p>Linked tag terms: {taxonomySummary.tagCount}</p>
         </div>
         <div className="space-y-2">
-          <label className="text-xs text-muted-foreground">Category ID (optional)</label>
-          <Input
-            value={categoryId}
-            onChange={(event) => onCategoryIdChange(event.target.value)}
-            placeholder="taxonomy category term ID"
-          />
+          <label className="text-xs text-muted-foreground">Category</label>
+          <Select
+            value={categoryId || "__none__"}
+            onValueChange={(value) => onCategoryIdChange(value === "__none__" ? "" : value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue
+                placeholder={taxonomyLoading ? "Loading categories..." : "Select a category"}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">No category</SelectItem>
+              {categoryOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {taxonomyLoading ? (
+            <p className="text-xs text-muted-foreground">Loading categories...</p>
+          ) : taxonomyError ? (
+            <p className="text-xs text-destructive">{taxonomyError}</p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground">Tags (comma separated)</label>
@@ -158,10 +186,11 @@ export function DocumentInspector({
         title="Featured image"
         info="Optional hero image used by post widgets/cards."
       >
-        <Input
-          value={featuredImage}
-          onChange={(event) => onFeaturedImageChange(event.target.value)}
-          placeholder="Media ID (optional)"
+        <MediaPicker
+          value={featuredImage || null}
+          onChange={(value) => onFeaturedImageChange(typeof value === "string" ? value : "")}
+          multiple={false}
+          accept={["image/*"]}
         />
       </InspectorSection>
 
@@ -170,12 +199,15 @@ export function DocumentInspector({
           title="Advanced"
           info="Optional technical metadata and SEO fields."
           action={
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="group">
-                Toggle
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">SEO {seoCompleteCount}/3</Badge>
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="ghost" size="sm" className="group">
+                  Toggle
+                  <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
           }
         >
           <CollapsibleContent className="space-y-3 border-t pt-3">
@@ -191,6 +223,12 @@ export function DocumentInspector({
               <div className="space-y-2">
                 <label className="text-xs text-muted-foreground">Slug</label>
                 <Input value={slug} onChange={(event) => onSlugChange(event.target.value)} />
+                {slugDisplay ? (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{slugDisplay.label}:</span>{" "}
+                    {slugDisplay.value}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <label className="text-xs text-muted-foreground">Excerpt</label>

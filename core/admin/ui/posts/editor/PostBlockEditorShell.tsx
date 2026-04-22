@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { getTaxonomyOverview } from "@/services/taxonomyClient";
+import {
+  getSiteSettings,
+  resolvePostSlugDisplay,
+  resolvePostSlugRouteContext,
+  type PostSlugRouteContext,
+} from "@/services/siteSettingsClient";
 
 import {
   usePostEditorLayout,
@@ -117,6 +126,12 @@ export function PostBlockEditorShell() {
     resetPreferences,
   } = usePostEditorPreferences();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [slugRouteContext, setSlugRouteContext] = useState<PostSlugRouteContext>(() =>
+    resolvePostSlugRouteContext(null)
+  );
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
+  const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [initialFocusMode] = useState(() =>
     resolveInitialFocusMode(initialPreferences)
   );
@@ -192,6 +207,67 @@ export function PostBlockEditorShell() {
       layout.focusMode ? "1" : "0"
     );
   }, [layout.focusMode]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const settings = await getSiteSettings();
+        if (!active) return;
+        setSlugRouteContext(resolvePostSlugRouteContext(settings));
+      } catch {
+        if (!active) return;
+        setSlugRouteContext(resolvePostSlugRouteContext(null));
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const editorTypeId = editor.post?.typeId ?? null;
+
+  useEffect(() => {
+    if (!editorTypeId) {
+      setCategoryOptions([]);
+      setTaxonomyError(null);
+      setTaxonomyLoading(false);
+      return;
+    }
+
+    let active = true;
+    setTaxonomyLoading(true);
+    setTaxonomyError(null);
+
+    (async () => {
+      try {
+        const overview = await getTaxonomyOverview(editorTypeId);
+        if (!active) return;
+        setCategoryOptions(
+          overview.terms.categories.map((category) => ({
+            id: category.id,
+            name: category.name,
+          }))
+        );
+      } catch (error) {
+        if (!active) return;
+        setTaxonomyError(error instanceof Error ? error.message : "Failed to load categories.");
+      } finally {
+        if (active) {
+          setTaxonomyLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [editorTypeId]);
+
+  const slugDisplay = useMemo(
+    () => resolvePostSlugDisplay(slugRouteContext, editor.slug),
+    [editor.slug, slugRouteContext]
+  );
 
   const handleCloseSecondarySidebar = useCallback(
     (target: "inserter" | "outline") => {
@@ -292,6 +368,10 @@ export function PostBlockEditorShell() {
         categoryId: editor.categoryId,
         seo: editor.seoDraft,
         taxonomySummary: editor.taxonomySummary,
+        categoryOptions,
+        taxonomyLoading,
+        taxonomyError,
+        slugDisplay,
         updatedAt: editor.post?.updatedAt ?? null,
         scheduledAt: editor.post?.scheduledAt ?? null,
         publishedAt: editor.post?.publishedAt ?? null,
@@ -378,7 +458,21 @@ export function PostBlockEditorShell() {
         <div className="px-4 pt-4 sm:px-6">
           <Alert variant="destructive">
             <AlertTitle>Autosave paused</AlertTitle>
-            <AlertDescription>{editor.autosaveError}</AlertDescription>
+            <AlertDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>{editor.autosaveError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    editor.saveDraft().catch(() => undefined);
+                  }}
+                >
+                  Retry now
+                </Button>
+              </div>
+            </AlertDescription>
           </Alert>
         </div>
       ) : null}
@@ -455,7 +549,13 @@ export function PostBlockEditorShell() {
               editor.preview().catch(() => undefined);
             }}
             onPublish={() => {
-              editor.publish().catch(() => undefined);
+              const wasPublished = editor.status === "published";
+              editor
+                .publish()
+                .then(() => {
+                  toast.success(wasPublished ? "Changes saved" : "Post published");
+                })
+                .catch(() => undefined);
             }}
             onToggleInserter={handleToggleInserter}
             inserterVisible={layout.showInserter}

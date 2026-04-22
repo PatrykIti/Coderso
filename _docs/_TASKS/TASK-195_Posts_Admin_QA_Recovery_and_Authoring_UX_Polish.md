@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Admin/UI + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-059, TASK-060, TASK-061, TASK-063
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
@@ -318,3 +318,21 @@ Reuse-first rule:
 6. Any still-reproducible server/runtime autosave failure or capability gap
    outside this family is captured in a linked follow-up task file with named
    owners and evidence instead of being silently downgraded to a note.
+
+## Completion Notes (2026-04-22)
+
+- Posts list now has controlled visible-scope selection, bulk action apply
+  flow, and Posts-specific shared filter copy.
+- Posts editor now gives explicit publish/update success feedback, actionable
+  autosave retry guidance, and revision preview before restore.
+- Post inspector now uses category selection, image-only featured-image picking,
+  collapsed SEO summary, and display-only slug URL/route hint context in create
+  and edit flows.
+- Writing toolbar and inserter contracts were tightened without introducing new
+  runtime block capabilities.
+
+## Validation (2026-04-22)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui/post-editor-layout-hook-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-richtext-inline-typography-selection.test.ts tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx tests/vitest/ui-integration/post-editor-keyboard-a11y.test.tsx tests/vitest/ui-integration/post-autosave-flow.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/posts/post-editor-preferences.test.ts tests/vitest/posts/post-editor-layout-state.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/taxonomyClient.test.ts tests/vitest/admin/adminApp.test.tsx`

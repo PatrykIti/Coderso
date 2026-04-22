@@ -399,7 +399,9 @@ test("PostRichTextToolbar shows typography-only row without advanced toggle when
   );
 
   try {
-    expect(view.container.textContent).toContain("Typography reads from block.");
+    expect(view.container.textContent).toContain(
+      "Typography follows the selected block style."
+    );
     expect(view.container.textContent).not.toContain("More formatting");
     expect(view.container.textContent).not.toContain("Code");
     expect(view.container.textContent).not.toContain("List");
@@ -433,7 +435,9 @@ test("PostRichTextToolbar falls back to writing-canvas defaults and supports par
     expect(view.container.textContent).toContain("List");
     expect(view.container.textContent).toContain("Code");
     expect(view.container.textContent).toContain("More formatting");
-    expect(view.container.textContent).toContain("Typography reads from block.");
+    expect(view.container.textContent).toContain(
+      "Typography follows the selected block style."
+    );
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     expect(selects).toHaveLength(1);
@@ -505,7 +509,9 @@ test("PostRichTextToolbar supports base-text-scale-only controls and prevents mo
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
     expect(selects).toHaveLength(1);
-    expect(view.container.textContent).toContain("Typography reads from block.");
+    expect(view.container.textContent).toContain(
+      "Typography follows the selected block style."
+    );
     expect(view.container.textContent).toContain("More formatting");
 
     const typeMouseDown = dispatchMouseDownByText(view.container, "Type");

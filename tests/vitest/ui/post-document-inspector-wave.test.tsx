@@ -173,6 +173,25 @@ vi.mock("@/ui/shared/InfoTip", () => ({
   InfoTip: ({ content }: { content: string }) => <span data-info-tip={content}>info</span>,
 }));
 
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({
+    onChange,
+    accept,
+    value,
+  }: {
+    onChange?: (value: unknown) => void;
+    accept?: string[];
+    value?: unknown;
+  }) => (
+    <div data-media-picker-accept={(accept ?? []).join(",")}>
+      <span>{`media:${String(value ?? "none")}`}</span>
+      <button type="button" onClick={() => onChange?.("media-1")}>
+        pick-media
+      </button>
+    </div>
+  ),
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const mount = (node: React.ReactNode) => {
@@ -260,6 +279,11 @@ test("DocumentInspector toggles advanced fields and routes document callbacks", 
         robots: "",
       }}
       taxonomySummary={{ categoryName: null, tagCount: 0 }}
+      categoryOptions={[
+        { id: "cat-1", name: "Category One" },
+        { id: "cat-2", name: "Category Two" },
+      ]}
+      slugDisplay={{ label: "Public URL", value: "https://nextless.test/blog/hello-world", concrete: true }}
       updatedAt="2026-03-13T09:00:00.000Z"
       scheduledAt={null}
       publishedAt={null}
@@ -277,18 +301,22 @@ test("DocumentInspector toggles advanced fields and routes document callbacks", 
   try {
     expect(view.container.textContent).toContain("Current category: Not assigned");
 
-    setInputValue(
-      view.container.querySelector('input[placeholder="taxonomy category term ID"]'),
-      "cat-2"
-    );
+    const selectsBeforeToggle = Array.from(view.container.querySelectorAll("select"));
+    setSelectValue(selectsBeforeToggle[0], "cat-2");
     setInputValue(
       view.container.querySelector('input[placeholder="news, guide, release"]'),
       "release, docs"
     );
-    setInputValue(
-      view.container.querySelector('input[placeholder="Media ID (optional)"]'),
-      "media-1"
+    const mediaButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("pick-media")
     );
+    if (!(mediaButton instanceof HTMLButtonElement)) {
+      throw new Error("missing media picker trigger");
+    }
+
+    React.act(() => {
+      mediaButton.click();
+    });
 
     const toggle = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Toggle")
@@ -302,10 +330,11 @@ test("DocumentInspector toggles advanced fields and routes document callbacks", 
     });
 
     expect(view.container.textContent).toContain("SEO fields completed: 0/3");
+    expect(view.container.textContent).toContain("Public URL:");
 
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
-    const robotsSelect = view.container.querySelector("select");
+    const robotsSelect = Array.from(view.container.querySelectorAll("select"))[1];
 
     setInputValue(inputs.find((input) => input.value === "Hello world"), "Updated title");
     setInputValue(inputs.find((input) => input.value === "hello-world"), "updated-slug");
@@ -371,6 +400,7 @@ test("DocumentInspector renders timestamp fallbacks and disables danger action w
         robots: "",
       }}
       taxonomySummary={{ categoryName: null, tagCount: 0 }}
+      categoryOptions={[]}
       updatedAt="not-a-date"
       scheduledAt={null}
       publishedAt={undefined}
@@ -390,6 +420,9 @@ test("DocumentInspector renders timestamp fallbacks and disables danger action w
     expect(view.container.textContent).toContain("not-a-date");
     expect(view.container.textContent).toContain("Not set");
     expect(view.container.textContent).toContain("Moving to trash...");
+    expect(
+      view.container.querySelector("[data-media-picker-accept='image/*']")
+    ).toBeTruthy();
 
     const dangerButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Moving to trash")

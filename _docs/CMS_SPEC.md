@@ -113,6 +113,18 @@ Storage:
 - Brak migracji tabel, dane w JSONB.
 - Schema zawiera meta‑pola UI (`xFieldType`, `xFieldConfig`) dla stabilnego round‑trip.
 
+### Posts admin authoring contract
+
+- Posts list wspiera visible-scope bulk actions (`Publish`, `Move to Draft`,
+  `Delete`) i resource-specific search copy.
+- Posts editor zachowuje writing-first shell, ale daje jawny feedback dla
+  publish/update i autosave failures.
+- Post inspector:
+  - wybiera kategorie z taxonomy overview,
+  - wybiera featured image przez shared media picker (`image/*` only),
+  - pokazuje SEO completion summary i slug route context bez zmiany stored slug
+    semantics.
+
 ---
 
 ## Preview (draft)

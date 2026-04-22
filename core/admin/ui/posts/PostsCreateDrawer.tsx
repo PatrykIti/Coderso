@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
+  resolvePostSlugDisplay,
+  type PostSlugRouteContext,
+} from "@/services/siteSettingsClient";
+import {
   Sheet,
   SheetClose,
   SheetContent,
@@ -25,6 +29,7 @@ type PostsCreateDrawerProps = {
   onOpenAfterCreateChange: (value: boolean) => void;
   isSubmitting?: boolean;
   error?: string | null;
+  slugRouteContext?: PostSlugRouteContext | null;
 };
 
 const slugify = (value: string) =>
@@ -42,6 +47,7 @@ export function PostsCreateDrawer({
   onOpenAfterCreateChange,
   isSubmitting = false,
   error,
+  slugRouteContext = null,
 }: PostsCreateDrawerProps) {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -50,6 +56,10 @@ export function PostsCreateDrawer({
   const canSubmit = useMemo(() => {
     return title.trim().length > 0 && slug.trim().length > 0;
   }, [slug, title]);
+  const slugDisplay = useMemo(
+    () => (slugRouteContext ? resolvePostSlugDisplay(slugRouteContext, slug) : null),
+    [slug, slugRouteContext]
+  );
 
   const handleSubmit = () => {
     if (!canSubmit || isSubmitting) return;
@@ -120,6 +130,12 @@ export function PostsCreateDrawer({
                   }}
                 />
               </div>
+              {slugDisplay ? (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{slugDisplay.label}:</span>{" "}
+                  {slugDisplay.value}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

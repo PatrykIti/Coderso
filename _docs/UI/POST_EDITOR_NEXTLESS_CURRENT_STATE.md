@@ -45,14 +45,23 @@ Mapa obecnej implementacji posts editora w Nextless jako baseline do migracji `T
 2. Writing-first flow i smart paste pipeline juz istnieja.
 3. Autosave i preview sa ustabilizowane (silent sync, bez resetu edytora).
 4. Runtime parity dla blokow jest utrzymane mapperem i rendererem.
+5. Po `TASK-195` editor daje jawny success feedback dla publish/update i
+   actionable autosave pause state z retry.
+6. Inspector ma picker-based category / featured-image UX, SEO badge na
+   zwiniętym `Advanced`, oraz display-only slug route context.
+7. Revisions drawer pokazuje bounded preview snapshot przed restore.
 
 ## Coupling / Gap Hotspots
-1. Brak centralnego layout state hooka dla wszystkich paneli (inserter/list/details) na poziomie region contract.
-2. Header nie jest jeszcze modularny jak Gutenberg (`DocumentTools` + `ActionCluster`).
-3. Inserter jest dialogiem, a nie dedykowanym secondary sidebar pattern.
-4. List view i outline/stats nie sa jednym spojnym `Document Overview` modulem.
-5. Focus return i keyboard contracts sa czesciowe (brak globalnego registry + focus return hooka).
-6. Inspector tabs i preferencje usera wymagaja domkniecia i redukcji duplikacji.
+1. Inserter/list/details korzysta juz ze wspolnego layout hooka, ale shell nadal
+   pozostaje miejscem integracji wielu owner seams.
+2. Header jest rozbity na `PostEditorHeader` + `PostEditorActionCluster`, ale
+   dalsza praca nadal powinna pilnowac presentational vs async bridge ownership.
+3. List view i outline/stats nie sa jeszcze jednym spojnym `Document Overview`
+   modulem.
+4. Focus return i keyboard contracts sa dobre dla biezacego shellu, ale dalsze
+   refaktory musza utrzymac te same owner seams.
+5. Inspector tabs i preferencje usera nadal wymagaja pilnowania, zeby nie
+   duplikowac visibility state poza shell/layout contract.
 
 ## Immediate Refactor Targets (for TASK-063)
 1. `PostBlockEditorShell.tsx` -> region shell + central layout state.

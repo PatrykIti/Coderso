@@ -20,6 +20,8 @@ type PageFiltersProps = {
   status: string;
   author: string;
   authorOptions: AuthorOption[];
+  searchPlaceholder?: string;
+  searchAriaLabel?: string;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onAuthorChange: (value: string) => void;
@@ -30,6 +32,8 @@ export function PageFilters({
   status,
   author,
   authorOptions,
+  searchPlaceholder = "Search pages by title...",
+  searchAriaLabel = "Search pages by title",
   onSearchChange,
   onStatusChange,
   onAuthorChange,
@@ -41,7 +45,8 @@ export function PageFilters({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search pages by title..."
+          placeholder={searchPlaceholder}
+          aria-label={searchAriaLabel}
           className="pl-9"
         />
       </div>

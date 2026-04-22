@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InfoTip } from "@/ui/shared/InfoTip";
 import { cn } from "@/lib/utils";
 
 export type PostRichTextCommand =
@@ -458,6 +459,7 @@ export function PostRichTextToolbar({
               {onFontFamilyChange ? (
                 <Select
                   value={fontFamily}
+                  disabled={disabled}
                   onValueChange={(value) =>
                     onFontFamilyChange(
                       value === "serif" || value === "mono" ? value : "sans"
@@ -477,6 +479,7 @@ export function PostRichTextToolbar({
               {onBaseTextScaleChange ? (
                 <Select
                   value={baseTextScale}
+                  disabled={disabled}
                   onValueChange={(value) =>
                     onBaseTextScaleChange(
                       value === "sm" || value === "lg" || value === "xl" ? value : "md"
@@ -495,8 +498,17 @@ export function PostRichTextToolbar({
                 </Select>
               ) : null}
               <span className="text-xs text-muted-foreground">
-                Typography reads from block.
+                {disabled
+                  ? "Typography unavailable for the current selection."
+                  : "Typography follows the selected block style."}
               </span>
+              <InfoTip
+                content={
+                  disabled
+                    ? "Select an editable writing block to change typography."
+                    : "Use these controls to align typography with the current writing block."
+                }
+              />
             </div>
           ) : null}
           {hasAdvancedActions ? (

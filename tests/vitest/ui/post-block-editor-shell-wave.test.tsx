@@ -171,6 +171,7 @@ const postShellState = vi.hoisted(() => ({
       if (key === "deletingPost") this.editor.deletingPost = false;
     }
     this.editor.moveToTrash.mockResolvedValue(true);
+    this.editor.saveDraft.mockResolvedValue(undefined);
     this.editor.preview.mockResolvedValue(undefined);
     this.editor.publish.mockResolvedValue(undefined);
     this.editor.restoreRevision.mockResolvedValue(undefined);
@@ -187,7 +188,12 @@ const postShellState = vi.hoisted(() => ({
     this.layout.leftRailMode = "outline";
     this.preferences.setPreferences.mockReset();
     this.preferences.resetPreferences.mockReset();
+    toastState.success.mockReset();
   },
+}));
+
+const toastState = vi.hoisted(() => ({
+  success: vi.fn(),
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -206,6 +212,67 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
     open: boolean;
     title: string;
   }) => <div>{`${title}:${open ? "open" : "closed"}`}</div>,
+}));
+
+vi.mock("@/services/taxonomyClient", () => ({
+  getTaxonomyOverview: vi.fn(async () => ({
+    taxonomies: {
+      category: { id: "taxonomy-category", typeId: "post", name: "Categories", slug: "category", kind: "category", createdAt: "", updatedAt: "" },
+      tag: null,
+    },
+    terms: {
+      categories: [
+        { id: "cat-1", taxonomyId: "taxonomy-category", name: "News", slug: "news", createdAt: "", updatedAt: "" },
+      ],
+      tags: [],
+    },
+  })),
+}));
+
+vi.mock("@/services/siteSettingsClient", () => ({
+  getSiteSettings: vi.fn(async () => ({
+    adminBaseUrl: null,
+    publicBaseUrl: "https://nextless.test",
+    adminPath: "/admin",
+    adminRedirectEnabled: false,
+    homepageId: null,
+    notFoundPageId: null,
+    previewEnabled: true,
+    cacheTtlSeconds: 30,
+    contentRoutes: [
+      {
+        type: "posts",
+        listPath: "/blog",
+        detailPath: "/blog/:slug",
+        enabled: true,
+      },
+    ],
+  })),
+  resolvePostSlugRouteContext: (settings: {
+    publicBaseUrl?: string | null;
+    contentRoutes?: Array<{ detailPath: string; enabled: boolean; type: string }>;
+  } | null) => ({
+    publicBaseUrl: settings?.publicBaseUrl ?? null,
+    detailPathPattern:
+      settings?.contentRoutes?.find((route) => route.enabled)?.detailPath ?? "/post/:slug",
+  }),
+  resolvePostSlugDisplay: (
+    context: { publicBaseUrl: string | null; detailPathPattern: string },
+    slug: string
+  ) => ({
+    label: context.publicBaseUrl ? "Public URL" : "Route hint",
+    value:
+      context.publicBaseUrl && slug
+        ? `${context.publicBaseUrl}${context.detailPathPattern.replace(":slug", slug)}`
+        : context.detailPathPattern,
+    concrete: Boolean(context.publicBaseUrl && slug),
+  }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: toastState.success,
+  },
 }));
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
@@ -485,6 +552,11 @@ afterEach(() => {
   postShellState.reset();
 });
 
+const flushMicrotasks = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and settings actions", async () => {
   const { PostBlockEditorShell } = await import(
     "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
@@ -537,6 +609,30 @@ test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and setting
     expect(postShellState.navigate).toHaveBeenCalledWith("/admin/posts", {
       replace: true,
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell retries autosave and emits publish success toast", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+
+    await act(async () => {
+      buttons.find((button) => button.textContent === "Retry now")?.click();
+      buttons.find((button) => button.textContent === "publish-post")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(postShellState.editor.saveDraft).toHaveBeenCalledTimes(1);
+    expect(postShellState.editor.publish).toHaveBeenCalledTimes(1);
+    expect(toastState.success).toHaveBeenCalledWith("Post published");
   } finally {
     view.cleanup();
   }

@@ -40,8 +40,22 @@ vi.mock("@/components/ui/badge", () => ({
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: ({ "aria-label": ariaLabel }: { "aria-label"?: string }) => (
-    <input type="checkbox" aria-label={ariaLabel} />
+  Checkbox: ({
+    "aria-label": ariaLabel,
+    checked,
+    onCheckedChange,
+  }: {
+    "aria-label"?: string;
+    checked?: boolean | "indeterminate";
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      aria-label={ariaLabel}
+      checked={checked === true}
+      data-indeterminate={String(checked === "indeterminate")}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
   ),
 }));
 
@@ -138,6 +152,16 @@ const clickByText = (container: HTMLElement, text: string) => {
   }
   act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const clickCheckbox = (container: HTMLElement, label: string) => {
+  const checkbox = container.querySelector(`input[aria-label="${label}"]`);
+  if (!(checkbox instanceof HTMLInputElement)) {
+    throw new Error(`Missing checkbox: ${label}`);
+  }
+  act(() => {
+    checkbox.click();
   });
 };
 
@@ -257,6 +281,89 @@ test("PostsTable trims tags to three items and forwards row action callbacks", (
     expect(onUnpublish).toHaveBeenCalledWith("post-1");
     expect(onDuplicate).toHaveBeenCalledWith("post-1");
     expect(onDelete).toHaveBeenCalledWith("post-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsTable controls header and row selection state", () => {
+  const onToggleAll = vi.fn();
+  const onTogglePost = vi.fn();
+  const post = {
+    id: "post-1",
+    title: "Launch",
+    slug: "/launch",
+    status: "draft",
+    tags: ["news"],
+    publishedAt: null,
+    updatedAt: "2026-03-06T12:00:00.000Z",
+    author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+  };
+
+  const view = mount(
+    <PostsTable
+      items={[post] as never}
+      selectedIds={["post-1"]}
+      isAllSelected
+      onToggleAll={onToggleAll}
+      onTogglePost={onTogglePost}
+      onEdit={() => undefined}
+      onPreview={() => undefined}
+      onPublish={() => undefined}
+      onUnpublish={() => undefined}
+      onDuplicate={() => undefined}
+    />
+  );
+
+  try {
+    expect(
+      view.container.querySelector('input[aria-label="Select all posts"]')?.getAttribute("checked")
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector('input[aria-label="Select Launch"]')?.getAttribute("checked")
+    ).not.toBeNull();
+
+    clickCheckbox(view.container, "Select all posts");
+    clickCheckbox(view.container, "Select Launch");
+
+    expect(onToggleAll).toHaveBeenCalledTimes(1);
+    expect(onTogglePost).toHaveBeenCalledWith("post-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsTable exposes indeterminate header state", () => {
+  const post = {
+    id: "post-1",
+    title: "Launch",
+    slug: "/launch",
+    status: "draft",
+    tags: ["news"],
+    publishedAt: null,
+    updatedAt: "2026-03-06T12:00:00.000Z",
+    author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+  };
+
+  const view = mount(
+    <PostsTable
+      items={[post] as never}
+      selectedIds={["post-1"]}
+      isIndeterminate
+      onEdit={() => undefined}
+      onPreview={() => undefined}
+      onPublish={() => undefined}
+      onUnpublish={() => undefined}
+      onDuplicate={() => undefined}
+    />
+  );
+
+  try {
+    expect(
+      view.container
+        .querySelector('input[aria-label="Select all posts"]')
+        ?.getAttribute("data-indeterminate")
+    ).toBe("true");
   } finally {
     view.cleanup();
   }
