@@ -36,10 +36,13 @@ export const composeAdminSurface = (graph) => {
   const groups = groupAdminContributions(graph.adminSections);
   return {
     blocks: groups.flatMap(toScreenBlocks),
-    layout: "record-view",
   };
 };
 ```
+
+`composeAdminSurface(...)` returns the persisted custom-screen definition
+surface only. It must not invent a new top-level `layout` field unless a later
+task explicitly extends the current custom-screen schema/service/API contract.
 
 ## Security Contract
 

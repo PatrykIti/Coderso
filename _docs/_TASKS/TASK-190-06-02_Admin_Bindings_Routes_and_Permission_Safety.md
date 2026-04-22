@@ -35,7 +35,18 @@ No child task files.
 - Update `core/services/assistant/actionPlanTypes.ts` only if new binding metadata is required.
 - Update current custom-screen binding helpers only if a small shared extraction
   is needed for both assistant composition and existing screen behavior
+- Update `core/services/customScreens/customScreenSchemas.ts` only if
+  `collectionRole`, `compositionKey`, or equivalent canonical screen-link
+  metadata must become part of the current custom-screen schema
+- Update `core/services/customScreens/customScreenService.ts` only if that
+  metadata must persist through the current custom-screen owner seam
+- Update `core/admin/services/customScreensClient.ts` only if that metadata must
+  round-trip through the current admin cached client
 - Add `tests/vitest/assistant/blueprint-binding-composer.test.ts`
+- Update `tests/vitest/admin/custom-screen-schemas.test.ts` only if the current
+  custom-screen schema contract widens in this leaf
+- Update `tests/vitest/customScreens/customScreenService.test.ts` only if the
+  current custom-screen persistence contract widens in this leaf
 
 ## Pseudocode
 

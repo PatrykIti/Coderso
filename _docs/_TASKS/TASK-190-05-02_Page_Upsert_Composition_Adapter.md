@@ -21,7 +21,19 @@ No child task files.
 ## Files to Change
 
 - Add `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
+- Update `core/services/pages/pageService.ts` only if explicit canonical
+  list-page linkage or page-level collection references must persist in the
+  current page contract
+- Update `core/admin/services/pagesClient.ts` only if that persisted page
+  metadata must round-trip through the current admin cached client
+- Update `core/admin/ui/pages/PageEditor.tsx` only if the current page editor
+  needs UI/form ownership for explicit canonical list-page or collection-linked
+  page metadata
 - Add `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
+- Update `tests/vitest/admin/pagesClient.test.ts` only if page-owner metadata
+  round-trip is widened in this leaf
+- Update `tests/vitest/ui/page-editor.test.tsx` or existing page-editor UI tests
+  only if the current editor contract is widened in this leaf
 
 Prefer reuse:
 

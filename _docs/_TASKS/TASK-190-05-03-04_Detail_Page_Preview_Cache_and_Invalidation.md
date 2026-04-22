@@ -198,7 +198,9 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 
 ## Testing Requirements
 
-- Valid content preview token renders composed detail page draft.
+- Valid content preview token renders the previewed entry through the composed
+  detail-page pipeline, but only against a published detail-page document when
+  `detailPageId` is provided.
 - Valid detail-page preview token renders `current_document` with a selected
   published sample entry from server-issued preview context.
 - Preview token context normalization rejects malformed `detail-page` payloads.
