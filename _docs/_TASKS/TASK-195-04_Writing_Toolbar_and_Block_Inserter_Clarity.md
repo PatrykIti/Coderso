@@ -21,6 +21,9 @@ editor shell:
 
 This wave should improve the readability of the writing controls without
 changing the underlying writing-canvas model or block-insertion engine.
+The QA report also points at broader media-inventory expectations, but this
+family only repairs the semantics of block types that already exist in the
+catalog today.
 
 ## Sub-Tasks
 
@@ -41,6 +44,8 @@ Out of scope:
 - a new posts block taxonomy beyond the existing `text/media/interactive`
   structure,
 - changing the writing-canvas command engine or supported block types,
+- introducing new post block types such as `video`, `gallery`, `audio`, or
+  `file` under this polish wave,
 - adding new runtime block renderers beyond any minimal media-grouping move that
   reuses existing block types.
 

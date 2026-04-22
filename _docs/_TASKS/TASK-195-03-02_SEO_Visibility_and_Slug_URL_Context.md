@@ -30,10 +30,14 @@ Owner boundary:
 - `DocumentInspector` owns the visible SEO summary and slug field presentation.
 - `siteSettingsClient.getSiteSettings()` is the existing admin read owner for
   `publicBaseUrl` and `contentRoutes`.
-- `core/services/content/postsFeedResolver.ts` is the current owner for the
-  posts detail-path fallback contract.
-- This leaf must compose those existing seams; it must not hardcode `/blog`,
-  `nextless.cms`, or a new Posts-only settings source.
+- `site.contentRoutes` remains the canonical route owner for posts detail-path
+  configuration.
+- `core/services/content/postsFeedResolver.ts` is only a current consumer that
+  reflects the existing fallback contract (`/post/:slug`); this leaf must not
+  couple the admin editor directly to widget-resolver code.
+- If a reusable route-prefix helper is needed, extract it from current route
+  consumers into a Bun-free helper instead of hardcoding `/blog`,
+  `nextless.cms`, or introducing a Posts-only settings source.
 
 ## Sub-Tasks
 
@@ -58,13 +62,13 @@ No child task files.
 - Auth/RBAC/CSRF/rate-limit: unchanged.
 - Reject-unknown validation: unchanged.
 - Anti-abuse:
-- do not rewrite stored slugs behind the user’s back,
-- any displayed URL prefix must come from trusted existing settings/runtime
-  context only,
-- collapsed-summary badges must not imply SEO completeness when required
-  fields are still empty,
-- the URL context path must reuse the existing site settings plus posts runtime
-  route contract rather than a hardcoded admin-only approximation.
+  - do not rewrite stored slugs behind the user’s back,
+  - any displayed URL prefix must come from trusted existing settings/runtime
+    context only,
+  - collapsed-summary badges must not imply SEO completeness when required
+    fields are still empty,
+  - the URL context path must reuse the existing site settings plus posts route
+    contract rather than a hardcoded admin-only approximation.
 
 ## Testing Requirements
 

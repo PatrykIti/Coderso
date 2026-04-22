@@ -29,6 +29,11 @@ The repo already has the building blocks to avoid that:
 
 This leaf should reuse those seams instead of keeping raw-ID fields in the
 editor.
+The current persistence contract stays the same:
+
+- `post.data.featuredImage` remains the stored featured-image identifier,
+- post metadata continues to persist taxonomy/media ids after the picker choice,
+  rather than introducing a richer Posts-only media object.
 
 Owner boundary:
 
@@ -38,6 +43,8 @@ Owner boundary:
 - `taxonomyClient.getTaxonomyOverview()` remains the read owner for category
   options.
 - `MediaPicker` remains the shared media selection surface.
+- `mediaClient` remains the fetch/cache owner beneath `MediaPicker`; this leaf
+  should reuse that path instead of adding a Posts-specific media lookup flow.
 
 ## Sub-Tasks
 
@@ -57,7 +64,10 @@ No child task files.
 - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
+- `tests/vitest/ui/media-picker.test.tsx`
 - `tests/vitest/admin/taxonomyClient.test.ts`
+- `tests/vitest/admin/mediaClient.test.ts`
+  only if picker integration changes fetch/cache semantics
 
 ## Security Contract
 
@@ -83,8 +93,14 @@ No child task files.
   - picker changes propagate through the details sidebar contract.
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
   - selected category/media IDs normalize back into the current payload shape.
+- `tests/vitest/ui/media-picker.test.tsx`
+  - shared picker loading, selected-asset, and removal states remain compatible
+    with Posts featured-image usage.
 - `tests/vitest/admin/taxonomyClient.test.ts`
   - taxonomy overview reads stay stable for the picker.
+- `tests/vitest/admin/mediaClient.test.ts`
+  only if picker integration changes fetch/cache semantics
+  - media list/cache behavior stays backward compatible for the shared picker.
 
 ## Documentation Updates Required
 

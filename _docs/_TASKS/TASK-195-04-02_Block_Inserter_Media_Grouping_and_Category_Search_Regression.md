@@ -11,8 +11,9 @@
 
 ## Overview
 
-Clean up the Posts block-inserter catalog so the Media tab reflects actual media
-content and lock category-scoped search with explicit regression tests.
+Clean up the existing Posts block-inserter catalog so the Media tab reflects
+actual media content and lock category-scoped search with explicit regression
+tests.
 
 Current code shows both sides of the problem:
 
@@ -24,6 +25,12 @@ Current code shows both sides of the problem:
 That means the QA report is partly about catalog semantics and partly about
 trust. This leaf should fix the Media grouping and add regression coverage for
 the category-scoped search path that already exists in code.
+The same report also mentions broader media inventory expectations
+(`video/gallery/audio/file`), but those are not already-shipped block
+contracts in this repo. This leaf must not invent them under a polish task.
+If QA replay still proves new media block types are required after regrouping
+the current catalog, open a separate capability-expansion task instead of
+stretching this leaf.
 
 Owner boundary:
 
@@ -52,6 +59,8 @@ No child task files.
 
 - Reclassify `embed` into the Media-facing experience.
 - Move `separator` out of Media if that yields a more intuitive catalog.
+- Keep the fix inside current block types only; do not add new post block types
+  or runtime renderers in this leaf.
 - Do not fork a second search implementation; keep `searchPostBlockCatalog()`
   as the single owner and lock it with tests.
 
@@ -70,6 +79,8 @@ No child task files.
 
 - `tests/vitest/ui/post-block-inserter-wave.test.tsx`
   - category buttons filter visible results,
+  - the Media tab exposes only current media-facing existing blocks after the
+    regrouping,
   - search stays scoped to the active category,
   - keyboard navigation still works after regrouping.
 - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
@@ -86,6 +97,9 @@ No child task files.
 
 ## Acceptance Criteria
 
-1. The Media tab feels media-focused rather than a mixed bucket.
+1. The Media tab exposes only current media-facing existing blocks and no longer
+   misclassifies `Separator` as media.
 2. Category-scoped search is regression-covered and deterministic.
 3. Inserter keyboard navigation and item selection remain intact.
+4. Any broader request for new media block types is tracked as a separate
+   capability-expansion follow-up rather than being smuggled into this leaf.

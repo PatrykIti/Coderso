@@ -14,6 +14,8 @@
 Close the `TASK-195` Posts QA recovery wave with final validation, docs parity,
 board/changelog sync, and explicit replay of the report scenarios from
 `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`.
+Closure must also separate in-scope fixes from still-reproducible issues that
+belong to a different owner wave.
 
 ## Sub-Tasks
 
@@ -27,6 +29,9 @@ No child task files.
 - Update docs, changelog, and `_docs/_TASKS/README.md`.
 - Record any remaining environment-only console failures separately from the
   product-owned fixes.
+- If replay still surfaces an out-of-scope issue, create and link a dedicated
+  follow-up task file with exact evidence and owner seams before marking
+  `TASK-195` done.
 
 Out of scope:
 
@@ -60,6 +65,10 @@ Out of scope:
 - Bun suites only if those leaves widened route/service contracts
 - replay of the user-facing Posts scenarios from
   `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`
+- replay of the captured console-failure scenarios from
+  `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`
+  - if autosave/server/runtime failures still reproduce, record the exact error
+    strings plus the current route/settings owners in the linked follow-up task
 
 ## Documentation Updates Required
 
@@ -78,3 +87,6 @@ Out of scope:
 2. The report scenarios have been replayed against the final branch state.
 3. Docs, task board, and changelog are synchronized with the shipped Posts QA
    contract.
+4. Any still-reproducible server/runtime autosave failure or broader
+   capability gap outside the current leaf scopes is captured in a linked
+   follow-up task file with named owners and evidence before closure.

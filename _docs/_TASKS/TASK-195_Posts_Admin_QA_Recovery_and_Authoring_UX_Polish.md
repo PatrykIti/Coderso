@@ -35,14 +35,22 @@ The report findings that still need explicit owner tracking are:
 - Collapsed `Advanced` keeps SEO too easy to miss.
 - Slug editing lacks explicit public URL context.
 - Rich-text typography controls use unclear helper copy.
-- The block inserter still needs a final cleanup around Media grouping and a
-  regression lock for category-scoped search behavior observed in QA.
+- The block inserter still needs a final cleanup around the existing
+  `text/media/interactive` catalog grouping and a regression lock for
+  category-scoped search behavior observed in QA.
 
 The report also captured autosave/network failures in console output. This
 family treats that as a product-owned recovery/surfacing problem first: users
 must see a clear paused-state/retry path instead of relying on console output.
 If the underlying DB connection issue still reproduces after UI hardening, log
 that as a separate infrastructure follow-up rather than hiding it in editor UX.
+Closure must keep those outcomes explicit:
+
+- defects inside the current Posts admin/editor contracts are fixed in this
+  family,
+- capability gaps or server/runtime failures outside those contracts get a
+  dedicated follow-up task file with named owners instead of being left as
+  loose notes.
 
 ## Sub-Tasks
 
@@ -71,7 +79,7 @@ This umbrella covers four owner areas:
    - SEO visibility and slug context.
 4. Authoring guidance:
    - clearer typography affordances,
-   - block-inserter media taxonomy cleanup,
+   - block-inserter cleanup on the existing `text/media/interactive` catalog,
    - regression coverage for category-scoped search.
 
 Out of scope:
@@ -79,6 +87,11 @@ Out of scope:
 - new public Posts endpoints,
 - a new posts document model or revision model,
 - runtime rendering redesign for writing canvas,
+- introducing brand-new post block types or runtime renderers for `video`,
+  `gallery`, `audio`, or `file` under this QA-polish wave,
+- root-cause server/runtime DB connectivity or settings-read fixes unless a
+  dedicated follow-up task is opened from closure with exact evidence and
+  owners,
 - replacing the existing slug storage contract with a slash-prefixed format,
 - introducing a brand-new Playwright lane before the shipped Vitest/Bun command
   surface is covered.
@@ -113,6 +126,9 @@ Current owner seams in code:
   - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
   - `core/admin/app/AdminApp.tsx`
   - `core/admin/components/ui/sonner.tsx`
+- Server/runtime follow-up owners if autosave/settings failures still reproduce:
+  - `core/server/routes/postsRoutes.ts`
+  - `core/services/settings/settingsService.ts`
 - Public URL context and current posts route fallback:
   - `core/admin/services/siteSettingsClient.ts`
   - `core/services/content/postsFeedResolver.ts`
@@ -222,5 +238,7 @@ Reuse-first rule:
 4. SEO state, slug context, toolbar hints, and block-inserter grouping are
    beginner-readable and regression-covered.
 5. The Playwright report scenarios are replayed successfully against the final
-   branch state, with any remaining console-only infra issues called out
-   separately.
+   branch state.
+6. Any still-reproducible server/runtime autosave failure or capability gap
+   outside this family is captured in a linked follow-up task file with named
+   owners and evidence instead of being silently downgraded to a note.

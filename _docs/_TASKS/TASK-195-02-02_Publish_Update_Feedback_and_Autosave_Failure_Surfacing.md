@@ -37,8 +37,20 @@ Owner boundary:
   emission for Posts editor actions.
 - `AdminApp` plus the shared `sonner` mount own whether that feedback is
   actually visible in the admin shell.
+- `core/server/routes/postsRoutes.ts` owns the `/posts/:id/autosave` request
+  contract if replay still shows a server-side autosave failure.
+- `core/services/settings/settingsService.ts` owns the `site.*` settings read
+  path implicated by the captured `site.adminPath` query failure; this leaf
+  must not move that diagnosis into ad-hoc client code.
 - This leaf must repair the existing path end-to-end instead of adding a
   Posts-only toaster host or parallel feedback bus.
+
+Out of scope:
+
+- root-cause server/runtime DB connectivity or settings-read fixes unless a
+  separate follow-up task is explicitly opened from `TASK-195-05`,
+- optimistic UI fallbacks that pretend autosave succeeded when the route
+  actually failed.
 
 ## Sub-Tasks
 
@@ -65,13 +77,13 @@ No child task files.
 - Auth/RBAC/CSRF/rate-limit: unchanged existing posts routes.
 - Reject-unknown validation: unchanged.
 - Anti-abuse:
-- success feedback must not leak hidden payload data,
-- autosave failure surfacing must preserve dirty state until the user retries
-  or performs an explicit save,
-- infra-originated failures must remain visible as failures rather than being
-  swallowed by optimistic UI,
-- feedback plumbing must stay on the shared admin shell path rather than adding
-  a second Posts-only notification channel.
+  - success feedback must not leak hidden payload data,
+  - autosave failure surfacing must preserve dirty state until the user retries
+    or performs an explicit save,
+  - infra-originated failures must remain visible as failures rather than being
+    swallowed by optimistic UI,
+  - feedback plumbing must stay on the shared admin shell path rather than
+    adding a second Posts-only notification channel.
 
 ## Testing Requirements
 
@@ -104,3 +116,6 @@ No child task files.
    console-only noise.
 4. The visible success path reuses the shared admin toast infrastructure instead
    of introducing a Posts-only notification channel.
+5. If replay still reproduces a server/runtime autosave failure after UI
+   hardening, the task records the exact route/settings owners for a linked
+   follow-up instead of claiming the path is fixed in client code.
