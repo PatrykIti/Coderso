@@ -1,6 +1,6 @@
 # Raport UX/QA — sekcja Pages (Admin UI)
 
-**Data testów:** 2026-04-22
+**Data testów:** 2026-04-22 (re-weryfikacja: 2026-04-22)
 **Tester:** Claude (Playwright CLI)
 **Środowisko:** http://localhost:5173/admin/pages
 **Zalogowany jako:** patryk.ciechanski@patrykiti.pl
@@ -26,6 +26,8 @@
 
 **Co się dzieje:** Kliknięcie "Select all" zaznacza tylko checkbox w nagłówku tabeli, ale checkboxy przy poszczególnych wierszach pozostają niezaznaczone. Nie pojawia się żaden toolbar z bulk akcjami. DOM potwierdza: header `[checked]`, wiersze bez atrybutu `checked`.
 
+**Kierunek naprawy UI:** Checkbox w nagłówku powinien mieć trzy stany: niezaznaczony, częściowo zaznaczony (indeterminate) i zaznaczony. Kliknięcie go zaznacza/odznacza wszystkie wiersze. Każdy wiersz ma własny klikalny checkbox. Po zaznaczeniu co najmniej jednego wiersza — nad tabelą pojawia się pasek akcji grupowych z licznikiem zaznaczonych pozycji i przyciskami (np. "Opublikuj", "Przenieś do kosza", "Zmień autora"). Wzorzec działający: Entries — można z niego dokładnie przenieść interakcję.
+
 ---
 
 ### [BUG-2] ŚREDNI: Autor strony = "Unknown" dla nowych stron
@@ -33,6 +35,8 @@
 **Gdzie:** Lista stron → kolumna Author
 
 **Co się dzieje:** Nowo tworzone strony wyświetlają autora jako "N Unknown" zamiast nazwy zalogowanego użytkownika. Przy stronach tworzonych wcześniej (about, cos — autor Patryk) działa poprawnie. Prawdopodobnie problem z przypisywaniem autora przy tworzeniu przez dialog "Create New Page".
+
+**Kierunek naprawy UI:** Avatar i nazwa autora powinny pojawiać się natychmiast po utworzeniu strony — na liście i w edytorze. Widok "N Unknown" jest efektem braku dociągnięcia aktualnie zalogowanego użytkownika w momencie utworzenia. Do naprawienia po stronie serwisu tworzącego stronę (tam gdzie są już ownership pól) — nie wprowadzać równoległego mechanizmu autora. W UI: przy przyszłych błędach ownership (np. usunięty user) zamiast "Unknown" pokazywać grey state "Brak autora" z tooltipem "Poprzedni autor został usunięty".
 
 ---
 
@@ -42,6 +46,8 @@
 
 **Co się dzieje:** Tekst `Loading template options...` permanentnie pozostaje pod dropdownem — nigdy nie znika. Dropdown działa (pokazuje "Custom (landing)"), ale wisząca informacja o ładowaniu sugeruje błąd lub nierozwiązany stan asynchroniczny.
 
+**Kierunek naprawy UI:** Stan "loading" powinien znikać po zakończeniu pobrania listy templates (sukces lub błąd). Jeśli pobranie się nie udało — komunikat błędu "Nie udało się załadować szablonów. [Spróbuj ponownie]" z linkiem do retry. Jeśli pobranie się powiodło — tekst znika i pod dropdownem jest cisza lub helper text opisujący wybrany template. Nie wprowadzać nowego endpointu templates — użyć już istniejącego z widget library / templates (ten sam source of truth).
+
 ---
 
 ### [BUG-4] ŚREDNI: Przyciski akcji widgetu bez aria-label i tooltipów
@@ -50,13 +56,17 @@
 
 **Co się dzieje:** Żaden z przycisków toolbaru widgetu nie ma `aria-label`, `title` ani tooltipa. Brak dostępności (accessibility) i brak jasnej informacji co dany przycisk robi. Sprawdzone przez `el.getAttribute('aria-label')` — zwraca `null`.
 
+**Kierunek naprawy UI:** Każdy przycisk w toolbarze widgetu ma aria-label i tooltip (hover) z jednoznaczną etykietą: "Przesuń w górę", "Przesuń w dół", "Duplikuj widget", "Usuń widget". Etykieta + ikonka razem — nie tylko sama ikonka. Przycisk "Usuń" dodatkowo w czerwonym akcentowym kolorze przy hover, żeby wyróżnić destructive action. Wzorzec spójny z Custom Screens (tam widget toolbar też ma reorder/delete) — nie tworzyć niezależnej implementacji.
+
 ---
 
 ### [BUG-5] NISKI: Ostrzeżenia Radix UI w konsoli
 
-**Gdzie:** Konsole przeglądarki (wielokrotnie)
+**Gdzie:** Konsole przeglądarki (wielokrotnie — zweryfikowane 2026-04-22: warning nadal obecny)
 
 **Co się dzieje:** `Warning: Missing Description or aria-describedby={undefined} for {DialogContent}` — pojawia się przy każdym otwarciu dialogów (Create Page, Page Settings, History). Problem z brakującymi opisami w komponentach Radix UI.
+
+**Kierunek naprawy UI:** Każdy dialog powinien mieć Description (jedno-dwa zdania wyjaśniające cel dialogu) albo jawną deklarację `aria-describedby`. Dla Create Page: "Wpisz tytuł i slug aby utworzyć nową stronę". Dla Page Settings: "Zmień metadane i ustawienia strony". Dla History: "Przeglądaj wersje strony i przywróć wcześniejsze". Dotyczy wszystkich Radix Dialogów w całej aplikacji — zbiorczy fix w centralnym wrapperze DialogContent zamiast dodawania description do każdego dialogu osobno.
 
 ---
 
@@ -68,7 +78,7 @@
 
 **Problem:** Po kliknięciu nie pojawia się żaden toast ani powiadomienie. Jedynym sygnałem sukcesu jest znikający napis "UNSAVED CHANGES" (save) lub zmiana badge'a DRAFT→PUBLISHED (publish). To zbyt subtelne — użytkownik może nie wiedzieć że akcja się wykonała.
 
-**Sugestia:** Dodać toast notification ("Saved", "Published successfully").
+**Kierunek naprawy UI:** Toast w prawym dolnym/górnym rogu po każdej udanej akcji: "Szkic zapisany" / "Strona opublikowana". Toast znika automatycznie po 3-4 sekundach. W przypadku błędu — czerwony toast "Nie udało się zapisać. [Spróbuj ponownie]". To ta sama reguła we wszystkich sekcjach Admin UI — użyć istniejącego komponentu toast z aplikacji (nie tworzyć nowego systemu notyfikacji per sekcja).
 
 ---
 
@@ -78,7 +88,7 @@
 
 **Problem:** Po kliknięciu "+" przy widgecie (np. Feature Grid), nowy blok dodaje się na końcu strony, ale canvas nie przewija się do niego. Użytkownik musi ręcznie scrollować canvas by znaleźć nowo dodany widget.
 
-**Sugestia:** Po dodaniu widgetu — auto-scroll canvas do nowego elementu.
+**Kierunek naprawy UI:** Po wstawieniu widgetu — auto-scroll canvasu do nowo dodanego elementu (smooth scroll, nie nagłe skoki). Jednocześnie dodać chwilową ramkę/highlight wokół nowego widgetu (2 sekundy, fade-out) żeby wizualnie zaznaczyć gdzie się pojawił. Wzorzec spójny z kreatorem Custom Screens gdzie nowy widget pojawia się na końcu canvasu.
 
 ---
 
@@ -88,7 +98,7 @@
 
 **Problem:** Przycisk jest `disabled` dopóki nie zostanie wpisany tytuł, ale nie ma tooltipa ani helptextu tłumaczącego dlaczego. Nowy użytkownik może być zdezorientowany.
 
-**Sugestia:** Dodać helper text np. "Enter a page title to continue" lub tooltip na disabled button.
+**Kierunek naprawy UI:** Pod polem "Title" dodać helper text "Tytuł jest wymagany" (szary gdy puste, znika po wpisaniu). Opcjonalnie: tooltip przy hover na disabled button "Wpisz tytuł aby kontynuować". Sama ikona/kursor blokady przy hover też pomaga. Zasada: disabled button zawsze daje wskazówkę co odblokuje — nigdy nie zostawiać bez wyjaśnienia.
 
 ---
 
@@ -98,7 +108,7 @@
 
 **Problem:** Ponad 30 widgetów w płaskiej, niegrupowanej liście. Brak podziału na kategorie (Layout, Content, Commerce, Forms, itp.). Znalezienie konkretnego widgetu wymaga scrollowania przez całą listę.
 
-**Sugestia:** Pogrupować widgety w sekcje z nagłówkami lub dodać collapsed accordion per kategoria.
+**Kierunek naprawy UI:** Rozszerzyć istniejący komponent Widget Library (ten sam który jest w `/admin/coderso/widgets` i w Custom Screens) — tam kategorie i filtry już są zaimplementowane. Użyć go też w edytorze Pages zamiast osobnej płaskiej listy. Dzięki temu użytkownik dostaje te same filtry/kategorie wszędzie, a kod widgetów jest w jednym miejscu. Alternatywnie: jeśli integracja z Widget Library nie jest możliwa krótkoterminowo — podzielić listę w edytorze na collapsed sekcje wg kategorii (Layout/Content/Forms/Navigation/Media) z licznikami.
 
 ---
 
@@ -108,7 +118,7 @@
 
 **Problem:** Gdy frontend nie jest uruchomiony pod adresem z konfiguracji (np. localhost:3000), iframe pokazuje ikonkę zepsutego dokumentu bez żadnego tekstu błędu ani wskazówki. Użytkownik nie wie co jest nie tak.
 
-**Sugestia:** Dodać czytelny fallback w iframie z komunikatem np. "Frontend preview unavailable. Make sure your site is running at [URL]."
+**Kierunek naprawy UI:** Przed wstawieniem URL do iframe sprawdzić dostępność endpointu. Jeśli niedostępny — zamiast iframe pokazać placeholder kartę z ikoną ostrzeżenia, nagłówkiem "Podgląd na żywo niedostępny" i treścią: "Frontend nie odpowiada pod [URL z konfiguracji]. Upewnij się, że serwis jest uruchomiony, lub zmień URL w ustawieniach." + link do ustawień. Wykorzystać istniejący stan "empty state" z innych sekcji — nie tworzyć nowego wzorca error state.
 
 *Uwaga: Runtime preview działające poprawnie (otwieranie w nowej karcie przez menu "...") działa bez zarzutu po poprawnej konfiguracji.*
 
@@ -120,7 +130,7 @@
 
 **Problem:** Po kliknięciu "Complete setup" wizard nie zamknął się — panel przełączył się w tryb wyboru wariantu layoutu (Centered / Media Right / Media Left) bez żadnego nagłówka wyjaśniającego co to jest i co użytkownik ma teraz zrobić.
 
-**Sugestia:** Dodać nagłówek/opis sekcji "Choose layout variant" lub wyraźnie oddzielić etapy konfiguracji.
+**Kierunek naprawy UI:** Po "Complete setup" prawy panel pokazuje nowy nagłówek: "Wybierz wariant layoutu" + krótki opis "Te same dane, różne układy wizualne". Progressbar lub stepper u góry panelu pokazujący gdzie jest użytkownik w flow: `Config → Layout → Styling`. Dzięki temu "Complete setup" jest krokiem przejścia, a nie zakończenia. Alternatywnie: pozwolić pominąć layout i zamknąć wizard przyciskiem "Use defaults" — user może dostosować później.
 
 ---
 
@@ -130,7 +140,7 @@
 
 **Problem:** Slot wyświetla "Empty slot." bez żadnej wskazówki co można w nim umieścić ani jak (drag & drop? kliknięcie?).
 
-**Sugestia:** Dodać pomocniczy tekst np. "Drag a widget here or click + to add content".
+**Kierunek naprawy UI:** Empty state slotu zawiera: ikonę "+" (widoczne CTA) + tekst "Dodaj widget do slotu Hero Content" + wskazówka niższa "Możesz przeciągnąć z biblioteki lub kliknąć aby wybrać". Hover na slot — highlight ramki i kursor pointer sugerujący klikalność. Po kliknięciu otwiera się Widget Library (mini) filtrowana do widgetów pasujących do tego typu slotu (np. tylko atomic). Wzorzec "Drop target" z Custom Screens — użyć tego samego komponentu empty state.
 
 ---
 
@@ -140,7 +150,7 @@
 
 **Problem:** Tekst "Save settings or close the drawer to keep one autosave snapshot" — zwrot "autosave snapshot" jest technicznym żargonem niezrozumiałym dla przeciętnego użytkownika.
 
-**Sugestia:** Uprościć do np. "Your changes will be saved automatically when you close this panel."
+**Kierunek naprawy UI:** Zastąpić technical speak prostym opisem: "Twoje zmiany zapiszą się automatycznie po zamknięciu panelu." Jeśli istnieje różnica między "Save settings" a "close and autosave" — wyjaśnić ją dwoma osobnymi linijkami: (1) "Zapisz i zamknij" → zapisuje od razu, (2) "Zamknij bez zapisu" → odrzuca zmiany. Usunąć koncept "snapshot" z UI — to koncept wewnętrzny, nie obchodzi użytkownika.
 
 ---
 
@@ -150,7 +160,7 @@
 
 **Problem:** Dropdown "Max width" jest wyłączony gdy "Page width" = "full", ale nie ma tooltipa ani tekstu wyjaśniającego dlaczego.
 
-**Sugestia:** Dodać tooltip "Max width is not applicable when page width is set to full."
+**Kierunek naprawy UI:** Tooltip przy hover na disabled dropdown: "Max width nie ma zastosowania gdy Page width = full." Alternatywnie: pod polem szary helper text "Dostępne tylko gdy Page width ≠ full". Ogólna zasada w tym formularzu: każde disabled pole ma widoczny helper text lub tooltip wyjaśniający warunek odblokowania. Wskazane też: wizualna zależność (np. cienka linia łącząca Page width z Max width) sygnalizująca że są powiązane.
 
 ---
 
@@ -170,6 +180,14 @@
 | Wizard konfiguracji widgetu | Intuicyjny dla podstawowej konfiguracji (Hero, Feature Grid) |
 | Checkbox "Open in editor after create" | Przenosi do edytora po zapisie — wygodne |
 | Wybór wariantu layoutu widgetu (Centered/Media Right/Media Left) | Działa |
+
+---
+
+## Re-weryfikacja 2026-04-22
+
+- BUG-3 (Create Page disabled bez wyjaśnienia) — **nadal występuje** (disabled button bez helper textu)
+- BUG-5 (Radix `aria-describedby` warning) — **nadal występuje** w konsoli przy otwarciu Create Page dialog
+- BUG-1, BUG-2, BUG-4, UX-1..9 — wymagały utworzenia strony i dodania widgetów; przy re-weryfikacji lista stron była pusta, więc zachowuję oryginalne ustalenia. Warto zweryfikować ponownie po utworzeniu testowych stron.
 
 ---
 
