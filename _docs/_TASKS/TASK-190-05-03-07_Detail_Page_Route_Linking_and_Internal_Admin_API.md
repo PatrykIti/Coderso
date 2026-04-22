@@ -173,16 +173,21 @@ Admin client rule:
 - `detailPagesClient.ts` owns list/detail/get/update/autosave/publish/unpublish/
   revisions/restore/preview wrappers plus cache hydration for the detail-page
   resource family.
-- `cachePolicy.ts` owns the detail-page admin cache keys:
-  - `detailPages:list`
-  - `detailPages:detail:<id>`
+- `cachePolicy.ts` owns one detail-page cache-key family, not one flat list key:
+  - `detailPages:list` for unfiltered list reads if they exist,
+  - `detailPages:list:contentType:<contentTypeId>` for content-type-filtered
+    list reads,
+  - `detailPages:detail:<id>` for one document read,
+- `detailPagesClient.ts` owns selecting the correct list cache key from the
+  current query args so filtered workspace/editor reads do not collide with a
+  future unfiltered list view or with another content type,
 - `siteSettingsClient.ts`, `siteSettingsValidation.ts`, `SiteRouteEditor.tsx`,
   and `SiteSettingsPage.tsx` remain the manual/admin transport owners for
   `detailPageId` route linking. `detailPagesClient.ts` owns detail-page document
   CRUD only and must not absorb route-link mutations.
 - `assistantClient.ts` owns mapping validated `detail-page.upsert` execution
-  results onto those cache keys so assistant-driven edits reuse the same cache
-  invalidation path as manual admin flows.
+  results onto that same cache-key family so assistant-driven edits reuse the
+  same cache invalidation path as manual admin flows.
 - `detailPagesClient.ts` must follow the current admin cache contract already
   used by pages/custom screens: local cache hydrate, background revalidation,
   and `cacheBus` broadcast invalidate/update events.
@@ -290,8 +295,9 @@ Route boundary maps through centralized `mapDetailPageError`.
 - Linked detail pages reject delete with a machine-readable route conflict until
   the canonical route link is cleared through the existing route owner seam.
 - `detailPagesClient.ts` exposes delete and invalidates the detail-page list /
-  detail cache keys through the same admin cache contract as comparable
-  resources.
+  detail cache-key family, including the active `contentTypeId`-scoped list key
+  when the current read is filtered, through the same admin cache contract as
+  comparable resources.
 - `contentRouteMatcher` returns `detailPageId`.
 - Site Settings UI/client round-trips `detailPageId`.
 - `tests/vitest/assistant/action-plan-schema.test.ts` covers strict

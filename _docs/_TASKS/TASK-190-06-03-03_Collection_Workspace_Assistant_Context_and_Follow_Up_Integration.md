@@ -52,6 +52,11 @@ The collection workspace stays inside the existing Engine module:
 Expected context additions:
 
 ```ts
+type AssistantCollectionWorkspaceHint = {
+  contentTypeId: string;
+  activeDetailPageId?: string | null;
+};
+
 type AssistantActiveSurfaceContext =
   | { kind: "page"; ... }
   | { kind: "widget-template"; ... }
@@ -60,10 +65,8 @@ type AssistantActiveSurfaceContext =
 
 type AssistantActionContext = {
   ...
-  collectionWorkspace?: {
-    contentTypeId: string;
-    activeDetailPageId?: string | null;
-  } | null;
+  collectionWorkspaceHint?: AssistantCollectionWorkspaceHint | null;
+  collectionWorkspace?: AssistantCollectionWorkspaceSummary | null;
 };
 ```
 
@@ -71,10 +74,19 @@ Rules:
 
 - workspace route parsing must continue to resolve to
   `area: "coderso"` + `codersoModule: "engine"`,
+- widen the existing `AssistantActionContext` in place instead of inventing a
+  parallel collection-context transport:
+  - `collectionWorkspaceHint` is the browser-bound identity hint,
+  - `collectionWorkspace` is the server-hydrated bounded summary,
+  - both fields belong to one existing context pipeline
+    (`useAssistantAdminContext.ts` -> `assistantRoutes.ts` ->
+    `adminContextService.ts` / `providerPlanningContext.ts`), not two
+    independent flows,
 - `AssistantCollectionWorkspaceSummary` remains owned by the server read model
-  from `TASK-190-06-03-01`; the browser sends only the bounded identity hint
-  above, and this leaf rehydrates the bounded summary server-side for assistant
-  context instead of redefining it in the browser,
+  from `TASK-190-06-03-01`; the browser sends only
+  `collectionWorkspaceHint`, and this leaf rehydrates
+  `AssistantActionContext.collectionWorkspace` server-side for assistant
+  context instead of redefining the summary in the browser,
 - `assistantRoutes.ts` plus the server-side workspace loader own permission
   parity for that rehydration. They must reuse the same underlying read guard
   contract as the collection-workspace endpoint/read model from
@@ -131,8 +143,8 @@ Rules:
   model from `TASK-190-06-03-01`; the browser must not become the source of
   truth for canonical linked resources,
 - `CollectionWorkspacePage.tsx` is the producer for the bounded
-  `collectionWorkspace` identity hint in the existing assistant context package:
-  it may publish only `contentTypeId` plus optional `activeDetailPageId`, not a
+  `collectionWorkspaceHint` in the existing assistant context package: it may
+  publish only `contentTypeId` plus optional `activeDetailPageId`, not a
   browser-owned copy of the workspace summary,
 - `DetailTemplateEditorPage.tsx` is the producer for
   `activeSurface.kind = "detail-page"` through the existing
@@ -143,14 +155,16 @@ Rules:
   second collection-workspace context store, route-local fetch transport, or
   browser-owned detail-page summary cache,
 - `adminContextService.ts` and `providerPlanningContext.ts` consume only the
-  server-hydrated bounded workspace summary; raw browser
-  `collectionWorkspace` payloads must not cross the provider boundary,
+  server-hydrated bounded workspace summary in
+  `AssistantActionContext.collectionWorkspace`; raw browser
+  `collectionWorkspaceHint` payloads must not cross the provider boundary
+  unhydrated,
 - assistant route/provider packaging extends the current bounded context package
   with `collectionWorkspace` only after server-side rehydration/validation,
 - `assistantActionSchemas.ts` must stay strict at the browser boundary: it may
-  accept only the bounded `collectionWorkspace` identity hint
+  accept only the bounded `collectionWorkspaceHint`
   (`contentTypeId` plus optional `activeDetailPageId`), never canonical links,
-  candidate lists, or a browser-owned copy of the workspace summary,
+  candidate lists, or a browser-owned copy of `collectionWorkspace`,
 - `assistantRoutes.ts` keeps explicit surface permission branches. Read planning
   for `activeSurface.kind = "detail-page"` follows page parity:
   - require `content:read` because the surface is content-owned,
@@ -187,7 +201,7 @@ Rules:
 
 - workspace route is recognized as `codersoModule: "engine"`.
 - `assistantActionSchemas.ts` accepts the new `detail-page` active-surface shape
-  and bounded `collectionWorkspace` context shape.
+  and bounded `collectionWorkspaceHint` browser payload shape.
 - `/assistant/actions/plan` keeps explicit permission parity for
   `activeSurface.kind = "detail-page"`: `content:read` plus `widgets:read`,
   without broadening unrelated surface checks.
@@ -203,9 +217,12 @@ Rules:
 - missing detail page resource clears the active surface instead of trusting
   stale browser state.
 - workspace-root follow-up context is rehydrated server-side from the bounded
-  collection workspace endpoint/package, not from browser-only state.
-- browser-supplied `collectionWorkspace` summary payloads are ignored/replaced
-  by the server-owned bounded workspace summary derived from
+  collection workspace endpoint/package into
+  `AssistantActionContext.collectionWorkspace`, not from browser-only state.
+- browser-supplied `collectionWorkspaceHint` stays an identity-only hint and
+  never bypasses server hydration into a direct provider/browser summary path.
+- browser-owned `collectionWorkspace` summary payloads are rejected at the
+  schema boundary; the server-owned bounded workspace summary is derived from
   `TASK-190-06-03-01`.
 - if no canonical detail-page link exists yet, workspace/detail-page follow-up
   consumes only bounded server-owned `candidates.detailPages` from

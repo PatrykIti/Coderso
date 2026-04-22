@@ -33,6 +33,8 @@ No child task files.
 - Update `core/admin/services/contentTypesClient.ts`
 - Update `core/admin/services/cachePolicy.ts`
 - Update `core/admin/utils/adminPrefetch.ts`
+- Update `tests/perf/admin-prefetch-budget.test.ts` if the shared prefetch matcher
+  semantics change to prefer the most specific route
 - Add `core/admin/ui/content-types/CollectionWorkspacePage.tsx`
 - Add `core/admin/ui/content-types/CollectionOverview.tsx`
 - Add `core/admin/ui/content-types/CollectionReadinessChecklist.tsx`
@@ -281,8 +283,22 @@ type CollectionWorkspaceSummary = {
 
 - Visibility: internal admin read model only.
 - Auth model: authenticated admin session.
-- RBAC: workspace read model requires the same read permissions as the
-  underlying resources.
+- RBAC:
+  - the host route remains under the existing content-type route family and
+    therefore requires `content:read` at minimum,
+  - the server-owned workspace loader must enforce owner-read parity before it
+    materializes linked slices from other seams instead of treating the host
+    route permission as sufficient for everything,
+  - concrete owner-read expectations stay explicit:
+    - `settings:read` for canonical `site.contentRoutes` row data and
+      route-derived collection link fields,
+    - `forms:read` for linked form summaries,
+    - `content:read` for content types, pages, listings, detail pages, custom
+      screens, and SEO summaries that already sit in the content-owned admin
+      families,
+  - if the actor lacks one of those owner reads, the workspace must redact or
+    mark that slice `unresolved` instead of broadening permissions or leaking
+    the underlying resource payload.
 - CSRF: not applicable to read-only requests.
 - Rate-limit bucket: `admin_read`.
 - Reject-unknown validation: aggregated payload is strict.
@@ -307,6 +323,13 @@ type CollectionWorkspaceSummary = {
 - Workspace route warmup resolves through a specific workspace prefetch match and
   does not get swallowed by the broader `/coderso/engine` prefix entry under the
   current `adminPrefetch.ts` matcher.
+- route tests cover the owner-read bundle explicitly: `content:read` for the
+  host route plus `settings:read` / `forms:read` gated slices where the
+  workspace summary includes those owner families.
+- if `createAdminPrefetcher(...)` changes matching semantics to prefer the most
+  specific route, extend the existing perf gate in
+  `tests/perf/admin-prefetch-budget.test.ts` so the new matcher still stays
+  inside the current hover-burst request budget.
 - canonical public list page prefers explicit collection linkage; the
   detail-route-prefix fallback is compatibility-only for current catalog-family
   presets and must return `unresolved` when multiple or non-exact candidates

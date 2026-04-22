@@ -35,9 +35,11 @@ No child task files.
   current page contract
 - Update `core/admin/services/pagesClient.ts` only if that persisted page
   metadata must round-trip through the current admin cached client
-- Update `core/admin/ui/pages/PageEditor.tsx` only if the current page editor
-  needs UI/form ownership for explicit canonical list-page or collection-linked
-  page metadata
+- Update `core/admin/ui/pages/PageSettingsDrawer.tsx` only if manual page
+  settings UI exposes explicit canonical list-page or collection-linked page
+  metadata
+- Update `core/admin/ui/pages/PageEditor.tsx` only if the route shell must wire
+  that widened settings contract into the existing settings drawer flow
 - Add `tests/vitest/assistant/blueprint-page-section-composer.test.ts`
 - Update `tests/vitest/assistant/action-plan-schema.test.ts` if the existing
   `page.upsert` contract widens for `collectionLink`
@@ -109,9 +111,12 @@ type PageCollectionLink = {
   `actionExecutorService.ts` own the reviewed assistant transport for this
   metadata when composer-generated `page.upsert` actions create or update the
   canonical list page.
-- `pagesClient.ts` owns cached round-trip for that metadata, and `PageEditor.tsx`
-  owns any manual editing UI if this metadata becomes operator-visible.
-- `PageEditor.tsx` may expose only the exact persisted
+- `pagesClient.ts` owns cached round-trip for that metadata.
+- `PageSettingsDrawer.tsx` is the concrete manual settings-form seam if this
+  metadata becomes operator-visible, while `PageEditor.tsx` stays the route
+  shell that passes persisted data into that drawer; do not invent a second
+  page-metadata editor outside the current settings flow.
+- `PageSettingsDrawer.tsx` / `PageEditor.tsx` may expose only the exact persisted
   `PageData.settings.collectionLink` fields already owned by
   `pageService.ts` / `pagesClient.ts`; it must not infer canonical list-page
   linkage from route/title heuristics or keep a second editor-only shadow copy
@@ -169,7 +174,8 @@ export const composePageUpsertInput = (graph): AssistantPageUpsertAction["input"
   read from `settings.collectionLink`, not re-derived from route or slug
   heuristics once this contract exists.
 - Any manual editor support for that metadata stays page-owned in the current
-  Page editor seam rather than moving into workspace-only controls.
+  Page settings drawer seam rather than moving into workspace-only controls or a
+  second page-metadata form.
 
 ## Documentation Updates Required
 
