@@ -1,0 +1,786 @@
+- generic [ref=e353]:
+  - complementary [ref=e354]:
+    - generic [ref=e356]:
+      - generic [ref=e357]: "N"
+      - generic [ref=e358]:
+        - generic [ref=e359]: Nextless
+        - generic [ref=e360]: Admin Panel
+    - navigation [ref=e361]:
+      - generic [ref=e362]:
+        - paragraph [ref=e363]: Main
+        - generic [ref=e364]:
+          - link "Dashboard" [ref=e365] [cursor=pointer]:
+            - /url: /admin/
+            - img [ref=e366]
+            - generic [ref=e371]: Dashboard
+          - link "Pages" [ref=e372] [cursor=pointer]:
+            - /url: /admin/pages
+            - img [ref=e373]
+            - generic [ref=e376]: Pages
+          - link "Posts" [ref=e377] [cursor=pointer]:
+            - /url: /admin/coderso/posts
+            - img [ref=e378]
+            - generic [ref=e381]: Posts
+          - link "Menus" [ref=e382] [cursor=pointer]:
+            - /url: /admin/menus
+            - img [ref=e383]
+            - generic [ref=e384]: Menus
+          - link "Media" [ref=e385] [cursor=pointer]:
+            - /url: /admin/media
+            - img [ref=e386]
+            - generic [ref=e390]: Media
+          - generic [ref=e391]:
+            - button "Coderso" [expanded] [ref=e392]:
+              - img [ref=e393]
+              - generic [ref=e396]: Coderso
+              - img [ref=e397]
+            - generic [ref=e399]:
+              - link "Engine" [ref=e400] [cursor=pointer]:
+                - /url: /admin/coderso/engine
+                - img [ref=e401]
+                - generic [ref=e405]: Engine
+              - link "Entries" [ref=e406] [cursor=pointer]:
+                - /url: /admin/coderso/entries
+                - img [ref=e407]
+                - generic [ref=e411]: Entries
+              - link "Screens Beta" [ref=e412] [cursor=pointer]:
+                - /url: /admin/coderso/custom-screens
+                - img [ref=e413]
+                - generic [ref=e418]: Screens
+                - generic [ref=e419]: Beta
+              - link "Widgets" [ref=e420] [cursor=pointer]:
+                - /url: /admin/coderso/widgets
+                - img [ref=e421]
+                - generic [ref=e424]: Widgets
+              - link "Forms" [ref=e425] [cursor=pointer]:
+                - /url: /admin/coderso/forms
+                - img [ref=e426]
+                - generic [ref=e429]: Forms
+              - link "Listings Beta" [ref=e430] [cursor=pointer]:
+                - /url: /admin/coderso/listings
+                - img [ref=e431]
+                - generic [ref=e436]: Listings
+                - generic [ref=e437]: Beta
+              - link "Filters Beta" [ref=e438] [cursor=pointer]:
+                - /url: /admin/coderso/filters
+                - img [ref=e439]
+                - generic [ref=e441]: Filters
+                - generic [ref=e442]: Beta
+              - link "Search Beta" [ref=e443] [cursor=pointer]:
+                - /url: /admin/coderso/search
+                - img [ref=e444]
+                - generic [ref=e447]: Search
+                - generic [ref=e448]: Beta
+              - link "Booking Beta" [ref=e449] [cursor=pointer]:
+                - /url: /admin/coderso/booking
+                - img [ref=e450]
+                - generic [ref=e452]: Booking
+                - generic [ref=e453]: Beta
+              - link "Reviews Beta" [ref=e454] [cursor=pointer]:
+                - /url: /admin/coderso/reviews
+                - img [ref=e455]
+                - generic [ref=e457]: Reviews
+                - generic [ref=e458]: Beta
+              - link "Commerce Beta" [ref=e459] [cursor=pointer]:
+                - /url: /admin/coderso/commerce
+                - img [ref=e460]
+                - generic [ref=e464]: Commerce
+                - generic [ref=e465]: Beta
+              - link "Popups Beta" [ref=e466] [cursor=pointer]:
+                - /url: /admin/coderso/popups
+                - img [ref=e467]
+                - generic [ref=e470]: Popups
+                - generic [ref=e471]: Beta
+              - link "Solution Kits Beta" [ref=e472] [cursor=pointer]:
+                - /url: /admin/coderso/solution-kits
+                - img [ref=e473]
+                - generic [ref=e476]: Solution Kits
+                - generic [ref=e477]: Beta
+      - generic [ref=e478]:
+        - paragraph [ref=e479]: Store
+        - link "Plugin Store" [ref=e481] [cursor=pointer]:
+          - /url: /admin/store
+          - img [ref=e482]
+          - generic [ref=e486]: Plugin Store
+      - generic [ref=e487]:
+        - paragraph [ref=e488]: Visual
+        - link "Admin UI Theme" [ref=e490] [cursor=pointer]:
+          - /url: /admin/themes
+          - img [ref=e491]
+          - generic [ref=e497]: Admin UI Theme
+      - generic [ref=e498]:
+        - paragraph [ref=e499]: Tools
+        - generic [ref=e500]:
+          - link "Search" [ref=e501] [cursor=pointer]:
+            - /url: /admin/search
+            - img [ref=e502]
+            - generic [ref=e505]: Search
+          - link "SEO Manager" [ref=e506] [cursor=pointer]:
+            - /url: /admin/seo
+            - img [ref=e507]
+            - generic [ref=e510]: SEO Manager
+          - link "Analytics" [ref=e511] [cursor=pointer]:
+            - /url: /admin/analytics
+            - img [ref=e512]
+            - generic [ref=e514]: Analytics
+          - link "Backups" [ref=e515] [cursor=pointer]:
+            - /url: /admin/backups
+            - img [ref=e516]
+            - generic [ref=e518]: Backups
+          - link "Import / Export" [ref=e519] [cursor=pointer]:
+            - /url: /admin/tools/import-export
+            - img [ref=e520]
+            - generic [ref=e523]: Import / Export
+          - link "Redirects" [ref=e524] [cursor=pointer]:
+            - /url: /admin/redirects
+            - img [ref=e525]
+            - generic [ref=e531]: Redirects
+      - generic [ref=e532]:
+        - paragraph [ref=e533]: Admin
+        - generic [ref=e534]:
+          - link "Users" [ref=e535] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e536]
+            - generic [ref=e541]: Users
+          - link "Roles Matrix" [ref=e542] [cursor=pointer]:
+            - /url: /admin/roles
+            - img [ref=e543]
+            - generic [ref=e546]: Roles Matrix
+          - link "Audit Logs" [ref=e547] [cursor=pointer]:
+            - /url: /admin/audit
+            - img [ref=e548]
+            - generic [ref=e550]: Audit Logs
+          - link "Access Logs" [ref=e551] [cursor=pointer]:
+            - /url: /admin/access-logs
+            - img [ref=e552]
+            - generic [ref=e554]: Access Logs
+          - link "Settings" [ref=e555] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e556]
+            - generic [ref=e559]: Settings
+    - generic [ref=e560]:
+      - link "Docs" [ref=e561] [cursor=pointer]:
+        - /url: https://nextless.dev/docs
+        - img [ref=e562]
+        - text: Docs
+      - link "Support" [ref=e565] [cursor=pointer]:
+        - /url: https://nextless.dev/support
+        - img [ref=e566]
+        - text: Support
+  - generic [ref=e573]:
+    - banner [ref=e574]:
+      - generic [ref=e577]:
+        - generic [ref=e578]: Pages
+        - generic [ref=e579]: /
+        - generic [ref=e580]: Homepage
+        - generic [ref=e581]: Published
+        - generic [ref=e1502]: Unsaved changes
+      - generic [ref=e583]:
+        - img [ref=e584]
+        - textbox "Search pages, entries, media..." [ref=e587]
+      - generic [ref=e588]:
+        - button "Light" [ref=e589]:
+          - img
+          - generic [ref=e590]: Light
+        - button [ref=e591]:
+          - img
+        - button [ref=e592]:
+          - img
+    - main [ref=e593]:
+      - generic [ref=e594]:
+        - complementary [ref=e595]:
+          - generic [ref=e597]:
+            - tablist [ref=e598]:
+              - tab "Widgets" [selected] [ref=e599]
+              - tab "Templates" [ref=e600]
+              - tab "Forms" [ref=e601]
+            - tabpanel "Widgets" [ref=e602]:
+              - generic [ref=e603]:
+                - generic [ref=e605]:
+                  - img
+                  - textbox "Find components..." [ref=e606]
+                - generic [ref=e610]:
+                  - generic [ref=e612]:
+                    - generic [ref=e613]:
+                      - paragraph [ref=e614]: Section
+                      - paragraph [ref=e615]: Semantic layout wrapper with repeatable region slots.
+                    - button [ref=e616]:
+                      - img
+                  - generic [ref=e618]:
+                    - generic [ref=e619]:
+                      - paragraph [ref=e620]: Grid Columns
+                      - paragraph [ref=e621]: Responsive multi-column layout with repeatable column slots.
+                    - button [ref=e622]:
+                      - img
+                  - generic [ref=e624]:
+                    - generic [ref=e625]:
+                      - paragraph [ref=e626]: Split Layout
+                      - paragraph [ref=e627]: Two-pane layout wrapper with ratio and mobile behavior controls.
+                    - button [ref=e628]:
+                      - img
+                  - generic [ref=e630]:
+                    - generic [ref=e631]:
+                      - paragraph [ref=e632]: Tabs
+                      - paragraph [ref=e633]: Switch between grouped content panels.
+                    - button [ref=e634]:
+                      - img
+                  - generic [ref=e636]:
+                    - generic [ref=e637]:
+                      - paragraph [ref=e638]: Accordion
+                      - paragraph [ref=e639]: Expandable stacked content panels.
+                    - button [ref=e640]:
+                      - img
+                  - generic [ref=e642]:
+                    - generic [ref=e643]:
+                      - paragraph [ref=e644]: Toggle Block
+                      - paragraph [ref=e645]: Switch between two alternate content panes.
+                    - button [ref=e646]:
+                      - img
+                  - generic [ref=e648]:
+                    - generic [ref=e649]:
+                      - paragraph [ref=e650]: Spacer
+                      - paragraph [ref=e651]: Responsive vertical spacing primitive for clean rhythm control.
+                    - button [ref=e652]:
+                      - img
+                  - generic [ref=e654]:
+                    - generic [ref=e655]:
+                      - paragraph [ref=e656]: Divider
+                      - paragraph [ref=e657]: Visual separator with optional centered label and spacing controls.
+                    - button [ref=e658]:
+                      - img
+                  - generic [ref=e660]:
+                    - generic [ref=e661]:
+                      - paragraph [ref=e662]: Stack
+                      - paragraph [ref=e663]: Flow layout wrapper with responsive direction and spacing.
+                    - button [ref=e664]:
+                      - img
+                  - generic [ref=e666]:
+                    - generic [ref=e667]:
+                      - paragraph [ref=e668]: Hero
+                      - paragraph [ref=e669]: Top-of-page hero section with CTA.
+                    - button [ref=e670]:
+                      - img
+                  - generic [ref=e672]:
+                    - generic [ref=e673]:
+                      - paragraph [ref=e674]: Feature Grid
+                      - paragraph [ref=e675]: Card grid for value propositions and product highlights.
+                    - button [ref=e676]:
+                      - img
+                  - generic [ref=e678]:
+                    - generic [ref=e679]:
+                      - paragraph [ref=e680]: Testimonials
+                      - paragraph [ref=e681]: Social proof quotes with ratings and author identity.
+                    - button [ref=e682]:
+                      - img
+                  - generic [ref=e684]:
+                    - generic [ref=e685]:
+                      - paragraph [ref=e686]: Pricing Plans
+                      - paragraph [ref=e687]: Plan cards and comparison layout for offers.
+                    - button [ref=e688]:
+                      - img
+                  - generic [ref=e690]:
+                    - generic [ref=e691]:
+                      - paragraph [ref=e692]: FAQ Accordion
+                      - paragraph [ref=e693]: Expandable list of questions and answers for objection handling.
+                    - button [ref=e694]:
+                      - img
+                  - generic [ref=e696]:
+                    - generic [ref=e697]:
+                      - paragraph [ref=e698]: CTA Banner
+                      - paragraph [ref=e699]: Compact conversion strip with headline and CTA actions.
+                    - button [ref=e700]:
+                      - img
+                  - generic [ref=e702]:
+                    - generic [ref=e703]:
+                      - paragraph [ref=e704]: Logo Cloud
+                      - paragraph [ref=e705]: Partner and customer logo section for trust building.
+                    - button [ref=e706]:
+                      - img
+                  - generic [ref=e708]:
+                    - generic [ref=e709]:
+                      - paragraph [ref=e710]: Gallery Mosaic
+                      - paragraph [ref=e711]: Media gallery layouts for visual storytelling sections.
+                    - button [ref=e712]:
+                      - img
+                  - generic [ref=e714]:
+                    - generic [ref=e715]:
+                      - paragraph [ref=e716]: Stats KPI
+                      - paragraph [ref=e717]: Metrics section with values and supporting labels.
+                    - button [ref=e718]:
+                      - img
+                  - generic [ref=e720]:
+                    - generic [ref=e721]:
+                      - paragraph [ref=e722]: Team
+                      - paragraph [ref=e723]: Member section with profile cards, roles, and social links.
+                    - button [ref=e724]:
+                      - img
+                  - generic [ref=e726]:
+                    - generic [ref=e727]:
+                      - paragraph [ref=e728]: Rich Text Section
+                      - paragraph [ref=e729]: Long-form copy block with safe HTML rendering and typography controls.
+                    - button [ref=e730]:
+                      - img
+                  - generic [ref=e732]:
+                    - generic [ref=e733]:
+                      - paragraph [ref=e734]: Content List
+                      - paragraph [ref=e735]: Dynamic list of entries from selected content type.
+                    - button [ref=e736]:
+                      - img
+                  - generic [ref=e738]:
+                    - generic [ref=e739]:
+                      - paragraph [ref=e740]: Posts Feed
+                      - paragraph [ref=e741]: Display latest or selected posts without building a listing query.
+                    - button [ref=e742]:
+                      - img
+                  - generic [ref=e744]:
+                    - generic [ref=e745]:
+                      - paragraph [ref=e746]: Entry Teaser
+                      - paragraph [ref=e747]: Highlighted teaser for one selected, latest, or featured entry.
+                    - button [ref=e748]:
+                      - img
+                  - generic [ref=e750]:
+                    - generic [ref=e751]:
+                      - paragraph [ref=e752]: Product Gallery
+                      - paragraph [ref=e753]: Product cards with runtime query source and stock/price metadata.
+                    - button [ref=e754]:
+                      - img
+                  - generic [ref=e756]:
+                    - generic [ref=e757]:
+                      - paragraph [ref=e758]: Product Compare
+                      - paragraph [ref=e759]: Comparison matrix for product attributes and pricing.
+                    - button [ref=e760]:
+                      - img
+                  - generic [ref=e762]:
+                    - generic [ref=e763]:
+                      - paragraph [ref=e764]: Product Table
+                      - paragraph [ref=e765]: Tabular product list with configurable columns.
+                    - button [ref=e766]:
+                      - img
+                  - generic [ref=e768]:
+                    - generic [ref=e769]:
+                      - paragraph [ref=e770]: Listing Filters
+                      - paragraph [ref=e771]: Faceted runtime filters for listing query widgets.
+                    - button [ref=e772]:
+                      - img
+                  - generic [ref=e774]:
+                    - generic [ref=e775]:
+                      - paragraph [ref=e776]: Search Box
+                      - paragraph [ref=e777]: Scoped listing search or global public search widget.
+                    - button [ref=e778]:
+                      - img
+                  - generic [ref=e780]:
+                    - generic [ref=e781]:
+                      - paragraph [ref=e782]: Timeline
+                      - paragraph [ref=e783]: Timeline of steps or milestones.
+                    - button [ref=e784]:
+                      - img
+                  - generic [ref=e786]:
+                    - generic [ref=e787]:
+                      - paragraph [ref=e788]: Compare Timeline
+                      - paragraph [ref=e789]: Two-track process comparison.
+                    - button [ref=e790]:
+                      - img
+                  - generic [ref=e792]:
+                    - generic [ref=e793]:
+                      - paragraph [ref=e794]: Newsletter
+                      - paragraph [ref=e795]: Email signup form.
+                    - button [ref=e796]:
+                      - img
+                  - generic [ref=e798]:
+                    - generic [ref=e799]:
+                      - paragraph [ref=e800]: Booking Calendar
+                      - paragraph [ref=e801]: Interactive slot picker for booking services/resources.
+                    - button [ref=e802]:
+                      - img
+                  - generic [ref=e804]:
+                    - generic [ref=e805]:
+                      - paragraph [ref=e806]: Appointment Form
+                      - paragraph [ref=e807]: Customer details form linked to selected booking calendar slot.
+                    - button [ref=e808]:
+                      - img
+                  - generic [ref=e810]:
+                    - generic [ref=e811]:
+                      - paragraph [ref=e812]: Form Embed
+                      - paragraph [ref=e813]: Embed a saved form with layout controls.
+                    - button [ref=e814]:
+                      - img
+                  - generic [ref=e816]:
+                    - generic [ref=e817]:
+                      - paragraph [ref=e818]: Contact
+                      - paragraph [ref=e819]: Contact form and details.
+                    - button [ref=e820]:
+                      - img
+                  - generic [ref=e822]:
+                    - generic [ref=e823]:
+                      - paragraph [ref=e824]: Navigation
+                      - paragraph [ref=e825]: Site menu with logo and links.
+                    - button [ref=e826]:
+                      - img
+                  - generic [ref=e828]:
+                    - generic [ref=e829]:
+                      - paragraph [ref=e830]: Footer
+                      - paragraph [ref=e831]: Footer with links and company info.
+                    - button [ref=e832]:
+                      - img
+        - generic [ref=e834]:
+          - generic [ref=e836]:
+            - generic [ref=e837]:
+              - generic [ref=e838]:
+                - paragraph [ref=e839]: Runtime preview device
+                - generic [ref=e840]:
+                  - button "Desktop" [ref=e841]:
+                    - img
+                  - button "Tablet" [ref=e842]:
+                    - img
+                  - button "Mobile" [ref=e843]:
+                    - img
+              - button "Runtime preview" [ref=e844]:
+                - img
+                - text: Runtime preview
+            - generic [ref=e845]:
+              - button "Save draft" [ref=e846]:
+                - img
+                - text: Save draft
+              - button "Publish" [ref=e847]:
+                - img
+                - text: Publish
+            - generic [ref=e848]:
+              - button "Page settings" [ref=e849]:
+                - img
+                - text: Page settings
+              - button "History" [ref=e851]:
+                - img
+                - text: History
+          - generic [ref=e859]:
+            - button "Reorder Hero Hero centered Top-of-page hero section with CTA. Twoja strona internetowa zaczyna się tutaj Nowoczesny CMS dla nowoczesnych zespołów. Zacznij teraz Dowiedz się więcej Hero Content 0 Empty slot." [ref=e945] [cursor=pointer]:
+              - generic [ref=e862]:
+                - button "Reorder Hero Hero centered Top-of-page hero section with CTA." [ref=e863]:
+                  - button "Reorder Hero" [ref=e864]:
+                    - img [ref=e865]
+                  - generic [ref=e872]:
+                    - generic [ref=e873]:
+                      - paragraph [ref=e874]: Hero
+                      - generic [ref=e875]: centered
+                    - paragraph [ref=e876]: Top-of-page hero section with CTA.
+                - generic [ref=e877]:
+                  - button [disabled]:
+                    - img
+                  - button [ref=e1150]:
+                    - img
+                  - button [active] [ref=e878]:
+                    - img
+                  - button [ref=e879]:
+                    - img
+              - generic [ref=e886]:
+                - heading "Twoja strona internetowa zaczyna się tutaj" [level=1] [ref=e941]
+                - paragraph [ref=e888]: Nowoczesny CMS dla nowoczesnych zespołów.
+                - generic [ref=e889]:
+                  - link "Zacznij teraz" [ref=e944]:
+                    - /url: /zacznij
+                  - link "Dowiedz się więcej" [ref=e946]:
+                    - /url: /o-nas
+              - generic [ref=e893]:
+                - generic [ref=e894]:
+                  - generic [ref=e895]: Hero Content
+                  - generic [ref=e896]: "0"
+                - generic [ref=e897]: Empty slot.
+            - button "Reorder Hero Hero centered Top-of-page hero section with CTA. Twoja strona internetowa zaczyna się tutaj Nowoczesny CMS dla nowoczesnych zespołów. Zacznij teraz Dowiedz się więcej Hero Content 0 Empty slot." [ref=e1503] [cursor=pointer]:
+              - generic [ref=e1505]:
+                - button "Reorder Hero Hero centered Top-of-page hero section with CTA." [ref=e1506]:
+                  - button "Reorder Hero" [ref=e1507]:
+                    - img [ref=e1508]
+                  - generic [ref=e1515]:
+                    - generic [ref=e1516]:
+                      - paragraph [ref=e1517]: Hero
+                      - generic [ref=e1518]: centered
+                    - paragraph [ref=e1519]: Top-of-page hero section with CTA.
+                - generic [ref=e1520]:
+                  - button [ref=e1521]:
+                    - img
+                  - button [ref=e1522]:
+                    - img
+                  - button [ref=e1523]:
+                    - img
+                  - button [ref=e1524]:
+                    - img
+              - generic [ref=e1531]:
+                - heading "Twoja strona internetowa zaczyna się tutaj" [level=1] [ref=e1532]
+                - paragraph [ref=e1533]: Nowoczesny CMS dla nowoczesnych zespołów.
+                - generic [ref=e1534]:
+                  - link "Zacznij teraz" [ref=e1535]:
+                    - /url: /zacznij
+                  - link "Dowiedz się więcej" [ref=e1536]:
+                    - /url: /o-nas
+              - generic [ref=e1538]:
+                - generic [ref=e1539]:
+                  - generic [ref=e1540]: Hero Content
+                  - generic [ref=e1541]: "0"
+                - generic [ref=e1542]: Empty slot.
+            - button "Reorder Feature Grid Feature Grid cards-3 Card grid for value propositions and product highlights. Feature highlights Everything your team needs Use focused cards to explain your strongest product capabilities." [ref=e1151] [cursor=pointer]:
+              - generic [ref=e1153]:
+                - button "Reorder Feature Grid Feature Grid cards-3 Card grid for value propositions and product highlights." [ref=e1154]:
+                  - button "Reorder Feature Grid" [ref=e1155]:
+                    - img [ref=e1156]
+                  - generic [ref=e1163]:
+                    - generic [ref=e1164]:
+                      - paragraph [ref=e1165]: Feature Grid
+                      - generic [ref=e1166]: cards-3
+                    - paragraph [ref=e1167]: Card grid for value propositions and product highlights.
+                - generic [ref=e1168]:
+                  - button [ref=e1169]:
+                    - img
+                  - button [disabled]:
+                    - img
+                  - button [ref=e1170]:
+                    - img
+                  - button [ref=e1171]:
+                    - img
+              - generic [ref=e1175]:
+                - generic [ref=e1176]:
+                  - paragraph [ref=e1177]: Feature highlights
+                  - heading "Everything your team needs" [level=3] [ref=e1178]
+                  - paragraph [ref=e1179]: Use focused cards to explain your strongest product capabilities.
+                - generic [ref=e1180]:
+                  - article [ref=e1181]:
+                    - generic [ref=e1182]: ⚡
+                    - heading "Fast setup" [level=4] [ref=e1183]
+                    - paragraph [ref=e1184]: Launch complete pages using reusable blocks and presets.
+                    - link "Explore setup" [ref=e1185]:
+                      - /url: "#"
+                  - article [ref=e1186]:
+                    - generic [ref=e1187]: 🧩
+                    - heading "Composable widgets" [level=4] [ref=e1188]
+                    - paragraph [ref=e1189]: Mix content, forms, and layout blocks without custom code.
+                    - link "View widgets" [ref=e1190]:
+                      - /url: "#"
+                  - article [ref=e1191]:
+                    - generic [ref=e1192]: 📈
+                    - heading "Conversion ready" [level=4] [ref=e1193]
+                    - paragraph [ref=e1194]: Design sections tuned for clarity, trust, and action.
+                    - link "See examples" [ref=e1195]:
+                      - /url: "#"
+        - complementary [ref=e854]:
+          - generic [ref=e855]:
+            - generic [ref=e1543]:
+              - text: "Slots:"
+              - generic [ref=e1545]:
+                - generic [ref=e1546]:
+                  - generic [ref=e1547]: Hero Content slot
+                  - generic [ref=e1549]: 0 items
+                - generic [ref=e1550]: Slot is available and currently empty.
+              - generic [ref=e1551]: Use the Insert dialog to add widgets into a slot.
+            - generic [ref=e1230]:
+              - tablist [ref=e1231]:
+                - tab "Wizard" [ref=e1232]
+                - tab "Visual" [selected] [ref=e1233]
+                - tab "Advanced" [ref=e1234]
+              - tabpanel "Visual" [ref=e1235]:
+                - generic [ref=e1552]:
+                  - generic [ref=e1553]:
+                    - generic [ref=e1554]:
+                      - paragraph [ref=e1555]: Variant and Presets
+                      - paragraph [ref=e1556]: Choose hero orientation and save reusable configurations.
+                    - generic [ref=e1557]:
+                      - generic [ref=e1558]:
+                        - button "Centered Selected Single column hero with centered content." [ref=e1559]:
+                          - generic [ref=e1560]:
+                            - paragraph [ref=e1561]: Centered
+                            - generic [ref=e1562]: Selected
+                          - paragraph [ref=e1563]: Single column hero with centered content.
+                        - button "Media Right Pick Text left, media right." [ref=e1564]:
+                          - generic [ref=e1565]:
+                            - paragraph [ref=e1566]: Media Right
+                            - generic [ref=e1567]: Pick
+                          - paragraph [ref=e1568]: Text left, media right.
+                        - button "Media Left Pick Media left, text right." [ref=e1569]:
+                          - generic [ref=e1570]:
+                            - paragraph [ref=e1571]: Media Left
+                            - generic [ref=e1572]: Pick
+                          - paragraph [ref=e1573]: Media left, text right.
+                      - button "Add variant preset" [ref=e1574]
+                      - paragraph [ref=e1575]: No presets yet. Save your current setup as a starting point.
+                  - generic [ref=e1576]:
+                    - generic [ref=e1577]:
+                      - paragraph [ref=e1578]: Content
+                      - paragraph [ref=e1579]: Edit all copy shown in this Hero block.
+                    - generic [ref=e1580]:
+                      - generic [ref=e1581]:
+                        - paragraph [ref=e1582]: Headline
+                        - textbox "Build with confidence" [ref=e1583]: Twoja strona internetowa zaczyna się tutaj
+                      - generic [ref=e1584]:
+                        - paragraph [ref=e1585]: Subhead
+                        - textbox "Short supporting message" [ref=e1586]: Nowoczesny CMS dla nowoczesnych zespołów.
+                      - generic [ref=e1587]:
+                        - paragraph [ref=e1588]: Body
+                        - textbox "Explain the key benefit." [ref=e1589]
+                  - generic [ref=e1590]:
+                    - generic [ref=e1591]:
+                      - paragraph [ref=e1592]: CTA
+                      - paragraph [ref=e1593]: Manage CTA structure and button appearance.
+                    - generic [ref=e1594]:
+                      - generic [ref=e1595]:
+                        - paragraph [ref=e1596]: CTA layout
+                        - combobox [ref=e1597]:
+                          - generic: Dual CTA
+                          - img
+                      - generic [ref=e1598]:
+                        - generic [ref=e1599]:
+                          - paragraph [ref=e1600]: Primary CTA Label
+                          - textbox "Get started" [ref=e1601]: Zacznij teraz
+                        - generic [ref=e1602]:
+                          - paragraph [ref=e1603]: Primary CTA URL
+                          - textbox "/start" [ref=e1604]: /zacznij
+                        - generic [ref=e1605]:
+                          - paragraph [ref=e1606]: Primary button size
+                          - combobox [ref=e1607]:
+                            - generic: md
+                            - img
+                        - generic [ref=e1608]:
+                          - paragraph [ref=e1609]: Secondary CTA Label
+                          - textbox "Learn more" [ref=e1610]: Dowiedz się więcej
+                        - generic [ref=e1611]:
+                          - paragraph [ref=e1612]: Secondary CTA URL
+                          - textbox "/learn" [ref=e1613]: /o-nas
+                        - generic [ref=e1614]:
+                          - paragraph [ref=e1615]: Secondary button size
+                          - combobox [ref=e1616]:
+                            - generic: md
+                            - img
+                  - generic [ref=e1617]:
+                    - generic [ref=e1618]:
+                      - paragraph [ref=e1619]: Typography
+                      - paragraph [ref=e1620]: Adjust alignment and text scale.
+                    - generic [ref=e1621]:
+                      - generic [ref=e1622]:
+                        - paragraph [ref=e1623]: Alignment
+                        - combobox [ref=e1624]:
+                          - generic: center
+                          - img
+                      - generic [ref=e1625]:
+                        - generic [ref=e1626]:
+                          - paragraph [ref=e1627]: Headline size
+                          - combobox [ref=e1628]:
+                            - generic: 3xl
+                            - img
+                        - generic [ref=e1629]:
+                          - paragraph [ref=e1630]: Subhead size
+                          - combobox [ref=e1631]:
+                            - generic: xl
+                            - img
+                        - generic [ref=e1632]:
+                          - paragraph [ref=e1633]: Body size
+                          - combobox [ref=e1634]:
+                            - generic: base
+                            - img
+                  - generic [ref=e1635]:
+                    - generic [ref=e1636]:
+                      - paragraph [ref=e1637]: Colors and Borders
+                      - paragraph [ref=e1638]: Fine-tune text, button, and frame styling.
+                    - generic [ref=e1639]:
+                      - generic [ref=e1640]:
+                        - generic [ref=e1641]:
+                          - paragraph [ref=e1642]: Headline color
+                          - generic [ref=e1643]:
+                            - textbox [ref=e1644]: "#111827"
+                            - textbox "var(--color-text)" [ref=e1645]
+                        - generic [ref=e1646]:
+                          - paragraph [ref=e1647]: Subhead color
+                          - generic [ref=e1648]:
+                            - textbox [ref=e1649]: "#111827"
+                            - textbox "rgba(17, 24, 39, 0.8)" [ref=e1650]
+                        - generic [ref=e1651]:
+                          - paragraph [ref=e1652]: Body color
+                          - generic [ref=e1653]:
+                            - textbox [ref=e1654]: "#111827"
+                            - textbox "rgba(17, 24, 39, 0.7)" [ref=e1655]
+                        - generic [ref=e1656]:
+                          - paragraph [ref=e1657]: Card border color
+                          - generic [ref=e1658]:
+                            - textbox [ref=e1659]: "#111827"
+                            - textbox "var(--color-border)" [ref=e1660]
+                        - generic [ref=e1661]:
+                          - paragraph [ref=e1662]: Primary button background
+                          - generic [ref=e1663]:
+                            - textbox [ref=e1664]: "#111827"
+                            - textbox "var(--color-primary)" [ref=e1665]
+                        - generic [ref=e1666]:
+                          - paragraph [ref=e1667]: Primary button text
+                          - generic [ref=e1668]:
+                            - textbox [ref=e1669]: "#111827"
+                            - textbox "var(--color-bg)" [ref=e1670]
+                        - generic [ref=e1671]:
+                          - paragraph [ref=e1672]: Primary button border
+                          - generic [ref=e1673]:
+                            - textbox [ref=e1674]: "#111827"
+                            - textbox "transparent" [ref=e1675]
+                        - generic [ref=e1676]:
+                          - paragraph [ref=e1677]: Secondary button background
+                          - generic [ref=e1678]:
+                            - textbox [ref=e1679]: "#111827"
+                            - textbox "transparent" [ref=e1680]
+                        - generic [ref=e1681]:
+                          - paragraph [ref=e1682]: Secondary button text
+                          - generic [ref=e1683]:
+                            - textbox [ref=e1684]: "#111827"
+                            - textbox "var(--color-text)" [ref=e1685]
+                        - generic [ref=e1686]:
+                          - paragraph [ref=e1687]: Secondary button border
+                          - generic [ref=e1688]:
+                            - textbox [ref=e1689]: "#111827"
+                            - textbox "var(--color-border)" [ref=e1690]
+                        - generic [ref=e1691]:
+                          - paragraph [ref=e1692]: Media frame border color
+                          - generic [ref=e1693]:
+                            - textbox [ref=e1694]: "#111827"
+                            - textbox "var(--color-border)" [ref=e1695]
+                      - generic [ref=e1696]:
+                        - generic [ref=e1697]:
+                          - paragraph [ref=e1698]: Card border width
+                          - combobox [ref=e1699]:
+                            - generic: "1"
+                            - img
+                        - generic [ref=e1700]:
+                          - paragraph [ref=e1701]: Card radius
+                          - combobox [ref=e1702]:
+                            - generic: 3xl
+                            - img
+                        - generic [ref=e1703]:
+                          - paragraph [ref=e1704]: Media border width
+                          - combobox [ref=e1705]:
+                            - generic: "1"
+                            - img
+                        - generic [ref=e1706]:
+                          - paragraph [ref=e1707]: Media radius
+                          - combobox [ref=e1708]:
+                            - generic: 2xl
+                            - img
+                  - generic [ref=e1709]:
+                    - generic [ref=e1710]:
+                      - paragraph [ref=e1711]: Background
+                      - paragraph [ref=e1712]: Background can use image/video from library or external URL.
+                    - generic [ref=e1713]:
+                      - generic [ref=e1714]:
+                        - paragraph [ref=e1715]: Background color
+                        - generic [ref=e1716]:
+                          - textbox [ref=e1717]: "#ffffff"
+                          - textbox "transparent" [ref=e1718]
+                      - generic [ref=e1719]:
+                        - paragraph [ref=e1720]: Background gradient
+                        - generic [ref=e1722]:
+                          - generic [ref=e1723]:
+                            - paragraph [ref=e1724]: Start color
+                            - textbox [ref=e1725]: "#0f172a"
+                          - generic [ref=e1726]:
+                            - paragraph [ref=e1727]: End color
+                            - textbox [ref=e1728]: "#475569"
+                        - generic [ref=e1729]:
+                          - generic [ref=e1730]:
+                            - generic [ref=e1731]: Angle
+                            - generic [ref=e1732]: 135deg
+                          - slider [ref=e1733]: "135"
+                      - generic [ref=e1734]:
+                        - paragraph [ref=e1735]: Background media type
+                        - combobox [ref=e1736]:
+                          - generic: No media
+                          - img
+                      - paragraph [ref=e1738]: Background media supports both Media Library and external URL.
