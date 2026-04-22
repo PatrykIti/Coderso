@@ -113,9 +113,9 @@ Execute must:
 - upsert document idempotently,
 - invalidate relevant site cache,
 - return admin/public preview metadata,
-- return normalized execution metadata (`detailPageId`, `contentTypeSlug`,
-  effective status/public-impact summary) needed by the later admin
-  client/cache layer,
+- return normalized execution metadata (`detailPageId`, `contentTypeId`,
+  `contentTypeSlug`, effective status/public-impact summary) needed by the later
+  admin client/cache layer,
 - leave runtime route ownership unchanged until a later
   `setting.content-route.upsert` links `detailPageId`.
 

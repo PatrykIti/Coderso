@@ -62,6 +62,7 @@ export type DetailPageDocument = {
   schemaVersion: 1;
   id: string;
   name: string;
+  contentTypeId: string;
   contentTypeSlug: string;
   status: "draft" | "published";
   titlePattern: string;
@@ -145,7 +146,11 @@ type ContentRouteSetting = {
   later action assembly can link `site.contentRoutes.detailPageId` without
   waiting on an opaque DB-generated value. The default deterministic scheme is
   UUIDv5 (or equivalent deterministic UUID) derived from stable collection
-  identity such as content type slug + composition key/role.
+  identity such as content type id + composition key/role.
+- `contentTypeId` is the stable owner key for deterministic ids, joins, and
+  reuse matching. `contentTypeSlug` remains a normalized route-facing copy and
+  must not become the primary identity input because the content-type owner seam
+  already allows slug updates.
 - Manual admin create may generate a random UUID server-side, but the
   normalized id must be returned before any route-link mutation.
 - `detailPageSchema.ts` plus the content-domain service layer own id validation
@@ -173,7 +178,11 @@ Normalization rules:
 - `schemaVersion` must be `1`.
 - `id` is UUID-compatible.
 - composer-generated `id` is deterministic and UUID-compatible.
+- `contentTypeId` must be a valid current content type id.
 - `contentTypeSlug` must be a safe content type slug.
+- `contentTypeSlug` must stay consistent with the linked `contentTypeId` at
+  write/publish time; the slug is descriptive/route-facing data, not the stable
+  identity key.
 - `blocks[].id` must be unique across the tree.
 - `bindings[].id` must be unique.
 - `bindings[].blockId` must point to an existing block.

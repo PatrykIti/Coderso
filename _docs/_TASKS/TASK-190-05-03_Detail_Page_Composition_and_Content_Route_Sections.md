@@ -80,6 +80,7 @@ type DetailPageDocument = {
   schemaVersion: 1;
   id: string;
   name: string;
+  contentTypeId: string;
   contentTypeSlug: string;
   status: "draft" | "published";
   titlePattern: string;
@@ -126,6 +127,9 @@ type DetailPageBinding = {
 Storage direction:
 
 - `detail_page_documents` is the required storage contract.
+- `contentTypeId` is the stable owner identity for joins, deterministic ids, and
+  reuse matching; `contentTypeSlug` remains a route-facing/admin-facing copy
+  derived from the current content-type owner seam.
 - `site.contentRoutes` remains the route matcher and may reference a
   `detailPageId`, but it must not store the full detail page document.
 - `ContentRouteSetting.detailPageId` is the canonical stable link from a

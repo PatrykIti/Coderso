@@ -53,7 +53,7 @@ Required fixture tiers:
 - Tier A: current pack parity
   - house-project content type,
   - dedicated house-project custom screen,
-  - published house-project listing query,
+  - house-project listing query filtering published entries,
   - card/listing template,
   - public house-project landing page,
   - content route with list/detail patterns,

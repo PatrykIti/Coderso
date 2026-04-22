@@ -80,6 +80,7 @@ type AssistantDetailPageSummary = {
   id: string;
   name: string;
   status: "draft" | "published";
+  contentTypeId: string;
   contentTypeSlug: string;
   linkedRouteType: string | null;
   updatedAt: string | null;
@@ -92,6 +93,9 @@ Rules:
 
 - `detail-page` target resolution must come from trusted catalog ids, active
   surface identity, or exact bounded route/content-type linkage.
+- bounded catalog/provider/resource joins for `detail-page` must use
+  `contentTypeId` as the stable owner key; `contentTypeSlug` and
+  `linkedRouteType` remain route-facing labels and compatibility data.
 - generic provider planning may mention `detail-page`, but provider output
   remains operation-draft-only and cannot bypass local action assembly.
 - generic assistant flows must not guess detail page ids from free-text names
@@ -117,6 +121,8 @@ Rules:
   executable provider actions.
 - target resolver accepts trusted `detail-page` matches from bounded catalog or
   active surface context only.
+- trusted detail-page matches prefer `contentTypeId` / exact ids over mutable
+  slug labels when both are available in bounded catalog data.
 - missing/ambiguous detail-page lookup returns `needs_input` or no match, not a
   fuzzy mutation target.
 - existing `detail-page.upsert` execution path remains unchanged.

@@ -44,6 +44,7 @@ type AssistantDetailPageSummary = {
   id: string;
   name: string;
   status: "draft" | "published";
+  contentTypeId: string;
   contentTypeSlug: string;
   linkedRouteType: string | null;
   updatedAt: string | null;
@@ -64,6 +65,9 @@ Rules:
   collection-link metadata from current owner contracts. If an owner seam does
   not yet expose enough information, extend that seam with stable link metadata
   instead of falling back to `name`-only matching.
+- `contentTypeId` is the stable collection identity in bounded detail-page
+  summaries. `contentTypeSlug` and `linkedRouteType` remain route-facing labels
+  and compatibility data; they must not become the primary join key for reuse.
 - persistence of canonical list-page links and page-attached listing/query/
   template references stays with `TASK-190-05-02` / current page owner seams.
 - persistence of `compositionKey`, `collectionRole`, or equivalent stable
@@ -93,7 +97,7 @@ export const matchExistingCompositionResources = (graph, catalog) => ({
     findById(catalog.detailPages, graph.detailPage?.id) ??
     findLinkedDetailPage(
       catalog.detailPages,
-      graph.detailPage?.contentTypeSlug,
+      graph.contentType.id,
       graph.route?.detailPageId
     ),
   listingQuery: findExplicitOrUniqueQuery(
@@ -118,9 +122,12 @@ Matcher rules:
 - `page.slug` and `listing-template.slug` remain safe deterministic keys.
 - `listing-query.name` and `custom-screen.name` must not be used as silent reuse
   keys because current storage only indexes them; they are not unique.
-- `detail-page` fallback by `contentTypeSlug` alone is allowed only when current
+- `detail-page` fallback by `contentTypeId` alone is allowed only when current
   owner contracts expose exactly one canonical linked detail page for that
   collection; otherwise the matcher returns `unresolved`.
+- `contentTypeSlug` may still appear in bounded summaries for route/context
+  packaging, but matcher joins must prefer `contentTypeId` because the current
+  content-type owner seam allows slug edits.
 - If the current owner seam lacks deterministic link metadata for supporting
   resources, extend that seam with explicit `compositionKey`, `collectionRole`,
   canonical list-page linkage, or equivalent stable metadata under the exact
