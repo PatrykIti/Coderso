@@ -204,6 +204,7 @@ vi.mock("@/components/ui/sheet", () => ({
   ),
   SheetClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SheetDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
@@ -693,7 +694,7 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
       inputs[2]?.dispatchEvent(new Event("change", { bubbles: true }));
       buttons.find((button) => button.textContent?.includes("Reset to theme defaults"))?.click();
       buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
-      buttons.find((button) => button.textContent?.includes("Close and autosave"))?.click();
+      buttons.find((button) => button.textContent?.includes("Close and keep draft"))?.click();
       buttons.find((button) => button.textContent === "Discard")?.click();
       buttons.find((button) => button.textContent === "Restore")?.click();
       buttons.find((button) => button.textContent === "Edit")?.click();

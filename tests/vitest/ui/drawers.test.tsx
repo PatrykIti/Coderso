@@ -115,6 +115,8 @@ test("PageCreateDrawer renders title", () => {
   );
 
   expect(html).toContain("Create New Page");
+  expect(html).toContain("Start with a template and publish when ready.");
+  expect(html).toContain("Title is required before you can create the page.");
   expect(html).toContain("Open in editor after create");
 });
 

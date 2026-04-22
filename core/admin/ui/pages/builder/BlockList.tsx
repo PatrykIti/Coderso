@@ -1,4 +1,4 @@
-import { GripVertical } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +17,19 @@ export type BlockListProps = {
   className?: string;
   pageDefaults?: WidgetRendererPageDefaults;
   selectedId?: string | null;
+  highlightedId?: string | null;
   onSelect: (id: string) => void;
   onMove: (path: BlockPath, from: number, to: number) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onInsert?: (parentId: string, slotId: string, widgetType: string) => void;
   onMoveToSlot?: (blockId: string, parentId: string, slotId: string) => void;
+  onOpenSlotInsert?: (target: {
+    parentId: string;
+    slotId: string;
+    slotLabel: string;
+    allowedTypes?: string[];
+  }) => void;
   path?: BlockPath;
   depth?: number;
   widgetRegistry?: WidgetDefinition[];
@@ -33,12 +40,14 @@ export function BlockList({
   className,
   pageDefaults,
   selectedId,
+  highlightedId,
   onSelect,
   onMove,
   onDuplicate,
   onDelete,
   onInsert,
   onMoveToSlot,
+  onOpenSlotInsert,
   path,
   depth,
   widgetRegistry: providedWidgetRegistry,
@@ -115,10 +124,13 @@ export function BlockList({
         return (
           <div
             key={block.id}
+            data-block-id={block.id}
             className={cn(
               "cursor-pointer rounded-xl border bg-background p-4 shadow-sm",
               level > 0 && "border-dashed bg-muted/20",
               selectedId === block.id && "border-primary/50 ring-2 ring-primary/10",
+              highlightedId === block.id &&
+                "border-emerald-500/40 ring-2 ring-emerald-500/20",
               hoverIndex === index && dragIndex !== null && "border-primary/40"
             )}
             draggable
@@ -166,6 +178,7 @@ export function BlockList({
               <div className="flex items-start justify-between gap-3">
                 <button
                   type="button"
+                  data-block-select="true"
                   className="flex flex-1 items-start gap-3 text-left"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -206,6 +219,7 @@ export function BlockList({
                   </div>
                 </button>
                 <BlockToolbar
+                  blockLabel={label}
                   onMoveUp={() => onMove(listPath, index, index - 1)}
                   onMoveDown={() => onMove(listPath, index, index + 1)}
                   onDuplicate={() => onDuplicate(block.id)}
@@ -222,6 +236,9 @@ export function BlockList({
               <div className="border-t p-4 space-y-4">
                 {slotTargets.map((slot) => {
                   const slotBlocks = slotMap[slot.slotId] ?? [];
+                  const slotDefinition = widget?.slots?.find(
+                    (definition) => definition.id === slot.definitionId
+                  );
                   return (
                     <div
                       key={`${block.id}-slot-${slot.slotId}`}
@@ -260,19 +277,50 @@ export function BlockList({
                           blocks={slotBlocks}
                           pageDefaults={pageDefaults}
                           selectedId={selectedId}
+                          highlightedId={highlightedId}
                           onSelect={onSelect}
                           onMove={onMove}
                           onDuplicate={onDuplicate}
                           onDelete={onDelete}
                           onInsert={onInsert}
                           onMoveToSlot={onMoveToSlot}
+                          onOpenSlotInsert={onOpenSlotInsert}
                           path={[...listPath, { index, slotId: slot.slotId }]}
                           depth={level + 1}
                           widgetRegistry={widgetRegistry}
                         />
                       ) : (
-                        <div className="rounded-lg border border-dashed bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
-                          Empty slot.
+                        <div className="rounded-lg border border-dashed bg-muted/10 px-3 py-3 text-xs text-muted-foreground">
+                          {onOpenSlotInsert ? (
+                            <button
+                              type="button"
+                              className="flex w-full items-start gap-3 rounded-md text-left transition hover:text-foreground"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onOpenSlotInsert({
+                                  parentId: block.id,
+                                  slotId: slot.slotId,
+                                  slotLabel: slot.label,
+                                  allowedTypes: slotDefinition?.allowedTypes,
+                                });
+                              }}
+                            >
+                              <span className="mt-0.5 rounded-full border bg-background p-1 text-muted-foreground">
+                                <Plus className="h-3 w-3" />
+                              </span>
+                              <span className="space-y-1">
+                                <span className="block font-medium text-foreground">
+                                  Add widget to {slot.label}
+                                </span>
+                                <span className="block text-muted-foreground">
+                                  Drag from the library or choose a widget from the
+                                  widgets tab.
+                                </span>
+                              </span>
+                            </button>
+                          ) : (
+                            <span>Empty slot. Drag from the library to add a widget.</span>
+                          )}
                         </div>
                       )}
                     </div>

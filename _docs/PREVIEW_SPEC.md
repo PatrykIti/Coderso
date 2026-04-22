@@ -22,6 +22,9 @@ public rendering.
 - Jeden wspolny komponent: `RuntimePreviewDialog`.
 - Te same breakpointy urzadzen (desktop/tablet/mobile).
 - Te same stany: `loading`, `error`, `empty`, `no-preview`.
+- Dodatkowy recoverable state:
+  gdy host preview jest nieosiagalny albo iframe nie zaladuje sie w oczekiwanym
+  czasie, dialog pokazuje actionable placeholder zamiast pustej/broken ramki.
 - Te same wymagania iframe: `sandbox="allow-same-origin allow-scripts"`.
 
 Dotyczy:
@@ -51,6 +54,18 @@ Resolver policy dla `previewUrl` zwracanego przez Admin API:
 4. relative path fallback (`/preview?...`)
 
 Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhost/127.0.0.1` -> `http`.
+
+## Preview failure guidance
+
+- For obvious loopback targets (`localhost`, `127.0.0.1`, `::1`, `0.0.0.0`)
+  the dialog may preflight the preview origin and surface a specific
+  "frontend not responding" placeholder.
+- For non-loopback targets the dialog may fall back to an iframe-load timeout
+  placeholder.
+- Failure copy must not expose preview tokens; operator-facing diagnostics use
+  the host or base URL only.
+- Pages runtime preview may expose a direct route back to Page Settings when the
+  configured public URL looks wrong.
 
 ## Admin API response contract
 

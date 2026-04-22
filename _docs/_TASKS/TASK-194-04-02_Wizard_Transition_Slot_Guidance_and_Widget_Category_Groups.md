@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Builder + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-194-04
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

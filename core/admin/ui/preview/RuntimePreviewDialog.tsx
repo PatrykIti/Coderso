@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Monitor, Smartphone, Tablet, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -18,6 +19,8 @@ const runtimePreviewDevices = [
 
 export type RuntimePreviewDeviceId = (typeof runtimePreviewDevices)[number]["id"];
 
+type PreviewLoadError = "loopback_unreachable" | "timeout" | null;
+
 const isAbsoluteUrl = (value: string) => /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
 
 const withPreviewDevice = (previewUrl: string, device: RuntimePreviewDeviceId) => {
@@ -29,6 +32,36 @@ const withPreviewDevice = (previewUrl: string, device: RuntimePreviewDeviceId) =
       : `${resolved.pathname}${resolved.search}${resolved.hash}`;
   } catch {
     return previewUrl;
+  }
+};
+
+const getPreviewTargetLabel = (previewUrl: string) => {
+  try {
+    const resolved = new URL(previewUrl, "http://localhost");
+    resolved.searchParams.delete("token");
+    resolved.searchParams.delete("device");
+    return isAbsoluteUrl(previewUrl) ? resolved.origin : resolved.pathname || "/preview";
+  } catch {
+    return previewUrl.replace(/([?&]token=)[^&]+/, "$1<redacted>");
+  }
+};
+
+const getPreviewOrigin = (previewUrl: string) => {
+  if (!isAbsoluteUrl(previewUrl)) return null;
+  try {
+    return new URL(previewUrl).origin;
+  } catch {
+    return null;
+  }
+};
+
+const isLoopbackHost = (previewUrl: string) => {
+  if (!isAbsoluteUrl(previewUrl)) return false;
+  try {
+    const hostname = new URL(previewUrl).hostname;
+    return ["localhost", "127.0.0.1", "::1", "0.0.0.0"].includes(hostname);
+  } catch {
+    return false;
   }
 };
 
@@ -48,6 +81,8 @@ export type RuntimePreviewDialogProps = {
   iframeTitle?: string;
   device?: RuntimePreviewDeviceId;
   onDeviceChange?: (device: RuntimePreviewDeviceId) => void;
+  onFixPreviewTarget?: () => void;
+  fixPreviewTargetLabel?: string;
 };
 
 export function RuntimePreviewDialog({
@@ -66,9 +101,12 @@ export function RuntimePreviewDialog({
   iframeTitle = "Runtime preview",
   device,
   onDeviceChange,
+  onFixPreviewTarget,
+  fixPreviewTargetLabel = "Open settings",
 }: RuntimePreviewDialogProps) {
   const [internalDevice, setInternalDevice] = useState<RuntimePreviewDeviceId>("desktop");
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<PreviewLoadError>(null);
 
   const resolvedDevice = device ?? internalDevice;
 
@@ -81,7 +119,9 @@ export function RuntimePreviewDialog({
   };
 
   const viewport = useMemo(
-    () => runtimePreviewDevices.find((entry) => entry.id === resolvedDevice) ?? runtimePreviewDevices[0],
+    () =>
+      runtimePreviewDevices.find((entry) => entry.id === resolvedDevice) ??
+      runtimePreviewDevices[0],
     [resolvedDevice]
   );
   const iframeSrc = useMemo(
@@ -90,16 +130,101 @@ export function RuntimePreviewDialog({
   );
   const iframeKey = iframeSrc ?? previewUrl ?? "runtime-preview";
   const iframeReady = loadedSrc === iframeKey;
+  const previewTargetLabel = useMemo(
+    () => (previewUrl ? getPreviewTargetLabel(previewUrl) : null),
+    [previewUrl]
+  );
+  const previewOrigin = useMemo(
+    () => (previewUrl ? getPreviewOrigin(previewUrl) : null),
+    [previewUrl]
+  );
+  const previewUsesLoopback = useMemo(
+    () => (previewUrl ? isLoopbackHost(previewUrl) : false),
+    [previewUrl]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const timeoutId = window.setTimeout(() => {
+      setLoadedSrc(null);
+      setLoadError(null);
+    }, 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [iframeKey, open]);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !open ||
+      !previewUrl ||
+      isLoading ||
+      !previewUsesLoopback ||
+      !previewOrigin
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 1500);
+    let active = true;
+
+    window
+      .fetch(previewOrigin, {
+        method: "GET",
+        mode: "no-cors",
+        signal: controller.signal,
+      })
+      .catch(() => {
+        if (active) {
+          setLoadError("loopback_unreachable");
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [isLoading, open, previewOrigin, previewUrl, previewUsesLoopback]);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !open ||
+      !previewUrl ||
+      isLoading ||
+      loadError ||
+      iframeReady
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setLoadError("timeout");
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [iframeReady, isLoading, loadError, open, previewUrl]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-5xl" showCloseButton={false}>
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-5xl"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex flex-row items-center justify-between gap-4 border-b px-6 py-4">
           <div className="space-y-1">
             <DialogTitle>{title}</DialogTitle>
-            <p className="text-xs text-muted-foreground">
+            <DialogDescription className="text-xs text-muted-foreground">
               {subtitle ?? "Runtime preview (read-only, site theme)."}
-            </p>
+            </DialogDescription>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
@@ -140,6 +265,31 @@ export function RuntimePreviewDialog({
             <div className="rounded-2xl border border-destructive/40 bg-background p-10 text-center text-sm text-destructive">
               {error}
             </div>
+          ) : loadError ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-background p-10 text-center shadow-sm">
+              <div className="space-y-3">
+                <p className="text-base font-semibold text-foreground">
+                  Live preview unavailable
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {loadError === "loopback_unreachable"
+                    ? `Frontend is not responding at ${previewTargetLabel}. Start the public frontend or update the configured public URL.`
+                    : `Preview could not load from ${previewTargetLabel}. Check that the public frontend is reachable and the configured public URL is correct.`}
+                </p>
+                {onFixPreviewTarget ? (
+                  <div className="flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onFixPreviewTarget}
+                    >
+                      {fixPreviewTargetLabel}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           ) : !canPreview ? (
             <div className="rounded-2xl border bg-background p-10 text-center text-sm text-muted-foreground">
               {cannotPreviewMessage}
@@ -165,7 +315,10 @@ export function RuntimePreviewDialog({
                 )}
                 style={{ width: viewport.width, height: viewport.height }}
                 data-preview-device={resolvedDevice}
-                onLoad={() => setLoadedSrc(iframeKey)}
+                onLoad={() => {
+                  setLoadedSrc(iframeKey);
+                  setLoadError(null);
+                }}
               />
             </div>
           )}

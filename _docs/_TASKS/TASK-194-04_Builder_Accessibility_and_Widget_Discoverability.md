@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Builder + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-194, TASK-061
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

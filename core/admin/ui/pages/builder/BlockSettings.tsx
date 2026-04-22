@@ -105,6 +105,9 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
 
   return (
     <>
+      <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+        Next: fine-tune layout, styling, and advanced settings for this widget.
+      </div>
       {supportsSlots ? (
         <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
           Slots:
@@ -176,7 +179,8 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
                   </div>
                   {count === 0 ? (
                     <div className="mt-1 text-[11px] text-muted-foreground">
-                      Slot is available and currently empty.
+                      Slot is available and currently empty. Use the slot add
+                      action in the canvas or drag from the widgets tab.
                     </div>
                   ) : null}
                 </div>
@@ -184,7 +188,8 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
             })}
           </div>
           <div className="mt-2">
-            Use the Insert dialog to add widgets into a slot.
+            Use the slot add action in the canvas or drag from the widgets tab
+            to place widgets into a slot.
           </div>
         </div>
       ) : supportsChildren ? (

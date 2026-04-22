@@ -134,16 +134,19 @@ const widgetPickerState = vi.hoisted(() => ({
       type: "hero",
       title: "Hero",
       description: "Hero content block",
+      category: "layout",
     },
     {
       type: "feature-grid",
       title: "Feature Grid",
       description: "Benefits grid",
+      category: "content",
     },
     {
       type: "template-section",
       title: "Template Section",
       description: "Should stay hidden",
+      category: "layout",
     },
   ],
 }));
@@ -317,13 +320,23 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
   }
 });
 
-test("WidgetPicker filters registry items, hides template sections, and forwards add flow", () => {
+test("WidgetPicker groups registry items by category, supports slot context, and forwards add flow", () => {
   const onAdd = vi.fn();
-  const view = mount(<WidgetPicker onAdd={onAdd} />);
+  const onClearContext = vi.fn();
+  const view = mount(
+    <WidgetPicker
+      onAdd={onAdd}
+      allowedTypes={["feature-grid"]}
+      contextLabel="Hero Content"
+      onClearContext={onClearContext}
+    />
+  );
 
   try {
-    expect(view.container.textContent).toContain("Hero");
+    expect(view.container.textContent).toContain("Insert into Hero Content");
+    expect(view.container.textContent).toContain("Content");
     expect(view.container.textContent).toContain("Feature Grid");
+    expect(view.container.textContent).not.toContain("Hero content block");
     expect(view.container.textContent).not.toContain("Template Section");
 
     act(() => {
@@ -333,7 +346,14 @@ test("WidgetPicker filters registry items, hides template sections, and forwards
     });
 
     expect(view.container.textContent).toContain("Feature Grid");
-    expect(view.container.textContent).not.toContain("Hero");
+    expect(view.container.textContent).not.toContain("Hero content block");
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Clear")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onClearContext).toHaveBeenCalledTimes(1);
 
     const addButtons = Array.from(view.container.querySelectorAll("button")).filter(
       (button) => button.textContent === "plus-icon"

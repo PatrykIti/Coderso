@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 89 tasks
+- **To Do:** 74 tasks
 - **In Progress:** 5 tasks
-- **Done:** 952 tasks
+- **Done:** 967 tasks
 
 ---
 
@@ -64,21 +64,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-195-04-01 | Typography Control Affordance and Disabled-State Clarity | Medium | Small | Technical leaf: replace vague inherited-typography copy with explicit affordances and read-only state cues |
 | TASK-195-04-02 | Block Inserter Media Grouping and Category Search Regression | Medium | Medium | Technical leaf: regroup media-facing blocks and lock category-scoped search behavior with regression tests |
 | TASK-195-05 | QA, Docs, and Closure | Medium | Medium | Final Posts QA validation, docs parity, changelog, and board closure for TASK-195 |
-| TASK-194 | Pages Admin UX Reliability and Polish | High | Large | QA-driven Pages admin fix wave for bulk actions, dialog accessibility, editor feedback, disabled-state clarity, runtime preview recovery, and builder discoverability |
-| TASK-194-01 | Page List Bulk Actions and Author Consistency | High | Large | Critical list reliability: visible-scope selection, bulk apply flow, and create-path author/cache correctness |
-| TASK-194-01-01 | Page Table Selection State and Bulk Bar | High | Medium | Technical leaf: controlled row/header checkboxes, selected-count toolbar, and filtered-scope selection rules |
-| TASK-194-01-02 | Page Bulk Action Execution and Cache Refresh | High | Medium | Technical leaf: bulk publish/unpublish/delete apply flow, confirmations, partial-failure handling, and list refresh |
-| TASK-194-01-03 | Create Path Author Hydration and List Cache Correctness | High | Medium | Technical leaf: stop showing `Unknown` after create/open-after-create because list cache was primed from partial authorless payloads |
-| TASK-194-02 | Page Settings and Create Flow Clarity | High | Medium | Remove misleading loading/jargon states in settings, add dialog descriptions, and explain validation/dependent disabled states |
-| TASK-194-02-01 | Template Options Loading Lifecycle and Settings Status Copy | High | Medium | Technical leaf: usable fallback templates must not sit under a permanent blocking loading message |
-| TASK-194-02-02 | Create Drawer Validation, Dialog Accessibility, and Settings Microcopy | Medium | Small | Technical leaf: explain disabled create/max-width states, replace autosave jargon, and add explicit drawer descriptions |
-| TASK-194-03 | Page Editor Feedback and Runtime Preview Recovery | High | Medium | Save/publish feedback, unreachable preview messaging, and post-insert viewport/highlight behavior |
-| TASK-194-03-01 | Save Publish Success Feedback and Runtime Preview Failure State | High | Medium | Technical leaf: reuse existing toast infra if mounted, otherwise add minimal shared mount and actionable preview failure messaging |
-| TASK-194-03-02 | New Block Insertion Focus and Scroll | Medium | Small | Technical leaf: after add/insert, select the new block and bring it into view instead of leaving it below the fold |
-| TASK-194-04 | Builder Accessibility and Widget Discoverability | High | Medium | Toolbar labels, wizard guidance, slot helper copy, and category grouping for the widget picker |
-| TASK-194-04-01 | Block Toolbar Accessibility Labels and Action Hints | High | Small | Technical leaf: aria-label/title coverage for move, duplicate, and delete actions on widget cards |
-| TASK-194-04-02 | Wizard Transition Slot Guidance and Widget Category Groups | High | Medium | Technical leaf: clarify wizard handoff, explain empty slots, and group page-builder widgets by existing category metadata |
-| TASK-194-05 | QA Docs and Closure | Medium | Medium | Final Pages admin UX validation, docs parity, changelog, and board closure for TASK-194 |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -146,6 +131,21 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-194 | Pages Admin UX Reliability and Polish | High | Large | Done: Pages list/cache, drawer accessibility, editor feedback, preview recovery, and builder discoverability are aligned with the QA report |
+| TASK-194-05 | QA Docs and Closure | Medium | Medium | Done: final Pages admin UX validation, docs parity, Playwright summary refresh, changelog, and board closure |
+| TASK-194-04-02 | Wizard Transition Slot Guidance and Widget Category Groups | High | Medium | Done: wizard handoff is explicit, empty slots route into the existing widget library surface, and builder widgets are grouped by category |
+| TASK-194-04-01 | Block Toolbar Accessibility Labels and Action Hints | High | Small | Done: block toolbar actions expose labels/tooltips and delete affordance is explicit |
+| TASK-194-04 | Builder Accessibility and Widget Discoverability | High | Medium | Done: Pages builder toolbar, wizard handoff, empty-slot guidance, and widget picker discoverability are repaired |
+| TASK-194-03-02 | New Block Insertion Focus and Scroll | Medium | Small | Done: newly inserted blocks are selected, scrolled into view, and briefly highlighted |
+| TASK-194-03-01 | Save Publish Success Feedback and Runtime Preview Failure State | High | Medium | Done: editor feedback is visible and runtime preview failures are actionable on the existing dialog surface |
+| TASK-194-03 | Page Editor Feedback and Runtime Preview Recovery | High | Medium | Done: save/publish confidence, preview recovery, and post-insert viewport behavior are fixed |
+| TASK-194-02-02 | Create Drawer Validation, Dialog Accessibility, and Settings Microcopy | Medium | Small | Done: disabled create/max-width states are explained and drawer descriptions use user-facing copy |
+| TASK-194-02-01 | Template Options Loading Lifecycle and Settings Status Copy | High | Medium | Done: usable template choices no longer sit under permanent blocking loading copy and failure has retry |
+| TASK-194-02 | Page Settings and Create Flow Clarity | High | Medium | Done: settings/create flows use truthful loading, descriptions, and disabled-state guidance |
+| TASK-194-01-03 | Create Path Author Hydration and List Cache Correctness | High | Medium | Done: Pages list cache preserves authoritative author state and no longer shows stale `Unknown` after create/duplicate/detail mutations |
+| TASK-194-01-02 | Page Bulk Action Execution and Cache Refresh | High | Medium | Done: bulk publish/unpublish/delete refresh the list and handle partial failures cleanly |
+| TASK-194-01-01 | Page Table Selection State and Bulk Bar | High | Medium | Done: controlled row/header selection and selected-count bulk toolbar are wired on visible rows |
+| TASK-194-01 | Page List Bulk Actions and Author Consistency | High | Large | Done: Pages list behaves like the repo bulk-action contract and author presentation is cache-safe |
 | TASK-193 | Pages Bun Route Timeout Stabilization | Medium | Small | Done: DB-backed Pages route lifecycle coverage now uses an explicit Bun test timeout without changing route behavior |
 | TASK-192 | Assistant Admin Menu Resource Catalog Repair | High | Medium | Done: assistant catalog exposes posts, entries, full menus, media, commerce, solution kits, and screens for read-only inspection |
 | TASK-191 | Pages Test Coverage Hardening | High | Large | Done: Pages route/runtime/client/cache/builder coverage hardened with final QA and coverage validation |

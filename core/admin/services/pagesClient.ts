@@ -90,14 +90,23 @@ const isPageDetailPayload = (
   value: PageSummary | PageDetail
 ): value is PageDetail => "currentData" in value;
 
-const toPageSummary = (page: PageSummary | PageDetail): PageSummary => ({
-  id: page.id,
-  title: page.title,
-  slug: page.slug,
-  status: page.status,
-  updatedAt: page.updatedAt,
-  author: page.author ?? null,
-});
+const hasAuthorField = (page: PageSummary | PageDetail) =>
+  Object.prototype.hasOwnProperty.call(page, "author");
+
+const toPageSummaryPatch = (page: PageSummary | PageDetail) => {
+  const patch: Partial<PageSummary> &
+    Pick<PageSummary, "id" | "title" | "slug" | "status" | "updatedAt"> = {
+      id: page.id,
+      title: page.title,
+      slug: page.slug,
+      status: page.status,
+      updatedAt: page.updatedAt,
+    };
+  if (hasAuthorField(page)) {
+    patch.author = page.author ?? null;
+  }
+  return patch;
+};
 
 const readPagesCache = () =>
   readLocalCache(cacheKeys.pagesList, cacheTtlMs.list, isPageList);
@@ -115,17 +124,21 @@ const primePagesCacheInternal = (items: PageSummary[]) => {
   writeLocalCache(cacheKeys.pagesList, items);
 };
 
-const upsertCachedPage = (page: PageSummary | PageDetail) => {
+const mergeCachedPageIntoList = (page: PageSummary | PageDetail) => {
   const current = cachedPages ?? readPagesCache() ?? [];
-  const summary = toPageSummary(page);
-  const index = current.findIndex((item) => item.id === summary.id);
+  const summaryPatch = toPageSummaryPatch(page);
+  const index = current.findIndex((item) => item.id === summaryPatch.id);
   const next = [...current];
   if (index === -1) {
-    next.unshift(summary);
+    if (hasAuthorField(page)) {
+      next.unshift(summaryPatch as PageSummary);
+    }
   } else {
-    next[index] = { ...next[index], ...summary };
+    next[index] = { ...next[index], ...summaryPatch };
   }
-  primePagesCacheInternal(next);
+  if (next.length !== current.length || next.some((item, itemIndex) => item !== current[itemIndex])) {
+    primePagesCacheInternal(next);
+  }
   if (isPageDetailPayload(page)) {
     writePageDetailCache(page);
   }
@@ -146,9 +159,9 @@ const updateCachedPageStatus = (id: string, status: PageStatus) => {
 
 const removeCachedPage = (id: string) => {
   const current = cachedPages ?? readPagesCache();
+  clearLocalCache(cacheKeys.pageDetail(id));
   if (!current) return;
   primePagesCacheInternal(current.filter((item) => item.id !== id));
-  clearLocalCache(cacheKeys.pageDetail(id));
 };
 
 export const getCachedPages = () => {
@@ -193,7 +206,7 @@ export async function getPageCached(id: string, options?: { force?: boolean }) {
     if (cachedDetail) return cachedDetail;
   }
   const result = await getPage(id);
-  if (result) upsertCachedPage(result);
+  if (result) mergeCachedPageIntoList(result);
   return result;
 }
 
@@ -208,8 +221,9 @@ export async function createPage(payload: PagePayload) {
     { withCsrf: true }
   );
   if (created) {
-    upsertCachedPage(created);
-    broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });
+    writePageDetailCache(created);
+    clearPagesCache();
+    broadcastCacheEvent({ key: cacheKeys.pagesList, action: "invalidate" });
     broadcastCacheEvent({ key: cacheKeys.pageDetail(created.id), action: "update" });
   }
   return created;
@@ -226,7 +240,7 @@ export async function updatePage(id: string, payload: Partial<PagePayload>) {
     { withCsrf: true }
   );
   if (updated) {
-    upsertCachedPage(updated);
+    mergeCachedPageIntoList(updated);
     broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.pageDetail(updated.id), action: "update" });
   }
@@ -296,8 +310,9 @@ export async function duplicatePage(id: string) {
     { withCsrf: true }
   );
   if (clone) {
-    upsertCachedPage(clone);
-    broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });
+    writePageDetailCache(clone);
+    clearPagesCache();
+    broadcastCacheEvent({ key: cacheKeys.pagesList, action: "invalidate" });
     broadcastCacheEvent({ key: cacheKeys.pageDetail(clone.id), action: "update" });
   }
   return clone;
@@ -319,7 +334,7 @@ export async function restorePageRevision(id: string, revisionId: string) {
     { withCsrf: true }
   );
   if (result?.page) {
-    upsertCachedPage(result.page);
+    mergeCachedPageIntoList(result.page);
     broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.pageDetail(result.page.id), action: "update" });
   }

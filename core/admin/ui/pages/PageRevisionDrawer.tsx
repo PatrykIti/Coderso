@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import type { PageRevision } from "@/services/pagesClient";
 
 export type PageRevisionDrawerProps = {
@@ -74,9 +80,9 @@ export function PageRevisionDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Page history</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Restore published revisions or manage the latest settings autosave.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close page history">

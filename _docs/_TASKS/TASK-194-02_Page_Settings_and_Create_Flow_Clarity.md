@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + UX Copy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-194, TASK-053
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

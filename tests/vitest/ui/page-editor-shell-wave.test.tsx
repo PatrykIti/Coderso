@@ -704,6 +704,8 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
       data: { blocks: unknown[] };
     };
     expect(draftPayload.data.blocks).toHaveLength(2);
+    expect(view.container.textContent).toContain("Page updated");
+    expect(view.container.textContent).toContain("Draft saved.");
 
     clickButton(view.container, "Publish");
     await flush();
@@ -715,12 +717,13 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
       })
     );
     expect(view.container.textContent).toContain("Published");
+    expect(view.container.textContent).toContain("Page published.");
 
     clickButton(view.container, "Page settings");
     await flush();
 
     expect(pageEditorState.getPageTemplateOptions).toHaveBeenCalledTimes(1);
-    expect(view.container.textContent).toContain("template-options-loading:true");
+    expect(view.container.textContent).toContain("template-options-loading:false");
 
     clickButton(view.container, "settings-save");
     await flush();

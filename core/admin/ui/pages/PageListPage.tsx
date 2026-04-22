@@ -27,6 +27,7 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 
 import { PageFilters } from "./PageFilters";
+import { PageBulkActionsBar, type PageBulkActionValue } from "./PageBulkActionsBar";
 import { PageTable } from "./PageTable";
 import { PageCreateDrawer } from "./PageCreateDrawer";
 
@@ -68,6 +69,9 @@ export function PageListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<PageBulkActionValue | "">("");
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
   const hasHydratedRef = useRef(hasInitialCache);
 
@@ -144,6 +148,21 @@ export function PageListPage() {
     () => filterPages(items, searchQuery, statusFilter, authorFilter),
     [items, searchQuery, statusFilter, authorFilter]
   );
+  const visibleIds = useMemo(
+    () => filteredItems.map((page) => page.id),
+    [filteredItems]
+  );
+  const selectedCount = selectedIds.length;
+  const isAllSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => visibleIds.includes(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [visibleIds]);
 
   const handleCreate = async (payload: {
     title: string;
@@ -259,6 +278,59 @@ export function PageListPage() {
     }
   };
 
+  const handleTogglePage = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((pageId) => pageId !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedIds(isAllSelected ? [] : visibleIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setBulkAction("");
+  };
+
+  const handleBulkApply = async () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+    if (bulkAction === "delete" && typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Delete ${selectedIds.length} page${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`
+      );
+      if (!confirmed) return;
+    }
+
+    setIsBulkWorking(true);
+    setError(null);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => {
+          if (bulkAction === "publish") return publishPage(id);
+          if (bulkAction === "unpublish") return unpublishPage(id);
+          return deletePage(id);
+        })
+      );
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length > 0) {
+        setError(
+          `Failed to update ${failed.length} page${failed.length === 1 ? "" : "s"}.`
+        );
+      }
+      await refresh({ force: true, background: true });
+      handleClearSelection();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Bulk action failed.");
+      }
+    } finally {
+      setIsBulkWorking(false);
+    }
+  };
+
   const handleDrawerOpenChange = (next: boolean) => {
     setCreateOpen(next);
     if (next) {
@@ -312,6 +384,16 @@ export function PageListPage() {
           onStatusChange={setStatusFilter}
           onAuthorChange={setAuthorFilter}
         />
+        {selectedCount > 0 ? (
+          <PageBulkActionsBar
+            selectedCount={selectedCount}
+            action={bulkAction}
+            onActionChange={setBulkAction}
+            onApply={handleBulkApply}
+            onClear={handleClearSelection}
+            isApplying={isBulkWorking}
+          />
+        ) : null}
         {isLoading ? (
           <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
             Loading pages...
@@ -324,6 +406,11 @@ export function PageListPage() {
                 ? "No pages match your current filters."
                 : undefined
             }
+            selectedIds={selectedIds}
+            isAllSelected={isAllSelected}
+            isIndeterminate={isIndeterminate}
+            onToggleAll={handleToggleAll}
+            onTogglePage={handleTogglePage}
             onEdit={handleEdit}
             onPreview={handlePreview}
             onPublish={handlePublish}

@@ -41,8 +41,11 @@ export function WizardPanel({ widget, block, onChange, onComplete }: WizardPanel
         variant={variant}
         onVariantChange={(next) => onChange({ ...block, variant: next })}
       />
+      <p className="text-xs text-muted-foreground">
+        Next you can fine-tune layout, styling, and advanced settings.
+      </p>
       <Button className="w-full" onClick={onComplete}>
-        Complete setup
+        Continue to layout and styling
       </Button>
     </div>
   );

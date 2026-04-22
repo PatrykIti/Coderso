@@ -16,6 +16,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -50,6 +51,7 @@ type PageSettingsDrawerProps = {
   templateOptions?: PageTemplateOption[] | null;
   templateOptionsLoading?: boolean;
   templateOptionsError?: string | null;
+  onRetryTemplateOptions?: () => void;
   onSave: (payload: {
     title: string;
     slug: string;
@@ -85,6 +87,7 @@ export function PageSettingsDrawer({
   templateOptions,
   templateOptionsLoading = false,
   templateOptionsError,
+  onRetryTemplateOptions,
   onSave,
   onAutosave,
   isSubmitting = false,
@@ -162,6 +165,7 @@ export function PageSettingsDrawer({
     () => title.trim().length > 0 && slug.trim().length > 0,
     [slug, title]
   );
+  const hasUsableTemplateChoices = resolvedTemplateOptions.length > 0;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -199,9 +203,9 @@ export function PageSettingsDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Page settings</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Configure metadata, layout, and defaults for this page.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close page settings">
@@ -277,7 +281,9 @@ export function PageSettingsDrawer({
                     <SelectTrigger>
                       <SelectValue
                         placeholder={
-                          templateOptionsLoading ? "Loading templates..." : "Choose template"
+                          templateOptionsLoading && !hasUsableTemplateChoices
+                            ? "Loading templates..."
+                            : "Choose template"
                         }
                       />
                     </SelectTrigger>
@@ -289,11 +295,23 @@ export function PageSettingsDrawer({
                       ))}
                     </SelectContent>
                   </Select>
-                  {templateOptionsLoading ? (
-                    <p className="text-xs text-muted-foreground">Loading template options...</p>
-                  ) : null}
                   {templateOptionsError ? (
-                    <p className="text-xs text-destructive">{templateOptionsError}</p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <p className="text-destructive">{templateOptionsError}</p>
+                      {onRetryTemplateOptions ? (
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="xs"
+                          className="h-auto px-0"
+                          onClick={onRetryTemplateOptions}
+                        >
+                          Try again
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : templateOptionsLoading && !hasUsableTemplateChoices ? (
+                    <p className="text-xs text-muted-foreground">Loading template options...</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
@@ -423,6 +441,11 @@ export function PageSettingsDrawer({
                       ))}
                     </SelectContent>
                   </Select>
+                  {layout.wrapper.container === "full" ? (
+                    <p className="text-xs text-muted-foreground">
+                      Available when Page width is not full.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
@@ -737,11 +760,11 @@ export function PageSettingsDrawer({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Settings className="h-4 w-4" />
-              <span>Save settings or close the drawer to keep one autosave snapshot.</span>
+              <span>Save settings now, or close the panel to keep one draft version in history.</span>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                {isDirty ? "Close and autosave" : "Cancel"}
+                {isDirty ? "Close and keep draft" : "Cancel"}
               </Button>
               <Button onClick={() => void handleSubmit()} disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save settings"}
@@ -750,11 +773,11 @@ export function PageSettingsDrawer({
           </div>
           {isAutosaving ? (
             <p className="mt-3 text-xs text-muted-foreground">
-              Saving autosave snapshot...
+              Saving draft version...
             </p>
           ) : isDirty ? (
             <p className="mt-3 text-xs text-muted-foreground">
-              Closing the drawer stores one autosave snapshot in page history.
+              Closing the panel keeps one draft version in page history.
             </p>
           ) : null}
         </div>

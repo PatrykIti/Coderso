@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Accessibility + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-002, TASK-052, TASK-053, TASK-061, TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
@@ -261,3 +261,22 @@ Owner-responsibility rule:
 5. Existing good Pages behaviors from the QA report remain intact.
 6. The final closure updates `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` with the
    landed verification state for the tracked `BUG-*` and `UX-*` items.
+
+## Completion Notes (2026-04-22)
+
+- Completed all `TASK-194` leaves across Pages list, settings/create, editor
+  feedback/runtime preview, and builder discoverability.
+- Kept the fixes on existing owner seams:
+  `pagesClient`, `PageListPage`, `PageTable`, `PageCreateDrawer`,
+  `PageSettingsDrawer`, `PageRevisionDrawer`, `PageEditor`,
+  `RuntimePreviewDialog`, `BlockToolbar`, `BlockList`, `BlockSettings`,
+  `LibraryPanel`, and `WidgetPicker`.
+- No new backend endpoint family was introduced.
+- Pages runtime preview feedback stayed on the existing dialog surface and
+  Pages builder slot insertion stayed on the existing widget library surface.
+
+## Validation (2026-04-22)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockToolbar.test.tsx tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/ui/page-editor-insert-scroll.test.tsx tests/vitest/ui/page-editor-slot-insert-flow.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx`

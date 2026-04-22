@@ -50,9 +50,14 @@ test("BlockSettings clarifies empty slot availability", () => {
     <BlockSettings block={heroBlock} widget={asBlockSettingsWidget(heroWidget)} onChange={() => undefined} />
   );
 
+  expect(html).toContain(
+    "Next: fine-tune layout, styling, and advanced settings for this widget."
+  );
   expect(html).toMatch(/Hero Content(?:<!-- -->)? slot/);
   expect(html).toMatch(/0(?:<!-- -->)?\s*(?:<!-- -->)?items/);
-  expect(html).toContain("Slot is available and currently empty.");
+  expect(html).toContain(
+    "Slot is available and currently empty. Use the slot add action in the canvas or drag from the widgets tab."
+  );
 });
 
 test("BlockSettings shows repeatable slot controls", () => {

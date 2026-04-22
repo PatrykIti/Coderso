@@ -274,6 +274,13 @@ export type PageEditorProps = {
   initialPage?: PageDetail | null;
 };
 
+type SlotInsertTarget = {
+  parentId: string;
+  slotId: string;
+  slotLabel: string;
+  allowedTypes?: string[];
+};
+
 export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorProps) {
   const [pageId, setPageId] = useState<string | null>(initialPageId ?? initialPage?.id ?? null);
   const [page, setPage] = useState<PageDetail | null>(initialPage ?? null);
@@ -312,9 +319,15 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<RuntimePreviewDeviceId>("desktop");
+  const [libraryTab, setLibraryTab] = useState<"widgets" | "templates" | "forms">("widgets");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
+  const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const statusNoticeTimerRef = useRef<number | null>(null);
 
   const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = useMemo(() => {
@@ -391,9 +404,79 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       });
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      setHighlightedBlockId(null);
+      setPendingScrollBlockId(null);
     },
     []
   );
+
+  const showStatusNotice = useCallback((message: string) => {
+    setStatusNotice(message);
+    if (typeof window === "undefined") return;
+    if (statusNoticeTimerRef.current !== null) {
+      window.clearTimeout(statusNoticeTimerRef.current);
+    }
+    statusNoticeTimerRef.current = window.setTimeout(() => {
+      setStatusNotice(null);
+      statusNoticeTimerRef.current = null;
+    }, 4000);
+  }, []);
+
+  const focusInsertedBlock = useCallback((blockId: string) => {
+    setSelectedId(blockId);
+    setHighlightedBlockId(blockId);
+    setPendingScrollBlockId(blockId);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && statusNoticeTimerRef.current !== null) {
+        window.clearTimeout(statusNoticeTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !highlightedBlockId) return;
+    const timerId = window.setTimeout(() => {
+      setHighlightedBlockId((current) =>
+        current === highlightedBlockId ? null : current
+      );
+    }, 2000);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [highlightedBlockId]);
+
+  useEffect(() => {
+    if (
+      typeof document === "undefined" ||
+      typeof window === "undefined" ||
+      !pendingScrollBlockId
+    ) {
+      return;
+    }
+
+    const escapedId =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(pendingScrollBlockId)
+        : pendingScrollBlockId.replace(/["\\]/g, "\\$&");
+
+    const timeoutId = window.setTimeout(() => {
+      const target = document.querySelector(
+        `[data-block-id="${escapedId}"]`
+      ) as HTMLElement | null;
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusTarget = target.querySelector<HTMLElement>("[data-block-select='true']");
+      focusTarget?.focus({ preventScroll: true });
+      setPendingScrollBlockId(null);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [blocks, pendingScrollBlockId]);
 
   const refreshPage = useCallback(
     async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
@@ -447,32 +530,34 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     });
   }, [pageId, refreshPage]);
 
-  useEffect(() => {
-    if (!settingsOpen) return;
-    if (templateOptions || templateOptionsLoading) return;
-    let active = true;
+  const loadTemplateOptions = useCallback(async () => {
     setTemplateOptionsLoading(true);
     setTemplateOptionsError(null);
-    getPageTemplateOptions()
-      .then((payload) => {
-        if (!active) return;
-        setTemplateOptions(payload);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setTemplateOptionsError(err.message);
-        } else {
-          setTemplateOptionsError("Failed to load template options.");
-        }
-      })
-      .finally(() => {
-        if (active) setTemplateOptionsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [settingsOpen, templateOptions, templateOptionsLoading]);
+    try {
+      const payload = await getPageTemplateOptions();
+      setTemplateOptions(payload);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setTemplateOptionsError(err.message);
+      } else {
+        setTemplateOptionsError("Failed to load template options.");
+      }
+    } finally {
+      setTemplateOptionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    if (templateOptions || templateOptionsLoading || templateOptionsError) return;
+    void loadTemplateOptions();
+  }, [
+    loadTemplateOptions,
+    settingsOpen,
+    templateOptions,
+    templateOptionsError,
+    templateOptionsLoading,
+  ]);
 
   const refreshRevisions = useCallback(
     async () => {
@@ -549,9 +634,16 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   };
 
   const handleAddBlock = (type: string) => {
+    if (slotInsertTarget) {
+      handleInsertIntoSlot(slotInsertTarget.parentId, slotInsertTarget.slotId, type);
+      setSlotInsertTarget(null);
+      if (mobileLibraryOpen) setMobileLibraryOpen(false);
+      return;
+    }
     const nextBlock = buildNewBlock(type);
     updateBlocks([...blocks, nextBlock]);
-    setSelectedId(nextBlock.id);
+    focusInsertedBlock(nextBlock.id);
+    if (mobileLibraryOpen) setMobileLibraryOpen(false);
   };
 
   const handleAddTemplateSection = (template: { id: string; name: string }) => {
@@ -563,7 +655,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     };
     const finalized = { ...nextBlock, data: nextData };
     updateBlocks([...blocks, finalized]);
-    setSelectedId(finalized.id);
+    focusInsertedBlock(finalized.id);
+    if (mobileLibraryOpen) setMobileLibraryOpen(false);
   };
 
   const handleAddForm = (form: { id: string; name: string }) => {
@@ -575,13 +668,26 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     };
     const finalized = { ...nextBlock, data: nextData };
     updateBlocks([...blocks, finalized]);
-    setSelectedId(finalized.id);
+    focusInsertedBlock(finalized.id);
+    if (mobileLibraryOpen) setMobileLibraryOpen(false);
   };
 
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
     const nextBlock = buildNewBlock(type);
     updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
-    setSelectedId(nextBlock.id);
+    focusInsertedBlock(nextBlock.id);
+  };
+
+  const handleOpenSlotInsert = (target: SlotInsertTarget) => {
+    setLibraryTab("widgets");
+    setSlotInsertTarget(target);
+    if (
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 1023px)").matches
+    ) {
+      setMobileLibraryOpen(true);
+    }
   };
 
   const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
@@ -614,6 +720,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     if (!pageId) return;
     setIsSaving(true);
     setError(null);
+    setStatusNotice(null);
     try {
       const updated = await updatePage(pageId, {
         data: pageData,
@@ -621,6 +728,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPage(updated);
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      showStatusNotice("Draft saved.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -636,6 +744,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     if (!pageId) return;
     setIsPublishing(true);
     setError(null);
+    setStatusNotice(null);
     try {
       await publishPage(pageId, pageData);
       const updated = await getPageCached(pageId, { force: true });
@@ -645,6 +754,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         setUnsavedChanges(false);
         setRemoteUpdatePending(false);
       }
+      showStatusNotice("Page published.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -790,11 +900,28 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const status = page?.status ?? "draft";
   const title = page?.title ?? "Homepage";
+  const renderLibraryPanel = () => (
+    <LibraryPanel
+      onAddWidget={handleAddBlock}
+      onAddTemplate={handleAddTemplateSection}
+      onAddForm={handleAddForm}
+      activeTab={libraryTab}
+      onActiveTabChange={(nextTab) => {
+        setLibraryTab(nextTab);
+        if (nextTab !== "widgets" && slotInsertTarget) {
+          setSlotInsertTarget(null);
+        }
+      }}
+      widgetAllowedTypes={slotInsertTarget?.allowedTypes ?? null}
+      widgetContextLabel={slotInsertTarget?.slotLabel ?? null}
+      onClearWidgetContext={() => setSlotInsertTarget(null)}
+    />
+  );
 
   return (
     <EditorShell
       activeHref="/admin/pages"
-      leftPanel={<LibraryPanel onAddWidget={handleAddBlock} onAddTemplate={handleAddTemplateSection} onAddForm={handleAddForm} />}
+      leftPanel={renderLibraryPanel()}
       rightPanel={
         <BlockSettings
           block={selectedBlock}
@@ -916,6 +1043,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             <AlertDescription>{metaError}</AlertDescription>
           </Alert>
         ) : null}
+        {statusNotice ? (
+          <Alert>
+            <AlertTitle>Page updated</AlertTitle>
+            <AlertDescription>{statusNotice}</AlertDescription>
+          </Alert>
+        ) : null}
         {remoteUpdatePending ? (
           <Alert>
             <AlertTitle>Updated in another tab</AlertTitle>
@@ -965,12 +1098,14 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 className={spacingTokenToListSpaceClassMap[pageLayout.sections.gap]}
                 pageDefaults={pageLayout.sections.defaults}
                 selectedId={selectedId}
+                highlightedId={highlightedBlockId}
                 onSelect={setSelectedId}
                 onMove={handleMove}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
                 onInsert={handleInsertIntoSlot}
                 onMoveToSlot={handleMoveIntoSlot}
+                onOpenSlotInsert={handleOpenSlotInsert}
               />
             </div>
           </div>
@@ -985,6 +1120,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         templateOptions={templateOptions?.templates ?? null}
         templateOptionsLoading={templateOptionsLoading}
         templateOptionsError={templateOptionsError}
+        onRetryTemplateOptions={() => {
+          void loadTemplateOptions();
+        }}
         onSave={handleSaveSettings}
         onAutosave={handleAutosaveSettings}
         isSubmitting={isUpdatingMeta}
@@ -1019,6 +1157,11 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         iframeTitle="Page runtime preview"
         device={previewDevice}
         onDeviceChange={setPreviewDevice}
+        onFixPreviewTarget={() => {
+          setPreviewOpen(false);
+          setSettingsOpen(true);
+        }}
+        fixPreviewTargetLabel="Open page settings"
       />
       <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
         <SheetContent side="left" className="w-80 p-0">
@@ -1027,20 +1170,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             Browse available components and widgets.
           </SheetDescription>
           <div className="flex h-full flex-col overflow-y-auto">
-            <LibraryPanel
-              onAddWidget={(type) => {
-                handleAddBlock(type);
-                setMobileLibraryOpen(false);
-              }}
-              onAddTemplate={(template) => {
-                handleAddTemplateSection(template);
-                setMobileLibraryOpen(false);
-              }}
-              onAddForm={(form) => {
-                handleAddForm(form);
-                setMobileLibraryOpen(false);
-              }}
-            />
+            {renderLibraryPanel()}
           </div>
         </SheetContent>
       </Sheet>

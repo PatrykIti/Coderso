@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-194-01
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

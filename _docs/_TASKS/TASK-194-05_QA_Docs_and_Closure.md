@@ -5,7 +5,7 @@
 **Category:** QA + CMS/Pages + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-194-01, TASK-194-02, TASK-194-03, TASK-194-04
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
@@ -153,3 +153,22 @@ No child task files.
 4. `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` is refreshed with a dated
    re-verification status for the tracked `BUG-*` and `UX-*` items.
 5. The task board and changelog are synchronized with the final state.
+
+## Completion Notes (2026-04-22)
+
+- Re-ran the full targeted Vitest matrix for Pages list/cache, drawer
+  accessibility, editor feedback/preview, and builder discoverability.
+- Re-ran `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Updated `_docs/CONTENT_LIST_UX.md`, `_docs/CONTENT_EDITOR_UX.md`,
+  `_docs/CMS_SPEC.md`, `_docs/PREVIEW_SPEC.md`, `_docs/ADMIN_CACHE.md`, and
+  `_docs/PLAYWRIGHT/SUMMARY-PAGES.md` to reflect the final Pages UX contract.
+- Updated `_docs/_TASKS/README.md` and `_docs/_CHANGELOG/README.md`, and added
+  the matching changelog entry for the completed `TASK-194` family.
+- No Bun runtime/server regression pass was needed because the implementation
+  stayed inside admin/UI/admin-client seams.
+
+## Validation (2026-04-22)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockToolbar.test.tsx tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/ui/page-editor-insert-scroll.test.tsx tests/vitest/ui/page-editor-slot-insert-flow.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx`
