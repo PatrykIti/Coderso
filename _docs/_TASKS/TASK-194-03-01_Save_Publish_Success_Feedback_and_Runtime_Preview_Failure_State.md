@@ -16,6 +16,8 @@ Make the editor honest about positive and negative outcomes:
 - after `Save draft` or `Publish`, the user needs explicit success feedback,
 - when the runtime preview target cannot load, the dialog must explain what went
   wrong and what to do next,
+- the runtime preview dialog must also provide its own explicit accessible
+  description instead of relying on wrapper silence,
 - when save/publish fail, the user should get immediate visible failure feedback
   instead of relying only on subtle shell state.
 
@@ -29,7 +31,11 @@ Current owner seams:
   - preview dialog receives backend token/url state but no iframe-load failure
     diagnostics.
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx:70-171`
-  - dialog only distinguishes loading, API error, empty, and iframe render.
+  - dialog only distinguishes loading, API error, empty, and iframe render, and
+    does not own an explicit `DialogDescription` yet.
+- `core/admin/components/ui/dialog.tsx:57-86`
+  - shared wrapper exists, but this leaf should prefer truthful surface-owned
+    dialog copy before considering a fallback here.
 - `core/admin/components/ui/sonner.tsx:1-40`
   - toast component exists, but current repo search did not show any shared
     mount or Pages usage.
@@ -47,6 +53,8 @@ No child task files.
 - `core/admin/ui/pages/PageEditor.tsx:822-862`
 - `core/admin/ui/pages/PageEditor.tsx:1009-1022`
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx:70-171`
+- `core/admin/components/ui/dialog.tsx:57-86` only if a shared dialog fallback
+  proves necessary after trying the surface-owned description
 - `core/admin/app/AdminApp.tsx:818-825` if the shared toaster is not already
   mounted
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx:682-785`
@@ -62,6 +70,9 @@ No child task files.
 - If mounting a global toaster is too invasive for this leaf, use a minimal
   page-local success/error banner only as a fallback.
 - Track iframe load readiness separately from preview token generation.
+- Add an explicit `DialogDescription` on `RuntimePreviewDialog` so the Pages
+  preview surface fixes its own a11y warning instead of hiding it in a generic
+  wrapper.
 - Preferred preview path:
   - detect obviously unreachable local preview hosts before showing a broken
     iframe when the URL already points at `localhost`, `127.0.0.1`, or another
@@ -113,6 +124,7 @@ useEffect(() => {
   - generic preview path remains unchanged when the iframe loads.
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
   - dialog shows iframe sandbox contract,
+  - dialog renders explicit description text on the real `Dialog` wrapper,
   - local-host preflight or unresolved iframe timeout swaps to actionable
     placeholder copy,
   - placeholder includes the attempted host/base URL without leaking tokens,

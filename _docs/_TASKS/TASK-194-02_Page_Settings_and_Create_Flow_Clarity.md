@@ -18,10 +18,16 @@ but misleading:
 - `Create Page` stays disabled without telling the user what is missing,
 - Page Settings footer copy exposes `autosave snapshot` jargon instead of
   product-facing language,
-- Pages sheets/dialogs lack explicit descriptions and trigger Radix a11y
-  warnings,
+- Pages create/settings/history sheets lack explicit descriptions and trigger
+  Radix a11y warnings,
 - disabled dependent controls such as `Max width` do not explain why they are
   unavailable.
+
+Ownership note:
+
+- runtime preview dialog warnings stay in `TASK-194-03-01` because the dialog
+  copy and failure state already belong to the runtime-preview surface owner,
+  not the settings/create wave.
 
 ## Sub-Tasks
 
@@ -33,14 +39,16 @@ but misleading:
 - Make template loading state truthful and non-blocking.
 - Explain create-form validation directly in the drawer.
 - Replace technical autosave wording with user-facing language.
-- Add description / `aria-describedby` coverage for the Pages drawers touched by
-  this wave.
+- Add description / `aria-describedby` coverage for the existing create,
+  settings, and history sheets.
 - Explain why dependent settings controls are disabled.
 
 Out of scope:
 
 - a new template-selection architecture,
 - changes to revision/autosave persistence semantics,
+- runtime preview dialog description/warning handling, owned by
+  `TASK-194-03-01`,
 - a redesign of Page Settings layout already covered by `TASK-053`.
 
 ## Files to Change
@@ -50,6 +58,7 @@ Out of scope:
 - `core/admin/ui/pages/PageCreateDrawer.tsx`
 - `core/admin/ui/pages/PageRevisionDrawer.tsx`
 - `core/admin/components/ui/sheet.tsx`
+- `tests/vitest/ui/drawers.test.tsx`
 - `tests/vitest/ui/page-settings-drawer.test.tsx`
 - `tests/vitest/ui/page-settings-drawer-wave.test.tsx`
 - `tests/vitest/ui/page-revision-drawer.test.tsx`
@@ -69,9 +78,12 @@ Out of scope:
   - truthful template-loading copy,
   - disabled create-button helper behavior,
   - disabled dependent-field helper behavior,
-  - drawer description / `aria-describedby` coverage,
+  - create/settings/history description / `aria-describedby` coverage,
   - updated autosave wording,
-  - no regression to existing settings save/autosave flows.
+  - no regression to existing settings save/autosave flows,
+  - at least one real `Sheet` path in Pages (`drawers.test.tsx` and/or
+    `page-revision-drawer.test.tsx`) so missing-description regressions fail on
+    the real wrapper, not only on mocked shells.
 
 ## Documentation Updates Required
 

@@ -28,10 +28,13 @@ No child task files.
 - `tests/vitest/ui/page-list-cache-behavior.test.tsx`
 - `tests/vitest/ui/page-settings-drawer.test.tsx`
 - `tests/vitest/ui/page-settings-drawer-wave.test.tsx`
+- `tests/vitest/ui/drawers.test.tsx`
 - `tests/vitest/ui/page-revision-drawer.test.tsx`
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
 - `tests/vitest/admin/pagesClient.test.ts`
+- `tests/vitest/pageBuilder/blockToolbar.test.tsx` if the toolbar leaf ships a
+  focused real-component suite
 - `tests/vitest/pageBuilder/blockList.test.tsx`
 - `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
 - `tests/vitest/pageBuilder/pickers.test.tsx`
@@ -63,10 +66,20 @@ No child task files.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
+  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
+  - if `tests/vitest/pageBuilder/blockToolbar.test.tsx` is added by `TASK-194-04-01`, append it to the same Vitest run
   - keep at least one non-mocked `Sheet` path and one non-mocked `Dialog` path
     in the Pages suites so Radix warning regressions fail in local Vitest, not
     only in Playwright/manual QA
+  - preferred real-wrapper paths:
+    - `tests/vitest/ui/drawers.test.tsx` and/or
+      `tests/vitest/ui/page-revision-drawer.test.tsx` for `Sheet`
+    - `tests/vitest/ui/runtime-preview-dialog.test.tsx` for `Dialog`
+  - builder toolbar accessibility must be proven on the real toolbar component
+    (`tests/vitest/pageBuilder/blockToolbar.test.tsx` or an explicitly
+    unmocked equivalent), not only through the mocked `blockList` suite
+  - author-fallback closure notes must confirm both mobile and desktop PageTable
+    presentations, not only the desktop column
 - Bun only if server/service code changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts tests/unit/pages`
   - if the preview UI change requires new server-derived host metadata, add the
@@ -89,6 +102,7 @@ No child task files.
 1. The `TASK-194` family ships with targeted validation across the correct
    Vitest/Bun lanes.
 2. Closure explicitly states which report items were fixed by Vitest-owned UI
-   coverage and which ones required Bun-side regression guards.
+   coverage, which ones were verified on real `Sheet`/`Dialog` wrappers, and
+   which ones required Bun-side regression guards.
 3. Docs describe the final user-facing list/settings/editor/builder behavior.
 4. The task board and changelog are synchronized with the final state.

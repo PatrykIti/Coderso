@@ -17,10 +17,16 @@ Explain the currently opaque Pages drawer states:
 - Page Settings footer copy talks about `autosave snapshot` instead of the user
   outcome,
 - `Max width` becomes disabled with no explanation when `Page width = full`,
-- create/settings/history drawers do not provide explicit descriptions and can
+- create/settings/history sheets do not provide explicit descriptions and can
   trigger Radix accessibility warnings.
 
 These are copy/affordance fixes, not persistence or validation redesign.
+
+Ownership note:
+
+- preview-dialog description coverage belongs to
+  `TASK-194-03-01_Save_Publish_Success_Feedback_and_Runtime_Preview_Failure_State.md`
+  because `RuntimePreviewDialog.tsx` already owns that surface and its copy.
 
 ## Sub-Tasks
 
@@ -43,8 +49,10 @@ No child task files.
 - `core/admin/ui/pages/PageRevisionDrawer.tsx:69-87`
   - add explicit history-drawer description content.
 - `core/admin/components/ui/sheet.tsx`
-  - only if the repo chooses a wrapper-level fallback for optional descriptions
-    instead of per-surface descriptions.
+  - only if several existing Pages sheets truly need the same fallback contract;
+    prefer owner-surface descriptions first.
+- `tests/vitest/ui/drawers.test.tsx:106-119`
+  - keep a real `Sheet` render path for the create drawer.
 - `tests/vitest/ui/page-post-list-wave.test.tsx:565-610`
 - `tests/vitest/ui/page-settings-drawer-wave.test.tsx`
 - `tests/vitest/ui/page-revision-drawer.test.tsx`
@@ -56,8 +64,10 @@ No child task files.
   understand the disabled state.
 - Replace footer jargon with copy that describes the outcome:
   `close to keep one draft version in history`, not `keep one autosave snapshot`.
-- Add explicit description content to the create/settings/history drawers rather
-  than hiding the warning.
+- Add explicit description content to the existing create/settings/history sheet
+  owners rather than hiding the warning.
+- Do not add a Pages-only wrapper abstraction or generated placeholder copy if a
+  truthful `SheetDescription` can live on the current surface owner.
 - When `Max width` is disabled, explain the dependency inline or via
   `aria-describedby`; users should not have to infer the `Page width = full`
   rule.
@@ -82,14 +92,19 @@ const createHelp =
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - helper copy appears while the button is disabled,
   - button enables once required fields are present.
+- `tests/vitest/ui/drawers.test.tsx`
+  - create drawer renders explicit descriptive copy through the real `Sheet`
+    wrapper.
 - `tests/vitest/ui/page-settings-drawer-wave.test.tsx`
   - disabled `Max width` renders helper copy explaining the dependency,
   - updated footer copy renders in dirty and clean states without changing
     autosave behavior.
 - `tests/vitest/ui/page-revision-drawer.test.tsx`
-  - rendered drawer includes explicit descriptive text for the history flow.
-- At least one Vitest path in this leaf must render the real `Sheet` wrapper
-  instead of a mock so missing-description regressions fail locally.
+  - rendered drawer includes explicit descriptive text for the history flow via
+    the real `Sheet` wrapper, not only SSR text snapshots.
+- At least one Pages create/history Vitest path in this leaf must render the
+  real `Sheet` wrapper instead of a mock so missing-description regressions fail
+  locally.
 
 ## Documentation Updates Required
 
@@ -99,7 +114,8 @@ const createHelp =
 ## Acceptance Criteria
 
 1. The create drawer explains why `Create Page` is disabled.
-2. Settings and history drawers include explicit accessible descriptions.
+2. Create, settings, and history sheets include explicit accessible
+   descriptions on their existing surface owners.
 3. Disabled `Max width` explains why it is unavailable.
 4. Footer copy in Page Settings uses user-facing autosave language.
 5. No validation rules or autosave behavior change under the hood.

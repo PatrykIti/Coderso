@@ -46,6 +46,8 @@ Out of scope:
 - `core/admin/ui/pages/builder/WidgetPicker.tsx`
 - `core/widgets/types.ts`
 - `core/admin/ui/widgets/WidgetLibraryPage.tsx` for category label/icon reuse
+- `tests/vitest/pageBuilder/blockToolbar.test.tsx` if the real toolbar gets its
+  own focused accessibility suite
 - `tests/vitest/pageBuilder/blockList.test.tsx`
 - `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
 - `tests/vitest/pageBuilder/wizardPanel.test.tsx`
@@ -63,7 +65,7 @@ Out of scope:
 ## Testing Requirements
 
 - Vitest coverage for:
-  - action-button labels/titles,
+  - action-button labels/titles on the real toolbar owner,
   - wizard transition copy,
   - empty-slot helper text,
   - category-grouped widget picker behavior.

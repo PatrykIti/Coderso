@@ -16,6 +16,8 @@ actionable:
 
 - saving and publishing succeed silently,
 - runtime preview failure can collapse into an unhelpful broken iframe,
+- runtime preview dialog still needs to satisfy its accessibility description
+  contract on the existing dialog owner,
 - adding a block can leave the new widget off-screen with no clear visual
   anchor.
 
@@ -29,6 +31,8 @@ actionable:
 - Add visible success confirmation after draft save and publish.
 - Keep failure feedback visible and actionable when save/publish fail.
 - Make preview failure actionable when the preview target host is unreachable.
+- Keep runtime-preview dialog copy and dialog-description ownership on the
+  existing preview surface instead of moving it into settings/create code paths.
 - Scroll/focus/highlight the newly inserted block into view.
 
 Out of scope:
@@ -41,6 +45,8 @@ Out of scope:
 
 - `core/admin/ui/pages/PageEditor.tsx`
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
+- `core/admin/components/ui/dialog.tsx` only if the repo proves a truthful
+  shared dialog fallback is required
 - `core/admin/app/AdminApp.tsx` only if the shared toaster must be mounted
 - `core/admin/ui/pages/builder/BlockList.tsx` only if data attributes/refs are
   needed for scroll targeting
@@ -64,6 +70,7 @@ Out of scope:
   - success feedback on save/publish,
   - visible failure feedback on save/publish,
   - actionable preview failure state,
+  - explicit runtime-preview dialog description on the real `Dialog` wrapper,
   - post-insert scroll/focus/highlight behavior,
   - no regression to existing preview/save/publish settings tests.
 - Bun only if a leaf touches preview URL resolution logic on the server.

@@ -46,7 +46,10 @@ No child task files.
   - repair create-path cache priming.
 - `core/admin/services/pagesClient.ts:292-303`
   - apply the same cache rule to duplicate if it reuses the same partial shape.
-- `core/admin/ui/pages/PageTable.tsx:147-163`
+- `core/admin/ui/pages/PageTable.tsx:127-139`
+  - keep the mobile metadata row on the same missing-author contract as the main
+    author column.
+- `core/admin/ui/pages/PageTable.tsx:151-163`
   - render a neutral missing-author fallback for true `author: null` payloads
     instead of reusing the same `Unknown` label that currently hides cache
     corruption.
@@ -71,8 +74,9 @@ Primary direction:
   authoritative list-summary data when `author` is unresolved,
 - invalidate or mark the pages list cache stale so the next list mount fetches a
   real list snapshot,
-- reserve the neutral missing-author UI only for real server payloads with
-  `author: null`.
+- reserve one shared neutral missing-author UI for real server payloads with
+  `author: null`; do not let mobile and desktop paths drift into different
+  fallback contracts.
 
 Only widen server payloads if the client-only cache fix proves insufficient.
 
@@ -104,7 +108,8 @@ if (created) {
     the list cache was invalidated by create/duplicate.
 - `tests/vitest/ui/page-table-wave.test.tsx`
   - `author: null` uses neutral fallback copy/tooling that is distinct from the
-    stale-cache symptom.
+    stale-cache symptom in both the mobile metadata row and the desktop author
+    column.
 - `tests/integration/routes/pages.test.ts`
   - keep the existing `authorId` assertion green if server code is touched.
 
@@ -118,6 +123,7 @@ if (created) {
 1. A page created in the current admin flow does not show `Unknown` author on
    the list because of stale client cache.
 2. The fix does not rely on browser-local synthetic author names.
-3. Real missing-author payloads render as a neutral, intentional fallback state.
+3. Real missing-author payloads render as one neutral, intentional fallback
+   state across both mobile and desktop list presentations.
 4. Cached list rendering remains fast, but stale partial mutation payloads stop
    being treated as authoritative list state.

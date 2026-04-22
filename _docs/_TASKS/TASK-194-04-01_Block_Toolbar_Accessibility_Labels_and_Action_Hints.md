@@ -21,7 +21,8 @@ Current owner seams:
 - `core/admin/ui/pages/builder/BlockList.tsx:208-215`
   - toolbar is rendered with enough context to pass a block label/index.
 - `tests/vitest/pageBuilder/blockList.test.tsx:465-480`
-  - existing tests already click the toolbar controls via test doubles.
+  - existing tests already click toolbar controls via a test double, so they are
+    not sufficient proof of the real accessibility contract.
 
 The report explicitly called out the move up, move down, duplicate, and delete
 icons as inaccessible and guesswork-driven.
@@ -36,14 +37,22 @@ No child task files.
 - `core/admin/ui/pages/builder/BlockList.tsx:208-215`
 - `core/admin/ui/pages/BlockToolbar.tsx:5-19` only if the legacy/demo toolbar is
   still kept as a public visual leaf and should stay consistent
-- `tests/vitest/pageBuilder/blockList.test.tsx:465-480`
+- `tests/vitest/pageBuilder/blockList.test.tsx:465-480` only if one pass keeps
+  an integration assertion after removing or narrowing the toolbar mock
 - `tests/vitest/ui/page-leaf-components.test.tsx:25-31` only if the legacy
   toolbar stays in scope
+
+## New Files to Create
+
+- `tests/vitest/pageBuilder/blockToolbar.test.tsx` unless the existing
+  `blockList` suite is explicitly changed to exercise the real toolbar component.
 
 ## Implementation Direction
 
 - Pass block label context from `BlockList` into `BlockToolbar`.
 - Add `aria-label` and `title` to every icon-only action.
+- Prove the contract on the real `BlockToolbar` owner; do not count mocked
+  `BlockToolbar` usage in `blockList.test.tsx` as sufficient validation.
 - Keep labels action-specific:
   - `Move Hero up`
   - `Move Hero down`
@@ -63,11 +72,14 @@ No child task files.
 
 ## Testing Requirements
 
-- `tests/vitest/pageBuilder/blockList.test.tsx`
-  - toolbar buttons expose `aria-label`/`title`,
+- `tests/vitest/pageBuilder/blockToolbar.test.tsx`
+  - real toolbar buttons expose `aria-label`/`title`,
   - disabled move buttons still expose labels,
   - delete action keeps destructive affordance metadata/classing if one is
     added.
+- `tests/vitest/pageBuilder/blockList.test.tsx`
+  - only verify label propagation/context wiring if the suite still touches the
+    real toolbar path.
 - `tests/vitest/ui/page-leaf-components.test.tsx`
   - update only if the legacy toolbar remains part of the supported surface.
 

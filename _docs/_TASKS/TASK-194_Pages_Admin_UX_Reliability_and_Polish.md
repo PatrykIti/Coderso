@@ -76,13 +76,16 @@ This umbrella covers four owner areas:
    - template-options loading lifecycle,
    - create-form validation affordances,
    - autosave wording cleanup,
-   - dialog/sheet accessibility descriptions,
+   - create/settings/history accessibility descriptions on the existing Pages
+     sheet surfaces,
    - dependent-field helper copy for disabled controls.
 3. Page editor feedback and preview recovery:
    - success confirmations,
-   - actionable runtime preview failure states,
-   - visible failure feedback,
-   - scroll/focus/highlight after insertion.
+    - actionable runtime preview failure states,
+   - runtime preview dialog accessibility description on the existing preview
+     dialog surface,
+    - visible failure feedback,
+    - scroll/focus/highlight after insertion.
 4. Builder accessibility and discoverability:
    - labeled action buttons,
    - clearer wizard-to-visual handoff,
@@ -136,6 +139,10 @@ Reuse-first rule:
 - reuse existing widget-library category labels and slot constraints instead of
   creating Pages-only copies,
 - reuse existing `sonner` component if toast feedback is chosen,
+- keep accessibility fixes on the truthful surface owner first
+  (`PageCreateDrawer`, `PageSettingsDrawer`, `PageRevisionDrawer`,
+  `RuntimePreviewDialog`) instead of generating generic fallback copy in shared
+  wrappers unless a real shared contract is proven,
 - keep route/service contracts stable unless a client-only fix cannot preserve
   correctness.
 
