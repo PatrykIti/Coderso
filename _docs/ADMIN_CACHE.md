@@ -209,12 +209,17 @@ When adding a new resource:
 - `PageListPage` mount policy:
   - cache present -> `{ force: false, background: true }`
   - cache missing -> `{ force: true, background: false }`
+- `MenuListPage` mount policy:
+  - cache present -> `{ force: false, background: true }`
+  - cache missing -> `{ force: true, background: false }`
 - `MenuEditorPage` mount policy:
   - cache present -> `{ force: false, background: true, reloadActive: false }`
   - cache missing -> `{ force: false, background: false, reloadActive: false }`
-- Active menu detail reload:
-  - reloads when active menu changed, explicit refresh is clicked, save completes, or cacheBus detail event is received
-  - does not auto-force on every route entry when detail cache exists
+- Menu editor detail reload:
+  - reloads the route-selected `menus:detail:<id>` entry on explicit refresh,
+    save completion, or cacheBus detail event,
+  - does not switch to another menu because `menus:list` changed elsewhere,
+  - does not auto-force on every route entry when detail cache exists.
 
 
 ## Route Map

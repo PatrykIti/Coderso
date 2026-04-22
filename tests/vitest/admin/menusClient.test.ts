@@ -1,7 +1,9 @@
 import { expect, test } from "vitest";
 
 import {
+  createMenu,
   clearMenusCache,
+  getCachedMenus,
   getMenuWithItems,
   getMenuWithItemsCached,
   listMenus,
@@ -142,6 +144,43 @@ test("getMenuWithItemsCached reads from local storage", async () => {
     const result = await getMenuWithItemsCached("menu-1");
     expect(result).toEqual(cached);
     expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("createMenu primes list cache for immediate list rendering", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async () =>
+    jsonResponse({
+      id: "menu-2",
+      name: "Footer",
+      location: "footer",
+      createdAt: "2026-04-22T00:00:00.000Z",
+    });
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    await createMenu({ name: "Footer", location: "footer" });
+    expect(getCachedMenus()).toEqual([
+      {
+        id: "menu-2",
+        name: "Footer",
+        location: "footer",
+        createdAt: "2026-04-22T00:00:00.000Z",
+      },
+    ]);
+    expect(storage.getItem(cacheKeys.menusList)).toContain("Footer");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {

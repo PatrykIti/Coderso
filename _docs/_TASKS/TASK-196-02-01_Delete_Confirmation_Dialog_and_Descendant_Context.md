@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin/UI + Destructive Actions
 **Estimated Effort:** Medium
 **Dependencies:** TASK-196-02
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

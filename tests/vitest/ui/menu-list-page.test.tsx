@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import { MenuEditorPage } from "../../../core/admin/ui/menus/MenuEditorPage";
+import { MenuListPage } from "../../../core/admin/ui/menus/MenuListPage";
 
 const createLocalStorage = () => {
   const store = new Map<string, string>();
@@ -18,37 +18,46 @@ const createLocalStorage = () => {
   };
 };
 
-test("MenuEditorPage renders route-selected editor shell without cross-menu switcher", () => {
+test("MenuListPage renders shell and loading state", () => {
+  const html = renderAdminUi(<MenuListPage />, {
+    path: "/admin/menus",
+  });
+
+  expect(html).toContain("Menus");
+  expect(html).toContain("New Menu");
+  expect(html).toContain("Loading menus");
+});
+
+test("MenuListPage renders cached menus with editor links", () => {
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const storage = createLocalStorage();
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
 
   try {
     storage.setItem(
-      cacheKeys.menuDetail("menu-1"),
+      cacheKeys.menusList,
       JSON.stringify({
-        value: {
-          menu: {
+        value: [
+          {
             id: "menu-1",
-            name: "Main Navigation",
-            location: "primary",
+            name: "Cached Menu",
+            location: "footer",
             createdAt: "2026-04-22T00:00:00.000Z",
           },
-          items: [],
-        },
+        ],
         savedAt: Date.now(),
       })
     );
 
-    const html = renderAdminUi(<MenuEditorPage />, {
-      path: "/admin/menus/menu-1",
+    const html = renderAdminUi(<MenuListPage />, {
+      path: "/admin/menus",
     });
 
-    expect(html).toContain("Main Navigation");
-    expect(html).toContain("Back to menus");
-    expect(html).toContain("Location");
-    expect(html).not.toContain("Active menu");
-    expect(html).not.toContain("New Menu");
+    expect(html).toContain("Cached Menu");
+    expect(html).toContain("footer");
+    expect(html).toContain("/admin/menus/menu-1");
+    expect(html).toContain("Open editor");
+    expect(html).not.toContain("Loading menus");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

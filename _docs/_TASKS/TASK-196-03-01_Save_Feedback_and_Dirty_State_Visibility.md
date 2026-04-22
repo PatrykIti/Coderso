@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin/UI + Mutation Feedback
 **Estimated Effort:** Medium
 **Dependencies:** TASK-196-03
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

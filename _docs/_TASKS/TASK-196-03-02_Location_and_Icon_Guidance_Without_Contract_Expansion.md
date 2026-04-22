@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin/UI + Form Guidance
 **Estimated Effort:** Small
 **Dependencies:** TASK-196-03
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

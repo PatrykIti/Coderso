@@ -97,9 +97,12 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: `listMediaCached`, `getCachedMedia`
 
 ## Menus / Themes / Site Settings
+- Menus list
+  - UI: `core/admin/ui/menus/MenuListPage.tsx`
+  - Cached APIs: `listMenusCached`, `getCachedMenus`
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
-  - Cached APIs: `listMenusCached`, `getMenuWithItemsCached`, `getCachedMenus`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
+  - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
 - SEO manager
   - UI: `core/admin/ui/seo/SeoManagerPage.tsx`
   - Cached APIs: none; consumes cache bus events for assistant/direct SEO mutations

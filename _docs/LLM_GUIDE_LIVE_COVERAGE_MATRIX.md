@@ -22,7 +22,8 @@ Coverage states:
 | /admin | Dashboard | live-gated | TASK-184-12 | Dashboard prompts stay non-executable/read-only. |
 | /admin/pages | Pages | live-execute | TASK-184-02 | Page create/search/update/delete/safety live matrix. |
 | /admin/coderso/posts | Posts | live-gated | TASK-184-10 | Direct post mutations stay gated until typed post actions exist. |
-| /admin/menus | Menus | live-execute | TASK-184-08 | Menu item inspect/update/delete live matrix. |
+| /admin/menus | Menus | live-read-only | TASK-184-08 | List-first Menus surface; choose a menu before entering the editor. |
+| /admin/menus/:id | Menus Editor | live-execute | TASK-184-08 | Route-selected menu item inspect/update/delete live matrix after choosing a menu from `/admin/menus`. |
 | /admin/media | Media | live-execute | TASK-184-08 | Existing media references execute; upload prompts stay gated. |
 | /admin/coderso/engine | Engine | live-execute | TASK-184-03 | Content type inspect/delete safety live matrix. |
 | /admin/coderso/entries | Entries | live-execute | TASK-184-03 | Active entry update/delete live matrix. |

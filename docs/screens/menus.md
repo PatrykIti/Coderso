@@ -14,64 +14,79 @@ keywords:
 
 # Basic
 
-Menus is the navigation builder for the site. It combines menu creation,
-menu-level metadata, item hierarchy editing, and per-item settings in one admin
-screen.
+Menus is the navigation builder for the site. The admin flow is now split into
+two connected screens:
 
-In the current UI, the Menus surface includes:
-- page header with `Refresh` and `New Menu`,
-- save state controls such as `All changes saved`, `Discard`, and `Save changes`,
-- menu-level fields for active menu, location, and menu name,
+- a list screen at `Menus` where you create or choose a menu,
+- a dedicated editor screen for one selected menu.
+
+In the current UI, the Menus experience includes:
+
+- a list-first screen with `Refresh`, `New Menu`, and one row per menu,
+- an editor route that opens only after you choose a menu from the list,
+- save state controls such as `All changes saved`, `Discard`, and
+  `Save changes`,
+- menu-level fields for `Location` and `Menu name`,
 - a `Menu Structure` area for hierarchy editing,
 - a create dialog for new menus,
-- an item-details workflow for editing one selected menu item.
+- an item-details workflow for editing one selected menu item,
+- a branded delete confirmation dialog before removing a menu item.
 
 # Medium
 
 Use Menus after you already know which pages, posts, or external destinations
-should be reachable from navigation. The screen is best when route structure is
-already fairly stable and you are ready to shape user-facing journeys.
+should be reachable from navigation. The list screen helps you choose the
+correct navigation surface first; the editor then focuses on exactly one menu.
 
-The Menus screen is easiest to understand as four connected workflows:
+The Menus experience is easiest to understand as five connected workflows:
+
+- menu selection:
+  start on the list and choose the menu you want to edit
 - menu creation:
   create a new named menu and optionally assign a location
 - menu-level editing:
-  choose the active menu, update location, update menu name
+  update location and menu name on the selected menu
 - structure editing:
   add items, reorder them, and build parent/child hierarchy
 - item-level editing:
   define what each link points to and when it should appear
 
-The builder also exposes a clear save model:
+The editor also exposes a clear save model:
+
 - `All changes saved` when nothing is pending
 - `Discard` when you want to throw away unsaved changes
-- `Save changes` when you want to persist current builder state
+- `Save changes` when you want to persist the current editor state
 
 # Instruction
 
 1. Open `Menus` from the main admin navigation.
-2. Start at the top of the screen.
+2. Start on the Menus list.
    Confirm:
-   - which menu is active,
-   - whether the page says `All changes saved`,
-   - whether `Discard` and `Save changes` are available.
-3. If you need a brand-new menu, click `New Menu`.
+   - which menus already exist,
+   - which one you want to edit,
+   - whether you need a brand-new menu instead.
+3. If you need a new menu, click `New Menu`.
 4. In the create dialog, fill the fields in this order:
    - `Menu name`
    - `Location (optional)`
-5. Use `Create Menu` to open the new menu in the builder.
-6. If you are editing an existing menu, review the menu-level fields before
-   touching the structure:
-   - `Active menu`
+5. Use `Create Menu` to add the menu to the list.
+6. Open the chosen menu from the list when you are ready to edit it.
+7. In the editor header, confirm:
+   - you are editing the correct menu,
+   - whether the page says `All changes saved`,
+   - whether `Discard` and `Save changes` are available.
+8. Review the menu-level fields before touching the structure:
    - `Location`
    - `Menu name`
-7. Scroll to `Menu Structure`.
-8. Use `Add Item` when you need a new link.
-9. Reorder items in the structure area by dragging:
-   - up or down to reorder,
-   - right to create a sub-menu.
-10. Select an existing item when you need to edit its details.
-11. In item settings, work top to bottom:
+9. Use `Location` for the theme slot identifier the frontend expects, for
+   example `primary` or `footer`.
+10. Scroll to `Menu Structure`.
+11. Use `Add Item` when you need a new link.
+12. Reorder items in the structure area by dragging the handle:
+    - up or down to reorder,
+    - slightly right to create a sub-menu.
+13. Select an existing item when you need to edit its details.
+14. In item settings, work top to bottom:
     - `Navigation Label`
     - `Link Type`
     - linked page or custom URL
@@ -81,26 +96,30 @@ The builder also exposes a clear save model:
     - `Badge Tone`
     - `Description`
     - `Icon Name`
-12. Choose `Link Type` carefully:
+15. Choose `Link Type` carefully:
     - `Page` when the menu item should point to an internal page,
     - `Custom URL` when the item should point to an external or custom route.
-13. Use `Parent Item` when you want the link nested under another item instead
+16. Use `Parent Item` when you want the link nested under another item instead
     of sitting at the top level.
-14. Use `Visibility` when the link should appear only for:
+17. Use `Visibility` when the link should appear only for:
     - everyone,
     - logged-in users,
     - logged-out users.
-15. Use `Badge Label`, `Badge Tone`, `Description`, and `Icon Name` only when
+18. Use `Badge Label`, `Badge Tone`, `Description`, and `Icon Name` only when
     your menu presentation needs extra metadata.
-16. Click `Save changes` after updating menu metadata, structure, or item
+19. Use the delete action only after reading the confirmation dialog. If the
+    item has children, the dialog tells you how many nested items will also be
+    removed from the current draft menu.
+20. Click `Save changes` after updating menu metadata, structure, or item
     settings.
-17. Use `Discard` only when you intentionally want to throw away the unsaved
+21. Use `Discard` only when you intentionally want to throw away the unsaved
     state.
-18. Use `Refresh` when the menu changed elsewhere and you want the latest
+22. Use `Refresh` when the menu changed elsewhere and you want the latest
     server state.
 
 Use this safe working order when you want the fewest mistakes:
-1. Create or choose the correct menu.
+
+1. Choose the correct menu from the list.
 2. Update menu-level name/location first.
 3. Build the hierarchy.
 4. Edit item details one item at a time.
@@ -110,6 +129,9 @@ Use this safe working order when you want the fewest mistakes:
 
 - Do not build navigation before the underlying routes are stable. Menus should
   reflect product structure, not guess it.
+- The list screen exists to reduce mode confusion. Do not treat the editor as a
+  place to browse between unrelated menus; return to the list when you want a
+  different navigation surface.
 - Use top-level items for primary journeys and nesting for secondary or
   contextual links. If every item becomes nested, the information architecture
   is usually doing too much.
@@ -123,14 +145,16 @@ Use this safe working order when you want the fewest mistakes:
 - Drag-and-drop hierarchy is powerful, but it is easy to create confusing
   trees. Review the final structure as a user journey, not just as a technical
   nesting exercise.
-- The builder can surface slow-loading or refreshed menu state, so save often
-  and refresh intentionally instead of assuming local state is the only truth.
+- The editor can surface remote updates without overwriting your unsaved draft.
+  Refresh intentionally when another tab changed the same menu.
 
 # Troubleshooting
 
 - Menus appears to be stuck on loading:
-  wait for hydration to finish, then use `Refresh` if the builder still has not
-  loaded current menu data.
+  use `Refresh` on the list or in the editor and confirm the current menu still
+  exists.
+- You cannot find the menu you expected:
+  return to the Menus list and confirm it was created successfully.
 - You cannot create a page-linked item:
   confirm there are pages available to select. If not, create the page first or
   use `Custom URL` temporarily.
@@ -144,13 +168,16 @@ Use this safe working order when you want the fewest mistakes:
   review the menu `Location` value and the theme/runtime mapping that consumes
   it.
 - You want to remove an item but are unsure whether children will be affected:
-  verify the hierarchy first and then delete intentionally from the item drawer.
+  open delete intentionally and read the confirmation dialog before continuing.
 
 # Decision Guide
 
 - Choose `New Menu` vs editing an existing menu:
   create a new menu when the navigation surface is conceptually different; edit
-  the existing menu when you are refining the same navigation area.
+  an existing menu when you are refining the same navigation area.
+- Choose list screen vs editor:
+  use the list to choose the correct menu first; use the editor only for the
+  selected menu you are actively changing.
 - Choose `Page` vs `Custom URL`:
   use `Page` for internal managed pages; use `Custom URL` for external
   destinations or routes not modeled as managed pages.
@@ -165,14 +192,14 @@ Use this safe working order when you want the fewest mistakes:
 
 # Checklist
 
-1. Confirm the correct menu is active.
+1. Confirm you opened the correct menu from the list.
 2. Confirm menu `Location` and `Menu name` are correct.
 3. Confirm top-level and nested item hierarchy matches user journeys.
 4. Confirm each item points to the correct page or custom URL.
 5. Confirm `Visibility` rules are intentional.
 6. Confirm optional badge/description/icon metadata is actually needed.
 7. Click `Save changes`.
-8. Re-check the saved structure before leaving the screen.
+8. Re-check the saved structure before leaving the editor.
 
 # Security
 

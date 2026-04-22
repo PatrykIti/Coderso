@@ -243,6 +243,10 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
+    expect(view.container.textContent).toContain(
+      "Theme slot identifier such as"
+    );
+
     await act(async () => {
       buttons.find((button) => button.textContent?.includes("Create Menu"))?.click();
     });

@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin/UI + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-002, TASK-058, TASK-170
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
@@ -222,3 +222,23 @@ Reuse-first rule:
 4. `Location` and `Icon Name` no longer feel like unexplained technical fields.
 5. The Playwright Menus report is covered by named Vitest/Bun proofs and replay
    notes.
+
+## Completion Notes (2026-04-22)
+
+- Shipped a list-first Menus flow:
+  - `/admin/menus` now renders a dedicated list page,
+  - `/admin/menus/:id` now edits exactly one chosen menu.
+- Removed the editor-local `Active menu` switcher and `New Menu` action from
+  the editor surface.
+- Replaced native `window.confirm()` for item deletion with a shared
+  route/editor-owned confirmation dialog.
+- Added explicit save feedback, clearer location guidance, stronger item
+  affordances, and clearer nested hierarchy hints.
+- Updated cache/docs/task/changelog source-of-truth files for the new Menus IA.
+
+## Validation (2026-04-22)
+
+- `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun run test:vitest -- tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-refresh-policy.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-item-form.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/admin/adminApp.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint:repo:types`

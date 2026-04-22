@@ -98,6 +98,9 @@ Storage:
 - menu locations (np. `primary`, `footer`).
 - menu items z nestingiem.
 - menu item moze wskazywac na page lub URL.
+- Admin UI jest list-first:
+  - `/admin/menus` pokazuje liste menu i create entrypoint,
+  - `/admin/menus/:id` edytuje tylko jedno wybrane menu.
 
 ---
 

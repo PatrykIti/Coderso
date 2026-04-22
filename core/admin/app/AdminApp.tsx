@@ -50,6 +50,7 @@ import { PostEditorPage } from "@/ui/posts/PostEditorPage";
 import { PostsListPage } from "@/ui/posts/PostsListPage";
 import { MediaLibraryPage } from "@/ui/media/MediaLibraryPage";
 import { MenuEditorPage } from "@/ui/menus/MenuEditorPage";
+import { MenuListPage } from "@/ui/menus/MenuListPage";
 import { PermissionsMatrixPage } from "@/ui/roles/PermissionsMatrixPage";
 import { RedirectsPage } from "@/ui/redirects/RedirectsPage";
 import { SearchPage } from "@/ui/search/SearchPage";
@@ -83,6 +84,7 @@ import { PluginStorePage } from "@/ui/store/PluginStorePage";
 import { PagePreview } from "@/ui/pages/PagePreview";
 import { SiteSettingsPage } from "@/ui/site/SiteSettingsPage";
 import { SetupWizard } from "@/ui/setup/SetupWizard";
+import { Toaster } from "@/components/ui/sonner";
 import {
   toSetupWizardSettingsPayload,
   type SetupWizardValues,
@@ -576,7 +578,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/pages/:id", element: <PageEditor /> },
       { pattern: "/preview", element: <PagePreview /> },
       { pattern: "/media", element: <MediaLibraryPage /> },
-      { pattern: "/menus", element: <MenuEditorPage /> },
+      { pattern: "/menus", element: <MenuListPage /> },
+      { pattern: "/menus/:id", element: <MenuEditorPage /> },
       { pattern: "/users", element: <UsersRolesPage /> },
       { pattern: "/roles", element: <PermissionsMatrixPage /> },
       { pattern: "/themes", element: <ThemesPage /> },
@@ -820,6 +823,7 @@ export function AdminApp({ path }: AdminAppProps) {
       <AdminAssistantConfigProvider value={assistantConfig}>
         <>
           <style id="nextless-theme-tokens">{tokenCss}</style>
+          <Toaster position="top-right" richColors />
           {match.element}
         </>
       </AdminAssistantConfigProvider>

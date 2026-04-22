@@ -18,7 +18,7 @@ test("MenuItemForm renders required fields", () => {
         badgeLabel: "",
         badgeTone: "default",
         description: "",
-        icon: "",
+        icon: "sparkles",
       }}
       pages={[
         { id: "page-1", title: "Home", slug: "home", status: "draft", updatedAt: "", author: null },
@@ -32,4 +32,7 @@ test("MenuItemForm renders required fields", () => {
   expect(html).toContain("Parent Item");
   expect(html).toContain("Visibility");
   expect(html).toContain("Badge Label");
+  expect(html).toContain("Optional runtime icon token");
+  expect(html).toContain("Current token:");
+  expect(html).toContain("sparkles");
 });

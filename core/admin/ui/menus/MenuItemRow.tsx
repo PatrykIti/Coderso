@@ -12,6 +12,7 @@ type MenuItemRowProps = {
   depth?: number;
   active?: boolean;
   isDragTarget?: boolean;
+  dropIntent?: "sibling" | "child" | null;
   onEdit?: (item: MenuItemDisplay) => void;
   onDelete?: (item: MenuItemDisplay) => void;
   onSelect?: (item: MenuItemDisplay, eventTimeStamp: number) => void;
@@ -26,6 +27,7 @@ export function MenuItemRow({
   depth = 0,
   active,
   isDragTarget,
+  dropIntent,
   onEdit,
   onDelete,
   onSelect,
@@ -39,6 +41,8 @@ export function MenuItemRow({
   const hasMetadataBadge = Boolean(settings.badge);
   const hasRestrictedVisibility =
     Boolean(settings.visibility) && settings.visibility !== "all";
+  const nestedHint =
+    depth > 0 && item.parentLabel ? `Sub-item of ${item.parentLabel}` : null;
   const toneClass =
     settings.badge?.tone === "accent"
       ? "border-sky-200 bg-sky-500/10 text-sky-700"
@@ -52,10 +56,11 @@ export function MenuItemRow({
   return (
     <div
       className={cn(
-        "group flex items-stretch gap-3 rounded-xl border bg-background px-3 shadow-sm transition select-none cursor-grab active:cursor-grabbing",
+        "group flex items-stretch gap-3 rounded-xl border bg-background px-3 shadow-sm transition select-none",
         active && "border-primary/60 ring-1 ring-primary/20",
         isDragTarget && "border-primary/50 ring-2 ring-primary/10"
       )}
+      data-menu-depth={depth}
       onDragOver={(event) => {
         event.preventDefault();
         onDragOver?.(item, event);
@@ -68,8 +73,14 @@ export function MenuItemRow({
     >
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left cursor-grab active:cursor-grabbing"
+        className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
         draggable
+        aria-label={`Open menu item details for ${label}`}
+        title={
+          nestedHint
+            ? `Open menu item details for ${label}. ${nestedHint}.`
+            : `Open menu item details for ${label}.`
+        }
         onClick={(event) => onSelect?.(item, event.timeStamp)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -85,7 +96,7 @@ export function MenuItemRow({
         onDragEnd={(event) => onDragEnd?.(event)}
       >
         <div
-          className="pointer-events-none flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground"
+          className="pointer-events-none flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground cursor-grab active:cursor-grabbing"
           aria-hidden="true"
         >
           <GripVertical className="h-4 w-4" />
@@ -112,6 +123,19 @@ export function MenuItemRow({
               ? `Page: ${item.pageTitle}`
               : item.href || "Missing link"}
           </div>
+          {nestedHint ? (
+            <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span aria-hidden="true">↳</span>
+              <span>{nestedHint}</span>
+            </div>
+          ) : null}
+          {isDragTarget && dropIntent ? (
+            <div className="mt-1 text-[11px] font-medium text-primary">
+              {dropIntent === "child"
+                ? "Drop as sub-menu"
+                : "Drop at the same level"}
+            </div>
+          ) : null}
         </div>
         {hasMetadataBadge ? (
           <Badge
@@ -139,6 +163,8 @@ export function MenuItemRow({
         <Button
           variant={active ? "secondary" : "ghost"}
           size="icon"
+          aria-label={`Open details for ${label}`}
+          title={`Open details for ${label}`}
           onClick={(event) => {
             event.stopPropagation();
             onEdit?.(item);
@@ -149,6 +175,8 @@ export function MenuItemRow({
         <Button
           variant="ghost"
           size="icon"
+          aria-label={`Delete ${label}`}
+          title={`Delete ${label}`}
           onClick={(event) => {
             event.stopPropagation();
             onDelete?.(item);

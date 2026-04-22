@@ -5,7 +5,7 @@
 **Category:** QA + CMS/Menus + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-196-01, TASK-196-02, TASK-196-03
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
@@ -113,3 +113,21 @@ No child task files.
 2. Closure explicitly states which findings were fixed by the IA split, which by
    tree/delete work, and which by editor feedback/guidance work.
 3. Cache/docs/board/changelog are synchronized with the final Menus behavior.
+
+## Completion Notes (2026-04-22)
+
+- Replayed the Menus QA family through targeted Menus UI/admin Vitest suites.
+- Synced Menus source-of-truth docs:
+  - `_docs/CMS_SPEC.md`
+  - `_docs/ADMIN_CACHE.md`
+  - `_docs/ADMIN_CACHE_MAP.md`
+  - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
+  - `docs/screens/menus.md`
+- Synchronized task board and changelog for the completed `TASK-196` family.
+
+## Validation (2026-04-22)
+
+- `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun run test:vitest -- tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-refresh-policy.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-item-form.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/admin/adminApp.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint:repo:types`

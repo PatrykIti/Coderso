@@ -38,6 +38,7 @@ const renderTree = (
       depth={depth}
       active={item.id === activeId}
       isDragTarget={hoverId === item.id && dragId !== null}
+      dropIntent={hoverId === item.id ? hoverIntent : null}
       onSelect={onSelect}
       onEdit={onEdit}
       onDelete={onDelete}

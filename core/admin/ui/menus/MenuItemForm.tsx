@@ -53,6 +53,8 @@ export function MenuItemForm({
   errors,
   onChange,
 }: MenuItemFormProps) {
+  const normalizedIcon = value.icon.trim();
+
   const handleLinkTypeChange = (next: "page" | "url") => {
     onChange({
       ...value,
@@ -279,8 +281,15 @@ export function MenuItemForm({
           placeholder="e.g. sparkles"
         />
         <p className="text-xs text-muted-foreground">
-          Optional icon token for custom menu presenters.
+          Optional runtime icon token such as <code>sparkles</code>. Keep the
+          token simple and lowercase; the active menu presenter decides which
+          icon names it can render.
         </p>
+        {normalizedIcon ? (
+          <p className="text-xs text-muted-foreground">
+            Current token: <code>{normalizedIcon}</code>
+          </p>
+        ) : null}
       </div>
     </form>
   );

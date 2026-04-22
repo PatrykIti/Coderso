@@ -96,7 +96,9 @@ export function MenuCreateDialog({
               onChange={(event) => setLocation(event.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Useful when mapping menus to theme locations.
+              Theme slot identifier such as <code>primary</code> or{" "}
+              <code>footer</code>. Use the value your frontend theme expects for
+              navigation placement.
             </p>
           </div>
           {error ? <p className="text-xs text-rose-500">{error}</p> : null}

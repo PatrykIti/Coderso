@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin/UI + Routing + Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-196
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 
