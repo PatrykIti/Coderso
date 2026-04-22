@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 78 tasks
+- **To Do:** 89 tasks
 - **In Progress:** 5 tasks
 - **Done:** 952 tasks
 
@@ -38,6 +38,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-196 | Menus Admin IA, Reliability, and Editor Clarity | High | Large | QA-driven Menus fix wave for list-first IA, safer tree editing, and clearer editor feedback |
+| TASK-196-01 | Menus List Screen and Single-Editor Routing | High | Large | Split Menus into `/menus` list and `/menus/:id` editor while removing the in-editor menu switcher |
+| TASK-196-01-01 | Menus List Page, Table, and Create Flow | High | Medium | Technical leaf: list-first Menus surface, existing create dialog on list, and explicit row navigation into editor |
+| TASK-196-01-02 | Single-Menu Editor Route, Back Navigation, and Cache Scope | High | Medium | Technical leaf: route-selected editor only, back link to list, and no active-menu dropdown state |
+| TASK-196-02 | Menu Item Deletion Safety and Tree Readability | High | Medium | Replace native confirm, surface real hierarchy, and clarify drag/edit/delete affordances |
+| TASK-196-02-01 | Delete Confirmation Dialog and Descendant Context | High | Medium | Technical leaf: branded destructive dialog with item label plus descendant impact |
+| TASK-196-02-02 | Nested Tree Indentation and Row Affordance Clarity | High | Medium | Technical leaf: stronger submenu hierarchy plus clearer drag/edit/delete semantics on real tree rows |
+| TASK-196-03 | Editor Feedback and Field Guidance | Medium | Medium | Save visibility and pragmatic guidance for technical-looking Menus fields |
+| TASK-196-03-01 | Save Feedback and Dirty-State Visibility | Medium | Medium | Technical leaf: explicit success/failure confirmation on save while keeping dirty-state context |
+| TASK-196-03-02 | Location and Icon Guidance Without Contract Expansion | Medium | Small | Technical leaf: clearer `Location` and `Icon Name` help without changing the stored string contract |
+| TASK-196-04 | QA, Docs, and Closure | Medium | Medium | Final Menus report replay, docs/cache map sync, changelog, and board closure for TASK-196 |
 | TASK-195 | Posts Admin QA Recovery and Authoring UX Polish | High | Large | QA-driven Posts fix wave for list bulk actions, editor confidence, inspector affordances, and writing-surface clarity |
 | TASK-195-01 | Posts List Bulk Actions and Filter Terminology | High | Large | Critical list reliability: visible-scope selection, bulk apply flow, and Posts-specific shared filter copy |
 | TASK-195-01-01 | Posts Table Selection State and Bulk Toolbar | High | Medium | Technical leaf: controlled row/header checkboxes, selected-count toolbar, and filtered-scope selection rules |
