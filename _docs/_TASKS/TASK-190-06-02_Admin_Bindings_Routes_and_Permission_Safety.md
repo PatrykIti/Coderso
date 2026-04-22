@@ -17,6 +17,14 @@ Bindings should extend the current custom-screen binding contract, not create a
 parallel admin-binding DSL. Reuse the existing `widgetId + propPath + field +
 mode` model and current safe dot-path semantics wherever possible.
 
+If canonical admin-screen resolution later needs explicit stable metadata such as
+`collectionRole`, `compositionKey`, or equivalent collection-link fields, this
+leaf owns that extension under the current custom-screen contract:
+
+- add it to the custom-screen schema/create-update contract,
+- persist it through current custom-screen service/client flows,
+- keep workspace and matcher layers read-only consumers of that metadata.
+
 ## Sub-Tasks
 
 No child task files.
@@ -63,6 +71,9 @@ export const composeBindings = (schema, adminSections) =>
 - Duplicate binding id dedupe.
 - Generated bindings stay compatible with the current custom-screen binding
   contract and current dot-path helper behavior.
+- Any added `collectionRole` / `compositionKey` metadata round-trips through the
+  current custom-screen schema/service/client contract rather than a workspace-
+  only or matcher-only store.
 
 ## Documentation Updates Required
 

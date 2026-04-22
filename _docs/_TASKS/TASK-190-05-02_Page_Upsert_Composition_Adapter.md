@@ -31,6 +31,14 @@ Prefer reuse:
 - do not widen `actionPlanTypes`, `actionPlanSchema`, or
   `actionExecutorService.ts` in this slice unless existing `page.upsert` cannot
   represent the composed page payload.
+- if collection workspace / no-duplicate matching needs explicit canonical
+  list-page linkage or persisted page-level references to listing query,
+  listing template, or supporting collection resources, those fields belong to
+  the current page owner seam in this leaf:
+  - persist them in the page data/settings contract,
+  - round-trip them through `page.upsert`, page service, and current page admin
+    editor/client,
+  - do not invent workspace-only or matcher-only metadata stores for them.
 
 ## Pseudocode
 
@@ -68,6 +76,9 @@ export const composePageUpsertInput = (graph): AssistantPageUpsertAction["input"
 - Composed blocks normalize.
 - Listing filters + content-list in one page.
 - Form embed resolves by form name.
+- Any explicit canonical list-page or page-attached collection metadata added
+  for workspace/reuse round-trips through the current page owner seam rather
+  than a workspace-only or matcher-only store.
 
 ## Documentation Updates Required
 

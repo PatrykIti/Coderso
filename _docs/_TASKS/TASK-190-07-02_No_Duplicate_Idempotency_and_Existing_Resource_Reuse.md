@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-07, TASK-190-07-01
+**Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02, TASK-190-07-01
 **Status:** To Do
 
 ---
@@ -64,10 +64,15 @@ Rules:
   collection-link metadata from current owner contracts. If an owner seam does
   not yet expose enough information, extend that seam with stable link metadata
   instead of falling back to `name`-only matching.
-- persistence of `compositionKey`, `collectionRole`, canonical list-page links,
-  or equivalent collection metadata stays with current page/custom-screen/
-  detail-page owner seams; this slice only consumes those persisted fields in
-  bounded catalogs and matcher logic.
+- persistence of canonical list-page links and page-attached listing/query/
+  template references stays with `TASK-190-05-02` / current page owner seams.
+- persistence of `compositionKey`, `collectionRole`, or equivalent stable
+  custom-screen metadata stays with `TASK-190-06-02` / current custom-screen
+  owner seams.
+- persistence of detail-page-owned secondary-resource metadata stays with
+  `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner seams.
+- this slice only consumes those persisted fields in bounded catalogs and
+  matcher logic; it must not introduce planner-owned metadata fallbacks.
 - Non-unique fields such as listing query `name` or custom screen `name` are
   advisory labels only; they are not sufficient for silent reuse.
 - `blueprintExistingResourceMatcher.ts` consumes these summaries for reuse and
@@ -89,13 +94,11 @@ export const matchExistingCompositionResources = (graph, catalog) => ({
     findLinkedDetailPage(
       catalog.detailPages,
       graph.detailPage?.contentTypeSlug,
-      graph.route?.detailPageId,
-      graph.detailPage?.compositionKey
+      graph.route?.detailPageId
     ),
   listingQuery: findExplicitOrUniqueQuery(
     catalog.listings.queries,
     graph.query?.id,
-    graph.query?.compositionKey,
     graph.page?.listingQueryId,
     graph.contentType.slug
   ),
@@ -120,7 +123,11 @@ Matcher rules:
   collection; otherwise the matcher returns `unresolved`.
 - If the current owner seam lacks deterministic link metadata for supporting
   resources, extend that seam with explicit `compositionKey`, `collectionRole`,
-  or equivalent stable metadata rather than adding fuzzy name heuristics.
+  canonical list-page linkage, or equivalent stable metadata under the exact
+  owner leaves above rather than adding fuzzy name heuristics.
+- This slice never invents or persists `compositionKey`, `collectionRole`,
+  canonical list-page links, or page-attached listing refs inside matcher logic,
+  planning state, or provider context.
 
 ## Security Contract
 
@@ -144,6 +151,14 @@ Matcher rules:
   first match.
 - Existing detail page document update/reuse tests keyed by stable detail page
   id and content-type ownership, not a second route-pattern owner.
+- Matcher consumes canonical list-page / supporting-resource linkage from
+  `TASK-190-05-02` / current page owner seams rather than inventing planner-only
+  state.
+- Matcher consumes `collectionRole` / `compositionKey` from `TASK-190-06-02` /
+  current custom-screen owner seams rather than inventing planner-only state.
+- Matcher consumes any extra detail-page-owned secondary-resource metadata from
+  `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner seams
+  rather than inventing planner-only state.
 - Idempotency replay tests.
 - Conflict when existing resource is incompatible.
 

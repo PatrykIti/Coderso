@@ -18,6 +18,11 @@ routes.
 Public users must never access detail page CRUD endpoints. Public users only hit
 runtime paths such as `/projekty-domow/:slug`.
 
+This leaf is the single implementation owner for the `detailPageId` round-trip
+across settings normalization, assistant action input, Site Settings
+serialization/UI, and route-match metadata. `TASK-190-05-03-01` defines the
+shared contract and id rules, but this leaf owns the actual end-to-end wiring.
+
 ## Sub-Tasks
 
 No child task files.

@@ -127,14 +127,14 @@ Program rules:
   current owner seams:
   - `site.contentRoutes` owns canonical route row selection and
     `detailPageId` linkage,
-  - the page owner seam owns explicit canonical list-page linkage and any
-    persisted page-level references to listing/query/template or supporting
-    resources,
-  - the detail-page owner seam owns explicit references declared inside
-    detail-page documents,
-  - the custom-screen owner seam owns explicit stable metadata such as
-    `collectionRole`, `compositionKey`, or equivalent canonical screen-link
-    fields when needed.
+  - `TASK-190-05-02` / current page owner seam own explicit canonical
+    list-page linkage and any persisted page-level references to
+    listing/query/template or supporting resources,
+  - `TASK-190-05-03-01` plus `TASK-190-05-03-07` / current detail-page owner
+    seam own explicit references declared inside detail-page documents,
+  - `TASK-190-06-02` / current custom-screen owner seam own explicit stable
+    metadata such as `collectionRole`, `compositionKey`, or equivalent
+    canonical screen-link fields when needed.
 - the workspace program may extend those existing owner seams where the current
   persisted contract is not strong enough, but it must not create a
   workspace-only registry, browser-owned source of truth, or assistant-only

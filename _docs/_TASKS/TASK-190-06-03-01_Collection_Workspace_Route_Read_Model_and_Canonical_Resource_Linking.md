@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin/UI + Collections + Read Model
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-05-03-07, TASK-190-06-01
+**Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02
 **Status:** To Do
 
 ---
@@ -42,12 +42,16 @@ No child task files.
   helpers need a canonical workspace link helper
 - Update current page owner seams only if explicit persisted canonical
   list-page/supporting-resource linkage is missing today; keep that ownership in
-  page-owned contracts rather than `collectionWorkspaceService.ts`
+  `TASK-190-05-02` / page-owned contracts rather than
+  `collectionWorkspaceService.ts`
 - Update current custom-screen owner seams only if explicit stable metadata such
   as `collectionRole` / `compositionKey` is required for canonical admin-screen
-  resolution
+  resolution; land those fields in `TASK-190-06-02` / current custom-screen
+  schema-service-client contracts
 - Update current detail-page owner seams only if explicit persisted secondary
-  references are needed beyond route-level `detailPageId` linkage
+  references are needed beyond route-level `detailPageId` linkage; land those
+  fields in `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page
+  service-client contracts
 - Update `tests/integration/routes/contentTypes.test.ts`
 - Update `tests/vitest/admin/contentTypesClient.test.ts`
 - Update `tests/vitest/admin/adminPrefetch.test.ts`
@@ -100,13 +104,18 @@ Owner rule:
     `setting.content-route.upsert`.
 - The page owner seam (`page.upsert` / `page.update` / page service / page admin
   editor) owns persisted canonical list-page linkage and any page-level explicit
-  references to listing query/template or supporting resources.
+  references to listing query/template or supporting resources. If those fields
+  do not exist yet, they must land through `TASK-190-05-02` before this leaf
+  consumes them.
 - The detail-page owner seam (`detail-page.upsert` / detail-page document
   service / detail-page admin client) owns persisted references declared inside
-  detail-page documents.
+  detail-page documents. If extra secondary-resource metadata is needed, it must
+  land through `TASK-190-05-03-01` / `TASK-190-05-03-07` before this leaf
+  consumes it.
 - The custom-screen owner seam owns any explicit `collectionRole`,
   `compositionKey`, or equivalent stable metadata needed to resolve a canonical
-  admin screen safely.
+  admin screen safely. If those fields do not exist yet, they must land through
+  `TASK-190-06-02` before this leaf consumes them.
 - The workspace service must only read these owner contracts. It must never
   invent, persist, or backfill canonical links in browser cache, local state, or
   route-local helpers.
@@ -147,7 +156,8 @@ Deterministic resolution order:
    - canonical list page is the public page explicitly linked by the current
      collection setup contract, not the hidden runtime listing endpoint itself,
    - preferred source of truth is explicit persisted collection-link metadata on
-     the current page owner seam, not workspace-only state,
+     the current page owner seam from `TASK-190-05-02`, not workspace-only
+     state,
    - compatibility fallback for current catalog-family packs is allowed only
      when all of the following are true:
      - the current collection setup uses the known hidden-list pattern
@@ -176,7 +186,7 @@ Deterministic resolution order:
    - otherwise return `unresolved` plus bounded candidates.
 5. Admin screen:
    - canonical admin screen may resolve from explicit stable metadata on the
-     custom-screen owner seam first,
+     custom-screen owner seam from `TASK-190-06-02` first,
    - only if that metadata does not exist yet, canonical admin screen may
      resolve when exactly one screen is a safe deterministic match for the
      collection content type and workspace role;
@@ -268,9 +278,18 @@ type CollectionWorkspaceSummary = {
   exist.
 - `collectionWorkspaceService.ts` reads canonical links from current owner seams
   and never persists or backfills inferred links on its own.
+- if canonical list-page linkage or page-level listing refs are needed, they
+  round-trip through `TASK-190-05-02` / current page owner seams before the
+  workspace consumes them.
 - canonical list-page / page-level listing references round-trip through the
   page owner seam before the workspace consumes them; they are not browser-only
   annotations.
+- if `collectionRole`, `compositionKey`, or equivalent canonical screen-link
+  fields are needed, they round-trip through `TASK-190-06-02` / current
+  custom-screen owner seams before the workspace consumes them.
+- if extra detail-page secondary-resource metadata is needed, it round-trips
+  through `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner
+  seams before the workspace consumes it.
 - page/listing query/template/admin screen return `unresolved` + `candidates`
   when multiple plausible matches exist.
 - forms/secondary pages/editorial/proof/SEO links come from explicit canonical

@@ -36,22 +36,24 @@ No child task files.
 - Add SQL migration for `detail_page_documents`
 - Add SQL migration for `detail_page_revisions`
 - Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates.
-- Update `core/services/settings/settingsService.ts` only to support safe route
-  references to detail page documents, not to store full documents in settings.
-- Update `core/services/assistant/actionPlanTypes.ts` and
-  `actionPlanSchema.ts` for `setting.content-route.upsert.detailPageId`.
-- Update `core/services/assistant/actionFamilyContracts.ts` for the expanded
-  `setting.content-route.upsert` input contract.
-- Update `core/admin/services/siteSettingsClient.ts` so `detailPageId`
-  survives admin read/write round-trips.
-- Update `core/admin/ui/site/siteSettingsValidation.ts`
-- Update `core/admin/ui/site/SiteRouteEditor.tsx`
-- Update `core/admin/ui/site/SiteSettingsPage.tsx`
-- Update `tests/unit/settings/contentRoutesValidation.test.ts`
-- Update `tests/unit/site/contentRouteMatcher.test.ts`
-- Update `tests/vitest/admin/siteSettingsClient.test.ts`
-- Update `tests/vitest/ui/site-settings.test.tsx`
-- Update `tests/vitest/ui/plugin-media-site-leaf.test.tsx`
+
+## Responsibility Boundary
+
+- This leaf owns the detail-page document schema, persisted storage, revision
+  history, and UUID-compatible id contract.
+- If collection workspace / reuse matching later needs explicit detail-page-
+  owned secondary-resource references or stable composition metadata, this leaf
+  owns the schema/storage side of those fields inside `DetailPageDocument`.
+- This leaf defines the shared `detailPageId` contract shape that later route
+  linking must consume, but it does not own the settings/action/admin-client/UI/
+  matcher round-trip implementation for that field.
+- `TASK-190-05-03-07` is the single implementation owner for:
+  - `settingsService.normalizeContentRoutes`,
+  - `setting.content-route.upsert` input/execute behavior,
+  - `siteSettingsClient` and Site Settings UI round-trip,
+  - `contentRouteMatcher` route-match metadata.
+- `TASK-190-05-03-04` remains the owner of preview-token storage/query
+  semantics for detail-page preview.
 
 ## Data Contract
 
@@ -108,8 +110,8 @@ Rules:
   own the document.
 - `site.contentRoutes` remains the only runtime route owner; detail-page
   documents do not store canonical public route state in parallel.
-- `ContentRouteSetting` must preserve `detailPageId` through settings
-  normalization, admin client reads/writes, and route matching:
+- `ContentRouteSetting` must support an optional `detailPageId` as the shared
+  route-link field consumed by later settings/action/runtime work:
 
 ```ts
 type ContentRouteSetting = {
@@ -121,16 +123,18 @@ type ContentRouteSetting = {
 };
 ```
 
-- `setting.content-route.upsert` stays the current route action and is extended
-  rather than replaced:
+- The later route-linking leaf must extend `setting.content-route.upsert`
+  rather than replace it:
   - omitted `detailPageId` preserves the current route link,
   - `detailPageId: null` clears the link,
   - `detailPageId: "<id>"` sets/replaces the link.
-- `contentRouteMatcher` returns `detailPageId` with detail route matches.
-- Site Settings UI/client round-trips `detailPageId` without dropping it.
-- `detailPageId` is part of the settings/admin route-editor contract, not a
-  server-only extension; the owner set includes settings normalization, admin
-  client serialization, route-editor form state, and route matching.
+- `contentRouteMatcher` is expected to surface `detailPageId` with detail route
+  matches once `TASK-190-05-03-07` lands.
+- Site Settings UI/client are expected to round-trip `detailPageId` once
+  `TASK-190-05-03-07` lands.
+- `detailPageId` is not a server-only extension, but the end-to-end
+  settings/admin route-editor/action/matcher implementation belongs to
+  `TASK-190-05-03-07`, not to this leaf.
 - `DetailPageDocument.id`, persisted `detail_page_documents.id`, linked
   `site.contentRoutes.detailPageId`, and shared preview/storage targets must all
   stay on one UUID-compatible identifier contract.
@@ -148,6 +152,10 @@ type ContentRouteSetting = {
   and deterministic-id generation rules. Preview, route-linking, matcher, and
   admin/API slices consume that contract; they must not redefine id format
   locally.
+- If explicit detail-page-owned secondary-resource references or stable
+  composition metadata are needed for workspace/reuse flows, they must be added
+  here as part of the detail-page document contract instead of being stored in
+  workspace-only or matcher-only state.
 - If a later change wants non-UUID detail-page ids, that change must explicitly
   widen the affected shared storage owners and migrations instead of silently
   drifting this contract.
@@ -199,13 +207,6 @@ Normalization rules:
 - Publish creates a `publish` revision and updates `published_document`.
 - Autosave keeps only the latest autosave revision.
 - Restore/discard revision semantics match the Pages revision contract.
-- `ContentRouteSetting.detailPageId` normalizes and round-trips through
-  settings service, `siteSettingsClient`, Site Settings UI form state, and
-  route-editor validation helpers.
-- `setting.content-route.upsert` schema and action-family metadata accept
-  optional `detailPageId` without dropping it from normalized plan input;
-  preserve/clear execute semantics are owned by `TASK-190-05-03-07`.
-- `contentRouteMatcher` exposes `detailPageId` for runtime detail resolution.
 - Unknown keys reject.
 - Duplicate block ids reject.
 - Binding to missing block rejects.
@@ -213,6 +214,9 @@ Normalization rules:
 - Shared dot-path semantics stay compatible with the current custom-screen
   binding contract.
 - Secret-like field binding rejects unless explicitly allowed as non-public.
+- End-to-end settings/action/admin-client/UI/matcher round-trip for
+  `detailPageId` is explicitly deferred to `TASK-190-05-03-07`; this leaf only
+  defines the shared contract that slice must consume.
 
 ## Documentation Updates Required
 
