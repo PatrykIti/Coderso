@@ -57,6 +57,10 @@ Public runtime rules:
 - preview may render draft entry/page data only with valid preview token,
 - detail page shell uses the same site CSS/theme/template flow already used by
   `renderPublicEntryDetailHtml`,
+- `TASK-190-05-03-07` later wires the validated `detailPageId` settings/client/
+  matcher round-trip, but this leaf remains the only runtime owner that
+  consumes that route metadata inside `publicSite.tsx` /
+  `renderPublicEntry.tsx`,
 - detail page render must not import admin UI modules,
 - current theme override support for `content detail` templates remains the
   fallback seam when no linked detail document exists,

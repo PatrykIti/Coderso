@@ -32,7 +32,7 @@ No child task files.
 Internal admin routes:
 
 ```text
-GET    /admin/api/detail-pages?contentTypeSlug=<slug>
+GET    /admin/api/detail-pages?contentTypeId=<id>
 GET    /admin/api/detail-pages/:id
 POST   /admin/api/detail-pages
 PATCH  /admin/api/detail-pages/:id
@@ -58,6 +58,11 @@ Preview endpoint response contract:
 
 Rules:
 
+- internal read/list filtering for detail pages is keyed by stable
+  `contentTypeId`, in line with `TASK-190-05-03-01` and the collection-
+  workspace route family; `contentTypeSlug` may remain normalized response data
+  or route-facing label, but it must not become the canonical admin filter or
+  join key for this slice,
 - `previewUrl` follows the same absolute/relative base URL resolution policy as
   existing page/content/widget-template preview endpoints.
 - preview issuance requires a sample entry id in the internal admin request, but
@@ -98,10 +103,19 @@ Rules:
 - `contentRouteMatcher` returns `detailPageId` for detail route matches.
 - `settingsService.normalizeContentRoutes` rejects invalid `detailPageId`
   values.
+- `settingsService.normalizeContentRoutes` remains a structural settings owner:
+  it validates safe route shape plus the shared `detailPageId` format contract,
+  but referential checks such as document existence, content-type ownership, and
+  delete/unlink conflicts stay in the detail-page service, route handlers, and
+  runtime owner seams instead of turning settings normalization into a second
+  DB-backed validator.
 - `siteSettingsClient` and Site Settings UI round-trip `detailPageId` without
   dropping it.
-- Public runtime validates that the referenced detail page document belongs to
-  the matched content type before rendering.
+- `TASK-190-05-03-03` remains the single runtime owner for consuming validated
+  `detailPageId` route metadata inside `publicSite.tsx` /
+  `renderPublicEntry.tsx` and rejecting content-type mismatches before render;
+  this leaf supplies the admin/settings/matcher round-trip that runtime owner
+  consumes and must not add a second parallel runtime validation path.
 
 ## Files to Change
 
@@ -244,6 +258,8 @@ Route boundary maps through centralized `mapDetailPageError`.
   exposing it as an untrusted query parameter.
 - Detail-page preview reuses the `preview_tokens.context` storage contract from
   `TASK-190-05-03-04`; this leaf does not invent a second persisted store.
+- Detail-page list/read filtering uses `contentTypeId` as the stable content-
+  type join key; mutable `contentTypeSlug` remains advisory response data only.
 - Settings round-trip preserves `detailPageId`.
 - `setting.content-route.upsert` preserves existing `detailPageId` when the
   field is omitted, clears it when `null`, and replaces it when a string id is
@@ -255,7 +271,12 @@ Route boundary maps through centralized `mapDetailPageError`.
   resources.
 - `contentRouteMatcher` returns `detailPageId`.
 - Site Settings UI/client round-trips `detailPageId`.
-- Public runtime rejects content type/detail page mismatch.
+- settings/content-route validation tests cover shape/UUID-contract rules in the
+  settings seam, while document existence/content-type mismatch coverage stays
+  with the detail-page route/runtime owners.
+- Cross-slice parity: once `TASK-190-05-03-03` consumes the validated route
+  metadata from this leaf, public runtime rejects content type/detail page
+  mismatch without introducing a second route registry.
 
 ## Documentation Updates Required
 

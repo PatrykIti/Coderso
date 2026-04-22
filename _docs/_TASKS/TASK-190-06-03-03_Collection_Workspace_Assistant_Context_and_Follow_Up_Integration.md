@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Admin Context
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-06-03-01, TASK-190-06-03-02
+**Dependencies:** TASK-190-05-03-07, TASK-190-06-03-01, TASK-190-06-03-02
 **Status:** To Do
 
 ---
@@ -86,6 +86,9 @@ Rules:
   workspace root; do not repurpose `/admin/coderso/engine/:contentTypeId/collection`
   to `selectedResource.kind = "detail-page"`,
 - the active detail-template editor publishes `activeSurface.kind = "detail-page"`,
+- this leaf consumes the detail-page read/admin seam introduced by
+  `TASK-190-05-03-07`; it must not add a second ad-hoc detail-page lookup or
+  hydration path inside assistant context just to make follow-up planning work,
 - `useAssistantAdminContext.ts` must extend the existing
   `activeSurfaceMatchesRoute(...)` contract with an explicit workspace-aware
   branch instead of globally relaxing the match rule:
@@ -101,6 +104,10 @@ Rules:
   - optional `activeDetailPageId | null` when the editor can switch between
     multiple bounded detail-page candidates within the workspace flow,
 - server hydration for `detail-page` reuses content-domain services,
+- if the workspace route lands before the detail-page read seam from
+  `TASK-190-05-03-07`, the workspace package may still hydrate, but
+  `activeSurface.kind = "detail-page"` must stay gated/null instead of
+  re-implementing detail-page reads in the assistant layer,
 - workspace-root follow-up uses the same server-owned collection workspace read
   model from `TASK-190-06-03-01`; the browser must not become the source of
   truth for canonical linked resources,
@@ -164,6 +171,9 @@ Rules:
 - browser-supplied `collectionWorkspace` summary payloads are ignored/replaced
   by the server-owned bounded workspace summary derived from
   `TASK-190-06-03-01`.
+- if the detail-page read/admin seam from `TASK-190-05-03-07` is unavailable,
+  assistant context drops/gates the detail-page active surface instead of
+  creating a parallel fetch/hydration path.
 - missing workspace-read permission parity clears/drops the workspace follow-up
   package instead of broadening generic assistant-route access or trusting
   browser-owned context.

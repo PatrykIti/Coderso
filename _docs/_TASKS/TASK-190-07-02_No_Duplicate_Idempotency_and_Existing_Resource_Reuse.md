@@ -27,7 +27,8 @@ No child task files.
   resource package must expose the new detail-page summaries
 - Update `core/services/assistant/cmsTargetResolver.ts` if detail-page matching
   needs trusted catalog support
-- Add `tests/unit/assistant/blueprintCompositionExecutor.test.ts`
+- Update `tests/unit/assistant/actionExecutorService.test.ts`
+- Update `tests/unit/assistant/actionExecutorService.db.test.ts`
 - Update `tests/vitest/assistant/admin-context-catalogs.test.ts`
 - Update `tests/vitest/assistant/admin-context-catalog-normalizer.test.ts`
 
@@ -81,6 +82,9 @@ Rules:
   advisory labels only; they are not sufficient for silent reuse.
 - `blueprintExistingResourceMatcher.ts` consumes these summaries for reuse and
   idempotency.
+- matcher output feeds the existing `actionExecutorService` / idempotency store
+  path; this slice must not introduce a planner-owned or blueprint-owned
+  executor wrapper just to apply reuse decisions.
 - `providerPlanningContext.ts` may expose the bounded summaries only through the
   existing redacted resource package.
 - `cmsTargetResolver.ts` may use the bounded summaries for trusted detail-page

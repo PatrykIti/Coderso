@@ -14,6 +14,10 @@
 Convert a composition graph into a strict `AssistantActionPlan` that reuses
 current typed actions and avoids duplicate resources.
 
+Execution stays inside the current `actionExecutorService` boundary. This slice
+adds assembler/matcher/metadata helpers around the existing executor; it does
+not introduce a second blueprint-specific execution flow.
+
 Business value:
 - Mixed blueprint plans can execute safely.
 - Existing setups can be refined instead of reinstalled.
@@ -34,7 +38,6 @@ New owner files:
 - `core/services/assistant/blueprints/blueprintCompositionMetadata.ts`
 - `tests/vitest/assistant/blueprint-action-assembler.test.ts`
 - `tests/vitest/assistant/blueprint-composition-metadata.test.ts`
-- `tests/unit/assistant/blueprintCompositionExecutor.test.ts`
 
 Touched files:
 
@@ -42,6 +45,8 @@ Touched files:
 - `core/services/assistant/actionExecutorService.ts`
 - `core/services/assistant/actionDiffService.ts`
 - `core/services/assistant/actionExecutionStore.ts`
+- `tests/unit/assistant/actionExecutorService.test.ts`
+- `tests/unit/assistant/actionExecutorService.db.test.ts`
 
 ## Acceptance Criteria
 
@@ -66,7 +71,8 @@ Touched files:
 ## Testing Requirements
 
 - Vitest assembler tests.
-- Bun DB-backed no-duplicate tests.
+- Bun DB-backed no-duplicate tests in the existing `actionExecutorService`
+  executor lane.
 - Existing assistant execute/dry-run tests remain green.
 
 ## Documentation Updates Required
