@@ -12,6 +12,9 @@
 ## Overview
 
 Expose SEO state and slug context without changing the stored slug contract.
+This covers the existing edit-flow inspector and the existing create drawer so
+the Playwright finding is fixed at both user entrypoints instead of only after a
+post is opened.
 
 Current inspector behavior:
 
@@ -29,9 +32,11 @@ Owner boundary:
 
 - `DocumentInspector` owns the visible SEO summary and slug field presentation
   only; it should stay a props-driven presenter.
+- `PostsCreateDrawer` owns the create-flow slug input surface and should consume
+  the same derived URL context instead of inventing a second routing heuristic.
 - `PostBlockEditorShell` owns reading existing admin settings data, deriving the
   display URL context from existing contracts, and threading that context into
-  the inspector props.
+  the editor inspector props or a shared helper consumed by the create flow.
 - `PostDetailsSidebar` remains a pass-through seam for document props; it should
   not start fetching settings on its own.
 - `siteSettingsClient.getSiteSettings()` is the existing admin read owner for
@@ -54,11 +59,15 @@ No child task files.
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
   - load/reuse the current settings read path and pass a display-only slug URL
     context into the details inspector props.
+- `core/admin/ui/posts/PostsCreateDrawer.tsx`
+  - reuse the same display-only slug URL context helper/path for the create
+    flow instead of leaving the slug field raw.
 - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx`
   only if the document prop surface needs to widen for slug URL context
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:168-255`
 - `core/admin/services/siteSettingsClient.ts`
   only if a thin read helper or memoized loader is needed for the inspector path
+- `tests/vitest/ui/page-post-list-wave.test.tsx`
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
 - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
@@ -71,6 +80,9 @@ No child task files.
 - Do not fetch admin settings inside `DocumentInspector`.
 - Keep slug persistence ownership where it already lives; this leaf changes only
   the display context around the existing raw slug value.
+- Keep create-flow and edit-flow URL context derived from one existing helper or
+  shell-owned path; do not duplicate route guessing between `PostsCreateDrawer`
+  and `DocumentInspector`.
 - If route-prefix derivation needs reuse, extract one Bun-free helper from the
   current settings/runtime consumers and call it from the shell path instead of
   duplicating route guessing logic in the inspector.
@@ -94,6 +106,9 @@ No child task files.
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
   - collapsed SEO summary/badge stays visible,
   - slug field shows URL context without changing the raw value contract.
+- `tests/vitest/ui/page-post-list-wave.test.tsx`
+  - the current `PostsCreateDrawer` slug field shows the same URL context
+    affordance instead of staying a raw slug-only input.
 - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
   - the direct inspector surface shows the slug context on the actual
     `DocumentInspector` seam.
@@ -116,9 +131,9 @@ No child task files.
 ## Acceptance Criteria
 
 1. SEO completion is visible before the advanced section is expanded.
-2. Slug editing shows the runtime URL context derived from the existing site
-   settings and posts route contract.
+2. Slug entrypoints in both the existing create and edit flows show the runtime
+   URL context derived from the existing site settings and posts route contract.
 3. Persisted slug values remain backward compatible with current posts data.
 4. The slug URL context is derived once on the existing shell/settings path and
-   passed into `DocumentInspector`; this leaf does not add a second settings
-   fetch or a hardcoded admin-only route guess.
+   passed into `DocumentInspector` or a shared create/edit helper; this leaf
+   does not add a second settings fetch or a hardcoded admin-only route guess.

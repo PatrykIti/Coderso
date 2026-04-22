@@ -62,14 +62,14 @@ No child task files.
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts:539-545`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts:591-644`
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:366-384`
-- `core/admin/components/ui/sonner.tsx` and `core/admin/app/AdminApp.tsx`
-  - verify and reuse the shared admin toast mount; `AdminApp` is the owner for
-    visible admin-level toast plumbing
+- `core/admin/components/ui/sonner.tsx`
+- `core/admin/app/AdminApp.tsx`
+  - reuse the shared admin toast mount; `AdminApp` is the owner for visible
+    admin-level toast plumbing in the current checkout
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
-- `tests/vitest/admin/adminApp.test.tsx` only if the shared toaster mount path
-  changes
+- `tests/vitest/admin/adminApp.test.tsx`
 
 ## Security Contract
 
@@ -98,8 +98,7 @@ No child task files.
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - header preview/publish/update actions keep their current semantics after the
     feedback wiring changes.
-- `tests/vitest/admin/adminApp.test.tsx` only if `AdminApp` gains the shared
-  toaster mount
+- `tests/vitest/admin/adminApp.test.tsx`
   - the admin shell includes the one shared toast host exactly once.
 
 ## Documentation Updates Required

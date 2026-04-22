@@ -80,7 +80,7 @@ This umbrella covers four owner areas:
 3. Inspector affordances:
    - category selection from taxonomy data,
    - featured-image media picker reuse,
-   - SEO visibility and slug context.
+   - SEO visibility and slug context across the existing create and edit flows.
 4. Authoring guidance:
    - clearer typography affordances,
    - block-inserter cleanup on the existing `text/media/interactive` catalog,
@@ -138,6 +138,7 @@ Current owner seams in code:
   - `core/server/routes/postsRoutes.ts`
   - `core/services/settings/settingsService.ts`
 - Public URL context and current posts route fallback:
+  - `core/admin/ui/posts/PostsCreateDrawer.tsx`
   - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
   - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx`
   - `core/admin/services/siteSettingsClient.ts`
@@ -148,13 +149,16 @@ Current owner seams in code:
   - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
   - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
 - Direct owner tests for the changed seams:
+  - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
   - `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `tests/vitest/posts/post-editor-preferences.test.ts`
+  - `tests/vitest/posts/post-editor-layout-state.test.ts`
   - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
   - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - `tests/vitest/ui/media-picker.test.tsx`
   - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
-  - `tests/vitest/admin/adminApp.test.tsx` if the shared toast mount changes
+  - `tests/vitest/admin/adminApp.test.tsx`
 
 Reuse-first rule:
 
@@ -167,16 +171,27 @@ Reuse-first rule:
 - keep `DocumentInspector` presentation-only for slug URL context; load and
   derive that context once on the existing shell/settings path and pass it
   through current props instead of fetching inside the inspector,
+- keep the create-drawer slug affordance on the existing `PostsCreateDrawer`
+  surface and route it through the same derived public URL context helper used
+  by the editor path; do not invent a second posts-routing source or a
+  create-only URL-guessing branch,
 - repair discoverability through the existing storage/layout restore seams
   (`resolveInitialFocusMode`, `resolveInitialLayoutState`,
   `usePostEditorPreferences`, `usePostEditorLayout`) rather than creating a
   second visibility model,
+- if discoverability work changes stored preference resolution or the layout
+  reducer, update the direct owner tests
+  `tests/vitest/posts/post-editor-preferences.test.ts` and
+  `tests/vitest/posts/post-editor-layout-state.test.ts` instead of relying only
+  on higher-level render suites,
 - keep category-scoped search in the existing `searchPostBlockCatalog()`
   contract and add regression coverage instead of branching into a second search
   path,
 - keep publish/update success feedback on the existing shared admin toast path:
   Posts editor code may emit feedback, but `AdminApp` remains the mount owner;
-  do not add a Posts-only toaster host or ad-hoc event bus,
+  do not add a Posts-only toaster host or ad-hoc event bus; if the current
+  checkout lacks a mounted shared toaster, mount it on the existing `AdminApp`
+  path instead of making toast visibility conditional in Posts code,
 - derive slug URL context from the existing `site.publicBaseUrl` plus
   `site.contentRoutes` read model and the current posts runtime fallback in
   `postsFeedResolver`; do not hardcode `/blog` or invent a Posts-only settings
@@ -233,17 +248,19 @@ Reuse-first rule:
 - Vitest:
   - umbrella validation is the union of the leaf-declared suites; do not mark
     `TASK-195` validated from a narrower subset.
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui/post-editor-layout-hook-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-richtext-inline-typography-selection.test.ts tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/admin/taxonomyClient.test.ts`
-  - add `tests/vitest/admin/siteSettingsClient.test.ts` when the slug URL
-    context helper or settings read path changes.
+  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui/post-editor-layout-hook-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-richtext-inline-typography-selection.test.ts tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/posts/post-editor-preferences.test.ts tests/vitest/posts/post-editor-layout-state.test.ts tests/vitest/admin/taxonomyClient.test.ts tests/vitest/admin/adminApp.test.tsx`
+  - add `tests/vitest/admin/siteSettingsClient.test.ts` when the shared slug
+    URL-context helper or settings read path changes.
 - Direct owner tests added by this family:
   - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
   - `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `tests/vitest/posts/post-editor-preferences.test.ts`
+  - `tests/vitest/posts/post-editor-layout-state.test.ts`
   - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
   - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - `tests/vitest/ui/media-picker.test.tsx`
   - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
-  - `tests/vitest/admin/adminApp.test.tsx` if the shared toast mount changes
+  - `tests/vitest/admin/adminApp.test.tsx`
 - Bun only if a leaf widens server/client route contracts:
   - `set -a && source .env && set +a && bun test tests/integration/routes/postsRoutes.test.ts tests/integration/posts/posts-revisions-flow.test.ts`
 - QA replay:
@@ -274,7 +291,8 @@ Reuse-first rule:
 3. Category and featured-image assignment no longer require users to know raw
    internal IDs.
 4. SEO state, slug context, toolbar hints, and block-inserter grouping are
-   beginner-readable and regression-covered.
+   beginner-readable and regression-covered across the existing create and edit
+   flows.
 5. The Playwright report scenarios are replayed successfully against the final
    branch state.
 6. Any still-reproducible server/runtime autosave failure or capability gap

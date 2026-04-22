@@ -69,6 +69,8 @@ No child task files.
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
 - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
+- `tests/vitest/posts/post-editor-preferences.test.ts`
+- `tests/vitest/posts/post-editor-layout-state.test.ts`
   - stored preference and local-storage hydration remain compatible with the
     repaired shell behavior
 
@@ -106,6 +108,12 @@ No child task files.
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
   - preference hydration and legacy/local storage compatibility remain intact
     after the discoverability fix.
+- `tests/vitest/posts/post-editor-preferences.test.ts`
+  - direct owner coverage for default resolution and v1/v2 storage compatibility
+    if preference hydration/defaults change.
+- `tests/vitest/posts/post-editor-layout-state.test.ts`
+  - direct owner coverage for reducer-level restore semantics if focus/layout
+    behavior changes.
 
 ## Documentation Updates Required
 

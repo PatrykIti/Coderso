@@ -52,12 +52,17 @@ Out of scope:
 - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx`
 - `core/admin/ui/posts/editor/settings/postEditorPreferences.ts`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
-- `core/admin/components/ui/sonner.tsx` and `core/admin/app/AdminApp.tsx` only
-  if the current admin shell still lacks a mounted toaster
+- `core/admin/ui/posts/editor/hooks/usePostEditorPreferences.ts`
+- `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts`
+- `core/admin/components/ui/sonner.tsx`
+- `core/admin/app/AdminApp.tsx`
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+- `tests/vitest/posts/post-editor-preferences.test.ts`
+- `tests/vitest/posts/post-editor-layout-state.test.ts`
+- `tests/vitest/admin/adminApp.test.tsx`
 
 ## Security Contract
 
@@ -78,7 +83,11 @@ Out of scope:
   - shell toggle semantics and hidden-inspector recovery,
   - success feedback and autosave-pause states,
   - revision preview rendering and restore gating,
-  - no regression to focus-mode persistence or preview wiring.
+  - no regression to focus-mode persistence or preview wiring,
+  - direct owner coverage for stored preference resolution and layout reducer
+    behavior when discoverability fixes touch those contracts,
+  - direct owner coverage that the shared admin shell exposes the one toast
+    mount used by publish/update feedback.
 - Bun only if revision payloads or posts route outputs change materially.
 
 ## Documentation Updates Required
