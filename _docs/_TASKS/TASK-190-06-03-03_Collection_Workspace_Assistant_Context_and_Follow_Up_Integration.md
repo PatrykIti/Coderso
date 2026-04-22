@@ -34,6 +34,7 @@ No child task files.
 - Update `core/server/routes/assistantRoutes.ts`
 - Update `core/server/validation/assistantActionSchemas.ts`
 - Update `tests/vitest/ui/use-assistant-admin-context.test.tsx`
+- Update `tests/vitest/assistant/active-surface-hydration.test.ts`
 - Update `tests/vitest/assistant/admin-context-service.test.ts`
 - Update `tests/vitest/assistant/provider-planning-context.test.ts`
 - Update `tests/integration/routes/assistant.test.ts`
@@ -133,6 +134,9 @@ Rules:
 - `/assistant/actions/plan` keeps explicit permission parity for
   `activeSurface.kind = "detail-page"`: `content:read` plus `widgets:read`,
   without broadening unrelated surface checks.
+- `active-surface-hydration.test.ts` covers the new `detail-page` rehydration
+  branch directly, including the drop-to-null behavior for stale or missing
+  server resources.
 - active surface can publish and rehydrate `detail-page`.
 - workspace-root route with `selectedResource.kind = "content-type"` still keeps
   `activeSurface.kind = "detail-page"` only through the explicit

@@ -31,10 +31,10 @@ No child task files.
 - Add SQL migration for preview-token context storage
 - Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates for the
   preview-token storage change
-- Update `core/server/utils/previewUrls.ts` if detail preview needs additional
-  query metadata.
+- Update `core/server/utils/previewUrls.ts`
 - Update `core/site/cache/siteCache.ts`
 - Update entry/page/detail document services for invalidation hooks.
+- Update `tests/unit/pages/previewService.test.ts`
 - Update `tests/vitest/server/previewUrls.test.ts`
 - Add `tests/integration/runtime/detail-page-preview-cache.test.tsx`
 
@@ -47,7 +47,7 @@ Current state:
 
 - preview tokens are already DB-backed through `preview_tokens`,
 - the current storage only keeps `targetType`, `targetId`, `tokenHash`, and
-  `expiresAt`,
+  `expiresAt`, plus `createdAt`,
 - that is not enough for detail-page preview because runtime must also know
   which sample entry was selected server-side.
 
@@ -152,6 +152,10 @@ Implementation notes:
 - Extend preview token storage/validation so detail-page preview can carry the
   server-issued sample entry context inside `preview_tokens.context` instead of
   relying on raw query params.
+- `previewUrls.ts` remains the shared preview path/base-url owner for
+  `page` / `content` / `widget-template` preview URLs; this leaf extends that
+  existing helper in place for the new `detail-page` target instead of adding a
+  route-local URL builder.
 - `publicSite.tsx` / detail runtime resolution must treat `detailPageId` on
   `type=content` preview as a published-document override only; reading
   `current_document` requires the dedicated `type=detail-page` preview token.
@@ -204,6 +208,12 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 - Valid detail-page preview token renders `current_document` with a selected
   published sample entry from server-issued preview context.
 - Preview token context normalization rejects malformed `detail-page` payloads.
+- `previewService.test.ts` covers the new `detail-page` target type plus strict
+  `preview_tokens.context` normalization on the existing shared preview-token
+  seam.
+- `previewUrls.test.ts` covers shared URL building for
+  `/preview?type=detail-page&token=...` through the existing preview URL helper
+  rather than a route-local formatter.
 - DB migration artifacts exist for the preview-token context column.
 - Detail-page preview with a draft sample entry and no content preview token
   returns `404`.
