@@ -86,6 +86,7 @@ No child task files.
 
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/ADMIN_CACHE.md`
+- `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
