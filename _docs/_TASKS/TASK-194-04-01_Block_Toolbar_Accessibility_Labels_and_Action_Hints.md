@@ -1,0 +1,78 @@
+# TASK-194-04-01: Block Toolbar Accessibility Labels and Action Hints
+# FileName: TASK-194-04-01_Block_Toolbar_Accessibility_Labels_and_Action_Hints.md
+
+**Priority:** High
+**Category:** CMS/Pages + Builder + Accessibility
+**Estimated Effort:** Small
+**Dependencies:** TASK-194-04
+**Status:** To Do
+
+---
+
+## Overview
+
+Add accessible labels and hints to the widget-card toolbar actions in the page
+builder.
+
+Current owner seams:
+
+- `core/admin/ui/pages/builder/BlockToolbar.tsx:14-46`
+  - buttons render icon-only controls with no `aria-label` or `title`.
+- `core/admin/ui/pages/builder/BlockList.tsx:208-215`
+  - toolbar is rendered with enough context to pass a block label/index.
+- `tests/vitest/pageBuilder/blockList.test.tsx:465-480`
+  - existing tests already click the toolbar controls via test doubles.
+
+The report explicitly called out the move up, move down, duplicate, and delete
+icons as inaccessible and guesswork-driven.
+
+## Sub-Tasks
+
+No child task files.
+
+## Files to Change
+
+- `core/admin/ui/pages/builder/BlockToolbar.tsx:14-46`
+- `core/admin/ui/pages/builder/BlockList.tsx:208-215`
+- `core/admin/ui/pages/BlockToolbar.tsx:5-19` only if the legacy/demo toolbar is
+  still kept as a public visual leaf and should stay consistent
+- `tests/vitest/pageBuilder/blockList.test.tsx:465-480`
+- `tests/vitest/ui/page-leaf-components.test.tsx:25-31` only if the legacy
+  toolbar stays in scope
+
+## Implementation Direction
+
+- Pass block label context from `BlockList` into `BlockToolbar`.
+- Add `aria-label` and `title` to every icon-only action.
+- Keep labels action-specific:
+  - `Move Hero up`
+  - `Move Hero down`
+  - `Duplicate Hero`
+  - `Delete Hero`
+- Disabled buttons should still expose their labels.
+
+## Security Contract
+
+- Visibility: internal admin builder only.
+- Auth/RBAC/CSRF/rate-limit: unchanged.
+- Reject-unknown validation: unchanged.
+- Anti-abuse: none; this is an accessibility-only improvement.
+
+## Testing Requirements
+
+- `tests/vitest/pageBuilder/blockList.test.tsx`
+  - toolbar buttons expose `aria-label`/`title`,
+  - disabled move buttons still expose labels.
+- `tests/vitest/ui/page-leaf-components.test.tsx`
+  - update only if the legacy toolbar remains part of the supported surface.
+
+## Documentation Updates Required
+
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/_TASKS/README.md`
+
+## Acceptance Criteria
+
+1. Every icon-only widget-card action has an accessible label.
+2. Labels include enough context for screen readers and hover hints.
+3. Existing action behavior does not change.
