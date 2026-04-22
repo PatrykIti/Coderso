@@ -76,6 +76,10 @@ Reuse rule:
   family, for example `contentTypes:collectionWorkspace:<contentTypeId>`, so
   the workspace extends current `Engine` ownership instead of creating a
   parallel top-level `collections:*` cache namespace.
+- manual and assistant mutation owners may invalidate that existing workspace
+  cache key through their current client/cache seams, but they do not become
+  second read-model owners or reconstruct the workspace summary outside the
+  server-owned read endpoint.
 - `contentTypesClient.ts` exposes narrow helpers such as
   `getContentTypeCollectionWorkspace(...)` /
   `getContentTypeCollectionWorkspaceCached(...)` and aggregates existing read
@@ -110,6 +114,9 @@ Owner rule:
 - `collectionWorkspaceService.ts` owns aggregated read-model assembly and
   deterministic resolution only.
 - `contentTypeRoutes.ts` owns the server read endpoint only.
+- `contentTypesClient.ts` owns cached read-through access only, and
+  `CollectionWorkspacePage.tsx` owns route-local refresh/pending UX only; neither
+  becomes a second canonical-link resolver or persistence owner.
 - `site.contentRoutes` remains the owner of:
   - canonical route row selection by content type,
   - `detailPageId` linkage,

@@ -81,7 +81,13 @@ means:
   manual editing surfaces,
 - collection workspace and any assistant follow-up context must extend the
   current `adminPaths` / `prefetchAdminRoute` / admin-context seams rather than
-  introducing parallel route-to-surface workflows.
+  introducing parallel route-to-surface workflows,
+- when a leaf widens an existing contract, it should name the concrete write
+  owner, read/cache owner, and admin/UI transport owner for that widened seam
+  instead of leaving responsibility implicit,
+- planner/composer/workspace layers may compose and consume existing seams, but
+  they must not become hidden persistence owners, sidecar transport owners, or
+  second sources of truth for the same resource.
 
 ## Business Goal
 

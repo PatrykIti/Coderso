@@ -129,17 +129,18 @@ Program rules:
   technical `kind` should be `detail-page`; "Detail Template" remains a UI
   label.
 - persisted canonical collection links and stable collection metadata stay with
-  current owner seams:
+  concrete owner seams; where an exact field does not exist yet, the owning
+  leaf widens that seam in place:
   - `site.contentRoutes` owns canonical route row selection and
     `detailPageId` linkage,
-  - `TASK-190-05-02` / current page owner seam own explicit canonical
-    list-page linkage and page-attached listing refs through
-    `PageData.settings.collectionLink`,
+  - `TASK-190-05-02` / current page owner seam widens the existing page data
+    contract in place when canonical list-page linkage and page-attached
+    listing refs need to persist through `PageData.settings.collectionLink`,
   - `TASK-190-05-03-01` plus `TASK-190-05-03-07` / current detail-page owner
     seam own explicit references declared inside detail-page documents,
-  - `TASK-190-06-02` / current custom-screen owner seam own explicit stable
-    `collectionRole` / `compositionKey` metadata when canonical screen-link
-    fields are needed.
+  - `TASK-190-06-02` / current custom-screen owner seam widens the existing
+    custom-screen contract in place if canonical screen-link metadata needs
+    exact persisted `collectionRole` / `compositionKey` fields.
 - the workspace program may extend those existing owner seams where the current
   persisted contract is not strong enough, but it must not create a
   workspace-only registry, browser-owned source of truth, or assistant-only

@@ -82,6 +82,11 @@ Rules:
 - The default implementation path extends the existing `preview_tokens` table
   with a nullable JSONB `context` column.
 - `previewService.ts` owns strict write/read validation for `context`.
+- `previewService.ts` is the only serializer/deserializer of
+  `PreviewTokenContext` against `preview_tokens.context`; admin route handlers,
+  public preview/runtime code, and detail-page services pass typed inputs into
+  that seam and consume typed results from it instead of writing raw JSON blobs
+  or reading preview rows directly.
 - `previewUrls.ts` remains the shared preview path/base-url owner for every
   preview target type. Adding `type=detail-page` or `detailPageId` extends that
   existing helper in place; detail-page routes/services must not synthesize
@@ -183,6 +188,9 @@ Implementation notes:
 - `publicSite.tsx` / detail runtime resolution must treat `detailPageId` on
   `type=content` preview as a published-document override only; reading
   `current_document` requires the dedicated `type=detail-page` preview token.
+- detail-page admin routes later reuse this shared preview contract, but they do
+  not become storage owners for `sampleEntryId` or `preview_tokens.context`;
+  this leaf keeps preview persistence under the shared preview-token seam.
 - Update `previewUrls` builders for detail-template preview URLs.
 - Update `_docs/PREVIEW_SPEC.md` and `_docs/CMS_API.md`.
 - Do not log preview tokens or sample entry data in diagnostics.
@@ -213,6 +221,9 @@ Owner split:
     data affects rendered detail-page sections.
 - Detail-page preview/admin routes must reuse those owner-hook seams instead of
   introducing a second route-local invalidation flow or cache registry.
+- future detail-page admin client cache invalidation belongs to the later
+  detail-page admin client/cache seams; this leaf defines the shared public
+  preview/runtime invalidation hooks and preview-token storage contract only.
 
 Pseudocode:
 

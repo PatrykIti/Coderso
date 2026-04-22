@@ -115,6 +115,10 @@ type CustomScreenCollectionLink = {
 - `customScreenSchemas.ts` owns validation and reject-unknown behavior for these
   fields, `customScreenService.ts` owns persistence, and
   `customScreensClient.ts` owns cached round-trip.
+- current custom-screen editor/client flows may round-trip only those same
+  exact top-level persisted fields; they must not introduce a second
+  workspace-only, matcher-only, or client-only copy of canonical screen
+  metadata.
 - Workspace, matcher, and assistant-context leaves consume only these persisted
   fields; they must not invent alternate names or browser-only copies.
 

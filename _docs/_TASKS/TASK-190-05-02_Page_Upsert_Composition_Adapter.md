@@ -111,6 +111,11 @@ type PageCollectionLink = {
   canonical list page.
 - `pagesClient.ts` owns cached round-trip for that metadata, and `PageEditor.tsx`
   owns any manual editing UI if this metadata becomes operator-visible.
+- `PageEditor.tsx` may expose only the exact persisted
+  `PageData.settings.collectionLink` fields already owned by
+  `pageService.ts` / `pagesClient.ts`; it must not infer canonical list-page
+  linkage from route/title heuristics or keep a second editor-only shadow copy
+  of the same metadata.
 - Downstream leaves such as `TASK-190-06-03-01` and `TASK-190-07-02` must read
   this persisted metadata from the page seam; they must not re-derive canonical
   list pages from title/slug heuristics once this contract exists.

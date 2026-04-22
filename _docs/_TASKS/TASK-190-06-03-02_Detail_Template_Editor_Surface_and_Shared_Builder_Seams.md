@@ -26,6 +26,9 @@ No child task files.
 - Add `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
 - Add `core/admin/ui/content-types/detailTemplateEditorModel.ts`
 - Reuse `core/admin/services/detailPagesClient.ts`
+- Reuse `core/admin/services/entriesClient.ts` for bounded sample-entry picker
+  data instead of introducing a detail-page-local entry client or route-local
+  fetch helper
 - Extract shared builder/editor helpers only where current editors already share
   behavior
 - Add `tests/vitest/ui/detail-template-editor.test.tsx`
@@ -54,6 +57,13 @@ Rules:
   widget-template editor behavior,
 - detail-template mode may add binding-specific inspector panels and sample
   entry preview requirements,
+- detail-template block selection should reuse the current `page-builder`
+  widget-surface contract because the edited resource is still a public
+  runtime-rendered page-like document, not a custom-screen surface,
+- if a later slice truly needs detail-page-specific widget availability, widen
+  the shared widget owner seam explicitly (`WidgetSurface`, widget registry, and
+  the corresponding surface filters) instead of adding a detail-page-local
+  allowlist in the editor,
 - editor chrome and lifecycle behavior should come from extracted shared seams
   where practical,
 - route shell, cache warmup, and admin navigation ownership stay in the current
@@ -61,6 +71,13 @@ Rules:
   owner only for detail-page document CRUD/preview/revision lifecycle,
 - no ad-hoc route-local fetch helpers; use dedicated detail-page admin client
   wrappers,
+- sample-entry selection for preview stays on existing admin entry-read seams:
+  `entriesClient.ts` owns bounded list/read caching, while
+  `DetailTemplateEditorPage.tsx` owns only picker UI state and passes the chosen
+  id into the existing detail-page preview route,
+- detail-page preview routes/services validate the chosen `sampleEntryId`
+  against the linked content type and shared preview-token contract; the editor
+  must not become a second source of truth for sample-entry ownership,
 - no assumption that all current editors are already one unified shell.
 
 ## Manual Editing Flow
@@ -99,6 +116,11 @@ Collection Workspace
   conventions instead of a parallel lifecycle.
 - sample entry preview is required and validated for detail-page runtime
   preview.
+- sample-entry picker reuses the existing entry admin client/cache seam instead
+  of introducing a detail-page-local entry transport.
+- detail-template widget library stays aligned with the existing
+  `page-builder` surface unless a later task explicitly widens the shared widget
+  surface contract.
 - binding inspector/state behaves deterministically.
 - shared extraction does not regress the existing page/widget-template/custom
   screen editors.

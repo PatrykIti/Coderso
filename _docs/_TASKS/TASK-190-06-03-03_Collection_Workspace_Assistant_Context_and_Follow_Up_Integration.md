@@ -84,6 +84,12 @@ Rules:
   workspace package from assistant context instead of trusting browser-supplied
   summary payloads, broadening generic assistant permissions, or creating a
   second browser-local transport,
+- `useAssistantAdminContext.ts` remains the browser-side owner of bounded
+  route/identity hints only, `adminContextService.ts` owns normalization and
+  redaction of those hints, and `assistantRoutes.ts` plus
+  `activeSurfaceHydration.ts` own final server validation/rehydration; this leaf
+  must widen that existing chain in place rather than bypassing one hop with a
+  direct browser-to-provider payload,
 - selected resource stays the collection/content-type shell resource for the
   workspace root; do not repurpose `/admin/coderso/engine/:contentTypeId/collection`
   to `selectedResource.kind = "detail-page"`,
@@ -141,6 +147,10 @@ Rules:
   `collectionWorkspace` payloads must not cross the provider boundary,
 - assistant route/provider packaging extends the current bounded context package
   with `collectionWorkspace` only after server-side rehydration/validation,
+- `assistantActionSchemas.ts` must stay strict at the browser boundary: it may
+  accept only the bounded `collectionWorkspace` identity hint
+  (`contentTypeId` plus optional `activeDetailPageId`), never canonical links,
+  candidate lists, or a browser-owned copy of the workspace summary,
 - `assistantRoutes.ts` keeps explicit surface permission branches. Read planning
   for `activeSurface.kind = "detail-page"` follows page parity:
   - require `content:read` because the surface is content-owned,

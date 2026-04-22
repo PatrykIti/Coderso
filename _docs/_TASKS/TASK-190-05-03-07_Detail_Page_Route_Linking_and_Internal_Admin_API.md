@@ -100,7 +100,15 @@ Rules:
   - omitted `detailPageId` preserves the current link,
   - `detailPageId: null` clears the link,
   - `detailPageId: "<id>"` sets/replaces the link.
+- this leaf widens the current Site Settings route contract in place through
+  `settingsService.ts`, `siteSettingsClient.ts`, `siteSettingsValidation.ts`,
+  `SiteRouteEditor.tsx`, and `SiteSettingsPage.tsx`; it must not create a second
+  detail-page route-link store, hidden settings alias, or detail-page-local
+  route metadata bag.
 - `contentRouteMatcher` returns `detailPageId` for detail route matches.
+- `contentRouteMatcher.ts` remains a pure matcher over normalized
+  `site.contentRoutes`; it surfaces stored `detailPageId` for runtime consumers
+  but does not perform DB lookups, existence checks, or fallback inference.
 - `settingsService.normalizeContentRoutes` rejects invalid `detailPageId`
   values.
 - `settingsService.normalizeContentRoutes` remains a structural settings owner:
@@ -111,6 +119,10 @@ Rules:
   DB-backed validator.
 - `siteSettingsClient` and Site Settings UI round-trip `detailPageId` without
   dropping it.
+- `setting.content-route.upsert` remains the only assistant/manual write seam
+  for canonical route linkage. `detail-page.upsert` and detail-page CRUD may
+  create or update documents, but they must not mutate `site.contentRoutes`
+  out-of-band.
 - `TASK-190-05-03-03` remains the single runtime owner for consuming validated
   `detailPageId` route metadata inside `publicSite.tsx` /
   `renderPublicEntry.tsx` and rejecting content-type mismatches before render;
@@ -164,6 +176,10 @@ Admin client rule:
 - `cachePolicy.ts` owns the detail-page admin cache keys:
   - `detailPages:list`
   - `detailPages:detail:<id>`
+- `siteSettingsClient.ts`, `siteSettingsValidation.ts`, `SiteRouteEditor.tsx`,
+  and `SiteSettingsPage.tsx` remain the manual/admin transport owners for
+  `detailPageId` route linking. `detailPagesClient.ts` owns detail-page document
+  CRUD only and must not absorb route-link mutations.
 - `assistantClient.ts` owns mapping validated `detail-page.upsert` execution
   results onto those cache keys so assistant-driven edits reuse the same cache
   invalidation path as manual admin flows.
@@ -180,7 +196,8 @@ Preview storage rule:
 - It must not add a second preview-session store, ad-hoc cache entry, or
   route-local server state for `sampleEntryId`.
 - The route handler may call preview-service helpers, but physical preview
-  storage remains owned by the shared `preview_tokens` contract.
+  storage and `preview_tokens.context` serialization remain owned by the shared
+  `previewService.ts` + `preview_tokens` contract.
 
 ID contract:
 
