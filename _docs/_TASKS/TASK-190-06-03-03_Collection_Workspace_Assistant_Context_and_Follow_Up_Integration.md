@@ -170,7 +170,8 @@ Rules:
 - `active-surface-hydration.test.ts` covers the new `detail-page` rehydration
   branch directly, including the drop-to-null behavior for stale or missing
   server resources.
-- active surface can publish and rehydrate `detail-page`.
+- active surface can round-trip and rehydrate `detail-page` context payloads
+  without implying write/publish authority in this slice.
 - workspace-root route with `selectedResource.kind = "content-type"` still keeps
   `activeSurface.kind = "detail-page"` only through the explicit
   workspace-aware reconciliation rule; matching must not be loosened globally

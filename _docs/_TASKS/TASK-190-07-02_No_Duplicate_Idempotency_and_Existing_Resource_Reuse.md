@@ -23,10 +23,6 @@ No child task files.
 - Update `core/services/assistant/adminContextTypes.ts`
 - Update `core/services/assistant/adminContextCatalogNormalizer.ts`
 - Update `core/services/assistant/adminContextCatalogs.ts`
-- Update `core/services/assistant/providerPlanningContext.ts` if the bounded
-  resource package must expose the new detail-page summaries
-- Update `core/services/assistant/cmsTargetResolver.ts` if detail-page matching
-  needs trusted catalog support
 - Update `tests/unit/assistant/actionExecutorService.test.ts`
 - Update `tests/unit/assistant/actionExecutorService.db.test.ts`
 - Update `tests/vitest/assistant/admin-context-catalogs.test.ts`
@@ -85,11 +81,13 @@ Rules:
 - matcher output feeds the existing `actionExecutorService` / idempotency store
   path; this slice must not introduce a planner-owned or blueprint-owned
   executor wrapper just to apply reuse decisions.
-- `providerPlanningContext.ts` may expose the bounded summaries only through the
-  existing redacted resource package.
-- `cmsTargetResolver.ts` may use the bounded summaries for trusted detail-page
-  lookup once the policy/action slices enable that resource family; no parallel
-  fuzzy lookup path should be introduced.
+- generic provider/resource/policy exposure for `detail-page` stays deferred to
+  `TASK-190-05-03-08`; this slice prepares the bounded summaries that later
+  generic assistant seams consume, but it does not widen
+  `providerPlanningContext.ts`, `cmsTargetResolver.ts`, or adjacent generic
+  policy flows on its own.
+- no parallel fuzzy lookup path should be introduced here to compensate for that
+  deferral.
 
 ## Pseudocode
 
@@ -170,6 +168,9 @@ Matcher rules:
 - Matcher consumes any extra detail-page-owned secondary-resource metadata from
   `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner seams
   rather than inventing planner-only state.
+- Generic provider/policy/target-resolver coverage for `detail-page` remains
+  owned by `TASK-190-05-03-08`; this slice keeps reuse/idempotency assertions on
+  bounded catalog builders and matcher behavior only.
 - Idempotency replay tests.
 - Conflict when existing resource is incompatible.
 

@@ -22,9 +22,15 @@ No child task files.
 
 - Add `tests/vitest/assistant/blueprint-detail-page-fixtures.test.ts`
 - Add `tests/integration/runtime/detail-page-composer-runtime.test.tsx`
-- Update `tests/vitest/assistant/blueprint-composition-fixtures.test.ts` when
-  TASK-190-08 lands.
-- Update live matrix only after local deterministic fixtures are green.
+
+Sequencing rule:
+
+- this leaf owns the dedicated local detail-page fixture files above,
+- shared `tests/vitest/assistant/blueprint-composition-fixtures.test.ts`
+  remains `TASK-190-08`-owned until that later leaf creates the shared matrix
+  file; only then may those cases be folded into the broader corpus,
+- live matrix updates stay deferred until local deterministic fixtures are
+  green.
 
 ## Fixture Matrix
 

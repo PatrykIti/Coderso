@@ -46,11 +46,13 @@ This leaf does **not**:
 
 - Update `core/services/assistant/cmsOperationDraftSchema.ts`
 - Update `core/services/assistant/operationPolicy/cmsResourcePolicies.ts`
+- Update `core/services/assistant/operationPolicy/resolverPolicy.ts`
 - Update `core/services/assistant/cmsTargetResolver.ts`
 - Update `core/services/assistant/providerPlanningContext.ts`
 - Update `core/services/assistant/actionPlanTypes.ts` only if generic assistant
   metadata needs a detail-page label/helper seam
 - Update `tests/vitest/assistant/cms-target-resolver.test.ts`
+- Update `tests/vitest/assistant/operation-policy-resolver.test.ts`
 - Update `tests/vitest/assistant/provider-planning-context.test.ts`
 - Add/extend policy coverage tests for `detail-page`
 - Update `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
@@ -60,6 +62,9 @@ Reuse rule:
 - consume bounded detail-page summaries from `TASK-190-07-02`,
 - consume active-surface `detail-page` context from `TASK-190-06-03-03`,
 - keep `detail-page.upsert` as the only executable action path,
+- keep active-surface to generic resource-kind inference in
+  `operationPolicy/resolverPolicy.ts`; `cmsTargetResolver.ts` consumes that seam
+  and must not add a second divergent `detail-page` inference branch,
 - do not add one-off service lookups when catalog/policy seams can answer the
   same question deterministically.
 
@@ -121,6 +126,9 @@ Rules:
   executable provider actions.
 - target resolver accepts trusted `detail-page` matches from bounded catalog or
   active surface context only.
+- operation-policy resolver coverage keeps active `detail-page` inference on the
+  existing `resolverPolicy.ts` seam instead of adding one-off target-resolver
+  heuristics.
 - trusted detail-page matches prefer `contentTypeId` / exact ids over mutable
   slug labels when both are available in bounded catalog data.
 - missing/ambiguous detail-page lookup returns `needs_input` or no match, not a
