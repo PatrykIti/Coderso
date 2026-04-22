@@ -32,6 +32,9 @@ No child task files.
 - If replay still surfaces an out-of-scope issue, create and link a dedicated
   follow-up task file with exact evidence and owner seams before marking
   `TASK-195` done.
+- If replay still says the Posts Media tab needs brand-new media block types
+  beyond the regrouped current catalog, create and link a dedicated capability
+  follow-up with explicit contract/editor/runtime owners before closure.
 
 Out of scope:
 

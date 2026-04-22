@@ -51,6 +51,10 @@ Closure must keep those outcomes explicit:
 - capability gaps or server/runtime failures outside those contracts get a
   dedicated follow-up task file with named owners instead of being left as
   loose notes.
+- if QA replay still demands brand-new media block capabilities beyond the
+  current catalog, that becomes a separate capability task with explicit
+  contract/editor/runtime owners rather than an implicit extension of
+  `blockCatalog.ts`.
 
 ## Sub-Tasks
 
@@ -126,15 +130,30 @@ Current owner seams in code:
   - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
   - `core/admin/app/AdminApp.tsx`
   - `core/admin/components/ui/sonner.tsx`
+- Discoverability restore and shell-state ownership:
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+  - `core/admin/ui/posts/editor/hooks/usePostEditorPreferences.ts`
+  - `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts`
 - Server/runtime follow-up owners if autosave/settings failures still reproduce:
   - `core/server/routes/postsRoutes.ts`
   - `core/services/settings/settingsService.ts`
 - Public URL context and current posts route fallback:
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+  - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx`
   - `core/admin/services/siteSettingsClient.ts`
   - `core/services/content/postsFeedResolver.ts`
+- Future media-capability follow-up owners if replay still asks for new block
+  types beyond regrouping:
+  - `core/services/posts/editor/postBlockDocument.ts`
+  - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
+  - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
 - Direct owner tests for the changed seams:
   - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
   - `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
+  - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+  - `tests/vitest/ui/media-picker.test.tsx`
+  - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
   - `tests/vitest/admin/adminApp.test.tsx` if the shared toast mount changes
 
 Reuse-first rule:
@@ -145,6 +164,13 @@ Reuse-first rule:
   helpers,
 - keep the current focus-mode preference contract unless a narrower
   discoverability fix cannot solve the QA finding,
+- keep `DocumentInspector` presentation-only for slug URL context; load and
+  derive that context once on the existing shell/settings path and pass it
+  through current props instead of fetching inside the inspector,
+- repair discoverability through the existing storage/layout restore seams
+  (`resolveInitialFocusMode`, `resolveInitialLayoutState`,
+  `usePostEditorPreferences`, `usePostEditorLayout`) rather than creating a
+  second visibility model,
 - keep category-scoped search in the existing `searchPostBlockCatalog()`
   contract and add regression coverage instead of branching into a second search
   path,
@@ -155,6 +181,10 @@ Reuse-first rule:
   `site.contentRoutes` read model and the current posts runtime fallback in
   `postsFeedResolver`; do not hardcode `/blog` or invent a Posts-only settings
   source,
+- if replay still requires `video`, `gallery`, `audio`, or `file` in the Posts
+  Media tab, open a separate capability-expansion task with named
+  contract/editor/runtime owners; do not hide that work inside the current
+  catalog-regrouping leaf,
 - when `DocumentInspector` changes, update its direct owner test
   `tests/vitest/ui/post-document-inspector-wave.test.tsx` in addition to the
   sidebar/integration tests,
@@ -201,10 +231,18 @@ Reuse-first rule:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/admin/taxonomyClient.test.ts`
+  - umbrella validation is the union of the leaf-declared suites; do not mark
+    `TASK-195` validated from a narrower subset.
+  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui/post-editor-layout-hook-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-richtext-inline-typography-selection.test.ts tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/admin/taxonomyClient.test.ts`
+  - add `tests/vitest/admin/siteSettingsClient.test.ts` when the slug URL
+    context helper or settings read path changes.
 - Direct owner tests added by this family:
   - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
   - `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx`
+  - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+  - `tests/vitest/ui/media-picker.test.tsx`
+  - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
   - `tests/vitest/admin/adminApp.test.tsx` if the shared toast mount changes
 - Bun only if a leaf widens server/client route contracts:
   - `set -a && source .env && set +a && bun test tests/integration/routes/postsRoutes.test.ts tests/integration/posts/posts-revisions-flow.test.ts`

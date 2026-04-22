@@ -40,6 +40,15 @@ Owner boundary:
   interaction over that catalog contract.
 - This leaf must repair those existing seams, not create a second search path or
   parallel category registry.
+- If a separate follow-up later adds brand-new media block types, those owners
+  are explicit:
+  - block contract/schema/defaults: `core/services/posts/editor/postBlockDocument.ts`
+    plus its normalizer owners,
+  - editor/admin affordances: `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
+    and related inspectors,
+  - runtime/public rendering: `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
+    and adjacent runtime mappers.
+  `blockCatalog.ts` alone is not the owner of new media capabilities.
 
 ## Sub-Tasks
 
@@ -63,6 +72,9 @@ No child task files.
   or runtime renderers in this leaf.
 - Do not fork a second search implementation; keep `searchPostBlockCatalog()`
   as the single owner and lock it with tests.
+- If QA replay still says Media needs `video`, `gallery`, `audio`, or `file`,
+  open a dedicated linked follow-up task with the contract/editor/runtime owners
+  named above instead of stretching this catalog leaf.
 
 ## Security Contract
 
@@ -101,5 +113,6 @@ No child task files.
    misclassifies `Separator` as media.
 2. Category-scoped search is regression-covered and deterministic.
 3. Inserter keyboard navigation and item selection remain intact.
-4. Any broader request for new media block types is tracked as a separate
-   capability-expansion follow-up rather than being smuggled into this leaf.
+4. Any broader request for new media block types is tracked as a separate,
+   linked capability-expansion follow-up with named contract/editor/runtime
+   owners rather than being smuggled into this leaf.
