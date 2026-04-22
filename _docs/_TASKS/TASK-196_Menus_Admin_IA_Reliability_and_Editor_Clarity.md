@@ -188,6 +188,10 @@ Reuse-first rule:
   - keep at least one real `MenuItemRow` / `MenuTree` path so hierarchy and
     drag affordance regressions are proven on the actual DOM, not only mocked
     leaf-component wiring
+  - if `core/admin/utils/adminPrefetch.ts` changes as part of the route split,
+    add the named Vitest owners `tests/vitest/admin/adminPrefetch.test.ts` and
+    `tests/vitest/admin/admin-prefetch-policy.test.ts` in addition to any perf
+    gate rerun
 - Bun only if a leaf widens server/service behavior:
   - `set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts`
 - Perf gate only if route-prefetch semantics change materially:
@@ -201,6 +205,7 @@ Reuse-first rule:
 - `_docs/CMS_SPEC.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`

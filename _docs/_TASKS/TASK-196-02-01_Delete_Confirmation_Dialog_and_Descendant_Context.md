@@ -27,8 +27,8 @@ No child task files.
 
 - `core/admin/ui/menus/MenuEditorPage.tsx`
 - `core/admin/ui/menus/MenuItemDrawer.tsx`
-- `core/admin/ui/menus/MenuTree.tsx` only if the row action flow needs a small
-  trigger change
+- `core/admin/ui/menus/MenuItemRow.tsx` if the row action trigger needs a small
+  affordance or wiring change
 - new `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
 - `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
 - `tests/vitest/ui/menu-leaf-components.test.tsx`

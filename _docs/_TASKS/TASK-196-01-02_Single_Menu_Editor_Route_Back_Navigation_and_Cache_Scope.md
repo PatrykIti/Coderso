@@ -82,6 +82,7 @@ No child task files.
 
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 

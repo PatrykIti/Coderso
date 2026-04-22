@@ -39,6 +39,9 @@ No child task files.
 - `tests/vitest/ui/menu-leaf-components.test.tsx`
 - `tests/vitest/admin/menusClient.test.ts`
 - `tests/vitest/admin/adminApp.test.tsx`
+- `tests/vitest/admin/adminPrefetch.test.ts` if route warmup logic changed
+- `tests/vitest/admin/admin-prefetch-policy.test.ts` if route warmup policy
+  changed
 - `tests/integration/routes/menus.test.ts` only if any server contract changed
 - `tests/unit/menus/menuService.test.ts` only if any service/tree contract
   changed
@@ -47,6 +50,7 @@ No child task files.
 - `_docs/CMS_SPEC.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
@@ -79,6 +83,10 @@ No child task files.
   - closure notes must cite both `tests/vitest/ui/menu-leaf-components.test.tsx`
     and `tests/vitest/ui/menu-editor-shell-wave.test.tsx` for `Location`
     guidance, because create-surface and editor-surface owners differ
+  - if `core/admin/utils/adminPrefetch.ts` changed, append
+    `tests/vitest/admin/adminPrefetch.test.ts` and
+    `tests/vitest/admin/admin-prefetch-policy.test.ts` before relying on the
+    perf gate alone
 - Bun only if server/service code changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts`
 - Perf gate only if route-prefetch semantics changed:

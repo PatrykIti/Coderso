@@ -43,6 +43,9 @@ the current single-screen workflow.
 - `tests/vitest/ui/menu-editor-refresh-policy.test.tsx`
 - `tests/vitest/admin/menusClient.test.ts`
 - `tests/vitest/admin/adminApp.test.tsx`
+- `tests/vitest/admin/adminPrefetch.test.ts` if route warmup changes materially
+- `tests/vitest/admin/admin-prefetch-policy.test.ts` if route warmup changes
+  materially
 
 ## Architecture
 
@@ -113,12 +116,19 @@ Target behavior:
 - `tests/vitest/admin/adminApp.test.tsx`
   - `/admin/menus` resolves to list
   - `/admin/menus/:id` resolves to editor
+- `tests/vitest/admin/adminPrefetch.test.ts`
+  - if `/menus` or `/menus/:id` prefetch behavior changes, prove active-route
+    skip and request selection on the existing prefetch owner seam
+- `tests/vitest/admin/admin-prefetch-policy.test.ts`
+  - if route warmup policy changes, prove cooldown/fresh-window behavior on the
+    existing policy owner seam
 
 ## Documentation Updates Required
 
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/CMS_SPEC.md`
+- `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 
