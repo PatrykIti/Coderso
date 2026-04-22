@@ -152,6 +152,13 @@ blueprints/
   blueprintActionAssembler.ts
   blueprintExistingResourceMatcher.ts
   blueprintCompositionMetadata.ts
+```
+
+Test-only fixture corpus lives under the evaluation lane, not inside the
+runtime/service layer:
+
+```text
+tests/vitest/assistant/fixtures/
   blueprintCompositionFixtures.ts
 ```
 

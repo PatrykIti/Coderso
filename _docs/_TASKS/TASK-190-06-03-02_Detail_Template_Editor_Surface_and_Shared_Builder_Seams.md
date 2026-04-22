@@ -28,7 +28,7 @@ No child task files.
 - Reuse `core/admin/services/detailPagesClient.ts`
 - Extract shared builder/editor helpers only where current editors already share
   behavior
-- Update `tests/vitest/ui/detail-template-editor.test.tsx`
+- Add `tests/vitest/ui/detail-template-editor.test.tsx`
 
 Reuse anchor points:
 

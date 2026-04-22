@@ -33,7 +33,10 @@ No child task files.
 - Update `core/site/renderPublicEntry.tsx`
 - Update `core/site/contentRouteMatcher.ts` only if route match metadata needs
   detail page ids from `site.contentRoutes`.
-- Update `core/services/content/detailPageRuntimeResolver.ts`
+- Add `core/services/content/detailPageRuntimeResolver.ts` only if extracting
+  detail-page-specific runtime resolution out of the current public runtime
+  owners improves reuse; otherwise keep the resolution logic inside
+  `core/server/publicSite.tsx` / `core/site/renderPublicEntry.tsx`
 - Add `tests/integration/runtime/detail-page-runtime.test.tsx`
 
 ## Runtime Contract

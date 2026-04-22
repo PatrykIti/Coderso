@@ -149,6 +149,10 @@ Preview must:
 - render the same detail document pipeline as public runtime,
 - pass `device=desktop|tablet|mobile` into block visibility logic,
 - return `410` for expired token and `404` for disabled preview/missing target.
+- extend the existing shared preview-token validation seam in
+  `previewService.ts` (or a small helper extracted there) so runtime can
+  distinguish `expired` from `missing` without adding a second route-local
+  token lookup/result contract in `publicSite.tsx`.
 
 Implementation notes:
 
@@ -156,6 +160,11 @@ Implementation notes:
 - Extend preview token storage/validation so detail-page preview can carry the
   server-issued sample entry context inside `preview_tokens.context` instead of
   relying on raw query params.
+- Because the current shared helper returns one null-like outcome today, this
+  leaf must widen that existing helper in place so callers can map
+  `expired -> 410` and `missing/disabled -> 404` through one shared contract
+  rather than duplicating token-status branching in each preview route/runtime
+  owner.
 - `previewUrls.ts` remains the shared preview path/base-url owner for
   `page` / `content` / `widget-template` preview URLs; this leaf extends that
   existing helper in place for the new `detail-page` target instead of adding a
@@ -232,6 +241,9 @@ export async function invalidateDetailPageCacheForEntry(entry) {
 - `previewService.test.ts` covers the new `detail-page` target type plus strict
   `preview_tokens.context` normalization on the existing shared preview-token
   seam.
+- `previewService.test.ts` also covers the widened shared token-validation
+  outcome used to distinguish `expired` from `missing` without route-local
+  duplication.
 - `previewUrls.test.ts` covers shared URL building for
   `/preview?type=detail-page&token=...` through the existing preview URL helper
   rather than a route-local formatter.
