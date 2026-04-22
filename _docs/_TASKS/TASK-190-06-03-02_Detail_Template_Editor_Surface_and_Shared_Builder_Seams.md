@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin/UI + Detail Templates + Builder Reuse
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-07, TASK-190-06-03-01
+**Dependencies:** TASK-190-05-03-04, TASK-190-05-03-07, TASK-190-06-03-01
 **Status:** To Do
 
 ---
@@ -25,7 +25,8 @@ No child task files.
 
 - Add `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`
 - Add `core/admin/ui/content-types/detailTemplateEditorModel.ts`
-- Reuse `core/admin/services/detailPagesClient.ts`
+- Update `core/admin/services/detailPagesClient.ts` after
+  `TASK-190-05-03-07` adds that owner seam
 - Reuse `core/admin/services/entriesClient.ts` for bounded sample-entry picker
   data instead of introducing a detail-page-local entry client or route-local
   fetch helper

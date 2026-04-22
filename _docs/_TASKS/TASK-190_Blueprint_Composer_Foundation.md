@@ -321,11 +321,13 @@ Technical leaf tasks:
    surfaces, and the first-class detail page runtime contract.
 7. Add action assembly that reuses current typed actions plus review diagnostics.
 8. Add no-duplicate and existing-resource reuse checks.
-9. Run full plan composer shadow/cutover only after graph, merge, action
-   assembly, and no-duplicate fixtures pass.
-10. Add fixtures, authoring docs, observability, and live/provider evaluation coverage.
-11. Add manual collection workspace coverage so generated collections remain
-    editable without the assistant.
+9. Add manual collection workspace coverage so generated collections remain
+   editable without the assistant.
+10. Add fixtures, authoring docs, observability, and live/provider evaluation
+    coverage needed to prove cutover safety.
+11. Run full composed-plan routing/cutover only after graph, merge, action
+    assembly, no-duplicate checks, manual collection editability, and
+    `TASK-190-08` evaluation coverage are green.
 
 ## Dependency Notes
 
@@ -350,6 +352,10 @@ Technical leaf tasks:
 - Do not shorten this order with browser-only or planner-only heuristics. If a
   consumer slice cannot resolve canonical links from existing owner seams yet, it
   should stay `unresolved`/gated until the upstream contract lands.
+- Full composed-plan routing is the last rollout gate, not an intermediate
+  milestone. Even if action assembly and no-duplicate checks are ready, do not
+  flip user-visible composer routing before `TASK-190-06-03-*` keeps generated
+  collections manually editable and `TASK-190-08` proves the rollout gates.
 
 ## Security Contract
 

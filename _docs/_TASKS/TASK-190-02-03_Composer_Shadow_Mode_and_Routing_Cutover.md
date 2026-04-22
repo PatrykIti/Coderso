@@ -18,9 +18,10 @@ candidate resolver beside the current single-blueprint planner and records
 comparison diagnostics without changing user-visible behavior.
 
 Full composed plan cutover is explicitly deferred until graph, merge engines,
-page/detail/admin composition, action assembly, no-duplicate checks, and fixture
-coverage exist (`TASK-190-03` through `TASK-190-07`, validated in
-`TASK-190-08`).
+page/detail/admin composition, action assembly, no-duplicate checks, and
+manual collection editability exist (`TASK-190-03` through `TASK-190-07`,
+including `TASK-190-06-03`), and the rollout gates are then validated in
+`TASK-190-08`.
 
 This prevents a big-bang cutover in `actionPlannerService.ts`.
 
@@ -51,7 +52,10 @@ Deferred full plan cutover:
 - selected prompt families may opt into composer routing only after
   `TASK-190-03..190-07` are implemented,
 - assembled composer plans must pass `normalizeAssistantActionPlan`,
-- dry-run parity and no-duplicate checks must be green,
+- generated collection outputs must already be manually editable through the
+  `TASK-190-06-03` workspace/editor wave before routing flips,
+- dry-run parity, no-duplicate checks, and evaluation coverage from
+  `TASK-190-08` must be green,
 - fallback to legacy blueprint builder remains available for a bounded period,
 - no provider-generated action payloads are introduced,
 - the existing `input.context.siteKit` short-circuit in `actionPlannerService.ts`

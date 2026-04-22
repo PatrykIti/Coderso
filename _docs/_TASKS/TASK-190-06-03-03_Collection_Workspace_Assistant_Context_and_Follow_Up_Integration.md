@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Admin Context
 **Estimated Effort:** Medium
-**Dependencies:** TASK-190-05-03-07, TASK-190-06-03-01, TASK-190-06-03-02
+**Dependencies:** TASK-190-05-03-05, TASK-190-05-03-07, TASK-190-06-03-01, TASK-190-06-03-02
 **Status:** To Do
 
 ---

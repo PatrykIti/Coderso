@@ -33,6 +33,14 @@ No child task files.
   preview-token storage change
 - Update `core/server/utils/previewUrls.ts`
 - Update `core/site/cache/siteCache.ts`
+- Update `core/services/assistant/actionExecutorService.ts` so
+  `setting.content-route.upsert` reuses the shared public-cache invalidation
+  seam when canonical content routes change
+- Update the current manual settings/content-route write owner seam
+  (`core/server/routes/settingsRoutes.ts`, and `core/services/settings/settingsService.ts`
+  only if invalidation is centralized below the route boundary) so Site
+  Settings edits that change `site.contentRoutes` reuse the same shared
+  invalidation helpers
 - Update current mutation owners that already invalidate public output:
   `core/services/content/entryService.ts`,
   `core/services/pages/pageService.ts`, and the future detail-page
@@ -145,8 +153,12 @@ Rules:
 - `contentType` and `slug` remain compatibility/path hints owned by the shared
   preview helper until a later explicit helper cutover says otherwise; token
   validation stays the runtime authority,
-- `detailPageId` is optional; when omitted, runtime uses the active published
-  detail document for the entry content type.
+- `detailPageId` is optional; when omitted, runtime may use the active
+  published detail document for the entry content type only after
+  `TASK-190-05-03-07` lands the canonical `site.contentRoutes.detailPageId`
+  link. Before that route-link seam exists, omitted-detail-page preview stays
+  on the current legacy preview/runtime fallback instead of adding a second
+  inferred detail-page lookup path.
 - When `detailPageId` is provided, runtime may use only a published detail page
   document that belongs to the previewed entry content type.
 - `type=content` preview must never expose `current_document` of a detail-page
@@ -189,6 +201,10 @@ Implementation notes:
   `detailPageId`, or explicitly cut over the helper/tests/routes in the same
   implementation wave; it must not silently document a narrower URL while code
   still emits the existing params.
+- omitted-detail-page `type=content` preview must not invent a second canonical
+  detail-page lookup before `TASK-190-05-03-07` lands the explicit
+  `site.contentRoutes.detailPageId` route-link seam; until then the preview path
+  stays on the current legacy detail fallback.
 - `publicSite.tsx` / detail runtime resolution must treat `detailPageId` on
   `type=content` preview as a published-document override only; reading
   `current_document` requires the dedicated `type=detail-page` preview token.
@@ -218,11 +234,19 @@ Owner split:
   output:
   - current entry/post/page owner seams for entry-like publish/update/delete
     behavior,
-  - current settings/content-route owner seam for route mutations,
+  - current settings/content-route owner seam for route mutations, concretely
+    the existing manual settings write path in `core/server/routes/settingsRoutes.ts`
+    plus the typed assistant write path in
+    `core/services/assistant/actionExecutorService.ts` for
+    `setting.content-route.upsert`,
   - current and future detail-page document/admin owner seams for detail-page
     save/publish/unpublish/delete,
   - current form/listing query/listing template owner seams when their persisted
     data affects rendered detail-page sections.
+- if route invalidation is later centralized under `setSetting(...)` /
+  `setSettings(...)`, that still counts as the same current settings/content-
+  route owner seam; do not move route invalidation into Site Settings UI,
+  preview-only routes, or client-side helpers.
 - Detail-page preview/admin routes must reuse those owner-hook seams instead of
   introducing a second route-local invalidation flow or cache registry.
 - future detail-page admin client cache invalidation belongs to the later
