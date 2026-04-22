@@ -32,6 +32,9 @@ changing the underlying writing-canvas model or block-insertion engine.
 - Clarify typography helper copy, tooltiping, and disabled/read-only states.
 - Reclassify block-catalog items so the Media tab reads like actual media.
 - Keep category-scoped search behavior deterministic and regression-covered.
+- Keep `blockCatalog.ts` as the single owner of category assignment/search
+  semantics; `BlockInserter.tsx` should stay a consumer of that contract rather
+  than reimplementing it.
 
 Out of scope:
 
@@ -51,6 +54,7 @@ Out of scope:
 - `tests/vitest/ui/post-richtext-toolbar-wave.test.tsx`
 - `tests/vitest/ui/post-block-inserter-wave.test.tsx`
 - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
+- `tests/vitest/posts/post-block-catalog-search.test.ts`
 
 ## Security Contract
 
@@ -70,6 +74,9 @@ Out of scope:
   - block-catalog grouping by category,
   - category-scoped search regression,
   - keyboard navigation in the inserter after regrouping.
+- Direct owner test:
+  - `tests/vitest/posts/post-block-catalog-search.test.ts` keeps the
+    `blockCatalog.ts` search/category contract locked below the UI layer.
 - No Bun coverage required unless a leaf unexpectedly changes a route or
   persisted contract.
 

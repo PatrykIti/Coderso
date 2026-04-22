@@ -31,6 +31,10 @@ raw IDs and collapsed technical drawers.
 - Expose SEO completion state when `Advanced` is collapsed.
 - Show slug editing with explicit runtime URL context while preserving the
   stored slug contract.
+- Keep all of the above on existing owner seams: `DocumentInspector` for the UI,
+  `taxonomyClient` and `MediaPicker` for lookup/picker reuse, and
+  `siteSettingsClient` plus the current posts runtime route contract for URL
+  context.
 
 Out of scope:
 
@@ -45,10 +49,15 @@ Out of scope:
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
 - `core/admin/ui/media/MediaPicker.tsx`
 - `core/admin/services/taxonomyClient.ts`
+- `core/admin/services/siteSettingsClient.ts` only if a thin read helper is
+  needed for slug URL context reuse
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
+- `tests/vitest/ui/post-document-inspector-wave.test.tsx`
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/admin/taxonomyClient.test.ts`
+- `tests/vitest/admin/siteSettingsClient.test.ts` only if site settings helper
+  usage changes
 
 ## Security Contract
 
@@ -70,6 +79,9 @@ Out of scope:
   - metadata draft normalization back to current payload shape,
   - SEO summary and slug-context rendering,
   - taxonomy/media loading and empty/error states.
+- Direct owner test:
+  - `tests/vitest/ui/post-document-inspector-wave.test.tsx` for the concrete
+    `DocumentInspector` contract that currently renders the raw ID fields.
 - Bun only if posts metadata route payloads widen.
 
 ## Documentation Updates Required

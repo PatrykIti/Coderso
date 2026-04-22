@@ -25,6 +25,16 @@ Current inspector behavior:
 This leaf should keep slug persistence backward compatible and make SEO status
 visible even when the advanced controls are collapsed.
 
+Owner boundary:
+
+- `DocumentInspector` owns the visible SEO summary and slug field presentation.
+- `siteSettingsClient.getSiteSettings()` is the existing admin read owner for
+  `publicBaseUrl` and `contentRoutes`.
+- `core/services/content/postsFeedResolver.ts` is the current owner for the
+  posts detail-path fallback contract.
+- This leaf must compose those existing seams; it must not hardcode `/blog`,
+  `nextless.cms`, or a new Posts-only settings source.
+
 ## Sub-Tasks
 
 No child task files.
@@ -34,8 +44,13 @@ No child task files.
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:168-255`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
   only if a derived URL prefix helper is needed from current settings/post data
+- `core/admin/services/siteSettingsClient.ts`
+  only if a thin read helper or memoized loader is needed for the inspector path
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
+- `tests/vitest/ui/post-document-inspector-wave.test.tsx`
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
+- `tests/vitest/admin/siteSettingsClient.test.ts` only if site settings helper
+  usage changes
 
 ## Security Contract
 
@@ -43,19 +58,28 @@ No child task files.
 - Auth/RBAC/CSRF/rate-limit: unchanged.
 - Reject-unknown validation: unchanged.
 - Anti-abuse:
-  - do not rewrite stored slugs behind the user’s back,
-  - any displayed URL prefix must come from trusted existing settings/runtime
-    context only,
-  - collapsed-summary badges must not imply SEO completeness when required
-    fields are still empty.
+- do not rewrite stored slugs behind the user’s back,
+- any displayed URL prefix must come from trusted existing settings/runtime
+  context only,
+- collapsed-summary badges must not imply SEO completeness when required
+  fields are still empty,
+- the URL context path must reuse the existing site settings plus posts runtime
+  route contract rather than a hardcoded admin-only approximation.
 
 ## Testing Requirements
 
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
   - collapsed SEO summary/badge stays visible,
   - slug field shows URL context without changing the raw value contract.
+- `tests/vitest/ui/post-document-inspector-wave.test.tsx`
+  - the direct inspector surface shows the slug context on the actual
+    `DocumentInspector` seam.
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
   - slug normalization and save payload remain backward compatible.
+- `tests/vitest/admin/siteSettingsClient.test.ts` only if site settings helper
+  usage changes
+  - `publicBaseUrl` / `contentRoutes` normalization remains backward
+    compatible.
 
 ## Documentation Updates Required
 
@@ -66,5 +90,6 @@ No child task files.
 ## Acceptance Criteria
 
 1. SEO completion is visible before the advanced section is expanded.
-2. Slug editing shows the runtime URL context.
+2. Slug editing shows the runtime URL context derived from the existing site
+   settings and posts route contract.
 3. Persisted slug values remain backward compatible with current posts data.

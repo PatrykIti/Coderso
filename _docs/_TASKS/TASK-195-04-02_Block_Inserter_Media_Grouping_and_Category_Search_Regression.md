@@ -25,6 +25,15 @@ That means the QA report is partly about catalog semantics and partly about
 trust. This leaf should fix the Media grouping and add regression coverage for
 the category-scoped search path that already exists in code.
 
+Owner boundary:
+
+- `blockCatalog.ts` owns block category assignment and
+  `searchPostBlockCatalog()` semantics.
+- `BlockInserter.tsx` owns query input, rendering, focus, and keyboard
+  interaction over that catalog contract.
+- This leaf must repair those existing seams, not create a second search path or
+  parallel category registry.
+
 ## Sub-Tasks
 
 No child task files.
@@ -37,6 +46,7 @@ No child task files.
   only if helper text must explain category-scoped search
 - `tests/vitest/ui/post-block-inserter-wave.test.tsx`
 - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
+- `tests/vitest/posts/post-block-catalog-search.test.ts`
 
 ## Implementation Notes
 
@@ -64,6 +74,9 @@ No child task files.
   - keyboard navigation still works after regrouping.
 - `tests/vitest/ui-integration/post-block-inserter.test.tsx`
   - rendered category labels/items match the updated catalog expectations.
+- `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `searchPostBlockCatalog()` keeps category-scoped filtering,
+  - regrouped catalog order remains deterministic at the owner layer.
 
 ## Documentation Updates Required
 

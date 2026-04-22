@@ -30,6 +30,15 @@ The repo already has the building blocks to avoid that:
 This leaf should reuse those seams instead of keeping raw-ID fields in the
 editor.
 
+Owner boundary:
+
+- `DocumentInspector` owns the metadata editing surface.
+- `PostDetailsSidebar` only passes tabs/document props; it must not become a
+  second picker shell.
+- `taxonomyClient.getTaxonomyOverview()` remains the read owner for category
+  options.
+- `MediaPicker` remains the shared media selection surface.
+
 ## Sub-Tasks
 
 No child task files.
@@ -45,6 +54,7 @@ No child task files.
 - `core/admin/ui/media/MediaPicker.tsx:48-260`
   - reuse directly; avoid a Posts-only media dialog fork
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
+- `tests/vitest/ui/post-document-inspector-wave.test.tsx`
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/admin/taxonomyClient.test.ts`
@@ -65,6 +75,10 @@ No child task files.
 
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
   - category selector and featured-image picker render correctly.
+- `tests/vitest/ui/post-document-inspector-wave.test.tsx`
+  - the raw `Category ID` / `Media ID` inputs disappear from the direct
+    `DocumentInspector` surface,
+  - the chosen category/media affordance remains user-readable.
 - `tests/vitest/ui/post-details-sidebar-wave.test.tsx`
   - picker changes propagate through the details sidebar contract.
 - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`

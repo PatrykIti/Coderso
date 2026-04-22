@@ -108,6 +108,18 @@ Current owner seams in code:
 - Revision confidence:
   - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx`
   - `core/admin/services/postsClient.ts`
+- Shared admin feedback visibility:
+  - `core/admin/ui/posts/editor/header/PostEditorActionCluster.tsx`
+  - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
+  - `core/admin/app/AdminApp.tsx`
+  - `core/admin/components/ui/sonner.tsx`
+- Public URL context and current posts route fallback:
+  - `core/admin/services/siteSettingsClient.ts`
+  - `core/services/content/postsFeedResolver.ts`
+- Direct owner tests for the changed seams:
+  - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
+  - `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `tests/vitest/admin/adminApp.test.tsx` if the shared toast mount changes
 
 Reuse-first rule:
 
@@ -119,7 +131,20 @@ Reuse-first rule:
   discoverability fix cannot solve the QA finding,
 - keep category-scoped search in the existing `searchPostBlockCatalog()`
   contract and add regression coverage instead of branching into a second search
-  path.
+  path,
+- keep publish/update success feedback on the existing shared admin toast path:
+  Posts editor code may emit feedback, but `AdminApp` remains the mount owner;
+  do not add a Posts-only toaster host or ad-hoc event bus,
+- derive slug URL context from the existing `site.publicBaseUrl` plus
+  `site.contentRoutes` read model and the current posts runtime fallback in
+  `postsFeedResolver`; do not hardcode `/blog` or invent a Posts-only settings
+  source,
+- when `DocumentInspector` changes, update its direct owner test
+  `tests/vitest/ui/post-document-inspector-wave.test.tsx` in addition to the
+  sidebar/integration tests,
+- when block grouping or category-scoped search changes, keep
+  `blockCatalog.ts` as the single owner and update
+  `tests/vitest/posts/post-block-catalog-search.test.ts`.
 
 ## Security Contract
 
@@ -161,6 +186,10 @@ Reuse-first rule:
   - `bun --cwd core lint:types`
 - Vitest:
   - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/posts-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-details-sidebar-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/post-richtext-toolbar-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/admin/taxonomyClient.test.ts`
+- Direct owner tests added by this family:
+  - `tests/vitest/ui/post-document-inspector-wave.test.tsx`
+  - `tests/vitest/posts/post-block-catalog-search.test.ts`
+  - `tests/vitest/admin/adminApp.test.tsx` if the shared toast mount changes
 - Bun only if a leaf widens server/client route contracts:
   - `set -a && source .env && set +a && bun test tests/integration/routes/postsRoutes.test.ts tests/integration/posts/posts-revisions-flow.test.ts`
 - QA replay:
