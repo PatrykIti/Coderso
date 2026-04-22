@@ -152,6 +152,11 @@ Deterministic resolution order:
 2. Detail template:
    - canonical detail template is the document referenced by
      `site.contentRoutes.detailPageId`.
+   - if no canonical `detailPageId` link exists yet, the workspace may still
+     expose bounded detail-page candidates for the same collection content
+     type, but it must keep `canonical.detailPage = null` and return
+     `unresolved` + `candidates.detailPages` until the current owner seams link
+     one document explicitly through `site.contentRoutes.detailPageId`.
 3. Public list/landing page:
    - canonical list page is the public page explicitly linked by the current
      collection setup contract, not the hidden runtime listing endpoint itself,
@@ -210,6 +215,10 @@ Rules:
 - hidden runtime list endpoints and public landing pages remain separate
   resources in the workspace read model when the current blueprint contract
   keeps them separate,
+- bounded detail-page candidates are compatibility/read-model data only; they
+  support manual selection/follow-up flows, but they do not become canonical
+  and must not be persisted from the workspace layer outside the existing
+  route/detail-page owner seams,
 - supporting pages, editorial/proof/case-study resources, and SEO remain in
   scope, but they must arrive through explicit persisted links or owner-contract
   extensions rather than workspace-only heuristics,
@@ -238,6 +247,7 @@ type CollectionWorkspaceSummary = {
   unresolved: string[];
   candidates: {
     pages: ...[];
+    detailPages: ...[];
     listingQueries: ...[];
     listingTemplates: ...[];
     adminScreens: ...[];
@@ -290,6 +300,10 @@ type CollectionWorkspaceSummary = {
 - if extra detail-page secondary-resource metadata is needed, it round-trips
   through `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page owner
   seams before the workspace consumes it.
+- if no canonical route link exists yet and multiple bounded detail-page
+  documents exist for the same content type, the workspace returns
+  `unresolved` + bounded `candidates.detailPages` rather than guessing a
+  canonical template or persisting a workspace-local link.
 - page/listing query/template/admin screen return `unresolved` + `candidates`
   when multiple plausible matches exist.
 - forms/secondary pages/editorial/proof/SEO links come from explicit canonical

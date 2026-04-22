@@ -143,9 +143,15 @@ Rules:
 - Add `tests/unit/content/detailPageDocumentService.test.ts`
 - Update `tests/unit/settings/contentRoutesValidation.test.ts`
 - Update `tests/unit/site/contentRouteMatcher.test.ts`
+- Update `tests/unit/assistant/actionExecutorService.test.ts`
+- Update `tests/unit/assistant/actionExecutorService.db.test.ts`
 - Add `tests/vitest/admin/detailPagesClient.test.ts`
 - Update `tests/vitest/admin/assistantClient.test.ts`
+- Update `tests/vitest/assistant/action-plan-schema.test.ts`
+- Update `tests/vitest/assistant/action-family-contracts.test.ts` only if
+  `actionFamilyContracts.ts` widens the executable route-link contract metadata
 - Update `tests/vitest/admin/siteSettingsClient.test.ts`
+- Update `tests/vitest/ui/site-settings-validation.test.ts`
 - Update `tests/vitest/ui/site-settings.test.tsx`
 - Update `tests/vitest/ui/plugin-media-site-leaf.test.tsx`
 - Add settings/content route round-trip tests.
@@ -271,6 +277,24 @@ Route boundary maps through centralized `mapDetailPageError`.
   resources.
 - `contentRouteMatcher` returns `detailPageId`.
 - Site Settings UI/client round-trips `detailPageId`.
+- `tests/vitest/assistant/action-plan-schema.test.ts` covers strict
+  `setting.content-route.upsert` shape for `detailPageId`, including the
+  current owner semantics for omitted value vs `null` vs string id.
+- `tests/unit/assistant/actionExecutorService.test.ts` and
+  `tests/unit/assistant/actionExecutorService.db.test.ts` cover dry-run /
+  execute behavior for preserving, clearing, and replacing `detailPageId`
+  through the existing `setting.content-route.upsert` seam instead of a second
+  route-link executor path.
+- If `actionFamilyContracts.ts` changes in this leaf, the corresponding
+  `tests/vitest/assistant/action-family-contracts.test.ts` assertions stay in
+  sync with the executable route-link contract metadata and permissions.
+- `tests/vitest/ui/site-settings-validation.test.ts` covers local form
+  validation for the optional `detailPageId` shape/UUID-compatible contract,
+  while referential checks still stay with the detail-page owner seams.
+- `tests/vitest/ui/site-settings.test.tsx` and
+  `tests/vitest/ui/plugin-media-site-leaf.test.tsx` cover Site Settings /
+  `SiteRouteEditor` round-trip for `detailPageId` without inventing route-local
+  state outside the existing settings editor flow.
 - settings/content-route validation tests cover shape/UUID-contract rules in the
   settings seam, while document existence/content-type mismatch coverage stays
   with the detail-page route/runtime owners.

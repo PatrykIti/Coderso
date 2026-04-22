@@ -103,7 +103,18 @@ Rules:
   - canonical/current `detailPage.id | null`,
   - optional `activeDetailPageId | null` when the editor can switch between
     multiple bounded detail-page candidates within the workspace flow,
+- when multiple bounded detail-page candidates are available, this leaf consumes
+  the server-owned `CollectionWorkspaceSummary.candidates.detailPages` contract
+  from `TASK-190-06-03-01`; it may forward only bounded candidate identity
+  needed for reconciliation and must not synthesize browser-local candidate
+  lists,
 - server hydration for `detail-page` reuses content-domain services,
+- `assistantRoutes.ts` default server hydrator is the explicit owner seam for
+  extending live assistant-context hydration beyond today's
+  `page` / `widget-template` / `custom-screen` imports. This leaf must widen
+  that existing server-owned wiring in place for `detail-page` /
+  `collectionWorkspace` instead of landing only schema/type changes or adding a
+  second route-local fetch path,
 - if the workspace route lands before the detail-page read seam from
   `TASK-190-05-03-07`, the workspace package may still hydrate, but
   `activeSurface.kind = "detail-page"` must stay gated/null instead of
@@ -171,6 +182,10 @@ Rules:
 - browser-supplied `collectionWorkspace` summary payloads are ignored/replaced
   by the server-owned bounded workspace summary derived from
   `TASK-190-06-03-01`.
+- if no canonical detail-page link exists yet, workspace/detail-page follow-up
+  consumes only bounded server-owned `candidates.detailPages` from
+  `TASK-190-06-03-01`; browser state must not invent candidate ids or promote a
+  candidate to canonical ownership on its own.
 - if the detail-page read/admin seam from `TASK-190-05-03-07` is unavailable,
   assistant context drops/gates the detail-page active surface instead of
   creating a parallel fetch/hydration path.

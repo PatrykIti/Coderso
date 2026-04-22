@@ -81,7 +81,6 @@ detail_page_documents: {
   id,
   name,
   content_type_id,
-  content_type_slug,
   status,
   current_document,
   published_document,
@@ -107,6 +106,10 @@ Rules:
 - `published_document` stores the public runtime document.
 - Public runtime reads `published_document` only.
 - Preview reads `current_document` only through valid preview/admin context.
+- `content_type_id` is the only persisted content-type join key for this
+  resource family. This leaf must extend the current id-based content-domain
+  contract instead of introducing a second top-level relational owner field for
+  mutable slug data.
 - `site.contentRoutes` can reference `detailPageId` for matching but does not
   own the document.
 - `site.contentRoutes` remains the only runtime route owner; detail-page
@@ -151,6 +154,16 @@ type ContentRouteSetting = {
   reuse matching. `contentTypeSlug` remains a normalized route-facing copy and
   must not become the primary identity input because the content-type owner seam
   already allows slug updates.
+- `contentTypeSlug` is advisory normalized data for read/response/runtime
+  context. The service layer may derive or refresh it from the linked content
+  type on write/read; the detail-page storage contract does not need a separate
+  top-level `content_type_slug` relational column when `contentTypeId` already
+  anchors the canonical owner seam.
+- If the current/public document snapshot keeps `contentTypeSlug` for export,
+  runtime context, or backward-compatible response shape, that copy stays
+  service-owned compatibility data inside the normalized document contract. It
+  must never become a second persisted join key or a second source of truth
+  beside `contentTypeId`.
 - Manual admin create may generate a random UUID server-side, but the
   normalized id must be returned before any route-link mutation.
 - `detailPageSchema.ts` plus the content-domain service layer own id validation
@@ -181,8 +194,9 @@ Normalization rules:
 - `contentTypeId` must be a valid current content type id.
 - `contentTypeSlug` must be a safe content type slug.
 - `contentTypeSlug` must stay consistent with the linked `contentTypeId` at
-  write/publish time; the slug is descriptive/route-facing data, not the stable
-  identity key.
+  write/publish/read time; the slug is descriptive/route-facing data, not the
+  stable identity key, and it may be derived/refreshed from the linked content
+  type rather than treated as a separate relational owner field.
 - `blocks[].id` must be unique across the tree.
 - `bindings[].id` must be unique.
 - `bindings[].blockId` must point to an existing block.
