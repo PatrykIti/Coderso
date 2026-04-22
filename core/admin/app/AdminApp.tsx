@@ -104,7 +104,6 @@ import { AdminBasePathProvider } from "@/ui/contexts/AdminBasePathContext";
 import { AdminAssistantConfigProvider } from "@/ui/contexts/AdminAssistantConfigContext";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { clearAssistantRuntimeStateCache } from "@/ui/assistant/AssistantPanel";
-import { Toaster } from "@/components/ui/sonner";
 
 const publicRoutes = new Set([
   "/login",
