@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-194, TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-22)
 
 ---
 

@@ -38,8 +38,22 @@ vi.mock("@/components/ui/badge", () => ({
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: ({ "aria-label": ariaLabel }: { "aria-label"?: string }) => (
-    <input type="checkbox" aria-label={ariaLabel} />
+  Checkbox: ({
+    "aria-label": ariaLabel,
+    checked,
+    onCheckedChange,
+  }: {
+    "aria-label"?: string;
+    checked?: boolean | "indeterminate";
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      aria-label={ariaLabel}
+      checked={checked === true}
+      data-indeterminate={String(checked === "indeterminate")}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
   ),
 }));
 
@@ -196,11 +210,63 @@ test("PageTable renders fallback status, author, and date values", async () => {
 
   try {
     expect(view.container.textContent).toContain("custom_status");
-    expect(view.container.textContent).toContain("Unknown");
+    expect(view.container.textContent).toContain("No author");
     expect(view.container.textContent).toContain("2026-03-06T12:00:00.000Z");
-    expect(view.container.textContent).toContain("N");
+    expect(view.container.textContent).toContain("NA");
   } finally {
     dateSpy.mockRestore();
+    view.cleanup();
+  }
+});
+
+test("PageTable wires controlled selection state", async () => {
+  const { PageTable } = await import("../../../core/admin/ui/pages/PageTable");
+
+  const onToggleAll = vi.fn();
+  const onTogglePage = vi.fn();
+
+  const view = mount(
+    <PageTable
+      items={[
+        {
+          id: "page-1",
+          title: "Landing",
+          slug: "/landing",
+          status: "draft",
+          updatedAt: "2026-03-06T12:00:00.000Z",
+          author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+        },
+      ] as never}
+      selectedIds={["page-1"]}
+      isAllSelected={false}
+      isIndeterminate={true}
+      onToggleAll={onToggleAll}
+      onTogglePage={onTogglePage}
+      onEdit={() => undefined}
+      onPreview={() => undefined}
+      onPublish={() => undefined}
+      onUnpublish={() => undefined}
+      onDuplicate={() => undefined}
+    />
+  );
+
+  try {
+    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    expect(checkboxes[0]?.getAttribute("data-indeterminate")).toBe("true");
+    expect((checkboxes[1] as HTMLInputElement | undefined)?.checked).toBe(true);
+
+    act(() => {
+      (checkboxes[0] as HTMLInputElement | undefined)?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+      (checkboxes[1] as HTMLInputElement | undefined)?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+
+    expect(onToggleAll).toHaveBeenCalledTimes(1);
+    expect(onTogglePage).toHaveBeenCalledWith("page-1");
+  } finally {
     view.cleanup();
   }
 });

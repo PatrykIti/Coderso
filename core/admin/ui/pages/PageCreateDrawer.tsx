@@ -8,6 +8,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -59,6 +60,12 @@ export function PageCreateDrawer({
   const canSubmit = useMemo(() => {
     return title.trim().length > 0 && slug.trim().length > 0;
   }, [slug, title]);
+  const titleHint =
+    title.trim().length === 0
+      ? "Add a page title to generate a slug and enable Create Page."
+      : slug.trim().length === 0
+        ? "Enter a slug to enable Create Page."
+        : "Ready to create the page.";
 
   const handleSubmit = () => {
     if (!canSubmit || isSubmitting) return;
@@ -81,9 +88,9 @@ export function PageCreateDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Create New Page</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Start with a template and publish when ready.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close create page drawer">
@@ -106,6 +113,7 @@ export function PageCreateDrawer({
               <Input
                 placeholder="e.g. About us"
                 value={title}
+                aria-describedby="page-create-title-hint"
                 onChange={(event) => {
                   const nextTitle = event.target.value;
                   setTitle(nextTitle);
@@ -115,6 +123,14 @@ export function PageCreateDrawer({
                   }
                 }}
               />
+              <p
+                id="page-create-title-hint"
+                className="text-xs text-muted-foreground"
+              >
+                {title.trim().length === 0
+                  ? "Title is required before you can create the page."
+                  : "The slug is generated from the title until you edit it."}
+              </p>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -181,6 +197,9 @@ export function PageCreateDrawer({
               </Button>
             </div>
           </div>
+          {!canSubmit ? (
+            <p className="mt-3 text-xs text-muted-foreground">{titleHint}</p>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

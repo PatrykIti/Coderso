@@ -42,3 +42,13 @@ Gdy zaznaczysz wpisy na liscie:
   - Delete
 - Po bulk action selection jest czyszczone, lista odswiezana, a wynik surfacowany
   jako success lub partial-failure message.
+
+## Pages parity
+
+- Pages list follows the same visible-scope bulk-selection rule as Entries.
+- Bulk actions on Pages cover `Publish`, `Unpublish`, and `Delete`.
+- Destructive bulk delete requires confirmation and the list refreshes after the
+  apply path completes.
+- Pages list rows keep real author identity from authoritative list payloads;
+  detail or mutation payloads that do not resolve `author` must not overwrite
+  cached list author state.

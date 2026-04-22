@@ -47,6 +47,13 @@ Model:
 - Kazdy blok ma `type` (np. `hero`, `timeline`, `compare-timeline`) i `data`.
 - `data` jest walidowane przez JSON schema danego widgetu.
 - Page builder posiada zakladki Widgets/Templates; template sections renderuja widget templates jako bloki.
+- Page builder widget library groups widgets by existing `WidgetCategory`
+  metadata instead of a flat ungrouped list.
+- Empty slots stay on the existing builder contract:
+  the canvas CTA routes into the same widget library surface with slot-aware
+  context, not a second Pages-only insert dialog.
+- Completing the widget wizard moves the operator into layout/styling refinement
+  with explicit transition copy.
 
 Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
@@ -76,6 +83,8 @@ Zasady:
 - oldest revisions are pruned on publish when limit is exceeded.
 - zamkniecie Page Settings z niezapisanymi zmianami tworzy jeden autosave snapshot (`title`, `slug`, `data`).
 - autosave nie jest traktowany jak publikowana rewizja i moze byc osobno `restore` albo `discard`.
+- Page Settings copy should describe this as keeping one draft version in
+  history, not expose `autosave snapshot` jargon.
 
 ---
 

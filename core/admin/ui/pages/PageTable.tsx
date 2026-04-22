@@ -52,6 +52,11 @@ const toInitials = (value: string) =>
 export type PageTableProps = {
   items: PageSummary[];
   emptyMessage?: string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onTogglePage?: (id: string) => void;
   onEdit: (id: string) => void;
   onPreview: (id: string) => void;
   onPublish: (id: string) => void;
@@ -60,9 +65,20 @@ export type PageTableProps = {
   onDelete?: (id: string) => void;
 };
 
+const missingAuthorLabel = "No author";
+const missingAuthorHint = "Previous author is no longer available.";
+
+const resolveAuthorLabel = (author: PageSummary["author"]) =>
+  author?.name ?? author?.email ?? missingAuthorLabel;
+
 export function PageTable({
   items,
   emptyMessage,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onTogglePage,
   onEdit,
   onPreview,
   onPublish,
@@ -76,7 +92,11 @@ export function PageTable({
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="w-10 pl-4">
-              <Checkbox aria-label="Select all pages" />
+              <Checkbox
+                aria-label="Select all pages"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
             </TableHead>
             <TableHead className="min-w-[12rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Page title
@@ -106,10 +126,18 @@ export function PageTable({
               </TableCell>
             </TableRow>
           ) : null}
-          {items.map((page) => (
-            <TableRow key={page.id}>
+          {items.map((page) => {
+            const isSelected = selectedIds.includes(page.id);
+            const authorLabel = resolveAuthorLabel(page.author);
+            const authorHint = page.author ? undefined : missingAuthorHint;
+            return (
+            <TableRow key={page.id} className={isSelected ? "bg-muted/30" : undefined}>
               <TableCell className="pl-4">
-                <Checkbox aria-label={`Select ${page.title}`} />
+                <Checkbox
+                  aria-label={`Select ${page.title}`}
+                  checked={isSelected}
+                  onCheckedChange={() => onTogglePage?.(page.id)}
+                />
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
@@ -132,8 +160,8 @@ export function PageTable({
                       {statusLabels[page.status] ?? page.status}
                     </Badge>
                     <span className="text-muted-foreground/60">•</span>
-                    <span>
-                      {page.author?.name ?? page.author?.email ?? "Unknown"}
+                    <span title={authorHint}>
+                      {authorLabel}
                     </span>
                     <span className="text-muted-foreground/60">•</span>
                     <span>{formatDate(page.updatedAt)}</span>
@@ -152,15 +180,11 @@ export function PageTable({
                 <div className="flex items-center gap-2">
                   <Avatar size="sm">
                     <AvatarFallback>
-                      {toInitials(
-                        page.author?.name ??
-                          page.author?.email ??
-                          "NA"
-                      )}
+                      {toInitials(authorLabel)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm text-muted-foreground">
-                    {page.author?.name ?? page.author?.email ?? "Unknown"}
+                  <span className="text-sm text-muted-foreground" title={authorHint}>
+                    {authorLabel}
                   </span>
                 </div>
               </TableCell>
@@ -179,7 +203,8 @@ export function PageTable({
                 />
               </TableCell>
             </TableRow>
-          ))}
+          );
+          })}
         </TableBody>
       </Table>
     </div>

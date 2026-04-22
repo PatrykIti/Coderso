@@ -183,11 +183,54 @@
 
 ---
 
-## Re-weryfikacja 2026-04-22
+## Status po wdrozeniu TASK-194 (2026-04-22)
 
-- BUG-3 (Create Page disabled bez wyjaśnienia) — **nadal występuje** (disabled button bez helper textu)
-- BUG-5 (Radix `aria-describedby` warning) — **nadal występuje** w konsoli przy otwarciu Create Page dialog
-- BUG-1, BUG-2, BUG-4, UX-1..9 — wymagały utworzenia strony i dodania widgetów; przy re-weryfikacji lista stron była pusta, więc zachowuję oryginalne ustalenia. Warto zweryfikować ponownie po utworzeniu testowych stron.
+- BUG-1 — zaimplementowane:
+  controlled header/row selection + Pages bulk actions (`publish`, `unpublish`,
+  `delete`) z proofem w Vitest.
+- BUG-2 — zaimplementowane:
+  Pages list cache nie jest juz prime'owany authorless summary z detail/mutation
+  payloads; author fallback ma osobny neutralny stan `No author`.
+- BUG-3 — zaimplementowane:
+  blocking `Loading template options...` znika, gdy drawer ma juz uzywalne
+  choices; error state ma retry.
+- BUG-4 — zaimplementowane:
+  toolbar widgetu ma `aria-label` + `title`, a delete ma explicit destructive
+  affordance.
+- BUG-5 — zaimplementowane:
+  Create Page, Page Settings, Page History i Runtime Preview maja explicit
+  description owners.
+- UX-1 — zaimplementowane:
+  editor pokazuje widoczny success notice po `Save draft` i `Publish`.
+- UX-2 — zaimplementowane:
+  po insert/add blok jest przewijany do viewportu i chwilowo podswietlany.
+- UX-3 — zaimplementowane:
+  create drawer wyjasnia, dlaczego `Create Page` jest disabled.
+- UX-4 — zaimplementowane:
+  widget picker jest grupowany po istniejacych kategoriach widgetow.
+- UX-5 — zaimplementowane:
+  runtime preview pokazuje actionable placeholder dla unreachable host/timeout
+  zamiast pustej ramki.
+- UX-6 — zaimplementowane:
+  wizard ma explicit handoff copy do layout/styling.
+- UX-7 — zaimplementowane:
+  empty slot pokazuje CTA i prowadzi do istniejacego widget library surface z
+  contextem slotu.
+- UX-8 — zaimplementowane:
+  wording w Page Settings mowi o draft version in history, nie o
+  `autosave snapshot`.
+- UX-9 — zaimplementowane:
+  disabled `Max width` pokazuje helper text z warunkiem odblokowania.
+
+## Validation snapshot (2026-04-22)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockToolbar.test.tsx tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/ui/page-editor-insert-scroll.test.tsx tests/vitest/ui/page-editor-slot-insert-flow.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx`
+
+Uwaga: ten raport zostal zaktualizowany na podstawie wdrozenia + targeted
+Vitest proof. Nie robilem ponownego manualnego replay Playwright na lokalnym
+serwerze w tym samym kroku zamkniecia taska.
 
 ---
 

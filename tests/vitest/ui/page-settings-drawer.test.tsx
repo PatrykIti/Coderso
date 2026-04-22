@@ -41,6 +41,7 @@ const renderDrawer = (
 test("PageSettingsDrawer renders layout and defaults sections", () => {
   const html = renderDrawer();
 
+  expect(html).toContain("Configure metadata, layout, and defaults for this page.");
   expect(html).toContain("Template and navigation");
   expect(html).toContain("Revision history");
   expect(html).toContain("Layout and appearance");
@@ -49,16 +50,18 @@ test("PageSettingsDrawer renders layout and defaults sections", () => {
   expect(html).toContain("Preview modes");
 });
 
-test("PageSettingsDrawer surfaces template options loading state", () => {
+test("PageSettingsDrawer hides blocking template loading copy when fallback choices are usable", () => {
   const html = renderDrawer({ templateOptionsLoading: true });
 
-  expect(html).toContain("Loading template options...");
+  expect(html).not.toContain("Loading template options...");
 });
 
 test("PageSettingsDrawer surfaces template options error state", () => {
   const html = renderDrawer({
     templateOptionsError: "Failed to load template options.",
+    onRetryTemplateOptions: () => undefined,
   });
 
   expect(html).toContain("Failed to load template options.");
+  expect(html).toContain("Try again");
 });

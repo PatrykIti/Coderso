@@ -77,3 +77,16 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   - `Embed` nalezy do kategorii `Media`,
   - `Separator` nalezy do kategorii `Text`,
   - search pozostaje ograniczony do aktywnej kategorii.
+
+## Pages builder UX
+
+- Icon-only widget-card actions expose explicit `aria-label` and `title`
+  metadata.
+- Wizard completion is a transition, not a silent mode switch:
+  the next step explains layout/styling refinement before advanced settings.
+- Empty slots expose a visible add action and route back into the existing
+  widget library surface instead of opening a separate Pages-only inserter.
+- The page-builder widget library is grouped by existing widget categories:
+  `Layout`, `Content`, `Forms`, `Navigation`, `Media`.
+- After a widget is inserted, the canvas scrolls to the new block and applies a
+  short-lived visual highlight.

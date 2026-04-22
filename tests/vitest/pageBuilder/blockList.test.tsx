@@ -318,7 +318,7 @@ test("BlockList renders default-slot fallback for empty legacy children", () => 
   expect(html).toContain("legacy-container");
   expect(html).toContain("Unknown widget type");
   expect(html).toContain("Default slot");
-  expect(html).toContain("Empty slot.");
+  expect(html).toContain("Empty slot. Drag from the library to add a widget.");
 });
 
 test("BlockList selects from the keyboard and ignores drops from another list token", () => {
@@ -374,6 +374,7 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
   registerWidget(fixedSlotDefinition);
   const onInsert = vi.fn();
   const onMoveToSlot = vi.fn();
+  const onOpenSlotInsert = vi.fn();
   const parent: Block = {
     ...createBlock("slot-layout"),
     id: "slot-parent",
@@ -388,13 +389,14 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
       onDelete={() => {}}
       onInsert={onInsert}
       onMoveToSlot={onMoveToSlot}
+      onOpenSlotInsert={onOpenSlotInsert}
     />
   );
 
   try {
     const slotContainer = getSlotContainer(view.container, "Main");
     expect(slotContainer).not.toBeNull();
-    expect(normalizeText(slotContainer)).toContain("Empty slot.");
+    expect(normalizeText(slotContainer)).toContain("Add widget to Main");
 
     dispatchDragEvent(
       slotContainer!,
@@ -409,6 +411,18 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
       createDataTransfer({ "block-id": "child-block" })
     );
     expect(onMoveToSlot).toHaveBeenCalledWith("child-block", "slot-parent", "main");
+
+    act(() => {
+      Array.from(slotContainer!.querySelectorAll("button"))
+        .find((button) => normalizeText(button).includes("Add widget to Main"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onOpenSlotInsert).toHaveBeenCalledWith({
+      parentId: "slot-parent",
+      slotId: "main",
+      slotLabel: "Main",
+      allowedTypes: undefined,
+    });
   } finally {
     view.cleanup();
   }

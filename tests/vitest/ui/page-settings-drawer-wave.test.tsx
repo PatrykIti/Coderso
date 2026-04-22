@@ -109,6 +109,7 @@ vi.mock("@/components/ui/sheet", () => ({
     ) : null,
   SheetClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -279,7 +280,7 @@ test("PageSettingsDrawer autosaves dirty drafts on close and forwards reopen req
 
   try {
     expect(view.container.textContent).toContain("Custom (bespoke)");
-    expect(view.container.textContent).toContain("Saving autosave snapshot...");
+    expect(view.container.textContent).toContain("Saving draft version...");
 
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
@@ -376,6 +377,7 @@ test("PageSettingsDrawer disables max width for full container and does not auto
     );
 
     expect(disabledSelects).toHaveLength(1);
+    expect(view.container.textContent).toContain("Available when Page width is not full.");
 
     act(() => {
       buttons.find((button) => button.textContent === "trigger-close")?.click();
@@ -386,6 +388,33 @@ test("PageSettingsDrawer disables max width for full container and does not auto
     });
 
     expect(onAutosave).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageSettingsDrawer retries template options after failure", async () => {
+  const onRetryTemplateOptions = vi.fn();
+
+  const view = mount(
+    <PageSettingsDrawer
+      open
+      onOpenChange={() => undefined}
+      page={basePage}
+      settings={baseSettings}
+      templateOptionsError="Failed to load template options."
+      onRetryTemplateOptions={onRetryTemplateOptions}
+      onSave={async () => false}
+    />
+  );
+
+  try {
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    act(() => {
+      buttons.find((button) => button.textContent === "Try again")?.click();
+    });
+
+    expect(onRetryTemplateOptions).toHaveBeenCalledTimes(1);
   } finally {
     view.cleanup();
   }

@@ -114,7 +114,10 @@ test("WizardPanel renders widget editor and metadata", () => {
     expect(view.container.textContent).toContain("Dummy Widget");
     expect(view.container.textContent).toContain("Widget type");
     expect(view.container.textContent).toContain("dummy");
-    expect(view.container.textContent).toContain("Complete setup");
+    expect(view.container.textContent).toContain(
+      "Next you can fine-tune layout, styling, and advanced settings."
+    );
+    expect(view.container.textContent).toContain("Continue to layout and styling");
   } finally {
     view.cleanup();
   }
@@ -133,7 +136,9 @@ test("WizardPanel forwards editor data, variant updates, and completion", () => 
     act(() => {
       buttons.find((button) => button.textContent === "change-data")?.click();
       buttons.find((button) => button.textContent === "change-variant")?.click();
-      buttons.find((button) => button.textContent === "Complete setup")?.click();
+      buttons
+        .find((button) => button.textContent === "Continue to layout and styling")
+        ?.click();
     });
 
     expect(onChange).toHaveBeenCalledWith({

@@ -197,6 +197,17 @@ Clients update caches and broadcast events on:
   address is either not represented in the admin cache key contract or is
   handled by the existing site-kit execution surface.
 
+### Pages list/detail cache note
+
+- Pages list cache (`pages:list`) is authoritative for author presentation.
+- Detail and mutation payloads that do not carry resolved `author` metadata must
+  not create or overwrite list summaries with authorless placeholders.
+- `createPage()` and `duplicatePage()` keep detail cache warm but invalidate the
+  list cache so the next list hydration comes from an authoritative list payload.
+- Detail-style updates (`getPageCached`, `updatePage`, revision restore) merge
+  title/slug/status fields into an existing list row without dropping the
+  current author identity.
+
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.

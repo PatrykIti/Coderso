@@ -30,6 +30,7 @@ test("PageRevisionDrawer renders autosave label and discard action", () => {
   );
 
   expect(html).toContain("Page history");
+  expect(html).toContain("Restore published revisions or manage the latest settings autosave.");
   expect(html).toContain("Autosave");
   expect(html).toContain("Not saved");
   expect(html).toContain("Discard");

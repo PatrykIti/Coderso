@@ -250,6 +250,7 @@ vi.mock("@/components/ui/sheet", () => ({
   ),
   SheetClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SheetDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
@@ -461,6 +462,10 @@ vi.mock("../../../core/admin/ui/pages/PageTable", () => ({
   PageTable: ({
     items,
     emptyMessage,
+    selectedIds = [],
+    isAllSelected,
+    onToggleAll,
+    onTogglePage,
     onEdit,
     onPreview,
     onPublish,
@@ -470,6 +475,10 @@ vi.mock("../../../core/admin/ui/pages/PageTable", () => ({
   }: {
     items: Array<{ id: string; title: string }>;
     emptyMessage?: string;
+    selectedIds?: string[];
+    isAllSelected?: boolean;
+    onToggleAll?: () => void;
+    onTogglePage?: (id: string) => void;
     onEdit: (id: string) => void;
     onPreview: (id: string) => void;
     onPublish: (id: string) => void;
@@ -479,9 +488,17 @@ vi.mock("../../../core/admin/ui/pages/PageTable", () => ({
   }) => (
     <div>
       <span>{emptyMessage ?? `pages:${items.length}`}</span>
+      <span>{`page-selected:${selectedIds.length}`}</span>
+      <span>{`page-all-selected:${String(Boolean(isAllSelected))}`}</span>
       {items.map((item) => (
         <div key={item.id}>{item.title}</div>
       ))}
+      <button type="button" onClick={() => onToggleAll?.()}>
+        toggle-page-all
+      </button>
+      <button type="button" onClick={() => onTogglePage?.(items[0]!.id)}>
+        toggle-page-first
+      </button>
       <button type="button" onClick={() => onEdit(items[0]!.id)}>
         edit-page-row
       </button>
@@ -1065,6 +1082,83 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
         .querySelector("[data-has-open-change='true']")
         ?.getAttribute("data-sheet-open")
     ).toBe("false");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageListPage shows bulk actions for visible selection, trims hidden selection, and applies publish", async () => {
+  pagePostState.pages = [
+    pagePostState.pages[0],
+    {
+      ...pagePostState.pages[0],
+      id: "page-2",
+      title: "Docs hub",
+      slug: "/docs",
+      status: "draft",
+      author: {
+        id: "author-2",
+        name: "Editor",
+        email: "editor@example.com",
+      },
+    },
+  ];
+
+  const { PageListPage } = await import(
+    "../../../core/admin/ui/pages/PageListPage"
+  );
+
+  const view = mount(<PageListPage />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search pages by title..."]'
+    );
+
+    act(() => {
+      buttons().find((button) => button.textContent === "toggle-page-all")?.click();
+    });
+
+    expect(view.container.textContent).toContain("Selected 2");
+    expect(view.container.textContent).toContain("page-selected:2");
+
+    act(() => {
+      setInputValue(searchInput ?? undefined, "docs");
+    });
+
+    expect(view.container.textContent).toContain("Selected 1");
+    expect(view.container.textContent).toContain("page-selected:1");
+    expect(view.container.textContent).toContain("Docs hub");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).filter(
+        (button) => button.textContent === "edit-page-row"
+      )
+    ).toHaveLength(1);
+
+    const bulkSelect = Array.from(view.container.querySelectorAll("select")).find((select) =>
+      select.querySelector('option[value="publish"]')
+    );
+
+    act(() => {
+      setSelectValue(bulkSelect, "publish");
+    });
+
+    await act(async () => {
+      buttons().find((button) => button.textContent === "Apply")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.publishPageCalls).toEqual(["page-2"]);
+    expect(view.container.textContent).not.toContain("Selected 1");
+    expect(pagePostState.pageRefreshCalls).toEqual([
+      { force: false, background: undefined },
+      { force: true, background: true },
+    ]);
   } finally {
     view.cleanup();
   }

@@ -123,8 +123,15 @@ const pageDetail = (overrides: Partial<{
   updatedAt: string;
   author: null;
 }> = {}) => ({
-  ...pageSummary(overrides),
+  id: overrides.id ?? "page-1",
+  title: overrides.title ?? "Home",
+  slug: overrides.slug ?? "/",
+  status: overrides.status ?? "draft",
+  updatedAt: overrides.updatedAt ?? "2026-02-14T00:00:00.000Z",
   currentData: overrides.currentData ?? { blocks: [] },
+  ...(Object.prototype.hasOwnProperty.call(overrides, "author")
+    ? { author: overrides.author ?? null }
+    : {}),
 });
 
 test("listPages hits GET /pages", async () => {
@@ -505,7 +512,7 @@ test("listPagesCached dedupes in-flight reads and force refreshes cache", async 
   }
 });
 
-test("getPageCached forced fetch primes list and detail caches", async () => {
+test("getPageCached forced fetch primes detail cache without creating an authorless list entry", async () => {
   const { storage, restore: restoreStorage } = installLocalStorage();
   const fetchMock = installFetch(async () =>
     jsonResponse(
@@ -527,22 +534,66 @@ test("getPageCached forced fetch primes list and detail caches", async () => {
       id: "page-7",
       title: "Fetched detail",
     });
-    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
-      pageSummary({
-        id: "page-7",
-        title: "Fetched detail",
-        slug: "/fetched-detail",
-      }),
-    ]);
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toBeNull();
     expect(getCachedPageDetail("page-7")?.title).toBe("Fetched detail");
-    expect(getCachedPages()?.[0]?.id).toBe("page-7");
+    expect(getCachedPages()).toBeNull();
   } finally {
     fetchMock.restore();
     restoreStorage();
   }
 });
 
-test("page mutations synchronize list/detail caches and broadcast cache events", async () => {
+test("detail-style page updates preserve existing author data in cached page lists", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    return jsonResponse(
+      pageDetail({
+        id: "page-1",
+        title: "Updated Home",
+        slug: "/updated-home",
+      })
+    );
+  });
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    setCacheValue(storage, cacheKeys.pagesList, [
+      {
+        ...pageSummary({ id: "page-1", title: "Home", slug: "/" }),
+        author: {
+          id: "author-1",
+          name: "Admin User",
+          email: "admin@example.com",
+        },
+      },
+    ]);
+
+    await updatePage("page-1", { title: "Updated Home" });
+
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      {
+        ...pageSummary({
+          id: "page-1",
+          title: "Updated Home",
+          slug: "/updated-home",
+        }),
+        author: {
+          id: "author-1",
+          name: "Admin User",
+          email: "admin@example.com",
+        },
+      },
+    ]);
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("page mutations synchronize caches and invalidate list entries when create-style payloads lack author details", async () => {
   const { storage, restore: restoreStorage } = installLocalStorage();
   const events: CacheEvent[] = [];
   const unsubscribe = subscribeCacheEvents((event) => events.push(event));
@@ -632,14 +683,12 @@ test("page mutations synchronize list/detail caches and broadcast cache events",
     });
 
     await duplicatePage("page-1");
-    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
-      pageSummary({
-        id: "page-copy",
-        title: "Updated Home (copy)",
-        slug: "/copy",
-      }),
-      pageSummary({ id: "page-1", title: "Updated Home", status: "draft" }),
-    ]);
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toBeNull();
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-copy"))).toMatchObject({
+      id: "page-copy",
+      title: "Updated Home (copy)",
+      slug: "/copy",
+    });
 
     await restorePageRevision("page-1", "rev-1");
     expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toMatchObject({
@@ -648,13 +697,7 @@ test("page mutations synchronize list/detail caches and broadcast cache events",
     });
 
     await deletePage("page-1");
-    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
-      pageSummary({
-        id: "page-copy",
-        title: "Updated Home (copy)",
-        slug: "/copy",
-      }),
-    ]);
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toBeNull();
     expect(storage.getItem(cacheKeys.pageDetail("page-1"))).toBeNull();
 
     const eventPairs = events.map((event) => `${event.action}:${event.key}`);

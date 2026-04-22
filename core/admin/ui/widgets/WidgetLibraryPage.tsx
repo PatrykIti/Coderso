@@ -70,6 +70,7 @@ import {
   filterWidgetLibraryItems,
   normalizeCategoryValue,
 } from "./widgetLibraryUtils";
+import { widgetCategoryLabels, widgetCategoryOrder } from "./widgetCategoryMeta";
 import type {
   WidgetCategoryId,
   WidgetComplexity,
@@ -117,24 +118,19 @@ const categoryMeta: Record<
   WidgetCategoryId,
   { label: string; icon: LucideIcon; preview: WidgetPreview }
 > = {
-  layout: { label: "Layout", icon: GalleryVerticalEnd, preview: "hero" },
-  content: { label: "Content", icon: Columns, preview: "grid" },
-  forms: { label: "Forms", icon: FileText, preview: "form" },
-  navigation: { label: "Navigation", icon: List, preview: "banner" },
-  media: { label: "Media", icon: ImageIcon, preview: "media" },
+  layout: { label: widgetCategoryLabels.layout, icon: GalleryVerticalEnd, preview: "hero" },
+  content: { label: widgetCategoryLabels.content, icon: Columns, preview: "grid" },
+  forms: { label: widgetCategoryLabels.forms, icon: FileText, preview: "form" },
+  navigation: { label: widgetCategoryLabels.navigation, icon: List, preview: "banner" },
+  media: { label: widgetCategoryLabels.media, icon: ImageIcon, preview: "media" },
 };
 
 const widgetCategories: CategoryItem[] = [
   { id: "widgets-all", label: "All Widgets", icon: LayoutGrid },
-  ...(
-    Object.entries(categoryMeta) as [
-      WidgetCategoryId,
-      (typeof categoryMeta)[WidgetCategoryId],
-    ][]
-  ).map(([id, meta]) => ({
+  ...widgetCategoryOrder.map((id) => ({
     id,
-    label: meta.label,
-    icon: meta.icon,
+    label: categoryMeta[id].label,
+    icon: categoryMeta[id].icon,
   })),
 ];
 

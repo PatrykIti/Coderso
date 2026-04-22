@@ -25,8 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 721 | 2026-04-22 | TASK-196 menus list-first editor and UX closure | Admin/UI |
+| 723 | 2026-04-22 | TASK-194 pages admin UX reliability and polish | CMS Pages/Admin UI |
 | 722 | 2026-04-22 | TASK-195 posts admin QA recovery | QA/CMS Posts |
+| 721 | 2026-04-22 | TASK-196 menus list-first editor and UX closure | Admin/UI |
 | 720 | 2026-04-21 | TASK-193 pages bun route timeout stabilization | QA/CMS Pages |
 | 719 | 2026-04-20 | TASK-192 assistant admin resource catalog repair | Assistant/Core |
 | 718 | 2026-04-20 | TASK-191 pages coverage closure | QA/CMS Pages |
