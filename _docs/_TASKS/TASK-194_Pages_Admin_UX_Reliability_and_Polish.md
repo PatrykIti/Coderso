@@ -89,7 +89,7 @@ This umbrella covers four owner areas:
 4. Builder accessibility and discoverability:
    - labeled action buttons,
    - clearer wizard-to-visual handoff,
-   - slot helper CTA text,
+   - slot helper CTA wired to the existing insert surface,
    - category groups in the widget picker.
 
 Out of scope:
@@ -138,6 +138,8 @@ Reuse-first rule:
   source,
 - reuse existing widget-library category labels and slot constraints instead of
   creating Pages-only copies,
+- reuse existing `WidgetInsertDialog` / `widgetInsertUtils` slot targeting
+  before adding any Pages-only insert flow,
 - reuse existing `sonner` component if toast feedback is chosen,
 - keep accessibility fixes on the truthful surface owner first
   (`PageCreateDrawer`, `PageSettingsDrawer`, `PageRevisionDrawer`,
@@ -186,6 +188,12 @@ Reuse-first rule:
   - `bun --cwd core lint:types`
 - Vitest:
   - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/page-table-wave.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list-cache-behavior.test.tsx tests/vitest/ui/page-settings-drawer.test.tsx tests/vitest/ui/page-settings-drawer-wave.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/pagesClient.test.ts tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/pickers.test.tsx tests/vitest/pageBuilder/wizardPanel.test.tsx`
+  - keep author/cache regression proof on `tests/vitest/admin/pagesClient.test.ts`
+    because `pagesClient.ts` owns mutation-driven list/detail cache writes; UI
+    suites only confirm the symptom is gone,
+  - post-insert scroll/highlight and slot-CTA work must be proven on at least
+    one unmocked Pages builder path, not only through globally mocked shell
+    suites.
 - Bun only when a leaf touches server/service contract:
   - `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts tests/unit/pages`
   - keep `tests/integration/routes/pages.test.ts` as the route-contract guard

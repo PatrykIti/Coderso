@@ -25,6 +25,15 @@ instead of mutation-local placeholders. When the server truly reports no author,
 the list should render a neutral missing-author state rather than the same
 generic `Unknown` copy that currently masks stale cache bugs.
 
+Ownership note:
+
+- `core/admin/services/pagesClient.ts` owns mutation-driven list/detail cache
+  writes and invalidation.
+- `core/admin/ui/pages/PageListPage.tsx` owns mount refresh behavior and cache
+  consumption, not author synthesis.
+- `core/admin/ui/pages/PageTable.tsx` owns only the truthful rendering of
+  resolved vs intentionally missing author payloads.
+
 ## Sub-Tasks
 
 - `TASK-194-01-01_Page_Table_Selection_State_and_Bulk_Bar.md`
@@ -57,6 +66,7 @@ Out of scope:
 - `tests/vitest/ui/page-table-wave.test.tsx`
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
 - `tests/vitest/ui/page-list-cache-behavior.test.tsx`
+- `tests/vitest/admin/pagesClient.test.ts`
 - `tests/vitest/ui/entry-page-support-wave.test.tsx`
 - `tests/integration/routes/pages.test.ts` only if the author-fix leaf widens server response shape
 
@@ -81,6 +91,8 @@ Out of scope:
   - page table controlled header/row selection,
   - bulk bar render/clear/apply states,
   - filtered visible-scope selection rules,
+  - cache-owner regression coverage in `tests/vitest/admin/pagesClient.test.ts`
+    for create/duplicate list/detail cache writes,
   - author/cache correctness after create/open-after-create,
   - neutral missing-author fallback rendering when `author: null` is real,
   - partial bulk failure messaging.

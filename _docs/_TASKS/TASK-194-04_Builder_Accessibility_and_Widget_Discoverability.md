@@ -28,7 +28,8 @@ Close the builder-side usability and accessibility issues from the report:
 - Add accessible action labels and optional title/tooltips to widget-card
   controls.
 - Clarify the wizard-to-visual handoff.
-- Improve empty-slot helper text.
+- Improve empty-slot guidance and CTA by reusing the existing insert-surface
+  contracts.
 - Group picker items by existing widget categories.
 
 Out of scope:
@@ -43,7 +44,11 @@ Out of scope:
 - `core/admin/ui/pages/builder/BlockList.tsx`
 - `core/admin/ui/pages/builder/BlockSettings.tsx`
 - `core/admin/ui/pages/builder/WizardPanel.tsx`
+- `core/admin/ui/pages/PageEditor.tsx` if slot CTA wiring needs owner-level state
 - `core/admin/ui/pages/builder/WidgetPicker.tsx`
+- `core/admin/ui/widgets/WidgetInsertDialog.tsx` and
+  `core/admin/ui/widgets/widgetInsertUtils.ts` if slot CTA reuses the existing
+  insert dialog
 - `core/widgets/types.ts`
 - `core/admin/ui/widgets/WidgetLibraryPage.tsx` for category label/icon reuse
 - `tests/vitest/pageBuilder/blockToolbar.test.tsx` if the real toolbar gets its
@@ -52,6 +57,8 @@ Out of scope:
 - `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`
 - `tests/vitest/pageBuilder/wizardPanel.test.tsx`
 - `tests/vitest/pageBuilder/pickers.test.tsx`
+- `tests/vitest/ui/dialogs.test.tsx` if `WidgetInsertDialog` gains slot-aware
+  builder assertions
 
 ## Security Contract
 
@@ -67,8 +74,10 @@ Out of scope:
 - Vitest coverage for:
   - action-button labels/titles on the real toolbar owner,
   - wizard transition copy,
-  - empty-slot helper text,
-  - category-grouped widget picker behavior.
+  - empty-slot CTA plus guidance,
+  - category-grouped widget picker behavior,
+  - at least one real slot-CTA path that reuses the existing insert surface
+    instead of closing on copy-only assertions.
 
 ## Documentation Updates Required
 

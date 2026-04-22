@@ -33,6 +33,15 @@ route permission path:
 That combination lets the list show a synthetic authorless summary even though
 the DB row already has the correct `authorId`.
 
+Ownership note:
+
+- `core/admin/services/pagesClient.ts` is the owner of mutation-driven
+  list/detail cache priming and invalidation.
+- `core/admin/ui/pages/PageListPage.tsx` is only the consumer of that cache plus
+  mount-refresh policy.
+- `core/admin/ui/pages/PageTable.tsx` owns the rendering contract for true
+  `author: null` payloads, not cache repair.
+
 ## Sub-Tasks
 
 No child task files.
@@ -60,8 +69,12 @@ No child task files.
 - `core/admin/ui/pages/PageListPage.tsx:148-168`
   - ensure create/open-after-create does not leave the next list mount on stale
     partial cache only.
+- `tests/vitest/admin/pagesClient.test.ts:545-706`
+  - prove that mutation responses without resolved `author` do not become the
+    authoritative pages-list summary.
 - `tests/vitest/ui/page-post-list-wave.test.tsx:738-849`
 - `tests/vitest/ui/page-list-cache-behavior.test.tsx`
+  - touch only if `resolvePageListMountRefreshOptions()` changes.
 - `tests/integration/routes/pages.test.ts:291-305` only as a guard that the
   server author assignment remains correct
 
@@ -70,6 +83,8 @@ No child task files.
 Primary direction:
 
 - keep server route shape stable,
+- keep cache ownership in `pagesClient.ts`; do not move author-hydration logic
+  into `PageListPage` or `PageTable`,
 - treat create/duplicate mutation responses as detail-cache-worthy but not
   authoritative list-summary data when `author` is unresolved,
 - invalidate or mark the pages list cache stale so the next list mount fetches a
@@ -101,11 +116,16 @@ if (created) {
 
 ## Testing Requirements
 
+- `tests/vitest/admin/pagesClient.test.ts`
+  - create/duplicate responses that lack resolved `author` do not prime
+    `pagesList` with authorless summaries,
+  - trustworthy cached list state remains intact or is invalidated explicitly,
+  - detail cache and `cacheBus` events stay coherent after the repair.
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - create with open-after-create does not leave `Unknown` in the next list view.
 - `tests/vitest/ui/page-list-cache-behavior.test.tsx`
-  - mount refresh semantics stay fast when cache is trustworthy and re-fetch when
-    the list cache was invalidated by create/duplicate.
+  - update only if mount refresh semantics change; this suite is not the primary
+    proof for mutation-cache correctness.
 - `tests/vitest/ui/page-table-wave.test.tsx`
   - `author: null` uses neutral fallback copy/tooling that is distinct from the
     stale-cache symptom in both the mobile metadata row and the desktop author
@@ -127,3 +147,5 @@ if (created) {
    state across both mobile and desktop list presentations.
 4. Cached list rendering remains fast, but stale partial mutation payloads stop
    being treated as authoritative list state.
+5. `pagesClient.ts` remains the single owner of mutation-driven list/detail
+   cache writes for this repair.

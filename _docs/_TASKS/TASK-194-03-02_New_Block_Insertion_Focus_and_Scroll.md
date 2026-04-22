@@ -25,6 +25,12 @@ Current owner seams:
   - rows are renderable targets but do not currently expose a stable scroll/focus
     hook for the editor.
 
+Testing note:
+
+- the current `tests/vitest/ui/page-editor-shell-wave.test.tsx` globally mocks
+  `BlockList`, so it cannot be the only proof for real DOM target lookup,
+  `scrollIntoView`, or transient highlight rendering.
+
 ## Sub-Tasks
 
 No child task files.
@@ -35,9 +41,15 @@ No child task files.
 - `core/admin/ui/pages/PageEditor.tsx:963-974`
 - `core/admin/ui/pages/builder/BlockList.tsx:165-217`
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx:837-913`
-- `tests/vitest/ui/page-editor-shell-wave.test.tsx:1045-1099`
+  - only if one scenario is changed to use a real `BlockList` path.
 - `tests/vitest/pageBuilder/blockList.test.tsx` if new data attributes or focus
   targets are introduced
+
+## New Files to Create
+
+- `tests/vitest/ui/page-editor-insert-scroll.test.tsx`
+  - add this focused suite if the existing shell-wave file stays globally mocked
+    for `BlockList`.
 
 ## Implementation Direction
 
@@ -49,6 +61,10 @@ No child task files.
   or its main select button.
 - Add a short-lived highlight state/class for the inserted block so the user
   gets the same visual landing cue even on long canvases.
+- Keep responsibilities explicit:
+  - `PageEditor.tsx` owns post-insert selection and scheduling the scroll step,
+  - `BlockList.tsx` owns the stable DOM target plus highlight rendering,
+  - do not introduce a second standalone scroll coordinator just for this leaf.
 
 ## Implementation Sketch
 
@@ -71,9 +87,12 @@ queueMicrotask(() => {
 
 ## Testing Requirements
 
-- `tests/vitest/ui/page-editor-shell-wave.test.tsx`
-  - after add/insert, the selected block id changes to the new block and the
-    scroll/focus hook fires,
+- one unmocked Pages editor suite (`tests/vitest/ui/page-editor-insert-scroll.test.tsx`
+  or an equivalent unmocked branch in `tests/vitest/ui/page-editor-shell-wave.test.tsx`)
+  must prove:
+  - after add/insert, the selected block id changes to the new block,
+  - the editor finds the real `BlockList` DOM target and calls
+    `scrollIntoView`,
   - the temporary highlight state is applied and then clears.
 - `tests/vitest/pageBuilder/blockList.test.tsx`
   - row markers/focus targets exist for selected blocks if new attributes are
@@ -91,3 +110,4 @@ queueMicrotask(() => {
 2. The inserted block is visually highlighted for a short, deterministic window.
 3. The inserted block is still selected as the details target.
 4. No block order or data semantics change.
+5. The shipped proof uses an unmocked `PageEditor -> BlockList` path.

@@ -72,6 +72,9 @@ Out of scope:
   - actionable preview failure state,
   - explicit runtime-preview dialog description on the real `Dialog` wrapper,
   - post-insert scroll/focus/highlight behavior,
+  - at least one unmocked `PageEditor -> BlockList` proof for the
+    scroll/highlight contract; mocked shell suites can cover orchestration but
+    are not sufficient as the sole evidence,
   - no regression to existing preview/save/publish settings tests.
 - Bun only if a leaf touches preview URL resolution logic on the server.
 
