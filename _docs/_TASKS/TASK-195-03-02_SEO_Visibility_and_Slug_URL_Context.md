@@ -32,11 +32,14 @@ Owner boundary:
 
 - `DocumentInspector` owns the visible SEO summary and slug field presentation
   only; it should stay a props-driven presenter.
-- `PostsCreateDrawer` owns the create-flow slug input surface and should consume
-  the same derived URL context instead of inventing a second routing heuristic.
+- `PostsCreateDrawer` owns the create-flow slug input presentation only; it
+  should not become a settings-fetch owner.
+- `PostsListPage` owns the create-flow orchestration and should derive/pass the
+  display-only slug URL context into `PostsCreateDrawer` on the existing list
+  path.
 - `PostBlockEditorShell` owns reading existing admin settings data, deriving the
   display URL context from existing contracts, and threading that context into
-  the editor inspector props or a shared helper consumed by the create flow.
+  the editor inspector props.
 - `PostDetailsSidebar` remains a pass-through seam for document props; it should
   not start fetching settings on its own.
 - `siteSettingsClient.getSiteSettings()` is the existing admin read owner for
@@ -59,9 +62,12 @@ No child task files.
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
   - load/reuse the current settings read path and pass a display-only slug URL
     context into the details inspector props.
+- `core/admin/ui/posts/PostsListPage.tsx`
+  - load/reuse the same display-only slug URL context helper/path for the
+    create flow and pass it into the drawer props.
 - `core/admin/ui/posts/PostsCreateDrawer.tsx`
-  - reuse the same display-only slug URL context helper/path for the create
-    flow instead of leaving the slug field raw.
+  - render the passed display-only slug URL context instead of staying a raw
+    slug-only input.
 - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx`
   only if the document prop surface needs to widen for slug URL context
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:168-255`
@@ -81,8 +87,9 @@ No child task files.
 - Keep slug persistence ownership where it already lives; this leaf changes only
   the display context around the existing raw slug value.
 - Keep create-flow and edit-flow URL context derived from one existing helper or
-  shell-owned path; do not duplicate route guessing between `PostsCreateDrawer`
-  and `DocumentInspector`.
+  orchestrator-owned path; `PostsListPage` should feed the create drawer and
+  `PostBlockEditorShell` should feed the editor inspector, without drawer-local
+  fetches or duplicated route guessing.
 - If route-prefix derivation needs reuse, extract one Bun-free helper from the
   current settings/runtime consumers and call it from the shell path instead of
   duplicating route guessing logic in the inspector.

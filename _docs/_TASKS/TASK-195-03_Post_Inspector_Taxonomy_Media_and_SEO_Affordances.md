@@ -32,9 +32,10 @@ raw IDs and collapsed technical drawers.
 - Show slug editing with explicit runtime URL context in the existing editor and
   create-drawer flows while preserving the stored slug contract.
 - Keep all of the above on existing owner seams: `DocumentInspector` for the UI,
-  `taxonomyClient` and `MediaPicker` for lookup/picker reuse, `PostsCreateDrawer`
-  for the create-flow slug surface, and `siteSettingsClient` plus the current
-  posts runtime route contract for URL context.
+  `taxonomyClient` and `MediaPicker` for lookup/picker reuse, `PostsListPage`
+  plus `PostsCreateDrawer` for the create-flow slug surface/orchestration, and
+  `siteSettingsClient` plus the current posts runtime route contract for URL
+  context.
 
 Out of scope:
 
@@ -45,6 +46,7 @@ Out of scope:
 ## Files to Change
 
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx`
+- `core/admin/ui/posts/PostsListPage.tsx`
 - `core/admin/ui/posts/PostsCreateDrawer.tsx`
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
@@ -85,7 +87,8 @@ Out of scope:
   - `tests/vitest/ui/post-document-inspector-wave.test.tsx` for the concrete
     `DocumentInspector` contract that currently renders the raw ID fields.
   - `tests/vitest/ui/page-post-list-wave.test.tsx` for the current
-    `PostsCreateDrawer` contract when the create-flow slug affordance changes.
+    `PostsListPage` + `PostsCreateDrawer` create-flow contract when the slug URL
+    context wiring changes.
 - Bun only if posts metadata route payloads widen.
 
 ## Documentation Updates Required

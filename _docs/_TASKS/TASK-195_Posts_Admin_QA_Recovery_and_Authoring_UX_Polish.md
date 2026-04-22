@@ -138,6 +138,7 @@ Current owner seams in code:
   - `core/server/routes/postsRoutes.ts`
   - `core/services/settings/settingsService.ts`
 - Public URL context and current posts route fallback:
+  - `core/admin/ui/posts/PostsListPage.tsx`
   - `core/admin/ui/posts/PostsCreateDrawer.tsx`
   - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
   - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx`
@@ -172,9 +173,10 @@ Reuse-first rule:
   derive that context once on the existing shell/settings path and pass it
   through current props instead of fetching inside the inspector,
 - keep the create-drawer slug affordance on the existing `PostsCreateDrawer`
-  surface and route it through the same derived public URL context helper used
-  by the editor path; do not invent a second posts-routing source or a
-  create-only URL-guessing branch,
+  surface, but let `PostsListPage` remain the create-flow orchestrator that
+  derives and passes display-only URL context through props; do not invent a
+  second posts-routing source, a drawer-local fetch, or a create-only
+  URL-guessing branch,
 - repair discoverability through the existing storage/layout restore seams
   (`resolveInitialFocusMode`, `resolveInitialLayoutState`,
   `usePostEditorPreferences`, `usePostEditorLayout`) rather than creating a
