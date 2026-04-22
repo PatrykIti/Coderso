@@ -185,7 +185,7 @@ export const menuPolicy: AssistantResourcePolicy = surfacePolicy({
     delete: gatedAction("delete"),
   },
   destructive: exactDestructivePolicy,
-  coverageState: "live-execute",
+  coverageState: "live-read-only",
   task: "TASK-184-08",
   notes: "Menu summaries are read-only; menu item inspect/update/delete live matrix covers executable item actions.",
 });
@@ -209,7 +209,7 @@ export const menuItemPolicy: AssistantResourcePolicy = surfacePolicy({
     "link menu",
     "link z menu",
   ],
-  routes: ["/admin/menus"],
+  routes: ["/admin/menus/:id"],
   operations: ["inspect", "find", "create", "update", "delete"],
   readPermissions: ["menus:read"],
   executePermissions: ["menus:write"],
@@ -245,7 +245,7 @@ export const menuItemPolicy: AssistantResourcePolicy = surfacePolicy({
   destructive: exactDestructivePolicy,
   coverageState: "live-execute",
   task: "TASK-184-08",
-  notes: "Menu item inspect/update/delete live matrix.",
+  notes: "Route-selected menu item inspect/update/delete live matrix.",
 });
 
 export const adminSearchPolicy: AssistantResourcePolicy = surfacePolicy({
