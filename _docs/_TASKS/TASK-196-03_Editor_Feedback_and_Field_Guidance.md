@@ -74,9 +74,13 @@ Reuse-first rule:
 - `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
   - visible success/failure feedback after save
   - dirty-state badge remains accurate before and after save
+- `tests/vitest/ui/menu-leaf-components.test.tsx`
+  - create-dialog `Location` helper copy is covered on the real create surface
 - `tests/vitest/ui/menu-item-form.test.tsx`
   - new helper or preview guidance renders for `Icon Name`
-  - `Location` copy stays understandable in both create and editor contexts
+- `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
+  - editor-side `Location` helper copy or contextual guidance is covered on the
+    real editor surface
 - `tests/vitest/admin/adminApp.test.tsx`
   - only if shared toaster mount changes
 

@@ -119,6 +119,7 @@ Target behavior:
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/CMS_SPEC.md`
+- `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria

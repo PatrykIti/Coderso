@@ -133,6 +133,11 @@ Reuse-first rule:
   split; the list owns summary hydration and the editor owns one menu detail,
 - keep deletion confirmation on the existing dialog primitives instead of
   adding a new modal dependency,
+- keep confirmation responsibilities explicit:
+  - `MenuEditorPage.tsx` owns which item is pending deletion and which
+    descendants are affected,
+  - the confirmation dialog surface owns only rendering and confirm/cancel UI,
+  - row and drawer surfaces stay trigger-only,
 - treat `/menus/:id` as the canonical selected-menu route because
   `useAssistantAdminContext.ts` already recognizes that shape,
 - keep `Location` as the current free-text contract unless a later task
@@ -173,12 +178,13 @@ Reuse-first rule:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-refresh-policy.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-item-form.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/admin/adminApp.test.tsx`
+  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-refresh-policy.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-item-form.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/admin/adminApp.test.tsx`
   - keep list-vs-editor routing proof in `tests/vitest/admin/adminApp.test.tsx`
     or an equivalent route-owner suite; do not treat pure component renders as
     sufficient evidence that `/menus` and `/menus/:id` resolve correctly
-  - keep at least one real `Dialog` wrapper path in Menus tests so the delete
-    confirmation does not regress behind mocked shells
+  - keep `tests/vitest/ui/menu-item-delete-dialog.test.tsx` as the mandatory
+    real `Dialog` wrapper proof for the delete flow; mocked leaf suites are
+    wiring-only evidence
   - keep at least one real `MenuItemRow` / `MenuTree` path so hierarchy and
     drag affordance regressions are proven on the actual DOM, not only mocked
     leaf-component wiring
@@ -195,6 +201,7 @@ Reuse-first rule:
 - `_docs/CMS_SPEC.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry when TASK-196 closes

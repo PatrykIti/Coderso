@@ -35,6 +35,7 @@ No child task files.
 - `tests/vitest/ui/menu-tree.test.tsx`
 - `tests/vitest/ui/menu-item-row.test.tsx`
 - `tests/vitest/ui/menu-item-form.test.tsx`
+- `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
 - `tests/vitest/ui/menu-leaf-components.test.tsx`
 - `tests/vitest/admin/menusClient.test.ts`
 - `tests/vitest/admin/adminApp.test.tsx`
@@ -46,6 +47,7 @@ No child task files.
 - `_docs/CMS_SPEC.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry for TASK-196
@@ -67,12 +69,16 @@ No child task files.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-refresh-policy.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-item-form.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/admin/adminApp.test.tsx`
-  - keep at least one real `Dialog` path in scope for delete confirmation
+  - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-refresh-policy.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-item-form.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/admin/adminApp.test.tsx`
+  - keep `tests/vitest/ui/menu-item-delete-dialog.test.tsx` as the mandatory
+    real `Dialog` path for delete confirmation
   - keep at least one real tree/row path in scope for hierarchy and affordance
     regressions
   - route split closure notes must cite `adminApp` or equivalent route-owner
     proof, not only isolated component renders
+  - closure notes must cite both `tests/vitest/ui/menu-leaf-components.test.tsx`
+    and `tests/vitest/ui/menu-editor-shell-wave.test.tsx` for `Location`
+    guidance, because create-surface and editor-surface owners differ
 - Bun only if server/service code changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts`
 - Perf gate only if route-prefetch semantics changed:
@@ -87,6 +93,7 @@ No child task files.
 - `_docs/CMS_SPEC.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry

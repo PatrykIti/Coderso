@@ -31,11 +31,17 @@ No child task files.
 - `core/admin/ui/menus/MenuEditorPage.tsx`
 - `core/admin/ui/menus/MenuItemForm.tsx`
 - `tests/vitest/ui/menu-item-form.test.tsx`
-- `tests/vitest/ui/menu-leaf-components.test.tsx` only if the drawer wiring
-  remains the best owner for field-help assertions
+- `tests/vitest/ui/menu-leaf-components.test.tsx`
+- `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
 
 ## Implementation Direction
 
+- Responsibility split:
+  - `MenuCreateDialog.tsx` owns create-surface `Location` explanation,
+  - `MenuEditorPage.tsx` owns editor-surface `Location` explanation,
+  - `MenuItemForm.tsx` owns `Icon Name` guidance and any lightweight preview or
+    validation hint,
+  - no surface should fork the saved `location` or `icon` contract.
 - `Location`:
   - explain it in end-user terms,
   - mention realistic examples such as `primary` or `footer`,
@@ -59,16 +65,19 @@ No child task files.
 
 ## Testing Requirements
 
+- `tests/vitest/ui/menu-leaf-components.test.tsx`
+  - create-dialog `Location` helper copy is covered on the real create surface
+- `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
+  - editor-side `Location` guidance is covered where the current editor field
+    actually renders
 - `tests/vitest/ui/menu-item-form.test.tsx`
   - helper copy for `Icon Name` is visible and meaningful
   - any icon preview or invalid-token hint is covered if added
-- `tests/vitest/ui/menu-leaf-components.test.tsx`
-  - only if the real drawer path is needed to prove the updated guidance renders
-    in context
 
 ## Documentation Updates Required
 
 - `_docs/CMS_SPEC.md`
+- `docs/screens/menus.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
@@ -76,3 +85,5 @@ No child task files.
 1. `Location` tells the user what the value is for and gives concrete examples.
 2. `Icon Name` no longer feels like an unexplained raw token box.
 3. The stored menu contract remains string-based.
+4. Create-surface and editor-surface `Location` guidance are both covered by
+   named owner tests.

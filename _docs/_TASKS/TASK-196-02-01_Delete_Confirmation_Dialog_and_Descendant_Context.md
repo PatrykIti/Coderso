@@ -29,14 +29,19 @@ No child task files.
 - `core/admin/ui/menus/MenuItemDrawer.tsx`
 - `core/admin/ui/menus/MenuTree.tsx` only if the row action flow needs a small
   trigger change
-- optional new `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
+- new `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
+- `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
 - `tests/vitest/ui/menu-leaf-components.test.tsx`
 - `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
-- `tests/vitest/ui/dialogs.test.tsx` only if a real shared dialog path is the
-  cleanest regression owner
 
 ## Implementation Direction
 
+- Responsibility split:
+  - `MenuEditorPage.tsx` owns which item is pending delete plus descendant
+    metadata,
+  - `MenuItemDeleteDialog.tsx` owns only UI rendering and confirm/cancel
+    actions,
+  - row and drawer stay trigger-only.
 - Use the current tree state to calculate descendant count.
 - Dialog copy should include:
   - item label,
@@ -59,16 +64,18 @@ No child task files.
 
 ## Testing Requirements
 
+- `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
+  - mandatory real-wrapper owner for the dialog surface
+  - dialog copy contains label, descendant count, and irreversible wording
+  - confirm and cancel semantics are proven without mocking
+    `@/components/ui/dialog`
 - `tests/vitest/ui/menu-leaf-components.test.tsx`
   - both delete entrypoints open the same dialog
-  - dialog copy contains label and descendant count
   - cancel keeps the item tree intact
   - confirm removes the item and descendants from local draft state
 - `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
   - at least one real editor path proves the dialog integrates with the actual
     editor shell, not only leaf mocks
-- `tests/vitest/ui/dialogs.test.tsx`
-  - only if needed to keep a real `Dialog` wrapper path in scope
 
 ## Documentation Updates Required
 
@@ -79,3 +86,5 @@ No child task files.
 1. Native browser confirm is gone from the Menus editor delete flow.
 2. The dialog names the affected item and descendant impact before confirmation.
 3. Row-level and drawer-level delete behave consistently.
+4. The dialog surface has one explicit owner and one explicit real-wrapper test
+   owner.

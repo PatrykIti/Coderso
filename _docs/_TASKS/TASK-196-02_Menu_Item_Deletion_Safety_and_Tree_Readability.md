@@ -31,7 +31,8 @@ IA split:
 - `core/admin/ui/menus/MenuTree.tsx`
 - `core/admin/ui/menus/MenuItemRow.tsx`
 - `core/admin/ui/menus/MenuItemDrawer.tsx`
-- optional new `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
+- new `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
+- `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
 - `tests/vitest/ui/menu-tree.test.tsx`
 - `tests/vitest/ui/menu-item-row.test.tsx`
 - `tests/vitest/ui/menu-leaf-components.test.tsx`
@@ -47,10 +48,19 @@ Current owner seams:
   - `MenuItemRow.tsx`
 - drawer-level delete trigger:
   - `MenuItemDrawer.tsx`
+- delete confirmation rendering:
+  - `MenuItemDeleteDialog.tsx`
 
 The existing tree already carries `parentId`, `orderIndex`, and nested
 `children[]` structure. This task should make that structure visible and safe,
 not invent a second hierarchy model.
+
+Responsibility split:
+
+- `MenuEditorPage.tsx` owns deletion candidate state and descendant resolution.
+- `MenuItemDeleteDialog.tsx` owns the shared confirmation copy and real dialog
+  wrapper contract.
+- `MenuItemRow.tsx` and `MenuItemDrawer.tsx` remain trigger-only entrypoints.
 
 ## Implementation Direction
 
@@ -78,6 +88,10 @@ not invent a second hierarchy model.
 
 ## Testing Requirements
 
+- `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
+  - real `Dialog` wrapper contract for the Menus delete flow
+  - confirm/cancel actions, danger copy, and descendant context render without
+    mocking `@/components/ui/dialog`
 - `tests/vitest/ui/menu-tree.test.tsx`
   - prove nested structure is rendered in a visually distinct way
   - prove drag target hints remain visible when moving items
@@ -97,3 +111,5 @@ not invent a second hierarchy model.
 1. Deleting a menu item is confirmed in the product UI, not by the browser.
 2. Nested relationships are visible in the tree, not only stored in data.
 3. Drag, edit, and delete controls are visually and semantically clearer.
+4. Delete dialog rendering has one named owner instead of being reimplemented in
+   row and drawer flows.
