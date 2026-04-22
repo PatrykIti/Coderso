@@ -53,11 +53,17 @@ Deferred full plan cutover:
 - assembled composer plans must pass `normalizeAssistantActionPlan`,
 - dry-run parity and no-duplicate checks must be green,
 - fallback to legacy blueprint builder remains available for a bounded period,
-- no provider-generated action payloads are introduced.
+- no provider-generated action payloads are introduced,
+- the existing `input.context.siteKit` short-circuit in `actionPlannerService.ts`
+  remains authoritative for the explicit site-kit flow unless a later dedicated
+  task intentionally converges site-kit and blueprint-composer routing.
 
 After cutover:
-- composer is the primary blueprint setup path,
-- legacy direct preset routing is removed or reduced to wrapper compatibility.
+- composer is the primary setup path for current blueprint-family packs,
+- the explicit site-kit entrypoint remains separate and owned by the current
+  site-kit planner until a later convergence task says otherwise,
+- legacy direct preset routing for blueprint-family packs is removed or reduced
+  to wrapper compatibility.
 
 ## Files to Change
 

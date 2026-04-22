@@ -65,6 +65,10 @@ means:
 
 - generic CMS/admin operations continue to use `assistantOperationPolicy`,
 - current executable blueprint packs remain the starting point,
+- existing `site-kit` planning through `buildGuidedSiteBuilderPlanResult(...)`
+  / `site-kit.recommend` / `site-kit.install` remains a separate explicit
+  entrypoint owned by the current site-kit flow unless a later task
+  intentionally converges those paths,
 - current public content detail runtime is reused and extended where it matches
   the detail-page business need,
 - detail-page domain types/schema/normalizer/runtime/admin API stay under one
@@ -233,6 +237,10 @@ type BlueprintCompositionPlan = {
    - Detail-page domain contract stays owned by content services; blueprint
      manifests/composers may reference `detail-page` resources but must not
      define a second domain schema/normalizer for the same resource.
+   - Existing `site-kit` routing in `actionPlannerService.ts` remains the owner
+     of explicit site-kit setup. TASK-190 generalizes current blueprint-family
+     packs; it does not silently replace the site-kit short-circuit with a
+     second overlapping setup flow.
    - Runtime route ownership stays with `site.contentRoutes` plus
      `detailPageId`; detail-page documents do not become a second route registry.
    - Generic CMS/admin mutation planning remains owned by operation policy and

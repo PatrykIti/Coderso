@@ -45,55 +45,53 @@ kartami, stronami szczegolowymi, formularzem zapytania, realizacjami,
 poradnikiem, menu i wygodna edycja w adminie.
 ```
 
-The expected resource graph must include:
+The Mabudo-like contract must be staged by implementation wave so fixtures do
+not demand end-state resources before the owning seams exist.
 
-- standard pages:
-  - home,
-  - about,
-  - contact,
-  - house-project listing page,
-  - realization/case-study listing page when selected,
-- posts/editorial hub when the prompt asks for poradnik/blog guidance,
-- content types:
-  - house projects,
-  - project categories or collections,
-  - realizations/case studies when selected,
-- sample entries for generated content types when fixture mode asks for seeded
-  examples,
-- relations:
-  - project -> category/collection,
-  - project -> related projects,
-  - project -> realization/case study when selected,
-- custom screens:
-  - admin screen for house project records,
-  - admin screen for related case studies when selected,
-- listings:
-  - published house-project query,
-  - card template for project cards,
-  - filters/facets for area, rooms, price/status/style/category where present,
-- detail pages:
+Required fixture tiers:
+
+- Tier A: current pack parity
+  - house-project content type,
+  - dedicated house-project custom screen,
+  - published house-project listing query,
+  - card/listing template,
+  - public house-project landing page,
+  - content route with list/detail patterns,
+  - no duplicate resources on rerun.
+- Tier B: adjunct composition waves
+  - inquiry/contact forms only when the corresponding adjunct/page-composition
+    leaves are in scope,
+  - editorial hub / proof / case-study resources only when the corresponding
+    adjunct capability and page/admin leaves are enabled,
+  - menus and SEO expectations only when the corresponding action/composition
+    leaves are enabled for that fixture tier,
+  - supporting public pages such as `about` / `contact` only when a specific
+    page-composition leaf adds them through existing page ownership, not as a
+    blanket expectation for every early Mabudo fixture.
+- Tier C: detail-page wave
   - canonical `detail_page_documents` entry linked from the
     `/projekty-domow/:slug` content route through `detailPageId`,
   - bindings for title, hero image, gallery, area, rooms, floors, price/status,
     CTA/form context, related projects,
-- forms:
-  - project inquiry form using existing public form hardening,
-  - contact form if contact page is generated,
-- menus:
-  - main menu with generated public pages,
-  - footer menu with generated public pages,
-- widget templates or reusable sections:
-  - hero,
-  - CTA,
-  - FAQ/proof/testimonial sections when selected,
-- SEO/routes:
-  - SEO docs or patterns for generated pages and detail pages,
-  - content routes with list and detail route patterns,
-- collection workspace:
+  - detail-page preview/runtime assertions only after the detail-page owner
+    leaves land.
+- Tier D: collection workspace wave
   - one workspace linking canonical resources plus linked secondary resources
     for model, entries, list page, detail template, filters/cards, forms,
     admin screen, SEO, routes, and preview,
-- no duplicate resources on rerun.
+  - workspace assertions only after the bounded read-model/admin-context leaves
+    land.
+
+Relation expectations must also stay owner-aligned:
+
+- relation behavior is asserted as content-schema field metadata on generated
+  content types when the relevant schema-merge leaf is in scope,
+- do not model or assert `relation` as a standalone blueprint resource node.
+
+Optional seeded-example coverage:
+
+- sample entries for generated content types are asserted only in fixture modes
+  that explicitly exercise seeding/draft-generation leaves.
 
 The fixture should assert resource keys and action types, not brittle generated
 copy. Text copy may be asserted only for stable product labels.

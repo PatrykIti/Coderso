@@ -66,7 +66,6 @@ Resource/surface kinds must include first-class detail templates:
 type BlueprintResourceKind =
   | "content-type"
   | "entry"
-  | "relation"
   | "custom-screen"
   | "listing-query"
   | "listing-template"
@@ -81,6 +80,16 @@ type BlueprintResourceKind =
 
 UI labels may call this resource "Detail Template", but the technical
 resource/action kind is `detail-page`.
+
+Content-model relations stay owned by the existing schema/field contract in the
+content domain. If a capability contributes relation behavior, it does so
+through content-schema field metadata handled by the schema merge/validation
+leaves, not as a standalone `BlueprintResourceKind`.
+
+If the registry carries `site-kit` metadata, it describes the existing explicit
+site-kit entrypoint owned by the current site-builder flow. It does not imply
+that blueprint composition can silently subsume or blend the site-kit path as a
+parallel setup router.
 
 ## Acceptance Criteria
 

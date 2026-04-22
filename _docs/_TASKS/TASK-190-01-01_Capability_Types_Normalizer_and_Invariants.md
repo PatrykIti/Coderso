@@ -55,6 +55,12 @@ Required invariants:
   templates.
 - UI can label `detail-page` as "Detail Template", but manifests use the
   technical kind consistently.
+- relation semantics stay under content-schema field definitions and content
+  validation; manifests may express relation-capable schema contributions, but
+  they do not introduce a standalone `relation` resource family.
+- `site-kit` manifest metadata, if present, points at the existing explicit
+  site-kit entrypoint and must not be treated as proof that the composer can
+  silently replace or merge that flow.
 - `detail-page` in manifests is capability metadata only; the actual detail page
   document types/schema/normalizer remain owned by the content domain rather
   than a second schema in `assistant/blueprints`.
@@ -112,6 +118,8 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
 - Unknown action type rejects.
 - Unknown resource kind rejects.
 - `detail-page` resource kind accepts only detail page document contributions.
+- relation-capable schema metadata is accepted only inside schema/field
+  contributions; a standalone `relation` resource entry rejects.
 - capability metadata for `detail-page` does not redefine the content-domain
   detail page schema/normalizer.
 - current-pack detail-page metadata without a matching gated/latent declaration
