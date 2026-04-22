@@ -82,6 +82,10 @@ Rules:
 - The default implementation path extends the existing `preview_tokens` table
   with a nullable JSONB `context` column.
 - `previewService.ts` owns strict write/read validation for `context`.
+- `previewUrls.ts` remains the shared preview path/base-url owner for every
+  preview target type. Adding `type=detail-page` or `detailPageId` extends that
+  existing helper in place; detail-page routes/services must not synthesize
+  preview URLs through route-local builders.
 - `detail-page` preview uses `preview_tokens.context.sampleEntryId`; runtime
   must not trust raw `sampleEntryId` query params.
 - This leaf must not introduce a second ad-hoc in-memory preview store.
@@ -172,6 +176,23 @@ Invalidation triggers:
 - detail page document update,
 - form referenced by detail page update,
 - listing/query/template changes used by related sections.
+
+Owner split:
+
+- `core/site/cache/siteCache.ts` remains the shared owner of normalized public
+  path invalidation helpers such as `invalidateSiteCachePath(...)` and
+  `invalidateContentEntryCache(...)`.
+- Mutation owners reuse those shared helpers when they change public detail
+  output:
+  - current entry/post/page owner seams for entry-like publish/update/delete
+    behavior,
+  - current settings/content-route owner seam for route mutations,
+  - current and future detail-page document/admin owner seams for detail-page
+    save/publish/unpublish/delete,
+  - current form/listing query/listing template owner seams when their persisted
+    data affects rendered detail-page sections.
+- Detail-page preview/admin routes must reuse those owner-hook seams instead of
+  introducing a second route-local invalidation flow or cache registry.
 
 Pseudocode:
 

@@ -58,7 +58,10 @@ type AssistantActiveSurfaceContext =
 
 type AssistantActionContext = {
   ...
-  collectionWorkspace?: AssistantCollectionWorkspaceSummary | null;
+  collectionWorkspace?: {
+    contentTypeId: string;
+    activeDetailPageId?: string | null;
+  } | null;
 };
 ```
 
@@ -67,9 +70,18 @@ Rules:
 - workspace route parsing must continue to resolve to
   `area: "coderso"` + `codersoModule: "engine"`,
 - `AssistantCollectionWorkspaceSummary` remains owned by the server read model
-  from `TASK-190-06-03-01`; this leaf only transports and rehydrates that
-  bounded summary for assistant context, it does not redefine it in the
-  browser,
+  from `TASK-190-06-03-01`; the browser sends only the bounded identity hint
+  above, and this leaf rehydrates the bounded summary server-side for assistant
+  context instead of redefining it in the browser,
+- `assistantRoutes.ts` plus the server-side workspace loader own permission
+  parity for that rehydration. They must reuse the same underlying read guard
+  contract as the collection-workspace endpoint/read model from
+  `TASK-190-06-03-01` instead of treating generic assistant `content:read` as
+  sufficient for every linked resource the workspace summary may expose,
+- if the actor cannot satisfy that workspace read contract, the route drops the
+  workspace package from assistant context instead of trusting browser-supplied
+  summary payloads, broadening generic assistant permissions, or creating a
+  second browser-local transport,
 - selected resource stays the collection/content-type shell resource for the
   workspace root; do not repurpose `/admin/coderso/engine/:contentTypeId/collection`
   to `selectedResource.kind = "detail-page"`,
@@ -92,6 +104,9 @@ Rules:
 - workspace-root follow-up uses the same server-owned collection workspace read
   model from `TASK-190-06-03-01`; the browser must not become the source of
   truth for canonical linked resources,
+- `adminContextService.ts` and `providerPlanningContext.ts` consume only the
+  server-hydrated bounded workspace summary; raw browser
+  `collectionWorkspace` payloads must not cross the provider boundary,
 - assistant route/provider packaging extends the current bounded context package
   with `collectionWorkspace` only after server-side rehydration/validation,
 - `assistantRoutes.ts` keeps explicit surface permission branches. Read planning
@@ -146,6 +161,12 @@ Rules:
   stale browser state.
 - workspace-root follow-up context is rehydrated server-side from the bounded
   collection workspace endpoint/package, not from browser-only state.
+- browser-supplied `collectionWorkspace` summary payloads are ignored/replaced
+  by the server-owned bounded workspace summary derived from
+  `TASK-190-06-03-01`.
+- missing workspace-read permission parity clears/drops the workspace follow-up
+  package instead of broadening generic assistant-route access or trusting
+  browser-owned context.
 - existing page/widget-template/custom-screen assistant context remains green.
 - no parallel browser-local transport is added for collection workspace
   follow-up.
