@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 65 tasks
+- **To Do:** 87 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1004 tasks
 
@@ -55,6 +55,28 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-201-05-01 | Multi Select Bulk Delete and Download | Medium | Medium | Technical leaf: visible-scope selection, confirmed bulk delete, and safe download behavior |
 | TASK-201-05-02 | Upload Zone Separation and Open Details Preference Placement | Medium | Medium | Technical leaf: separate upload/grid surfaces and preserve `media.openAfterUpload` ownership |
 | TASK-201-06 | QA Docs and Closure | Medium | Medium | Final validation, source Playwright report closure, docs, changelog, and board sync |
+| TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
+| TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Business area: search/sort/filter list, duplicate-name context, relation labels, and screen UUID hygiene |
+| TASK-202-01-01 | Content Type List Search, Sort, and Status Filters | High | Medium | Technical leaf: list search, deterministic sort, and real-status filter gating |
+| TASK-202-01-02 | Duplicate Name Visibility and Relation Target Labels | High | Medium | Technical leaf: duplicate badges plus relation options with slug context |
+| TASK-202-01-03 | Screen UUID Name Hygiene and Generator Guard | Medium | Medium | Technical leaf: trace and guard the generator that creates unreadable Screen UUID types |
+| TASK-202-02 | Create, Duplicate, and Row Action Flows | High | Large | Business area: create validation, create-to-editor navigation, duplicate flow, and lifecycle actions |
+| TASK-202-02-01 | Create Drawer Duplicate Validation and Create-to-Editor Flow | High | Medium | Technical leaf: duplicate create guard, success feedback, and editor navigation |
+| TASK-202-02-02 | Duplicate Content Type Action and Clone Contract | Medium | Medium | Technical leaf: schema-only duplicate action with unique name/slug and cache updates |
+| TASK-202-02-03 | Row Action Menu and Editor Lifecycle Entry Points | Medium | Small | Technical leaf: accessible Edit/Duplicate/Delete entry points without unsafe direct delete |
+| TASK-202-03 | Destructive Change Safety for Content Types and Fields | High | Large | Business area: guarded content type delete, confirmation UI, and field remove recovery |
+| TASK-202-03-01 | Content Type Delete Service Guard, Route Mapping, and Cache Invalidation | High | Medium | Technical leaf: zero-entry server guard, mapped route errors, and cache invalidation |
+| TASK-202-03-02 | Delete Type Danger Zone and List Confirmation UI | High | Medium | Technical leaf: editor danger zone plus list delete dialog with exact target context |
+| TASK-202-03-03 | Field Remove Confirmation, Undo, and Schema Selection Recovery | High | Medium | Technical leaf: confirm/undo local field removal and stable selection fallback |
+| TASK-202-04 | Field Authoring and Schema Metadata Controls | High | Large | Business area: label/key generation, readable labels, select builder, and number constraints |
+| TASK-202-04-01 | Label to Field Name Autogeneration and Manual Lock | High | Medium | Technical leaf: label-derived kebab key until manual key edit |
+| TASK-202-04-02 | Human Readable Label Backfill and Display Normalization | Medium | Small | Technical leaf: readable fallback labels without destructive schema rewrites |
+| TASK-202-04-03 | Select Options Builder and Multi Select Schema Contract | High | Medium | Technical leaf: option rows, label/value values, multi-select, and schema round-trip |
+| TASK-202-04-04 | Number Field Constraints, Format, and Step Schema Mapping | Medium | Medium | Technical leaf: min/max/integer/decimal/step controls and validation |
+| TASK-202-05 | Save, Publish, Status, and QA Closure | High | Large | Business area: real content type status, save/publish feedback, and source report closure |
+| TASK-202-05-01 | Content Type Draft Published Status Model and Migration | High | Medium | Technical leaf: persist real draft/published status with migration artifacts |
+| TASK-202-05-02 | Save Draft, Publish Feedback, Badge, and Shared Toaster | High | Medium | Technical leaf: truthful save/publish toasts and status badge updates |
+| TASK-202-05-03 | QA Docs, Changelog, and Playwright Source Closure | Medium | Medium | Technical leaf: replay SUMMARY-ENGINE and sync docs, changelog, and board |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |

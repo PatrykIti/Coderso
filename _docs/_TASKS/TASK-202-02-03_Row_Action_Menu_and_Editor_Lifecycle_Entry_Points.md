@@ -1,0 +1,62 @@
+# TASK-202-02-03: Row Action Menu and Editor Lifecycle Entry Points
+# FileName: TASK-202-02-03_Row_Action_Menu_and_Editor_Lifecycle_Entry_Points.md
+
+**Priority:** Medium
+**Category:** CMS/Engine + Admin/UI + Accessibility
+**Estimated Effort:** Small
+**Dependencies:** TASK-202-02, TASK-202-03
+**Status:** To Do
+
+---
+
+## Overview
+
+Replace the single `Edit` action from `ContentTypeTable.tsx:104-108` with a
+clear lifecycle action surface for Edit, Duplicate, and Delete. Delete remains
+disabled or confirmation-gated until `TASK-202-03` server safety is ready.
+
+## Sub-Tasks
+
+No child task files.
+
+## Files to Change
+
+- `core/admin/ui/content-types/ContentTypeTable.tsx:104-108`
+- `core/admin/ui/content-types/ContentTypeEditor.tsx:353-382`
+- shared menu/dialog primitives already used by Pages/Posts/Menus where
+  applicable.
+- `tests/vitest/ui/content-type-table.test.tsx`
+- `tests/vitest/ui/content-type-editor.test.tsx`
+
+## Security Contract
+
+- Visibility: internal admin UI only.
+- Auth model: unchanged.
+- RBAC: UI affordances must respect existing write/publish capability if the
+  app exposes permission-aware controls.
+- CSRF: mutations continue through client wrappers.
+- Rate-limit bucket: unchanged.
+- Reject-unknown validation: unchanged.
+- Anti-abuse:
+  - destructive actions are confirmation-gated,
+  - disabled delete must explain why when entries exist or guard data is
+    unavailable,
+  - row menu labels must name the target type.
+
+## Testing Requirements
+
+- Row menu contains accessible Edit, Duplicate, and Delete actions.
+- Delete action is disabled or opens confirmation according to `TASK-202-03`.
+- Editor lifecycle actions mirror list behavior without hand-built hrefs.
+
+## Documentation Updates Required
+
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md` closure mapping.
+- `_docs/_TASKS/README.md`
+
+## Acceptance Criteria
+
+1. Lifecycle actions are discoverable from the list and editor.
+2. Delete cannot be triggered as an unsafe direct action.
+3. Navigation uses shared admin route helpers.
