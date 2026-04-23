@@ -153,3 +153,59 @@ Instrukcja "Drag right to create sub-menus" sugeruje że drag jest jedynym wizua
 - `submenu-no-indent.png` — About Us z Parent: Home, ale brak wcięcia w liście (bug)
 - `about-us-parent-home.png` — panel Edit pokazuje Parent Item: Home (dane poprawne)
 - `menus-final-state.png` — końcowy stan: Main Navigation z Home + Blog
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-23)
+
+Ręczny przebieg po wdrożeniu fixów. Sekcja Menus została **znacznie przeprojektowana** od czasu pierwotnego raportu — teraz to pełny list+detail flow zamiast pojedynczej strony z "Active menu" dropdownem.
+
+### Architektura: redesign zamiast patchu 🏗️
+
+Przed fixem: jedna strona z comboboxem "Active menu" przełączającym między menu.
+Po fixie: lista menusów (tabela) → klik w wiersz → dedykowany edytor pod `/admin/menus/{uuid}`.
+
+Ten redesign **jednym pociągnięciem** eliminuje 2 bugi z oryginalnego raportu (BUG-3: Active menu nie przełącza się; UX-2: "Active menu" niejednoznaczna nazwa) — bo po prostu nie ma już comboboxa "Active menu", jest naturalny wzorzec jak w Pages/Posts.
+
+### Zweryfikowane działające ✓
+
+| ID | Element | Obserwacja na żywo |
+|---|---|---|
+| BUG-1 | Natywny window.confirm() | Usunięty. Teraz klik "Delete Item" otwiera Radix AlertDialog: "Delete menu item? — [item] will be removed from the current draft menu. This action cannot be undone after you save the menu. Only this item will be removed." + Cancel / Delete item. Stylistyka spójna z Admin UI, z kontekstem co się usuwa. |
+| BUG-2 | Sub-menu bez wcięcia | Ustawienie Parent Item na child skutkuje teraz widocznym wcięciem w liście Menu Structure (zmierzone: +24px left offset). Hierarchia widoczna wizualnie. |
+| BUG-3 | "Active menu" dropdown nie przełącza się | Nie ma już "Active menu" dropdowna — cały flow przepisany na list+detail. Problem rozwiązany przez redesign. |
+| BUG-4 | Toast po Save changes | Po "Save changes" aria-live region pokazuje "Menu saved." — widoczny, mierzalny success indicator. (W przeciwieństwie do Pages/Posts gdzie toast pozostaje pusty — tutaj działa!) |
+| UX-1 | Redundantna ikonka edit | Każdy item w liście ma teraz 3 buttony z distinct aria-labels: "Open menu item details for [item]" (click wiersz), "Open details for [item]" (ikona edit), "Delete [item]" (ikona trash). Rozróżnienie jednoznaczne. |
+| UX-2 | Niejednoznaczna nazwa "Active menu" | Wyeliminowane przez redesign. Nawigacja jest teraz "Back to menus" (breadcrumb-style). |
+| UX-3 | Brak drag handle | Draggable items z `cursor-grab` klasą. Instrukcja precyzyjna: "Drag the handle to reorder. Move slightly to the right while dragging to turn an item into a sub-menu." (wcześniej było bardziej ogólne). |
+| UX-5 | Location field bez wyjaśnienia | Pole Location ma teraz opis: "Theme slot identifier such as primary or footer. Use the value your frontend theme expects for navigation placement." + w dialogu Create Menu: inline code examples `primary` / `footer`. Nowy użytkownik wie co wpisać. |
+
+### Zweryfikowane częściowo ⚠
+
+| ID | Element | Obserwacja |
+|---|---|---|
+| UX-4 | Icon Name picker | Opis pola się poprawił: "Optional runtime icon token such as sparkles. Keep the token simple and lowercase; the active menu presenter decides which icon names it can render." — więcej kontekstu. **Ale nadal brak wizualnego pickera ikon / autocomplete / podglądu** — textbox pozostaje wolnym polem. Copy-fix bez UI-fixa. **Kierunek dopracowania UI:** dropdown z wyszukiwarką dostępnych tokenów + live preview małej ikonki obok pola. |
+
+### Nowa obserwacja: Create Menu dialog ma helper ✓ (bonus fix)
+
+Poza oryginalnymi bugami — w dialogu Create Menu dodano walidację "Menu name is required." (analogicznie do Pages UX-3). Przycisk Create Menu disabled gdy puste — z widoczną przyczyną. Ten sam wzorzec rozpięty spójnie przez Pages → Posts → Menus.
+
+### UX feel — obserwacje po całym flow ✨
+
+**Co jest super teraz:**
+- **Toast po Save changes DZIAŁA** ("Menu saved.") — Menus jako jedyna z 3 sekcji poprawionych ma widoczny success feedback. To co nie zadziałało w Pages/Posts (mimo vitest proof) — tutaj zadziałało w real-user feel.
+- Delete AlertDialog z pełnym kontekstem (nazwa, warning, zakres) — najlepszy delete UX w całym Admin UI. Wzorzec który powinien trafić do Forms/Listings/Custom Screens/Commerce (które nadal mają silent delete).
+- Redesign z "Active menu" dropdown na list+detail — zamiast patchować bug, usunięto źródło. Przykład podejścia "rozszerzamy istniejące kontrakty" (Pages/Posts pattern) zamiast tworzenia równoległego flow.
+- Ujednolicenie aria-labels ("Open menu item details for X", "Delete X") — każdy button "wie kim jest".
+
+**Co nadal zostawia niedosyt:**
+- Icon Name — opis lepszy, ale brak wizualnego wsparcia. Użytkownik nadal musi znać token (`sparkles`, `bookmark`, …). Dla content managera to UX martwy.
+- Drag handle istnieje (`cursor-grab`), ale brak dedicated drag handle icon (six-dot grip ⋮⋮) — trzeba najechać żeby zobaczyć kursor, sama wizualna sugestia drag'alności jest subtelna.
+
+### Screeny
+
+- `retest-fix/menus-list.png` — nowa lista menusów (tabela z kolumnami)
+- `retest-fix/menu-editor.png` — dedykowany edytor pod URL/uuid
+- `retest-fix/submenu-parent.png` — drugi item z parent = pierwszy
+- `retest-fix/submenu-applied.png` — sub-menu wcięte (24px offset)
+- `retest-fix/delete-confirm.png` — Radix AlertDialog "Delete menu item?" z warning i kontekstem

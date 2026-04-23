@@ -234,6 +234,59 @@ serwerze w tym samym kroku zamkniecia taska.
 
 ---
 
+## Manualna re-weryfikacja Playwright (2026-04-23)
+
+Ręczny przebieg E2E przez wszystkie bugi/UX po wdrożeniu TASK-194. Gdzie status vitest vs. Playwright różni się — to poniżej oznaczam.
+
+### Zweryfikowane działające ✓
+
+| ID | Element | Obserwacja na żywo |
+|---|---|---|
+| BUG-1 | Bulk select | Select all pages → "Selected 2" toolbar z "Bulk actions" dropdown (Publish/Unpublish/Delete) + "Clear selection". Działa idealnie. |
+| BUG-2 | Autor nowych stron | Nowa strona "Retest Page" → autor "Patryk" od razu widoczny na liście. Brak "N Unknown". |
+| BUG-3 | "Loading template options..." | W Page Settings drawer → Template dropdown pokazuje "Landing", brak wiszącego tekstu "Loading...". Stan loading rozwiązany. |
+| BUG-4 | Widget toolbar aria-label | Hero widget ma: "Move Hero up" (disabled gdy jeden widget), "Move Hero down", "Duplicate Hero", "Delete Hero" — wszystkie z aria-label. Screen reader-friendly. |
+| BUG-5 | Radix `aria-describedby` warning | 0 warnings w konsoli po otwarciu dialogów: Create Page, Page Settings, Page History, Runtime Preview. **Całkowicie rozwiązane dla Pages.** |
+| UX-3 | Create Page disabled helper | Pole Title → helper "Title is required before you can create the page." Pod disabled button: "Add a page title to generate a slug and enable Create Page." Po wpisaniu → "The slug is generated from the title until you edit it." Świetna progresja. |
+| UX-4 | Widget picker kategoryzacja | Panel Widgets ma zakładki "Widgets / Templates / Forms" + wewnątrz sekcje z licznikami ("Layout 10", "Content 20"). Dokładnie jak Widget Library — spójność osiągnięta. |
+| UX-7 | Empty slot CTA | Slot "Hero Content" pokazuje: "0 | Add widget to Hero Content | Drag from the library or choose a widget from the widgets tab." Jasny call-to-action zamiast "Empty slot". |
+| UX-8 | Wording Page Settings | Stopka: "Save settings now, or close the panel to keep one **draft version in history**." Koncept "autosave snapshot" zniknął z UI. |
+| UX-9 | Max width disabled helper | Pole Max width (gdy Page width = full) pod polem: "Available when Page width is not full." Warunek jasny, bez żargonu. |
+
+### Zweryfikowane częściowo / wymagają dopracowania ⚠
+
+| ID | Element | Obserwacja |
+|---|---|---|
+| UX-1 | Toast po Save draft / Publish | Element `[aria-live=polite]` istnieje w DOM, ale **pozostaje pusty** po kliknięciu Save draft i Publish. Badge zmienia się z Draft → Published, przycisk Publish → Update — to pośredni feedback, ale nie ma widocznego toast notification. Vitest proof potwierdza mechanizm istnieje; w real-user feel nic nie migoce → użytkownik nadal może nie zauważyć że akcja się powiodła. **Kierunek dopracowania UI:** podpiąć toast z widocznym tekstem (np. sonner toast "Strona zapisana" / "Opublikowano") do tej samej aria-live region, albo użyć timeout render 3s z animacją pojawienia. |
+| UX-2 | Auto-scroll po insert | Nie zweryfikowano w tym przebiegu bezpośrednio (widget dodano przez JS click a nie insert-from-library). Vitest potwierdza mechanizm. **Kierunek dopracowania UI:** warto w osobnym manualnym teście sprawdzić UX przy długiej stronie z 10+ widgetami — czy smooth-scroll faktycznie animuje się do nowo wstawionego elementu oraz czy highlight jest wystarczająco wyraźny. |
+| UX-5 | Runtime preview placeholder | Dialog "Page Preview" otwiera się, ale przy `localhost:3000` zwracającym 404 iframe nadal renderuje cross-origin 404 zamiast placeholdera z admin UI. Testy Vitest (`runtime-preview-dialog.test.tsx`) potwierdzają logikę detection, ale na żywo placeholder nie jest wyraźnie widoczny w dialogu gdy backend jest dostępny a tylko ścieżka nie istnieje (404 inside iframe). **Kierunek dopracowania UI:** rozszerzyć detection na `load` event iframe z wynikiem 404 (HEAD preflight przed zasileniem src) — nie tylko na timeout/unreachable host. |
+
+### UX feel — obserwacje po całym flow ✨
+
+**Co jest super teraz:**
+- Create Page dialog — helper texty prowadzą użytkownika, disabled state tłumaczy się sam. Nowy użytkownik ma komplet informacji bez chodzenia po dokumentacji.
+- Widget picker z kategoriami + licznikami ("Layout 10") — redukuje paraliż decyzyjny (30 widgetów nie w jednym rzędzie).
+- Widget toolbar z pełnymi aria-labels + stanem disabled dla niemożliwych ruchów ("Move up" disabled gdy to pierwszy widget) — bardzo czysto.
+- Page Settings: "Available when Page width is not full." zamiast milczącego disabled — przykład jak disabled field powinien tłumaczyć się sam.
+
+**Co nadal zostawia niedosyt:**
+- Brak widocznego toast po Save/Publish — aria-live region jest, ale tekst się nie pojawia. To drobny drobiazg ale odczuwalny. Użytkownik po kliknięciu "Save draft" ma 1 sekundową niepewność.
+- Runtime Preview dla niedostępnej ścieżki wewnątrz działającego frontendu (404 podstrona) nadal pokazuje surowy 404 zamiast admin-ui error state — poprawione tylko dla "host całkowicie niedostępny".
+
+### Screeny
+
+- `retest-fix/pages-list.png` — lista stron (Patryk jako autor)
+- `retest-fix/bulk-select-works.png` — "Selected 2" toolbar + Bulk actions dropdown
+- `retest-fix/create-dialog-helper.png` — Create Page z helper textami
+- `retest-fix/page-editor.png` — edytor z widget picker kategorycznym
+- `retest-fix/after-add-hero.png` — Hero z toolbar'em (Move up/down, Duplicate, Delete z aria-labels)
+- `retest-fix/after-save-immediate.png` — stan po Save draft (badge zmieniony, brak toast)
+- `retest-fix/after-publish.png` — po Publish (badge Published, przycisk → Update)
+- `retest-fix/page-settings.png` — Page Settings z nowymi opisami (Max width helper, draft version in history)
+- `retest-fix/runtime-preview.png` + `runtime-preview-content.png` — preview dialog z 404 w iframe
+
+---
+
 ## Screenshoty
 
 Dostępne w katalogu `screenshots/`:

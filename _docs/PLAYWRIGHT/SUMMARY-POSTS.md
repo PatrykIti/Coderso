@@ -211,6 +211,72 @@ Dostępne w katalogu `screenshots/` (jeśli dodane):
 
 ---
 
+## Manualna re-weryfikacja Playwright (2026-04-23)
+
+Ręczny przebieg po wdrożeniu fixów. Status per bug/UX poniżej.
+
+### Zweryfikowane działające ✓
+
+| ID | Element | Obserwacja na żywo |
+|---|---|---|
+| BUG-1 | Bulk select | Select all → "1 post selected" + "Apply a bulk action to the visible selection." + Bulk actions dropdown + Clear. Działa jak w Pages. |
+| BUG-2 | Search placeholder | Placeholder w search bar: "Search posts by title..." (nie "Search pages..."). Copy-paste naprawione. |
+| BUG-3 | Przycisk "Details" | Toolbar rozróżnia teraz 5 buttonów z unikalnymi aria-labels: "Add block" (Toggle block inserter), "Outline" (Hide document overview), "Details" (Hide post details), "Focus" (Toggle full width editor), "Revisions" (Open revision history). Details nie otwiera już Block Inserter. |
+| BUG-4 | Category ID / Featured Image — raw fields | Featured image: "Browse media" button zamiast Media ID textbox, "No media selected yet." status — użyto istniejącego Media Pickera z Entries. Categories: "Category" dropdown z "No category" (nie raw ID). |
+| UX-6 | "Typography reads from block" | Tekst zmieniony na "Typography follows the selected block style." — jaśniejsze, nie sugeruje że jest "readonly". |
+
+### Zweryfikowane częściowo ⚠
+
+| ID | Element | Obserwacja |
+|---|---|---|
+| BUG-5 | Toast po Publish / Update | Po Publish: badge Draft → Published, przycisk Publish → Update. **Toast nie jest widoczny** — aria-live region jest pusta. Pośredni feedback działa, ale dedykowanego toast notification brak. Analogiczny problem jak UX-1 w Pages. **Kierunek dopracowania UI:** podpiąć sonner toast "Post opublikowany" / "Zmiany zapisane" do aria-live region. |
+| UX-1 | Preview w Revisions | Version 1 ma teraz button "Preview" + "Restore". Kliknięcie Preview → sekcja rozwija się z "Hide preview" toggle, ale treść pokazuje **"No preview available for this revision."** dla właśnie utworzonej wersji (1 block). Mechanizm istnieje, ale default empty state ścina UX. **Kierunek dopracowania UI:** dla pustych/bardzo krótkich wersji pokazać przynajmniej meta (author, date, rozmiar JSON) zamiast "No preview available". |
+| UX-4 | Block Inserter Media | Zakładka Media zawiera teraz: Image + Embed (przedtem Image + Separator). Separator usunięty z Media — dobrze. Ale nadal brak Video, Gallery, Audio, File. Częściowa poprawa. |
+| UX-7 | Search per kategoria w Block Inserter | Placeholder search bar: "Search blocks..." pozostał globalny niezależnie od aktywnej zakładki. Zakładki Text/Media/Interactive działają, ale search nie zawęża się do aktywnej zakładki. |
+
+### Nowy bug wykryty podczas re-weryfikacji ⚠
+
+### [BUG-6] NISKI: Radix `aria-describedby` warning nadal w Post revisions dialog
+
+**Gdzie:** Edytor posta → przycisk "Revisions" → otwarcie drawera Post revisions
+
+**Co się dzieje:** Po otwarciu Revisions dialog w konsoli pojawia się `Warning: Missing Description or aria-describedby={undefined} for {DialogContent}`. Pozostałe dialogi w Posts (jak widać w UX-7 Create Post drawer) są clean — tylko Revisions ma ten sam problem który był fixowany w Pages BUG-5. Pewnie ten specyficzny dialog umknął.
+
+**Kierunek naprawy UI:** Dodać opis do DialogContent dla Revisions — np. "Restore an earlier snapshot of this post." (który już jest w subtitle dialogu — wystarczy podłączyć jako `aria-describedby`). Rozwiązanie takie samo jak w TASK-194 Pages BUG-5.
+
+### [BUG-7] NISKI: 500 Internal Server Error na `/api/content-types/post/terms`
+
+**Gdzie:** Edytor posta → prawy panel Post tab → sekcja Categories and Tags
+
+**Co się dzieje:** Endpoint `GET /admin/api/content-types/post/terms` zwraca HTTP 500. W UI widoczne jako: "Category: No category — Failed query: select "id", "type_id", "name", "slug", "kind", "created_at", "updated_at" from "content_taxonomies" where ..." — raw query error w miejscu gdzie powinna być lista kategorii. Z poprzedniego raportu wiadomo że baza Render ma problem `CONNECTION_CLOSED` okresowo, ale frontend pokazuje surowy SQL error zamiast friendly fallback.
+
+**Kierunek naprawy UI:** Gdy endpoint `/terms` zwraca 500 — w UI pokazać: "Nie udało się załadować kategorii. [Spróbuj ponownie]" z retry button, nie surowe query. Raw SQL nie powinien nigdy trafić do UI użytkownika. (Zasada taka sama jak BUG-3 Forms — kody błędów mapować do user-friendly messages.)
+
+### UX feel — obserwacje po całym flow ✨
+
+**Co jest super teraz:**
+- Rozróżnienie 5 buttonów w toolbarze z aria-labels — każdy robi dokładnie to co sugeruje ikona. Ogromny skok dostępności.
+- Browse media picker zamiast Media ID textbox — WordPress-level UX dla Featured Image. Użycie tego samego komponentu co w Entries = spójność.
+- Category dropdown (nawet jeśli empty z powodu 500 — mechanizm jest właściwy, to problem backend).
+- "Typography follows the selected block style." — subtle ale kluczowa zmiana. Jedno słowo zrobiło różnicę ("reads from" → "follows").
+
+**Co nadal zostawia niedosyt:**
+- Brak widocznego toast po Publish/Update — ten sam pain point jak w Pages.
+- "No preview available for this revision." — Preview button istnieje ale dla 80% wersji daje tę negatywną wiadomość. Lepiej pokazać fallback (tekst treści w read-only).
+- BUG-7 (raw SQL error w UI kategorii) psuje pierwsze wrażenie z Post editor — user widzi coś co wygląda jak debug output.
+- Zakładka Media w Block Inserter nadal uboga (tylko Image + Embed) — dla blog-posta dobrze by było też Gallery/Video.
+
+### Screeny
+
+- `retest-fix/posts-list.png` — lista z poprawnym placeholder search
+- `retest-fix/bulk-select.png` — "1 post selected" + Bulk actions
+- `retest-fix/post-editor.png` — edytor z 5 różnymi buttonami w toolbarze (Add block / Outline / Details / Focus / Revisions)
+- `retest-fix/block-inserter.png` — Block Inserter z zakładkami Text/Media/Interactive
+- `retest-fix/revisions-dialog.png` — Version 1 z przyciskiem Preview + Restore
+- `retest-fix/revisions-preview-expanded.png` — "No preview available for this revision."
+
+---
+
 ## Bledy z konsoli real time
 
 ```plaintext
