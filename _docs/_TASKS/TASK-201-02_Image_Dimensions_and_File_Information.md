@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Domain/Service + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-201
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

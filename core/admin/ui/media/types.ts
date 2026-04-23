@@ -21,3 +21,13 @@ export type MediaMetaUpdate = {
   alt?: string | null;
   caption?: string | null;
 };
+
+export type MediaUsageItem = {
+  id: string;
+  type: "page" | "entry" | "post" | "commerce";
+  title: string;
+  context: string;
+  targetId: string;
+  targetSlug?: string | null;
+  adminHref: string;
+};

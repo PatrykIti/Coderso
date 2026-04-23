@@ -5,7 +5,7 @@
 **Category:** QA + CMS/Media + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-201-01, TASK-201-02, TASK-201-03, TASK-201-04, TASK-201-05
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 
@@ -160,6 +160,39 @@ No child task files.
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry using the next available changelog number and
   referencing `TASK-201`
+
+## Closure Notes - 2026-04-23
+
+Source report closure:
+
+- `BUG-1` / `BUG-4`: closed by real async feedback in
+  `MediaDetailsDrawer` with `MediaLibraryPage` returning the
+  `mediaClient.updateMedia` / clipboard result.
+- `BUG-2`: closed by upload/replace dimension persistence plus selected-asset
+  recovery through `POST /media/:id/dimensions/recover`.
+- `BUG-3` / `BUG-5`: closed by empty states, loaded counts, and removal of the
+  inert load-more button for the current full-list media API.
+- `BUG-6`: closed by the bounded usage read model and canonical `AdminLink`
+  navigation for pages, entries, posts, and commerce products.
+- `UX-1` / `UX-2`: closed by shared display-name helpers and missing-alt
+  warnings in cards and details.
+- `UX-3`: closed by visible-scope selection, bulk download anchors, and
+  confirmed per-asset bulk delete.
+- `UX-4` / `UX-5`: closed by separating upload from the asset list and moving
+  `media.openAfterUpload` next to the upload surface while preserving the
+  existing user-setting key.
+
+Validation recorded:
+
+- `bun --cwd core lint` - pass.
+- `bun --cwd core lint:types` - pass.
+- `set -a && source .env && set +a && bun test tests/unit/media/imageDimensions.test.ts tests/unit/media/mediaUsageService.test.ts tests/integration/routes/media.test.ts tests/unit/media/mediaService.test.ts` - pass (`10 pass`; DB-backed media service tests ran against reachable `DATABASE_URL` outside the sandbox).
+- `set -a && source .env && set +a && ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/ui/media-components.test.tsx` - pass (`14 pass`).
+
+`MediaDetailsPanel` remains a secondary exported/tested component in this
+closure. The primary library details owner is `MediaDetailsDrawer`; shared media
+display/dimension helpers now live in `core/admin/ui/media/utils.ts`, so the
+secondary surface is not treated as a parallel persistence or usage owner.
 
 ## Acceptance Criteria
 

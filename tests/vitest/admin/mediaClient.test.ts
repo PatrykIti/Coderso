@@ -4,9 +4,12 @@ import {
   createClipboardImageFilename,
   clearMediaCache,
   deleteMedia,
+  getMediaUsage,
   listMedia,
   listMediaCached,
   normalizeClipboardImageFile,
+  recoverMediaDimensions,
+  replaceMedia,
   updateMedia,
   uploadClipboardImage,
   uploadMedia,
@@ -154,6 +157,89 @@ test("updateMedia posts JSON with CSRF", async () => {
     expect(body.title).toBe("Hero");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("getMediaUsage reads tracked usage with limit query", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([
+      {
+        id: "page:page-1",
+        type: "page",
+        title: "Homepage",
+        context: "Page builder content",
+        targetId: "page-1",
+        adminHref: "/pages/page-1",
+      },
+    ]);
+  };
+
+  try {
+    const result = await getMediaUsage("media-1", { limit: 10 });
+    expect(result).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/media/media-1/usage?limit=10");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("recoverMediaDimensions posts empty JSON with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ id: "media-1", key: "key", url: "/media/key" });
+  };
+
+  try {
+    resetCsrfToken();
+    await recoverMediaDimensions("media-1");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/media/media-1/dimensions/recover");
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(JSON.parse(calls[1]?.init?.body as string)).toEqual({});
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("replaceMedia uploads replacement file with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ id: "media-1", key: "key", url: "/media/key" });
+  };
+
+  try {
+    resetCsrfToken();
+    const file = new File(["img"], "replacement.png", { type: "image/png" });
+    await replaceMedia("media-1", file);
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/media/media-1/replace");
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.body).toBeInstanceOf(FormData);
+    expect((calls[1]?.init?.body as FormData).get("file")).toBeInstanceOf(File);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
   }
 });
 

@@ -8,6 +8,8 @@ import { media, settings } from "../../../core/db/schema";
 import {
   deleteMedia,
   getMediaById,
+  recoverMediaDimensions,
+  replaceMedia,
   updateMedia,
   uploadMedia,
 } from "../../../core/services/media/mediaService";
@@ -56,6 +58,11 @@ let tempDir: string | undefined;
 let createdMediaId: string | undefined;
 let createdMediaKey: string | undefined;
 let existingStorageRows: Array<{ key: string; value: unknown; updatedAt: Date }> = [];
+
+const pngOneByOne = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "base64"
+);
 
 const storageKeys = [
   "storage.driver",
@@ -174,6 +181,8 @@ testIfDb("upload/update/delete media", async () => {
   createdMediaKey = row?.key;
 
   const updated = await updateMedia(uploaded.id, { caption: "Updated" });
+  expect(updated?.alt).toBe("Alt");
+  expect(updated?.title).toBe("Title");
   expect(updated?.caption).toBe("Updated");
 
   await deleteMedia(uploaded.id);
@@ -197,4 +206,96 @@ testIfDb("rejects disallowed mime", async () => {
   );
 
   await expect(uploadMedia(file, {})).rejects.toThrow("media_mime_not_allowed");
+});
+
+testIfDb("uploads image dimensions and falls back to original filename title", async () => {
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "image/png",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+
+  const file = buildUploadFile("pixel.png", "image/png", pngOneByOne);
+  const uploaded = await uploadMedia(file, {});
+  createdMediaId = uploaded.id;
+
+  const row = await getMediaById(uploaded.id);
+  expect(row?.title).toBe("pixel.png");
+  expect(row?.width).toBe(1);
+  expect(row?.height).toBe(1);
+
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
+
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "text/plain",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+});
+
+testIfDb("recovers missing dimensions and replaces asset without losing title", async () => {
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "image/png",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+
+  const uploaded = await uploadMedia(
+    buildUploadFile("first.png", "image/png", pngOneByOne),
+    { title: "Brand mark" }
+  );
+  createdMediaId = uploaded.id;
+  const original = await getMediaById(uploaded.id);
+  createdMediaKey = original?.key;
+
+  await db
+    .update(media)
+    .set({ width: null, height: null })
+    .where(eq(media.id, uploaded.id));
+
+  const recovered = await recoverMediaDimensions(uploaded.id);
+  expect(recovered?.width).toBe(1);
+  expect(recovered?.height).toBe(1);
+
+  const replaced = await replaceMedia(
+    uploaded.id,
+    buildUploadFile("second.png", "image/png", pngOneByOne)
+  );
+  expect(replaced.id).toBe(uploaded.id);
+  expect(replaced.originalName).toBe("second.png");
+  expect(replaced.title).toBe("Brand mark");
+  expect(replaced.width).toBe(1);
+  expect(replaced.height).toBe(1);
+
+  if (tempDir && createdMediaKey) {
+    const storedPath = path.join(tempDir, createdMediaKey);
+    await expect(stat(storedPath)).rejects.toThrow();
+  }
+
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
+  createdMediaKey = undefined;
+
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "text/plain",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
 });

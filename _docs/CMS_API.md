@@ -1438,7 +1438,10 @@ Permissions: `media:read`, `media:write`
 - `POST /media` (multipart)
 - `GET /media`
 - `GET /media/:id`
+- `GET /media/:id/usage`
 - `PATCH /media/:id`
+- `POST /media/:id/dimensions/recover`
+- `POST /media/:id/replace` (multipart)
 - `DELETE /media/:id`
 
 Runtime asset delivery:
@@ -1457,6 +1460,35 @@ Update metadata payload:
 ```json
 { "title": "Hero Banner", "alt": "Mountain landscape", "caption": "Winter view" }
 ```
+
+Usage response:
+
+```json
+[
+  {
+    "id": "page:uuid",
+    "type": "page",
+    "title": "Homepage",
+    "context": "Page builder content",
+    "targetId": "uuid",
+    "targetSlug": "homepage",
+    "adminHref": "/pages/uuid"
+  }
+]
+```
+
+Maintenance/action notes:
+
+- `PATCH /media/:id` accepts partial metadata and preserves omitted fields;
+  explicit `null` clears a metadata value.
+- `POST /media/:id/dimensions/recover` accepts `{}` and attempts bounded
+  service-side dimension recovery for existing images without stored
+  dimensions.
+- `POST /media/:id/replace` accepts multipart `file`, validates the replacement
+  with the same upload settings, preserves the media ID, and updates storage
+  key/url, MIME, size, original file name, and dimensions.
+- New media action payloads reject unknown fields and stay on the internal admin
+  `media:read` / `media:write` permission model with CSRF for writes.
 
 ---
 

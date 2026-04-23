@@ -163,6 +163,33 @@ Uwaga: autosave DZIAŁA — Alt Text "Placeholder hero image" zapisał się popr
 
 ---
 
+## Status zamknięcia TASK-201 — 2026-04-23
+
+Wdrożone w `task/TASK-201-media-qa`, changelog `729`.
+
+| ID | Status | Zamknięcie |
+|---|---|---|
+| BUG-1 | Zamknięty | `MediaDetailsDrawer` pokazuje saving/saved/failed z realnego wyniku `mediaClient.updateMedia`; `mediaService.updateMedia` nie kasuje pominiętych pól. |
+| BUG-2 | Zamknięty | Upload/replace zapisuje `media.width`/`media.height`, a wybrany legacy obraz bez wymiarów uruchamia `POST /media/:id/dimensions/recover`. |
+| BUG-3 | Zamknięty | Filtry/search bez wyników pokazują empty state zamiast pustej siatki. |
+| BUG-4 | Zamknięty | `Copy URL` pokazuje copied/failure na podstawie `navigator.clipboard.writeText()`. |
+| BUG-5 | Zamknięty | Martwy `Load More Assets` usunięty dla obecnego full-list API; UI pokazuje `Showing X of Y assets`. |
+| BUG-6 | Zamknięty | Usage pochodzi z bounded read modelu dla pages/entries/posts/commerce i linkuje przez kanoniczne admin hrefy. |
+| UX-1 | Zamknięty | Karty, picker i details używają display-name helpera: `title`, potem `originalName`, potem storage name. |
+| UX-2 | Zamknięty | Obraz bez alt text ma badge/ostrzeżenie w karcie i details. |
+| UX-3 | Zamknięty | Tryb Select obsługuje visible-scope selection, bulk download i potwierdzony bulk delete. |
+| UX-4 | Zamknięty | Upload surface jest osobną sekcją nad listą assetów. |
+| UX-5 | Zamknięty | `media.openAfterUpload` przeniesiony przy upload surface i nadal zapisuje istniejący user-setting key. |
+
+Walidacja:
+
+- `bun --cwd core lint` — pass.
+- `bun --cwd core lint:types` — pass.
+- `set -a && source .env && set +a && bun test tests/unit/media/imageDimensions.test.ts tests/unit/media/mediaUsageService.test.ts tests/integration/routes/media.test.ts tests/unit/media/mediaService.test.ts` — pass (`10 pass`; DB-backed media service tests ran against reachable `DATABASE_URL` outside the sandbox).
+- `set -a && source .env && set +a && ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/ui/media-components.test.tsx` — pass (`14 pass`).
+
+---
+
 ## Screenshoty
 
 - `media-library-grid.png` — widok siatki z 7 plikami

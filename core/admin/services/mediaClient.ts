@@ -20,10 +20,14 @@ export type MediaRecord = {
   createdBy?: string | null;
 };
 
-export type MediaUploadResponse = {
+export type MediaUsageSummary = {
   id: string;
-  url: string;
-  key: string;
+  type: "page" | "entry" | "post" | "commerce";
+  title: string;
+  context: string;
+  targetId: string;
+  targetSlug?: string | null;
+  adminHref: string;
 };
 
 export type MediaUpdatePayload = {
@@ -138,7 +142,7 @@ export async function uploadMedia(file: File, meta?: MediaUpdatePayload) {
   if (meta?.title) formData.set("title", meta.title);
   if (meta?.caption) formData.set("caption", meta.caption);
 
-  const result = await apiRequest<MediaUploadResponse>(
+  const result = await apiRequest<MediaRecord>(
     "/media",
     {
       method: "POST",
@@ -165,6 +169,51 @@ export async function updateMedia(id: string, payload: MediaUpdatePayload) {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+  if (updated) {
+    upsertCachedMedia(updated);
+    broadcastCacheEvent({ key: cacheKeys.mediaList, action: "update" });
+  }
+  return updated;
+}
+
+export async function getMediaUsage(id: string, options?: { limit?: number }) {
+  const params = new URLSearchParams();
+  if (options?.limit) params.set("limit", String(options.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<MediaUsageSummary[]>(
+    `/media/${encodeURIComponent(id)}/usage${suffix}`,
+    { method: "GET" }
+  );
+}
+
+export async function recoverMediaDimensions(id: string) {
+  const updated = await apiRequest<MediaRecord>(
+    `/media/${encodeURIComponent(id)}/dimensions/recover`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+    { withCsrf: true }
+  );
+  if (updated) {
+    upsertCachedMedia(updated);
+    broadcastCacheEvent({ key: cacheKeys.mediaList, action: "update" });
+  }
+  return updated;
+}
+
+export async function replaceMedia(id: string, file: File) {
+  const formData = new FormData();
+  formData.set("file", file, file.name);
+  const updated = await apiRequest<MediaRecord>(
+    `/media/${encodeURIComponent(id)}/replace`,
+    {
+      method: "POST",
+      body: formData,
     },
     { withCsrf: true }
   );

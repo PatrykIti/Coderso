@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 104 tasks
+- **To Do:** 85 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1016 tasks
+- **Done:** 1035 tasks
 
 ---
 
@@ -53,25 +53,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-203-04-01 | Content Type Sidebar Grouping, Counts, and Hide Empty Types | Medium | Medium | Technical leaf: non-destructive sidebar grouping/filtering for many content types |
 | TASK-203-04-02 | Metadata Panel SEO URL, Taxonomy Link, and Collapsible Help | Medium | Medium | Technical leaf: replace hardcoded SEO URL and add internal taxonomy repair path |
 | TASK-203-05 | QA, Docs, and Closure | Medium | Medium | Final validation, Playwright finding map, docs, changelog, and board closure |
-| TASK-201 | Media Library QA Recovery and Asset Management UX | High | Large | Media QA family from `_docs/PLAYWRIGHT/SUMMARY-MEDIA.md`: metadata confidence, dimensions, empty states, usage navigation, bulk actions, upload clarity, and closure |
-| TASK-201-01 | Metadata Save Feedback and Asset Identity | High | Large | Business area: visible autosave/copy feedback, readable asset names, and missing-alt accessibility signals |
-| TASK-201-01-01 | Metadata Autosave Status and Copy URL Feedback | High | Medium | Technical leaf: blur autosave saving/saved/failed states plus copied/failed feedback |
-| TASK-201-01-02 | Human Readable Naming and Missing Alt Signals | High | Medium | Technical leaf: title/original-name display precedence and image missing-alt warnings |
-| TASK-201-02 | Image Dimensions and File Information | High | Large | Business area: persist and render image dimensions through the media service contract |
-| TASK-201-02-01 | Image Dimension Extraction and Persistence | High | Medium | Technical leaf: upload-time dimension parser and persisted width/height |
-| TASK-201-02-02 | Legacy Dimension Backfill and Details Rendering | Medium | Medium | Technical leaf: bounded backfill/recovery plus truthful details rendering |
-| TASK-201-03 | Filter Empty States and Load More Truth | High | Medium | Business area: empty filter/search states and real load-more/loaded-count behavior |
-| TASK-201-03-01 | Empty State Copy and Upload Recovery CTA | Medium | Small | Technical leaf: no-assets, no-filter-results, and no-search-results states |
-| TASK-201-03-02 | Pagination Has-More Contract and Loaded Counts | Medium | Medium | Technical leaf: hide dead load-more controls and add bounded pagination metadata if needed |
-| TASK-201-03-03 | Grid List View Mode Parity | Medium | Small | Technical leaf: make toolbar grid/list mode render distinct views through the existing media presenter |
-| TASK-201-04 | Usage Navigation and Reference Contracts | High | Large | Business area: replace hard-coded usage examples with bounded references and canonical navigation |
-| TASK-201-04-01 | Media Usage Read Model | High | Medium | Technical leaf: internal usage summaries across current page/entry/post/commerce owners |
-| TASK-201-04-02 | Usage Entry Navigation and Affordance Fallback | Medium | Medium | Technical leaf: AdminLink destinations for resolvable targets and non-clickable fallback state |
-| TASK-201-05 | Bulk Asset Actions and Upload Surface Clarity | Medium | Large | Business area: library multi-select, safe bulk actions, clearer upload zone, and preference placement |
-| TASK-201-05-01 | Multi Select Bulk Delete and Download | Medium | Medium | Technical leaf: visible-scope selection, confirmed bulk delete, and safe download behavior |
-| TASK-201-05-02 | Upload Zone Separation and Open Details Preference Placement | Medium | Medium | Technical leaf: separate upload/grid surfaces and preserve `media.openAfterUpload` ownership |
-| TASK-201-05-03 | Replace Action Owner and Details Actions | Medium | Medium | Technical leaf: make the existing Replace affordance real through media owners or explicitly unavailable |
-| TASK-201-06 | QA Docs and Closure | Medium | Medium | Final validation, source Playwright report closure, docs, changelog, and board sync |
 | TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
 | TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Business area: search/sort/filter list, duplicate-name context, relation labels, and screen UUID hygiene |
 | TASK-202-01-01 | Content Type List Search, Sort, and Status Filters | High | Medium | Technical leaf: list search, deterministic sort, and real-status filter gating |
@@ -161,6 +142,25 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-201 | Media Library QA Recovery and Asset Management UX | High | Large | Done: Media QA report closed with metadata/copy feedback, dimensions, empty states, real usage navigation, bulk actions, upload separation, replace action, docs, and changelog 729 |
+| TASK-201-06 | QA Docs and Closure | Medium | Medium | Done: source Playwright closure, docs, changelog 729, and targeted validation recorded |
+| TASK-201-05-03 | Replace Action Owner and Details Actions | Medium | Medium | Done: details Replace calls the existing media service/client owner and keeps the same media ID |
+| TASK-201-05-02 | Upload Zone Separation and Open Details Preference Placement | Medium | Medium | Done: upload surface is separated from the asset list and `media.openAfterUpload` stays on the existing user-setting key |
+| TASK-201-05-01 | Multi Select Bulk Delete and Download | Medium | Medium | Done: visible-scope selection, bulk download anchors, and confirmed per-asset bulk delete shipped |
+| TASK-201-05 | Bulk Asset Actions and Upload Surface Clarity | Medium | Large | Done: library asset-management actions now have real owner callbacks and visible states |
+| TASK-201-04-02 | Usage Entry Navigation and Affordance Fallback | Medium | Medium | Done: usage entries use canonical `AdminLink` hrefs for pages, entries, posts, and commerce products |
+| TASK-201-04-01 | Media Usage Read Model | High | Medium | Done: bounded media usage summaries read existing page, entry, post, and commerce references |
+| TASK-201-04 | Usage Navigation and Reference Contracts | High | Large | Done: hard-coded usage examples were replaced with a route/client/service usage contract |
+| TASK-201-03-03 | Grid List View Mode Parity | Medium | Small | Done: toolbar view state now renders distinct grid and list presentations through `MediaGrid` |
+| TASK-201-03-02 | Pagination Has-More Contract and Loaded Counts | Medium | Medium | Done: inert Load More was removed for the current full-list contract and loaded counts are shown |
+| TASK-201-03-01 | Empty State Copy and Upload Recovery CTA | Medium | Small | Done: empty list/filter/search states render a bounded empty message instead of a blank grid |
+| TASK-201-03 | Filter Empty States and Load More Truth | High | Medium | Done: list truthfulness now matches the checked-out full-list media API |
+| TASK-201-02-02 | Legacy Dimension Backfill and Details Rendering | Medium | Medium | Done: selected image rows without dimensions trigger service-backed recovery and truthful unknown/non-image rendering |
+| TASK-201-02-01 | Image Dimension Extraction and Persistence | High | Medium | Done: upload/replace persist dimensions using the media service dimension parser |
+| TASK-201-02 | Image Dimensions and File Information | High | Large | Done: image dimensions are persisted/recovered through the media service contract and rendered in details |
+| TASK-201-01-02 | Human Readable Naming and Missing Alt Signals | High | Medium | Done: media display helpers prefer title/original name and image assets expose missing-alt warnings |
+| TASK-201-01-01 | Metadata Autosave Status and Copy URL Feedback | High | Medium | Done: drawer autosave and Copy URL use real async success/failure feedback |
+| TASK-201-01 | Metadata Save Feedback and Asset Identity | High | Large | Done: metadata confidence and asset identity gaps from the media QA report are closed |
 | TASK-204 | Posts QA Follow-up - Toasts, Revisions, Taxonomy, and Block Inserter | High | Large | Done: shared toast a11y config, revision fallback metadata, taxonomy/settings/autosave safe route errors, category retry, scoped inserter search, source-report closure, and explicit media capability gap owners landed |
 | TASK-204-04-01 | Runtime Console Error Triage Settings and Autosave | High | Medium | Done: settings and autosave unexpected failures map to bounded browser-facing API errors while preserving truthful failure state |
 | TASK-204-04 | QA Docs and Playwright Source Closure | Medium | Medium | Done: TASK-204 source report map, docs, changelog 728, board sync, and validation evidence recorded |

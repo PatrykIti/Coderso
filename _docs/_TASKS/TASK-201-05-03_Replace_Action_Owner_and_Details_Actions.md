@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/API + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-201-05, TASK-201-02-01
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/UI + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-006, TASK-058, TASK-170-03-02-03, TASK-184-10
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 
@@ -377,6 +377,28 @@ Dependency notes:
 - new `_docs/_CHANGELOG/*` entry when TASK-201 closes, using the next available
   changelog number while referencing `TASK-201`; do not reuse the existing
   changelog number `201`, which already belongs to another historical entry.
+
+## Closure Notes - 2026-04-23
+
+Implemented in branch `task/TASK-201-media-qa`.
+
+- Metadata and identity stay on the existing drawer/page/client/service path:
+  `MediaDetailsDrawer` awaits the real async save/copy/replace result,
+  `MediaLibraryPage` returns updated media items, and `mediaService.updateMedia`
+  preserves omitted metadata fields while allowing explicit null clears.
+- Image dimensions are parsed by `core/services/media/imageDimensions.ts` during
+  upload/replace, and selected legacy image rows recover dimensions through
+  `POST /media/:id/dimensions/recover`.
+- The current full-list media API no longer renders a dead load-more control;
+  the library shows loaded counts, empty states, and distinct grid/list views
+  through `MediaGrid`.
+- Usage now comes from `core/services/media/mediaUsageService.ts` and
+  `GET /media/:id/usage`, scanning existing page, entry, post, and commerce
+  owners with bounded summaries and canonical admin hrefs.
+- Bulk delete/download, upload surface separation, `media.openAfterUpload`, and
+  same-ID replace all reuse the existing media client/cache owner instead of
+  introducing a second media workflow.
+- Changelog: `_docs/_CHANGELOG/729-2026-04-23-task-201-media-library-qa-recovery.md`.
 
 ## Acceptance Criteria
 

@@ -92,6 +92,8 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Media library
   - UI: `core/admin/ui/media/MediaLibraryPage.tsx`
   - Cached APIs: `listMediaCached`, `getCachedMedia`
+  - Mutating cached APIs: `uploadMedia`, `updateMedia`, `recoverMediaDimensions`, `replaceMedia`, `deleteMedia`
+  - Read-only uncached API: `getMediaUsage`
 - Media picker
   - UI: `core/admin/ui/media/MediaPicker.tsx`
   - Cached APIs: `listMediaCached`, `getCachedMedia`

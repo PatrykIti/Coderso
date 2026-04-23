@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-201-03
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

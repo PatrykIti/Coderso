@@ -49,6 +49,11 @@ Uwaga:
 - Max size per file (config: `MEDIA_MAX_SIZE_BYTES`).
 - Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`).
 - Metadane: alt, title, caption.
+- Dla uploadow i replace obrazow serwis media probuje zapisac `width` i `height`
+  w rekordzie `media`. Parser jest bounded i nie dekoduje pikseli; wspiera PNG,
+  JPEG, GIF i WebP.
+- Jesli `title` nie zostanie podany przy uploadzie, domyslnie przyjmuje
+  oryginalna nazwe pliku. `originalName` pozostaje read-only identity.
 
 ## Assistant avatar assets (TASK-101-06)
 
@@ -81,8 +86,39 @@ Multi:
 - Upload dropzone + manual browse.
 - Wyszukiwarka po nazwie i tytule.
 - Filtry: all, images, documents, audio.
-- Panel szczegolow: podglad meta, edycja title/alt/caption, copy link.
+- Panel szczegolow: podglad meta, edycja title/alt/caption, copy link,
+  replace asset bez zmiany ID, usage links, file info i wymiary obrazow.
+- Metadata autosave i Copy URL pokazuja wynik operacji (saving/saved/failed,
+  copied/failed) oparty o realny wynik async.
+- Widok grid/list korzysta z tego samego ownera listy i pokazuje `title`,
+  `originalName`, a dopiero potem storage name.
+- Obrazy bez alt text pokazuja ostrzezenie accessibility w karcie i details.
+- Empty states i loaded counts sa prawdziwe dla aktualnego full-list API; UI nie
+  pokazuje martwego `Load More Assets`.
+- Multi-select dziala na widocznym zakresie assetow i uzywa istniejacych
+  per-asset delete/download sciezek.
+- `media.openAfterUpload` jest preference uzytkownika przy upload surface i
+  nadal zapisuje sie przez `userSettingsClient`.
 - Delete asset wymaga potwierdzenia w UI (v1.1).
+
+## Admin usage read model
+
+- `GET /media/:id/usage` zwraca bounded internal summaries dla miejsc uzycia
+  assetu w obecnych wlascicielach danych: pages, content entries, posts i
+  commerce products.
+- Endpoint wymaga `media:read`. Zwracane `adminHref` wskazuje tylko istniejace
+  kanoniczne trasy admina.
+- Usage matcher szuka znanych ksztaltow referencji media (`mediaId`, `assetId`,
+  `featuredMediaId`, tablice media IDs oraz rich-text `data-media-id`) bez
+  broad substring matching.
+
+## Admin maintenance actions
+
+- `POST /media/:id/dimensions/recover` wymaga `media:write` i probuje uzupelnic
+  wymiary tylko dla istniejacego obrazu bez `width`/`height`.
+- `POST /media/:id/replace` wymaga `media:write`, waliduje nowy plik tym samym
+  kontraktem co upload, zachowuje ID assetu i aktualizuje storage key/url,
+  oryginalna nazwe, MIME, rozmiar oraz wymiary.
 
 ## Security
 

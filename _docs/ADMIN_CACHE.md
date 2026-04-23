@@ -197,6 +197,17 @@ Clients update caches and broadcast events on:
   address is either not represented in the admin cache key contract or is
   handled by the existing site-kit execution surface.
 
+### Media cache note
+
+- Media list cache (`media:list`) is owned by
+  `core/admin/services/mediaClient.ts`.
+- `uploadMedia()` invalidates the list after successful multipart upload.
+- `updateMedia()`, `recoverMediaDimensions()`, and `replaceMedia()` upsert the
+  returned media record into the list cache and broadcast `update`.
+- `deleteMedia()` removes the record and broadcasts `invalidate`.
+- Usage lookups (`GET /media/:id/usage`) are read-only, bounded API calls and
+  are not stored in browser cache.
+
 ### Pages list/detail cache note
 
 - Pages list cache (`pages:list`) is authoritative for author presentation.

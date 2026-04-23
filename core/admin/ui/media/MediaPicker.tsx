@@ -15,7 +15,11 @@ import { isApiClientError } from "@/services/apiClient";
 import { getCachedMedia, listMediaCached } from "@/services/mediaClient";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import type { MediaItem } from "@/ui/media/types";
-import { formatBytes, toMediaItem } from "@/ui/media/utils";
+import {
+  formatBytes,
+  resolveMediaDisplayName,
+  toMediaItem,
+} from "@/ui/media/utils";
 
 type MediaPickerProps = {
   value: unknown;
@@ -111,7 +115,9 @@ export function MediaPicker({
       if (!matchesAccept(item.mimeType, accept)) return false;
       if (!query) return true;
       const normalized = query.toLowerCase();
+      const displayName = resolveMediaDisplayName(item).toLowerCase();
       return (
+        displayName.includes(normalized) ||
         item.name.toLowerCase().includes(normalized) ||
         (item.originalName ?? "").toLowerCase().includes(normalized) ||
         (item.title ?? "").toLowerCase().includes(normalized)
@@ -229,10 +235,14 @@ export function MediaPicker({
               key={item.id}
               className="flex items-center gap-3 rounded-xl border bg-muted/10 p-3"
             >
+              {(() => {
+                const displayName = resolveMediaDisplayName(item);
+                return (
+                  <>
               {item.type === "image" ? (
                 <img
                   src={item.url}
-                  alt={item.alt ?? item.name}
+                  alt={item.alt ?? displayName}
                   className="h-16 w-20 rounded-lg object-cover"
                   loading="lazy"
                 />
@@ -246,11 +256,14 @@ export function MediaPicker({
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium">{item.name}</p>
+                <p className="text-sm font-medium">{displayName}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatBytes(item.sizeBytes)}
                 </p>
               </div>
+                  </>
+                );
+              })()}
               <Button
                 type="button"
                 variant="ghost"

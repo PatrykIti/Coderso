@@ -39,6 +39,29 @@ export function resolveMediaName(record: MediaRecord) {
   return "asset";
 }
 
+export function resolveMediaDisplayName(
+  item: Pick<MediaItem, "name" | "originalName" | "title">
+) {
+  const title = item.title?.trim();
+  if (title) return title;
+  const originalName = item.originalName?.trim();
+  if (originalName) return originalName;
+  const name = item.name?.trim();
+  return name || "asset";
+}
+
+export function hasMissingImageAlt(item: Pick<MediaItem, "type" | "alt">) {
+  return item.type === "image" && !item.alt?.trim();
+}
+
+export function formatDimensions(
+  item: Pick<MediaItem, "type" | "width" | "height">
+) {
+  if (item.type !== "image") return "Not applicable";
+  if (item.width && item.height) return `${item.width} × ${item.height} px`;
+  return "Unknown";
+}
+
 export function toMediaItem(record: MediaRecord): MediaItem {
   return {
     id: record.id,

@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Settings2, UploadCloud } from "lucide-react";
+import { CheckSquare, Download, Settings2, Trash2, UploadCloud } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
   deleteMedia,
   getCachedMedia,
+  getMediaUsage,
   listMediaCached,
+  recoverMediaDimensions,
+  replaceMedia as replaceMediaAsset,
   updateMedia,
   uploadMedia,
 } from "@/services/mediaClient";
@@ -27,14 +31,36 @@ import {
   type MediaFilter,
   type MediaView,
 } from "@/ui/media/MediaToolbar";
-import type { MediaItem, MediaMetaUpdate } from "@/ui/media/types";
+import type { MediaItem, MediaMetaUpdate, MediaUsageItem } from "@/ui/media/types";
 import {
   UploadDropzone,
   type UploadDropzoneHandle,
 } from "@/ui/media/UploadDropzone";
-import { toMediaItem } from "@/ui/media/utils";
+import { resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+
+type UsageLoadState = {
+  state: "idle" | "loading" | "loaded" | "error";
+  items: MediaUsageItem[];
+  error?: string | null;
+};
+
+type DimensionRecoveryState = {
+  state: "idle" | "recovering" | "recovered" | "error";
+  message?: string | null;
+};
+
+const defaultUsageState: UsageLoadState = {
+  state: "idle",
+  items: [],
+  error: null,
+};
+
+const defaultDimensionState: DimensionRecoveryState = {
+  state: "idle",
+  message: null,
+};
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
@@ -43,6 +69,8 @@ export function MediaLibraryPage() {
     initialCached ? initialCached.map(toMediaItem) : []
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MediaFilter>("all");
@@ -52,6 +80,9 @@ export function MediaLibraryPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [usageById, setUsageById] = useState<Record<string, UsageLoadState>>({});
+  const [dimensionById, setDimensionById] = useState<Record<string, DimensionRecoveryState>>({});
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [deliveryAccessMode, setDeliveryAccessMode] = useState<
     "public" | "internal"
@@ -132,6 +163,12 @@ export function MediaLibraryPage() {
   }, [items, selectedId]);
 
   useEffect(() => {
+    setSelectedIds((current) =>
+      current.filter((id) => items.some((item) => item.id === id))
+    );
+  }, [items]);
+
+  useEffect(() => {
     if (!initialSelectedId || selectedId) return;
     const match = items.find((item) => item.id === initialSelectedId);
     if (match) {
@@ -141,18 +178,35 @@ export function MediaLibraryPage() {
   }, [items, initialSelectedId, selectedId]);
 
   const filteredItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
     return items.filter((item) => {
+      const displayName = resolveMediaDisplayName(item).toLowerCase();
       const matchesSearch =
-        !search ||
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        (item.originalName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-        (item.title ?? "").toLowerCase().includes(search.toLowerCase());
+        !normalizedSearch ||
+        displayName.includes(normalizedSearch) ||
+        item.name.toLowerCase().includes(normalizedSearch) ||
+        (item.originalName ?? "").toLowerCase().includes(normalizedSearch) ||
+        (item.title ?? "").toLowerCase().includes(normalizedSearch);
       const matchesFilter = filter === "all" || item.type === filter;
       return matchesSearch && matchesFilter;
     });
   }, [items, search, filter]);
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedSet.has(item.id)),
+    [items, selectedSet]
+  );
+  const currentUsage = selectedId ? usageById[selectedId] ?? defaultUsageState : defaultUsageState;
+  const currentDimensionState = selectedId
+    ? dimensionById[selectedId] ?? defaultDimensionState
+    : defaultDimensionState;
+
+  const updateOpenAfterUpload = (next: boolean) => {
+    setOpenAfterUpload(next);
+    setUserSetting("media.openAfterUpload", next).catch(() => undefined);
+  };
 
   const handleUploadFiles = async (files: File[]) => {
     setUploadError(null);
@@ -180,22 +234,21 @@ export function MediaLibraryPage() {
     }
   };
 
-  const handleSaveMeta = (id: string, meta: MediaMetaUpdate) => {
-    void (async () => {
-      setError(null);
-      try {
-        const updated = await updateMedia(id, meta);
-        setItems((prev) =>
-          prev.map((item) => (item.id === id ? toMediaItem(updated) : item))
-        );
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to update media metadata.");
-        }
+  const handleSaveMeta = async (id: string, meta: MediaMetaUpdate) => {
+    setError(null);
+    try {
+      const updated = await updateMedia(id, meta);
+      const next = toMediaItem(updated);
+      setItems((prev) => prev.map((item) => (item.id === id ? next : item)));
+      return next;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to update media metadata.");
       }
-    })();
+      throw err;
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -204,6 +257,7 @@ export function MediaLibraryPage() {
       try {
         await deleteMedia(id);
         setItems((prev) => prev.filter((item) => item.id !== id));
+        setSelectedIds((prev) => prev.filter((selected) => selected !== id));
         if (selectedId === id) {
           setSelectedId(null);
           setIsDrawerOpen(false);
@@ -223,10 +277,80 @@ export function MediaLibraryPage() {
     setIsDrawerOpen(true);
   };
 
-  const handleCopy = (url: string) => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(url).catch(() => undefined);
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of filteredItems) next.add(item.id);
+      return [...next];
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+    setActionMessage(null);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (typeof window !== "undefined") {
+      const ok = window.confirm(`Delete ${selectedIds.length} selected media assets?`);
+      if (!ok) return;
     }
+
+    setError(null);
+    setActionMessage(null);
+    const deleted = new Set<string>();
+    for (const id of selectedIds) {
+      try {
+        await deleteMedia(id);
+        deleted.add(id);
+      } catch {
+        // Keep deleting independent selected assets; failures are summarized below.
+      }
+    }
+
+    if (deleted.size > 0) {
+      setItems((prev) => prev.filter((item) => !deleted.has(item.id)));
+      setSelectedIds((prev) => prev.filter((id) => !deleted.has(id)));
+      if (selectedId && deleted.has(selectedId)) {
+        setSelectedId(null);
+        setIsDrawerOpen(false);
+      }
+    }
+
+    const failed = selectedIds.length - deleted.size;
+    setActionMessage(
+      failed > 0
+        ? `Deleted ${deleted.size} assets. ${failed} assets failed.`
+        : `Deleted ${deleted.size} assets.`
+    );
+  };
+
+  const handleBulkDownload = () => {
+    if (selectedItems.length === 0 || typeof document === "undefined") return;
+    for (const item of selectedItems) {
+      const link = document.createElement("a");
+      link.href = item.url;
+      link.download = item.originalName ?? resolveMediaDisplayName(item);
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  };
+
+  const handleCopy = async (url: string) => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      throw new Error("clipboard_unavailable");
+    }
+    await navigator.clipboard.writeText(url);
   };
 
   const handleOpen = (url: string) => {
@@ -234,6 +358,94 @@ export function MediaLibraryPage() {
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
+
+  const handleReplaceMedia = async (id: string, file: File) => {
+    setError(null);
+    try {
+      const updated = await replaceMediaAsset(id, file);
+      const next = toMediaItem(updated);
+      setItems((prev) => prev.map((item) => (item.id === id ? next : item)));
+      setDimensionById((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      return next;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to replace media asset.");
+      }
+      throw err;
+    }
+  };
+
+  const loadUsage = useCallback(async (id: string) => {
+    setUsageById((prev) => ({
+      ...prev,
+      [id]: { state: "loading", items: prev[id]?.items ?? [], error: null },
+    }));
+    try {
+      const result = await getMediaUsage(id);
+      setUsageById((prev) => ({
+        ...prev,
+        [id]: { state: "loaded", items: result, error: null },
+      }));
+    } catch (err) {
+      setUsageById((prev) => ({
+        ...prev,
+        [id]: {
+          state: "error",
+          items: [],
+          error: isApiClientError(err) ? err.message : "Failed to load usage.",
+        },
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId || !isDrawerOpen) return;
+    loadUsage(selectedId).catch(() => undefined);
+  }, [selectedId, isDrawerOpen, loadUsage]);
+
+  useEffect(() => {
+    if (!selectedItem || !isDrawerOpen) return;
+    if (selectedItem.type !== "image") return;
+    if (selectedItem.width && selectedItem.height) return;
+    const existing = dimensionById[selectedItem.id]?.state;
+    if (existing && existing !== "idle") return;
+
+    const id = selectedItem.id;
+    setDimensionById((prev) => ({
+      ...prev,
+      [id]: { state: "recovering", message: "Recovering..." },
+    }));
+    recoverMediaDimensions(id)
+      .then((updated) => {
+        const next = toMediaItem(updated);
+        setItems((prev) => prev.map((item) => (item.id === id ? next : item)));
+        const hasDimensions = Boolean(next.width && next.height);
+        setDimensionById((prev) => ({
+          ...prev,
+          [id]: {
+            state: "recovered",
+            message: hasDimensions ? "Dimensions recovered." : "Dimensions unavailable.",
+          },
+        }));
+      })
+      .catch((err) => {
+        setDimensionById((prev) => ({
+          ...prev,
+          [id]: {
+            state: "error",
+            message: isApiClientError(err)
+              ? err.message
+              : "Failed to recover dimensions.",
+          },
+        }));
+      });
+  }, [selectedItem, isDrawerOpen, dimensionById]);
 
   const loadMediaSettings = useCallback(async () => {
     setSettingsError(null);
@@ -299,7 +511,15 @@ export function MediaLibraryPage() {
           title="Media Library"
           description="Manage your images and assets."
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={isSelectionMode ? "secondary" : "outline"}
+                className="gap-2"
+                onClick={() => setIsSelectionMode((value) => !value)}
+              >
+                <CheckSquare className="h-4 w-4" />
+                Select
+              </Button>
               <Button
                 variant="outline"
                 className="gap-2"
@@ -324,41 +544,107 @@ export function MediaLibraryPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        {actionMessage ? (
+          <Alert>
+            <AlertTitle>Media action</AlertTitle>
+            <AlertDescription>{actionMessage}</AlertDescription>
+          </Alert>
+        ) : null}
         <MediaToolbar
           search={search}
           filter={filter}
           view={view}
-          openAfterUpload={openAfterUpload}
-          onOpenAfterUploadChange={(next) => {
-            setOpenAfterUpload(next);
-            setUserSetting("media.openAfterUpload", next).catch(() => undefined);
-          }}
           onSearchChange={setSearch}
           onFilterChange={setFilter}
           onViewChange={setView}
         />
+        {isSelectionMode ? (
+          <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {selectedIds.length} selected
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={handleSelectVisible}>
+                Select visible
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={selectedIds.length === 0}
+                onClick={handleBulkDownload}
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-2"
+                disabled={selectedIds.length === 0}
+                onClick={() => {
+                  handleBulkDelete().catch(() => undefined);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+                Clear
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <Card className="border-border/60">
           <CardContent className="space-y-8">
-            <UploadDropzone
-              ref={dropzoneRef}
-              onFiles={handleUploadFiles}
-              disabled={isUploading}
-              error={uploadError}
-            />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Upload assets</p>
+                  <p className="text-xs text-muted-foreground">
+                    New uploads use the configured media storage provider.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={openAfterUpload}
+                    onCheckedChange={(next) => updateOpenAfterUpload(next === true)}
+                  />
+                  Open details after upload
+                </label>
+              </div>
+              <UploadDropzone
+                ref={dropzoneRef}
+                onFiles={handleUploadFiles}
+                disabled={isUploading}
+                error={uploadError}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+              <span>
+                Showing {filteredItems.length} of {items.length} assets
+              </span>
+              {isLoading ? <span>Loading...</span> : null}
+            </div>
             {isLoading ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
                 Loading assets...
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                No media assets found.
               </div>
             ) : (
               <MediaGrid
                 items={filteredItems}
                 selectedId={selectedId}
+                selectedIds={selectedIds}
+                view={view}
+                selectionMode={isSelectionMode}
                 onSelect={handleSelectItem}
+                onToggleSelect={handleToggleSelect}
               />
             )}
-            <div className="flex justify-center">
-              <Button variant="outline">Load More Assets</Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -366,11 +652,17 @@ export function MediaLibraryPage() {
         key={selectedItem?.id ?? "empty"}
         item={selectedItem}
         open={isDrawerOpen}
+        usageItems={currentUsage.items}
+        usageState={currentUsage.state}
+        usageError={currentUsage.error}
+        dimensionState={currentDimensionState.state}
+        dimensionMessage={currentDimensionState.message}
         onOpenChange={setIsDrawerOpen}
         onSave={handleSaveMeta}
         onDelete={handleDelete}
         onCopy={handleCopy}
         onOpen={handleOpen}
+        onReplace={handleReplaceMedia}
       />
       <MediaSettingsDrawer
         open={isSettingsDrawerOpen}
