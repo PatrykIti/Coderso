@@ -26,7 +26,8 @@ Findings covered by this family:
 - `BUG-6`: editor lacks an in-context delete/danger-zone action.
 - `BUG-7`: save/update success feedback is missing.
 - `BUG-8`: SEO preview hardcodes `https://nextless.cms/blog/...`.
-- `UX-1`: content-type sidebar needs better grouping/filtering for 35+ types.
+- `UX-1`: content-type sidebar needs better grouping/filtering for 35+ types
+  and readable disambiguation when multiple types share the same name.
 - `UX-2`: status changes are local until a separate metadata save.
 - `UX-3`: `What is this?` help is always expanded.
 - `UX-4`: preview needs shared-runtime parity and 404 recovery evidence.
@@ -74,7 +75,8 @@ Execution contract for this family:
    - branded row/bulk/editor delete confirmation,
    - real duplicate flow or explicit removal decision.
 4. Sidebar and metadata affordances:
-   - non-destructive content-type grouping/filtering,
+   - non-destructive content-type grouping/filtering and duplicate-name
+     disambiguation,
    - SEO URL from settings/content routes,
    - taxonomy enablement link,
    - collapsible help.

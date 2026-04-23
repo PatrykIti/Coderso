@@ -17,6 +17,9 @@ Tighten non-destructive guidance and navigation gaps from `UX-1`, `UX-3`,
 Current owner evidence:
 
 - `EntryTypeSidebar.tsx:33-127` renders a flat content-type list.
+- `EntryTypeSidebar.tsx:96-107` renders only the type name plus count, so
+  duplicate names such as `News`/`Notes` are still ambiguous without slug or
+  route context.
 - `EntryMetadataPanel.tsx:107-110` hardcodes `Nextless CMS` and
   `https://nextless.cms/blog/...`.
 - `EntryMetadataPanel.tsx:314-333` renders `What is this?` expanded.
@@ -32,6 +35,7 @@ Current owner evidence:
 
 - Improve content-type sidebar scanability without mutating content types.
 - Preserve search behavior and entry counts.
+- Disambiguate duplicate content-type names with current slug/path context.
 - Add hide-empty/grouping affordances when derivable from current summaries.
 - Replace hardcoded SEO domain with settings/content-route context.
 - Add Engine settings navigation for disabled taxonomy.
@@ -74,6 +78,8 @@ Out of scope:
 ## Testing Requirements
 
 - sidebar grouping/hide-empty/search/count behavior,
+- duplicate type names remain readable by showing slug or equivalent current
+  content-type context,
 - SEO preview configured URL and fallback placeholder,
 - taxonomy disabled state includes internal settings link,
 - help is collapsible/persistently dismissible,
@@ -92,7 +98,8 @@ Out of scope:
 ## Acceptance Criteria
 
 1. The content-type sidebar remains searchable but is easier to scan.
-2. SEO preview never hardcodes `nextless.cms`.
-3. Disabled taxonomy guidance links to the owning Engine configuration.
-4. Help guidance is available without permanently occupying sidebar space.
-
+2. Duplicate type names are visually disambiguated without changing stored
+   content-type data.
+3. SEO preview never hardcodes `nextless.cms`.
+4. Disabled taxonomy guidance links to the owning Engine configuration.
+5. Help guidance is available without permanently occupying sidebar space.

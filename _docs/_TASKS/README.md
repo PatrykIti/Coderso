@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 104 tasks
+- **To Do:** 115 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1004 tasks
 
@@ -38,6 +38,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-204 | Posts QA Follow-up - Toasts, Revisions, Taxonomy, and Block Inserter | High | Large | Follow-up from `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` 2026-04-23 replay: visible toasts, revisions a11y/preview fallback, taxonomy safe errors/retry, block inserter search, media capability decision, and closure |
+| TASK-204-01 | Post Feedback and Revision Drawer Reliability | High | Medium | Business area: publish/update toast visibility plus revision drawer a11y and preview fallback |
+| TASK-204-01-01 | Publish Update Toast Delivery and A11y Proof | High | Small | Technical leaf: prove shared admin toast delivery end to end without a Posts-only toaster |
+| TASK-204-01-02 | Revision Drawer A11y and Empty Preview Fallback | High | Small | Technical leaf: wire sheet description and useful bounded fallback for non-text revision previews |
+| TASK-204-02 | Taxonomy Terms Error Boundary and Category Retry | High | Medium | Business area: bound `/content-types/:id/terms` failures and keep category selector friendly/retryable |
+| TASK-204-02-01 | Taxonomy Overview Route Error Mapping and Client Sanitization | High | Medium | Technical leaf: map taxonomy overview failures without leaking SQL/query text |
+| TASK-204-02-02 | Category Selector Friendly Error and Retry State | High | Small | Technical leaf: safe Posts inspector failure copy and retry state from the existing taxonomy client path |
+| TASK-204-03 | Block Inserter Search and Media Capability Follow-up | Medium | Large | Business area: active-category search proof plus explicit Video/Gallery/Audio/File media block capability contract |
+| TASK-204-03-01 | Category Scoped Search Copy and Regression Proof | Medium | Small | Technical leaf: scoped placeholder/copy and tests proving query + category intersection |
+| TASK-204-03-02 | Media Block Capability Contract for Video Gallery Audio File | Medium | Large | Technical leaf: implement accepted media block types end to end or keep unsupported capability explicitly open with owners |
+| TASK-204-04 | QA Docs and Playwright Source Closure | Medium | Medium | Final validation, source report closure, docs, changelog, and board sync for TASK-204 |
 | TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`: metadata/save feedback, rich text, preview, row actions, sidebar, SEO/taxonomy, and closure |
 | TASK-203-01 | Metadata Save, Status, and Feedback Contract | High | Large | Business area: metadata route/client errors, save feedback, status dirty state, and action clarity |
 | TASK-203-01-01 | Metadata Route, Service Error Mapping, and API Client State | High | Medium | Technical leaf: bounded metadata errors plus cache-safe client state |

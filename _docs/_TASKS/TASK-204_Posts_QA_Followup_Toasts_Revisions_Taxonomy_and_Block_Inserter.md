@@ -1,0 +1,207 @@
+# TASK-204: Posts QA Follow-up - Toasts, Revisions, Taxonomy, and Block Inserter
+# FileName: TASK-204_Posts_QA_Followup_Toasts_Revisions_Taxonomy_and_Block_Inserter.md
+
+**Priority:** High
+**Category:** CMS/Posts + Admin/UI + Admin/API + UX + Accessibility
+**Estimated Effort:** Large
+**Dependencies:** TASK-059, TASK-061, TASK-063, TASK-195
+**Status:** To Do
+
+---
+
+## Overview
+
+Follow up on the 2026-04-23 manual Playwright CLI re-verification captured in
+`_docs/PLAYWRIGHT/SUMMARY-POSTS.md`.
+
+`TASK-195` closed the main Posts QA wave. This family only tracks the remaining
+or newly observed issues from the fresh replay:
+
+- `BUG-5`: publish/update calls the success path, but the browser replay did not
+  show a visible toast and the live region stayed empty.
+- `UX-1`: revision preview can open, but a just-created one-block revision can
+  still show `No preview available for this revision.`
+- `UX-4`: Media tab is cleaner (`Image` + `Embed`, no `Separator`) but still
+  lacks the broader media capabilities requested by the report.
+- `UX-7`: category-scoped block search exists in code, but live UI copy and
+  proof still need to make the active category scope obvious.
+- `BUG-6`: the Post revisions sheet still emits the Radix
+  `aria-describedby` warning.
+- `BUG-7`: `GET /admin/api/content-types/post/terms` can return a 500 and the
+  Posts inspector can surface raw SQL/query text to users.
+
+This is a follow-up polish and contract-hardening family. It must not reopen
+closed `TASK-195` work such as list selection, search placeholder, Details
+button semantics, raw featured image IDs, category dropdown existence, slug URL
+context, or typography helper copy unless the fresh replay proves a regression
+in those exact seams.
+
+Closure must map every remaining item in the manual re-verification section of
+`_docs/PLAYWRIGHT/SUMMARY-POSTS.md` to fixed evidence, an explicit open
+capability decision, or a named follow-up. Do not leave the source report in a
+state where closed and still-open Posts findings are indistinguishable.
+
+## Sub-Tasks
+
+- `TASK-204-01_Post_Feedback_and_Revision_Drawer_Reliability.md`
+- `TASK-204-02_Taxonomy_Terms_Error_Boundary_and_Category_Retry.md`
+- `TASK-204-03_Block_Inserter_Search_and_Media_Capability_Followup.md`
+- `TASK-204-04_QA_Docs_and_Playwright_Source_Closure.md`
+
+## Scope
+
+1. Post action feedback and revision confidence:
+   - verify the real shared toast mount end to end,
+   - keep publish/update feedback visible and screen-reader reachable,
+   - add the missing revision sheet description,
+   - make empty/short revision previews useful without dumping raw blobs.
+2. Taxonomy loading failure boundaries:
+   - bound `/content-types/:id/terms` server errors,
+   - keep `taxonomyClient` and Posts shell errors user-safe,
+   - add retry/fallback UI in the category selector.
+3. Block inserter follow-up:
+   - align active-category search copy with the existing scoped search contract,
+   - prove category-scoped search in tests and replay,
+   - decide and implement or explicitly leave open the larger media capability
+     gap for `Video`, `Gallery`, `Audio`, and `File`.
+4. QA/docs/closure:
+   - replay the Posts report after the leaf work,
+   - update source docs, task board, and changelog when the family closes.
+
+Out of scope:
+
+- changing the stored Posts slug contract;
+- creating public Posts write endpoints;
+- adding a second Posts-only toast host or event bus;
+- pretending backend/database failures succeeded in the UI;
+- adding new media block labels in the catalog without schema/defaults,
+  editor, normalizer, runtime renderer, and tests;
+- broad redesign of the Posts editor shell, Entries editor, or media library.
+
+## Architecture
+
+Current owner seams:
+
+- shared toast plumbing:
+  - `core/admin/app/AdminApp.tsx:87`
+  - `core/admin/app/AdminApp.tsx:826`
+  - `core/admin/components/ui/sonner.tsx:13`
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:551`
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:556`
+- revision drawer:
+  - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:59`
+  - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:89`
+  - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:96`
+  - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:141`
+- taxonomy route/client/inspector:
+  - `core/server/routes/taxonomyRoutes.ts:34`
+  - `core/server/routes/taxonomyRoutes.ts:112`
+  - `core/server/routes/taxonomyRoutes.ts:152`
+  - `core/admin/services/apiClient.ts:60`
+  - `core/admin/services/taxonomyClient.ts:62`
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:239`
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:254`
+  - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:150`
+  - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:171`
+- block inserter and media capability contract:
+  - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx:62`
+  - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx:130`
+  - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:22`
+  - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:72`
+  - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:100`
+  - `core/services/posts/editor/postBlockDocument.ts:3`
+  - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
+
+Reuse-first rules:
+
+- keep `AdminApp` as the shared toast mount owner; Posts may dispatch feedback,
+  but must not mount a private toaster host;
+- keep `PostRevisionDrawer` as the revision UI owner and reuse existing
+  revision payload data;
+- keep `taxonomyRoutes` responsible for route-boundary error mapping and
+  `taxonomyClient` responsible for API client calls, while the Posts shell maps
+  client failures to safe UI state;
+- keep `DocumentInspector` presentational for category state and retry actions;
+- keep `blockCatalog.ts` as the catalog/search owner;
+- if new media block types are accepted, update the full block contract across
+  schema/types, defaults, normalizers, editor controls, runtime renderer, and
+  tests in one coherent leaf.
+
+## Security Contract
+
+- Visibility: internal admin Posts UI and internal admin taxonomy endpoints only.
+- Auth model: authenticated admin session or existing admin API-key path.
+- RBAC:
+  - `content:read` for taxonomy overview, revisions, and post detail data;
+  - `content:write` for posts mutations already used by publish/update and
+    autosave;
+  - `content:publish` for publish/unpublish.
+- CSRF: unchanged for current mutating Posts/admin calls; taxonomy overview is a
+  read path.
+- Rate-limit buckets: existing `admin_read` and `admin_write`.
+- Reject-unknown validation: unchanged Posts/taxonomy schemas; no loose
+  pass-through payloads.
+- Anti-abuse:
+  - no public write path,
+  - no raw SQL, stack traces, secrets, tokens, headers, or DB details in API
+    responses or UI copy,
+  - revision preview stays read-only and bounded,
+  - feedback must accurately report failures instead of masking infra issues.
+
+## Implementation Order
+
+1. Prove and repair visible publish/update toast delivery and revision drawer
+   accessibility/preview fallback.
+2. Bound taxonomy overview route/client errors and add category selector retry
+   UI.
+3. Tighten block inserter active-category search copy/proof.
+4. Decide and implement or explicitly keep open the broader media capability
+   gap with named owners.
+5. Replay the Posts Playwright checklist, update docs, changelog, and board.
+
+## Testing Requirements
+
+- Baseline:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+- Vitest:
+  - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/admin/taxonomyClient.test.ts`
+- Bun route/service suites if taxonomy route mapping changes:
+  - `set -a && source .env && set +a && bun test tests/integration/routes/taxonomy.test.ts`
+- If new media block types are added:
+  - `bun run test:vitest -- tests/vitest/posts/postBlockDocument.test.ts tests/vitest/posts/post-block-normalizer-writing-canvas.test.ts tests/vitest/posts/post-block-runtime-renderer.test.tsx tests/vitest/posts/post-block-transforms.test.ts tests/vitest/ui-integration/post-block-inserter.test.tsx`
+- QA replay:
+  - rerun the Posts checklist from `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` with
+    Playwright CLI or equivalent browser evidence;
+  - capture the console state for the revision dialog warning and taxonomy
+    terms failure path.
+
+## Documentation Updates Required
+
+- `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/CMS_SPEC.md`
+- `_docs/CMS_API.md` if taxonomy error codes/messages change
+- `_docs/UI/POST_EDITOR_NEXTLESS_CURRENT_STATE.md` if editor UX contract notes
+  change materially
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- new `_docs/_CHANGELOG/*` entry when `TASK-204` closes
+
+## Acceptance Criteria
+
+1. Publish/update success feedback is visible in the browser replay and covered
+   by direct tests against the shared toast path.
+2. Post revisions dialog has an accessible description and no longer emits the
+   `aria-describedby` warning.
+3. Revision preview gives useful bounded fallback information for short or
+   non-text revisions.
+4. Taxonomy overview failures do not leak SQL/query text through API responses
+   or the Posts inspector.
+5. Category selector failure state is friendly, retryable, and does not block
+   unrelated editor work.
+6. Block inserter search copy and tests prove active-category scope.
+7. `UX-4` media capability scope is either implemented across the full Posts
+   block contract or left explicitly open with named owners and no false closure.
+8. `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` is updated with per-item closure evidence
+   for every remaining `BUG-*` and `UX-*` item from the 2026-04-23 replay.

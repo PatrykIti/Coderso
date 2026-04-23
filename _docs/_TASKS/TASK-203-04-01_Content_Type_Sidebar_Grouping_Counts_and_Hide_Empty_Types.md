@@ -12,7 +12,9 @@
 ## Overview
 
 Make the Entries content-type sidebar usable with dozens of types. This leaf
-owns `UX-1` and stays non-destructive.
+owns `UX-1` and stays non-destructive. It also closes the report's duplicate
+name readability issue by showing current slug or equivalent context when two
+or more content types share the same display name.
 
 ## Sub-Tasks
 
@@ -22,6 +24,7 @@ No child task files.
 
 - `core/admin/ui/entries/EntryTypeSidebar.tsx:33-127`
 - `core/admin/ui/entries/EntryList.tsx:177-187`
+- `core/admin/ui/entries/EntryList.tsx:392-411`
 - `core/admin/services/contentTypesClient.ts`
 - `tests/vitest/ui/entry-list-wave.test.tsx`
 - `tests/vitest/ui/content-entries.test.tsx`
@@ -40,6 +43,7 @@ Direction:
 
 - preserve search across groups,
 - preserve counts,
+- preserve readable names but add slug/context for duplicate labels,
 - keep active type visible,
 - do not add storage cleanup semantics.
 
@@ -56,6 +60,7 @@ Direction:
 
 - sidebar filters by name/slug,
 - counts remain visible,
+- duplicate names show slug or equivalent context and remain searchable by slug,
 - active type stays selected after grouping/filtering,
 - hide-empty toggle does not hide active type unexpectedly,
 - create collection action remains accessible.
@@ -70,5 +75,6 @@ Direction:
 
 1. A 35+ item sidebar is grouped or filterable beyond plain search.
 2. Entry counts remain visible and trusted.
-3. Empty/generated-type hiding is reversible and presentation-only.
-
+3. Duplicate display names are disambiguated without renaming or mutating
+   content types.
+4. Empty/generated-type hiding is reversible and presentation-only.
