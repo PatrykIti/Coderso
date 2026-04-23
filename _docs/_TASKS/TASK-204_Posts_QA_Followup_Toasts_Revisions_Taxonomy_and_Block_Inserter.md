@@ -118,8 +118,16 @@ fresh run proves they regressed.
 
 All child tasks inherit these execution rules:
 
+- Repair the existing contract in place. Extend the current route, service,
+  client, hook, component, or catalog owner named in this task instead of
+  inventing a parallel flow, duplicate helper, or test-only production fallback.
 - Fix the existing owner seam first. If the owner is unclear during
-  implementation, stop and document the responsible module before changing code.
+  implementation, stop and document the responsible module and responsibility
+  before changing code.
+- Keep fixes grounded in the code that exists today and in the repo source of
+  truth docs. Do not redesign Posts, taxonomy, revisions, toasts, block
+  rendering, or media handling unless a child task explicitly owns that
+  capability expansion.
 - Do not create duplicate toasters, taxonomy clients, admin endpoints, block
   catalogs, layout state, or renderer paths to make tests pass.
 - Keep presentation components presentational:
@@ -142,6 +150,8 @@ All child tasks inherit these execution rules:
     `TASK-204-03-02` media capability work;
   - `TASK-204-04-01` console triage evidence must be consumed before
     `TASK-204-04` closes the family.
+  - if implementation discovers a new ordering constraint, update both the
+    affected child task dependencies and this family order before continuing.
 
 Out of scope:
 
@@ -278,12 +288,12 @@ Reuse-first rules:
    accessibility/preview fallback.
 2. Bound taxonomy overview route/client errors and add category selector retry
    UI.
-3. Tighten block inserter active-category search copy/proof.
-4. Decide and implement or explicitly keep open the broader media capability
+3. Triage the source report's settings/admin-path and autosave console errors
+   through `TASK-204-04-01` as soon as DB/browser replay evidence is available;
+   this is not blocked by the block inserter or media capability work.
+4. Tighten block inserter active-category search copy/proof.
+5. Decide and implement or explicitly keep open the broader media capability
    gap with named owners.
-5. Triage the source report's settings/admin-path and autosave console errors
-   through `TASK-204-04-01`, fixing bounded error contracts in-family only when
-   the replay proves an app-owned leak or user-facing failure.
 6. Replay the Posts Playwright checklist, including console capture for
    settings/admin-path reads, autosave failures, and regression smoke for the
    `TASK-195`-owned focus/SEO/slug and already-verified list/editor fixes.

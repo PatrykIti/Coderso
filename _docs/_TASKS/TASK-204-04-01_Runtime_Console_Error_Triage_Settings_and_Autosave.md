@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Posts + Settings + Admin/API + Runtime QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-204-01, TASK-204-02, TASK-204-03
+**Dependencies:** TASK-204
 **Status:** To Do
 
 ---
@@ -23,6 +23,10 @@ and Posts category selector. This leaf keeps the settings/admin-path and
 autosave evidence separate so final closure can decide whether each finding is
 an app-owned error-boundary leak, an environment-only database outage, or a
 follow-up owned outside this polish family.
+
+This triage is intentionally not blocked by the block inserter/media capability
+work. It may run as soon as the `TASK-204` family starts, then final closure
+must consume its evidence after all implementation leaves finish.
 
 ## Sub-Tasks
 
