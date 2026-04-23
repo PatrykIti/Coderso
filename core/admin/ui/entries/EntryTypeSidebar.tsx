@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -38,15 +39,98 @@ export function EntryTypeSidebar({
   className,
 }: EntryTypeSidebarProps) {
   const [query, setQuery] = useState("");
+  const [hideEmpty, setHideEmpty] = useState(false);
+  const duplicateNames = useMemo(() => {
+    const counts = new Map<string, number>();
+    types.forEach((type) => {
+      const key = type.name.trim().toLowerCase();
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [types]);
   const filteredTypes = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return types;
-    return types.filter(
+    const searchable = !normalized
+      ? types
+      : types.filter(
       (type) =>
         type.name.toLowerCase().includes(normalized) ||
         type.slug.toLowerCase().includes(normalized)
     );
-  }, [types, query]);
+    return searchable.filter(
+      (type) =>
+        !hideEmpty ||
+        (type.count ?? 0) > 0 ||
+        type.slug === activeSlug
+    );
+  }, [activeSlug, hideEmpty, types, query]);
+
+  const groupedTypes = useMemo(
+    () => [
+      {
+        id: "with-entries",
+        label: "With entries",
+        items: filteredTypes.filter((type) => (type.count ?? 0) > 0),
+      },
+      {
+        id: "empty",
+        label: "Empty",
+        items: filteredTypes.filter((type) => (type.count ?? 0) === 0),
+      },
+    ],
+    [filteredTypes]
+  );
+
+  const renderTypeButton = (type: EntryTypeItem) => {
+    const Icon = resolveIcon(type.slug);
+    const isActive = type.slug === activeSlug;
+    const hasDuplicateName = (duplicateNames.get(type.name.trim().toLowerCase()) ?? 0) > 1;
+    return (
+      <button
+        key={type.id}
+        type="button"
+        onClick={() => onSelect?.(type.slug)}
+        className={cn(
+          "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-muted"
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+              isActive
+                ? "bg-primary/15 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            <Icon className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block truncate font-medium">{type.name}</span>
+            {hasDuplicateName ? (
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {type.slug}
+              </span>
+            ) : null}
+          </span>
+        </div>
+        <Badge
+          variant={isActive ? "secondary" : "ghost"}
+          className={cn(
+            "ml-2 shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold",
+            isActive
+              ? "border border-primary/20 bg-primary/10 text-primary"
+              : "text-muted-foreground"
+          )}
+        >
+          {type.count ?? 0}
+        </Badge>
+      </button>
+    );
+  };
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
@@ -63,52 +147,28 @@ export function EntryTypeSidebar({
             className="pl-9"
           />
         </div>
+        <label className="mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <Checkbox
+            checked={hideEmpty}
+            onCheckedChange={(checked) => setHideEmpty(checked === true)}
+            aria-label="Hide empty content types"
+          />
+          Hide empty content types
+        </label>
       </div>
       <Separator />
       <ScrollArea className="flex-1">
-        <div className="space-y-1 p-3">
-          {filteredTypes.map((type) => {
-            const Icon = resolveIcon(type.slug);
-            const isActive = type.slug === activeSlug;
-            return (
-              <button
-                key={type.id}
-                type="button"
-                onClick={() => onSelect?.(type.slug)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-lg",
-                      isActive
-                        ? "bg-primary/15 text-primary"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="font-medium">{type.name}</span>
-                </div>
-                <Badge
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={cn(
-                    "rounded-md px-2 py-0.5 text-[10px] font-semibold",
-                    isActive
-                      ? "border border-primary/20 bg-primary/10 text-primary"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {type.count ?? 0}
-                </Badge>
-              </button>
-            );
-          })}
+        <div className="space-y-4 p-3">
+          {groupedTypes.map((group) =>
+            group.items.length > 0 ? (
+              <div key={group.id} className="space-y-1">
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {group.label}
+                </p>
+                {group.items.map(renderTypeButton)}
+              </div>
+            ) : null
+          )}
         </div>
       </ScrollArea>
       <Separator />

@@ -1,5 +1,6 @@
 import { LayoutGrid, List, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import {
 } from "@/services/contentTypesClient";
 import {
   deleteEntry,
+  duplicateEntry,
   getCachedEntries,
   listEntriesCached,
   updateEntryMetadata,
@@ -30,10 +32,18 @@ import {
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { EntryFilters } from "./EntryFilters";
 import { EntryGrid } from "./EntryGrid";
+import { EntryDeleteDialog } from "./EntryDeleteDialog";
 import { EntryTable } from "./EntryTable";
 import { EntryTypeSidebar } from "./EntryTypeSidebar";
 
 type EntryView = "list" | "grid";
+type DeleteRequest = {
+  ids: string[];
+  title: string;
+  description: string;
+  confirmLabel: string;
+  mode: "single" | "bulk";
+};
 
 export function filterEntries(
   entries: Awaited<ReturnType<typeof listEntriesCached>>,
@@ -70,6 +80,8 @@ export function EntryList() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<BulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -229,20 +241,68 @@ export function EntryList() {
   };
 
   const handleDeleteEntry = async (id: string) => {
-    if (!activeSlug) return;
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("Delete this entry? This cannot be undone.");
-      if (!confirmed) return;
-    }
+    const entry = entries.find((item) => item.id === id);
+    setDeleteRequest({
+      ids: [id],
+      title: "Delete entry?",
+      description: `Delete ${entry?.title ?? "this entry"}? This cannot be undone.`,
+      confirmLabel: "Delete entry",
+      mode: "single",
+    });
+  };
+
+  const confirmDeleteRequest = async () => {
+    if (!activeSlug || !deleteRequest) return;
+    const ids = deleteRequest.ids;
+    setIsDeleting(true);
     setError(null);
     try {
-      await deleteEntry(activeSlug, id);
+      const results = await Promise.allSettled(
+        ids.map((entryId) => deleteEntry(activeSlug, entryId))
+      );
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length > 0) {
+        const message = `Failed to delete ${failed.length} entr${
+          failed.length === 1 ? "y" : "ies"
+        }.`;
+        setError(message);
+        toast.error(message);
+      } else {
+        toast.success(ids.length === 1 ? "Entry deleted." : "Entries deleted.");
+      }
       await refreshEntries();
+      if (deleteRequest.mode === "bulk") handleClearSelection();
+      setDeleteRequest(null);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
         setError("Failed to delete entry.");
+        toast.error("Failed to delete entry.");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDuplicateEntry = async (id: string) => {
+    if (!activeSlug) return;
+    setError(null);
+    try {
+      const duplicated = await duplicateEntry(activeSlug, id);
+      await refreshEntries();
+      toast.success("Entry duplicated.");
+      navigate(
+        `/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(duplicated.id)}`
+      );
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+        toast.error(err.message);
+      } else {
+        setError("Failed to duplicate entry.");
+        toast.error("Failed to duplicate entry.");
       }
     }
   };
@@ -310,20 +370,24 @@ export function EntryList() {
 
   const handleBulkApply = async () => {
     if (!activeSlug || !bulkAction || selectedIds.length === 0) return;
-    if (bulkAction === "delete" && typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        `Delete ${selectedIds.length} entr${selectedIds.length === 1 ? "y" : "ies"}? This cannot be undone.`
-      );
-      if (!confirmed) return;
+    if (bulkAction === "delete") {
+      setDeleteRequest({
+        ids: selectedIds,
+        title: `Delete ${selectedIds.length} entr${
+          selectedIds.length === 1 ? "y" : "ies"
+        }?`,
+        description: "Selected entries will be removed permanently.",
+        confirmLabel:
+          selectedIds.length === 1 ? "Delete entry" : "Delete entries",
+        mode: "bulk",
+      });
+      return;
     }
     setIsBulkWorking(true);
     setError(null);
     try {
       const results = await Promise.allSettled(
         selectedIds.map((id) => {
-          if (bulkAction === "delete") {
-            return deleteEntry(activeSlug, id);
-          }
           const status =
             bulkAction === "publish"
               ? "published"
@@ -335,17 +399,23 @@ export function EntryList() {
       );
       const failed = results.filter((result) => result.status === "rejected");
       if (failed.length > 0) {
-        setError(
-          `Failed to update ${failed.length} entr${failed.length === 1 ? "y" : "ies"}.`
-        );
+        const message = `Failed to update ${failed.length} entr${
+          failed.length === 1 ? "y" : "ies"
+        }.`;
+        setError(message);
+        toast.error(message);
+      } else {
+        toast.success("Entries updated.");
       }
       await refreshEntries();
       handleClearSelection();
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
         setError("Bulk action failed.");
+        toast.error("Bulk action failed.");
       }
     } finally {
       setIsBulkWorking(false);
@@ -506,6 +576,7 @@ export function EntryList() {
                 onEdit={handleEditEntry}
                 entryTypeSlug={activeSlug}
                 onDelete={handleDeleteEntry}
+                onDuplicate={handleDuplicateEntry}
                 selectedIds={selectedIds}
                 isAllSelected={isAllSelected}
                 isIndeterminate={isIndeterminate}
@@ -532,6 +603,19 @@ export function EntryList() {
         open={collectionOpen}
         onOpenChange={setCollectionOpen}
         onCreated={handleTypeCreated}
+      />
+      <EntryDeleteDialog
+        open={Boolean(deleteRequest)}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeleteRequest(null);
+        }}
+        title={deleteRequest?.title ?? "Delete entry?"}
+        description={
+          deleteRequest?.description ?? "This entry will be removed permanently."
+        }
+        confirmLabel={deleteRequest?.confirmLabel}
+        isDeleting={isDeleting}
+        onConfirm={() => void confirmDeleteRequest()}
       />
     </SplitShell>
   );

@@ -3,6 +3,8 @@ import { expect, test } from "vitest";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import {
   getSiteSettings,
+  resolveContentSlugDisplay,
+  resolveContentSlugRouteContext,
   resolvePostSlugDisplay,
   resolvePostSlugRouteContext,
   updateSiteSettings,
@@ -243,6 +245,48 @@ test("post slug helpers derive concrete and fallback route hints", () => {
   ).toEqual({
     label: "Route hint",
     value: "https://nextless.test/blog/:id",
+    concrete: false,
+  });
+});
+
+test("content slug helpers derive generic content route hints", () => {
+  const context = resolveContentSlugRouteContext(
+    {
+      publicBaseUrl: "https://nextless.test",
+      contentRoutes: [
+        {
+          type: "articles",
+          listPath: "/articles",
+          detailPath: "/articles/:slug",
+          enabled: true,
+        },
+      ],
+    },
+    "articles"
+  );
+
+  expect(context).toEqual({
+    publicBaseUrl: "https://nextless.test",
+    contentTypeSlug: "articles",
+    detailPathPattern: "/articles/:slug",
+    routeEnabled: true,
+  });
+  expect(resolveContentSlugDisplay(context, "hello-world")).toEqual({
+    label: "Public URL",
+    value: "https://nextless.test/articles/hello-world",
+    concrete: true,
+  });
+
+  const fallback = resolveContentSlugRouteContext(
+    {
+      publicBaseUrl: null,
+      contentRoutes: [],
+    },
+    "projects"
+  );
+  expect(resolveContentSlugDisplay(fallback, "alpha")).toEqual({
+    label: "Route hint",
+    value: "/projects/alpha",
     concrete: false,
   });
 });

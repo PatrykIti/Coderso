@@ -1,4 +1,14 @@
-import { AlertTriangle, Calendar, CheckCircle2, Info, Save, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Info,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { InfoTip } from "@/ui/shared/InfoTip";
 
 import type { EntryChecklist } from "./entryChecklist";
@@ -66,6 +77,7 @@ type EntryMetadataPanelProps = {
   onScheduledAtChange: (value: string) => void;
   title: string;
   slug: string;
+  seoPreviewUrl?: string;
   seoDescription: string;
   onSeoDescriptionChange: (value: string) => void;
   checklist?: EntryChecklist | null;
@@ -75,9 +87,12 @@ type EntryMetadataPanelProps = {
   onCreateCategory?: (name: string) => Promise<TaxonomyTermOption | null> | void;
   onCreateTag?: (name: string) => Promise<TaxonomyTermOption | null> | void;
   helpItems?: string[];
+  taxonomySettingsHref?: string | null;
   author?: { name: string | null; email: string } | null;
   onSave?: () => void;
   isSaving?: boolean;
+  onDelete?: () => void;
+  isDeleting?: boolean;
 };
 
 export function EntryMetadataPanel({
@@ -87,6 +102,7 @@ export function EntryMetadataPanel({
   onScheduledAtChange,
   title,
   slug,
+  seoPreviewUrl,
   seoDescription,
   onSeoDescriptionChange,
   checklist,
@@ -96,18 +112,23 @@ export function EntryMetadataPanel({
   onCreateCategory,
   onCreateTag,
   helpItems,
+  taxonomySettingsHref,
   author,
   onSave,
   isSaving,
+  onDelete,
+  isDeleting,
 }: EntryMetadataPanelProps) {
   const [categoryInput, setCategoryInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
-  const previewTitle = title
-    ? `${title} | Nextless CMS`
-    : "Content title | Nextless CMS";
-  const previewUrl = `https://nextless.cms/blog/${slug || "entry-slug"}`;
+  const [helpCollapsed, setHelpCollapsedState] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("entries.metadataHelpCollapsed") === "true";
+  });
+  const previewTitle = title || "Content title";
+  const previewUrl = seoPreviewUrl ?? `/${slug || "entry-slug"}`;
   const canSchedule = status === "scheduled";
   const checklistItems = checklist?.items ?? [];
   const checklistReadyCount = checklistItems.filter(
@@ -212,6 +233,12 @@ export function EntryMetadataPanel({
   };
 
   const taxonomyEnabled = taxonomy?.categoryEnabled || taxonomy?.tagEnabled;
+  const setHelpCollapsed = (value: boolean) => {
+    setHelpCollapsedState(value);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("entries.metadataHelpCollapsed", String(value));
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -313,24 +340,35 @@ export function EntryMetadataPanel({
           <Separator />
           {helpItems && helpItems.length > 0 ? (
             <section className="space-y-3">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition hover:text-foreground"
+                  onClick={() => setHelpCollapsed(!helpCollapsed)}
+                >
+                  {helpCollapsed ? (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
                   What is this?
-                </p>
+                </button>
                 <InfoTip
                   content="Quick reminders about how content fields behave in this entry."
                   label="What is this help"
                 />
               </div>
-              <Card>
-                <CardContent className="space-y-2 p-4">
-                  <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-                    {helpItems.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              {!helpCollapsed ? (
+                <Card>
+                  <CardContent className="space-y-2 p-4">
+                    <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                      {helpItems.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ) : null}
             </section>
           ) : null}
           <Separator />
@@ -380,9 +418,19 @@ export function EntryMetadataPanel({
             <Card>
               <CardContent className="space-y-4 p-4">
                 {!taxonomyEnabled ? (
-                  <p className="text-xs text-muted-foreground">
-                    Categories and tags are disabled for this content type.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Categories and tags are disabled for this content type.
+                    </p>
+                    {taxonomySettingsHref ? (
+                      <AdminLink
+                        href={taxonomySettingsHref}
+                        className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                      >
+                        Enable taxonomy in content type settings
+                      </AdminLink>
+                    ) : null}
+                  </div>
                 ) : null}
                 {taxonomy?.categoryEnabled ? (
                   <div className="space-y-2">
@@ -483,6 +531,34 @@ export function EntryMetadataPanel({
                 {isSaving ? "Saving..." : "Save metadata"}
               </Button>
             </div>
+          ) : null}
+          {onDelete ? (
+            <>
+              <Separator />
+              <section className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Danger zone
+                </p>
+                <Card>
+                  <CardContent className="flex flex-col gap-3 p-4">
+                    <p className="text-xs text-muted-foreground">
+                      Delete this entry permanently from the content list.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="w-full gap-2"
+                      disabled={isDeleting}
+                      onClick={onDelete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isDeleting ? "Deleting..." : "Delete entry"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </section>
+            </>
           ) : null}
         </div>
       </ScrollArea>

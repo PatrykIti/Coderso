@@ -2,6 +2,7 @@ import {
   createEntry,
   createEntryPreview,
   deleteEntry,
+  duplicateEntry,
   getEntry,
   listEntries,
   publishEntry,
@@ -12,6 +13,7 @@ import {
 import { getContentTypeBySlug } from "../../services/content/typeService";
 import {
   contentEntryCreateSchema,
+  contentEntryDuplicateSchema,
   contentEntryMetadataSchema,
   contentEntryPreviewSchema,
   contentEntryUpdateSchema,
@@ -59,6 +61,8 @@ const mapEntryMetadataError = (error: unknown) => {
         "Schedule date is required for scheduled entries.",
         400
       );
+    case "auth_required":
+      return new ApiError("auth_required", "Authentication is required.", 401);
     case "taxonomy_category_disabled":
       return new ApiError(
         "taxonomy_category_disabled",
@@ -174,6 +178,10 @@ export function registerContentEntryRoutes(
         };
       };
 
+      if (body.status === "published" && entry.status !== "published") {
+        await requirePermission("content:publish")(ctx);
+      }
+
       const scheduledAt =
         body.scheduledAt === null ||
         body.scheduledAt === undefined ||
@@ -201,6 +209,21 @@ export function registerContentEntryRoutes(
       }
       if (!metadata) throw new Error("entry_not_found");
       return metadata;
+    }
+  );
+
+  router.post(
+    "/content/:type/entries/:id/duplicate",
+    requirePermission("content:write"),
+    async (ctx) => {
+      validate(contentEntryDuplicateSchema, ctx.body);
+      const type = await getContentTypeBySlug(ctx.params.type);
+      if (!type) throw new Error("content_type_not_found");
+      const entry = await getEntry(ctx.params.id);
+      if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
+      const duplicated = await duplicateEntry(entry.id, ctx.user?.id ?? null);
+      if (!duplicated) throw new Error("entry_duplicate_failed");
+      return duplicated;
     }
   );
 

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 731 | 2026-04-23 | TASK-203 entries admin QA metadata rich text editor UX | QA/CMS Entries |
 | 729 | 2026-04-23 | TASK-201 media library QA recovery | CMS Media/Admin UI |
 | 728 | 2026-04-23 | TASK-204 posts QA follow-up closure | QA/CMS Posts |
 | 727 | 2026-04-23 | TASK-200 menus list parity | CMS Menus/Admin UI |

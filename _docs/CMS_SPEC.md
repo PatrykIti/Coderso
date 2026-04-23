@@ -121,6 +121,13 @@ Storage:
 - Content types sa tworzone w panelu admina (schema builder).
 - Brak migracji tabel, dane w JSONB.
 - Schema zawiera meta‑pola UI (`xFieldType`, `xFieldConfig`) dla stabilnego round‑trip.
+- Entries admin follows the same confidence rules as Pages/Posts list/editor
+  surfaces: visible feedback for mutations, app-dialog destructive confirms,
+  cache-safe duplicate/delete flows, and dirty-state protection for unsaved
+  content or metadata edits.
+- Generic `content_entries` previews stay on the content entry runtime path even
+  when the content type slug is `post` or `posts`; dedicated Posts storage is
+  used only for real posts.
 
 ### Posts admin authoring contract
 

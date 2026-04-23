@@ -4,6 +4,8 @@ import {
   clearEntriesCache,
   createEntry,
   deleteEntry,
+  duplicateEntry,
+  getCachedEntries,
   getEntry,
   getEntryCached,
   listEntries,
@@ -246,6 +248,89 @@ test("deleteEntry uses CSRF and DELETE", async () => {
     expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("duplicateEntry uses CSRF and primes list/detail caches", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const duplicated = {
+    id: "entry-copy",
+    typeId: "type-1",
+    title: "Hello (Copy)",
+    slug: "hello-copy",
+    status: "draft" as const,
+    data: {},
+    tags: ["news"],
+    createdAt: "2026-02-14T00:00:00.000Z",
+    updatedAt: "2026-02-14T00:00:00.000Z",
+    taxonomy: null,
+  };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse(duplicated);
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches("blog");
+    const result = await duplicateEntry("blog", "entry-1");
+    expect(result.id).toBe("entry-copy");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe(
+      "/admin/api/content/blog/entries/entry-1/duplicate"
+    );
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.body).toBe(JSON.stringify({}));
+    expect(getCachedEntries("blog")?.[0]?.id).toBe("entry-copy");
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches("blog");
+  }
+});
+
+test("failed updateEntryMetadata leaves cached list untouched", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const originalEntry = {
+    id: "entry-1",
+    typeId: "type-1",
+    title: "Original",
+    slug: "original",
+    status: "draft" as const,
+    data: {},
+    createdAt: "2026-02-14T00:00:00.000Z",
+    updatedAt: "2026-02-14T00:00:00.000Z",
+  };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/content/blog/entries") && init?.method === "GET") {
+      return jsonResponse([originalEntry]);
+    }
+    return jsonResponse({ error: { message: "metadata failed" } }, 500);
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches("blog");
+    await listEntriesCached("blog", { force: true });
+    await expect(
+      updateEntryMetadata("blog", "entry-1", { seo: { description: "Updated" } })
+    ).rejects.toThrow();
+    expect(getCachedEntries("blog")?.[0]?.title).toBe("Original");
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches("blog");
   }
 });
 

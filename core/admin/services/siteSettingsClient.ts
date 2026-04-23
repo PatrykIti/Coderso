@@ -26,6 +26,11 @@ export type PostSlugRouteContext = {
   detailPathPattern: string;
 };
 
+export type ContentSlugRouteContext = PostSlugRouteContext & {
+  contentTypeSlug: string;
+  routeEnabled: boolean;
+};
+
 export type PostSlugDisplay = {
   label: "Public URL" | "Route hint";
   value: string;
@@ -68,6 +73,17 @@ const resolvePostDetailPathPattern = (routes: SiteContentRoute[]) => {
     (item) => item.enabled && (item.type === "post" || item.type === "posts")
   );
   return route?.detailPath ?? "/post/:slug";
+};
+
+const resolveContentDetailRoute = (
+  routes: SiteContentRoute[],
+  contentTypeSlug: string
+) => {
+  const route = routes.find((item) => item.enabled && item.type === contentTypeSlug);
+  return {
+    detailPathPattern: route?.detailPath ?? `/${contentTypeSlug}/:slug`,
+    routeEnabled: Boolean(route),
+  };
 };
 
 const joinBaseAndPath = (baseUrl: string, path: string) => {
@@ -126,6 +142,25 @@ export const resolvePostSlugRouteContext = (
   publicBaseUrl: settings?.publicBaseUrl ?? null,
   detailPathPattern: resolvePostDetailPathPattern(settings?.contentRoutes ?? []),
 });
+
+export const resolveContentSlugRouteContext = (
+  settings: Pick<SiteSettingsResponse, "publicBaseUrl" | "contentRoutes"> | null | undefined,
+  contentTypeSlug: string
+): ContentSlugRouteContext => {
+  const normalizedSlug = contentTypeSlug.trim() || "content";
+  const route = resolveContentDetailRoute(settings?.contentRoutes ?? [], normalizedSlug);
+  return {
+    publicBaseUrl: settings?.publicBaseUrl ?? null,
+    contentTypeSlug: normalizedSlug,
+    detailPathPattern: route.detailPathPattern,
+    routeEnabled: route.routeEnabled,
+  };
+};
+
+export const resolveContentSlugDisplay = (
+  context: ContentSlugRouteContext,
+  slug: string
+): PostSlugDisplay => resolvePostSlugDisplay(context, slug);
 
 export const resolvePostSlugDisplay = (
   context: PostSlugRouteContext,

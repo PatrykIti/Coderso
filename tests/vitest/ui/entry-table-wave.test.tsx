@@ -198,10 +198,11 @@ test("EntryTable renders button and static title branches plus author and date f
   cleanup();
 });
 
-test("EntryTable forwards select, edit, and delete callbacks", () => {
+test("EntryTable forwards select, edit, duplicate, and delete callbacks", () => {
   const onToggleAll = vi.fn();
   const onToggleEntry = vi.fn();
   const onEdit = vi.fn();
+  const onDuplicate = vi.fn();
   const onDelete = vi.fn();
 
   const { container, cleanup } = mount(
@@ -213,6 +214,7 @@ test("EntryTable forwards select, edit, and delete callbacks", () => {
       onToggleAll={onToggleAll}
       onToggleEntry={onToggleEntry}
       onEdit={onEdit}
+      onDuplicate={onDuplicate}
       onDelete={onDelete}
     />
   );
@@ -225,6 +227,9 @@ test("EntryTable forwards select, edit, and delete callbacks", () => {
   );
   const deleteButton = Array.from(container.querySelectorAll("button")).find((button) =>
     button.textContent?.includes("Delete")
+  );
+  const duplicateButton = Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Duplicate")
   );
 
   if (!(selectAll instanceof HTMLInputElement)) {
@@ -239,6 +244,9 @@ test("EntryTable forwards select, edit, and delete callbacks", () => {
   if (!(deleteButton instanceof HTMLButtonElement)) {
     throw new Error("Missing delete action");
   }
+  if (!(duplicateButton instanceof HTMLButtonElement)) {
+    throw new Error("Missing duplicate action");
+  }
 
   expect(selectAll.getAttribute("data-checked")).toBe("indeterminate");
 
@@ -246,12 +254,14 @@ test("EntryTable forwards select, edit, and delete callbacks", () => {
     selectAll.click();
     selectEntry.click();
     editButton.click();
+    duplicateButton.click();
     deleteButton.click();
   });
 
   expect(onToggleAll).toHaveBeenCalledTimes(1);
   expect(onToggleEntry).toHaveBeenCalledWith("entry-1");
   expect(onEdit).toHaveBeenCalledWith("entry-1");
+  expect(onDuplicate).toHaveBeenCalledWith("entry-1");
   expect(onDelete).toHaveBeenCalledWith("entry-1");
 
   cleanup();

@@ -219,6 +219,15 @@ Clients update caches and broadcast events on:
   title/slug/status fields into an existing list row without dropping the
   current author identity.
 
+### Entries list/detail cache note
+
+- Entry duplicate writes the returned clone into `entries:detail:<typeSlug>:<id>`
+  and invalidates/broadcasts `entries:list:<typeSlug>` so the list reloads from
+  the authoritative list endpoint.
+- Failed metadata writes must not mutate list or detail cache state.
+- Entry editor background refresh must not overwrite unsaved content or metadata
+  edits; the editor defers active reload while either dirty flag is set.
+
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.

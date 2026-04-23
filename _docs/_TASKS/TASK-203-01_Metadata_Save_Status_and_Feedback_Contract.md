@@ -5,7 +5,8 @@
 **Category:** CMS/Entries + Admin/API + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-203, TASK-043, TASK-053-07
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-04-23
 
 ---
 

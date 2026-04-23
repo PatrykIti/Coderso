@@ -53,6 +53,7 @@ type EntryTableProps = {
   onToggleAll?: () => void;
   onToggleEntry?: (id: string) => void;
   onEdit?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   onDelete?: (id: string) => void;
   entryTypeSlug?: string | null;
 };
@@ -70,10 +71,12 @@ const formatUpdatedAt = (value?: string | null) => {
 
 function EntryRowActions({
   onEdit,
+  onDuplicate,
   onDelete,
   entryId,
 }: {
   onEdit?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
   onDelete?: (id: string) => void;
   entryId: string;
 }) {
@@ -89,7 +92,7 @@ function EntryRowActions({
           <Pencil className="h-4 w-4" />
           Edit
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDuplicate?.(entryId)}>
           <Copy className="h-4 w-4" />
           Duplicate
         </DropdownMenuItem>
@@ -112,6 +115,7 @@ export function EntryTable({
   onToggleAll,
   onToggleEntry,
   onEdit,
+  onDuplicate,
   onDelete,
   entryTypeSlug,
 }: EntryTableProps) {
@@ -226,6 +230,7 @@ export function EntryTable({
                   <div className="flex justify-end opacity-100 transition-opacity">
                     <EntryRowActions
                       onEdit={onEdit}
+                      onDuplicate={onDuplicate}
                       onDelete={onDelete}
                       entryId={entry.id}
                     />

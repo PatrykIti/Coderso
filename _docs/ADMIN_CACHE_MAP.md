@@ -14,9 +14,13 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Entries list
   - UI: `core/admin/ui/entries/EntryList.tsx`
   - Cached APIs: `listContentTypesCached`, `listEntriesCached`, `getCachedEntries`
+  - Mutations: `duplicateEntry`, `deleteEntry`, `updateEntryMetadata`
+  - Cache bus: `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
 - Entry editor
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
   - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`
+  - Mutations: `updateEntry`, `updateEntryMetadata`, `deleteEntry`
+  - Cache bus: `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
 
 ## Forms
 - Forms list

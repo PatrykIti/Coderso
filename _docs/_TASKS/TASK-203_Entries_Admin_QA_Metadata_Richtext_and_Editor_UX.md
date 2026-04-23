@@ -5,7 +5,8 @@
 **Category:** CMS/Entries + Admin/UI + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-003, TASK-043, TASK-048, TASK-053-07, TASK-059
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-04-23
 
 ---
 
@@ -313,3 +314,21 @@ Dependency notes:
    cache-safe.
 5. SEO URL, taxonomy guidance, preview failure handling, help density, and
    content-type sidebar scanability match current admin contracts.
+
+## Closure Notes
+
+- `BUG-1`, `UX-2`: metadata route/client/editor feedback and dirty-state guards
+  were fixed on the existing route/client/editor owners; publish transitions via
+  metadata now require `content:publish`.
+- `BUG-2`, `UX-4`: Engine `richtext` fields reuse the existing rich text
+  adapter, and generic content preview now bypasses the Posts storage branch for
+  report-shaped `contentType=post` entries.
+- `BUG-3`, `BUG-4`, `BUG-6`: row/bulk/editor destructive actions use app
+  dialogs, and duplicate is implemented through the existing Entries
+  service/client/route path.
+- `BUG-5`, `BUG-7`, `BUG-8`, `UX-1`, `UX-3`, `UX-5`: save actions, feedback,
+  SEO route display, sidebar scanability, collapsible help, and taxonomy
+  enablement links are aligned with current admin contracts.
+- Validation on 2026-04-23: lint/typecheck and targeted Vitest suites passed.
+  DB-backed Bun route/service/runtime assertions also passed with `.env` loaded
+  outside the sandbox: 16 pass, 0 fail.

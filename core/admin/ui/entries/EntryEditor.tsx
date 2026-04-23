@@ -1,5 +1,6 @@
 import { Eye, RefreshCcw, Save, Send, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedContentTypes, listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
+  deleteEntry,
   getCachedEntryDetail,
   getEntryCached,
   previewEntry,
@@ -34,16 +36,24 @@ import {
   type EntryDetail,
 } from "@/services/entriesClient";
 import {
+  getSiteSettings,
+  resolveContentSlugDisplay,
+  resolveContentSlugRouteContext,
+  type SiteSettingsResponse,
+} from "@/services/siteSettingsClient";
+import {
   createTaxonomyTerm,
   getTaxonomyOverview,
   type ContentTerm,
   type TaxonomyOverview,
 } from "@/services/taxonomyClient";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { EntryEditorHeader } from "./EntryEditorHeader";
+import { EntryDeleteDialog } from "./EntryDeleteDialog";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { buildEntryChecklist } from "./entryChecklist";
@@ -107,7 +117,11 @@ function slugify(value: string) {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
+const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
+  isApiClientError(error) ? error.message : fallback;
+
 export function EntryEditor() {
+  const { navigate } = useAdminRouter();
   const [{ type, id }] = useState<{
     type: string | null;
     id: string | null;
@@ -118,6 +132,7 @@ export function EntryEditor() {
     return resolveEntryParams(window.location.pathname);
   });
   const [entry, setEntry] = useState<EntryDetail | null>(null);
+  const [contentTypeId, setContentTypeId] = useState<string | null>(null);
   const [contentTypeName, setContentTypeName] = useState<string | null>(null);
   const [fields, setFields] = useState<ContentField[]>([]);
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -128,11 +143,18 @@ export function EntryEditor() {
     hasUnsavedChangesRef.current = value;
     setHasUnsavedChanges(value);
   };
+  const [hasUnsavedMetadataChanges, setHasUnsavedMetadataChanges] = useState(false);
+  const hasUnsavedMetadataChangesRef = useRef(false);
+  const setMetadataUnsavedChanges = (value: boolean) => {
+    hasUnsavedMetadataChangesRef.current = value;
+    setHasUnsavedMetadataChanges(value);
+  };
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [siteSettings, setSiteSettings] = useState<SiteSettingsResponse | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -141,6 +163,8 @@ export function EntryEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [relationTargets, setRelationTargets] = useState<
@@ -165,12 +189,14 @@ export function EntryEditor() {
       );
       setFields(mappedFields);
       setEntry(entryResult);
+      setContentTypeId(contentType.id);
       setContentTypeName(contentType.name);
       setTitle(entryResult.title);
       setSlug(entryResult.slug);
       setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
       setStatus(entryResult.status);
       setUnsavedChanges(false);
+      setMetadataUnsavedChanges(false);
       setScheduledAt(entryResult.scheduledAt ?? "");
       setSeoDescription(entryResult.seo?.description ?? "");
       setError(null);
@@ -221,7 +247,10 @@ export function EntryEditor() {
           return;
         }
         if (!entryResult) return;
-        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
+        if (
+          !options?.allowUnsaved &&
+          (hasUnsavedChangesRef.current || hasUnsavedMetadataChangesRef.current)
+        ) {
           setRemoteUpdatePending(true);
           return;
         }
@@ -297,6 +326,30 @@ export function EntryEditor() {
     });
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    getSiteSettings()
+      .then((settings) => {
+        if (active) setSiteSettings(settings);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hasAnyUnsavedChanges = hasUnsavedChanges || hasUnsavedMetadataChanges;
+
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!hasAnyUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasAnyUnsavedChanges]);
+
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
     setUnsavedChanges(true);
@@ -361,7 +414,7 @@ export function EntryEditor() {
     return data;
   };
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (options?: { successMessage?: string }) => {
     if (!type || !id) return;
     setIsSaving(true);
     setError(null);
@@ -377,12 +430,11 @@ export function EntryEditor() {
       setSeoDescription(updated.seo?.description ?? seoDescription);
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      toast.success(options?.successMessage ?? "Draft saved.");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save entry.");
-      }
+      const message = resolveEditorErrorMessage(err, "Failed to save entry.");
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -398,7 +450,7 @@ export function EntryEditor() {
     setError(null);
     try {
       if (status === "published") {
-        await handleSaveDraft();
+        await handleSaveDraft({ successMessage: "Entry updated." });
       } else {
         await publishEntry(type, id);
         const updated = await getEntryCached(type, id, { force: true });
@@ -410,21 +462,41 @@ export function EntryEditor() {
         }
         setUnsavedChanges(false);
         setRemoteUpdatePending(false);
+        toast.success("Entry published.");
       }
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to publish entry.");
-      }
+      const message = resolveEditorErrorMessage(err, "Failed to publish entry.");
+      setError(message);
+      toast.error(message);
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const handleStatusChange = async (nextStatus: EntryStatus) => {
+  const handleStatusChange = (nextStatus: EntryStatus) => {
     if (!type || !id) return;
     setStatus(nextStatus);
+    setMetadataUnsavedChanges(true);
+  };
+
+  const handleScheduledAtChange = (value: string) => {
+    setScheduledAt(value);
+    setMetadataUnsavedChanges(true);
+  };
+
+  const handleSeoDescriptionChange = (value: string) => {
+    setSeoDescription(value);
+    setMetadataUnsavedChanges(true);
+  };
+
+  const handleCategoryChange = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+    setMetadataUnsavedChanges(true);
+  };
+
+  const handleTagIdsChange = (tagIds: string[]) => {
+    setSelectedTagIds(tagIds);
+    setMetadataUnsavedChanges(true);
   };
 
   const handleGenerateSlug = () => {
@@ -477,6 +549,7 @@ export function EntryEditor() {
       const parsed = new Date(scheduledAt);
       if (Number.isNaN(parsed.getTime())) {
         setError("Schedule date must be a valid ISO timestamp.");
+        toast.error("Schedule date must be a valid ISO timestamp.");
         setIsSavingMetadata(false);
         return;
       }
@@ -485,6 +558,7 @@ export function EntryEditor() {
 
     if (status === "scheduled" && !scheduledAtIso) {
       setError("Schedule date is required for scheduled entries.");
+      toast.error("Schedule date is required for scheduled entries.");
       setIsSavingMetadata(false);
       return;
     }
@@ -512,15 +586,33 @@ export function EntryEditor() {
       setSeoDescription(updated.seo?.description ?? "");
       setSelectedCategoryId(updated.taxonomy?.category?.id ?? null);
       setSelectedTagIds(updated.taxonomy?.tags?.map((tag) => tag.id) ?? []);
+      setMetadataUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      toast.success("Metadata saved.");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save metadata.");
-      }
+      const message = resolveEditorErrorMessage(err, "Failed to save metadata.");
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSavingMetadata(false);
+    }
+  };
+
+  const handleDeleteEntry = async () => {
+    if (!type || !id) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await deleteEntry(type, id);
+      toast.success("Entry deleted.");
+      navigate("/entries");
+    } catch (err) {
+      const message = resolveEditorErrorMessage(err, "Failed to delete entry.");
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
     }
   };
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
@@ -533,6 +625,13 @@ export function EntryEditor() {
         categories: taxonomyOverview.terms.categories ?? [],
         tags: taxonomyOverview.terms.tags ?? [],
       }
+    : null;
+  const seoDisplay = useMemo(() => {
+    const context = resolveContentSlugRouteContext(siteSettings, type ?? "content");
+    return resolveContentSlugDisplay(context, slug);
+  }, [siteSettings, slug, type]);
+  const taxonomySettingsHref = contentTypeId
+    ? `/content-types/${encodeURIComponent(contentTypeId)}`
     : null;
 
   useEffect(() => {
@@ -627,7 +726,7 @@ export function EntryEditor() {
       breadcrumbs={
         <EntryEditorHeader
           status={status}
-          hasUnsavedChanges={hasUnsavedChanges}
+          hasUnsavedChanges={hasAnyUnsavedChanges}
           contentType={typeLabel}
           entryLabel={entry?.title ?? editorLabel}
         />
@@ -653,7 +752,7 @@ export function EntryEditor() {
                     variant="secondary"
                     size="sm"
                     className="gap-2"
-                    onClick={handleSaveDraft}
+                    onClick={() => void handleSaveDraft()}
                     disabled={isSaving || isLoading}
                   >
                     <Save className="h-4 w-4" />
@@ -706,11 +805,11 @@ export function EntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
-            {hasUnsavedChanges ? (
+            {hasAnyUnsavedChanges ? (
               <Alert>
                 <AlertTitle>Unsaved changes</AlertTitle>
                 <AlertDescription>
-                  Save or publish the entry to keep your edits.
+                  Save the entry content or metadata to keep your edits.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -847,33 +946,28 @@ export function EntryEditor() {
                 status={status}
                 onStatusChange={handleStatusChange}
                 scheduledAt={scheduledAt}
-                onScheduledAtChange={setScheduledAt}
+                onScheduledAtChange={handleScheduledAtChange}
                 title={title}
                 slug={slug}
+                seoPreviewUrl={seoDisplay.value}
                 seoDescription={seoDescription}
-                onSeoDescriptionChange={setSeoDescription}
+                onSeoDescriptionChange={handleSeoDescriptionChange}
                 checklist={checklist}
                 taxonomy={taxonomyState}
-                onCategoryChange={setSelectedCategoryId}
-                onTagIdsChange={setSelectedTagIds}
+                onCategoryChange={handleCategoryChange}
+                onTagIdsChange={handleTagIdsChange}
                 onCreateCategory={(name) => handleCreateTerm("category", name)}
                 onCreateTag={(name) => handleCreateTerm("tag", name)}
                 helpItems={helpItems}
+                taxonomySettingsHref={taxonomySettingsHref}
                 author={entry?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
+                onDelete={() => setDeleteDialogOpen(true)}
+                isDeleting={isDeleting}
               />
             </div>
           </ScrollArea>
-          <div className="border-t px-6 py-4">
-            <Button
-              className="w-full"
-              onClick={handleSaveDraft}
-              disabled={isSaving || isPublishing}
-            >
-              {isSaving ? "Saving..." : "Save draft"}
-            </Button>
-          </div>
         </aside>
       </div>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -888,35 +982,40 @@ export function EntryEditor() {
                 status={status}
                 onStatusChange={handleStatusChange}
                 scheduledAt={scheduledAt}
-                onScheduledAtChange={setScheduledAt}
+                onScheduledAtChange={handleScheduledAtChange}
                 title={title}
                 slug={slug}
+                seoPreviewUrl={seoDisplay.value}
                 seoDescription={seoDescription}
-                onSeoDescriptionChange={setSeoDescription}
+                onSeoDescriptionChange={handleSeoDescriptionChange}
                 checklist={checklist}
                 taxonomy={taxonomyState}
-                onCategoryChange={setSelectedCategoryId}
-                onTagIdsChange={setSelectedTagIds}
+                onCategoryChange={handleCategoryChange}
+                onTagIdsChange={handleTagIdsChange}
                 onCreateCategory={(name) => handleCreateTerm("category", name)}
                 onCreateTag={(name) => handleCreateTerm("tag", name)}
                 helpItems={helpItems}
+                taxonomySettingsHref={taxonomySettingsHref}
                 author={entry?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
+                onDelete={() => setDeleteDialogOpen(true)}
+                isDeleting={isDeleting}
               />
-            </div>
-            <div className="border-t px-6 py-4">
-              <Button
-                className="w-full"
-                onClick={handleSaveDraft}
-                disabled={isSaving || isPublishing}
-              >
-                {isSaving ? "Saving..." : "Save draft"}
-              </Button>
             </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      <EntryDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeleteDialogOpen(false);
+        }}
+        title="Delete entry?"
+        description={`Delete ${title || "this entry"}? This cannot be undone.`}
+        isDeleting={isDeleting}
+        onConfirm={() => void handleDeleteEntry()}
+      />
       <RuntimePreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}

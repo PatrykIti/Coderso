@@ -5,7 +5,8 @@
 **Category:** CMS/Entries + Admin/UI + Runtime Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-203, TASK-048, TASK-059, TASK-203-01
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-04-23
 
 ---
 

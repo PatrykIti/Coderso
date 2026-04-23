@@ -48,6 +48,12 @@ export const contentEntryPreviewSchema = {
   additionalProperties: false,
 };
 
+export const contentEntryDuplicateSchema = {
+  type: "object",
+  properties: {},
+  additionalProperties: false,
+};
+
 export const contentEntryMetadataSchema = {
   type: "object",
   properties: {

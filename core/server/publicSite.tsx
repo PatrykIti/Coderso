@@ -717,9 +717,9 @@ const renderEntryListHtml = async (
 const renderEntryDetailHtml = async (
   typeSlug: string,
   slug: string,
-  options?: { preview?: boolean; themeName?: string }
+  options?: { preview?: boolean; themeName?: string; preferGenericEntry?: boolean }
 ) => {
-  if (isPostContentTypeSlug(typeSlug)) {
+  if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug)) {
     const post = await getPostBySlug(slug);
     if (!post) return null;
     if (!options?.preview && !isEntryPublished(post)) {
@@ -877,6 +877,7 @@ export async function handlePublicRequest(req: Request) {
       if (!contentType) return new Response("Not Found", { status: 404 });
       const html = await renderEntryDetailHtml(contentType.slug, entry.slug, {
         preview: true,
+        preferGenericEntry: true,
       });
       if (!html) return new Response("Not Found", { status: 404 });
       return buildHtmlResponse(html);

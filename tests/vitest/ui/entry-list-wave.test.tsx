@@ -90,10 +90,12 @@ const entryListState = vi.hoisted(() => {
     nextEntriesError: new Map<string, unknown>(),
     entriesError: new Map<string, unknown>(),
     nextDeleteError: new Map<string, unknown>(),
+    nextDuplicateError: new Map<string, unknown>(),
     nextMetadataError: new Map<string, unknown>(),
     listContentTypesCalls: [] as Array<{ force?: boolean }>,
     listEntriesCalls: [] as Array<{ slug: string; force?: boolean }>,
     deleteEntryCalls: [] as Array<{ slug: string; id: string }>,
+    duplicateEntryCalls: [] as Array<{ slug: string; id: string }>,
     updateMetadataCalls: [] as Array<{
       slug: string;
       id: string;
@@ -111,10 +113,12 @@ const entryListState = vi.hoisted(() => {
       state.nextEntriesError = new Map<string, unknown>();
       state.entriesError = new Map<string, unknown>();
       state.nextDeleteError = new Map<string, unknown>();
+      state.nextDuplicateError = new Map<string, unknown>();
       state.nextMetadataError = new Map<string, unknown>();
       state.listContentTypesCalls = [];
       state.listEntriesCalls = [];
       state.deleteEntryCalls = [];
+      state.duplicateEntryCalls = [];
       state.updateMetadataCalls = [];
       state.navigateCalls = [];
     },
@@ -164,6 +168,13 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 vi.mock("@/services/apiClient", () => ({
   isApiClientError: (error: unknown) =>
     typeof error === "object" &&
@@ -208,6 +219,26 @@ vi.mock("@/services/entriesClient", () => ({
       (entry) => entry.id !== id
     );
     entryListState.cachedEntries[slug] = entryListState.entries[slug];
+  }),
+  duplicateEntry: vi.fn(async (slug: string, id: string) => {
+    entryListState.duplicateEntryCalls.push({ slug, id });
+    const key = `${slug}:${id}`;
+    const queuedError = entryListState.nextDuplicateError.get(key);
+    if (queuedError) {
+      entryListState.nextDuplicateError.delete(key);
+      throw queuedError;
+    }
+    const source = (entryListState.entries[slug] ?? []).find((entry) => entry.id === id);
+    const clone = {
+      ...(source ?? entryListState.createEntry("copy-1", "Copy", "copy", "draft", "author-1", "Ada")),
+      id: `${id}-copy`,
+      title: `${source?.title ?? "Copy"} (Copy)`,
+      slug: `${source?.slug ?? "copy"}-copy`,
+      status: "draft" as const,
+    };
+    entryListState.entries[slug] = [clone, ...(entryListState.entries[slug] ?? [])];
+    entryListState.cachedEntries[slug] = entryListState.entries[slug];
+    return clone;
   }),
   getCachedEntries: (slug: string) => entryListState.cachedEntries[slug] ?? null,
   listEntriesCached: vi.fn(async (slug: string, { force }: { force?: boolean } = {}) => {
@@ -456,6 +487,7 @@ vi.mock("../../../core/admin/ui/entries/EntryTable", () => ({
     onToggleAll,
     onToggleEntry,
     onEdit,
+    onDuplicate,
     onDelete,
   }: {
     entries: EntrySummary[];
@@ -466,6 +498,7 @@ vi.mock("../../../core/admin/ui/entries/EntryTable", () => ({
     onToggleAll: () => void;
     onToggleEntry: (id: string) => void;
     onEdit: (id: string) => void;
+    onDuplicate: (id: string) => void;
     onDelete: (id: string) => void;
   }) => (
     <div data-entry-table="true">
@@ -493,6 +526,13 @@ vi.mock("../../../core/admin/ui/entries/EntryTable", () => ({
       </button>
       <button
         type="button"
+        data-entry-duplicate-first="true"
+        onClick={() => entries[0] && onDuplicate(entries[0].id)}
+      >
+        duplicate-first
+      </button>
+      <button
+        type="button"
         data-entry-delete-first="true"
         onClick={() => entries[0] && onDelete(entries[0].id)}
       >
@@ -500,6 +540,26 @@ vi.mock("../../../core/admin/ui/entries/EntryTable", () => ({
       </button>
     </div>
   ),
+}));
+
+vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
+  EntryDeleteDialog: ({
+    open,
+    title,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-entry-delete-dialog="true">
+        <span>{title}</span>
+        <button type="button" data-entry-delete-confirm="true" onClick={onConfirm}>
+          confirm-delete
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../../core/admin/ui/entries/EntryTypeSidebar", () => ({
@@ -681,6 +741,18 @@ test("EntryList covers cached load, filters, create flows, cache refresh, and gr
 
     act(() => {
       view.container
+        .querySelector("button[data-entry-duplicate-first='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(entryListState.duplicateEntryCalls).toContainEqual({
+      slug: "articles",
+      id: "entry-1",
+    });
+    expect(entryListState.navigateCalls).toContain("/entries/articles/entry-1-copy");
+
+    act(() => {
+      view.container
         .querySelector("button[data-entry-filter-type='true']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -806,11 +878,13 @@ test("EntryList covers delete flows, bulk delete cancellation, and partial bulk 
         .querySelector("button[data-entry-delete-first='true']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    act(() => {
+      view.container
+        .querySelector("button[data-entry-delete-confirm='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     await flush();
-    expect(text(view.container)).toContain("Delete blocked");
-
-    const confirmMock = vi.fn(() => false);
-    vi.stubGlobal("confirm", confirmMock);
+    expect(text(view.container)).toContain("Failed to delete 1 entry.");
 
     act(() => {
       view.container
@@ -829,10 +903,9 @@ test("EntryList covers delete flows, bulk delete cancellation, and partial bulk 
     });
     await flush();
 
-    expect(confirmMock).toHaveBeenCalled();
+    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
     expect(entryListState.deleteEntryCalls).toHaveLength(1);
 
-    vi.stubGlobal("confirm", vi.fn(() => true));
     entryListState.nextDeleteError.set(
       "articles:entry-2",
       entryListState.apiError("Bulk delete blocked")
@@ -840,12 +913,12 @@ test("EntryList covers delete flows, bulk delete cancellation, and partial bulk 
 
     act(() => {
       view.container
-        .querySelector("button[data-entry-bulk-apply='true']")
+        .querySelector("button[data-entry-delete-confirm='true']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await flush();
 
-    expect(text(view.container)).toContain("Failed to update 1 entry.");
+    expect(text(view.container)).toContain("Failed to delete 1 entry.");
     expect(text(view.container)).toContain("Keep me");
     expect(text(view.container)).not.toContain("Delete me");
   } finally {

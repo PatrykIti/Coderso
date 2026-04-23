@@ -313,6 +313,27 @@ export async function updateEntryMetadata(
   return updated;
 }
 
+export async function duplicateEntry(typeSlug: string, id: string) {
+  const duplicated = await apiRequest<EntryDetail>(
+    `/content/${typeSlug}/entries/${id}/duplicate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+    { withCsrf: true }
+  );
+  if (duplicated) {
+    upsertCachedEntry(typeSlug, duplicated);
+    broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastCacheEvent({
+      key: cacheKeys.entryDetail(typeSlug, duplicated.id),
+      action: "update",
+    });
+  }
+  return duplicated;
+}
+
 export async function previewEntry(
   typeSlug: string,
   id: string,

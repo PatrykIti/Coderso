@@ -12,6 +12,7 @@ import {
 } from "../../../core/db/schema";
 import {
   createEntry,
+  duplicateEntry,
   updateEntry,
   createEntryPreview,
   getEntry,
@@ -213,6 +214,70 @@ testIfDb("updateEntryMetadata stores taxonomy tags, schedule, and SEO", async ()
   await cleanup();
   contentTypeId = undefined;
   entryId = undefined;
+});
+
+testIfDb("duplicateEntry creates a draft copy with unique slug and metadata", async () => {
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: `entry-copy-${randomUUID()}@example.com`,
+      passwordHash: "test",
+      status: "active",
+    })
+    .returning();
+  userId = user?.id;
+
+  const type = await createContentType({
+    name: "Stories",
+    slug: `stories-${randomUUID()}`,
+    schema,
+  });
+  contentTypeId = type.id;
+
+  const taxonomies = await setTaxonomyConfig(type.id, {
+    categories: true,
+    tags: true,
+  });
+  const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
+  const tag = await createTerm(tagTaxonomy!.id, { name: "Featured" });
+
+  const sourceSlug = `story-${randomUUID()}`;
+  const entry = await createEntry(type.id, {
+    title: "Source Story",
+    slug: sourceSlug,
+    data: { title: "Source Story" },
+  });
+  entryId = entry?.id;
+
+  await createEntry(type.id, {
+    title: "Existing copy",
+    slug: `${sourceSlug}-copy`,
+    data: { title: "Existing copy" },
+  });
+
+  await updateEntryMetadata(entry.id, {
+    taxonomy: { tagIds: [tag!.id] },
+    seo: { description: "Source SEO summary", robots: "index,follow" },
+  });
+
+  const duplicated = await duplicateEntry(entry.id, userId);
+
+  expect(duplicated?.title).toBe("Source Story (Copy 2)");
+  expect(duplicated?.slug).toBe(`${sourceSlug}-copy-2`);
+  expect(duplicated?.status).toBe("draft");
+  expect(duplicated?.publishedAt).toBeNull();
+  expect(duplicated?.scheduledAt).toBeNull();
+  expect(duplicated?.author?.id).toBe(userId);
+  expect(duplicated?.taxonomy?.tags?.map((term) => term.name)).toEqual([
+    "Featured",
+  ]);
+  expect(duplicated?.seo?.description).toBe("Source SEO summary");
+  expect(duplicated?.seo?.robots).toBe("index,follow");
+
+  await cleanup();
+  contentTypeId = undefined;
+  entryId = undefined;
+  userId = undefined;
 });
 
 testIfDb("validates relation entry IDs", async () => {

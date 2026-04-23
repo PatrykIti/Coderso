@@ -1,9 +1,18 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { pageRevisions, pages, previewTokens, users } from "../../../core/db/schema";
+import {
+  contentEntries,
+  contentTypes,
+  pageRevisions,
+  pages,
+  previewTokens,
+  users,
+} from "../../../core/db/schema";
+import { createEntry } from "../../../core/services/content/entryService";
+import { createContentType } from "../../../core/services/content/typeService";
 import {
   createPage,
   publishPage,
@@ -34,6 +43,8 @@ async function canConnect() {
 
 const trackedPageIds = new Set<string>();
 const trackedUserIds = new Set<string>();
+const trackedContentEntryIds = new Set<string>();
+const trackedContentTypeIds = new Set<string>();
 const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
 
 const trackPage = (id: string | undefined | null) => {
@@ -42,6 +53,14 @@ const trackPage = (id: string | undefined | null) => {
 
 const trackUser = (id: string | undefined | null) => {
   if (id) trackedUserIds.add(id);
+};
+
+const trackContentEntry = (id: string | undefined | null) => {
+  if (id) trackedContentEntryIds.add(id);
+};
+
+const trackContentType = (id: string | undefined | null) => {
+  if (id) trackedContentTypeIds.add(id);
 };
 
 const rememberSetting = async (key: string) => {
@@ -72,11 +91,22 @@ const restoreSettings = async () => {
 const cleanupTrackedRows = async () => {
   const pageIds = [...trackedPageIds];
   const userIds = [...trackedUserIds];
+  const contentEntryIds = [...trackedContentEntryIds];
+  const contentTypeIds = [...trackedContentTypeIds];
 
   if (pageIds.length > 0) {
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
     await db.delete(pageRevisions).where(inArray(pageRevisions.pageId, pageIds));
     await db.delete(pages).where(inArray(pages.id, pageIds));
+  }
+
+  if (contentEntryIds.length > 0) {
+    await db.delete(previewTokens).where(inArray(previewTokens.targetId, contentEntryIds));
+    await db.delete(contentEntries).where(inArray(contentEntries.id, contentEntryIds));
+  }
+
+  if (contentTypeIds.length > 0) {
+    await db.delete(contentTypes).where(inArray(contentTypes.id, contentTypeIds));
   }
 
   if (userIds.length > 0) {
@@ -85,6 +115,8 @@ const cleanupTrackedRows = async () => {
 
   trackedPageIds.clear();
   trackedUserIds.clear();
+  trackedContentEntryIds.clear();
+  trackedContentTypeIds.clear();
 };
 
 afterEach(async () => {
@@ -264,6 +296,57 @@ testIfDb("page preview runtime rejects missing, invalid, expired, and disabled t
     `/preview?type=page&token=${encodeURIComponent(valid.token)}`
   );
   expect(disabledResponse.status).toBe(404);
+});
+
+testIfDb("content preview renders generic entries whose type slug is post", async () => {
+  resetRateLimitBuckets();
+  await setTestSetting("site.previewEnabled", true);
+  await setTestSetting("site.cacheTtlSeconds", 0);
+
+  const [existingPostType] = await db
+    .select()
+    .from(contentTypes)
+    .where(eq(contentTypes.slug, "post"));
+  const contentType =
+    existingPostType ??
+    (await createContentType({
+      name: "Generic Post Entries",
+      slug: "post",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title"],
+        properties: { title: { type: "string" } },
+      },
+    }));
+  if (!existingPostType) trackContentType(contentType.id);
+
+  const entrySlug = `generic-preview-${randomUUID()}`;
+  const [entry] = await db
+    .insert(contentEntries)
+    .values({
+      typeId: contentType.id,
+      title: `Generic Preview ${randomUUID()}`,
+      slug: entrySlug,
+      status: "draft",
+      data: { title: "Generic preview body" },
+    })
+    .returning();
+  trackContentEntry(entry?.id);
+  if (!entry?.id) throw new Error("missing_content_preview_entry");
+
+  const { token } = await createPreviewToken({
+    targetType: "content",
+    targetId: entry.id,
+    ttlMinutes: 5,
+  });
+
+  const response = await requestPublicPath(
+    `/preview?type=content&token=${encodeURIComponent(token)}&contentType=post&slug=${encodeURIComponent(entry.slug)}&device=desktop`
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.text()).toContain(entry.title);
 });
 
 testIfDb("content route match takes precedence over a page slug until routes are cleared", async () => {

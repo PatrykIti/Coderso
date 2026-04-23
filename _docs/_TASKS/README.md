@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 85 tasks
+- **To Do:** 70 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1035 tasks
+- **Done:** 1050 tasks
 
 ---
 
@@ -38,21 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`: metadata/save feedback, rich text, preview, row actions, sidebar, SEO/taxonomy, and closure |
-| TASK-203-01 | Metadata Save, Status, and Feedback Contract | High | Large | Business area: metadata route/client errors, save feedback, status dirty state, and action clarity |
-| TASK-203-01-01 | Metadata Route, Service Error Mapping, and API Client State | High | Medium | Technical leaf: bounded metadata errors plus cache-safe client state |
-| TASK-203-01-02 | Editor Save, Update, Metadata Feedback, and Dirty State | High | Medium | Technical leaf: visible success/failure feedback and metadata dirty state |
-| TASK-203-01-03 | Status, Save Action Consolidation, and Metadata Dirty Guard | Medium | Medium | Technical leaf: remove duplicate save ambiguity and guard local status edits |
-| TASK-203-02 | Schema-Driven Rich Text and Runtime Preview | High | Large | Business area: rich text field rendering plus shared preview parity and 404 recovery |
-| TASK-203-02-01 | Rich Text Field Renderer Contract and Editor Surface | High | Large | Technical leaf: replace textarea-only rich text branch while preserving legacy entry data |
-| TASK-203-02-02 | Entry Runtime Preview Parity and 404 Recovery | Medium | Medium | Technical leaf: shared preview dialog/copy and token-safe runtime failure handling |
-| TASK-203-03 | Row Actions, Delete, Duplicate, and Danger Zone | High | Large | Business area: replace native confirms, add editor danger zone, and wire duplicate end to end |
-| TASK-203-03-01 | Delete Confirmation, List/Bulk, and Editor Danger Zone | High | Medium | Technical leaf: app dialogs for row/bulk/editor delete |
-| TASK-203-03-02 | Duplicate Entry Route, Client, and List Feedback | High | Medium | Technical leaf: make visible duplicate action real and cache-safe |
-| TASK-203-04 | Content Type Sidebar, SEO, Taxonomy, and Help Guidance | Medium | Large | Business area: sidebar scanability plus metadata guidance cleanup |
-| TASK-203-04-01 | Content Type Sidebar Grouping, Counts, and Hide Empty Types | Medium | Medium | Technical leaf: non-destructive sidebar grouping/filtering for many content types |
-| TASK-203-04-02 | Metadata Panel SEO URL, Taxonomy Link, and Collapsible Help | Medium | Medium | Technical leaf: replace hardcoded SEO URL and add internal taxonomy repair path |
-| TASK-203-05 | QA, Docs, and Closure | Medium | Medium | Final validation, Playwright finding map, docs, changelog, and board closure |
 | TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
 | TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Business area: search/sort/filter list, duplicate-name context, relation labels, and screen UUID hygiene |
 | TASK-202-01-01 | Content Type List Search, Sort, and Status Filters | High | Medium | Technical leaf: list search, deterministic sort, and real-status filter gating |
@@ -142,6 +127,21 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Done: Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md` closed with metadata feedback, rich text, preview recovery, row actions, sidebar, SEO/taxonomy, docs, and tests |
+| TASK-203-05 | QA, Docs, and Closure | Medium | Medium | Done: validation, Playwright finding map, docs, changelog 731, and board closure synced |
+| TASK-203-04-02 | Metadata Panel SEO URL, Taxonomy Link, and Collapsible Help | Medium | Medium | Done: SEO preview now uses site content routes, taxonomy disabled state links to Engine, and help is collapsible |
+| TASK-203-04-01 | Content Type Sidebar Grouping, Counts, and Hide Empty Types | Medium | Medium | Done: Entries sidebar groups populated and empty types, supports hide-empty, and disambiguates duplicate names with slugs |
+| TASK-203-04 | Content Type Sidebar, SEO, Taxonomy, and Help Guidance | Medium | Large | Done: sidebar scanability and metadata guidance cleanup landed |
+| TASK-203-03-02 | Duplicate Entry Route, Client, and List Feedback | High | Medium | Done: duplicate route/service/client/list action is real, CSRF-backed, and cache-safe |
+| TASK-203-03-01 | Delete Confirmation, List/Bulk, and Editor Danger Zone | High | Medium | Done: row, bulk, and editor deletion use app dialogs and exact target context |
+| TASK-203-03 | Row Actions, Delete, Duplicate, and Danger Zone | High | Large | Done: native confirms are removed, editor danger zone is present, and duplicate works end to end |
+| TASK-203-02-02 | Entry Runtime Preview Parity and 404 Recovery | Medium | Medium | Done: generic content preview bypasses the Posts storage branch for `post`/`posts` content type slugs |
+| TASK-203-02-01 | Rich Text Field Renderer Contract and Editor Surface | High | Large | Done: Engine `richtext` fields now reuse the rich text adapter/serializer instead of textarea-only editing |
+| TASK-203-02 | Schema-Driven Rich Text and Runtime Preview | High | Large | Done: rich text rendering and content preview recovery shipped |
+| TASK-203-01-03 | Status, Save Action Consolidation, and Metadata Dirty Guard | Medium | Medium | Done: duplicate Save draft surfaces are removed and metadata changes keep their own dirty state |
+| TASK-203-01-02 | Editor Save, Update, Metadata Feedback, and Dirty State | High | Medium | Done: save/update/metadata/delete flows now show success/failure toast feedback and preserve dirty-state guards |
+| TASK-203-01-01 | Metadata Route, Service Error Mapping, and API Client State | High | Medium | Done: metadata route maps bounded errors, publish transitions require `content:publish`, and failed client writes do not mutate cache |
+| TASK-203-01 | Metadata Save, Status, and Feedback Contract | High | Large | Done: metadata route/client errors, save feedback, status dirty state, and action clarity are aligned |
 | TASK-201 | Media Library QA Recovery and Asset Management UX | High | Large | Done: Media QA report closed with metadata/copy feedback, dimensions, empty states, real usage navigation, bulk actions, upload separation, replace action, docs, and changelog 729 |
 | TASK-201-06 | QA Docs and Closure | Medium | Medium | Done: source Playwright closure, docs, changelog 729, and targeted validation recorded |
 | TASK-201-05-03 | Replace Action Owner and Details Actions | Medium | Medium | Done: details Replace calls the existing media service/client owner and keeps the same media ID |

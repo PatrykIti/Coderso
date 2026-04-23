@@ -42,6 +42,27 @@ W panelu szczegolow po prawej stronie (Entry Metadata) znajduje sie blok z krotk
 - jak dzialaja relacje,
 - do czego sluza kategorie/tagi.
 
+Blok jest zwijany i pamieta stan w `localStorage`, zeby regularni operatorzy
+nie tracili miejsca w bocznym panelu.
+
+## Entries editor
+
+- Engine `richtext` fields render through the shared rich text adapter instead
+  of a textarea-only control, while legacy string values keep editable
+  compatibility through the serializer.
+- Status, schedule, SEO, category, and tag edits mark metadata as dirty and are
+  covered by the same leave-page guard as content edits.
+- The editor has one primary draft/update action in the top toolbar; metadata
+  changes keep their own `Save metadata` action in the sidebar.
+- Save draft, update, metadata save, publish, duplicate, and delete flows must
+  surface success/failure feedback through the shared admin toast surface.
+- The sidebar danger zone owns in-editor delete and uses the app dialog pattern
+  before destructive deletion.
+- SEO preview uses the active site/content route context. If no trusted public
+  base URL is configured, show a neutral placeholder instead of a fake domain.
+- When taxonomy is disabled for the active content type, the empty state links
+  back to the Engine content type editor where category/tag toggles live.
+
 ## Accessibility
 
 Tooltipy posiadaja `aria-label` dla czytnikow ekranu.

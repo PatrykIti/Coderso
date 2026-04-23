@@ -14,6 +14,16 @@ Opisuje pola Content Types oraz ich konfiguracje w Admin UI.
 Pole `help` w definicji pola wyswietla sie jako podpowiedz w edytorze wpisu.
 Uzywaj go dla pol mniej oczywistych (np. format, ograniczenia, kontekst).
 
+## Rich text field
+
+`xFieldType: "richtext"` uses the shared admin rich text adapter in the Entry
+Editor. Values are serialized before persistence so existing string content
+remains editable and new block-style content can use headings, bold text, links,
+and lists without changing the `content_entries.data` storage model.
+
+Plain `text` fields still render as textarea/input controls. Do not model a
+rich authoring surface as `text` if formatting is part of the editor contract.
+
 ## Layout & grouping (tabs/sections)
 
 UI pozwala ustawic **tab**, **sekcje**, **szerokosc** i **gestosc wyswietlania**

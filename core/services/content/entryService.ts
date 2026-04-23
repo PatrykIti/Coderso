@@ -3,6 +3,7 @@ import { db } from "../../db/client";
 import {
   contentEntries,
   contentRevisions,
+  contentTermAssignments,
   contentTypes,
   media,
   users,
@@ -403,6 +404,16 @@ const normalizeSeoSlug = (slug: string | null) => {
   return slug.startsWith("/") ? slug : `/${slug}`;
 };
 
+const resolveDuplicateTitle = (sourceTitle: string, index: number) => {
+  if (index === 0) return `${sourceTitle} (Copy)`;
+  return `${sourceTitle} (Copy ${index + 1})`;
+};
+
+const resolveDuplicateSlug = (sourceSlug: string, index: number) => {
+  if (index === 0) return `${sourceSlug}-copy`;
+  return `${sourceSlug}-copy-${index + 1}`;
+};
+
 export async function listEntries(typeId: string) {
   const rows = await db
     .select({
@@ -560,6 +571,82 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
     .returning();
 
   return row ?? null;
+}
+
+export async function duplicateEntry(entryId: string, actorId?: string | null) {
+  const source = await getEntry(entryId);
+  if (!source) throw new Error("entry_not_found");
+
+  let createdId: string | null = null;
+  let createdTitle: string | null = null;
+  let createdSlug: string | null = null;
+
+  for (let index = 0; index < 100; index += 1) {
+    const nextTitle = resolveDuplicateTitle(source.title, index);
+    const nextSlug = resolveDuplicateSlug(source.slug, index);
+
+    try {
+      await ensureEntrySlugAvailable(source.typeId, nextSlug);
+
+      const [created] = await db
+        .insert(contentEntries)
+        .values({
+          typeId: source.typeId,
+          authorId: actorId ?? source.author?.id ?? null,
+          title: nextTitle,
+          slug: nextSlug,
+          status: "draft",
+          tags: source.tags,
+          data: source.data,
+          publishedAt: null,
+          scheduledAt: null,
+        })
+        .returning({ id: contentEntries.id });
+
+      if (!created) throw new Error("entry_duplicate_failed");
+      createdId = created.id;
+      createdTitle = nextTitle;
+      createdSlug = nextSlug;
+      break;
+    } catch (error) {
+      if (error instanceof Error && error.message === "entry_slug_conflict") {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (!createdId || !createdTitle || !createdSlug) {
+    throw new Error("entry_duplicate_failed");
+  }
+
+  const sourceAssignments = await db
+    .select({ termId: contentTermAssignments.termId })
+    .from(contentTermAssignments)
+    .where(eq(contentTermAssignments.entryId, entryId));
+
+  if (sourceAssignments.length > 0) {
+    await db.insert(contentTermAssignments).values(
+      sourceAssignments.map((assignment) => ({
+        entryId: createdId as string,
+        termId: assignment.termId,
+      }))
+    );
+  }
+
+  if (source.seo) {
+    await upsertSeoDocument({
+      targetType: "entry",
+      targetId: createdId,
+      slug: normalizeSeoSlug(createdSlug),
+      title: source.seo.title ?? createdTitle,
+      description: source.seo.description ?? undefined,
+      canonicalUrl: source.seo.canonicalUrl ?? undefined,
+      robots: source.seo.robots ?? undefined,
+    });
+  }
+
+  return getEntry(createdId);
 }
 
 export async function updateEntry(id: string, input: UpdateEntryInput) {

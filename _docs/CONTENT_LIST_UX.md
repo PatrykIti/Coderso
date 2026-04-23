@@ -28,6 +28,19 @@ Gdy zaznaczysz wpisy na liscie:
 - Zaznaczenie dotyczy wpisow widocznych po filtrach.
 - W widoku grid selection jest czyszczone, aby uniknac ukrytych zaznaczen.
 
+## Entries parity
+
+- Entries sidebar groups content types into populated and empty collections,
+  while preserving search and count visibility.
+- `Hide empty content types` is non-destructive; an active empty type remains
+  visible so the current context does not disappear.
+- Duplicate content type display names are disambiguated with the slug.
+- Row delete and bulk delete use the shared app confirmation dialog, not native
+  `window.confirm()`.
+- Row duplicate is a real Entries mutation. It creates a draft clone, refreshes
+  list/detail cache state, and navigates feedback through the shared toast
+  surface.
+
 ## Posts list
 
 - Posts korzysta z tego samego wzorca filtrowania i bulk actions co inne listy

@@ -5,7 +5,8 @@
 **Category:** CMS/Entries + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-203-01, TASK-203-02, TASK-203-03, TASK-203-04
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-04-23
 
 ---
 
@@ -178,3 +179,18 @@ Out of scope:
 8. `UX-5` closure confirms the repair link goes to the current taxonomy-toggle
    owner, and `UX-4` closure confirms the `publicSite` post-slug branch was
    handled or follow-up-owned explicitly.
+
+## Closure Evidence
+
+- Source report closure is recorded in
+  `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`.
+- Docs updated: content list/editor UX, content fields, CMS spec/API, preview
+  spec, admin cache docs, Coderso Entries user docs, and Engine taxonomy docs.
+- Changelog entry: `_docs/_CHANGELOG/731-2026-04-23-task-203-entries-admin-qa-metadata-richtext-editor-ux.md`.
+- Targeted validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bunx vitest run tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-editor-shell-wave.test.tsx`
+  - `set -a && source .env && set +a && bun test tests/unit/content/entryService.test.ts tests/integration/routes/contentTypes.test.ts tests/integration/runtime/pages-runtime.test.ts`
+- The Bun DB-backed route/service/runtime command passed outside the sandbox:
+  16 pass, 0 fail.

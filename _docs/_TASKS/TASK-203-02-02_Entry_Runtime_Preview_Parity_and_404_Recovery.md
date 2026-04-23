@@ -5,7 +5,8 @@
 **Category:** CMS/Entries + Runtime Preview + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-203-02
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-04-23
 
 ---
 

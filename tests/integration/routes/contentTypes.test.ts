@@ -1,20 +1,61 @@
 import { expect, test } from "bun:test";
-import { registerContentEntryRoutes } from "../../../core/server/routes/contentEntryRoutes";
+import { randomUUID } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
+import { db } from "../../../core/db/client";
+import { contentEntries, contentTypes, users } from "../../../core/db/schema";
+import {
+  registerContentEntryRoutes,
+  type RouteContext,
+  type RouteHandler,
+} from "../../../core/server/routes/contentEntryRoutes";
 import { registerContentTypeRoutes } from "../../../core/server/routes/contentTypeRoutes";
+import { createEntry } from "../../../core/services/content/entryService";
+import { createContentType } from "../../../core/services/content/typeService";
 
-type Route = { method: string; path: string };
+type Route = { method: string; path: string; handlers: RouteHandler[] };
 
 const makeRouter = () => {
   const routes: Route[] = [];
   return {
     routes,
     router: {
-      get: (path: string) => routes.push({ method: "GET", path }),
-      post: (path: string) => routes.push({ method: "POST", path }),
-      patch: (path: string) => routes.push({ method: "PATCH", path }),
-      delete: (path: string) => routes.push({ method: "DELETE", path }),
+      get: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "GET", path, handlers }),
+      post: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "POST", path, handlers }),
+      patch: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "PATCH", path, handlers }),
+      delete: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "DELETE", path, handlers }),
     },
   };
+};
+
+const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+const testIfDb = hasDb ? test : test.skip;
+
+async function canConnect() {
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const runRoute = async (
+  routes: Route[],
+  method: string,
+  path: string,
+  ctx: RouteContext
+) => {
+  const route = routes.find((item) => item.method === method && item.path === path);
+  if (!route) throw new Error(`route_not_found:${method} ${path}`);
+  let result: unknown;
+  for (const handler of route.handlers) {
+    result = await handler(ctx);
+  }
+  return result;
 };
 
 test("content routes are registered", () => {
@@ -44,10 +85,107 @@ test("content routes are registered", () => {
       "GET /content/:type/entries/:id",
       "PATCH /content/:type/entries/:id",
       "PATCH /content/:type/entries/:id/metadata",
+      "POST /content/:type/entries/:id/duplicate",
       "DELETE /content/:type/entries/:id",
       "POST /content/:type/entries/:id/preview",
       "POST /content/:type/entries/:id/publish",
       "POST /content/:type/entries/:id/unpublish",
     ])
   );
+});
+
+testIfDb("content entry metadata publish requires publish permission", async () => {
+  const { router, routes } = makeRouter();
+  const permissions: string[] = [];
+
+  registerContentEntryRoutes(router, {
+    requirePermission: (permission) => async () => {
+      permissions.push(permission);
+    },
+    validate: () => undefined,
+  });
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: `content-route-${randomUUID()}@example.com`,
+      passwordHash: "test",
+      status: "active",
+    })
+    .returning();
+  const type = await createContentType({
+    name: "Route Stories",
+    slug: `route-stories-${randomUUID()}`,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: { title: { type: "string" } },
+    },
+  });
+  const entry = await createEntry(type.id, {
+    title: "Route entry",
+    slug: `route-entry-${randomUUID()}`,
+    data: { title: "Route entry" },
+  });
+
+  try {
+    await runRoute(routes, "PATCH", "/content/:type/entries/:id/metadata", {
+      params: { type: type.slug, id: entry.id },
+      query: {},
+      body: { status: "published" },
+      user: { id: user!.id },
+    });
+
+    expect(permissions).toContain("content:write");
+    expect(permissions).toContain("content:publish");
+  } finally {
+    await db.delete(contentEntries).where(eq(contentEntries.id, entry.id));
+    await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
+    await db.delete(users).where(eq(users.id, user!.id));
+  }
+});
+
+testIfDb("content entry duplicate route returns a draft clone", async () => {
+  const { router, routes } = makeRouter();
+
+  registerContentEntryRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const type = await createContentType({
+    name: "Route Docs",
+    slug: `route-docs-${randomUUID()}`,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: { title: { type: "string" } },
+    },
+  });
+  const entry = await createEntry(type.id, {
+    title: "Route doc",
+    slug: `route-doc-${randomUUID()}`,
+    data: { title: "Route doc" },
+  });
+
+  try {
+    const result = (await runRoute(
+      routes,
+      "POST",
+      "/content/:type/entries/:id/duplicate",
+      {
+        params: { type: type.slug, id: entry.id },
+        query: {},
+        body: {},
+      }
+    )) as { title: string; slug: string; status: string };
+
+    expect(result.title).toBe("Route doc (Copy)");
+    expect(result.slug).toBe(`${entry.slug}-copy`);
+    expect(result.status).toBe("draft");
+  } finally {
+    await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
+  }
 });

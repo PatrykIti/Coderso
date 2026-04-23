@@ -195,6 +195,36 @@ GET http://localhost:3000/preview?type=content&token=...&contentType=post&slug=m
 
 ---
 
+## Closure TASK-203 (2026-04-23)
+
+All findings from this report were mapped into `TASK-203` and closed through
+the existing Entries owners rather than a parallel editor, route, preview, or
+storage path.
+
+| Finding | Closure |
+|---|---|
+| BUG-1 | Fixed metadata route/client/editor feedback. Metadata errors are bounded, failed writes do not mutate cache, and publish transitions via metadata require `content:publish`. |
+| BUG-2 | Fixed `richtext` field rendering through the shared rich text adapter/serializer instead of textarea-only editing. |
+| BUG-3 | Replaced native row/bulk delete confirms with the app dialog pattern. |
+| BUG-4 | Implemented real duplicate flow through `EntryTable -> EntryList -> entriesClient -> contentEntryRoutes -> entryService`; clone is draft and cache-safe. |
+| BUG-5 | Removed duplicate sidebar `Save draft` actions; toolbar owns content save/update and sidebar owns metadata save. |
+| BUG-6 | Added editor danger zone delete with app confirmation, toast feedback, and list navigation after delete. |
+| BUG-7 | Added shared success/failure toast feedback for save draft, update, metadata, publish, duplicate, and delete flows. |
+| BUG-8 | SEO snippet URL now resolves from site settings/content routes with a neutral fallback instead of `nextless.cms`. |
+| UX-1 | Sidebar groups populated/empty types, supports `Hide empty content types`, preserves the active empty type, and disambiguates duplicate names with slugs. |
+| UX-2 | Metadata edits now set a separate dirty flag and participate in the leave-page/refresh guard until `Save metadata` succeeds. |
+| UX-3 | `What is this?` help is collapsible and persists its collapsed state in localStorage. |
+| UX-4 | Existing Entries runtime preview action remains; runtime content preview now keeps generic entries on the generic content path when `contentType=post/posts`, fixing the captured 404 class. |
+| UX-5 | Disabled taxonomy state links to the owning Engine content type editor where taxonomy toggles live. |
+
+Validation:
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bunx vitest run tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-editor-shell-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/unit/content/entryService.test.ts tests/integration/routes/contentTypes.test.ts tests/integration/runtime/pages-runtime.test.ts` (16 pass, 0 fail outside the sandbox)
+
+---
+
 ## Screenshoty
 
 - `entries-list.png` — lista entry dla typu "testowy" (2 wpisy)

@@ -19,6 +19,8 @@ filtering, list/grid switching, and a create-entry drawer.
 
 In the current UI, this surface includes:
 - a left sidebar of content types with record counts,
+- populated and empty content type grouping with a `Hide empty content types`
+  toggle,
 - a main list area for the selected type,
 - `Create New {type}` action,
 - filters and type switching,
@@ -81,6 +83,9 @@ This is the correct surface when:
       editor,
     - without it, the draft stays in the list for later work.
 12. Open an existing record by clicking its row title.
+13. Use the row actions only after confirming the active type:
+    - `Duplicate` creates a new draft clone and opens it for review,
+    - `Delete` opens an app confirmation dialog before removing the entry.
 
 Use this safe list workflow when you want fewer mistakes:
 1. Pick the correct content type.
@@ -101,6 +106,9 @@ Use this safe list workflow when you want fewer mistakes:
   review still belong in the editor.
 - If a record feels too custom for its content type, the problem may be the
   Engine schema rather than the entry itself.
+- Empty content types can be hidden for scanning, but this does not archive or
+  delete the type.
+- Duplicate names in the sidebar show their slug as the stable disambiguator.
 
 # Troubleshooting
 
@@ -117,6 +125,9 @@ Use this safe list workflow when you want fewer mistakes:
 - A record should exist but the count looks wrong:
   refresh your understanding of the active content type before assuming the data
   is missing.
+- Duplicate does not show the expected clone:
+  refresh the active type list and check for the draft copy with the copied
+  title/slug suffix.
 
 # Decision Guide
 

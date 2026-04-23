@@ -270,6 +270,24 @@ vi.mock("@/services/entriesClient", () => ({
   listEntriesCached: entriesState.listEntriesCached,
 }));
 
+vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
+  PostRichTextAdapter: ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+  }) => (
+    <button
+      type="button"
+      data-richtext-value={value}
+      onClick={() => onChange("Updated body")}
+    >
+      richtext-editor
+    </button>
+  ),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     onChange,
@@ -826,9 +844,10 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
     );
     expect(textView.container.textContent).toContain("Long-form content with formatting.");
 
-    const textarea = textView.container.querySelector("textarea");
     act(() => {
-      setTextareaValue(textarea ?? undefined, "Updated body");
+      textView.container
+        .querySelector("button[data-richtext-value]")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(onChange).toHaveBeenLastCalledWith("Updated body");
 

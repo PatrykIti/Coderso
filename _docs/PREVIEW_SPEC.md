@@ -105,6 +105,15 @@ Widget template preview moze dodac metadata UI:
 - When a CSS bundle is available, we emit `rel="preload" as="style"` + `rel="stylesheet"`.
 - In preview mode, the body stays hidden until `window.load`, regardless of whether styles come from a built CSS bundle or dev module scripts.
 
+## Content entry preview routing
+
+- `type=content` preview renders through the generic content-entry runtime
+  contract by default.
+- A generic `content_entries` record whose content type slug is `post` or
+  `posts` must not be diverted into the dedicated Posts storage branch. This
+  keeps Engine-owned entries previewable even when an operator names a
+  collection `Post`.
+
 ## Security
 
 - Token losowy, przechowywany jako hash.

@@ -77,10 +77,14 @@ The editor works as five connected workflows:
 11. In `Search Engine Optimization`, review:
     - snippet preview,
     - meta description.
+    The preview URL comes from site settings and the active content route, not a
+    hardcoded demo domain.
 12. In `Taxonomy`, review:
     - categories,
     - tags,
     - whether the current content type even enables them.
+    If taxonomy is disabled, use the Engine settings link from the panel to
+    enable categories or tags for the owning content type.
 13. Use `Save metadata` after adjusting status, SEO, or taxonomy.
 14. Use the main primary action:
     - `Publish` for drafts,
@@ -114,6 +118,11 @@ Use this safe editing order when you want fewer publish mistakes:
   missing UI bug.
 - Runtime preview is more valuable late in the workflow, after required fields
   and metadata are already coherent.
+- Rich text fields use the rich text editor surface. Plain textarea behavior is
+  reserved for text fields, not Engine `richtext`.
+- Metadata changes have their own dirty state. Leaving the editor with unsaved
+  status, schedule, SEO, category, or tag changes should trigger the same guard
+  as unsaved field edits.
 
 # Troubleshooting
 
@@ -122,12 +131,17 @@ Use this safe editing order when you want fewer publish mistakes:
 - The record looks incomplete even though the main fields are filled:
   review the metadata panel, especially status, checklist, SEO, and taxonomy.
 - Categories or tags are not available:
-  the content type may have taxonomy disabled in Engine.
+  the content type may have taxonomy disabled in Engine; use the panel link to
+  open that content type's settings.
 - The record renders oddly in downstream UI:
   verify field values, slug, and preview, then trace back to the schema if
   needed.
 - You changed content but the publish action still feels unsafe:
   use `Save draft`, review the checklist, and only then publish/update.
+- Save metadata fails:
+  check the visible toast/error and retry after correcting the status, schedule,
+  or taxonomy input; failed metadata writes should not silently change cache
+  state.
 
 # Decision Guide
 

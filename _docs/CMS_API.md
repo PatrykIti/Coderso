@@ -1790,6 +1790,7 @@ Przyklad payload:
 - `GET /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id/metadata`
+- `POST /content/:type/entries/:id/duplicate`
 - `POST /content/:type/entries/:id/preview`
 - `POST /content/:type/entries/:id/publish`
 - `POST /content/:type/entries/:id/unpublish`
@@ -1870,6 +1871,18 @@ Metadata update payload (example):
   }
 }
 ```
+
+Metadata status transitions to `published` require `content:publish`; ordinary
+metadata writes remain under `content:write`.
+
+Duplicate entry payload:
+
+```json
+{}
+```
+
+Duplicate creates a draft copy with a unique title/slug, copied entry data,
+taxonomy assignments, tags, and SEO metadata. The source entry is not mutated.
 
 ---
 

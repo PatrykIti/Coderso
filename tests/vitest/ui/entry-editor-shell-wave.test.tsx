@@ -58,6 +58,8 @@ const entryEditorState = vi.hoisted(() => {
     updateEntryCalls: [] as Array<Record<string, unknown>>,
     publishEntryCalls: [] as Array<{ type: string; id: string }>,
     updateMetadataCalls: [] as Array<Record<string, unknown>>,
+    deleteEntryCalls: [] as Array<{ type: string; id: string }>,
+    navigateCalls: [] as string[],
     previewCalls: [] as Array<{ type: string; id: string }>,
     createTermCalls: [] as Array<{ taxonomyId: string; input: Record<string, unknown> }>,
     getEntryCalls: [] as Array<{ type: string; id: string; force?: boolean }>,
@@ -65,6 +67,7 @@ const entryEditorState = vi.hoisted(() => {
     previewError: null as unknown,
     publishError: null as unknown,
     metadataError: null as unknown,
+    deleteError: null as unknown,
     createTermError: null as unknown,
     reset() {
       this.previewUrl = "https://preview.test/entry";
@@ -72,6 +75,8 @@ const entryEditorState = vi.hoisted(() => {
       this.updateEntryCalls = [];
       this.publishEntryCalls = [];
       this.updateMetadataCalls = [];
+      this.deleteEntryCalls = [];
+      this.navigateCalls = [];
       this.previewCalls = [];
       this.createTermCalls = [];
       this.getEntryCalls = [];
@@ -79,6 +84,7 @@ const entryEditorState = vi.hoisted(() => {
       this.previewError = null;
       this.publishError = null;
       this.metadataError = null;
+      this.deleteError = null;
       this.createTermError = null;
     },
   };
@@ -181,6 +187,13 @@ vi.mock("@/components/ui/textarea", () => ({
   }),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 vi.mock("@/services/apiClient", () => ({
   isApiClientError: (error: unknown) =>
     typeof error === "object" &&
@@ -202,6 +215,11 @@ vi.mock("@/services/contentTypesClient", () => ({
 }));
 
 vi.mock("@/services/entriesClient", () => ({
+  deleteEntry: vi.fn(async (type: string, id: string) => {
+    entryEditorState.deleteEntryCalls.push({ type, id });
+    if (entryEditorState.deleteError) throw entryEditorState.deleteError;
+    return { ok: true };
+  }),
   getCachedEntryDetail: () => entryEditorState.entry,
   getEntryCached: vi.fn(async (type: string, id: string, { force }: { force?: boolean } = {}) => {
     entryEditorState.getEntryCalls.push({ type, id, force });
@@ -248,6 +266,39 @@ vi.mock("@/services/entriesClient", () => ({
   }),
 }));
 
+vi.mock("@/services/siteSettingsClient", () => ({
+  getSiteSettings: vi.fn(async () => ({
+    publicBaseUrl: "https://site.test",
+    contentRoutes: [
+      {
+        type: "articles",
+        listPath: "/articles",
+        detailPath: "/articles/:slug",
+        enabled: true,
+      },
+    ],
+  })),
+  resolveContentSlugRouteContext: (
+    settings: { publicBaseUrl: string | null; contentRoutes: Array<{ type: string; detailPath: string; enabled: boolean }> } | null,
+    contentTypeSlug: string
+  ) => ({
+    publicBaseUrl: settings?.publicBaseUrl ?? null,
+    contentTypeSlug,
+    detailPathPattern:
+      settings?.contentRoutes.find((route) => route.type === contentTypeSlug && route.enabled)
+        ?.detailPath ?? `/${contentTypeSlug}/:slug`,
+    routeEnabled: true,
+  }),
+  resolveContentSlugDisplay: (
+    context: { publicBaseUrl: string | null; detailPathPattern: string },
+    slug: string
+  ) => ({
+    label: context.publicBaseUrl ? "Public URL" : "Route hint",
+    value: `${context.publicBaseUrl ?? ""}${context.detailPathPattern.replace(":slug", slug)}`,
+    concrete: Boolean(context.publicBaseUrl),
+  }),
+}));
+
 vi.mock("@/services/taxonomyClient", () => ({
   getTaxonomyOverview: vi.fn(async () => entryEditorState.taxonomyOverview),
   createTaxonomyTerm: vi.fn(async (taxonomyId: string, input: Record<string, unknown>) => {
@@ -258,6 +309,14 @@ vi.mock("@/services/taxonomyClient", () => ({
       name: input.name,
       slug: String(input.name).toLowerCase(),
     };
+  }),
+}));
+
+vi.mock("@/ui/contexts/AdminRouterContext", () => ({
+  useAdminRouter: () => ({
+    navigate: (href: string) => {
+      entryEditorState.navigateCalls.push(href);
+    },
   }),
 }));
 
@@ -305,6 +364,23 @@ vi.mock("../../../core/admin/ui/entries/EntryEditorHeader", () => ({
   }) => <div>{`${entryLabel}:${status}`}</div>,
 }));
 
+vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
+  EntryDeleteDialog: ({
+    open,
+    onConfirm,
+  }: {
+    open: boolean;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-entry-delete-dialog="true">
+        <button type="button" data-entry-delete-confirm="true" onClick={onConfirm}>
+          confirm-delete
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
   EntryMetadataPanel: ({
     onStatusChange,
@@ -315,6 +391,7 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
     onCreateCategory,
     onCreateTag,
     onSave,
+    onDelete,
   }: {
     onStatusChange: (status: "draft" | "published" | "scheduled" | "archived") => void;
     onScheduledAtChange: (value: string) => void;
@@ -324,6 +401,7 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
     onCreateCategory?: (name: string) => Promise<unknown>;
     onCreateTag?: (name: string) => Promise<unknown>;
     onSave?: () => void;
+    onDelete?: () => void;
   }) => (
     <div>
       <button type="button" onClick={() => onStatusChange("scheduled")}>
@@ -349,6 +427,9 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
       </button>
       <button type="button" onClick={onSave}>
         save-metadata
+      </button>
+      <button type="button" onClick={onDelete}>
+        delete-entry
       </button>
     </div>
   ),
@@ -464,6 +545,15 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       buttons.find((button) => button.textContent === "create-category")?.click();
       buttons.find((button) => button.textContent === "create-tag")?.click();
       buttons.find((button) => button.textContent === "save-metadata")?.click();
+      buttons.find((button) => button.textContent === "delete-entry")?.click();
+    });
+    act(() => {
+      view.container
+        .querySelector("button[data-entry-delete-confirm='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
 
     expect(entryEditorState.previewCalls[0]).toEqual({
@@ -480,7 +570,10 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       { taxonomyId: "cat-taxonomy", input: { name: "Updates" } },
       { taxonomyId: "tag-taxonomy", input: { name: "Featured" } },
     ]);
-    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(entryEditorState.deleteEntryCalls).toEqual([
+      { type: "articles", id: "entry-1" },
+    ]);
+    expect(entryEditorState.navigateCalls).toContain("/entries");
     expect(view.container.textContent).toContain("preview:open:");
 
     act(() => {

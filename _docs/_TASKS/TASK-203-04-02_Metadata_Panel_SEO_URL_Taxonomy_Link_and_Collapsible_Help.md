@@ -5,7 +5,8 @@
 **Category:** CMS/Entries + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-203-04
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-04-23
 
 ---
 

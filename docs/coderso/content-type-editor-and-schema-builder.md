@@ -140,6 +140,9 @@ Use this safe modeling order when you want the lowest risk of downstream churn:
   automatically mean a better model.
 - Taxonomy behavior is showing up where it should not:
   review the `Categories` and `Tags` toggles.
+- Entry editor says categories and tags are disabled:
+  open this content type editor from the Entry metadata panel link and review
+  the taxonomy toggles here.
 
 # Decision Guide
 

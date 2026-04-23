@@ -9,10 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
+import { serializePostRichText } from "../../../services/posts/editor/postRichTextSerializer";
 
 import type { ContentField } from "../content-types/SchemaBuilder";
 
@@ -172,10 +173,7 @@ export function FieldRenderer({
   const spacingClass = isCompact ? "space-y-1" : "space-y-2";
   const inputClass = isCompact ? "h-9 text-sm" : undefined;
   const helperClass = isCompact ? "text-[11px]" : "text-xs";
-  const textAreaRows = isCompact ? 6 : 10;
-  const textAreaClass = isCompact
-    ? "min-h-[140px] resize-none bg-muted/30 text-sm"
-    : "min-h-[240px] resize-none bg-muted/30";
+  const richTextHeightClass = isCompact ? "min-h-[9rem]" : "min-h-[15rem]";
   const relationTarget = field.relation?.target ?? "";
   const relationLabel = useMemo(() => {
     if (!relationTarget) return undefined;
@@ -212,11 +210,12 @@ export function FieldRenderer({
     case "richtext":
       return (
         <div className={spacingClass}>
-          <Textarea
-            value={String(value ?? "")}
-            onChange={(event) => onChange(event.target.value)}
-            rows={textAreaRows}
-            className={textAreaClass}
+          <PostRichTextAdapter
+            value={serializePostRichText(value)}
+            onChange={onChange}
+            toolbarProfile="paragraph"
+            minHeightClassName={richTextHeightClass}
+            className="bg-muted/30"
             placeholder="Start writing..."
           />
           <p className={`${helperClass} text-muted-foreground`}>
