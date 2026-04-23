@@ -45,6 +45,19 @@ switching, realtime search, type filters, native file picker upload, media
 settings access mode, existing replace/delete affordances, the current media
 delivery access model, and the admin cache invalidation behavior.
 
+Implementation principle:
+
+- repair the existing media/admin contracts instead of introducing parallel
+  flows, duplicate helpers, or media-only infrastructure where shared owners
+  already exist,
+- name the owner and responsibility before changing a boundary that spans UI,
+  client, route, service, storage, cache, or navigation,
+- keep fixes grounded in current code paths and tests; do not create a new
+  media management model, notification host, navigation DSL, storage contract,
+  or bulk API unless the existing owner cannot satisfy the report safely,
+- when ownership is unclear during implementation, document the chosen owner in
+  the leaf before coding so later leaves do not add a second path.
+
 ## Sub-Tasks
 
 - `TASK-201-01_Metadata_Save_Feedback_and_Asset_Identity.md`
@@ -99,30 +112,67 @@ Current owner seams in code:
 
 - Media library shell, filters, cache, settings, upload orchestration:
   - `core/admin/ui/media/MediaLibraryPage.tsx`
+    - owns page state, filtered/visible asset set, selected details asset,
+      upload orchestration, open-after-upload preference wiring, list/grid mode,
+      and the decision to show empty states or load-more controls.
   - `core/admin/ui/media/MediaToolbar.tsx`
+    - owns search/filter/view/preference controls only; it must not own media
+      persistence, navigation, or cache state.
   - `core/admin/ui/media/UploadDropzone.tsx`
+    - owns file input/drop handling only; it must call existing upload handlers
+      and never bypass upload validation.
   - `core/admin/ui/media/MediaSettingsDrawer.tsx`
+    - owns delivery-access settings UI; if `media.openAfterUpload` is exposed
+      here, it still writes through `userSettingsClient` and the existing key.
   - `core/admin/services/mediaClient.ts`
+    - owns admin API wrappers, media list cache, cache updates, and cache-bus
+      broadcasts.
   - `core/admin/services/userSettingsClient.ts`
+    - owns `media.openAfterUpload`; do not create a second browser storage key.
 - Grid/card/details presentation:
   - `core/admin/ui/media/MediaGrid.tsx`
+    - owns grid/list presentation wiring and reusable selection props shared by
+      the library, picker, and post editor surfaces.
   - `core/admin/ui/media/MediaCard.tsx`
+    - owns card display, selected state, readable names, missing-alt card badge,
+      and keyboard-accessible per-card selection affordance.
   - `core/admin/ui/media/MediaDetailsDrawer.tsx`
+    - owns the primary details drawer, metadata draft state, save/copy feedback,
+      usage rendering, and details actions.
   - `core/admin/ui/media/MediaDetailsPanel.tsx`
+    - secondary details component; if kept, it must receive the same display
+      name, dimension, and metadata-save semantics as the drawer or be retired
+      deliberately in a separate cleanup.
   - `core/admin/ui/media/types.ts`
+    - owns UI-facing media item and usage summary types.
   - `core/admin/ui/media/utils.ts`
+    - owns display-name, date/size, dimension, and kind formatting helpers.
 - Server/service contract:
   - `core/server/routes/mediaRoutes.ts`
+    - owns route orchestration, permission checks, validation calls, and mapping
+      media-domain errors to API errors.
   - `core/server/validation/mediaSchemas.ts`
+    - owns strict media route payload/query schemas.
   - `core/services/media/mediaService.ts`
+    - owns media domain mutations, metadata merge semantics, upload defaults,
+      dimension persistence/backfill orchestration, and storage adapter calls.
   - `core/services/media/storage/adapter.ts`
+    - owns the storage read/write/delete interface; only extend it if legacy
+      dimension backfill cannot use the current `get(key)` read path safely.
   - `core/services/media/storage/index.ts`
+    - owns adapter selection and storage settings resolution.
   - `core/db/schema.ts` (`media.width` and `media.height` already exist)
 - Related reference owners for usage lookups:
-  - `core/db/schema.ts` (`pages`, `contentEntries`, `posts`, commerce media ids)
+  - `core/db/schema.ts` (`pages.currentData`, `pages.publishedData`,
+    `contentEntries.data`, `posts.featuredMediaId`, `posts.data`,
+    `commerceProducts.mediaIds`)
   - `core/services/content/contentListResolver.ts`
+    - reference only for current media-id candidate shapes; usage lookup should
+      not fork runtime listing behavior.
   - `core/services/posts/editor/postBlockDocument.ts`
   - `core/services/posts/runtime/postBlockRuntimeMapper.ts`
+    - reference only for post block/rich-text media-id ownership; usage lookup
+      should read bounded summaries, not render post runtime content.
   - `core/services/search/searchService.ts` for search/navigation reference only
   - `core/admin/ui/search/searchNavigation.ts` for media selected-query pattern
 - Navigation/cache helpers:
@@ -146,6 +196,9 @@ Current owner seams in code:
 
 Reuse-first rule:
 
+- fix current contracts in their owner modules before adding new abstractions,
+  and remove or align any old path that would keep writing/reading a different
+  shape,
 - keep `MediaGrid` usable by both `MediaLibraryPage` and `MediaPicker`; library
   bulk selection must not break picker selection semantics,
 - use existing `sonner` / shared `AdminApp` toaster mounting for feedback rather
@@ -159,6 +212,9 @@ Reuse-first rule:
 - keep dimensions in the media service/domain contract; UI fallback probing may
   be used only as an explicit temporary compatibility path that does not replace
   server-side persistence,
+- keep metadata PATCH semantics non-destructive: partial updates must preserve
+  omitted fields or the drawer/client must explicitly send the full normalized
+  draft; do not add UI-only workarounds that hide data loss,
 - keep `media.openAfterUpload` in `userSettingsClient`; settings/upload UI may
   move or expose that preference, but must not create a second storage key.
 
@@ -210,6 +266,8 @@ Reuse-first rule:
   - add new focused suites under `tests/vitest/mediaUi/*` or `tests/vitest/ui/*`
     for bulk bar, empty state, usage navigation, upload layout, and metadata
     autosave feedback as leaves land.
+  - include regression coverage that grid/list switching renders distinct
+    usable views while preserving search/filter selection state.
 - Bun:
   - `set -a && source .env && set +a && bun test tests/unit/media tests/integration/routes/media.test.ts`
   - DB-backed media service assertions should run only when `DATABASE_URL` is

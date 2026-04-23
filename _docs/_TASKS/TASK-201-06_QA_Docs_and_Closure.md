@@ -22,6 +22,10 @@ Closure responsibility note:
   landed evidence or an explicit open/follow-up state,
 - any server/API changes must include the route/security contract that landed,
   not just UI screenshots.
+- closure must verify preserved report positives, especially grid/list
+  switching, realtime search, type filters, native file picker upload, media
+  settings access mode, replace/delete affordances, media delivery access, and
+  cache invalidation behavior.
 
 ## Sub-Tasks
 
@@ -75,10 +79,36 @@ No child task files.
 - Vitest:
   - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-details.test.tsx tests/vitest/ui/media-details-panel.test.tsx tests/vitest/ui/media-card.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/media.test.tsx tests/vitest/mediaUi/mediaLibrary.test.tsx tests/vitest/mediaUi/mediaSettingsDrawer.test.tsx tests/vitest/admin/mediaClient.test.ts`
   - append any new suites added by the leaves before closure.
+  - include a targeted regression that changing the Media toolbar view mode
+    renders the list view distinctly from the grid view, while search/filter and
+    selected-item state remain coherent.
+  - include a targeted regression that existing upload, settings, replace,
+    delete, and copy actions still route through their original owner callbacks
+    rather than through duplicated local code.
 - Bun:
   - before DB-backed tests, confirm `DATABASE_URL` is reachable,
   - `set -a && source .env && set +a && bun test tests/unit/media tests/integration/routes/media.test.ts`
   - add runtime media delivery suites only if `/media/*` access behavior changed.
+
+## Report Replay Checklist
+
+- `BUG-1` / `BUG-4`: metadata save and copy feedback must be based on the real
+  async result from the existing drawer/page/client path.
+- `BUG-2`: dimensions must be filled by media service/domain behavior and
+  rendered truthfully for known, unknown, and non-image assets.
+- `BUG-3` / `BUG-5`: empty states and `Load More Assets` must be based on the
+  current visible/list pagination contract, not fixed copy.
+- `BUG-6`: usage entries must come from the bounded usage read model and use
+  canonical admin navigation only when the target is resolvable.
+- `UX-1` / `UX-2`: readable names and missing-alt warnings must come from shared
+  media display helpers and existing media metadata.
+- `UX-3`: bulk selection must operate on the visible asset set and must not
+  change `MediaPicker` selection semantics.
+- `UX-4` / `UX-5`: upload separation and `media.openAfterUpload` placement must
+  keep the same upload handler and user-setting key.
+- Preserved positives: grid/list switching, search, filters, native file picker,
+  media settings access mode, replace/delete affordances, delivery access mode,
+  and media cache invalidation must still work after all leaves land.
 
 ## Documentation Updates Required
 
@@ -100,3 +130,5 @@ No child task files.
 3. Docs describe the final Media UI, API, cache, and storage behavior.
 4. `_docs/_TASKS/README.md` and changelog are synchronized with `TASK-201`
    closure.
+5. The report's existing positive flows are regression-covered or manually
+   replayed with evidence and no duplicated owner paths.

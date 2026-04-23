@@ -15,6 +15,11 @@ Create the server/service contract for answering "where is this media asset
 used?" The read model must be bounded, permission-protected, and based on the
 current DB/schema seams instead of hard-coded UI fixtures.
 
+This leaf owns read-only usage discovery only. It must not introduce an
+inverted reference index, a write-side media-reference pipeline, or new content
+ownership unless bounded scans over the current persisted owners are proven
+insufficient.
+
 ## Sub-Tasks
 
 No child task files.
@@ -22,9 +27,12 @@ No child task files.
 ## Files to Change
 
 - add `core/services/media/mediaUsageService.ts`
+  - owns bounded usage summary discovery and reference normalization.
 - `core/services/media/mediaService.ts` only if usage is exported from the media
   domain module
 - `core/server/routes/mediaRoutes.ts`
+  - owns internal read route registration, permission checks, strict query
+    validation, and known media-domain error mapping.
 - `core/server/validation/mediaSchemas.ts` only if query params are added
 - `tests/unit/media/mediaUsageService.test.ts`
 - `tests/integration/routes/media.test.ts`
@@ -46,14 +54,49 @@ No child task files.
   - summaries exclude raw JSON payloads and secret settings,
   - malformed JSON references do not crash the endpoint.
 
+## Current Reference Owners
+
+The implementation must start from these existing owners and document any
+unsupported shape as an explicit open state instead of inventing a new storage
+model:
+
+- Pages:
+  - scan `pages.currentData` and `pages.publishedData` for known widget/page
+    media references,
+  - return page title, id/slug, context such as draft/published data, and a
+    resolvable admin destination when available.
+- Content entries:
+  - scan `contentEntries.data`,
+  - include the owning content type slug/id needed by admin entry routes,
+  - handle single media fields and multi-media arrays that match the existing
+    content field contract from `_docs/MEDIA_SPEC.md`.
+- Posts:
+  - include direct `posts.featuredMediaId`,
+  - scan post block documents for `attrs.mediaId`,
+  - scan sanitized rich text image references such as `data-media-id` where the
+    current post editor/runtime already owns that contract.
+- Commerce:
+  - include `commerceProducts.mediaIds`,
+  - do not claim collection ownership unless a current collection field stores
+    media ids.
+
+Avoid broad substring-only matches. Normalize exact ids from known shapes first;
+if a fallback text walk is needed, it must be bounded, tested against partial
+string false positives, and documented as compatibility support.
+
 ## Testing Requirements
 
 - Bun:
-  - finds page/content-entry/post/commerce references that store direct media
-    IDs,
+  - finds page references in `currentData` and `publishedData`,
+  - finds content-entry media fields in single and multi-value shapes,
+  - finds post `featuredMediaId`, block `attrs.mediaId`, and rich-text
+    `data-media-id` references,
+  - finds commerce product `mediaIds` references,
   - ignores partial string false positives where possible,
   - returns stable ordering,
   - handles no usage,
+  - handles malformed page/entry/post JSON safely,
+  - caps each family result set,
   - route registration includes the usage endpoint and permission middleware.
 
 ## Documentation Updates Required
