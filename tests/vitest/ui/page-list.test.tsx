@@ -9,7 +9,7 @@ test("PageListPage renders header and table", () => {
   const html = renderAdminUi(<PageListPage />);
 
   expect(html).toContain("Pages");
-  expect(html).toContain("Create New Page");
+  expect(html).toContain("New");
   expect(html).toContain("Loading pages");
 });
 

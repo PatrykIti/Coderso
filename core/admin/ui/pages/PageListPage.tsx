@@ -363,10 +363,23 @@ export function PageListPage() {
           title="Pages"
           description="Manage your content and page structures."
           actions={
-            <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Create New Page
-            </Button>
+            <>
+              {selectedCount > 0 ? (
+                <PageBulkActionsBar
+                  selectedCount={selectedCount}
+                  action={bulkAction}
+                  onActionChange={setBulkAction}
+                  onApply={handleBulkApply}
+                  onClear={handleClearSelection}
+                  isApplying={isBulkWorking}
+                  variant="inline"
+                />
+              ) : null}
+              <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </>
           }
         />
         {error ? (
@@ -384,16 +397,6 @@ export function PageListPage() {
           onStatusChange={setStatusFilter}
           onAuthorChange={setAuthorFilter}
         />
-        {selectedCount > 0 ? (
-          <PageBulkActionsBar
-            selectedCount={selectedCount}
-            action={bulkAction}
-            onActionChange={setBulkAction}
-            onApply={handleBulkApply}
-            onClear={handleClearSelection}
-            isApplying={isBulkWorking}
-          />
-        ) : null}
         {isLoading ? (
           <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
             Loading pages...

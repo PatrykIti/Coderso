@@ -874,7 +874,7 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
 
     act(() => {
       buttons()
-        .find((button) => button.textContent?.includes("Create New Page"))
+        .find((button) => button.textContent === "New")
         ?.click();
       setInputValue(titleInput() ?? undefined, "Docs Home");
     });
@@ -1030,7 +1030,7 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
 
     act(() => {
       buttons()
-        .find((button) => button.textContent?.includes("Create New Page"))
+        .find((button) => button.textContent === "New")
         ?.click();
     });
 
@@ -1126,6 +1126,15 @@ test("PageListPage shows bulk actions for visible selection, trims hidden select
 
     expect(view.container.textContent).toContain("Selected 2");
     expect(view.container.textContent).toContain("page-selected:2");
+    expect(
+      view.container.querySelector('[data-page-bulk-actions="inline"]')
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector('[data-page-bulk-actions="card"]')
+    ).toBeNull();
+    expect(
+      (view.container.textContent ?? "").indexOf("Selected 2")
+    ).toBeLessThan((view.container.textContent ?? "").indexOf("New"));
 
     act(() => {
       setInputValue(searchInput ?? undefined, "docs");
@@ -1615,7 +1624,7 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
     await act(async () => {
-      buttons().find((button) => button.textContent?.includes("Create New Page"))?.click();
+      buttons().find((button) => button.textContent === "New")?.click();
       buttons().find((button) => button.textContent?.includes("Create New Post"))?.click();
       buttons().find((button) => button.textContent === "edit-page-row")?.click();
       buttons().find((button) => button.textContent === "preview-page-row")?.click();

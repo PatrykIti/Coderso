@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export type PageBulkActionValue = "publish" | "unpublish" | "delete";
 
@@ -19,6 +20,7 @@ type PageBulkActionsBarProps = {
   onApply: () => void;
   onClear: () => void;
   isApplying?: boolean;
+  variant?: "card" | "inline";
 };
 
 export function PageBulkActionsBar({
@@ -28,14 +30,28 @@ export function PageBulkActionsBar({
   onApply,
   onClear,
   isApplying = false,
+  variant = "card",
 }: PageBulkActionsBarProps) {
+  const isInline = variant === "inline";
   return (
-    <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2">
+    <div
+      data-page-bulk-actions={variant}
+      className={cn(
+        isInline
+          ? "flex min-w-0 flex-wrap items-center justify-end gap-2"
+          : "flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+      )}
+    >
+      <div className="flex shrink-0 items-center gap-2">
         <Badge variant="secondary" className="text-[10px] uppercase tracking-widest">
           Selected {selectedCount}
         </Badge>
-        <span className="text-xs text-muted-foreground">
+        <span
+          className={cn(
+            "text-xs text-muted-foreground",
+            isInline ? "sr-only" : undefined
+          )}
+        >
           Apply a bulk action to the selected pages.
         </span>
       </div>
@@ -44,7 +60,12 @@ export function PageBulkActionsBar({
           value={action}
           onValueChange={(value) => onActionChange(value as PageBulkActionValue)}
         >
-          <SelectTrigger className="h-8 w-full sm:w-[200px]">
+          <SelectTrigger
+            className={cn(
+              "h-8",
+              isInline ? "w-[150px]" : "w-full sm:w-[200px]"
+            )}
+          >
             <SelectValue placeholder="Bulk actions" />
           </SelectTrigger>
           <SelectContent>
@@ -62,8 +83,13 @@ export function PageBulkActionsBar({
         <Button size="sm" onClick={onApply} disabled={!action || isApplying}>
           {isApplying ? "Applying..." : "Apply"}
         </Button>
-        <Button variant="ghost" size="sm" onClick={onClear}>
-          Clear selection
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          aria-label="Clear selection"
+        >
+          {isInline ? "Clear" : "Clear selection"}
         </Button>
       </div>
     </div>
