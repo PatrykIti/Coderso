@@ -60,8 +60,12 @@ test("PostsListPage renders cached posts without loading placeholder", () => {
     const html = renderAdminUi(<PostsListPage />, {
       path: "/admin/coderso/posts",
     });
+    const normalizedHtml = html.replaceAll("<!-- -->", "");
 
     expect(html).toContain("Cached post");
+    expect(normalizedHtml).toContain("Showing 1 of 1 posts");
+    expect(html).toContain("Previous");
+    expect(html).toContain("Next");
     expect(html).not.toContain("Loading posts");
   } finally {
     if (originalLocal === undefined) {

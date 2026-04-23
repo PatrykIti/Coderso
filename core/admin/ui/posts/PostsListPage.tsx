@@ -498,6 +498,19 @@ export function PostsListPage() {
             onDelete={handleDelete}
           />
         )}
+        <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Showing {filteredItems.length} of {items.length} posts
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              Previous
+            </Button>
+            <Button variant="outline" size="sm">
+              Next
+            </Button>
+          </div>
+        </div>
       </div>
       <PostsCreateDrawer
         key={drawerKey}

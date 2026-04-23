@@ -28,7 +28,8 @@ No child task files.
   - render selected-post bulk controls inside `PageHeader.actions`,
   - keep controls to the left of the create trigger,
   - rename the list create trigger from `Create New Post` to `New`,
-  - remove the standalone bulk toolbar row above filters/table.
+  - remove the standalone bulk toolbar row above filters/table,
+  - keep the same list footer pattern used by Pages and Menus.
 - `tests/vitest/ui/posts-list.test.tsx`
   - update the list shell smoke test for the `New` trigger.
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
@@ -81,3 +82,5 @@ No child task files.
 2. Bulk controls appear in the header actions area to the left of `New`.
 3. `New` opens the same create drawer as before.
 4. Existing Posts bulk behavior and validation remain unchanged.
+5. Posts list shows the same filtered-count footer and `Previous` / `Next`
+   controls as Pages and Menus.

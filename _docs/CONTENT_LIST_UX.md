@@ -42,6 +42,8 @@ Gdy zaznaczysz wpisy na liscie:
   - Delete
 - Po bulk action selection jest czyszczone, lista odswiezana, a wynik surfacowany
   jako success lub partial-failure message.
+- Stopka listy pokazuje liczbe widocznych postow wzgledem pelnej listy oraz
+  zachowuje ten sam uklad `Previous` / `Next` co Pages i Menus.
 
 ## Pages parity
 

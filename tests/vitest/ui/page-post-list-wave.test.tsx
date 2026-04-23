@@ -1213,6 +1213,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     expect(view.container.textContent).toContain("Product launch");
     expect(view.container.textContent).toContain("Roadmap");
+    expect(view.container.textContent).toContain("Showing 2 of 2 posts");
     expect(pagePostState.postRefreshCalls).toEqual([
       { force: true, background: true },
     ]);
@@ -1243,6 +1244,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     expect(view.container.textContent).not.toContain("Product launch");
     expect(view.container.textContent).not.toContain("Roadmap");
     expect(view.container.textContent).not.toContain("posts selected");
+    expect(view.container.textContent).toContain("Showing 0 of 2 posts");
 
     act(() => {
       setInputValue(searchInput ?? undefined, "campaign");
@@ -1251,6 +1253,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     expect(view.container.textContent).toContain("Product launch");
     expect(view.container.textContent).not.toContain("Roadmap");
     expect(view.container.textContent).not.toContain("posts selected");
+    expect(view.container.textContent).toContain("Showing 1 of 2 posts");
 
     await act(async () => {
       pagePostState.postSubscribers.forEach((handler) =>

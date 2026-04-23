@@ -13,6 +13,8 @@ Tasks: TASK-199
   above the filters/table area.
 - Shortened the Posts list create trigger from `Create New Post` to `New`; the
   create drawer contract is unchanged.
+- Added the same filtered-count footer and `Previous` / `Next` controls used by
+  Pages and Menus.
 - Preserved existing visible-scope bulk behavior for `Publish`, `Move to Draft`,
   and `Delete`, including delete confirmation, partial failure feedback,
   refresh, and clear-selection semantics.
