@@ -99,7 +99,10 @@ No child task files.
 - `BUG-1` / `BUG-4`: metadata save and copy feedback must be based on the real
   async result from the existing drawer/page/client path.
 - `BUG-2`: dimensions must be filled by media service/domain behavior and
-  rendered truthfully for known, unknown, and non-image assets.
+  rendered truthfully for known, pending/recoverable, unknown, and non-image
+  assets. Closure must show the selected-asset recovery trigger for legacy image
+  rows with missing dimensions, or mark `BUG-2` open; truthful copy alone is not
+  enough to close the report item.
 - `BUG-3` / `BUG-5`: empty states and `Load More Assets` must be based on the
   current visible/list pagination contract, not fixed copy.
 - `BUG-6`: usage entries must come from the bounded usage read model and use
@@ -122,7 +125,8 @@ No child task files.
   family must include route registration, permission, validation, and mapped
   `ApiError` coverage. If an existing media route is touched while adding the
   family work, map the existing media-domain errors through the same centralized
-  route boundary instead of adding route-local ad-hoc translations.
+  route boundary instead of adding route-local ad-hoc translations. Persisted
+  dimension recovery must not be hidden behind a read-only `GET` route.
 - Preserved positives: grid/list switching, search, filters, native file picker,
   media settings access mode, replace/delete affordances, delivery access mode,
   and media cache invalidation must still work after all leaves land.

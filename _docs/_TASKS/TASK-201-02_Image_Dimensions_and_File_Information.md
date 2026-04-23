@@ -26,7 +26,8 @@ provides a bounded recovery path for existing rows.
 
 - Extract image dimensions for supported image formats during upload.
 - Persist `width` and `height` through the existing media table columns.
-- Add a bounded service path for recovering dimensions on existing image rows.
+- Add a bounded selected-asset service path for recovering dimensions on
+  existing image rows when details are opened/refreshed.
 - Render dimensions as `415 x 66 px` consistently.
 - Distinguish `Unknown` image dimensions from non-image assets where useful.
 
@@ -36,6 +37,8 @@ Out of scope:
   proves the current stack cannot parse required dimensions safely,
 - changing the storage adapter interface for write paths unless needed for
   legacy backfill reads,
+- hidden DB writes from read-only media endpoints,
+- client-only image probing that bypasses the service/domain dimension contract,
 - storing EXIF or rich media metadata,
 - introducing public dimension mutation endpoints.
 
@@ -45,10 +48,12 @@ Out of scope:
 - add `core/services/media/imageDimensions.ts`
 - `core/services/media/storage/adapter.ts` only if the backfill contract needs
   a refined read helper
-- `core/server/routes/mediaRoutes.ts` only if backfill gets an explicit admin
-  route
+- `core/server/routes/mediaRoutes.ts` only if selected-asset recovery gets an
+  explicit internal admin mutation
 - `core/server/validation/mediaSchemas.ts` only if a new route payload exists
 - `core/admin/services/mediaClient.ts`
+- `core/admin/ui/media/MediaLibraryPage.tsx` if details-open recovery is wired
+  through the page owner
 - `core/admin/ui/media/MediaDetailsDrawer.tsx`
 - `core/admin/ui/media/MediaDetailsPanel.tsx`
 - `core/admin/ui/media/utils.ts`
@@ -73,6 +78,8 @@ Out of scope:
 - Anti-abuse:
   - parse only bounded file headers; do not load arbitrary unbounded content
     into memory for legacy backfill,
+  - selected-asset recovery must not hide persisted writes behind read-only
+    endpoints,
   - do not expose storage credentials in errors,
   - unknown/unsupported image formats should fail closed to `null`
     dimensions, not crash list/detail reads.
@@ -83,12 +90,14 @@ Out of scope:
   - image dimension parser fixtures for PNG and at least one common lossy image
     format supported by the implementation,
   - `uploadMedia` persists dimensions for images and leaves non-images null,
-  - legacy backfill updates only missing dimensions and handles missing storage
-    objects safely,
+  - legacy selected-asset recovery updates only missing dimensions and handles
+    missing storage objects safely,
   - route wiring, permission, validation, and mapped API error tests if a new
     admin endpoint is added.
 - Vitest:
   - details drawer/panel renders dimensions with `px`,
+  - details-open recovery calls the single client owner and updates the selected
+    cached record,
   - unknown dimensions use truthful copy,
   - media client preserves width/height cache updates.
 
@@ -102,6 +111,7 @@ Out of scope:
 ## Acceptance Criteria
 
 1. New image uploads persist dimensions in `media.width` and `media.height`.
-2. Existing image rows can recover dimensions through a bounded internal path.
+2. Existing image rows can recover dimensions through a bounded selected-asset
+   internal path with an explicit trigger.
 3. Details UI displays dimensions accurately and no longer shows a dead dash for
    supported images with recoverable metadata.

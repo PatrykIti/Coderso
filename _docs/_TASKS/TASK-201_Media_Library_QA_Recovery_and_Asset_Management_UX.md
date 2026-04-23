@@ -57,6 +57,10 @@ Implementation principle:
   already exist,
 - name the owner and responsibility before changing a boundary that spans UI,
   client, route, service, storage, cache, or navigation,
+- fix the owner contract that produces the behavior instead of masking it in a
+  downstream component; for example, image dimensions must be recovered through
+  the media service/client/details owner path, not by ad-hoc image probing
+  inside a card or drawer,
 - keep fixes grounded in current code paths and tests; do not create a new
   media management model, notification host, navigation DSL, storage contract,
   or bulk API unless the existing owner cannot satisfy the report safely,
@@ -90,6 +94,8 @@ This umbrella covers five owner areas:
 2. File information correctness:
    - image dimension extraction,
    - persistence/backfill for existing image rows where possible,
+   - a deterministic selected-asset recovery trigger for legacy image rows that
+     lack dimensions, owned by the media service/client/details path,
    - details rendering that differentiates unknown from non-image assets.
 3. List truthfulness:
    - filter/search empty states,
@@ -117,6 +123,8 @@ Out of scope:
 - a new public write endpoint,
 - one-off client-only dimension hacks that do not update the source media
   contract for future uploads or existing rows,
+- a broad background media migration unless the dimension leaf proves selected
+  asset recovery cannot satisfy the report safely,
 - a bulk backend route unless the leaf proves existing per-asset routes cannot
   satisfy the UX safely.
 
@@ -141,7 +149,8 @@ Current owner seams in code:
       here, it still writes through `userSettingsClient` and the existing key.
   - `core/admin/services/mediaClient.ts`
     - owns admin API wrappers, media list cache, cache updates, and cache-bus
-      broadcasts.
+      broadcasts. If legacy dimension recovery is exposed to the UI, this client
+      owns the single wrapper/result shape and cache update for that recovery.
   - `core/admin/services/userSettingsClient.ts`
     - owns `media.openAfterUpload`; do not create a second browser storage key.
 - Grid/card/details presentation:
@@ -178,8 +187,9 @@ Current owner seams in code:
     - owns strict media route payload/query schemas.
   - `core/services/media/mediaService.ts`
     - owns media domain mutations, metadata merge semantics, upload defaults,
-      dimension persistence/backfill orchestration, same-id replace semantics
-      if implemented, and storage adapter calls.
+      dimension persistence/backfill orchestration, selected legacy-image
+      recovery semantics, same-id replace semantics if implemented, and storage
+      adapter calls.
   - `core/services/media/storage/adapter.ts`
     - owns the storage read/write/delete interface; only extend it if legacy
       dimension backfill cannot use the current `get(key)` read path safely.
@@ -242,7 +252,9 @@ Reuse-first rule:
   admin path helpers,
 - keep dimensions in the media service/domain contract; UI fallback probing may
   be used only as an explicit temporary compatibility path that does not replace
-  server-side persistence,
+  server-side persistence. The default legacy fix must be a selected-asset
+  recovery request through the existing details/page/client/service owner chain,
+  not duplicated parsing in admin presentation components,
 - keep metadata PATCH semantics non-destructive: partial updates must preserve
   omitted fields or the drawer/client must explicitly send the full normalized
   draft; do not add UI-only workarounds that hide data loss,
@@ -286,6 +298,16 @@ Reuse-first rule:
 5. Add multi-select/bulk actions and clarify upload/preference placement.
 6. Re-run the Media report checklist, update docs, board, changelog, and the
    source Playwright summary with item-level closure evidence.
+
+Dependency notes:
+
+- `TASK-201-02-02` must land after `TASK-201-02-01` because legacy recovery must
+  reuse the same parser and persistence semantics as new uploads.
+- `TASK-201-04-02` must land after `TASK-201-04-01` because navigation consumes
+  usage summaries and must not rescan content JSON in the drawer.
+- `TASK-201-05-03` must land after `TASK-201-02-01` if same-id replacement is
+  implemented, because replacement must update dimensions through the upload
+  parser owner.
 
 ## Testing Requirements
 
