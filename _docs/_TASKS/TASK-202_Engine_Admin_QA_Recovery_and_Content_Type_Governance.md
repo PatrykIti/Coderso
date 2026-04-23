@@ -128,6 +128,11 @@ Current owner seams in code:
   - `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
   - `core/services/customScreens/customScreenService.ts:123`
   - `core/services/kits/solutionKitsInstallService.ts:1357`
+- Existing direct content-type delete/restore owner to inspect before closing
+  delete safety:
+  - `core/services/kits/solutionKitsInstallService.ts:2050`
+  - responsibility: rollback resources created or updated by a solution-kit run
+    without bypassing the guarded content type delete contract silently.
 
 Reuse-first rule:
 
@@ -153,6 +158,10 @@ Reuse-first rule:
   `contentTypes` directly, the leaf must name that owner and prove the same
   validation/responsibility in that owner rather than copying a second set of
   ad-hoc helpers.
+- Route every content-type deletion path through the guarded content type delete
+  contract where possible. If an existing owner has a legitimate scoped direct
+  delete path, such as solution-kit rollback, the leaf must name that owner, its
+  responsibility, and the equivalent safety proof instead of leaving a bypass.
 - Use durable schema metadata in `xFieldConfig`; do not store UI-only state in
   browser cache or unversioned ad-hoc fields.
 - Do not add parallel clients, cleanup scripts, schema builders, notification
@@ -165,6 +174,9 @@ Reuse-first rule:
 - If an existing contract cannot safely cover a report item, keep the shipped
   fix inside current contracts and record a named follow-up with owner
   responsibility instead of inventing a new product path in this family.
+- Fix the code that exists. Do not create duplicate abstractions, duplicate
+  clients, detached validators, detached cleanup scripts, or "new engine"
+  helpers to work around current owners.
 
 ## Security Contract
 
@@ -192,12 +204,15 @@ Reuse-first rule:
 
 ## Implementation Order
 
-1. Land list identity and create/duplicate flow fixes so admins can find the
-   right type and enter the editor confidently.
-2. Land destructive guards before exposing visible delete controls broadly.
-3. Land schema authoring controls and metadata mapping.
-4. Land real status/feedback behavior and keep cache/prefetch stable.
-5. Replay `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md`, update docs, changelog, and the
+1. Land list identity, relation disambiguation, and source guards for generated
+   `Screen <uuid>` content type names. Existing-record cleanup waits for the
+   safe delete/archive path; it must not block the generator guard.
+2. Land create/duplicate flow fixes so admins can find the right type and enter
+   the editor confidently.
+3. Land destructive guards before exposing visible delete controls broadly.
+4. Land schema authoring controls and metadata mapping.
+5. Land real status/feedback behavior and keep cache/prefetch stable.
+6. Replay `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md`, update docs, changelog, and the
    task board.
 
 ## Testing Requirements

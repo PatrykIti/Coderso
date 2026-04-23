@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Engine + Custom Screens + Assistant
 **Estimated Effort:** Medium
-**Dependencies:** TASK-202-01, TASK-202-03
+**Dependencies:** TASK-202-01; TASK-202-03 only for safe cleanup of existing records
 **Status:** To Do
 
 ---
@@ -13,14 +13,20 @@
 
 Investigate and stop the source of `Screen <uuid>` content type names reported
 in `BUG-7`. The short-term fix is not a blind cleanup script. First identify the
-writer, then add a guard at that owner seam and use the safe delete/archive path
-from `TASK-202-03` for cleanup.
+writer and add a guard at that owner seam. Existing-record cleanup uses the safe
+delete/archive path from `TASK-202-03`, but that cleanup dependency must not
+block the source guard.
 
 This leaf must follow the existing contract instead of inventing a parallel
 generator. If the bug comes from a generic content-type writer, put the
 normalization/guard in the current content type contract and make the callers use
 it. If the bug comes from a direct writer that cannot delegate immediately, name
 that owner and prove responsibility there with tests.
+
+Do not create a detached screen-name helper or cleanup-only script to make this
+report pass. The fix must execute in the current writer that creates or can
+create content types. If ownership is unclear during implementation, document the
+candidate owner, its responsibility, and the evidence before patching behavior.
 
 ## Sub-Tasks
 
@@ -48,6 +54,9 @@ No child task files.
 - `core/services/kits/solutionKitsInstallService.ts:1357-1475`
   - solution-kit content type upsert writer; keep kit blueprints readable and do
     not allow direct insert paths to drift from the content type contract.
+- `core/services/kits/solutionKitsInstallService.ts:2050-2213`
+  - solution-kit rollback can directly delete or restore content types; keep this
+    owner named if the guard changes shared create/delete invariants.
 - `tests/vitest/customScreens/customScreenService.test.ts`
 - `tests/vitest/assistant/actionExecutorService.test.ts`,
   `tests/vitest/assistant/action-plan-schema.test.ts`, or the current assistant
@@ -80,7 +89,8 @@ No child task files.
   readable deterministic label.
 - Regression proving direct content-type writers either delegate to the shared
   contract or have an explicitly documented owner/responsibility with equivalent
-  validation.
+  validation. Include solution-kit install/rollback coverage if that owner keeps
+  direct `contentTypes` writes.
 - Manual inventory note in closure documenting which path created the reported
   records.
 
@@ -97,4 +107,4 @@ No child task files.
 3. Any direct writer that remains outside `typeService` has a named owner,
    responsibility, and test evidence for the same guard.
 4. Cleanup of existing records is deferred until safe delete/cleanup evidence
-   exists.
+   exists, but the source guard can close before cleanup.

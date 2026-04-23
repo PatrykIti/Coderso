@@ -38,6 +38,10 @@ Current code shows the risks:
   database cascades. At minimum cover `contentEntries`, `customScreens`,
   `contentTaxonomies`, and slug/id based settings/read models such as
   `site.contentRoutes` or listing owners when they reference the type.
+- Identify every current content-type delete owner. Admin/API delete should use
+  `typeService`; scoped existing owners such as solution-kit rollback must either
+  call the same guarded contract or document their owner responsibility and
+  equivalent safety proof.
 - Map known domain errors to `ApiError` at the route boundary.
 - Add delete confirmation UI on list/editor surfaces.
 - Add field-removal confirmation and short recovery path.
@@ -64,6 +68,10 @@ Out of scope:
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:318-382`
 - `core/admin/ui/content-types/FieldEditor.tsx:106-108`
 - `core/admin/ui/content-types/SchemaBuilder.tsx:221-245`
+- `core/services/kits/solutionKitsInstallService.ts:2050-2213`
+  - inspect rollback's direct content type delete/restore path and either route
+    it through the guarded contract or record the owner responsibility and
+    equivalent rollback-safe guard.
 - `tests/integration/routes/contentTypes.test.ts`
 - `tests/vitest/admin/contentTypesClient.test.ts`
 - `tests/vitest/ui/content-type-table.test.tsx`
@@ -82,6 +90,8 @@ Out of scope:
   - delete requires exact id/name/slug context in UI confirmation,
   - server blocks deletion when entries or other owner dependencies exist,
   - delete guards must not silently trigger `onDelete: "cascade"` side effects,
+  - delete guards must not leave a second unguarded delete path in another
+    existing owner,
   - field removal confirmation must name the field and avoid accidental
     selection drift,
   - error messages must be machine-readable internally and user-readable in UI.

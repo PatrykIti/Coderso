@@ -42,7 +42,8 @@ Current code shows the gaps:
   distinguishable.
 - Trace the source of `Screen <uuid>` content type names and guard the owning
   generator path across all current content-type writers, not only the visible
-  custom-screen UI.
+  custom-screen UI. This source guard is part of the list/identity wave; cleanup
+  of existing records waits for the safe delete/archive path in `TASK-202-03`.
 
 Out of scope:
 

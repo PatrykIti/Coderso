@@ -14,6 +14,8 @@
 Make content type deletion safe before exposing it broadly in UI. Current
 `typeService.ts:101-108` deletes directly, while the list query already has
 `entryCount` data in `typeService.ts:24-48` that can support a zero-entry guard.
+The implementation must also account for existing non-admin delete owners so the
+guard is not bypassed outside the route family.
 
 ## Sub-Tasks
 
@@ -33,6 +35,11 @@ No child task files.
   - account for `content_taxonomies.type_id` references.
 - existing settings/listing owner helpers if the type is referenced by
   `site.contentRoutes`, listing queries/templates, or another current read model.
+- `core/services/kits/solutionKitsInstallService.ts:2050-2213`
+  - rollback currently deletes/restores content types directly; either route this
+    path through the guarded delete/restore contract where feasible, or document
+    solution-kit rollback as the owner with its responsibility and equivalent
+    safety proof.
 - `core/server/routes/contentTypeRoutes.ts:34-92`
   - add `mapContentTypeError`,
   - map not found/conflict/invalid errors to `ApiError`.
@@ -54,6 +61,8 @@ No child task files.
   - block delete while entries exist,
   - block delete while custom screens, taxonomies, content routes, listings, or
     other known owner references still depend on the type,
+  - do not leave solution-kit rollback or another existing direct writer as an
+    undocumented unguarded delete bypass,
   - do not rely on client-side entryCount as authority,
   - return mapped conflict instead of raw DB/cascade errors.
 
@@ -65,6 +74,8 @@ No child task files.
 - Deleting a type with custom screens or taxonomies maps to conflict.
 - Any referenced settings/listing owner that cannot be checked here gets a named
   owner note and follow-up before the delete UI is considered complete.
+- Solution-kit rollback either uses the guarded delete/restore path or has
+  targeted coverage proving why its scoped direct path is safe and owner-owned.
 - Deleting a zero-entry type invalidates content type caches.
 
 ## Documentation Updates Required
@@ -77,4 +88,6 @@ No child task files.
 
 1. Server-side delete cannot cascade-delete entries or custom screens silently.
 2. Known domain errors are mapped at the route boundary.
-3. Client cache is invalidated only after successful deletion.
+3. Existing direct content-type delete paths are either routed through the guard
+   or named with owner responsibility and equivalent safety evidence.
+4. Client cache is invalidated only after successful deletion.
