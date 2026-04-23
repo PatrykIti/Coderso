@@ -21,7 +21,9 @@ The current preview owner is already present:
 - `EntryEditor.tsx:321-344` creates preview URLs,
 - `EntryEditor.tsx:641-650` renders `Runtime preview`,
 - `EntryEditor.tsx:920-931` renders `RuntimePreviewDialog`,
-- `contentEntryRoutes.ts:220-242` creates content preview tokens/URLs.
+- `contentEntryRoutes.ts:220-242` creates content preview tokens/URLs,
+- `publicSite.tsx:841-883` consumes preview tokens and renders content
+  preview HTML.
 
 ## Sub-Tasks
 
@@ -34,7 +36,8 @@ The current preview owner is already present:
 - Preserve legacy string values and current schema validation.
 - Keep rich text field logic Bun-free.
 - Align Entries preview label/copy/failure handling with shared preview UX.
-- Fix or explicitly follow up the captured content preview 404.
+- Fix or explicitly follow up the captured content preview 404 with runtime
+  evidence from `publicSite`, not only dialog/client tests.
 
 Out of scope:
 
@@ -49,11 +52,18 @@ Out of scope:
 - `core/admin/ui/entries/EntryEditor.tsx:321-344`
 - `core/admin/ui/entries/EntryEditor.tsx:641-650`
 - `core/admin/ui/entries/EntryEditor.tsx:920-931`
-- `core/admin/ui/posts/editor/*` for reference/extraction only
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` for
+  reference/reuse only
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` for
+  reference/reuse only
+- `core/services/posts/editor/postRichTextSerializer.ts` for serializer reuse
+  or parity
+- `core/services/posts/editor/postRichTextSanitizer.ts` for sanitizer reuse or
+  parity
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
 - `core/server/routes/contentEntryRoutes.ts:220-242`
 - `core/server/utils/previewUrls.ts`
-- `core/server/publicSite.tsx`
+- `core/server/publicSite.tsx:841-883`
 - `core/services/content/entryService.ts:814-820`
 - `tests/vitest/ui/entry-field-relation.test.tsx`
 - `tests/vitest/ui/content-entry-editor.test.tsx`
@@ -84,7 +94,11 @@ Out of scope:
   - preview button/dialog/failure copy is token-safe.
 - Bun:
   - content preview token route still works,
-  - public content preview resolves valid entries or the 404 gets a follow-up.
+  - public content preview resolves valid entries through `handlePublicRequest`
+    or the 404 gets a precise follow-up owner,
+  - proof should create a real entry preview token and request
+    `/preview?type=content&token=...`; `publicEntryRenderer` output alone does
+    not close the runtime 404 from the report.
 
 ## Documentation Updates Required
 
@@ -100,5 +114,5 @@ Out of scope:
 1. Engine rich text fields expose real editing affordances.
 2. Existing rich text data remains readable/saveable.
 3. Entries runtime preview uses shared token-safe failure handling.
-4. The report's content preview 404 is fixed or captured in a linked follow-up.
-
+4. The report's content preview 404 is fixed with `publicSite` runtime evidence
+   or captured in a linked follow-up with exact owner and reproduction.

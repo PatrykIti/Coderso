@@ -14,6 +14,15 @@
 Make the existing Entries `Runtime preview` surface discoverable, consistent,
 and resilient. Do not add a second preview dialog.
 
+Ownership:
+
+- `EntryEditor` owns the toolbar action and dialog state.
+- `entriesClient.previewEntry()` owns the admin API call and CSRF behavior.
+- `contentEntryRoutes.ts` owns preview token creation and URL response shape.
+- `previewUrls.ts` owns token-safe preview URL construction.
+- `publicSite.tsx` owns `/preview?type=content...` token consumption and
+  runtime HTML rendering. UI-only tests cannot close the captured 404.
+
 ## Sub-Tasks
 
 No child task files.
@@ -26,7 +35,9 @@ No child task files.
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
 - `core/server/routes/contentEntryRoutes.ts:220-242`
 - `core/server/utils/previewUrls.ts`
-- `core/server/publicSite.tsx`
+- `core/server/publicSite.tsx:841-883`
+- `tests/integration/runtime/pages-runtime.test.ts` or a new equivalent
+  content-preview runtime suite
 - `tests/vitest/ui/entry-editor-shell-wave.test.tsx`
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
 - `tests/vitest/server/previewUrls.test.ts`
@@ -53,7 +64,11 @@ No child task files.
 - Bun:
   - content preview route is registered,
   - preview URL resolver follows configured/public fallback rules,
-  - public entry preview resolves valid content or produces a linked follow-up.
+  - public entry preview resolves valid content through `handlePublicRequest`,
+  - proof creates an entry preview token and requests
+    `/preview?type=content&token=...`; if it still returns 404, closure must
+    link a follow-up with the exact owner (`publicSite`, content route matching,
+    preview token validation, or entry lookup).
 
 ## Documentation Updates Required
 
@@ -66,5 +81,5 @@ No child task files.
 
 1. Entries preview is discoverable from the editor toolbar.
 2. Preview failures are visible, actionable, and token-safe.
-3. The 404 scenario is fixed or linked to a precise route/runtime follow-up.
-
+3. The 404 scenario is fixed with runtime evidence or linked to a precise
+   route/runtime follow-up.

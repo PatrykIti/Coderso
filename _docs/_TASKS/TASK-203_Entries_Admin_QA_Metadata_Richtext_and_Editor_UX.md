@@ -35,6 +35,22 @@ Findings covered by this family:
 Closure must map every report item to a fixed leaf, explicit follow-up, or
 documented out-of-scope decision.
 
+Execution contract for this family:
+
+- repair the existing Entries contracts instead of creating parallel editor,
+  preview, route, or storage systems;
+- do not duplicate code paths that already have owners; reuse current
+  `EntryEditor`, `FieldRenderer`, `EntryMetadataPanel`, `entriesClient`,
+  `contentEntryRoutes`, `entryService`, `previewUrls`, and public runtime seams;
+- every fix must name the owner responsible for the behavior it changes; if an
+  owner boundary is unclear during implementation, document the decision in the
+  leaf before patching code;
+- use current repo helpers for navigation, cache, validation, CSRF, preview URL
+  resolution, rich text normalization, and app dialogs instead of inventing
+  one-off replacements;
+- keep implementation tied to the code that exists in this branch and avoid
+  speculative redesigns outside the Playwright findings.
+
 ## Sub-Tasks
 
 - `TASK-203-01_Metadata_Save_Status_and_Feedback_Contract.md`
@@ -111,19 +127,29 @@ Current owner seams:
   - `core/server/validation/contentSchemas.ts:51`
   - `core/services/content/entryService.ts:533`
   - `core/services/content/entryService.ts:565`
+  - `core/services/content/entryService.ts:716`
   - `core/services/content/entryService.ts:694`
+  - `core/server/publicSite.tsx:841`
+  - `core/server/publicSite.tsx:864`
   - `core/server/utils/previewUrls.ts`
+  - `core/admin/app/AdminApp.tsx:549`
+  - `core/admin/utils/adminPaths.ts:64`
 
 Reuse-first rules:
 
 - keep `EntryEditor` as the Entries owner;
 - do not import Posts storage/runtime shells into `FieldRenderer`;
-- extract shared rich text pieces only if they stay Bun-free;
+- extract shared rich text pieces only if they stay Bun-free and reuse the
+  existing Posts rich text adapter/serializer/sanitizer contracts where they are
+  a real fit;
 - pass SEO/taxonomy display context into `EntryMetadataPanel` instead of
   fetching inside the panel;
 - keep cache invalidation in `entriesClient`/`cacheBus`;
 - use shared admin path/link helpers for new internal links;
 - keep destructive actions exact-id and visible-scope based.
+- keep preview token creation in `contentEntryRoutes`/`entryService`, preview
+  URL construction in `previewUrls`, and token consumption/runtime rendering in
+  `publicSite`; UI work alone cannot close the report's content-preview 404.
 
 ## Security Contract
 
@@ -169,6 +195,11 @@ Reuse-first rules:
   - `tests/vitest/server/previewUrls.test.ts`
 - Bun suites if route/service/runtime owners change:
   - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
+- If content preview runtime behavior changes or remains suspicious:
+  - `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts`
+  - or an equivalent Bun runtime suite that creates an entry preview token and
+    proves `/preview?type=content&token=...` returns the expected preview HTML
+    or records a precise follow-up owner.
 
 ## Documentation Updates Required
 
@@ -197,4 +228,3 @@ Reuse-first rules:
    cache-safe.
 5. SEO URL, taxonomy guidance, preview failure handling, help density, and
    content-type sidebar scanability match current admin contracts.
-

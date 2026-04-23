@@ -14,6 +14,15 @@
 Replace the textarea-only `richtext` branch with a real editing surface while
 preserving the Entries field contract.
 
+Ownership:
+
+- `FieldRenderer` owns choosing the control for Engine field types.
+- an Entries/content-field module owns `normalizeEntryRichTextValue()` and
+  `serializeEntryRichTextValue()` if new helpers are needed.
+- existing Posts rich text adapter, toolbar, serializer, and sanitizer may be
+  reused only when that removes duplication without importing Posts storage,
+  route, runtime shell, or DB/settings behavior into the Entries field layer.
+
 ## Sub-Tasks
 
 No child task files.
@@ -23,7 +32,14 @@ No child task files.
 - `core/admin/ui/entries/FieldRenderer.tsx:186-226`
 - `core/admin/ui/entries/EntryEditor.tsx:820-827`
 - `core/admin/ui/content-types/schemaMapping.ts`
-- `core/admin/ui/posts/editor/*` for reusable, Bun-free references only
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` for
+  reusable, Bun-free editor behavior if it fits
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` for shared
+  command UI if it fits
+- `core/services/posts/editor/postRichTextSerializer.ts` for string/HTML
+  normalization parity if reused
+- `core/services/posts/editor/postRichTextSanitizer.ts` for sanitizer parity if
+  reused
 - `tests/vitest/ui/entry-field-relation.test.tsx`
 - `tests/vitest/ui/content-entry-editor.test.tsx`
 - new or extended `tests/vitest/ui/entry-richtext-field.test.tsx`
@@ -43,6 +59,8 @@ case "richtext":
 Direction:
 
 - keep normalizers in an Entries/content-field owner,
+- do not create a second rich text grammar, sanitizer, or toolbar command model
+  when the current Posts rich text contracts can be reused safely,
 - support legacy strings,
 - do not import `db/client`, server routes, settings services, or Posts runtime
   renderers at module import time.
@@ -61,6 +79,8 @@ Direction:
 - rich text field does not render as textarea-only,
 - legacy string value displays and emits safely,
 - structured editor changes call `onChange` with expected serialized value,
+- reused Posts rich text pieces keep their existing owner tests green when
+  touched,
 - text/number/boolean/select/media/relation branches remain stable.
 
 ## Documentation Updates Required
@@ -74,4 +94,3 @@ Direction:
 1. Engine `richtext` fields expose formatting/editing affordances.
 2. Existing string-backed rich text entries remain compatible.
 3. `FieldRenderer` remains Bun-free and Vitest-owned.
-

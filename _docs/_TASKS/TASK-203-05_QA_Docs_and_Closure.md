@@ -27,6 +27,8 @@ No child task files.
 - Verify no new public write endpoint was introduced.
 - Verify no browser cache/localStorage/debug payload stores secrets or preview
   tokens.
+- Verify each closed finding was repaired through its existing owner seam, not a
+  duplicate route/component/helper introduced only for this wave.
 - Create/link follow-up tasks for still-reproducible preview-host/runtime issues
   or approved out-of-scope capability gaps.
 
@@ -68,6 +70,12 @@ Out of scope:
 - `bun run vitest run --config vitest.config.ts tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-editor-shell-wave.test.tsx tests/vitest/ui/entry-metadata.test.tsx tests/vitest/ui/content-entry-editor.test.tsx tests/vitest/ui/entry-field-relation.test.tsx tests/vitest/ui/content-entries.test.tsx tests/vitest/ui/entry-bulk-actions.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/contentTypesClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/server/previewUrls.test.ts`
 - If route/service/runtime owners changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
+- If preview runtime behavior changed or the report's content-preview 404 is
+  still in scope:
+  - `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts`
+  - or a new equivalent Bun runtime suite that creates an entry preview token,
+    requests `/preview?type=content&token=...`, and proves 200 preview HTML or
+    records an exact follow-up owner.
 - Manual/Playwright replay:
   - type switching/search/filter/view toggle,
   - create entry,
@@ -100,6 +108,7 @@ Out of scope:
 
 1. All `TASK-203-*` leaves are complete and validated in their lanes.
 2. Every `BUG-*` and `UX-*` is mapped to fixed evidence or linked follow-up.
-3. Docs, task board, changelog, and source Playwright summary are synchronized.
-4. Remaining preview/runtime/environment issues have exact evidence and owners.
-
+3. Closure evidence names the owner seam for each fix and confirms no duplicate
+   editor, preview, route, validation, cache, or navigation path was introduced.
+4. Docs, task board, changelog, and source Playwright summary are synchronized.
+5. Remaining preview/runtime/environment issues have exact evidence and owners.

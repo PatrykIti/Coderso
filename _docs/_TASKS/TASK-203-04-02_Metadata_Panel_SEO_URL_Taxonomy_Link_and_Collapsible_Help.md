@@ -15,6 +15,15 @@ Repair metadata panel guidance: hardcoded SEO URL, disabled taxonomy without a
 repair path, and always-expanded help. This leaf owns `BUG-8`, `UX-3`, and
 `UX-5`.
 
+Ownership:
+
+- `EntryEditor` owns fetching or deriving content type, site settings, content
+  route, and Engine-link context, then passing it into the panel.
+- `EntryMetadataPanel` stays presentational and must not fetch settings,
+  content types, routes, or taxonomy config at import/render time.
+- `siteSettingsClient` owns public URL/content-route normalization.
+- `AdminLink` plus `adminPaths` own canonical Engine navigation.
+
 ## Sub-Tasks
 
 No child task files.
@@ -27,10 +36,13 @@ No child task files.
 - `core/admin/ui/entries/EntryEditor.tsx:545-555`
 - `core/admin/services/siteSettingsClient.ts`
 - `core/admin/services/contentTypesClient.ts`
-- shared admin path helpers for Engine route if needed
+- `core/admin/ui/shared/AdminLink.tsx`
+- `core/admin/utils/adminPaths.ts`
 - `tests/vitest/ui/entry-metadata.test.tsx`
 - `tests/vitest/ui/entry-editor-shell-wave.test.tsx`
 - `tests/vitest/admin/siteSettingsClient.test.ts`
+- `tests/vitest/admin/adminPaths.test.ts` or `tests/vitest/ui/admin-link.test.tsx`
+  if canonical Engine href behavior changes
 
 ## Implementation Sketch
 
@@ -45,7 +57,12 @@ Direction:
 
 - concrete URL only from trustworthy site settings and route context,
 - otherwise show neutral placeholder/route hint,
-- taxonomy link goes to current content type settings through shared helpers.
+- taxonomy link goes to the current content type editor/settings route through
+  shared helpers, e.g. `/content-types/${contentTypeId}` or
+  `/content-types/${contentTypeId}/schema` resolved by `AdminLink` to the
+  canonical `/coderso/engine/...` route,
+- pass `contentTypeId` or an already-resolved `engineSettingsHref` from
+  `EntryEditor`; do not make `EntryMetadataPanel` discover owners by fetching.
 
 ## Security Contract
 
@@ -61,7 +78,8 @@ Direction:
 - configured public URL appears when available,
 - fallback placeholder appears when context is missing,
 - `nextless.cms` is not hardcoded,
-- disabled taxonomy copy includes Engine settings link,
+- disabled taxonomy copy includes Engine settings link for the current content
+  type and the test asserts the canonical href,
 - help can collapse and remains accessible.
 
 ## Documentation Updates Required
@@ -76,5 +94,6 @@ Direction:
 
 1. SEO preview URL is settings/route-derived or neutral placeholder.
 2. Disabled taxonomy guidance gives a direct internal repair path.
-3. Help no longer permanently occupies sidebar space.
-
+3. The repair path uses current admin navigation helpers and names the Engine
+   content type editor as the owner of taxonomy enablement.
+4. Help no longer permanently occupies sidebar space.

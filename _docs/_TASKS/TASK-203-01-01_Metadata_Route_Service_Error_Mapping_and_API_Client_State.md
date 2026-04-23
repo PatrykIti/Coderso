@@ -15,6 +15,15 @@ Make the metadata route/client robust enough for UI feedback. The report saw a
 500 from the metadata endpoint; this leaf bounds known failures without hiding
 unknown server errors.
 
+Ownership:
+
+- `contentEntryRoutes.ts` owns translating service errors into bounded
+  `ApiError` responses at the route boundary.
+- `entryService.ts` owns metadata invariants such as schedule validity,
+  taxonomy enablement, term membership, and publish auth requirements.
+- `entriesClient.ts` owns cache writes and broadcasts only after successful
+  metadata responses.
+
 ## Sub-Tasks
 
 No child task files.
@@ -41,6 +50,9 @@ throw error;
 Direction:
 
 - map only current service errors,
+- include the current `auth_required` publish transition from
+  `entryService.updateEntryMetadata()` so metadata status changes cannot surface
+  as raw 500s when no actor is present,
 - keep unknown failures visible as failures,
 - do not turn raw 500s into fake validation successes,
 - keep cache writes only after successful responses.
@@ -61,7 +73,10 @@ Direction:
   - metadata route registration,
   - schedule/taxonomy/SEO success,
   - invalid schedule, disabled taxonomy, missing taxonomy, and auth-required
-    publish transitions where feasible.
+    publish transitions,
+  - a route-boundary assertion in `tests/integration/routes/contentTypes.test.ts`
+    or an equivalent route suite that proves metadata publish without `ctx.user`
+    returns bounded `auth_required` instead of leaking as `internal_error`.
 - Vitest:
   - `updateEntryMetadata()` uses CSRF,
   - successful response updates/broadcasts cache,
@@ -76,5 +91,5 @@ Direction:
 
 1. Known metadata failures map to bounded API errors.
 2. Unknown failures do not leak internals.
-3. Successful metadata saves keep list/detail cache coherent.
-
+3. `auth_required` from metadata-driven publish maps to a bounded auth error.
+4. Successful metadata saves keep list/detail cache coherent.
