@@ -54,3 +54,26 @@ Gdy zaznaczysz wpisy na liscie:
 - Pages list rows keep real author identity from authoritative list payloads;
   detail or mutation payloads that do not resolve `author` must not overwrite
   cached list author state.
+
+## Menus parity
+
+- Menus list follows the Pages/Posts list layout: header action area, filter
+  strip, controlled table selection, selected-row styling, right-aligned
+  three-dot row actions, and list footer.
+- The Menus create trigger is labeled `New`; there is no primary `Refresh`
+  button in the list header.
+- Filters are Menus-specific:
+  - search by menu name or location,
+  - status: `All`, `Published`, `Draft`,
+  - location: `All locations`, concrete existing locations, and `Not assigned`.
+- Checkbox selection applies only to the currently visible filtered rows.
+  Hidden filtered-out rows are trimmed from selection.
+- Bulk actions render inline in the header actions beside `New` and support:
+  - Publish,
+  - Move to Draft,
+  - Delete.
+- Destructive row and bulk delete require confirmation; successful row/bulk
+  lifecycle actions refresh the list and clear selection where applicable.
+- Menus persist whole-menu lifecycle state via `draft` / `published`.
+  Existing menus migrate as `published` so public navigation does not disappear;
+  new menus default to `draft`.

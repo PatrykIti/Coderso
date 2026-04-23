@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-196, TASK-198, TASK-199
-**Status:** In Progress (2026-04-23)
+**Status:** Done (2026-04-23)
 
 ---
 
@@ -34,14 +34,14 @@ This task is a Menus list parity pass. It must keep the existing `/menus` ->
 
 ## Sub-Tasks
 
-- [ ] Add and validate the whole-menu lifecycle contract.
-- [ ] Align the Menus list header, filters, controlled selection, and table
+- [x] Add and validate the whole-menu lifecycle contract.
+- [x] Align the Menus list header, filters, controlled selection, and table
   behavior with Pages/Posts.
-- [ ] Add row and bulk publish/draft/delete actions with confirmation,
+- [x] Add row and bulk publish/draft/delete actions with confirmation,
   refresh, and partial-failure feedback.
-- [ ] Preserve editor routing, create flow, and admin cache behavior.
-- [ ] Validate public runtime navigation only resolves published menus.
-- [ ] Update tests, UX/API docs, changelog, and task board on closure.
+- [x] Preserve editor routing, create flow, and admin cache behavior.
+- [x] Validate public runtime navigation only resolves published menus.
+- [x] Update tests, UX/API docs, changelog, and task board on closure.
 
 ## Scope
 
@@ -269,7 +269,7 @@ Runtime compatibility:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx`
   - include coverage for:
     - shell renders `New` instead of `New Menu`,
     - search filters by menu name/location,
@@ -295,6 +295,7 @@ Runtime compatibility:
 ## Documentation Updates Required
 
 - `_docs/CONTENT_LIST_UX.md`
+- `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - new `_docs/_CHANGELOG/*` entry when TASK-200 is completed
@@ -315,3 +316,11 @@ Runtime compatibility:
    remain published after migration for backward compatibility.
 8. Existing menu editor links, create dialog, cache refresh, and `/menus/:id`
    route behavior remain intact.
+
+## Validation Evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint:repo:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/validation/menuSchemas.test.ts tests/vitest/ui/menu-editor.test.tsx tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts tests/unit/navigation/navigationRuntimeResolver.test.ts`
