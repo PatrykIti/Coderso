@@ -52,6 +52,7 @@ export type SolutionKitContentTypeTaxonomy = {
 export type SolutionKitContentTypeBlueprint = {
   slug: string;
   name: string;
+  status?: "draft" | "published";
   schema?: Record<string, unknown>;
   taxonomy?: SolutionKitContentTypeTaxonomy;
 };

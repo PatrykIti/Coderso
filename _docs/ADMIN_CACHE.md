@@ -175,6 +175,9 @@ Consumers subscribe and revalidate when matching keys change.
 ## Invalidation Rules
 Clients update caches and broadcast events on:
 - Create / update / delete / publish / unpublish.
+- Content type create, duplicate, save draft, publish, and delete mutate
+  `contentTypes:list` and the touched `contentTypes:detail:<id>` key. Delete
+  invalidates list/detail; duplicate inserts the new draft into the cached list.
 - Server responses are treated as source of truth for cache updates.
 - Assistant action execution invalidates known resource-family caches from
   validated execution results. Failed and `noop` results do not broadcast cache

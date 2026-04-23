@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Schema Builder + Compatibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-202-04
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

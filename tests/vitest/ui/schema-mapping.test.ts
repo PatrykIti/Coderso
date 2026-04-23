@@ -49,7 +49,19 @@ test("schema mapping preserves relation metadata", () => {
       type: "select",
       label: "Category",
       required: false,
-      options: ["news", "press"],
+      options: [
+        { id: "option-news", label: "News", value: "news" },
+        { id: "option-press", label: "Press", value: "press" },
+      ],
+      multiple: true,
+    },
+    {
+      id: "field-price",
+      name: "price",
+      type: "number",
+      label: "Price",
+      required: false,
+      number: { format: "decimal", min: 0, max: 1000, step: 0.01 },
     },
     {
       id: "field-gallery",
@@ -133,7 +145,25 @@ test("schema mapping preserves relation metadata", () => {
 
   const selectField = parsed.find((field) => field.name === "category");
   expect(selectField?.type).toBe("select");
-  expect(selectField?.options).toEqual(["news", "press"]);
+  expect(selectField?.multiple).toBe(true);
+  expect(selectField?.options).toEqual([
+    { id: "option-0-news", label: "News", value: "news" },
+    { id: "option-1-press", label: "Press", value: "press" },
+  ]);
+
+  const priceSchema = schema.properties["price"];
+  expect(priceSchema?.type).toBe("number");
+  expect(priceSchema?.minimum).toBe(0);
+  expect(priceSchema?.maximum).toBe(1000);
+  expect(priceSchema?.multipleOf).toBe(0.01);
+
+  const priceField = parsed.find((field) => field.name === "price");
+  expect(priceField?.number).toEqual({
+    format: "decimal",
+    min: 0,
+    max: 1000,
+    step: 0.01,
+  });
 
   const mediaField = parsed.find((field) => field.name === "gallery");
   expect(mediaField?.type).toBe("media");

@@ -1,9 +1,19 @@
-import { Save, Send } from "lucide-react";
+import { Copy, Save, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -16,12 +26,15 @@ import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
   type ContentSchema,
+  deleteContentType,
+  duplicateContentType,
   getCachedContentTypes,
   getContentTypeCached,
   listContentTypesCached,
   updateContentType,
 } from "@/services/contentTypesClient";
 import { listTaxonomies, updateTaxonomyConfig } from "@/services/taxonomyClient";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -57,12 +70,14 @@ const defaultFields: ContentField[] = [
 ];
 
 export function ContentTypeEditor() {
+  const { navigate } = useAdminRouter();
   const [typeId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return resolveContentTypeIdFromPath(window.location.pathname);
   });
   const [name, setName] = useState("" as string);
   const [slug, setSlug] = useState("" as string);
+  const [status, setStatus] = useState<"draft" | "published">("draft");
   const [fields, setFields] = useState<ContentField[]>(defaultFields);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,15 +98,24 @@ export function ContentTypeEditor() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [pendingFieldRemoval, setPendingFieldRemoval] = useState<ContentField | null>(null);
+  const [lastRemovedField, setLastRemovedField] = useState<{
+    field: ContentField;
+    index: number;
+  } | null>(null);
   const [taxonomyConfig, setTaxonomyConfig] = useState({
     categories: false,
     tags: false,
   });
   const [isTaxonomySaving, setIsTaxonomySaving] = useState(false);
 
-  const applyContentType = useCallback((result: { name: string; slug: string; schema: ContentSchema }) => {
+  const applyContentType = useCallback((result: { name: string; slug: string; schema: ContentSchema; status?: "draft" | "published" }) => {
     setName(result.name);
     setSlug(result.slug);
+    setStatus(result.status ?? "draft");
     const mappedFields = fieldsFromSchema(result.schema);
     setFields(mappedFields);
     setUnsavedChanges(false);
@@ -205,14 +229,57 @@ export function ContentTypeEditor() {
       name: nameValue,
       type: "text",
       label: "New field",
+      keyAuto: true,
       required: false,
     };
     handleFieldChange([...fields, nextField]);
     setSelectedFieldId(nextField.id);
   };
 
-  const handleSave = async () => {
+  const validateFieldsForSave = () => {
+    const names = fields.map((field) => ({ id: field.id, name: field.name }));
+    for (const field of fields) {
+      const fieldNameError = validateFieldName(field.name, names, field.id);
+      if (fieldNameError) return fieldNameError;
+      if (field.type === "select") {
+        const optionValues = new Set<string>();
+        for (const option of field.options ?? []) {
+          if (!option.label.trim() || !option.value.trim()) {
+            return "Select options need labels and values.";
+          }
+          if (optionValues.has(option.value)) {
+            return "Select option values must be unique.";
+          }
+          optionValues.add(option.value);
+        }
+      }
+      if (field.type === "number") {
+        const { min, max, step, format } = field.number ?? {};
+        if (typeof min === "number" && typeof max === "number" && min > max) {
+          return "Number field minimum cannot exceed maximum.";
+        }
+        if (typeof step === "number" && step <= 0) {
+          return "Number field step must be positive.";
+        }
+        if (
+          format === "integer" &&
+          field.defaultValue &&
+          !Number.isInteger(Number(field.defaultValue))
+        ) {
+          return "Integer number fields cannot use decimal defaults.";
+        }
+      }
+    }
+    return null;
+  };
+
+  const handleSave = async (nextStatus: "draft" | "published" = "draft") => {
     if (!typeId) return;
+    const validationError = validateFieldsForSave();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
@@ -220,17 +287,24 @@ export function ContentTypeEditor() {
         name: name.trim(),
         slug: slug.trim(),
         schema,
+        status: nextStatus,
       });
       setName(updated.name);
       setSlug(updated.slug);
+      setStatus(updated.status);
       setFields(fieldsFromSchema(updated.schema));
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      toast.success(
+        nextStatus === "published" ? "Content type published." : "Draft saved."
+      );
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
         setError("Failed to save content type.");
+        toast.error("Failed to save content type.");
       }
     } finally {
       setIsSaving(false);
@@ -238,12 +312,76 @@ export function ContentTypeEditor() {
   };
 
   const handlePublish = async () => {
-    await handleSave();
+    await handleSave("published");
+  };
+
+  const handleDuplicate = async () => {
+    if (!typeId) return;
+    setIsDuplicating(true);
+    setError(null);
+    try {
+      const duplicated = await duplicateContentType(typeId);
+      toast.success(`Duplicated "${duplicated.name}".`);
+      navigate(`/content-types/${encodeURIComponent(duplicated.id)}`);
+    } catch (err) {
+      const message = isApiClientError(err)
+        ? err.message
+        : "Failed to duplicate content type.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!typeId) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await deleteContentType(typeId);
+      toast.success(`Deleted "${name}".`);
+      setDeleteDialogOpen(false);
+      navigate("/content-types");
+    } catch (err) {
+      const message = isApiClientError(err)
+        ? err.message
+        : "Failed to delete content type.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleFieldChange = (next: ContentField[]) => {
     setFields(next);
     setUnsavedChanges(true);
+  };
+
+  const requestFieldRemoval = () => {
+    if (!selectedField) return;
+    setPendingFieldRemoval(selectedField);
+  };
+
+  const confirmFieldRemoval = () => {
+    if (!pendingFieldRemoval) return;
+    const index = fields.findIndex((field) => field.id === pendingFieldRemoval.id);
+    const next = fields.filter((field) => field.id !== pendingFieldRemoval.id);
+    handleFieldChange(next);
+    setSelectedFieldId(next[index]?.id ?? next[index - 1]?.id ?? next[0]?.id ?? null);
+    setLastRemovedField({ field: pendingFieldRemoval, index: Math.max(0, index) });
+    setPendingFieldRemoval(null);
+    setDetailsOpen(false);
+  };
+
+  const undoFieldRemoval = () => {
+    if (!lastRemovedField) return;
+    const next = [...fields];
+    next.splice(Math.min(lastRemovedField.index, next.length), 0, lastRemovedField.field);
+    handleFieldChange(next);
+    setSelectedFieldId(lastRemovedField.field.id);
+    setLastRemovedField(null);
   };
 
   const handleTaxonomyToggle = async (
@@ -319,6 +457,7 @@ export function ContentTypeEditor() {
           <PageHeader
             title="Content Type Editor"
             description="Define schema fields and validation rules."
+            actions={<Badge variant="outline">{status}</Badge>}
           />
           {error ? (
             <Alert variant="destructive" className="mt-4">
@@ -349,6 +488,19 @@ export function ContentTypeEditor() {
               </AlertDescription>
             </Alert>
           ) : null}
+          {lastRemovedField ? (
+            <Alert className="mt-4">
+              <AlertTitle>Field removed</AlertTitle>
+              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  {lastRemovedField.field.label} was removed from the local draft.
+                </span>
+                <Button variant="outline" size="sm" onClick={undoFieldRemoval}>
+                  Undo
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
         </div>
         <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2">
@@ -365,7 +517,17 @@ export function ContentTypeEditor() {
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={handleSave}
+                onClick={handleDuplicate}
+                disabled={isSaving || isLoading || isDuplicating}
+              >
+                <Copy className="h-4 w-4" />
+                {isDuplicating ? "Duplicating..." : "Duplicate"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => void handleSave("draft")}
                 disabled={isSaving || isLoading}
               >
                 <Save className="h-4 w-4" />
@@ -379,6 +541,16 @@ export function ContentTypeEditor() {
               >
                 <Send className="h-4 w-4" />
                 Publish
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-destructive hover:text-destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={isSaving || isLoading}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
               </Button>
             </div>
           </div>
@@ -490,17 +662,37 @@ export function ContentTypeEditor() {
                 defaultError={defaultError}
                 relationError={relationError}
                 relationTargets={relationTargets}
+                existingNames={fields.map((field) => ({ id: field.id, name: field.name }))}
                 onChange={(next) => {
                   handleFieldChange(
                     fields.map((field) => (field.id === next.id ? next : field))
                   );
                 }}
-                onRemove={() => {
-                  if (!selectedField) return;
-                  handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
-                }}
+                onRemove={requestFieldRemoval}
                 className="hidden lg:flex h-auto overflow-visible"
               />
+              <Card className="border-destructive/30">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
+                  <CardDescription>
+                    Delete the content type schema only when no entries or dependent owners use it.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    This action is blocked by the server if entries, screens, routes,
+                    taxonomies, or listings still reference this type.
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="gap-2"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete type
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
@@ -518,16 +710,13 @@ export function ContentTypeEditor() {
               defaultError={defaultError}
               relationError={relationError}
               relationTargets={relationTargets}
+              existingNames={fields.map((field) => ({ id: field.id, name: field.name }))}
               onChange={(next) => {
                 handleFieldChange(
                   fields.map((field) => (field.id === next.id ? next : field))
                 );
               }}
-              onRemove={() => {
-                if (!selectedField) return;
-                handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
-                setDetailsOpen(false);
-              }}
+              onRemove={requestFieldRemoval}
             />
           </div>
         </SheetContent>
@@ -543,6 +732,64 @@ export function ContentTypeEditor() {
           </div>
         </SheetContent>
       </Sheet>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete content type?</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{name}</span>{" "}
+              ({slug}) will be removed only if no entries or dependent owners
+              reference it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm text-rose-900">
+            The server blocks deletion for entries, custom screens, taxonomies,
+            content routes, and listings. This cannot be undone after it succeeds.
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete type"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(pendingFieldRemoval)}
+        onOpenChange={(open) => {
+          if (!open) setPendingFieldRemoval(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove field?</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">
+                {pendingFieldRemoval?.label}
+              </span>{" "}
+              ({pendingFieldRemoval?.name}) will be removed from this local schema draft.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
+            Removing a field can affect existing entries after you save the schema.
+            You can undo the local removal before saving.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingFieldRemoval(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmFieldRemoval}>
+              Remove field
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </EditorShell>
   );
 }

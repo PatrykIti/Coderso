@@ -9,6 +9,13 @@ Cel: wspierac kolekcje danych poza Pages (np. blog, case studies).
 - Revisions dla entries.
 - Content types sa tworzone i edytowane w panelu admina.
 - Schema jest zapisywana w DB (JSONB) bez migracji tabel.
+- Content Type ma realny status `draft` / `published`; nowe typy startuja jako
+  `draft`, a migracja TASK-202 zachowuje istniejace rekordy jako `published`.
+- `name` i `slug` sa unikalne w kontrakcie serwisu. Nazwy w stylu
+  `Screen <uuid>` sa odrzucane, aby generatorzy nie tworzyli nieczytelnych
+  typow.
+- Usuniecie content type przechodzi przez guard serwisowy i jest blokowane,
+  gdy typ ma entries, custom screens, taxonomie, content routes albo listings.
 
 ## Default content types (core)
 
@@ -46,11 +53,11 @@ Business/Media:
 Fields sa definiowane jako JSON schema.
 Typy dostepne w UI v1:
 - text, richtext, number, boolean
-- select
+- select (single lub multi-select)
 - media (image/file w jednym typie)
 - relation (do innego typu)
 
-Pozostale typy (multiselect, date/datetime, seo) planowane v1.1+ lub przez pluginy.
+Pozostale typy (date/datetime, seo) planowane v1.1+ lub przez pluginy.
 
 ### Schema meta (v1)
 
@@ -63,7 +70,9 @@ nie tracic typu pola:
   - `relation.multiple` (multi‑relation → `type: "array"`),
   - `media.accept` (MIME whitelist),
   - `media.maxItems` (limit dla multi‑media),
-  - `select.options` (lista opcji),
+  - `select.options` (lista `{ label, value }`) i `select.multiple`,
+  - `number.format/min/max/step` mapowane na JSON Schema
+    `type: "integer" | "number"`, `minimum`, `maximum`, `multipleOf`,
   - `layout.tab/section/width/display` (uklad pola w edytorze wpisu),
   - przyszłe: reguły mediów, richtext, walidatory.
 - `xRelationTarget` jest wspierane dla kompatybilności wstecznej.
@@ -73,12 +82,22 @@ Te pola sa ignorowane przez walidator danych wpisu.
 ## Admin UI rules (v1)
 
 - `name` pola musi byc unikalny i w kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
+- Nowe pola generuja `name` z etykiety dopoki uzytkownik recznie nie edytuje
+  klucza.
+- Etykiety odczytane ze starych schematow sa humanizowane, gdy byly identyczne
+  z technicznym kluczem (`featuredImage` -> `Featured Image`).
 - Required field musi miec `defaultValue` (UI blokuje brak defaultu).
 - Relation field wymaga `target` (slug typu docelowego).
 - Relation field może byc single lub multi (multi zapisuje tablice entry IDs).
+- Select field zapisuje stabilne wartosci i czytelne etykiety; multi-select
+  zapisuje tablice wartosci.
+- Number field moze wymusic integer/decimal, min, max i step.
 - UI generuje formularz entry dynamicznie z pola `schema`.
 - Layout pola (tab/sekcja/szerokosc) jest zapisywany w `xFieldConfig.layout`.
 - Draft/publish/preview + autosave draft w edytorze wpisu.
+- Content Type Editor pokazuje status badge, zapisuje draft/published, pozwala
+  duplikowac schemat bez entries i wymaga potwierdzenia przed usunieciem typu
+  albo pola.
 
 ## Taxonomie (Categories/Tags)
 

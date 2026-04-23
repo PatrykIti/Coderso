@@ -30,12 +30,14 @@ const slugify = (value: string) =>
 type ContentTypeCreateDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  existingTypes?: Array<{ name: string; slug: string }>;
   onCreated?: (type: ContentTypeSummary) => void;
 };
 
 export function ContentTypeCreateDrawer({
   open,
   onOpenChange,
+  existingTypes = [],
   onCreated,
 }: ContentTypeCreateDrawerProps) {
   const [name, setName] = useState("");
@@ -62,13 +64,24 @@ export function ContentTypeCreateDrawer({
 
   const handleSubmit = async () => {
     if (!name.trim() || !slug.trim()) return;
+    const normalizedName = name.trim().toLowerCase();
+    const normalizedSlug = slug.trim().toLowerCase();
+    if (existingTypes.some((type) => type.name.trim().toLowerCase() === normalizedName)) {
+      setError("Content type name already exists.");
+      return;
+    }
+    if (existingTypes.some((type) => type.slug.trim().toLowerCase() === normalizedSlug)) {
+      setError("Content type slug already exists.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
       const created = await createContentType({
         name: name.trim(),
-        slug: slug.trim(),
+        slug: normalizedSlug,
         schema: buildSchemaFromFields([]),
+        status: "draft",
       });
       onCreated?.(created);
       onOpenChange(false);
@@ -83,7 +96,13 @@ export function ContentTypeCreateDrawer({
     }
   };
 
-  const isDisabled = !name.trim() || !slug.trim() || isSaving;
+  const duplicateName = existingTypes.some(
+    (type) => type.name.trim().toLowerCase() === name.trim().toLowerCase()
+  );
+  const duplicateSlug = existingTypes.some(
+    (type) => type.slug.trim().toLowerCase() === slug.trim().toLowerCase()
+  );
+  const isDisabled = !name.trim() || !slug.trim() || duplicateName || duplicateSlug || isSaving;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -125,6 +144,11 @@ export function ContentTypeCreateDrawer({
                   onChange={(event) => setName(event.target.value)}
                 />
               </div>
+              {duplicateName ? (
+                <p className="text-xs text-destructive">
+                  This name is already used by another content type.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -142,6 +166,11 @@ export function ContentTypeCreateDrawer({
                   }}
                 />
               </div>
+              {duplicateSlug ? (
+                <p className="text-xs text-destructive">
+                  This slug is already used by another content type.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

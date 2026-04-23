@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-202-01; TASK-202-05-01 for status filter closure
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

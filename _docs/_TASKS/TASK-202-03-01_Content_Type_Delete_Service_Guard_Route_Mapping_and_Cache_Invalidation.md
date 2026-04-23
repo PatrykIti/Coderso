@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + API + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-202-03
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

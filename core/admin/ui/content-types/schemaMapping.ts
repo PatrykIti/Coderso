@@ -1,12 +1,20 @@
-import type { ContentField, FieldType } from "./SchemaBuilder";
+import type {
+  ContentField,
+  FieldType,
+  NumberFieldConfig,
+  SelectOption,
+} from "./SchemaBuilder";
 
 export type ContentSchemaProperty = {
-  type?: "string" | "number" | "boolean" | "array";
-  items?: { type?: "string" };
+  type?: "string" | "number" | "integer" | "boolean" | "array";
+  items?: { type?: "string"; enum?: string[] };
   title?: string;
   description?: string;
   enum?: string[];
   default?: string | number | boolean | string[];
+  minimum?: number;
+  maximum?: number;
+  multipleOf?: number;
   maxItems?: number;
   xFieldType?: FieldType | string;
   xFieldConfig?: Record<string, unknown>;
@@ -70,11 +78,59 @@ const readSelectOptions = (value: unknown) => {
   if (!isRecord(select)) return undefined;
   const options = select.options;
   if (!Array.isArray(options)) return undefined;
-  const normalized = options
-    .filter((entry): entry is string => typeof entry === "string")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
+  const normalized = options.flatMap((entry, index): SelectOption[] => {
+    if (typeof entry === "string") {
+      const value = entry.trim();
+      return value ? [{ id: `option-${index}-${value}`, label: value, value }] : [];
+    }
+    if (!isRecord(entry)) return [];
+    const label = typeof entry.label === "string" ? entry.label.trim() : "";
+    const value = typeof entry.value === "string" ? entry.value.trim() : "";
+    if (!label || !value) return [];
+    return [
+      {
+        id:
+          typeof entry.id === "string" && entry.id.trim()
+            ? entry.id.trim()
+            : `option-${index}-${value}`,
+        label,
+        value,
+        ...(entry.valueLocked === true ? { valueLocked: true } : {}),
+      },
+    ];
+  });
   return normalized.length ? normalized : undefined;
+};
+
+const readSelectMultiple = (value: unknown) => {
+  if (!isRecord(value)) return false;
+  const select = value.select;
+  if (!isRecord(select)) return false;
+  return select.multiple === true;
+};
+
+const readNumberConfig = (value: unknown): NumberFieldConfig | undefined => {
+  if (!isRecord(value)) return undefined;
+  const number = isRecord(value.number) ? value.number : undefined;
+  if (!number) return undefined;
+  const format =
+    number.format === "integer" || number.format === "decimal"
+      ? number.format
+      : undefined;
+  const min = typeof number.min === "number" && Number.isFinite(number.min)
+    ? number.min
+    : undefined;
+  const max = typeof number.max === "number" && Number.isFinite(number.max)
+    ? number.max
+    : undefined;
+  const step =
+    typeof number.step === "number" && Number.isFinite(number.step) && number.step > 0
+      ? number.step
+      : undefined;
+  if (!format && min === undefined && max === undefined && step === undefined) {
+    return undefined;
+  }
+  return { ...(format ? { format } : {}), min, max, step };
 };
 
 const readMediaConfig = (value: unknown) => {
@@ -136,21 +192,57 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
         xFieldType: field.type,
       };
       const fieldConfig: Record<string, unknown> = {};
+      const selectOptions =
+        field.type === "select" ? normalizeFieldSelectOptions(field.options) : [];
       if (
         (field.type === "relation" && field.relation?.multiple) ||
         (field.type === "media" && field.media?.multiple)
       ) {
         definition.type = "array";
         definition.items = { type: "string" };
+      } else if (field.type === "select" && field.multiple) {
+        const values = selectOptions.map((option) => option.value).filter(Boolean);
+        definition.type = "array";
+        definition.items = values.length
+          ? { type: "string", enum: values }
+          : { type: "string" };
+      } else if (field.type === "number" && field.number?.format === "integer") {
+        definition.type = "integer";
       } else {
         definition.type = fieldTypeMap[field.type];
       }
 
       if (field.label) definition.title = field.label;
       if (field.help) definition.description = field.help;
-      if (field.type === "select" && field.options?.length) {
-        definition.enum = field.options;
-        fieldConfig.select = { options: field.options };
+      if (field.type === "select" && selectOptions.length) {
+        const options = selectOptions.map((option) => ({
+          label: option.label,
+          value: option.value,
+        }));
+        const values = options.map((option) => option.value);
+        if (field.multiple) {
+          definition.items = { type: "string", enum: values };
+        } else {
+          definition.enum = values;
+        }
+        fieldConfig.select = {
+          options,
+          ...(field.multiple ? { multiple: true } : {}),
+        };
+      }
+      if (field.type === "number") {
+        const numberConfig = field.number;
+        if (typeof numberConfig?.min === "number") definition.minimum = numberConfig.min;
+        if (typeof numberConfig?.max === "number") definition.maximum = numberConfig.max;
+        if (typeof numberConfig?.step === "number") definition.multipleOf = numberConfig.step;
+        if (numberConfig) {
+          fieldConfig.number = {
+            ...(numberConfig.format ? { format: numberConfig.format } : {}),
+            ...(typeof numberConfig.min === "number" ? { min: numberConfig.min } : {}),
+            ...(typeof numberConfig.max === "number" ? { max: numberConfig.max } : {}),
+            ...(typeof numberConfig.step === "number" ? { step: numberConfig.step } : {}),
+          };
+        }
       }
       if (field.type === "relation" && field.relation?.target) {
         definition.xRelationTarget = field.relation.target;
@@ -227,50 +319,133 @@ const resolveFieldType = (definition: ContentSchemaProperty): FieldType => {
   const selectOptions = readSelectOptions(definition.xFieldConfig);
   if (selectOptions?.length) return "select";
   if (definition.enum && definition.enum.length > 0) return "select";
+  if (
+    definition.type === "array" &&
+    definition.items?.type === "string" &&
+    (definition.items.enum?.length || readSelectMultiple(definition.xFieldConfig))
+  ) {
+    return "select";
+  }
+  if (definition.type === "integer") return "number";
   if (definition.type === "number") return "number";
   if (definition.type === "boolean") return "boolean";
   return "text";
 };
 
+const humanizeFieldLabel = (name: string) =>
+  name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const isMachineLabel = (name: string, label?: string) => {
+  if (!label) return true;
+  const normalizedName = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalizedName === normalizedLabel;
+};
+
+const optionsFromEnum = (values?: string[]): SelectOption[] | undefined => {
+  if (!values?.length) return undefined;
+  return values.map((value, index) => ({
+    id: `option-${index}-${value}`,
+    label: humanizeFieldLabel(value),
+    value,
+    valueLocked: true,
+  }));
+};
+
+const normalizeFieldSelectOptions = (options: unknown): SelectOption[] => {
+  if (!Array.isArray(options)) return [];
+  return options.flatMap((entry, index): SelectOption[] => {
+    if (typeof entry === "string") {
+      const value = entry.trim();
+      return value
+        ? [{ id: `option-${index}-${value}`, label: humanizeFieldLabel(value), value }]
+        : [];
+    }
+    if (!isRecord(entry)) return [];
+    const label = typeof entry.label === "string" ? entry.label.trim() : "";
+    const value = typeof entry.value === "string" ? entry.value.trim() : "";
+    if (!label || !value) return [];
+    return [
+      {
+        id:
+          typeof entry.id === "string" && entry.id.trim()
+            ? entry.id.trim()
+            : `option-${index}-${value}`,
+        label,
+        value,
+        ...(entry.valueLocked === true ? { valueLocked: true } : {}),
+      },
+    ];
+  });
+};
+
 export function fieldsFromSchema(schema: ContentSchema): ContentField[] {
   const required = new Set(schema.required ?? []);
-  return Object.entries(schema.properties).map(([name, definition]) => ({
-    id: `field-${name}`,
-    name,
-    type: resolveFieldType(definition),
-    label: definition.title ?? name,
-    help: definition.description,
-    required: required.has(name),
-    options: definition.enum ?? readSelectOptions(definition.xFieldConfig),
-    defaultValue: parseDefaultValue(definition.default),
-    layout: readLayoutConfig(definition.xFieldConfig),
-    relation:
-      (definition.xFieldType === "relation" || definition.xRelationTarget) &&
-      (definition.xRelationTarget ??
-        readRelationTarget(definition.xFieldConfig))
-        ? {
-            target:
-              definition.xRelationTarget ??
-              (readRelationTarget(definition.xFieldConfig) as string),
-            multiple:
-              definition.type === "array" ||
-              readRelationMultiple(definition.xFieldConfig) === true,
-          }
-        : undefined,
-    media: (() => {
-      const mediaConfig = readMediaConfig(definition.xFieldConfig);
-      if (!(definition.xFieldType === "media" || mediaConfig)) return undefined;
-      return {
-        multiple: definition.type === "array" || mediaConfig?.multiple === true,
-        ...(mediaConfig?.accept?.length ? { accept: mediaConfig.accept } : {}),
-        ...(typeof mediaConfig?.maxItems === "number"
-          ? { maxItems: mediaConfig.maxItems }
-          : definition.maxItems !== undefined
-            ? { maxItems: definition.maxItems }
-            : {}),
-      };
-    })(),
-  }));
+  return Object.entries(schema.properties).map(([name, definition]) => {
+    const fieldType = resolveFieldType(definition);
+    return {
+      id: `field-${name}`,
+      name,
+      type: fieldType,
+      label: isMachineLabel(name, definition.title)
+        ? humanizeFieldLabel(name)
+        : (definition.title as string),
+      help: definition.description,
+      required: required.has(name),
+      options:
+        readSelectOptions(definition.xFieldConfig) ??
+        optionsFromEnum(definition.enum ?? definition.items?.enum),
+      multiple:
+        fieldType === "select" &&
+        (definition.type === "array" || readSelectMultiple(definition.xFieldConfig)),
+      number: (() => {
+        const fromConfig = readNumberConfig(definition.xFieldConfig);
+        if (definition.type !== "number" && definition.type !== "integer" && !fromConfig) {
+          return undefined;
+        }
+        return {
+          format: definition.type === "integer" ? "integer" : fromConfig?.format ?? "decimal",
+          ...(typeof definition.minimum === "number" ? { min: definition.minimum } : {}),
+          ...(typeof definition.maximum === "number" ? { max: definition.maximum } : {}),
+          ...(typeof definition.multipleOf === "number" ? { step: definition.multipleOf } : {}),
+          ...fromConfig,
+        };
+      })(),
+      defaultValue: parseDefaultValue(definition.default),
+      layout: readLayoutConfig(definition.xFieldConfig),
+      relation:
+        (definition.xFieldType === "relation" || definition.xRelationTarget) &&
+        (definition.xRelationTarget ??
+          readRelationTarget(definition.xFieldConfig))
+          ? {
+              target:
+                definition.xRelationTarget ??
+                (readRelationTarget(definition.xFieldConfig) as string),
+              multiple:
+                definition.type === "array" ||
+                readRelationMultiple(definition.xFieldConfig) === true,
+            }
+          : undefined,
+      media: (() => {
+        const mediaConfig = readMediaConfig(definition.xFieldConfig);
+        if (!(definition.xFieldType === "media" || mediaConfig)) return undefined;
+        return {
+          multiple: definition.type === "array" || mediaConfig?.multiple === true,
+          ...(mediaConfig?.accept?.length ? { accept: mediaConfig.accept } : {}),
+          ...(typeof mediaConfig?.maxItems === "number"
+            ? { maxItems: mediaConfig.maxItems }
+            : definition.maxItems !== undefined
+              ? { maxItems: definition.maxItems }
+              : {}),
+        };
+      })(),
+    };
+  });
 }
 
 export function countSchemaFields(schema?: ContentSchema | null) {

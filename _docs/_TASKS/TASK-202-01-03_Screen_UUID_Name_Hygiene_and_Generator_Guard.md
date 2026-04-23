@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Custom Screens + Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-202-01; TASK-202-03-01/TASK-202-03-02 only for safe cleanup of existing records
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-202-02, TASK-202-01-03 (writer inventory if shared validation exposes direct writer gaps)
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

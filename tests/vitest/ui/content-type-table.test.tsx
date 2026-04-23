@@ -15,6 +15,7 @@ const row = {
   updatedAt: "2026-02-14T00:00:00.000Z",
   fieldCount: 3,
   status: "published" as const,
+  duplicateNameCount: 2,
 };
 
 test("ContentTypeTable renders name as edit link", () => {
@@ -28,4 +29,6 @@ test("ContentTypeTable renders name as edit link", () => {
 
   expect(html).toContain("Edit content type: Blog");
   expect(html).toContain("/admin/coderso/engine/type-1");
+  expect(html).toContain("Duplicate name");
+  expect(html).toContain("Open actions for Blog");
 });

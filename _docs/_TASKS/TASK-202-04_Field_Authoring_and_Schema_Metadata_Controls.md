@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Schema Builder + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-202, TASK-048
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

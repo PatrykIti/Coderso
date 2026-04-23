@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 70 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1050 tasks
+- **Done:** 1072 tasks
 
 ---
 
@@ -38,28 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
-| TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Business area: search/sort/filter list, duplicate-name context, relation labels, and screen UUID hygiene |
-| TASK-202-01-01 | Content Type List Search, Sort, and Status Filters | High | Medium | Technical leaf: list search, deterministic sort, and real-status filter gating |
-| TASK-202-01-02 | Duplicate Name Visibility and Relation Target Labels | High | Medium | Technical leaf: duplicate badges plus relation options with slug context |
-| TASK-202-01-03 | Screen UUID Name Hygiene and Generator Guard | Medium | Medium | Technical leaf: trace all content-type writers and guard the owner that creates unreadable Screen UUID types |
-| TASK-202-02 | Create, Duplicate, and Row Action Flows | High | Large | Business area: create validation, create-to-editor navigation, duplicate flow, and lifecycle actions |
-| TASK-202-02-01 | Create Drawer Duplicate Validation and Create-to-Editor Flow | High | Medium | Technical leaf: duplicate create guard, success feedback, and editor navigation |
-| TASK-202-02-02 | Duplicate Content Type Action and Clone Contract | Medium | Medium | Technical leaf: schema-only duplicate action with unique name/slug, cache updates, and shared feedback |
-| TASK-202-02-03 | Row Action Menu and Editor Lifecycle Entry Points | Medium | Small | Technical leaf: accessible Edit/Duplicate/Delete entry points without unsafe direct delete |
-| TASK-202-03 | Destructive Change Safety for Content Types and Fields | High | Large | Business area: guarded content type delete, confirmation UI, and field remove recovery |
-| TASK-202-03-01 | Content Type Delete Service Guard, Route Mapping, and Cache Invalidation | High | Medium | Technical leaf: zero-entry server guard, mapped route errors, and cache invalidation |
-| TASK-202-03-02 | Delete Type Danger Zone and List Confirmation UI | High | Medium | Technical leaf: editor danger zone plus list delete dialog, exact target context, and shared feedback |
-| TASK-202-03-03 | Field Remove Confirmation, Undo, and Schema Selection Recovery | High | Medium | Technical leaf: confirm/undo local field removal and stable selection fallback |
-| TASK-202-04 | Field Authoring and Schema Metadata Controls | High | Large | Business area: label/key generation, readable labels, select builder, and number constraints |
-| TASK-202-04-01 | Label to Field Name Autogeneration and Manual Lock | High | Medium | Technical leaf: label-derived kebab key until manual key edit |
-| TASK-202-04-02 | Human Readable Label Backfill and Display Normalization | Medium | Small | Technical leaf: readable fallback labels without destructive schema rewrites |
-| TASK-202-04-03 | Select Options Builder and Multi Select Schema Contract | High | Medium | Technical leaf: option rows, label/value values, multi-select, and schema round-trip |
-| TASK-202-04-04 | Number Field Constraints, Format, and Step Schema Mapping | Medium | Medium | Technical leaf: min/max/integer/decimal/step controls and validation |
-| TASK-202-05 | Save, Publish, Status, and QA Closure | High | Large | Business area: real content type status, save/publish feedback, source report closure, and existing dirty-record inventory |
-| TASK-202-05-01 | Content Type Draft Published Status Model and Migration | High | Medium | Technical leaf: persist real draft/published status with migration artifacts |
-| TASK-202-05-02 | Save Draft, Publish Feedback, Badge, and Shared Toaster | High | Medium | Technical leaf: truthful save/publish toasts and status badge updates |
-| TASK-202-05-03 | QA Docs, Changelog, and Playwright Source Closure | Medium | Medium | Technical leaf: replay SUMMARY-ENGINE, inventory existing duplicate/test/UUID records, and sync docs, changelog, and board |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -127,6 +105,28 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Done: Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
+| TASK-202-05 | Save, Publish, Status, and QA Closure | High | Large | Done: real content type status, save/publish feedback, source report closure, and existing dirty-record inventory |
+| TASK-202-05-03 | QA Docs, Changelog, and Playwright Source Closure | Medium | Medium | Done: replayed SUMMARY-ENGINE, synced docs/changelog/board, and recorded validation |
+| TASK-202-05-02 | Save Draft, Publish Feedback, Badge, and Shared Toaster | High | Medium | Done: save/publish toasts and status badge updates use the shared admin toaster |
+| TASK-202-05-01 | Content Type Draft Published Status Model and Migration | High | Medium | Done: content types now persist draft/published status with migration artifacts |
+| TASK-202-04 | Field Authoring and Schema Metadata Controls | High | Large | Done: label/key generation, readable labels, select builder, and number constraints shipped |
+| TASK-202-04-04 | Number Field Constraints, Format, and Step Schema Mapping | Medium | Medium | Done: min/max/integer/decimal/step controls round-trip through JSON Schema |
+| TASK-202-04-03 | Select Options Builder and Multi Select Schema Contract | High | Medium | Done: option rows, label/value pairs, multi-select, and entry rendering are covered |
+| TASK-202-04-02 | Human Readable Label Backfill and Display Normalization | Medium | Small | Done: existing machine labels render with readable fallback labels without destructive rewrites |
+| TASK-202-04-01 | Label to Field Name Autogeneration and Manual Lock | High | Medium | Done: new field keys derive from label until manually edited |
+| TASK-202-03 | Destructive Change Safety for Content Types and Fields | High | Large | Done: guarded content type delete, confirmation UI, and field remove recovery shipped |
+| TASK-202-03-03 | Field Remove Confirmation, Undo, and Schema Selection Recovery | High | Medium | Done: field removal is confirmed, undoable locally, and keeps selection stable |
+| TASK-202-03-02 | Delete Type Danger Zone and List Confirmation UI | High | Medium | Done: editor/list delete confirmations include exact target context and shared feedback |
+| TASK-202-03-01 | Content Type Delete Service Guard, Route Mapping, and Cache Invalidation | High | Medium | Done: delete guard blocks entries/screens/taxonomies/routes/listings and maps API errors |
+| TASK-202-02 | Create, Duplicate, and Row Action Flows | High | Large | Done: create validation, create-to-editor navigation, duplicate flow, and lifecycle actions shipped |
+| TASK-202-02-03 | Row Action Menu and Editor Lifecycle Entry Points | Medium | Small | Done: accessible Edit/Duplicate/Delete entry points use the existing table/editor surfaces |
+| TASK-202-02-02 | Duplicate Content Type Action and Clone Contract | Medium | Medium | Done: schema-only duplicate creates unique draft copies with cache updates |
+| TASK-202-02-01 | Create Drawer Duplicate Validation and Create-to-Editor Flow | High | Medium | Done: duplicate create guard, success feedback, and editor navigation shipped |
+| TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Done: search/sort/filter list, duplicate-name context, relation labels, and screen UUID guard shipped |
+| TASK-202-01-03 | Screen UUID Name Hygiene and Generator Guard | Medium | Medium | Done: content-type writers use shared name normalization and reject generated Screen UUID names |
+| TASK-202-01-02 | Duplicate Name Visibility and Relation Target Labels | High | Medium | Done: duplicate badges and relation labels include slug context |
+| TASK-202-01-01 | Content Type List Search, Sort, and Status Filters | High | Medium | Done: list search, deterministic sort, and real status filter are wired |
 | TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Done: Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md` closed with metadata feedback, rich text, preview recovery, row actions, sidebar, SEO/taxonomy, docs, and tests |
 | TASK-203-05 | QA, Docs, and Closure | Medium | Medium | Done: validation, Playwright finding map, docs, changelog 731, and board closure synced |
 | TASK-203-04-02 | Metadata Panel SEO URL, Taxonomy Link, and Collapsible Help | Medium | Medium | Done: SEO preview now uses site content routes, taxonomy disabled state links to Engine, and help is collapsible |

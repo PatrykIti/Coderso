@@ -5,7 +5,7 @@ Opisuje pola Content Types oraz ich konfiguracje w Admin UI.
 ## Typy pola
 
 - text, richtext, number, boolean
-- select (lista opcji)
+- select (lista opcji, single albo multi-select)
 - media (powiazanie z Media Library)
 - relation (powiazanie z innym Content Type)
 
@@ -79,6 +79,61 @@ Schema meta:
 }
 ```
 
+## Select field
+
+Single select zapisuje jedna wartosc:
+
+```json
+{ "tone": "warm" }
+```
+
+Multi-select zapisuje tablice wartosci:
+
+```json
+{ "channels": ["web", "email"] }
+```
+
+Schema meta:
+
+```json
+{
+  "type": "array",
+  "items": { "type": "string", "enum": ["web", "email"] },
+  "xFieldType": "select",
+  "xFieldConfig": {
+    "select": {
+      "multiple": true,
+      "options": [
+        { "label": "Website", "value": "web" },
+        { "label": "Email", "value": "email" }
+      ]
+    }
+  }
+}
+```
+
+Starsze schematy z `options: string[]` sa nadal odczytywane i renderowane.
+
+## Number field
+
+Schema meta:
+
+```json
+{
+  "type": "number",
+  "minimum": 0,
+  "maximum": 1000,
+  "multipleOf": 0.01,
+  "xFieldType": "number",
+  "xFieldConfig": {
+    "number": { "format": "decimal", "min": 0, "max": 1000, "step": 0.01 }
+  }
+}
+```
+
+Format `integer` zapisuje `type: "integer"`; format `decimal` zapisuje
+`type: "number"`. Entry renderer przekazuje `min`, `max` i `step` do inputa.
+
 ## Relation field
 
 Entry data:
@@ -123,3 +178,5 @@ Zasady:
 - `relation` i `media` sprawdzaja istnienie wskazanych ID w DB.
 - `media.accept` ogranicza dozwolone MIME types.
 - `media.maxItems` ogranicza liczbe assetow w polu multi.
+- Select `enum` ogranicza wartosci do skonfigurowanych opcji.
+- Number `minimum`, `maximum` i `multipleOf` sa walidowane przez JSON Schema.

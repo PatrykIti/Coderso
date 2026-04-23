@@ -204,3 +204,38 @@
 - `content-type-editor-empty.png` — edytor 3-panelowy z pustymi polami
 - `editor-two-fields.png` — edytor po dodaniu 2 pól (title + field-2), schema live
 - `content-types-list-full.png` — lista po dodaniu "Article"
+
+---
+
+## TASK-202 closure — 2026-04-23
+
+TASK-202 zamyka wszystkie elementy z tego raportu przez istniejace kontrakty
+Engine/content types, bez drugiego schema buildera ani osobnego klienta admina.
+
+| Finding | Status | Dowod zamkniecia |
+|---|---|---|
+| BUG-1 Delete content type | Fixed | `typeService.deleteContentType` blokuje entries, custom screens, taxonomie, content routes i listings; lista i edytor maja potwierdzenia delete oraz cache invalidation. |
+| BUG-2 Duplikaty nazw | Fixed for future writes | `typeService` waliduje unikalna nazwe/slug przy create/update/duplicate; lista pokazuje duplicate badge, a relation dropdown pokazuje `Name (slug)`. Istniejace brudne rekordy nie sa usuwane automatycznie. |
+| BUG-3 Brak feedbacku save/publish | Fixed | Save draft i Publish uzywaja shared admin toastera i aktualizuja realny status badge. |
+| BUG-4 Remove field bez potwierdzenia | Fixed | Remove field otwiera dialog potwierdzenia, a lokalnie usuniete pole mozna cofnac przed zapisem. |
+| BUG-5 Field name nie generuje sie z Label | Fixed | Nowe pola maja `keyAuto`; etykieta generuje kebab-case key do momentu recznej edycji key. |
+| BUG-6 Create nie nawiguje do edytora | Fixed | Create drawer waliduje duplikaty, tworzy draft, pokazuje toast i przechodzi do edytora nowego typu. |
+| BUG-7 `Screen <uuid>` typy | Guarded | Shared content type name normalization odrzuca nowe nazwy `Screen <uuid>`; solution-kit writer i assistant path ida przez ten sam kontrakt. Existing-record cleanup zostaje poza TASK-202. |
+| UX-1 Lista bez search/filter/sort | Fixed | Engine list ma search po name/slug, sortable headers i filtr `draft` / `published`. |
+| UX-2 Relation bez kontekstu | Fixed | Relation target selector pokazuje nazwe i slug. |
+| UX-3 Select comma-separated | Fixed | Select ma wiersze Label/Value, add/remove/reorder i multi-select schema contract. Legacy `string[]` options sa nadal odczytywane. |
+| UX-4 Number bez min/max/format/step | Fixed | Number field zapisuje format integer/decimal, min/max i step do JSON Schema. |
+| UX-5 Machine-readable label | Fixed | `fieldsFromSchema` humanizuje label, gdy zapisany title byl identyczny z technicznym kluczem. |
+| UX-6 Brak Duplicate | Fixed | Duplicate jest dostepne z listy i edytora, kopiuje schema-only i tworzy draft z unikalna nazwa/slug. |
+
+Validation wykonane dla TASK-202:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `vitest run` dla content types client/table/editor/schema mapping/field renderer/integration suites
+- `bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/typeService.test.ts tests/unit/content/validation.test.ts tests/unit/assistant/actionExecutorService.test.ts`
+- `bun test tests/unit/kits/installService.test.ts tests/unit/kits/schema.test.ts`
+
+DB-backed suites w tej sesji pominely przypadki wymagajace polaczenia z DB
+(`DATABASE_URL` byl ustawiony, ale testowy `canConnect()` nie przeszedl), wiec
+biezacy runtime inventory brudnych content types nie zostal ponownie przeliczony.

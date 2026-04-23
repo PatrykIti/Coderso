@@ -25,6 +25,31 @@ type FieldRendererProps = {
   display?: "default" | "compact";
 };
 
+const normalizeSelectOptions = (options: unknown) => {
+  if (!Array.isArray(options)) return [];
+  return options.flatMap((entry, index) => {
+    if (typeof entry === "string") {
+      const value = entry.trim();
+      return value ? [{ id: `option-${index}-${value}`, label: value, value }] : [];
+    }
+    if (!entry || typeof entry !== "object") return [];
+    const option = entry as { id?: unknown; label?: unknown; value?: unknown };
+    const label = typeof option.label === "string" ? option.label.trim() : "";
+    const value = typeof option.value === "string" ? option.value.trim() : "";
+    if (!label || !value) return [];
+    return [
+      {
+        id:
+          typeof option.id === "string" && option.id.trim()
+            ? option.id.trim()
+            : `option-${index}-${value}`,
+        label,
+        value,
+      },
+    ];
+  });
+};
+
 type RelationSelectProps = {
   targetSlug: string;
   targetName?: string;
@@ -228,6 +253,9 @@ export function FieldRenderer({
         <div className={spacingClass}>
           <Input
             type="number"
+            min={field.number?.min}
+            max={field.number?.max}
+            step={field.number?.step}
             value={value !== null && value !== undefined ? String(value) : ""}
             onChange={(event) => {
               const next = event.target.value;
@@ -256,28 +284,73 @@ export function FieldRenderer({
         </div>
       );
     case "select":
-      return (
-        <div className={spacingClass}>
-          <Select
-            value={value ? String(value) : undefined}
-            onValueChange={(next) => onChange(next)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select option" />
-            </SelectTrigger>
-            <SelectContent>
-              {(field.options ?? []).map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className={`${helperClass} text-muted-foreground`}>
-            {customHelp || defaultHelp.select}
-          </p>
-        </div>
-      );
+      {
+        const options = normalizeSelectOptions(field.options);
+        const selectedValues = Array.isArray(value)
+          ? value.map(String)
+          : value
+            ? [String(value)]
+            : [];
+        if (field.multiple) {
+          return (
+            <div className={spacingClass}>
+              <div className="space-y-2 rounded-lg border p-2">
+                {options.length === 0 ? (
+                  <div className="px-2 py-2 text-xs text-muted-foreground">
+                    No options configured.
+                  </div>
+                ) : (
+                  options.map((option) => {
+                    const checked = selectedValues.includes(option.value);
+                    return (
+                      <label
+                        key={option.id}
+                        className="flex items-center gap-2 rounded-md px-2 py-1 text-sm"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(nextChecked) => {
+                            const next = nextChecked
+                              ? [...selectedValues, option.value]
+                              : selectedValues.filter((item) => item !== option.value);
+                            onChange(next);
+                          }}
+                        />
+                        {option.label}
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <p className={`${helperClass} text-muted-foreground`}>
+                {customHelp || "Choose one or more options from the list."}
+              </p>
+            </div>
+          );
+        }
+        return (
+          <div className={spacingClass}>
+            <Select
+              value={value ? String(value) : undefined}
+              onValueChange={(next) => onChange(next)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((option) => (
+                  <SelectItem key={option.id} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className={`${helperClass} text-muted-foreground`}>
+              {customHelp || defaultHelp.select}
+            </p>
+          </div>
+        );
+      }
     case "media":
       {
         const mediaHint = (() => {

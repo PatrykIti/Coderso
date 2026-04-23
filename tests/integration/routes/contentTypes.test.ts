@@ -77,6 +77,7 @@ test("content routes are registered", () => {
     expect.arrayContaining([
       "GET /content-types",
       "POST /content-types",
+      "POST /content-types/:id/duplicate",
       "GET /content-types/:id",
       "PATCH /content-types/:id",
       "DELETE /content-types/:id",

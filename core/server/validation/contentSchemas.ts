@@ -5,6 +5,7 @@ export const contentTypeCreateSchema = {
     name: { type: "string" },
     slug: { type: "string" },
     schema: { type: "object" },
+    status: { type: "string", enum: ["draft", "published"] },
   },
   additionalProperties: false,
 };
@@ -15,6 +16,16 @@ export const contentTypeUpdateSchema = {
     name: { type: "string" },
     slug: { type: "string" },
     schema: { type: "object" },
+    status: { type: "string", enum: ["draft", "published"] },
+  },
+  additionalProperties: false,
+};
+
+export const contentTypeDuplicateSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    slug: { type: "string" },
   },
   additionalProperties: false,
 };
