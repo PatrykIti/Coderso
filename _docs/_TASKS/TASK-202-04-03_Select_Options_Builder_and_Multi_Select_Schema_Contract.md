@@ -33,15 +33,18 @@ No child task files.
   - extend typed schema metadata.
 - `core/admin/ui/entries/FieldRenderer.tsx`
   - update select rendering so single-select keeps scalar values and
-    multi-select reads/writes arrays from the declared schema.
+    multi-select reads/writes arrays from the declared schema,
+  - keep this as an extension of the existing entry field renderer; do not create
+    a second select runtime or a detached multi-select component.
 - `core/services/content/validation.ts`
   - no parallel validator; rely on the existing AJV schema contract and add tests
     if new keywords/array constraints are introduced.
 - `tests/vitest/ui/schema-mapping.test.ts`
 - `tests/vitest/ui/field-editor-layout.test.tsx` or a new field-editor select
   owner suite.
-- `tests/vitest/ui/entry-field-renderer.test.tsx` or the current entry renderer
-  owner suite.
+- `tests/vitest/ui/entry-field-relation.test.tsx` if extending the existing
+  FieldRenderer direct suite, or a new `tests/vitest/ui/entry-field-select.test.tsx`
+  dedicated to select/multi-select rendering.
 - `tests/unit/content/validation.test.ts`
 
 ## Security Contract
@@ -65,8 +68,10 @@ No child task files.
 - Legacy comma/enum data reads correctly.
 - Multi-select writes JSON Schema array metadata and reads it back.
 - Entry renderer writes arrays for multi-select and scalar values for legacy
-  single-select.
+  single-select through the existing `FieldRenderer` owner.
 - Content validation accepts/rejects arrays according to the generated schema.
+  Add or extend a direct FieldRenderer suite; mocked entry shells are not enough
+  proof for select value-shape behavior.
 
 ## Documentation Updates Required
 

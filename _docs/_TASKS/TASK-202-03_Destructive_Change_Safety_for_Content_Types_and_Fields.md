@@ -20,6 +20,9 @@ Current code shows the risks:
 - `typeService.ts:101-108` deletes a content type directly.
 - `contentTypeRoutes.ts:84-92` exposes the delete route without a centralized
   `mapContentTypeError` helper.
+- `actionExecutorService.ts:2765-2776` executes assistant `content-type.delete`
+  through the injected delete dependency; it must inherit the same guarded
+  service contract and map dependency conflicts cleanly.
 - `ContentTypeEditor.tsx:498-530` removes the selected field immediately.
 - `FieldEditor.tsx:106-108` renders `Remove field` as a direct action.
 
@@ -42,6 +45,9 @@ Current code shows the risks:
   `typeService`; scoped existing owners such as solution-kit rollback must either
   call the same guarded contract or document their owner responsibility and
   equivalent safety proof.
+- Keep assistant delete execution aligned with the same guarded contract; do not
+  add an assistant-only delete helper or a weaker precheck that bypasses
+  `typeService` domain errors.
 - Map known domain errors to `ApiError` at the route boundary.
 - Add delete confirmation UI on list/editor surfaces.
 - Add field-removal confirmation and short recovery path.
@@ -64,6 +70,9 @@ Out of scope:
   dependency is not owned by `typeService`.
 - `core/server/routes/contentTypeRoutes.ts:34-92`
 - `core/admin/services/contentTypesClient.ts:184-198`
+- `core/services/assistant/actionExecutorService.ts:2765-2776`
+  - verify assistant execution receives the same guarded delete behavior through
+    its injected dependency and preserves machine-readable conflict handling.
 - `core/admin/ui/content-types/ContentTypeTable.tsx:104-108`
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:318-382`
 - `core/admin/ui/content-types/FieldEditor.tsx:106-108`
@@ -73,6 +82,7 @@ Out of scope:
     it through the guarded contract or record the owner responsibility and
     equivalent rollback-safe guard.
 - `tests/integration/routes/contentTypes.test.ts`
+- `tests/vitest/assistant/actionExecutorService.test.ts`
 - `tests/vitest/admin/contentTypesClient.test.ts`
 - `tests/vitest/ui/content-type-table.test.tsx`
 - `tests/vitest/ui/content-type-editor.test.tsx`
@@ -105,7 +115,10 @@ Out of scope:
     mapped conflict or a named follow-up owner when the dependency cannot be
     checked in this leaf,
   - delete missing id returns mapped not found,
-  - route registration still includes DELETE.
+  - route registration still includes DELETE,
+  - assistant `content-type.delete` execution uses the same guarded service
+    contract or has a named owner/responsibility note for any conflict mapping
+    that remains outside this leaf.
 - Vitest:
   - list/editor delete confirmation flow,
   - client cache invalidation after delete,

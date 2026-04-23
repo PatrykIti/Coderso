@@ -136,6 +136,17 @@ Current owner seams in code:
 
 Reuse-first rule:
 
+- Repair existing contracts in their existing owner seams. Do not create a
+  second schema builder, duplicate admin client, duplicate delete service,
+  detached validator, or one-off cleanup/generator helper when the current repo
+  already has an owner.
+- If ownership is unclear during implementation, stop at the leaf, name the
+  candidate owner area, its responsibility, and the evidence before writing the
+  fix. Do not hide unclear ownership behind a broad UI workaround.
+- Keep the implementation boring and user-facing behavior simple: validate and
+  normalize at the domain/service owner, keep routes as orchestration, and let UI
+  layers provide feedback around those same contracts instead of inventing a
+  separate path.
 - Keep `contentTypesClient.ts` as the single cached admin client for Engine
   reads/writes.
 - Fix the current Engine contracts in their existing owners. Do not add
@@ -164,13 +175,6 @@ Reuse-first rule:
   responsibility, and the equivalent safety proof instead of leaving a bypass.
 - Use durable schema metadata in `xFieldConfig`; do not store UI-only state in
   browser cache or unversioned ad-hoc fields.
-- Do not add parallel clients, cleanup scripts, schema builders, notification
-  hosts, or generated helpers when an existing owner already exists. If
-  ownership is unclear during implementation, document the responsible owner and
-  the reason before writing the fix.
-- If the current owner is unclear after inspection, the leaf must name the
-  responsible area, its responsibility, and the reason before implementation.
-  Do not hide unclear ownership behind a broad UI workaround.
 - If an existing contract cannot safely cover a report item, keep the shipped
   fix inside current contracts and record a named follow-up with owner
   responsibility instead of inventing a new product path in this family.
