@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Entries + Admin/API + Admin/UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-203-03
+**Dependencies:** TASK-203-03, TASK-203-01-02
 **Status:** To Do
 
 ---
@@ -13,7 +13,21 @@
 
 Make the visible `Duplicate` row action real. The current table renders
 `Duplicate` with no handler, while Pages and Posts already have duplicate
-patterns to reference.
+patterns to reference. This leaf owns `BUG-4`; it must not be closed by simply
+removing the menu item unless a separate product decision first changes the
+report closure and task scope.
+
+Ownership:
+
+- `EntryTable` owns forwarding the row action id only.
+- `EntryList` owns duplicate orchestration, refresh, navigation, and shared
+  feedback.
+- `entriesClient` owns the CSRF-protected duplicate wrapper plus cache
+  update/broadcast semantics after a successful response.
+- `contentEntryRoutes.ts` owns route validation, type/id matching, and mapping
+  known service errors at the route boundary.
+- `entryService.ts` owns cloning semantics, draft status, unique title/slug, and
+  preserving same-content-type invariants.
 
 ## Sub-Tasks
 
@@ -46,7 +60,9 @@ Direction:
 - cloned entry is a draft,
 - title/slug are deterministic and unique,
 - duplicate stays within the same content type,
-- success/error feedback is visible.
+- success/error feedback is visible through the shared admin feedback surface,
+- no parallel duplicate route/client/service is introduced when the existing
+  Entries owners can carry the contract.
 
 ## Security Contract
 
@@ -84,4 +100,6 @@ Direction:
 1. `Duplicate` is no longer a no-op.
 2. A successful duplicate creates a visible draft clone.
 3. Duplicate is permission-gated, CSRF-protected, and tested in Bun/Vitest.
-
+4. Closure evidence names the owner seam changed for table action forwarding,
+   list orchestration, client/cache behavior, route validation, and service clone
+   semantics.

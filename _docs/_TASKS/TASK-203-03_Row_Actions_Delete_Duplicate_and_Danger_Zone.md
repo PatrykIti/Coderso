@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Entries + Admin/UI + Admin/API
 **Estimated Effort:** Large
-**Dependencies:** TASK-203, TASK-203-01
+**Dependencies:** TASK-203, TASK-203-01-02
 **Status:** To Do
 
 ---
@@ -34,9 +34,15 @@ Current evidence:
 - Show shared success/failure feedback for row, bulk, and editor delete; the
   editor danger-zone success path must redirect to the list and confirm deletion
   visibly.
-- Implement the visible duplicate action end to end, or remove it with product
-  sign-off captured during closure.
+- Implement the visible duplicate action end to end through the current Entries
+  route/client/service owners. Do not close `BUG-4` by removing the action inside
+  this family; if product later decides to remove it, create/update a separate
+  task and source-report closure before implementation.
 - Keep selection visible-scope based and cache-safe.
+- Keep the row/bulk/editor work on existing owners (`EntryList`, `EntryTable`,
+  `EntryEditor`, `entriesClient`, `contentEntryRoutes`, `entryService`). Add a
+  helper only when the leaf documents why the existing owner cannot keep the
+  state readable.
 
 Out of scope:
 
@@ -99,4 +105,5 @@ Out of scope:
 
 1. Entries no longer use native `window.confirm()` for delete.
 2. Editor exposes confirmed danger-zone delete.
-3. `Duplicate` works end to end or is explicitly removed with closure evidence.
+3. `Duplicate` works end to end through the existing Entries contract and is not
+   a no-op.

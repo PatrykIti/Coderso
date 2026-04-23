@@ -34,6 +34,10 @@ No child task files.
 - Verify any new helper/component introduced by a leaf has an explicit owner and
   removes real complexity instead of duplicating an existing Entries, preview,
   route, validation, cache, or navigation contract.
+- Verify each leaf documents unresolved ownership boundaries before code merges;
+  closure must not accept "implicit" ownership for route, service, UI feedback,
+  cache, navigation, rich text, preview, SEO, taxonomy, or delete/duplicate
+  contracts.
 - Verify implementation did not add stale compatibility paths for assumptions
   that no longer match the current code, such as treating toolbar `Update` as a
   metadata call if the checked-in call graph no longer does that.
@@ -42,6 +46,11 @@ No child task files.
   without warning.
 - Verify delete/danger-zone success and failure feedback uses the existing shared
   admin feedback surface.
+- Verify `Duplicate` is implemented through the existing Entries
+  `EntryTable` -> `EntryList` -> `entriesClient` -> `contentEntryRoutes` ->
+  `entryService` path. If product rejects duplicate behavior, closure must point
+  to a separate product-decision task created before implementation, not silently
+  treat removal as a `TASK-203` fix.
 - Verify generic Entries SEO preview uses the active content type and
   `site.contentRoutes`, not Posts-only helpers or hardcoded blog/post paths.
 - Create/link follow-up tasks for still-reproducible preview-host/runtime issues
@@ -138,3 +147,6 @@ Out of scope:
 5. Remaining preview/runtime/environment issues have exact evidence and owners.
 6. Permission evidence confirms metadata status changes cannot bypass the
    existing publish route/security contract.
+7. `BUG-4` is closed by a working duplicate flow in the existing Entries
+   contract, or by a separate pre-approved product-scope change linked from the
+   Playwright source report.

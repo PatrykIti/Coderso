@@ -45,6 +45,9 @@ Execution contract for this family:
 - do not duplicate code paths that already have owners; reuse current
   `EntryEditor`, `FieldRenderer`, `EntryMetadataPanel`, `entriesClient`,
   `contentEntryRoutes`, `entryService`, `previewUrls`, and public runtime seams;
+- every leaf must start from the current checked-in owner code, not from stale
+  report assumptions; if the code moved, update the owner notes in that leaf
+  before patching implementation;
 - do not add production fallbacks, one-off wrappers, local toasters, duplicate
   dialogs, or alternate API routes only to satisfy tests; adjust the existing
   owner or its tests to match the real contract;
@@ -54,6 +57,10 @@ Execution contract for this family:
 - every fix must name the owner responsible for the behavior it changes; if an
   owner boundary is unclear during implementation, document the decision in the
   leaf before patching code;
+- dependencies between leaves are implementation constraints, not suggestions:
+  use the metadata feedback/dirty-state work before relying on shared feedback
+  from row/delete/duplicate flows, and use current cache/navigation helpers
+  before adding any new helper;
 - new helpers/components are allowed only when the current owner seam cannot keep
   the existing contract readable; the leaf must name the owner, responsibility,
   and why reuse through the current Entries/preview/route/cache/navigation path is
@@ -89,7 +96,10 @@ Execution contract for this family:
    - shared runtime preview failure handling.
 3. Row and destructive actions:
    - branded row/bulk/editor delete confirmation,
-   - real duplicate flow or explicit removal decision.
+   - real duplicate flow through the existing Entries route/client/service
+     owners. Removing the visible action is outside this family unless a
+     separate product decision changes the report closure and task scope before
+     implementation starts.
 4. Sidebar and metadata affordances:
    - non-destructive content-type grouping/filtering and duplicate-name
      disambiguation,

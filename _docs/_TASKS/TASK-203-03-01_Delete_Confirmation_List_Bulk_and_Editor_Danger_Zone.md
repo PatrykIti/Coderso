@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Entries + Admin/UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-203-03
+**Dependencies:** TASK-203-03, TASK-203-01-02
 **Status:** To Do
 
 ---
@@ -25,6 +25,9 @@ Ownership:
 - Feedback must use the existing shared admin notifier or current Entries error
   surface; do not reintroduce `window.confirm()` or add a local notification
   path.
+- This leaf owns delete confirmation only. Do not move duplicate behavior into a
+  delete-dialog abstraction or broaden the row action contract beyond the
+  existing `EntryList`/`EntryTable`/`EntryEditor` owners.
 
 ## Sub-Tasks
 
