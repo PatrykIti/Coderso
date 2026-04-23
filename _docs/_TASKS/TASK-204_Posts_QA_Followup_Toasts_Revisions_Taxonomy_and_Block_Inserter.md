@@ -208,6 +208,7 @@ Current owner seams:
   - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:100`
   - `core/services/posts/editor/postBlockDocument.ts:3`
   - `core/services/posts/editor/postBlockNormalizer.ts`
+  - `core/services/posts/runtime/postBlockRuntimeMapper.ts`
   - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
   - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx`
   - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`

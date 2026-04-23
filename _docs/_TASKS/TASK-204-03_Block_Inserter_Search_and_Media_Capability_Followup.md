@@ -50,7 +50,7 @@ Out of scope:
 - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:22-107`
 - `core/services/posts/editor/postBlockDocument.ts:3-18`
 - `core/services/posts/editor/postBlockNormalizer.ts`
-- `core/services/posts/editor/postBlockRuntimeMapper.ts`
+- `core/services/posts/runtime/postBlockRuntimeMapper.ts`
 - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
 - `tests/vitest/posts/post-block-catalog-search.test.ts`

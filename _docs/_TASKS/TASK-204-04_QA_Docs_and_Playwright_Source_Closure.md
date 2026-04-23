@@ -76,7 +76,7 @@ Out of scope:
 ## Files to Change
 
 - `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`
-- `_docs/_TASKS/TASK-204-04-01_Runtime_Console_Error_Triage_Settings_and_Autosave.md`
+- `_docs/_TASKS/TASK-204*.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_SPEC.md`
 - `_docs/CMS_API.md` if taxonomy API contract changed
