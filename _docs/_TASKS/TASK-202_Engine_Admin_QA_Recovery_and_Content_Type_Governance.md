@@ -133,6 +133,9 @@ Reuse-first rule:
 
 - Keep `contentTypesClient.ts` as the single cached admin client for Engine
   reads/writes.
+- Fix the current Engine contracts in their existing owners. Do not add
+  duplicate clients, services, schema builders, validators, notification hosts,
+  or helper layers when the repo already has a responsible owner.
 - Keep existing domain owners as the source of truth. UI validation can improve
   feedback, but create/delete/status correctness must live in `typeService`,
   route validation/mapping, and the current DB/settings owner seams.
@@ -156,6 +159,12 @@ Reuse-first rule:
   hosts, or generated helpers when an existing owner already exists. If
   ownership is unclear during implementation, document the responsible owner and
   the reason before writing the fix.
+- If the current owner is unclear after inspection, the leaf must name the
+  responsible area, its responsibility, and the reason before implementation.
+  Do not hide unclear ownership behind a broad UI workaround.
+- If an existing contract cannot safely cover a report item, keep the shipped
+  fix inside current contracts and record a named follow-up with owner
+  responsibility instead of inventing a new product path in this family.
 
 ## Security Contract
 

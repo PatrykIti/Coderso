@@ -22,7 +22,14 @@ No child task files.
 ## Files to Change
 
 - `core/admin/ui/content-types/ContentTypeTable.tsx:104-108`
+  - replace the single inline `Edit` button with the list-owned row action menu
+    for Edit / Duplicate / Delete.
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:353-382`
+  - this is the current editor toolbar owner for save/publish/preview actions;
+    add lifecycle entry points here only if the final UX keeps them in the
+    sticky toolbar. If lifecycle actions are moved to a dedicated header or
+    danger-zone section, document that owner before implementation and keep the
+    behavior wired through existing admin route/action helpers.
 - shared menu/dialog primitives already used by Pages/Posts/Menus where
   applicable.
 - `tests/vitest/ui/content-type-table.test.tsx`
@@ -47,7 +54,8 @@ No child task files.
 
 - Row menu contains accessible Edit, Duplicate, and Delete actions.
 - Delete action is disabled or opens confirmation according to `TASK-202-03`.
-- Editor lifecycle actions mirror list behavior without hand-built hrefs.
+- Editor lifecycle actions mirror list behavior through the chosen existing
+  owner without hand-built hrefs or a second action system.
 
 ## Documentation Updates Required
 

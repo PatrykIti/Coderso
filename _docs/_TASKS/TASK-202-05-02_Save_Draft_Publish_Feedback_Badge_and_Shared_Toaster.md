@@ -34,8 +34,9 @@ No child task files.
   - use real status for badges.
 - `core/admin/ui/content-types/ContentTypeTable.tsx:99-102`
   - render real status badge.
-- `core/admin/app/AdminApp.tsx:87`
-  - keep shared toaster mounted; do not add Engine-only host.
+- `core/admin/app/AdminApp.tsx:826`
+  - keep the existing shared `<Toaster />` mount as the feedback host; do not
+    add an Engine-only host.
 - `tests/vitest/ui/content-type-editor.test.tsx`
 - `tests/vitest/ui/content-type-table.test.tsx`
 - `tests/vitest/admin/adminApp.test.tsx`

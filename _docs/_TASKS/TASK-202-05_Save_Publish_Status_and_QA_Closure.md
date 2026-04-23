@@ -60,7 +60,9 @@ Out of scope:
 - `core/admin/services/contentTypesClient.ts:26-40`
 - `core/admin/ui/content-types/ContentTypeList.tsx:30-38`
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:214-242`
-- `core/admin/app/AdminApp.tsx:87`
+- `core/admin/app/AdminApp.tsx:826`
+  - existing shared `<Toaster />` mount; keep feedback on the current admin
+    host instead of adding an Engine-only provider.
 - `core/admin/utils/adminPrefetch.ts:179-180` if warmup assumptions change.
 
 ## Security Contract

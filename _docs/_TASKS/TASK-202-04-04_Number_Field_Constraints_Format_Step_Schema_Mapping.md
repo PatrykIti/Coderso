@@ -30,10 +30,16 @@ No child task files.
   - add `minimum`, `maximum`, `multipleOf`, and number format metadata.
 - `core/admin/ui/content-types/schemaMapping.ts:128-274`
   - round-trip number constraints.
-- `core/services/content/validation.ts` if entry validation needs awareness of
-  the new constraints.
+- `core/services/content/validation.ts`
+  - keep the existing AJV contract as the validation owner; use standard JSON
+    Schema keywords where possible and do not add a parallel number validator.
+    Extend custom keywords only if explicit schema metadata requires it.
 - `tests/vitest/ui/schema-mapping.test.ts`
-- `tests/vitest/validation/schemaValidator.test.ts` if validation changes.
+- `tests/unit/content/validation.test.ts`
+  - Bun owner for entry schema validation with AJV-backed number constraint
+    acceptance/rejection.
+- `tests/vitest/validation/schemaValidator.test.ts` only if route payload
+  schema validation changes.
 
 ## Security Contract
 
@@ -55,6 +61,8 @@ No child task files.
 - Invalid min/max/step combinations show errors and cannot save.
 - Integer and decimal formats handle default values correctly.
 - Existing unconstrained number fields remain valid.
+- Entry validation rejects payloads that violate generated number constraints
+  through the existing content validation owner.
 
 ## Documentation Updates Required
 
