@@ -32,6 +32,8 @@ test("MenuEditorPage renders route-selected editor shell without cross-menu swit
             id: "menu-1",
             name: "Main Navigation",
             location: "primary",
+            status: "published",
+            publishedAt: "2026-04-22T00:00:00.000Z",
             createdAt: "2026-04-22T00:00:00.000Z",
           },
           items: [],

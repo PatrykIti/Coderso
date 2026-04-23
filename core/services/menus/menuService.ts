@@ -13,12 +13,16 @@ import {
 export type CreateMenuInput = {
   name: string;
   location?: string | null;
+  status?: MenuStatus;
 };
 
 export type UpdateMenuInput = {
   name?: string;
   location?: string | null;
+  status?: MenuStatus;
 };
+
+export type MenuStatus = "draft" | "published";
 
 export type MenuItemInput = {
   id?: string;
@@ -39,6 +43,13 @@ function normalizeString(value: unknown) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+export function normalizeMenuStatus(
+  value: unknown,
+  fallback: MenuStatus = "draft"
+): MenuStatus {
+  return value === "published" || value === "draft" ? value : fallback;
 }
 
 function normalizeMenuItems(items: MenuItemInput[]): MenuItemRecord[] {
@@ -112,27 +123,47 @@ export async function getMenu(menuId: string) {
 
 
 export async function createMenu(input: CreateMenuInput) {
+  const status = normalizeMenuStatus(input.status, "draft");
+  const now = new Date();
   const [row] = await db
     .insert(menus)
     .values({
       name: input.name,
       location: input.location ?? null,
+      status,
+      publishedAt: status === "published" ? now : null,
     })
     .returning();
   return row ?? null;
 }
 
 export async function updateMenu(menuId: string, input: UpdateMenuInput) {
+  const patch: Partial<typeof menus.$inferInsert> = {};
+  if (input.name !== undefined) {
+    patch.name = input.name;
+  }
+  if (input.location !== undefined) {
+    patch.location = input.location;
+  }
+  if (input.status !== undefined) {
+    const status = normalizeMenuStatus(input.status, "draft");
+    patch.status = status;
+    patch.publishedAt = status === "published" ? new Date() : null;
+  }
+
   const [row] = await db
     .update(menus)
-    .set({
-      name: input.name,
-      location: input.location ?? null,
-    })
+    .set(patch)
     .where(eq(menus.id, menuId))
     .returning();
   return row ?? null;
 }
+
+export const publishMenu = (menuId: string) =>
+  updateMenu(menuId, { status: "published" });
+
+export const moveMenuToDraft = (menuId: string) =>
+  updateMenu(menuId, { status: "draft" });
 
 export async function deleteMenu(menuId: string) {
   const [row] = await db

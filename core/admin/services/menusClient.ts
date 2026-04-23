@@ -8,6 +8,8 @@ export type MenuSummary = {
   id: string;
   name: string;
   location: string | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
   createdAt: string;
 };
 
@@ -41,10 +43,32 @@ export type MenuItemInput = {
 let cachedMenus: MenuSummary[] | null = null;
 let cachedMenusPromise: Promise<MenuSummary[]> | null = null;
 
-const isMenuList = (value: unknown): value is MenuSummary[] => Array.isArray(value);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const isMenuStatus = (value: unknown): value is MenuSummary["status"] =>
+  value === "draft" || value === "published";
+
+const isNullableString = (value: unknown): value is string | null =>
+  typeof value === "string" || value === null;
+
+const isMenuSummary = (value: unknown): value is MenuSummary => {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    isNullableString(value.location) &&
+    isMenuStatus(value.status) &&
+    isNullableString(value.publishedAt) &&
+    typeof value.createdAt === "string"
+  );
+};
+
+const isMenuList = (value: unknown): value is MenuSummary[] =>
+  Array.isArray(value) && value.every(isMenuSummary);
 
 const isMenuDetail = (value: unknown): value is MenuWithItems =>
-  Boolean(value && typeof value === "object" && "menu" in value && "items" in value);
+  isRecord(value) && isMenuSummary(value.menu) && Array.isArray(value.items);
 
 const readMenusCache = () =>
   readLocalCache(cacheKeys.menusList, cacheTtlMs.list, isMenuList);
@@ -132,7 +156,11 @@ export async function getMenuWithItemsCached(menuId: string, options?: { force?:
   return result;
 }
 
-export async function createMenu(input: { name: string; location?: string | null }) {
+export async function createMenu(input: {
+  name: string;
+  location?: string | null;
+  status?: MenuSummary["status"];
+}) {
   const created = await apiRequest<MenuSummary>(
     "/menus",
     {
@@ -141,6 +169,7 @@ export async function createMenu(input: { name: string; location?: string | null
       body: JSON.stringify({
         name: input.name,
         location: input.location ?? null,
+        status: input.status,
       }),
     },
     { withCsrf: true }
@@ -155,7 +184,7 @@ export async function createMenu(input: { name: string; location?: string | null
 
 export async function updateMenu(
   menuId: string,
-  input: { name?: string; location?: string | null }
+  input: { name?: string; location?: string | null; status?: MenuSummary["status"] }
 ) {
   const updated = await apiRequest<MenuSummary>(`/menus/${menuId}`, {
     method: "PATCH",
@@ -173,6 +202,12 @@ export async function updateMenu(
   }
   return updated;
 }
+
+export const publishMenu = (menuId: string) =>
+  updateMenu(menuId, { status: "published" });
+
+export const moveMenuToDraft = (menuId: string) =>
+  updateMenu(menuId, { status: "draft" });
 
 export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
   const result = await apiRequest<{ ok: boolean }>(`/menus/${menuId}/items`, {

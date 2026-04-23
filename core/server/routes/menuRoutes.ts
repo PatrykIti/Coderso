@@ -152,8 +152,16 @@ export function registerMenuRoutes(router: Router, deps: MenuRouteDeps) {
   router.post("/menus", requirePermission("menus:write"), async (ctx) => {
     return withMenuErrors(async () => {
       validate(menuCreateSchema, ctx.body);
-      const body = ctx.body as { name: string; location?: string | null };
-      return createMenu({ name: body.name, location: body.location ?? null });
+      const body = ctx.body as {
+        name: string;
+        location?: string | null;
+        status?: "draft" | "published";
+      };
+      return createMenu({
+        name: body.name,
+        location: body.location ?? null,
+        status: body.status,
+      });
     });
   });
 
@@ -171,7 +179,11 @@ export function registerMenuRoutes(router: Router, deps: MenuRouteDeps) {
     async (ctx) => {
       return withMenuErrors(async () => {
         validate(menuUpdateSchema, ctx.body);
-        const body = ctx.body as { name?: string; location?: string | null };
+        const body = ctx.body as {
+          name?: string;
+          location?: string | null;
+          status?: "draft" | "published";
+        };
         const updated = await updateMenu(ctx.params.id, body);
         if (!updated) throw new Error("menu_not_found");
         return updated;

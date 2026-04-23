@@ -42,6 +42,8 @@ test("MenuListPage renders cached menus with editor links", () => {
             id: "menu-1",
             name: "Cached Menu",
             location: "footer",
+            status: "published",
+            publishedAt: "2026-04-22T00:00:00.000Z",
             createdAt: "2026-04-22T00:00:00.000Z",
           },
         ],

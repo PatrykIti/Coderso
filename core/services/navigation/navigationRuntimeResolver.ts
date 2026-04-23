@@ -229,7 +229,7 @@ export async function resolveNavigationRuntimeData(
     ? await resolvedDeps.getMenuWithItems(menuId)
     : await resolvedDeps.getMenuWithItemsByLocation(menuLocation);
 
-  if (!menu || menu.items.length === 0) {
+  if (!menu || menu.menu.status !== "published" || menu.items.length === 0) {
     return { items: manualItems, linksSource: "manual" };
   }
 

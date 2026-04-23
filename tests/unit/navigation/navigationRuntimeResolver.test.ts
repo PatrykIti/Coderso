@@ -117,7 +117,7 @@ test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug"
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "published" }, items: nodes } as any),
       getPageSlugsByIds: async () => new Map([["page-about", "/about"]]),
     }
   );
@@ -167,7 +167,7 @@ test("resolveNavigationRuntimeData keeps menu source when only one item exists",
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "published" }, items: nodes } as any),
       getPageSlugsByIds: async () => new Map(),
     }
   );
@@ -212,7 +212,7 @@ test("resolveNavigationRuntimeData maps menu metadata to deterministic item meta
     undefined,
     {
       getMenuWithItems: async () =>
-        ({ menu: { id: "menu-1" }, items: nodes } as any),
+        ({ menu: { id: "menu-1", status: "published" }, items: nodes } as any),
       getPageSlugsByIds: async () => new Map(),
     }
   );
@@ -254,7 +254,7 @@ test("resolveNavigationRuntimeData falls back to menu location when menuKey is m
     {
       getMenuWithItemsByLocation: async () => {
         calledLocation += 1;
-        return { menu: { id: "menu-primary" } as any, items: nodes } as any;
+        return { menu: { id: "menu-primary", status: "published" } as any, items: nodes } as any;
       },
       getPageSlugsByIds: async () => new Map(),
     }
@@ -263,4 +263,35 @@ test("resolveNavigationRuntimeData falls back to menu location when menuKey is m
   expect(calledLocation).toBe(1);
   expect(resolved.linksSource).toBe("menu");
   expect(resolved.items.map((item) => item.href)).toEqual(["/", "/about"]);
+});
+
+test("resolveNavigationRuntimeData falls back to manual links for draft menus", async () => {
+  const nodes: MenuItemNode[] = [
+    {
+      id: "item-1",
+      label: "Home",
+      href: "/",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      children: [],
+    },
+  ];
+
+  const resolved = await resolveNavigationRuntimeData(
+    {
+      linksSource: "menu",
+      menuKey: "menu-1",
+      items: [{ label: "Fallback", href: "/fallback" }],
+    },
+    undefined,
+    {
+      getMenuWithItems: async () =>
+        ({ menu: { id: "menu-1", status: "draft" }, items: nodes } as any),
+      getPageSlugsByIds: async () => new Map(),
+    }
+  );
+
+  expect(resolved.linksSource).toBe("manual");
+  expect(resolved.items.map((item) => item.href)).toEqual(["/fallback"]);
 });

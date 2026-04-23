@@ -10,6 +10,8 @@ type TestMenuSummary = {
   id: string;
   name: string;
   location: string | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
   createdAt: string;
 };
 
@@ -48,12 +50,16 @@ function createMenus(): TestMenuSummary[] {
       id: "menu-1",
       name: "Primary",
       location: "header",
+      status: "published",
+      publishedAt: "2026-03-08T10:00:00.000Z",
       createdAt: "2026-03-08T10:00:00.000Z",
     },
     {
       id: "menu-2",
       name: "Secondary",
       location: "footer",
+      status: "published",
+      publishedAt: "2026-03-08T11:00:00.000Z",
       createdAt: "2026-03-08T11:00:00.000Z",
     },
   ];

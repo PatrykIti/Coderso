@@ -1030,6 +1030,8 @@ export const menus = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     location: text("location"),
+    status: text("status").notNull().default("draft"),
+    publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({

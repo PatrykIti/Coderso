@@ -1462,11 +1462,37 @@ Permissions: `menus:read`, `menus:write`
 - `PUT /menus/:id/items`
 - `DELETE /menus/:id`
 
+Menu summary response includes:
+
+```json
+{
+  "id": "menu-uuid",
+  "name": "Primary",
+  "location": "primary",
+  "status": "published",
+  "publishedAt": "2026-04-23T10:00:00.000Z",
+  "createdAt": "2026-04-22T10:00:00.000Z"
+}
+```
+
 Create menu payload:
 
 ```json
-{ "name": "Primary", "location": "primary" }
+{ "name": "Primary", "location": "primary", "status": "draft" }
 ```
+
+`status` is optional and must be `draft` or `published`. New menus default to
+`draft`; existing menus are migrated as `published` for runtime compatibility.
+
+Update menu payload:
+
+```json
+{ "name": "Primary", "location": "primary", "status": "published" }
+```
+
+`PATCH /menus/:id` rejects empty payloads and unknown fields. Setting
+`status: "published"` sets `publishedAt`; setting `status: "draft"` clears it.
+Public runtime navigation resolves only published menus.
 
 Update menu items payload:
 

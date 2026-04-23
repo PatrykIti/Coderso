@@ -4,15 +4,18 @@ export const menuCreateSchema = {
   properties: {
     name: { type: "string" },
     location: { type: ["string", "null"] },
+    status: { enum: ["draft", "published"] },
   },
   additionalProperties: false,
 };
 
 export const menuUpdateSchema = {
   type: "object",
+  minProperties: 1,
   properties: {
     name: { type: "string" },
     location: { type: ["string", "null"] },
+    status: { enum: ["draft", "published"] },
   },
   additionalProperties: false,
 };

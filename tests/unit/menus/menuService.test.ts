@@ -7,6 +7,9 @@ import {
   createMenu,
   deleteMenuItem,
   getMenuWithItems,
+  moveMenuToDraft,
+  normalizeMenuStatus,
+  publishMenu,
   replaceMenuItems,
 } from "../../../core/services/menus/menuService";
 import {
@@ -94,6 +97,37 @@ test("assertNoCycles rejects cyclic items", () => {
   ];
 
   expect(() => assertNoCycles(items)).toThrow("menu_items_cycle");
+});
+
+test("normalizeMenuStatus only accepts supported lifecycle statuses", () => {
+  expect(normalizeMenuStatus("published")).toBe("published");
+  expect(normalizeMenuStatus("draft")).toBe("draft");
+  expect(normalizeMenuStatus("archived", "published")).toBe("published");
+  expect(normalizeMenuStatus(null, "draft")).toBe("draft");
+});
+
+testIfDb("createMenu defaults to draft and lifecycle helpers publish or draft menus", async () => {
+  const menu = await createMenu({
+    name: `Lifecycle-${randomUUID()}`,
+    location: `lifecycle-${randomUUID()}`,
+  });
+
+  createdMenuId = menu?.id;
+  if (!createdMenuId) throw new Error("menu_missing");
+
+  expect(menu?.status).toBe("draft");
+  expect(menu?.publishedAt).toBeNull();
+
+  const published = await publishMenu(createdMenuId);
+  expect(published?.status).toBe("published");
+  expect(published?.publishedAt).toBeInstanceOf(Date);
+
+  const draft = await moveMenuToDraft(createdMenuId);
+  expect(draft?.status).toBe("draft");
+  expect(draft?.publishedAt).toBeNull();
+
+  await cleanupMenu(createdMenuId);
+  createdMenuId = undefined;
 });
 
 testIfDb("replaceMenuItems stores items", async () => {
