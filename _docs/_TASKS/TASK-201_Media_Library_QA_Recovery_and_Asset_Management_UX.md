@@ -50,32 +50,34 @@ current code, the toolbar owns a `view` state but `MediaGrid` still renders only
 the grid surface, and the details `Replace` button is visible without an action
 owner. Those gaps are owned by dedicated leaves in this family.
 
-Implementation principle:
+Implementation principles:
 
-- repair the existing media/admin contracts instead of introducing parallel
-  flows, duplicate helpers, or media-only infrastructure where shared owners
-  already exist,
+- repair the existing media contracts correctly at their current owner seams before
+  considering new code paths,
 - start from the current checked-out owner seam and extend that seam only when
   the existing contract cannot satisfy the report safely; do not design a second
   media browser, metadata save flow, notification path, route layer, or storage
   abstraction for the same behavior,
-- name the owner and responsibility before changing a boundary that spans UI,
-  client, route, service, storage, cache, or navigation,
+- do not introduce duplicate flows, duplicate helpers, or parallel infrastructure
+  for behavior already owned by existing media/admin modules,
+- name the owner and responsibility for each changed area before coding; if that
+  responsibility is unclear during implementation, update the relevant leaf with
+  the chosen owner before changing code,
 - fix the owner contract that produces the behavior instead of masking it in a
   downstream component; for example, image dimensions must be recovered through
   the media service/client/details owner path, not by ad-hoc image probing
   inside a card or drawer,
-- keep fixes grounded in current code paths and tests; do not create a new
-  media management model, notification host, navigation DSL, storage contract,
-  or bulk API unless the existing owner cannot satisfy the report safely,
 - prefer extending existing owner modules and shared helpers over creating new
   abstractions; add a new helper/module only when it becomes the clear owner of
   a real contract such as dimension parsing or usage discovery,
 - keep user-facing behavior simple and logically consistent: visible controls
   must have a real owner callback/result, and unavailable actions must render as
   unavailable instead of pretending to work,
-- when ownership is unclear during implementation, document the chosen owner in
-  the leaf before coding so later leaves do not add a second path.
+- keep fixes tied to the checked-out code that exists today and the repo rules in
+  `_docs` / `AGENTS.md`; do not invent a new media management model to satisfy a
+  narrow QA finding,
+- record task dependencies explicitly when one leaf depends on another leaf's
+  contract, test data, route, or UI state; do not leave sequencing implicit.
 
 ## Sub-Tasks
 
@@ -94,7 +96,10 @@ This umbrella covers five owner areas:
    - autosave status/error feedback,
    - copy URL feedback,
    - user-facing display names,
-   - missing-alt accessibility warnings.
+   - missing-alt accessibility warnings,
+   - `Original File Name` remains a read-only identity field in this family; user
+     rename/edit behavior belongs to `title` unless a separate task explicitly
+     opens `originalName` mutation.
 2. File information correctness:
    - image dimension extraction,
    - persistence/backfill for existing image rows where possible,
@@ -125,6 +130,7 @@ Out of scope:
 - folder/tag taxonomy unless a separate task is opened,
 - drag-reorder or media collections,
 - a new public write endpoint,
+- editable `originalName` / original-file rename semantics,
 - one-off client-only dimension hacks that do not update the source media
   contract for future uploads or existing rows,
 - a broad background media migration unless the dimension leaf proves selected
@@ -327,6 +333,9 @@ Dependency notes:
 - `TASK-201-06` must verify the final `MediaDetailsPanel` decision: either the
   panel is aligned through the same helpers as the drawer or it is retired with
   its tests. Closure cannot leave it as a stale duplicate details contract.
+- If a leaf discovers a new cross-leaf dependency while implementing the real
+  owner path, update this dependency list and the affected leaf before coding the
+  dependent behavior.
 
 ## Testing Requirements
 
@@ -365,7 +374,9 @@ Dependency notes:
 - `_docs/PLAYWRIGHT/SUMMARY-MEDIA.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- new `_docs/_CHANGELOG/*` entry when TASK-201 closes
+- new `_docs/_CHANGELOG/*` entry when TASK-201 closes, using the next available
+  changelog number while referencing `TASK-201`; do not reuse the existing
+  changelog number `201`, which already belongs to another historical entry.
 
 ## Acceptance Criteria
 
@@ -385,3 +396,6 @@ Dependency notes:
 7. Report positives that are currently only partial in code, especially
    grid/list switching and Replace, are either implemented through their named
    owner paths or recorded as explicit open states with no misleading UI.
+8. Implementation leaves the media family with one owner path per behavior; no
+   duplicated save, usage, dimension, upload, replace, cache, or navigation path
+   remains unaccounted for.

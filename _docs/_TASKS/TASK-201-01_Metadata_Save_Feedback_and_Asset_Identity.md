@@ -30,6 +30,9 @@ not warn when image alt text is missing.
   display.
 - Default title for new uploads from the original filename when no explicit
   title is supplied.
+- Treat `Original File Name` as read-only identity in this family. It may be
+  displayed as supporting technical metadata, but the editable rename surface is
+  `title`.
 - Mark image assets with missing alt text in the details drawer and, if
   practical, on cards.
 
@@ -39,6 +42,7 @@ Out of scope:
   `caption`,
 - adding AI-generated alt text,
 - changing runtime asset URLs or storage keys,
+- adding editable `originalName` / original-file rename semantics,
 - adding media folders/tags.
 
 ## Files to Change
@@ -79,6 +83,8 @@ Out of scope:
   - metadata blur shows saving/saved/failed states and calls `updateMedia`,
   - copy URL shows `Copied` state and failure fallback,
   - cards/details render title/original filename before UUID-like storage names,
+  - `Original File Name` remains read-only while `title` owns user-facing rename
+    behavior,
   - image assets without alt show an accessibility warning,
   - `MediaPicker` keeps its current selected-grid semantics.
 - Bun:

@@ -28,6 +28,9 @@ Closure responsibility note:
   cache invalidation behavior. If a positive flow was only partially implemented
   in the checked-out code, closure must show the owner leaf that fixed it or mark
   the source report item as explicitly open.
+- closure must verify that every implemented fix repaired the existing owner
+  contract instead of leaving duplicate save, usage, dimension, upload, replace,
+  cache, or navigation paths behind.
 
 ## Sub-Tasks
 
@@ -63,7 +66,9 @@ No child task files.
 - `_docs/PLAYWRIGHT/SUMMARY-MEDIA.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- new `_docs/_CHANGELOG/*` entry for TASK-201
+- new `_docs/_CHANGELOG/*` entry for TASK-201 using the next available
+  changelog number. The entry title/body must reference `TASK-201`, but the file
+  and index number must not reuse the existing changelog `201` entry.
 
 ## Security Contract
 
@@ -114,6 +119,9 @@ No child task files.
   already used by page/widget/content code, not only simple string fields.
 - `UX-1` / `UX-2`: readable names and missing-alt warnings must come from shared
   media display helpers and existing media metadata.
+- `Original File Name`: remains read-only identity/supporting metadata. Closure
+  must not claim an editable original-name flow unless a separate task and
+  route/service contract landed for it.
 - `UX-3`: bulk selection must operate on the visible asset set and must not
   change `MediaPicker` selection semantics. Bulk download must be covered with
   safe URL/anchor behavior and user-safe partial failure handling.
@@ -150,7 +158,8 @@ No child task files.
 - `_docs/PLAYWRIGHT/SUMMARY-MEDIA.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- new `_docs/_CHANGELOG/*` entry
+- new `_docs/_CHANGELOG/*` entry using the next available changelog number and
+  referencing `TASK-201`
 
 ## Acceptance Criteria
 
@@ -159,6 +168,6 @@ No child task files.
    `BUG-*` and `UX-*` item.
 3. Docs describe the final Media UI, API, cache, and storage behavior.
 4. `_docs/_TASKS/README.md` and changelog are synchronized with `TASK-201`
-   closure.
+   closure without reusing an already allocated changelog number.
 5. The report's existing positive flows are regression-covered or manually
    replayed with evidence and no duplicated owner paths.

@@ -15,6 +15,10 @@ Make Media cards and details identify assets by readable names instead of
 storage UUIDs, and surface missing alt text for image assets. This leaf closes
 `UX-1` and `UX-2` while preserving the current storage key and URL contracts.
 
+This leaf does not make `Original File Name` editable. It uses `originalName` as
+a read-only identity source for display-name fallback, while `title` owns
+user-facing rename behavior.
+
 ## Sub-Tasks
 
 No child task files.
@@ -44,13 +48,17 @@ No child task files.
   - no derived display name may include secret-bearing query strings,
   - alt warnings apply only to image MIME/kind assets,
   - technical IDs can remain available as collapsed/read-only metadata, not as
-    the primary name.
+    the primary name,
+  - `originalName` remains read-only unless a separate route/service contract is
+    opened by a future task.
 
 ## Testing Requirements
 
 - Vitest:
   - display name precedence: non-empty title, original name, storage filename,
     fallback `asset`,
+  - original name appears as read-only supporting metadata and is not editable in
+    this leaf,
   - image without alt renders an accessibility warning,
   - non-image without alt does not render the warning,
   - card truncation still renders stable accessible text.

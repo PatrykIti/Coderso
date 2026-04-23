@@ -19,6 +19,11 @@ This leaf must repair the current drawer -> page -> `mediaClient.updateMedia`
 contract. Do not add a second save button, a second metadata endpoint, or a
 media-only notification host just to show feedback.
 
+Feedback in this leaf applies to editable metadata fields currently owned by the
+drawer (`title`, `alt`, and `caption`) plus `Copy URL`. `Original File Name`
+stays read-only identity and must not gain a silent update path as part of this
+fix.
+
 ## Sub-Tasks
 
 No child task files.
@@ -67,6 +72,9 @@ No child task files.
 - `MediaDetailsDrawer` currently calls `onSave(item.id, { title, alt, caption })`
   on blur and receives no result. Feedback must be based on the actual async
   result from the existing update path, not on a local timer alone.
+- `Original File Name` currently renders as read-only supporting identity. Keep it
+  out of the autosave contract unless a separate task explicitly opens
+  `originalName` editing and route/service persistence.
 - `MediaLibraryPage` currently starts the update in a fire-and-forget async
   closure. Convert that boundary to a promise/result contract or a named
   callback result; do not create a parallel save service.
@@ -103,3 +111,5 @@ No child task files.
 3. The drawer still saves through the existing media update path.
 4. Metadata PATCH behavior is non-destructive for omitted fields or fully
    documented/tested as complete-draft-only.
+5. `Original File Name` remains a read-only identity field and is not counted as
+   part of the autosave feedback fix.
