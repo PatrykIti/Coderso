@@ -32,6 +32,9 @@ Current code paths:
 ## Scope
 
 - Map known metadata service errors through `contentEntryRoutes`.
+- Enforce the existing publish contract when metadata status changes publish an
+  entry: `content:write` can save metadata, but a `published` transition also
+  needs `content:publish`.
 - Keep `entriesClient.updateEntryMetadata()` cache updates authoritative.
 - Show success/failure feedback for metadata, draft save, publish, and update.
 - Track status/schedule/taxonomy/SEO as metadata dirty state.
@@ -67,7 +70,10 @@ Out of scope:
 - Visibility: internal admin Entries UI and `/admin/api/content/:type/entries*`.
 - Auth model: authenticated admin session/API-key path.
 - RBAC: `content:write` for metadata/draft updates; `content:publish` for
-  publish/unpublish transitions.
+  publish/unpublish transitions. The metadata route must not publish an entry
+  through `content:write` alone; either delegate to the existing publish path or
+  perform a conditional publish-permission check before calling the service
+  branch that publishes.
 - CSRF: all mutating calls continue through `apiRequest` with CSRF.
 - Rate-limit bucket: existing `admin_write`.
 - Reject-unknown validation: `contentEntryMetadataSchema` remains strict.
@@ -83,6 +89,7 @@ Out of scope:
   - cache updates/broadcasts in `entriesClient`.
 - Bun:
   - route maps known service errors to `ApiError`,
+  - metadata-driven publish is rejected without `content:publish`,
   - service preserves taxonomy/tags/schedule/SEO behavior,
   - metadata route registration remains stable.
 
@@ -91,6 +98,7 @@ Out of scope:
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_API.md`
 - `_docs/CMS_SPEC.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `_docs/ADMIN_CACHE.md` only if cache semantics change
 - `_docs/_TASKS/README.md`
 
@@ -100,4 +108,5 @@ Out of scope:
 2. Successful save/update/metadata actions produce visible feedback.
 3. Status edits cannot be lost silently.
 4. The editor no longer exposes two indistinguishable `Save draft` actions.
-
+5. Publishing through metadata follows the same `content:publish` requirement as
+   the dedicated publish route.

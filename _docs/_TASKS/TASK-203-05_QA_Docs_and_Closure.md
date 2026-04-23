@@ -27,6 +27,8 @@ No child task files.
 - Verify no new public write endpoint was introduced.
 - Verify no browser cache/localStorage/debug payload stores secrets or preview
   tokens.
+- Verify metadata-driven publish transitions still require `content:publish` and
+  cannot be completed through `content:write` alone.
 - Verify each closed finding was repaired through its existing owner seam, not a
   duplicate route/component/helper introduced only for this wave.
 - Verify any new helper/component introduced by a leaf has an explicit owner and
@@ -51,6 +53,7 @@ Out of scope:
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache semantics changed
 - `docs/coderso/entries-list-type-selection-and-creation.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `docs/coderso/content-type-editor-and-schema-builder.md` if changed
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
@@ -62,6 +65,7 @@ Out of scope:
 - Final QA confirms:
   - Entries routes remain internal and permission-gated,
   - mutating routes stay CSRF-protected,
+  - metadata publish transitions require `content:publish`,
   - duplicate/delete/metadata payloads remain strict where applicable,
   - preview consumption remains token-gated/read-only,
   - feedback/docs do not expose secrets, tokens, headers, or backend settings.
@@ -76,6 +80,8 @@ Out of scope:
   must be present in `tests/vitest/ui/entry-field-relation.test.tsx`.
 - If route/service/runtime owners changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
+  - the route suite must include the metadata publish permission case if
+    `TASK-203-01-01` changes metadata route behavior.
 - If preview runtime behavior changed or the report's content-preview 404 is
   still in scope:
   - `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts`
@@ -118,3 +124,5 @@ Out of scope:
    editor, preview, route, validation, cache, or navigation path was introduced.
 4. Docs, task board, changelog, and source Playwright summary are synchronized.
 5. Remaining preview/runtime/environment issues have exact evidence and owners.
+6. Permission evidence confirms metadata status changes cannot bypass the
+   existing publish route/security contract.

@@ -43,6 +43,9 @@ Execution contract for this family:
 - do not duplicate code paths that already have owners; reuse current
   `EntryEditor`, `FieldRenderer`, `EntryMetadataPanel`, `entriesClient`,
   `contentEntryRoutes`, `entryService`, `previewUrls`, and public runtime seams;
+- fix the checked-in contracts that exist today before adding abstractions; do
+  not introduce convenience wrappers, duplicate routes, duplicate dialogs, or
+  one-off helpers when the current owner can carry the behavior cleanly;
 - every fix must name the owner responsible for the behavior it changes; if an
   owner boundary is unclear during implementation, document the decision in the
   leaf before patching code;
@@ -161,7 +164,10 @@ Reuse-first rules:
 
 - Visibility: internal admin Entries UI plus existing read-only token preview.
 - Auth model: authenticated admin session/API key where supported.
-- RBAC: `content:read`, `content:write`, `content:publish`.
+- RBAC: `content:read` for reads/preview token creation, `content:write` for
+  draft/metadata writes, and `content:publish` for any transition that publishes
+  an entry. Metadata saves must not allow a `published` status transition through
+  `content:write` alone.
 - CSRF: all mutating admin calls continue through shared CSRF client behavior.
 - Rate-limit buckets: existing `admin_read`, `admin_write`, `public_read`.
 - Reject-unknown validation: create/update/metadata/duplicate payloads remain
@@ -201,6 +207,8 @@ Reuse-first rules:
   - `tests/vitest/server/previewUrls.test.ts`
 - Bun suites if route/service/runtime owners change:
   - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
+- Metadata route tests must prove a publish transition is permission-gated by
+  `content:publish`, not only by `content:write` or actor presence.
 - If content preview runtime behavior changes or remains suspicious:
   - `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts`
   - or an equivalent Bun runtime suite that creates an entry preview token and
@@ -217,6 +225,7 @@ Reuse-first rules:
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache semantics change
 - `docs/coderso/entries-list-type-selection-and-creation.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `docs/coderso/content-type-editor-and-schema-builder.md` if field/taxonomy
   guidance changes
 - `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md` during closure

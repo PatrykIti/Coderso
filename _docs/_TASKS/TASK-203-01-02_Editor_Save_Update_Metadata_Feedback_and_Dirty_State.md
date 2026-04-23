@@ -54,6 +54,7 @@ No child task files.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
@@ -61,4 +62,3 @@ No child task files.
 1. Save/update/metadata successes are visible.
 2. Save/update/metadata failures are actionable.
 3. Metadata dirty state is distinct from field dirty state.
-

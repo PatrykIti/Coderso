@@ -49,6 +49,7 @@ No child task files.
 
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/CONTENT_EDITOR_UX.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria
@@ -56,4 +57,3 @@ No child task files.
 1. Row and bulk delete use app dialogs.
 2. Editor delete confirms before mutation.
 3. Success refreshes list/cache and failure stays visible.
-

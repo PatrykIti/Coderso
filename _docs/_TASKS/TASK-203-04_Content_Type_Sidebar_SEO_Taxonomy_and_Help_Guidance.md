@@ -91,6 +91,7 @@ Out of scope:
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_SPEC.md`
 - `docs/coderso/entries-list-type-selection-and-creation.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `docs/coderso/content-type-editor-and-schema-builder.md` if taxonomy linking
   changes
 - `_docs/_TASKS/README.md`

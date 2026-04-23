@@ -75,6 +75,7 @@ No child task files.
 - `_docs/PREVIEW_SPEC.md`
 - `_docs/CMS_SPEC.md`
 - `docs/coderso/entries-list-type-selection-and-creation.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria

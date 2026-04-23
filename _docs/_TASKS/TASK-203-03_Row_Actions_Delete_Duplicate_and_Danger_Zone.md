@@ -87,6 +87,7 @@ Out of scope:
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_API.md` if duplicate route is added
 - `_docs/CMS_SPEC.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache semantics change
 - `_docs/_TASKS/README.md`
 
@@ -95,4 +96,3 @@ Out of scope:
 1. Entries no longer use native `window.confirm()` for delete.
 2. Editor exposes confirmed danger-zone delete.
 3. `Duplicate` works end to end or is explicitly removed with closure evidence.
-

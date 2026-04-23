@@ -48,6 +48,7 @@ No child task files.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `docs/coderso/entries-list-type-selection-and-creation.md`
 - `_docs/_TASKS/README.md`
 
@@ -56,4 +57,3 @@ No child task files.
 1. There are no two indistinguishable `Save draft` actions.
 2. Status edits clearly require metadata save or use an explicit save path.
 3. Desktop and mobile details surfaces behave consistently.
-

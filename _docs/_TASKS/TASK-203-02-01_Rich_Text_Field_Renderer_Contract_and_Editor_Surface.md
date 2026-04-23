@@ -98,6 +98,7 @@ Direction:
 
 - `_docs/CONTENT_FIELDS.md`
 - `_docs/CONTENT_EDITOR_UX.md`
+- `docs/coderso/entry-editor-and-metadata.md`
 - `_docs/_TASKS/README.md`
 
 ## Acceptance Criteria

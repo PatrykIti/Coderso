@@ -18,7 +18,8 @@ unknown server errors.
 Ownership:
 
 - `contentEntryRoutes.ts` owns translating service errors into bounded
-  `ApiError` responses at the route boundary.
+  `ApiError` responses at the route boundary and enforcing conditional publish
+  permission when a metadata status change would publish an entry.
 - `entryService.ts` owns metadata invariants such as schedule validity,
   taxonomy enablement, term membership, and publish auth requirements.
 - `entriesClient.ts` owns cache writes and broadcasts only after successful
@@ -53,6 +54,8 @@ Direction:
 - include the current `auth_required` publish transition from
   `entryService.updateEntryMetadata()` so metadata status changes cannot surface
   as raw 500s when no actor is present,
+- do not treat `auth_required` as the full publish guard; the route must also
+  prove `content:publish` before allowing metadata to publish,
 - keep unknown failures visible as failures,
 - do not turn raw 500s into fake validation successes,
 - keep cache writes only after successful responses.
@@ -60,7 +63,9 @@ Direction:
 ## Security Contract
 
 - Visibility: internal admin route only.
-- Auth/RBAC: unchanged `content:write` / `content:publish`.
+- Auth/RBAC: metadata writes stay under `content:write`; metadata-driven publish
+  transitions also require `content:publish` and must reuse the existing
+  permission/checking path instead of adding a parallel publish route.
 - CSRF: unchanged through `withCsrf`.
 - Rate-limit bucket: `admin_write`.
 - Reject-unknown validation: unchanged strict metadata schema.
@@ -74,6 +79,8 @@ Direction:
   - schedule/taxonomy/SEO success,
   - invalid schedule, disabled taxonomy, missing taxonomy, and auth-required
     publish transitions,
+  - metadata publish attempted with `content:write` but without
+    `content:publish` is rejected with a bounded permission error,
   - a route-boundary assertion in `tests/integration/routes/contentTypes.test.ts`
     or an equivalent route suite that proves metadata publish without `ctx.user`
     returns bounded `auth_required` instead of leaking as `internal_error`.
@@ -93,3 +100,5 @@ Direction:
 2. Unknown failures do not leak internals.
 3. `auth_required` from metadata-driven publish maps to a bounded auth error.
 4. Successful metadata saves keep list/detail cache coherent.
+5. Metadata-driven publish cannot bypass the existing `content:publish`
+   contract.
