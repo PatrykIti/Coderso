@@ -25,6 +25,9 @@ Current owner evidence:
 - `EntryMetadataPanel.tsx:314-333` renders `What is this?` expanded.
 - `EntryMetadataPanel.tsx:382-385` shows disabled taxonomy copy without an
   Engine settings route.
+- `ContentTypeEditor.tsx:434-472` owns the current taxonomy toggles for a content
+  type. The schema-only `/content-types/:id/schema` surface does not own enabling
+  taxonomy.
 
 ## Sub-Tasks
 
@@ -42,6 +45,9 @@ Current owner evidence:
   `site.contentRoutes`; do not reuse Posts-only route helpers or hardcoded
   `/blog`/`/post` paths for generic entries.
 - Add Engine settings navigation for disabled taxonomy.
+- The taxonomy repair link must target the current content type editor
+  (`/content-types/:id`, canonical `/coderso/engine/:id` through `AdminLink`),
+  not the schema-only page.
 - Collapse or persist-dismiss help without removing first-use guidance.
 
 Out of scope:
@@ -62,6 +68,9 @@ Out of scope:
 - `core/admin/services/siteSettingsClient.ts`
 - shared admin path helpers if an Engine settings link is added
 - `core/admin/ui/shared/AdminLink.tsx`
+- `core/admin/ui/content-types/ContentTypeEditor.tsx:434-472` as the destination
+  owner for taxonomy enablement; do not change it unless the taxonomy UI itself
+  must move
 - `tests/vitest/ui/entry-list-wave.test.tsx`
 - `tests/vitest/ui/content-entries.test.tsx`
 - `tests/vitest/ui/entry-metadata.test.tsx`
@@ -87,6 +96,8 @@ Out of scope:
 - SEO route tests prove active content-type route ownership rather than Posts
   fallback behavior,
 - taxonomy disabled state includes internal settings link,
+- taxonomy link assertions must prove the canonical content type editor href, not
+  `/content-types/:id/schema`,
 - help is collapsible/persistently dismissible,
 - new links use shared admin path helpers.
 
@@ -107,5 +118,6 @@ Out of scope:
 2. Duplicate type names are visually disambiguated without changing stored
    content-type data.
 3. SEO preview never hardcodes `nextless.cms`.
-4. Disabled taxonomy guidance links to the owning Engine configuration.
+4. Disabled taxonomy guidance links to the owning Engine content type editor
+   where taxonomy toggles currently live.
 5. Help guidance is available without permanently occupying sidebar space.

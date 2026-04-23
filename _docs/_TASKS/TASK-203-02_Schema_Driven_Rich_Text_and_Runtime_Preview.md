@@ -15,6 +15,9 @@ Repair the schema-driven authoring and preview confidence gaps:
 
 - `BUG-2`: `FieldRenderer.tsx:212-226` renders `richtext` as textarea.
 - `UX-4`: Entries preview needs shared-runtime parity and 404 recovery evidence.
+  The current branch already has an editor `Runtime preview` button, so this
+  leaf must validate the existing surface instead of adding a second preview
+  entrypoint.
 
 The current preview owner is already present:
 
@@ -24,6 +27,11 @@ The current preview owner is already present:
 - `contentEntryRoutes.ts:220-242` creates content preview tokens/URLs,
 - `publicSite.tsx:841-883` consumes preview tokens and renders content
   preview HTML.
+- `publicSite.tsx:717-781` chooses between the dedicated Posts rendering branch
+  and generic content-entry rendering. The report's failed URL used
+  `contentType=post`, so this branch selection is a required owner check.
+- `postBlockRuntimeMapper.ts:895-899` owns the current `post`/`posts` slug
+  classification consumed by `publicSite`.
 
 ## Sub-Tasks
 
@@ -38,6 +46,10 @@ The current preview owner is already present:
 - Align Entries preview label/copy/failure handling with shared preview UX.
 - Fix or explicitly follow up the captured content preview 404 with runtime
   evidence from `publicSite`, not only dialog/client tests.
+- For the captured 404, prove whether a generic `content_entries` preview whose
+  content type slug is `post`/`posts` is routed to Posts storage by
+  `renderEntryDetailHtml()`. Fix that current owner or record the exact follow-up;
+  do not add an alternate preview route, token type, or UI-only fallback.
 
 Out of scope:
 
@@ -63,7 +75,10 @@ Out of scope:
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
 - `core/server/routes/contentEntryRoutes.ts:220-242`
 - `core/server/utils/previewUrls.ts`
+- `core/server/publicSite.tsx:717-781`
 - `core/server/publicSite.tsx:841-883`
+- `core/services/posts/runtime/postBlockRuntimeMapper.ts:895-899` only if the
+  existing post-slug classification must change deliberately
 - `core/services/content/entryService.ts:814-820`
 - `tests/vitest/ui/entry-field-relation.test.tsx`
 - `tests/vitest/ui/content-entry-editor.test.tsx`
@@ -99,6 +114,10 @@ Out of scope:
   - proof should create a real entry preview token and request
     `/preview?type=content&token=...`; `publicEntryRenderer` output alone does
     not close the runtime 404 from the report.
+  - include the report-shaped case where `contentType=post` / `type.slug=post`
+    exists in `content_entries`, because generic Entries preview must not be
+    silently swallowed by the dedicated Posts branch unless that is the explicit
+    product contract.
 
 ## Documentation Updates Required
 

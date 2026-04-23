@@ -13,9 +13,11 @@
 
 Make the visible `Duplicate` row action real. The current table renders
 `Duplicate` with no handler, while Pages and Posts already have duplicate
-patterns to reference. This leaf owns `BUG-4`; it must not be closed by simply
-removing the menu item unless a separate product decision first changes the
-report closure and task scope.
+patterns to reference. Those patterns are examples only; the implementation
+must repair the existing Entries contract and must not copy a Pages/Posts route,
+storage path, or cache flow into Entries. This leaf owns `BUG-4`; it must not be
+closed by simply removing the menu item unless a separate product decision first
+changes the report closure and task scope.
 
 Ownership:
 

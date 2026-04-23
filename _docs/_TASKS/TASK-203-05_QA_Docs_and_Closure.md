@@ -58,6 +58,16 @@ No child task files.
   treat removal as a `TASK-203` fix.
 - Verify generic Entries SEO preview uses the active content type and
   `site.contentRoutes`, not Posts-only helpers or hardcoded blog/post paths.
+- Verify the content-preview 404 from the report was checked against
+  `publicSite.tsx:717-781` branch selection, including the `contentType=post`
+  / `post` slug case. Closure must say whether the runtime was wrongly routing a
+  generic Entries preview into dedicated Posts storage.
+- Verify the disabled-taxonomy repair link targets the content type editor where
+  taxonomy toggles currently live (`/content-types/:id` resolved to
+  `/coderso/engine/:id`) and not the schema-only `/content-types/:id/schema`
+  surface.
+- Verify delete confirmation reused the existing app-dialog owner pattern or the
+  leaf explicitly documented why a new dialog primitive was necessary.
 - Create/link follow-up tasks for still-reproducible preview-host/runtime issues
   or approved out-of-scope capability gaps.
 
@@ -119,6 +129,9 @@ Out of scope:
   - or a new equivalent Bun runtime suite that creates an entry preview token,
     requests `/preview?type=content&token=...`, and proves 200 preview HTML or
     records an exact follow-up owner.
+  - this runtime proof must include the report-shaped `contentType=post` case or
+    explicitly record why that case is no longer reproducible in the current
+    product contract.
 - Manual/Playwright replay:
   - type switching/search/filter/view toggle,
   - create entry,
@@ -130,7 +143,7 @@ Out of scope:
   - dirty metadata leave-page guard,
   - row/bulk/editor delete feedback,
   - SEO URL,
-  - taxonomy disabled link,
+  - taxonomy disabled link to the content type editor, not schema-only builder,
   - runtime preview success/failure,
   - sidebar grouping/hide-empty.
 
@@ -162,3 +175,6 @@ Out of scope:
 7. `BUG-4` is closed by a working duplicate flow in the existing Entries
    contract, or by a separate pre-approved product-scope change linked from the
    Playwright source report.
+8. `UX-5` closure confirms the repair link goes to the current taxonomy-toggle
+   owner, and `UX-4` closure confirms the `publicSite` post-slug branch was
+   handled or follow-up-owned explicitly.

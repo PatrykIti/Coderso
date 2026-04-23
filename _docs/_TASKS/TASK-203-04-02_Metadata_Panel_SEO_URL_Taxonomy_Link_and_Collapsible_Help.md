@@ -26,6 +26,8 @@ Ownership:
   do not reuse the Posts-only slug helper/fallback when rendering generic
   Entries SEO previews.
 - `AdminLink` plus `adminPaths` own canonical Engine navigation.
+- `ContentTypeEditor.tsx:434-472` owns the current taxonomy toggles. The
+  schema-only builder route does not own enabling categories or tags.
 
 ## Sub-Tasks
 
@@ -41,6 +43,8 @@ No child task files.
 - `core/admin/services/contentTypesClient.ts`
 - `core/admin/ui/shared/AdminLink.tsx`
 - `core/admin/utils/adminPaths.ts`
+- `core/admin/ui/content-types/ContentTypeEditor.tsx:434-472` as the linked owner
+  for taxonomy enablement; no production change expected unless this owner moves
 - `tests/vitest/ui/entry-metadata.test.tsx`
 - `tests/vitest/ui/entry-editor-shell-wave.test.tsx`
 - `tests/vitest/admin/siteSettingsClient.test.ts`
@@ -65,9 +69,10 @@ Direction:
   configured; do not hard-code `/blog`, `/post`, `nextless.cms`, or any
   posts-specific fallback for Entries,
 - taxonomy link goes to the current content type editor/settings route through
-  shared helpers, e.g. `/content-types/${contentTypeId}` or
-  `/content-types/${contentTypeId}/schema` resolved by `AdminLink` to the
-  canonical `/coderso/engine/...` route,
+  shared helpers: `/content-types/${contentTypeId}` resolved by `AdminLink` to
+  canonical `/coderso/engine/${contentTypeId}`,
+- do not link disabled-taxonomy repair to `/content-types/${contentTypeId}/schema`
+  unless taxonomy toggles have deliberately moved there in a prior owner task,
 - pass `contentTypeId` or an already-resolved `engineSettingsHref` from
   `EntryEditor`; do not make `EntryMetadataPanel` discover owners by fetching.
 
@@ -89,6 +94,8 @@ Direction:
 - `nextless.cms` is not hardcoded,
 - disabled taxonomy copy includes Engine settings link for the current content
   type and the test asserts the canonical href,
+- disabled taxonomy tests assert the link does not point at the schema-only route
+  while taxonomy toggles still live in `ContentTypeEditor`,
 - help can collapse and remains accessible.
 - `EntryEditor` shell tests that mock `EntryMetadataPanel` prove only prop
   wiring; SEO URL, taxonomy link, and help-collapse behavior must be asserted in
@@ -108,7 +115,8 @@ Direction:
 1. SEO preview URL is settings/route-derived or neutral placeholder.
 2. Disabled taxonomy guidance gives a direct internal repair path.
 3. The repair path uses current admin navigation helpers and names the Engine
-   content type editor as the owner of taxonomy enablement.
+   content type editor (`/content-types/:id` -> `/coderso/engine/:id`) as the
+   owner of taxonomy enablement.
 4. Help no longer permanently occupies sidebar space.
 5. Generic Entries SEO preview does not reuse Posts-only route helpers or
    hardcoded blog/post paths.

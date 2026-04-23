@@ -12,7 +12,10 @@
 ## Overview
 
 Make the existing Entries `Runtime preview` surface discoverable, consistent,
-and resilient. Do not add a second preview dialog.
+and resilient. Do not add a second preview dialog or alternate preview route.
+The Playwright report said the button was missing, but the current checked-in
+`EntryEditor` already renders it; treat that as stale report context and fix the
+current parity/runtime gap.
 
 Ownership:
 
@@ -22,6 +25,13 @@ Ownership:
 - `previewUrls.ts` owns token-safe preview URL construction.
 - `publicSite.tsx` owns `/preview?type=content...` token consumption and
   runtime HTML rendering. UI-only tests cannot close the captured 404.
+- `publicSite.tsx:717-781` owns the detail rendering branch that first checks
+  `isPostContentTypeSlug(typeSlug)`. Because the report URL included
+  `contentType=post`, this branch must be verified before blaming the dialog or
+  token URL construction.
+- `postBlockRuntimeMapper.ts:895-899` owns the current `post`/`posts` slug
+  classification. Change it only if the product contract intentionally changes
+  how legacy/generic Entries with a `post` slug coexist with dedicated Posts.
 
 ## Sub-Tasks
 
@@ -33,9 +43,12 @@ No child task files.
 - `core/admin/ui/entries/EntryEditor.tsx:641-650`
 - `core/admin/ui/entries/EntryEditor.tsx:920-931`
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
+- `core/server/publicSite.tsx:717-781`
 - `core/server/routes/contentEntryRoutes.ts:220-242`
 - `core/server/utils/previewUrls.ts`
 - `core/server/publicSite.tsx:841-883`
+- `core/services/posts/runtime/postBlockRuntimeMapper.ts:895-899` only if the
+  current post-slug classification is the confirmed cause
 - `tests/integration/runtime/pages-runtime.test.ts` or a new equivalent
   content-preview runtime suite
 - `tests/vitest/ui/entry-editor-shell-wave.test.tsx`
@@ -68,6 +81,10 @@ No child task files.
   - content preview route is registered,
   - preview URL resolver follows configured/public fallback rules,
   - public entry preview resolves valid content through `handlePublicRequest`,
+  - report-shaped preview with a generic `content_entries` record and
+    `contentType=post` / content type slug `post` does not disappear into the
+    dedicated Posts storage branch unless that behavior is an explicit product
+    decision recorded in the leaf,
   - proof creates an entry preview token and requests
     `/preview?type=content&token=...`; if it still returns 404, closure must
     link a follow-up with the exact owner (`publicSite`, content route matching,
@@ -87,3 +104,5 @@ No child task files.
 2. Preview failures are visible, actionable, and token-safe.
 3. The 404 scenario is fixed with runtime evidence or linked to a precise
    route/runtime follow-up.
+4. Closure evidence names whether `publicSite` post-slug branch selection was
+   the root cause for the report's `contentType=post` preview failure.

@@ -30,6 +30,10 @@ Current evidence:
 ## Scope
 
 - Replace native row/bulk delete confirms with app dialogs.
+- Reuse the existing admin `Dialog`/app-dialog pattern already present in adjacent
+  owners before adding a new dialog primitive. Add a new `AlertDialog` primitive
+  only if the leaf first documents why the current dialog owner cannot carry the
+  destructive confirmation contract cleanly.
 - Add an editor danger zone for exact-entry delete.
 - Show shared success/failure feedback for row, bulk, and editor delete; the
   editor danger-zone success path must redirect to the list and confirm deletion

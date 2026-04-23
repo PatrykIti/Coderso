@@ -19,9 +19,11 @@ Ownership:
   `entriesClient.deleteEntry()` wrapper and visible-scope selection state.
 - `EntryEditor` owns the editor danger-zone action for the currently loaded
   exact entry and the post-delete navigation back to the Entries list.
-- Confirmation UI must reuse the repo's app dialog/Radix AlertDialog pattern
-  used by adjacent admin surfaces; do not add another delete-dialog abstraction
-  unless the current UI owner cannot carry the state clearly.
+- Confirmation UI must reuse the repo's existing app dialog pattern used by
+  adjacent admin surfaces, currently the shared `Dialog` primitive plus
+  owner-local state such as `MenuItemDeleteDialog`; do not add another
+  delete-dialog abstraction or a new `AlertDialog` primitive unless this leaf
+  first records why the current UI owner cannot carry the state clearly.
 - Feedback must use the existing shared admin notifier or current Entries error
   surface; do not reintroduce `window.confirm()` or add a local notification
   path.
@@ -60,7 +62,9 @@ No child task files.
 - bulk delete dialog includes selected count,
 - editor danger zone deletes, navigates back, and shows the delete success toast
   required by the Playwright report,
-- no test stubs depend on `window.confirm()`.
+- no test stubs depend on `window.confirm()`,
+- dialog tests assert the existing app-dialog owner behavior directly instead of
+  proving only a row/list mock.
 
 ## Documentation Updates Required
 

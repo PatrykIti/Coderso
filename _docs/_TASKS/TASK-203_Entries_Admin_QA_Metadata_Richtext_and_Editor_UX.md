@@ -32,7 +32,9 @@ Findings covered by this family:
   and readable disambiguation when multiple types share the same name.
 - `UX-2`: status changes are local until a separate metadata save.
 - `UX-3`: `What is this?` help is always expanded.
-- `UX-4`: preview needs shared-runtime parity and 404 recovery evidence.
+- `UX-4`: current checked-in code already renders an Entries `Runtime preview`
+  action; the remaining scope is shared-preview parity plus 404 recovery evidence
+  for the report's `/preview?type=content...&contentType=post...` scenario.
 - `UX-5`: disabled taxonomy state lacks a link to the owning Engine settings.
 
 Closure must map every report item to a fixed leaf, explicit follow-up, or
@@ -82,6 +84,13 @@ Execution contract for this family:
   `EntryTypeSidebar`, route/service behavior, or cache/client behavior must add
   or update direct owner coverage for that module; closure must not accept
   assertions hidden behind mocks as the only proof of the real contract.
+- when implementation exposes an unclear responsibility boundary, stop and update
+  the leaf with the owner decision before coding. The expected fix is to repair
+  the current contract owner, not to add a second editor, preview resolver,
+  route, cache wrapper, navigation helper, dialog family, or fallback layer.
+- dependencies are part of the scope: downstream UI leaves may consume feedback,
+  cache, navigation, preview, or dirty-state behavior only after the upstream
+  owner leaf has made that contract explicit and tested.
 
 ## Sub-Tasks
 
@@ -165,9 +174,13 @@ Current owner seams:
   - `core/services/content/entryService.ts:565`
   - `core/services/content/entryService.ts:716`
   - `core/services/content/entryService.ts:694`
+  - `core/server/publicSite.tsx:717`
+  - `core/server/publicSite.tsx:722`
+  - `core/server/publicSite.tsx:749`
   - `core/server/publicSite.tsx:841`
   - `core/server/publicSite.tsx:864`
   - `core/server/utils/previewUrls.ts`
+  - `core/services/posts/runtime/postBlockRuntimeMapper.ts:895`
   - `core/admin/app/AdminApp.tsx:549`
   - `core/admin/utils/adminPaths.ts:64`
 
@@ -186,6 +199,13 @@ Reuse-first rules:
 - keep preview token creation in `contentEntryRoutes`/`entryService`, preview
   URL construction in `previewUrls`, and token consumption/runtime rendering in
   `publicSite`; UI work alone cannot close the report's content-preview 404.
+- the report's preview 404 is not only a dialog failure. It must explicitly check
+  whether generic `content_entries` whose content type slug is `post`/`posts` are
+  being routed through the dedicated Posts storage branch in
+  `renderEntryDetailHtml()` before adding any new preview route or resolver.
+- taxonomy enablement is owned by the current Engine content type editor
+  (`/content-types/:id` -> `/coderso/engine/:id`), not the schema-only
+  `/content-types/:id/schema` surface.
 
 ## Security Contract
 
@@ -222,14 +242,19 @@ Dependency notes:
 - `TASK-203-01-03` must build on the dirty-state model from `TASK-203-01-02`
   instead of adding a separate guard.
 - `TASK-203-02-02` cannot close the preview 404 from the report without
-  `publicSite`/runtime proof or an exact follow-up owner.
+  `publicSite`/runtime proof or an exact follow-up owner. The proof must cover
+  the captured `contentType=post` case and verify whether the `post`/`posts`
+  branch in `renderEntryDetailHtml()` wrongly diverts generic Entries preview to
+  Posts storage.
 - `TASK-203-03-02` must reuse the existing
   `EntryTable` -> `EntryList` -> `entriesClient` -> `contentEntryRoutes` ->
   `entryService` path; a product decision to remove Duplicate must be a separate
   task before implementation.
 - `TASK-203-04-02` must reuse `site.contentRoutes`, `siteSettingsClient`,
   `AdminLink`, and `adminPaths` for SEO/taxonomy navigation instead of adding
-  Entries-only URL or route helpers.
+  Entries-only URL or route helpers. The disabled-taxonomy repair link must land
+  on the content type editor where taxonomy toggles live, not the schema-only
+  page.
 
 ## Testing Requirements
 
