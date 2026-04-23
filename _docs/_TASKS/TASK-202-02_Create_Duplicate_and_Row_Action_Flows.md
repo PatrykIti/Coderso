@@ -38,6 +38,10 @@ Current code shows the gaps:
   existing type may keep its own name/slug, but it must not collide with another
   type. This belongs in `typeService` and route error mapping, not only in the
   create drawer.
+- Keep the duplicate-name/slug contract in the existing content type owner. If a
+  current direct `contentTypes` writer cannot delegate to the shared owner during
+  this wave, the implementation must name that owner, responsibility, reason, and
+  targeted proof instead of copying a second validator.
 - On successful create, navigate to `/admin/coderso/engine/:id` through shared
   admin routing helpers and show creation feedback.
 - Add a duplicate content type action that copies schema only, never entries,
@@ -62,7 +66,14 @@ Out of scope:
 - `core/admin/services/contentTypesClient.ts:145-198`
 - `core/services/content/typeService.ts:63-99`
   - authoritative duplicate name/slug guards for create and update, ignore-self
-    update behavior, and duplicate clone contract.
+    update behavior, duplicate clone contract, and shared helpers consumed by
+    current creation/upsert callers where possible.
+- `core/services/kits/solutionKitsInstallService.ts:1357-1475`
+  - inspect the direct content type upsert owner when shared create/update
+    invariants change; route through the shared contract or document equivalent
+    owner responsibility and proof.
+- `core/services/assistant/actionExecutorService.ts:2731-2762`
+  - verify assistant content type upsert keeps using the shared service owner.
 - `core/server/routes/contentTypeRoutes.ts:54-92`
   - centralized `mapContentTypeError` coverage for duplicate create, update,
     and clone errors.
@@ -83,6 +94,7 @@ Out of scope:
   - duplicate target name/slug must be explicit and unique,
   - duplicate create/update/clone errors come from domain error codes, not DB
     constraint strings or UI-only checks,
+  - direct content-type writers must not bypass uniqueness silently,
   - success feedback must not expose raw server errors.
 
 ## Testing Requirements
@@ -98,7 +110,9 @@ Out of scope:
     server contract,
   - update duplicate name/slug returns mapped conflict/invalid errors while
     preserving same-record updates,
-  - duplicate clone creates schema-only output with no entries.
+  - duplicate clone creates schema-only output with no entries,
+  - direct content-type writers either reuse the shared guard or have named
+    owner/responsibility proof.
 
 ## Documentation Updates Required
 
@@ -113,3 +127,5 @@ Out of scope:
 2. Creating a valid content type takes the admin directly into its editor with
    visible feedback.
 3. Duplicating a type creates a schema-only copy with unique name and slug.
+4. Current content-type create/update callers share the same uniqueness contract
+   or have an explicit owner/responsibility exception with tests.

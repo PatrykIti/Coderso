@@ -36,6 +36,11 @@ dependency explicit and narrow. For example, source prevention must not wait for
 delete UI, while existing-record cleanup must not run before guarded delete and
 confirmation behavior exist.
 
+Coordinate with `TASK-202-02-01` when the fix touches shared content type
+normalization or duplicate-name/slug validation. Writer inventory should be
+recorded once and referenced by both leaves; do not create separate screen-name
+and duplicate-name helper paths that can drift.
+
 ## Sub-Tasks
 
 No child task files.

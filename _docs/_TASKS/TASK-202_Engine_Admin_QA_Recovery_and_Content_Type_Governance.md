@@ -98,6 +98,26 @@ Out of scope:
   are covered,
 - touching `TASK-201*` files or any sibling family owned by another agent.
 
+## Implementation Principles
+
+- Fix the existing Engine/content-type contracts in place. A TASK-202 leaf must
+  extend the current owner seam rather than create a duplicate validator, client,
+  schema builder, cleanup script, action helper, or notification host.
+- Domain/service owners remain authoritative. UI checks are allowed for fast
+  feedback, but create/update/delete/status correctness must be enforced by the
+  current domain service, route validation/error mapping, DB/settings owner, or a
+  named direct writer with equivalent proof.
+- If a current path already writes or deletes `contentTypes` directly, the leaf
+  must either route that path through the shared owner or name the owner, its
+  responsibility, the reason it remains separate, and the targeted tests that
+  prove equivalent behavior. Silent bypasses are not acceptable.
+- If ownership is unclear, stop inside the leaf and document the candidate owner
+  areas, evidence, and required dependency before implementing a workaround.
+- Dependencies between leaves must be explicit and narrow. Do not weaken scope to
+  an MVP or move behavior into a temporary helper just because a sibling owner has
+  not landed yet; record the dependency and keep the shipped behavior inside the
+  current repo contracts.
+
 ## Architecture
 
 Current owner seams in code:
