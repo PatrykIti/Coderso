@@ -144,6 +144,9 @@ Reuse-first rule:
   second schema builder, duplicate admin client, duplicate delete service,
   detached validator, or one-off cleanup/generator helper when the current repo
   already has an owner.
+- Implement against the code that exists today. If a leaf needs shared behavior,
+  extend the current owner path and make the existing callers use it; do not ship
+  a parallel flow that only satisfies the new UI or test.
 - Repair the code that exists. If a fix needs shared behavior, put it in the
   current owner (`typeService`, route validation/error mapping,
   `contentTypesClient`, schema mapping, `FieldRenderer`, or the documented
@@ -151,6 +154,9 @@ Reuse-first rule:
 - If ownership is unclear during implementation, stop at the leaf, name the
   candidate owner area, its responsibility, and the evidence before writing the
   fix. Do not hide unclear ownership behind a broad UI workaround.
+- If a leaf cannot safely complete because another owner must land first, record
+  that dependency explicitly in the leaf and source-report closure instead of
+  weakening the implementation or moving the behavior into a temporary helper.
 - Keep the implementation boring and user-facing behavior simple: validate and
   normalize at the domain/service owner, keep routes as orchestration, and let UI
   layers provide feedback around those same contracts instead of inventing a

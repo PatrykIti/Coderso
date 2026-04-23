@@ -52,9 +52,13 @@ No child task files.
 - `core/admin/services/contentTypesClient.ts:184-198`
   - keep list/detail cache invalidation on successful delete only.
 - `tests/integration/routes/contentTypes.test.ts`
-- `tests/vitest/assistant/actionExecutorService.test.ts`
-  - cover assistant delete execution against the guarded dependency contract.
-- DB-backed service test file if one exists or is added for `typeService`.
+- `tests/unit/content/typeService.test.ts`
+  - DB-backed service owner coverage for delete guards and domain errors.
+- `tests/unit/assistant/actionExecutorService.test.ts`
+  - Bun-owned assistant executor coverage against the guarded dependency
+    contract.
+- `tests/unit/assistant/actionExecutorService.db.test.ts` if DB-backed assistant
+  delete behavior changes.
 
 ## Security Contract
 

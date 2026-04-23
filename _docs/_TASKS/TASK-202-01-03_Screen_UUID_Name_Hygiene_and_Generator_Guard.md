@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Engine + Custom Screens + Assistant
 **Estimated Effort:** Medium
-**Dependencies:** TASK-202-01; TASK-202-03 only for safe cleanup of existing records
+**Dependencies:** TASK-202-01; TASK-202-03-01/TASK-202-03-02 only for safe cleanup of existing records
 **Status:** To Do
 
 ---
@@ -30,6 +30,11 @@ candidate owner, its responsibility, and the evidence before patching behavior.
 Existing bad records remain data cleanup, not proof that the generator guard
 failed. That cleanup is owned by the final source-report closure after
 `TASK-202-03` makes delete/archive safe.
+
+If the prevention fix requires a dependency from another leaf, keep that
+dependency explicit and narrow. For example, source prevention must not wait for
+delete UI, while existing-record cleanup must not run before guarded delete and
+confirmation behavior exist.
 
 ## Sub-Tasks
 
@@ -61,9 +66,13 @@ No child task files.
   - solution-kit rollback can directly delete or restore content types; keep this
     owner named if the guard changes shared create/delete invariants.
 - `tests/vitest/customScreens/customScreenService.test.ts`
-- `tests/vitest/assistant/actionExecutorService.test.ts`,
-  `tests/vitest/assistant/action-plan-schema.test.ts`, or the current assistant
-  executor/mapper owner suite, depending on the identified writer.
+- `tests/unit/assistant/actionExecutorService.test.ts` for Bun-owned assistant
+  executor logic.
+- `tests/unit/assistant/actionExecutorService.db.test.ts` when the source guard
+  depends on DB-backed executor behavior.
+- `tests/vitest/assistant/action-plan-schema.test.ts` or
+  `tests/vitest/assistant/cms-operation-action-mapper.test.ts` for Bun-free
+  action input/schema/mapper coverage, depending on the identified writer.
 - Solution-kit installer owner test if the source is a kit blueprint/direct
   `contentTypes` writer.
 
@@ -84,7 +93,8 @@ No child task files.
 
 ## Testing Requirements
 
-- Unit/Vitest coverage for the identified generator guard.
+- Bun/Vitest coverage in the current owner lane for the identified generator
+  guard.
 - Coverage must execute the production writer that created or could create the
   bad name (`typeService`, assistant mapper/executor, custom screen service, or
   solution-kit installer), not only a copied slug/name helper.

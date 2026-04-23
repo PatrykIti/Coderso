@@ -48,6 +48,9 @@ Current code shows the risks:
 - Keep assistant delete execution aligned with the same guarded contract; do not
   add an assistant-only delete helper or a weaker precheck that bypasses
   `typeService` domain errors.
+- If another owner cannot be migrated into the guarded contract in this leaf,
+  name that owner, its responsibility, the reason it remains separate, and the
+  exact follow-up dependency before enabling broad delete UI.
 - Map known domain errors to `ApiError` at the route boundary.
 - Add delete confirmation UI on list/editor surfaces.
 - Reuse the row/editor entry points from `TASK-202-02-03` when present, but do
@@ -86,7 +89,9 @@ Out of scope:
     it through the guarded contract or record the owner responsibility and
     equivalent rollback-safe guard.
 - `tests/integration/routes/contentTypes.test.ts`
-- `tests/vitest/assistant/actionExecutorService.test.ts`
+- `tests/unit/assistant/actionExecutorService.test.ts`
+- `tests/unit/assistant/actionExecutorService.db.test.ts` if DB-backed assistant
+  delete behavior changes.
 - `tests/vitest/admin/contentTypesClient.test.ts`
 - `tests/vitest/ui/content-type-table.test.tsx`
 - `tests/vitest/ui/content-type-editor.test.tsx`
