@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Engine + Admin/UI + UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-202-05-01
+**Dependencies:** TASK-202-05-01, TASK-202-02-02, TASK-202-03-02
 **Status:** To Do
 
 ---
@@ -14,6 +14,11 @@
 Fix `BUG-3`: after `Save draft` or `Publish`, the editor gives no explicit
 success signal beyond the unsaved alert disappearing. Use the existing shared
 admin feedback pattern.
+
+This leaf owns the save/publish feedback and verifies the shared toaster
+contract. Duplicate and delete feedback stay with the leaves that implement
+those actions (`TASK-202-02-02` and `TASK-202-03-02`) so the action owner also
+owns the user-visible result state.
 
 ## Sub-Tasks
 
@@ -50,6 +55,9 @@ No child task files.
 - Save draft shows success feedback and clears dirty state.
 - Publish shows success feedback and updates badge/status.
 - Failed save/publish keeps dirty state and shows error.
+- Duplicate/delete feedback is covered in the duplicate/delete owner leaves and
+  uses the same `AdminApp` toaster; this leaf must not introduce a second
+  notification host.
 - Shared toaster remains mounted by `AdminApp`.
 
 ## Documentation Updates Required
@@ -62,4 +70,5 @@ No child task files.
 
 1. `Save draft` and `Publish` both produce visible success or failure feedback.
 2. The editor and list badge agree on status after publish.
-3. Feedback uses shared admin infrastructure.
+3. Duplicate/delete feedback ownership is explicit and uses the same shared
+   admin infrastructure.

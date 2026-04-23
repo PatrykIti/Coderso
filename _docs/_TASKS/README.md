@@ -74,14 +74,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Business area: search/sort/filter list, duplicate-name context, relation labels, and screen UUID hygiene |
 | TASK-202-01-01 | Content Type List Search, Sort, and Status Filters | High | Medium | Technical leaf: list search, deterministic sort, and real-status filter gating |
 | TASK-202-01-02 | Duplicate Name Visibility and Relation Target Labels | High | Medium | Technical leaf: duplicate badges plus relation options with slug context |
-| TASK-202-01-03 | Screen UUID Name Hygiene and Generator Guard | Medium | Medium | Technical leaf: trace and guard the generator that creates unreadable Screen UUID types |
+| TASK-202-01-03 | Screen UUID Name Hygiene and Generator Guard | Medium | Medium | Technical leaf: trace all content-type writers and guard the owner that creates unreadable Screen UUID types |
 | TASK-202-02 | Create, Duplicate, and Row Action Flows | High | Large | Business area: create validation, create-to-editor navigation, duplicate flow, and lifecycle actions |
 | TASK-202-02-01 | Create Drawer Duplicate Validation and Create-to-Editor Flow | High | Medium | Technical leaf: duplicate create guard, success feedback, and editor navigation |
-| TASK-202-02-02 | Duplicate Content Type Action and Clone Contract | Medium | Medium | Technical leaf: schema-only duplicate action with unique name/slug and cache updates |
+| TASK-202-02-02 | Duplicate Content Type Action and Clone Contract | Medium | Medium | Technical leaf: schema-only duplicate action with unique name/slug, cache updates, and shared feedback |
 | TASK-202-02-03 | Row Action Menu and Editor Lifecycle Entry Points | Medium | Small | Technical leaf: accessible Edit/Duplicate/Delete entry points without unsafe direct delete |
 | TASK-202-03 | Destructive Change Safety for Content Types and Fields | High | Large | Business area: guarded content type delete, confirmation UI, and field remove recovery |
 | TASK-202-03-01 | Content Type Delete Service Guard, Route Mapping, and Cache Invalidation | High | Medium | Technical leaf: zero-entry server guard, mapped route errors, and cache invalidation |
-| TASK-202-03-02 | Delete Type Danger Zone and List Confirmation UI | High | Medium | Technical leaf: editor danger zone plus list delete dialog with exact target context |
+| TASK-202-03-02 | Delete Type Danger Zone and List Confirmation UI | High | Medium | Technical leaf: editor danger zone plus list delete dialog, exact target context, and shared feedback |
 | TASK-202-03-03 | Field Remove Confirmation, Undo, and Schema Selection Recovery | High | Medium | Technical leaf: confirm/undo local field removal and stable selection fallback |
 | TASK-202-04 | Field Authoring and Schema Metadata Controls | High | Large | Business area: label/key generation, readable labels, select builder, and number constraints |
 | TASK-202-04-01 | Label to Field Name Autogeneration and Manual Lock | High | Medium | Technical leaf: label-derived kebab key until manual key edit |

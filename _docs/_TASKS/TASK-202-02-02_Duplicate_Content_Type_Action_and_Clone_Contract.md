@@ -22,6 +22,8 @@ No child task files.
 
 - `core/admin/ui/content-types/ContentTypeTable.tsx:104-108`
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:318-382`
+  - surface duplicate success/error feedback through the shared admin toaster
+    pattern; do not add an Engine-only notification host.
 - `core/admin/services/contentTypesClient.ts:145-198`
 - `core/services/content/typeService.ts:63-99`
   - own schema-only clone creation and unique target name/slug generation.
@@ -56,6 +58,9 @@ No child task files.
 - Duplicate action creates a schema-only copy.
 - Target name/slug are unique and deterministic.
 - Cache updates include list and new detail keys.
+- Successful duplicate shows a shared-toast success message naming the new type.
+- Failed duplicate keeps the current row/editor state and shows a redacted,
+  user-readable error.
 - Error path handles duplicate target slug cleanly.
 - Server/domain tests prove entries, custom screens, taxonomies, listings, and
   other owner resources are not cloned.
@@ -73,4 +78,4 @@ No child task files.
 
 1. Admins can duplicate a content type from list or editor surfaces.
 2. The duplicate has the same schema and no entries.
-3. Cache and navigation point to the new content type.
+3. Cache, navigation, and success feedback point to the new content type.

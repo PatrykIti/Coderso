@@ -41,7 +41,8 @@ Current code shows the gaps:
 - Render relation options with name plus slug so duplicate names are
   distinguishable.
 - Trace the source of `Screen <uuid>` content type names and guard the owning
-  generator path.
+  generator path across all current content-type writers, not only the visible
+  custom-screen UI.
 
 Out of scope:
 
@@ -57,6 +58,7 @@ Out of scope:
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:170-180`
 - `core/admin/ui/content-types/FieldEditor.tsx:256-280`
 - generation owner identified by `TASK-202-01-03`
+- content-type upsert/creation owners identified by `TASK-202-01-03`
 - `tests/vitest/ui/content-type-table.test.tsx`
 - `tests/vitest/ui/field-editor-relation.test.tsx`
 - `tests/vitest/ui-integration/contentTypes.test.tsx`
@@ -78,8 +80,9 @@ Out of scope:
   - content type table search/sort/filter rendering,
   - duplicate-name badges or helper text,
   - relation target labels include slug context,
-  - generated-name guard helper or service owner test once the generator is
-    identified.
+  - generated-name guard coverage in the real owner path once the generator is
+    identified; do not add a detached helper test that the current writers never
+    call.
 - Bun only if generator/service behavior changes.
 
 ## Documentation Updates Required

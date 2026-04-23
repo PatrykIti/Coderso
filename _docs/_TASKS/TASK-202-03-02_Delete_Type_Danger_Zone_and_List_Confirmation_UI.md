@@ -21,7 +21,8 @@ No child task files.
 ## Files to Change
 
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:405-503`
-  - add Danger Zone after normal settings/schema controls.
+  - add Danger Zone after normal settings/schema controls and surface delete
+    success/error feedback through the shared admin toaster pattern.
 - `core/admin/ui/content-types/ContentTypeTable.tsx:74-108`
   - trigger delete confirmation from row action menu.
 - `core/admin/ui/content-types/ContentTypeList.tsx:73-115`
@@ -48,10 +49,13 @@ No child task files.
 - Editor renders a Danger Zone with delete affordance.
 - List row delete opens a branded confirmation dialog.
 - Confirm calls the shared client and removes the row only after success.
+- Successful delete shows a shared-toast success message naming the deleted type.
 - Blocked delete surfaces a user-readable conflict message.
 - Conflict details name the responsible owner area when the server reports one
   (entries, custom screens, taxonomies, routes/listings, or a documented
   follow-up).
+- Failed or blocked delete keeps the current list/detail state intact and does
+  not emit a success toast.
 
 ## Documentation Updates Required
 
@@ -63,4 +67,5 @@ No child task files.
 
 1. Content type delete is discoverable but never immediate.
 2. The confirmation identifies name, slug, and dependency impact.
-3. Delete failure does not remove local list/detail state.
+3. Delete success and failure feedback use the shared admin toaster.
+4. Delete failure does not remove local list/detail state.

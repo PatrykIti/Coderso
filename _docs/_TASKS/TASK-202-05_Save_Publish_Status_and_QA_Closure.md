@@ -35,6 +35,9 @@ Current code shows the status mismatch:
     explicitly rejects content type status.
 - Add visible feedback after save, publish, create, duplicate, and delete.
 - Keep the shared admin toaster ownership in `AdminApp`.
+- Keep result-state ownership with the action leaf that performs the mutation:
+  create in `TASK-202-02-01`, duplicate in `TASK-202-02-02`, delete in
+  `TASK-202-03-02`, and save/publish in `TASK-202-05-02`.
 - Keep cache updates and route prefetch consistent after status mutations.
 - Replay all Engine report findings and update source docs with evidence.
 
@@ -87,6 +90,8 @@ Out of scope:
 - Vitest:
   - list badge renders real status,
   - save/publish toasts and button states,
+  - duplicate/delete toast coverage is present in the action-owner leaves and
+    reuses the same `AdminApp` toaster,
   - `contentTypesClient` cache updates on status mutations,
   - `AdminApp` still mounts the shared toaster.
 - Baseline:

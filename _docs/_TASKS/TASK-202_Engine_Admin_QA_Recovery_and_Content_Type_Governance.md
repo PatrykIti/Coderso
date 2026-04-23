@@ -122,8 +122,12 @@ Current owner seams in code:
 - Related generation and screen seams to inspect before fixing `Screen <uuid>`
   records:
   - `core/services/assistant/actionExecutorService.ts:2731`
+  - `core/services/assistant/cmsOperationActionMapper.ts:603`
+  - `core/services/assistant/actionPlanSchema.ts:234`
+  - `core/services/assistant/operationPolicy/cmsResourcePolicies.ts:295`
   - `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
   - `core/services/customScreens/customScreenService.ts:123`
+  - `core/services/kits/solutionKitsInstallService.ts:1357`
 
 Reuse-first rule:
 
@@ -141,6 +145,11 @@ Reuse-first rule:
   `prefetchAdminRoute`.
 - Reuse existing shared dialog/toast primitives and the `AdminApp` toaster
   mount rather than adding Engine-only notification infrastructure.
+- Route every content-type creation/upsert path through the existing content type
+  service/normalization contract where possible. If an owner still writes
+  `contentTypes` directly, the leaf must name that owner and prove the same
+  validation/responsibility in that owner rather than copying a second set of
+  ad-hoc helpers.
 - Use durable schema metadata in `xFieldConfig`; do not store UI-only state in
   browser cache or unversioned ad-hoc fields.
 - Do not add parallel clients, cleanup scripts, schema builders, notification

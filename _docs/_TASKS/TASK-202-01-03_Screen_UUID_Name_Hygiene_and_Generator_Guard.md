@@ -16,6 +16,12 @@ in `BUG-7`. The short-term fix is not a blind cleanup script. First identify the
 writer, then add a guard at that owner seam and use the safe delete/archive path
 from `TASK-202-03` for cleanup.
 
+This leaf must follow the existing contract instead of inventing a parallel
+generator. If the bug comes from a generic content-type writer, put the
+normalization/guard in the current content type contract and make the callers use
+it. If the bug comes from a direct writer that cannot delegate immediately, name
+that owner and prove responsibility there with tests.
+
 ## Sub-Tasks
 
 No child task files.
@@ -24,6 +30,13 @@ No child task files.
 
 - `core/services/assistant/actionExecutorService.ts:2731-2762`
   - content type upsert execution.
+- `core/services/assistant/cmsOperationActionMapper.ts:603-616`
+  - provider draft to `content-type.upsert` mapping; ensure unsafe/generated
+    names cannot bypass local review/normalization.
+- `core/services/assistant/actionPlanSchema.ts:234-240`
+  - strict action input normalization for content type upsert payloads.
+- `core/services/assistant/operationPolicy/cmsResourcePolicies.ts:295-320`
+  - policy owner for executable content-type upsert/delete actions.
 - `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
   - generated catalog/screen naming inputs.
 - `core/services/customScreens/customScreenService.ts:123-154`
@@ -32,9 +45,15 @@ No child task files.
   - custom screen content type selection UI.
 - `core/services/content/typeService.ts:63-76`
   - content type creation guard if the writer is generic.
+- `core/services/kits/solutionKitsInstallService.ts:1357-1475`
+  - solution-kit content type upsert writer; keep kit blueprints readable and do
+    not allow direct insert paths to drift from the content type contract.
 - `tests/vitest/customScreens/customScreenService.test.ts`
-- `tests/vitest/assistant/actionExecutorService.test.ts` or the current
-  assistant executor owner suite.
+- `tests/vitest/assistant/actionExecutorService.test.ts`,
+  `tests/vitest/assistant/action-plan-schema.test.ts`, or the current assistant
+  executor/mapper owner suite, depending on the identified writer.
+- Solution-kit installer owner test if the source is a kit blueprint/direct
+  `contentTypes` writer.
 
 ## Security Contract
 
@@ -54,8 +73,14 @@ No child task files.
 ## Testing Requirements
 
 - Unit/Vitest coverage for the identified generator guard.
+- Coverage must execute the production writer that created or could create the
+  bad name (`typeService`, assistant mapper/executor, custom screen service, or
+  solution-kit installer), not only a copied slug/name helper.
 - Regression proving UUID-like fallback names are rejected or converted into a
   readable deterministic label.
+- Regression proving direct content-type writers either delegate to the shared
+  contract or have an explicitly documented owner/responsibility with equivalent
+  validation.
 - Manual inventory note in closure documenting which path created the reported
   records.
 
@@ -69,5 +94,7 @@ No child task files.
 
 1. The source of `Screen <uuid>` content type names is identified.
 2. The owning path no longer creates unreadable UUID-based content type names.
-3. Cleanup of existing records is deferred until safe delete/cleanup evidence
+3. Any direct writer that remains outside `typeService` has a named owner,
+   responsibility, and test evidence for the same guard.
+4. Cleanup of existing records is deferred until safe delete/cleanup evidence
    exists.
