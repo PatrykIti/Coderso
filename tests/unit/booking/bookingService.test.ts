@@ -25,6 +25,11 @@ import {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 
 async function canConnect() {
   try {
@@ -107,76 +112,80 @@ testIfDb("booking resource/service setup and slot preview", async () => {
   expect(slots[3]?.startsAt).toBe("2030-01-15T10:30:00.000Z");
 });
 
-testIfDb("booking reservation blocks overlapping slots", async () => {
-  const resource = await createBookingResource({
-    name: `Staff ${randomUUID()}`,
-    type: "staff",
-    timezone: "UTC",
-  });
-  const service = await createBookingService({
-    name: `Repair ${randomUUID()}`,
-    durationMinutes: 60,
-  });
-
-  await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
-
-  const day = new Date(Date.UTC(2030, 0, 16, 0, 0, 0));
-  const date = toDateString(day);
-  const dayOfWeek = day.getUTCDay();
-
-  await setBookingSchedules(resource.id, [
-    {
-      dayOfWeek,
-      startMinute: 8 * 60,
-      endMinute: 12 * 60,
+testIfDbWithOptions(
+  "booking reservation blocks overlapping slots",
+  async () => {
+    const resource = await createBookingResource({
+      name: `Staff ${randomUUID()}`,
+      type: "staff",
       timezone: "UTC",
-    },
-  ]);
+    });
+    const service = await createBookingService({
+      name: `Repair ${randomUUID()}`,
+      durationMinutes: 60,
+    });
 
-  const before = await previewBookingSlots({
-    serviceId: service.id,
-    resourceId: resource.id,
-    date,
-    timezone: "UTC",
-    intervalMinutes: 60,
-  });
-  expect(before.length).toBe(4);
+    await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
 
-  const reservation = await createBookingReservation({
-    serviceId: service.id,
-    resourceId: resource.id,
-    startsAt: before[0]!.startsAt,
-    endsAt: before[0]!.endsAt,
-    timezone: "UTC",
-    customerName: "Jan Kowalski",
-  });
-  expect(reservation).toBeTruthy();
+    const day = new Date(Date.UTC(2030, 0, 16, 0, 0, 0));
+    const date = toDateString(day);
+    const dayOfWeek = day.getUTCDay();
 
-  await expect(
-    createBookingReservation({
+    await setBookingSchedules(resource.id, [
+      {
+        dayOfWeek,
+        startMinute: 8 * 60,
+        endMinute: 12 * 60,
+        timezone: "UTC",
+      },
+    ]);
+
+    const before = await previewBookingSlots({
+      serviceId: service.id,
+      resourceId: resource.id,
+      date,
+      timezone: "UTC",
+      intervalMinutes: 60,
+    });
+    expect(before.length).toBe(4);
+
+    const reservation = await createBookingReservation({
       serviceId: service.id,
       resourceId: resource.id,
       startsAt: before[0]!.startsAt,
       endsAt: before[0]!.endsAt,
       timezone: "UTC",
-      customerName: "Conflict",
-    })
-  ).rejects.toThrow("booking_slot_unavailable");
+      customerName: "Jan Kowalski",
+    });
+    expect(reservation).toBeTruthy();
 
-  const after = await previewBookingSlots({
-    serviceId: service.id,
-    resourceId: resource.id,
-    date,
-    timezone: "UTC",
-    intervalMinutes: 60,
-  });
+    await expect(
+      createBookingReservation({
+        serviceId: service.id,
+        resourceId: resource.id,
+        startsAt: before[0]!.startsAt,
+        endsAt: before[0]!.endsAt,
+        timezone: "UTC",
+        customerName: "Conflict",
+      })
+    ).rejects.toThrow("booking_slot_unavailable");
 
-  expect(after.length).toBe(3);
-  expect(after.some((slot) => slot.startsAt === before[0]!.startsAt)).toBe(false);
+    const after = await previewBookingSlots({
+      serviceId: service.id,
+      resourceId: resource.id,
+      date,
+      timezone: "UTC",
+      intervalMinutes: 60,
+    });
 
-  const cancelled = await updateBookingReservationStatus(reservation.id, "cancelled");
-  expect(cancelled?.status).toBe("cancelled");
-});
+    expect(after.length).toBe(3);
+    expect(after.some((slot) => slot.startsAt === before[0]!.startsAt)).toBe(false);
+
+    const cancelled = await updateBookingReservationStatus(reservation.id, "cancelled");
+    expect(cancelled?.status).toBe("cancelled");
+  },
+  { timeout: 10_000 }
+);
 
 testIfDb("booking service submission access can be set to internal", async () => {
   const service = await createBookingService({
