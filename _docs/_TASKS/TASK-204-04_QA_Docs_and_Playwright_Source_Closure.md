@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-204-01, TASK-204-02, TASK-204-03, TASK-204-04-01
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Taxonomy + Admin/API + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-204, TASK-195-03
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

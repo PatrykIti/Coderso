@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Admin/UI + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-204, TASK-195-02
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

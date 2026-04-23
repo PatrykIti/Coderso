@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Block Editor + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-204, TASK-195-04
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

@@ -823,7 +823,13 @@ export function AdminApp({ path }: AdminAppProps) {
       <AdminAssistantConfigProvider value={assistantConfig}>
         <>
           <style id="nextless-theme-tokens">{tokenCss}</style>
-          <Toaster position="top-right" richColors />
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            duration={4000}
+            containerAriaLabel="Admin notifications"
+          />
           {match.element}
         </>
       </AdminAssistantConfigProvider>

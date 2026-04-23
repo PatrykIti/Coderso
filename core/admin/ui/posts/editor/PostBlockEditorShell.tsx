@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { isApiClientError } from "@/services/apiClient";
 import { getTaxonomyOverview } from "@/services/taxonomyClient";
 import {
   getSiteSettings,
@@ -37,6 +38,7 @@ import { useFocusReturn } from "./hooks/useFocusReturn";
 
 const FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
 const LAYOUT_STORAGE_KEY = "nextless.posts.editor.layout.v1";
+const TAXONOMY_LOAD_ERROR_COPY = "Could not load categories.";
 
 type StoredPostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
@@ -47,6 +49,14 @@ type StoredPostEditorLayoutState = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const resolveTaxonomyErrorCopy = (error: unknown) => {
+  if (!isApiClientError(error)) return TAXONOMY_LOAD_ERROR_COPY;
+  if (error.code === "taxonomy_category_disabled") {
+    return "Categories are not enabled for this post type.";
+  }
+  return TAXONOMY_LOAD_ERROR_COPY;
+};
 
 const resolveInitialDetailsTab = (
   preferences: PostEditorPreferences
@@ -132,6 +142,7 @@ export function PostBlockEditorShell() {
   const [categoryOptions, setCategoryOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [taxonomyLoading, setTaxonomyLoading] = useState(false);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
+  const [taxonomyRetryToken, setTaxonomyRetryToken] = useState(0);
   const [initialFocusMode] = useState(() =>
     resolveInitialFocusMode(initialPreferences)
   );
@@ -227,6 +238,10 @@ export function PostBlockEditorShell() {
 
   const editorTypeId = editor.post?.typeId ?? null;
 
+  const retryTaxonomyOverview = useCallback(() => {
+    setTaxonomyRetryToken((current) => current + 1);
+  }, []);
+
   useEffect(() => {
     if (!editorTypeId) {
       setCategoryOptions([]);
@@ -251,7 +266,7 @@ export function PostBlockEditorShell() {
         );
       } catch (error) {
         if (!active) return;
-        setTaxonomyError(error instanceof Error ? error.message : "Failed to load categories.");
+        setTaxonomyError(resolveTaxonomyErrorCopy(error));
       } finally {
         if (active) {
           setTaxonomyLoading(false);
@@ -262,7 +277,7 @@ export function PostBlockEditorShell() {
     return () => {
       active = false;
     };
-  }, [editorTypeId]);
+  }, [editorTypeId, taxonomyRetryToken]);
 
   const slugDisplay = useMemo(
     () => resolvePostSlugDisplay(slugRouteContext, editor.slug),
@@ -371,6 +386,7 @@ export function PostBlockEditorShell() {
         categoryOptions,
         taxonomyLoading,
         taxonomyError,
+        onTaxonomyRetry: retryTaxonomyOverview,
         slugDisplay,
         updatedAt: editor.post?.updatedAt ?? null,
         scheduledAt: editor.post?.scheduledAt ?? null,

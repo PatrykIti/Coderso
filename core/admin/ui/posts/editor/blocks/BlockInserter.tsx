@@ -71,6 +71,14 @@ export function BlockInserter({
     () => resolveMostUsedPostBlocks(recentlyUsedTypes),
     [recentlyUsedTypes]
   );
+  const searchPlaceholder =
+    category === "all"
+      ? "Search blocks..."
+      : `Search ${BLOCK_CATEGORY_FILTER_LABELS[category]} blocks...`;
+  const searchAriaLabel =
+    category === "all"
+      ? "Search blocks"
+      : `Search ${BLOCK_CATEGORY_FILTER_LABELS[category]} blocks`;
 
   const activeItemIndex = useMemo(() => {
     if (filtered.length === 0) return -1;
@@ -127,9 +135,9 @@ export function BlockInserter({
                 setQuery(event.target.value);
                 setActiveItemType(null);
               }}
-              placeholder="Search blocks..."
+              placeholder={searchPlaceholder}
               className="pl-9"
-              aria-label="Search blocks"
+              aria-label={searchAriaLabel}
             />
           </div>
         </div>
@@ -143,9 +151,9 @@ export function BlockInserter({
                 setQuery(event.target.value);
                 setActiveItemType(null);
               }}
-              placeholder="Search blocks..."
+              placeholder={searchPlaceholder}
               className="pl-9"
-              aria-label="Search blocks"
+              aria-label={searchAriaLabel}
             />
           </div>
           <div className="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Block categories">

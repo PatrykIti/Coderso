@@ -116,7 +116,9 @@ test("BlockInserter renders most-used section, category filters, and empty-searc
     expect(view.container.textContent).toContain("Image");
     expect(view.container.textContent).not.toContain("Paragraph");
 
-    const searchInput = view.container.querySelector('input[aria-label="Search blocks"]');
+    const searchInput = view.container.querySelector('input[aria-label="Search Media blocks"]');
+    expect(searchInput).toBeInstanceOf(HTMLInputElement);
+    expect((searchInput as HTMLInputElement).placeholder).toBe("Search Media blocks...");
     setInputValue(searchInput, "zzz-no-match");
 
     expect(view.container.textContent).toContain("No block matches this search.");
@@ -168,5 +170,38 @@ test("BlockInserter supports keyboard insertion, direct insertion, and disabled 
     expect(disabledInsert).not.toHaveBeenCalled();
   } finally {
     disabledView.cleanup();
+  }
+});
+
+test("BlockInserter scopes search copy and results to the active category", () => {
+  const onInsertBlock = vi.fn();
+  const view = mount(<BlockInserter onInsertBlock={onInsertBlock} showHeader={false} />);
+
+  try {
+    clickByText(view.container, "Media");
+
+    const mediaSearch = view.container.querySelector(
+      'input[aria-label="Search Media blocks"]'
+    );
+    expect(mediaSearch).toBeInstanceOf(HTMLInputElement);
+    expect((mediaSearch as HTMLInputElement).placeholder).toBe(
+      "Search Media blocks..."
+    );
+
+    setInputValue(mediaSearch, "cta");
+    expect(view.container.textContent).toContain("No block matches this search.");
+    expect(view.container.textContent).not.toContain("Button");
+
+    clickByText(view.container, "Interactive");
+    const interactiveSearch = view.container.querySelector(
+      'input[aria-label="Search Interactive blocks"]'
+    );
+    expect(interactiveSearch).toBeInstanceOf(HTMLInputElement);
+    expect((interactiveSearch as HTMLInputElement).placeholder).toBe(
+      "Search Interactive blocks..."
+    );
+    expect(view.container.textContent).toContain("Button");
+  } finally {
+    view.cleanup();
   }
 });

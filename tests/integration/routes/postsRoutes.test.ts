@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import {
+  mapUnexpectedPostRouteError,
   mapPostError,
   registerPostsRoutes,
 } from "../../../core/server/routes/postsRoutes";
@@ -89,4 +90,16 @@ test("mapPostError maps post domain errors to API responses", () => {
     "post_validation_failed"
   );
   expect(mapPostError(new Error("some_unknown_error"))).toBeNull();
+});
+
+test("mapUnexpectedPostRouteError hides autosave transport errors", () => {
+  const mapped = mapUnexpectedPostRouteError(new Error("CONNECTION_CLOSED"), {
+    code: "post_autosave_failed",
+    message: "Could not autosave post.",
+  });
+
+  expect(mapped.code).toBe("post_autosave_failed");
+  expect(mapped.status).toBe(500);
+  expect(mapped.message).toBe("Could not autosave post.");
+  expect(mapped.message).not.toContain("CONNECTION_CLOSED");
 });

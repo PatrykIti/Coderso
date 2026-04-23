@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 116 tasks
+- **To Do:** 104 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1004 tasks
+- **Done:** 1016 tasks
 
 ---
 
@@ -38,18 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-204 | Posts QA Follow-up - Toasts, Revisions, Taxonomy, and Block Inserter | High | Large | Follow-up from `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` 2026-04-23 replay: visible toasts, revisions a11y/preview fallback, taxonomy safe errors/retry, block inserter search, media capability decision, realtime console error classification, TASK-195-owned regression smoke, and closure |
-| TASK-204-01 | Post Feedback and Revision Drawer Reliability | High | Medium | Business area: publish/update toast visibility plus revision drawer a11y and preview fallback |
-| TASK-204-01-01 | Publish Update Toast Delivery and A11y Proof | High | Small | Technical leaf: prove shared admin toast delivery end to end without a Posts-only toaster |
-| TASK-204-01-02 | Revision Drawer A11y and Empty Preview Fallback | High | Small | Technical leaf: wire sheet description and useful bounded fallback for non-text revision previews |
-| TASK-204-02 | Taxonomy Terms Error Boundary and Category Retry | High | Medium | Business area: bound `/content-types/:id/terms` failures and keep category selector friendly/retryable |
-| TASK-204-02-01 | Taxonomy Overview Route Error Mapping and Client Sanitization | High | Medium | Technical leaf: map taxonomy overview failures without leaking SQL/query text |
-| TASK-204-02-02 | Category Selector Friendly Error and Retry State | High | Small | Technical leaf: safe Posts inspector failure copy and retry state from the existing taxonomy client path |
-| TASK-204-03 | Block Inserter Search and Media Capability Follow-up | Medium | Large | Business area: active-category search proof plus explicit Video/Gallery/Audio/File media block capability contract |
-| TASK-204-03-01 | Category Scoped Search Copy and Regression Proof | Medium | Small | Technical leaf: scoped placeholder/copy and tests proving query + category intersection |
-| TASK-204-03-02 | Media Block Capability Contract for Video Gallery Audio File | Medium | Large | Technical leaf: implement accepted media block types end to end or keep unsupported capability explicitly open with owners |
-| TASK-204-04 | QA Docs and Playwright Source Closure | Medium | Medium | Final validation after TASK-204-04-01, full source report closure including TASK-195-owned regression smoke, realtime console errors, docs, changelog, and board sync for TASK-204 |
-| TASK-204-04-01 | Runtime Console Error Triage Settings and Autosave | High | Medium | Technical leaf: separate `site.adminPath` and posts autosave console errors from taxonomy BUG-7 and fix or classify their owner seams |
 | TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`: metadata/save feedback, rich text, preview, row actions, sidebar, SEO/taxonomy, and closure |
 | TASK-203-01 | Metadata Save, Status, and Feedback Contract | High | Large | Business area: metadata route/client errors, save feedback, status dirty state, and action clarity |
 | TASK-203-01-01 | Metadata Route, Service Error Mapping, and API Client State | High | Medium | Technical leaf: bounded metadata errors plus cache-safe client state |
@@ -173,6 +161,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-204 | Posts QA Follow-up - Toasts, Revisions, Taxonomy, and Block Inserter | High | Large | Done: shared toast a11y config, revision fallback metadata, taxonomy/settings/autosave safe route errors, category retry, scoped inserter search, source-report closure, and explicit media capability gap owners landed |
+| TASK-204-04-01 | Runtime Console Error Triage Settings and Autosave | High | Medium | Done: settings and autosave unexpected failures map to bounded browser-facing API errors while preserving truthful failure state |
+| TASK-204-04 | QA Docs and Playwright Source Closure | Medium | Medium | Done: TASK-204 source report map, docs, changelog 728, board sync, and validation evidence recorded |
+| TASK-204-03-02 | Media Block Capability Contract for Video Gallery Audio File | Medium | Large | Done: Video/Gallery/Audio/File remain explicitly open capability work with schema/defaults/normalizer/editor/runtime owners, avoiding catalog-only labels |
+| TASK-204-03-01 | Category Scoped Search Copy and Regression Proof | Medium | Small | Done: block inserter search placeholder and aria label now follow the active category, with category-intersection tests |
+| TASK-204-03 | Block Inserter Search and Media Capability Follow-up | Medium | Large | Done: scoped search closure shipped and media capability gap was classified without fake surface labels |
+| TASK-204-02-02 | Category Selector Friendly Error and Retry State | High | Small | Done: Posts inspector renders safe category load copy with retry instead of raw query text |
+| TASK-204-02-01 | Taxonomy Overview Route Error Mapping and Client Sanitization | High | Medium | Done: taxonomy overview route maps unexpected errors to bounded `taxonomy_unexpected_error` responses |
+| TASK-204-02 | Taxonomy Terms Error Boundary and Category Retry | High | Medium | Done: taxonomy route boundary and Posts category selector failure recovery are covered |
+| TASK-204-01-02 | Revision Drawer A11y and Empty Preview Fallback | High | Small | Done: revisions sheet description and useful bounded fallback metadata landed |
+| TASK-204-01-01 | Publish Update Toast Delivery and A11y Proof | High | Small | Done: shared admin toaster config exposes accessible notification behavior and close/duration settings |
+| TASK-204-01 | Post Feedback and Revision Drawer Reliability | High | Medium | Done: publish/update feedback and revision drawer reliability hardening shipped |
 | TASK-200 | Menus List Parity With Pages and Posts | High | Large | Done: Menus list now matches Pages/Posts with filters, visible-row selection, inline bulk actions, row three-dot lifecycle/delete actions, and published-only runtime navigation |
 | TASK-199 | Posts List Header Bulk Actions | Medium | Small | Done: Posts bulk controls now appear inline in the header actions beside `New`, matching Pages without pushing the table down |
 | TASK-198 | Page List Header Bulk Actions | Medium | Small | Done: Pages bulk controls now appear inline in the header actions beside `New`, so row selection no longer pushes the table down |

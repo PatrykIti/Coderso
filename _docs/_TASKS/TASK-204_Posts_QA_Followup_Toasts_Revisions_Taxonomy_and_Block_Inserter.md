@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Admin/UI + Admin/API + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-059, TASK-061, TASK-063, TASK-195
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

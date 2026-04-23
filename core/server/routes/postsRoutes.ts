@@ -44,6 +44,7 @@ export type Router = {
 };
 
 export const mapPostError = (error: unknown) => {
+  if (error instanceof ApiError) return error;
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "post_not_found":
@@ -123,13 +124,24 @@ export const mapPostError = (error: unknown) => {
   }
 };
 
-const withPostErrors = async <T>(fn: () => Promise<T>) => {
+export const mapUnexpectedPostRouteError = (
+  _error: unknown,
+  options: { code: string; message: string; status?: number }
+) => {
+  return new ApiError(options.code, options.message, options.status ?? 500);
+};
+
+const withPostErrors = async <T>(
+  fn: () => Promise<T>,
+  unexpected?: { code: string; message: string; status?: number }
+) => {
   try {
     return await fn();
   } catch (error) {
     if (error instanceof ApiError) throw error;
     const mapped = mapPostError(error);
     if (mapped) throw mapped;
+    if (unexpected) throw mapUnexpectedPostRouteError(error, unexpected);
     throw error;
   }
 };
@@ -293,43 +305,49 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
   });
 
   router.post("/posts/:id/autosave", requirePermission("content:write"), async (ctx) => {
-    return withPostErrors(async () => {
-      validate(postAutosaveSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as {
-        title?: string;
-        slug?: string;
-        data?: Record<string, unknown>;
-        tags?: string[];
-        taxonomy?: {
-          categoryId?: string | null;
-          tagIds?: string[];
-        };
-        seo?: {
+    return withPostErrors(
+      async () => {
+        validate(postAutosaveSchema, ctx.body ?? {});
+        const body = (ctx.body ?? {}) as {
           title?: string;
-          description?: string;
-          canonicalUrl?: string;
-          robots?: string;
+          slug?: string;
+          data?: Record<string, unknown>;
+          tags?: string[];
+          taxonomy?: {
+            categoryId?: string | null;
+            tagIds?: string[];
+          };
+          seo?: {
+            title?: string;
+            description?: string;
+            canonicalUrl?: string;
+            robots?: string;
+          };
         };
-      };
-      const result = await autosavePost(
-        ctx.params.id,
-        {
-          title: body.title,
-          slug: body.slug,
-          data: body.data,
-          tags: body.tags,
-          taxonomy: body.taxonomy,
-          seo: body.seo,
-        },
-        ctx.user?.id ?? null
-      );
-      return {
-        post: result.post,
-        revision: result.revision,
-        savedAt: result.savedAt,
-        reusedRevision: result.reusedRevision,
-      };
-    });
+        const result = await autosavePost(
+          ctx.params.id,
+          {
+            title: body.title,
+            slug: body.slug,
+            data: body.data,
+            tags: body.tags,
+            taxonomy: body.taxonomy,
+            seo: body.seo,
+          },
+          ctx.user?.id ?? null
+        );
+        return {
+          post: result.post,
+          revision: result.revision,
+          savedAt: result.savedAt,
+          reusedRevision: result.reusedRevision,
+        };
+      },
+      {
+        code: "post_autosave_failed",
+        message: "Could not autosave post.",
+      }
+    );
   });
 
   router.get("/posts/:id/revisions", requirePermission("content:read"), async (ctx) => {

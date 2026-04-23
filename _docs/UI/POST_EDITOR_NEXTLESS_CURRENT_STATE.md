@@ -45,11 +45,16 @@ Mapa obecnej implementacji posts editora w Nextless jako baseline do migracji `T
 2. Writing-first flow i smart paste pipeline juz istnieja.
 3. Autosave i preview sa ustabilizowane (silent sync, bez resetu edytora).
 4. Runtime parity dla blokow jest utrzymane mapperem i rendererem.
-5. Po `TASK-195` editor daje jawny success feedback dla publish/update i
-   actionable autosave pause state z retry.
+5. Editor daje jawny success feedback dla publish/update przez shared admin
+   toaster i actionable autosave pause state z retry; unexpected autosave
+   failures sa mapowane do bounded browser-facing copy.
 6. Inspector ma picker-based category / featured-image UX, SEO badge na
-   zwiniętym `Advanced`, oraz display-only slug route context.
-7. Revisions drawer pokazuje bounded preview snapshot przed restore.
+   zwiniętym `Advanced`, display-only slug route context oraz retryable,
+   friendly category-load fallback.
+7. Revisions drawer pokazuje accessible opis i bounded preview/fallback
+   snapshot przed restore.
+8. Block inserter utrzymuje category-scoped search z placeholderem i aria-label
+   dopasowanym do aktywnej zakladki.
 
 ## Coupling / Gap Hotspots
 1. Inserter/list/details korzysta juz ze wspolnego layout hooka, ale shell nadal

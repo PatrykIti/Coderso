@@ -43,6 +43,7 @@ export type DocumentInspectorProps = {
   categoryOptions?: Array<{ id: string; name: string }>;
   taxonomyLoading?: boolean;
   taxonomyError?: string | null;
+  onTaxonomyRetry?: () => void;
   slugDisplay?: PostSlugDisplay | null;
   updatedAt?: string | null;
   scheduledAt?: string | null;
@@ -79,6 +80,20 @@ const formatTimestamp = (value?: string | null) => {
   return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 };
 
+const resolveSafeTaxonomyError = (value: string | null) => {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  if (
+    normalized.includes("failed query") ||
+    normalized.includes("select ") ||
+    normalized.includes("connection_closed") ||
+    normalized.includes("drizzle")
+  ) {
+    return "Could not load categories.";
+  }
+  return value;
+};
+
 export function DocumentInspector({
   title,
   status,
@@ -92,6 +107,7 @@ export function DocumentInspector({
   categoryOptions = [],
   taxonomyLoading = false,
   taxonomyError = null,
+  onTaxonomyRetry,
   slugDisplay = null,
   updatedAt,
   scheduledAt,
@@ -106,6 +122,7 @@ export function DocumentInspector({
   onCategoryIdChange,
   onSeoChange,
 }: DocumentInspectorProps) {
+  const safeTaxonomyError = resolveSafeTaxonomyError(taxonomyError);
   const seoCompleteCount = [
     seo.title.trim(),
     seo.description.trim(),
@@ -168,8 +185,21 @@ export function DocumentInspector({
           </Select>
           {taxonomyLoading ? (
             <p className="text-xs text-muted-foreground">Loading categories...</p>
-          ) : taxonomyError ? (
-            <p className="text-xs text-destructive">{taxonomyError}</p>
+          ) : safeTaxonomyError ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+              <p>{safeTaxonomyError}</p>
+              {onTaxonomyRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-7 px-2 text-xs"
+                  onClick={onTaxonomyRetry}
+                >
+                  Try again
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div className="space-y-2">

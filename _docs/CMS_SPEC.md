@@ -127,12 +127,20 @@ Storage:
 - Posts list wspiera visible-scope bulk actions (`Publish`, `Move to Draft`,
   `Delete`) i resource-specific search copy.
 - Posts editor zachowuje writing-first shell, ale daje jawny feedback dla
-  publish/update i autosave failures.
+  publish/update i autosave failures. Unexpected autosave failures map to
+  bounded browser-facing copy (`post_autosave_failed`) and do not expose raw
+  driver messages.
 - Post inspector:
   - wybiera kategorie z taxonomy overview,
+  - pokazuje retryable friendly fallback, gdy taxonomy overview/settings read
+    nie moze sie zaladowac,
   - wybiera featured image przez shared media picker (`image/*` only),
   - pokazuje SEO completion summary i slug route context bez zmiany stored slug
     semantics.
+- Revisions drawer ma accessible description i pokazuje bounded fallback
+  metadata dla rewizji bez extractable preview text.
+- Block inserter search jest category-scoped; copy i aria-label odzwierciedlaja
+  aktywna kategorie zamiast sugerowac globalne wyniki.
 
 ---
 

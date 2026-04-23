@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 728 | 2026-04-23 | TASK-204 posts QA follow-up closure | QA/CMS Posts |
 | 727 | 2026-04-23 | TASK-200 menus list parity | CMS Menus/Admin UI |
 | 726 | 2026-04-23 | TASK-199 posts list header bulk actions | CMS Posts/Admin UI |
 | 725 | 2026-04-23 | TASK-198 page list header bulk actions | CMS Pages/Admin UI |

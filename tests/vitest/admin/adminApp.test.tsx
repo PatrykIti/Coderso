@@ -22,7 +22,24 @@ vi.mock("@/services/adminThemeClient", () => ({
 }));
 
 vi.mock("@/components/ui/sonner", () => ({
-  Toaster: () => <div>Admin toaster</div>,
+  Toaster: ({
+    containerAriaLabel,
+    closeButton,
+    duration,
+  }: {
+    containerAriaLabel?: string;
+    closeButton?: boolean;
+    duration?: number;
+  }) => (
+    <div
+      data-admin-toaster="true"
+      data-container-aria-label={containerAriaLabel}
+      data-close-button={String(Boolean(closeButton))}
+      data-duration={String(duration)}
+    >
+      Admin toaster
+    </div>
+  ),
 }));
 
 vi.mock("@/ui/menus/MenuListPage", () => ({
@@ -89,6 +106,13 @@ test("AdminApp resolves /menus to the menus list route", async () => {
   try {
     await flush();
     expect(view.container.textContent).toContain("Menus List Route");
+    const toasters = view.container.querySelectorAll("[data-admin-toaster='true']");
+    expect(toasters).toHaveLength(1);
+    expect(toasters[0]?.getAttribute("data-container-aria-label")).toBe(
+      "Admin notifications"
+    );
+    expect(toasters[0]?.getAttribute("data-close-button")).toBe("true");
+    expect(toasters[0]?.getAttribute("data-duration")).toBe("4000");
   } finally {
     view.cleanup();
   }

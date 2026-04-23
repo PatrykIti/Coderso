@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Settings + Admin/API + Runtime QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-204
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

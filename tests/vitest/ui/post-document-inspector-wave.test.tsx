@@ -433,3 +433,58 @@ test("DocumentInspector renders timestamp fallbacks and disables danger action w
     view.cleanup();
   }
 });
+
+test("DocumentInspector sanitizes taxonomy load errors and keeps retry available", () => {
+  const onTaxonomyRetry = vi.fn();
+  const view = mount(
+    <DocumentInspector
+      title="Taxonomy fallback"
+      status="draft"
+      slug="taxonomy-fallback"
+      excerpt=""
+      featuredImage=""
+      tagsInput=""
+      categoryId=""
+      seo={{
+        title: "",
+        description: "",
+        canonicalUrl: "",
+        robots: "",
+      }}
+      taxonomySummary={{ categoryName: null, tagCount: 0 }}
+      categoryOptions={[]}
+      taxonomyError='Failed query: select "content_terms"."id" from "content_terms"'
+      onTaxonomyRetry={onTaxonomyRetry}
+      updatedAt="2026-03-13T09:00:00.000Z"
+      scheduledAt={null}
+      publishedAt={null}
+      onTitleChange={() => undefined}
+      onSlugChange={() => undefined}
+      onExcerptChange={() => undefined}
+      onFeaturedImageChange={() => undefined}
+      onTagsInputChange={() => undefined}
+      onCategoryIdChange={() => undefined}
+      onSeoChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Could not load categories.");
+    expect(view.container.textContent).not.toContain("Failed query");
+    expect(view.container.textContent).not.toContain("select");
+    expect(view.container.textContent).toContain("No category");
+
+    const retryButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Try again")
+    );
+    expect(retryButton).toBeInstanceOf(HTMLButtonElement);
+
+    React.act(() => {
+      (retryButton as HTMLButtonElement).click();
+    });
+
+    expect(onTaxonomyRetry).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});

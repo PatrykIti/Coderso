@@ -22,6 +22,19 @@ test("searchPostBlockCatalog filters by category", () => {
   expect(mediaResults.every((item) => item.category === "media")).toBe(true);
 });
 
+test("searchPostBlockCatalog does not match keywords outside the scoped category", () => {
+  const mediaCtaResults = searchPostBlockCatalog("cta", { category: "media" });
+  const interactiveCtaResults = searchPostBlockCatalog("cta", {
+    category: "interactive",
+  });
+  const mediaVideoResults = searchPostBlockCatalog("video", { category: "media" });
+
+  expect(mediaCtaResults).toHaveLength(0);
+  expect(interactiveCtaResults.map((item) => item.type)).toContain("button");
+  expect(mediaVideoResults.every((item) => item.category === "media")).toBe(true);
+  expect(mediaVideoResults.map((item) => item.type)).toContain("embed");
+});
+
 test("groupPostBlockCatalogByCategory keeps deterministic category order", () => {
   const groups = groupPostBlockCatalogByCategory(searchPostBlockCatalog(""));
   const categories = groups.map((group) => group.category);

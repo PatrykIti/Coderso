@@ -3,7 +3,13 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import type { PostRevision } from "@/services/postsClient";
 import { postRichTextToPlainText } from "../../../../services/posts/editor/postRichTextSerializer";
 
@@ -56,9 +62,23 @@ const collectPreviewText = (value: unknown): string => {
     .join(" ");
 };
 
-const resolveRevisionPreview = (revision: PostRevision) => {
+const describeRevisionFallback = (revision: PostRevision, author: string) => {
+  const blockCount = countBlocks(revision);
+  const blockLabel = blockCount === 1 ? "block" : "blocks";
+  const document = revision.data?.document;
+  const shape =
+    document && typeof document === "object" && !Array.isArray(document)
+      ? `Snapshot contains ${blockCount} ${blockLabel} without extractable text.`
+      : "No document snapshot is stored for this revision.";
+
+  return `Version ${revision.version} by ${author} on ${formatTimestamp(
+    revision.createdAt
+  )}. ${shape}`;
+};
+
+const resolveRevisionPreview = (revision: PostRevision, author: string) => {
   const text = collectPreviewText(revision.data?.document).replace(/\s+/g, " ").trim();
-  if (text.length === 0) return "No preview available for this revision.";
+  if (text.length === 0) return describeRevisionFallback(revision, author);
   if (text.length <= 180) return text;
   return `${text.slice(0, 177)}...`;
 };
@@ -94,9 +114,9 @@ export function PostRevisionDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Post revisions</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Restore an earlier snapshot of this post.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close revisions">
@@ -140,7 +160,7 @@ export function PostRevisionDrawer({
                     </div>
                     {previewRevisionId === revision.id ? (
                       <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-                        {resolveRevisionPreview(revision)}
+                        {resolveRevisionPreview(revision, author)}
                       </div>
                     ) : null}
                     <div className="flex justify-end gap-2">

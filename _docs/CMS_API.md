@@ -855,6 +855,15 @@ Autosave response (summary):
 }
 ```
 
+Autosave unexpected failure response:
+
+- unexpected persistence/transport failures are mapped at the route boundary to
+  `post_autosave_failed` with message `Could not autosave post.`;
+- raw driver errors such as `CONNECTION_CLOSED`, SQL text, database hosts, or
+  stack traces must not be returned to the admin browser;
+- the editor must keep the autosave failure truthful and dirty until a later
+  save succeeds.
+
 Preview response:
 
 ```json
@@ -1868,6 +1877,14 @@ Taxonomy overview response (example):
 }
 ```
 
+Taxonomy overview error contract:
+
+- known taxonomy/domain errors keep their machine-readable codes;
+- unexpected backend/database failures from `/content-types/:id/terms` map to
+  `taxonomy_unexpected_error` with message `Could not load taxonomy terms.`;
+- the Posts inspector renders safe category-load copy plus retry and must not
+  display raw SQL/query text.
+
 ---
 
 ## Search
@@ -2418,6 +2435,16 @@ Response:
 - Official runtime readiness wymaga seeded DB corpus; brak gotowosci nie fallbackuje do filesystem.
 - Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
 - Walidacja: `assistant.defaultMode=llm-guide` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
+
+Settings route error contract:
+
+- known settings validation errors keep stable codes such as
+  `settings_key_invalid`, `settings_value_invalid`, and `design_tokens_invalid`;
+- unexpected backend/database failures map to `settings_error` with message
+  `Could not complete settings request.`;
+- raw SQL/query text, driver messages, database hosts, stack traces, tokens, or
+  secrets must not be returned to the admin browser for `GET /settings`,
+  `GET /settings/:key`, storage/security settings reads, or settings writes.
 
 ---
 

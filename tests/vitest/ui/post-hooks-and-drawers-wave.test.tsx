@@ -437,6 +437,7 @@ test("revision drawers render states and gate restore/discard with confirmation"
 
   expect(emptyHtml).toContain("Loading revisions...");
   expect(emptyHtml).toContain("Failed");
+  expect(emptyHtml).toContain("Restore an earlier snapshot of this post.");
 
   const view = mount(
     <>
@@ -522,5 +523,58 @@ test("revision drawers render states and gate restore/discard with confirmation"
   } finally {
     view.cleanup();
     Reflect.deleteProperty(window, "confirm");
+  }
+});
+
+test("PostRevisionDrawer renders useful fallback metadata for empty previews", async () => {
+  const { PostRevisionDrawer } = await import(
+    "../../../core/admin/ui/posts/editor/PostRevisionDrawer"
+  );
+
+  const view = mount(
+    <PostRevisionDrawer
+      open
+      onOpenChange={() => undefined}
+      revisions={[
+        {
+          id: "post-rev-empty",
+          version: 7,
+          createdAt: "2026-03-06T14:00:00.000Z",
+          createdBy: { name: "", email: "editor@example.com" },
+          data: {
+            document: {
+              blocks: [{ id: "media-block", type: "image", attrs: { mediaId: "media-1" } }],
+            },
+          },
+        } as never,
+      ]}
+      isLoading={false}
+      error={null}
+      restoringId={null}
+      onRestore={() => undefined}
+    />
+  );
+
+  try {
+    const previewButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Preview"
+    );
+    if (!(previewButton instanceof HTMLButtonElement)) {
+      throw new Error("missing preview button");
+    }
+
+    act(() => {
+      previewButton.click();
+    });
+
+    expect(view.container.textContent).not.toContain(
+      "No preview available for this revision."
+    );
+    expect(view.container.textContent).toContain("Version 7 by editor@example.com");
+    expect(view.container.textContent).toContain(
+      "Snapshot contains 1 block without extractable text."
+    );
+  } finally {
+    view.cleanup();
   }
 });

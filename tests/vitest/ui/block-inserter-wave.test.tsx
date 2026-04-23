@@ -122,7 +122,7 @@ test("BlockInserter filters by category and search, renders most-used, and respe
     });
     expect(onInsertBlock).not.toHaveBeenCalled();
 
-    const input = view.container.querySelector('input[aria-label="Search blocks"]');
+    const input = view.container.querySelector('input[aria-label="Search Media blocks"]');
     setInputValue(input, "zzz");
     expect(view.container.textContent).toContain("No block matches this search.");
   } finally {
@@ -226,7 +226,7 @@ test("BlockInserter wraps keyboard navigation, resets active item after filters,
 
     expect(onInsertBlock).toHaveBeenLastCalledWith("writing-canvas");
 
-    const input = view.container.querySelector('input[aria-label="Search blocks"]');
+    const input = view.container.querySelector('input[aria-label="Search Text blocks"]');
     setInputValue(input, "zzz");
 
     act(() => {

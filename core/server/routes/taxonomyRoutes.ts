@@ -31,7 +31,11 @@ export type Router = {
   delete: (path: string, ...handlers: TaxonomyRouteHandler[]) => void;
 };
 
-const mapTaxonomyError = (error: unknown) => {
+const TAXONOMY_UNEXPECTED_MESSAGE = "Could not load taxonomy terms.";
+
+export const mapTaxonomyDomainError = (error: unknown) => {
+  if (error instanceof ApiError) return error;
+
   if (
     error &&
     typeof error === "object" &&
@@ -109,16 +113,15 @@ const mapTaxonomyError = (error: unknown) => {
   }
 };
 
+export const mapTaxonomyRouteError = (error: unknown) =>
+  mapTaxonomyDomainError(error) ??
+  new ApiError("taxonomy_unexpected_error", TAXONOMY_UNEXPECTED_MESSAGE, 500);
+
 const withTaxonomyErrors = async <T>(fn: () => Promise<T>) => {
   try {
     return await fn();
   } catch (error) {
-    const mapped = mapTaxonomyError(error);
-    if (mapped) throw mapped;
-    if (process.env.NODE_ENV !== "production" && error instanceof Error) {
-      throw new ApiError("taxonomy_unexpected_error", error.message, 500);
-    }
-    throw error;
+    throw mapTaxonomyRouteError(error);
   }
 };
 

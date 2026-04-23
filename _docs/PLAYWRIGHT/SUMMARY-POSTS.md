@@ -318,3 +318,38 @@ error: write CONNECTION_CLOSED dpg-d5r7o8e3jp1c73fhuqf0-a.frankfurt-postgres.ren
       at node:net:1468:20
 POST - http://localhost:3000/admin/api/posts/19e39b8f-33f6-48b2-89ed-febe408bc383/autosave failed
 ```
+
+---
+
+## Domknięcie TASK-204 (2026-04-23)
+
+Zakres TASK-204 domknął dodatkowe znaleziska z ręcznej re-weryfikacji bez
+rozszerzania Posts poza istniejące kontrakty. Nie wykonano nowego manualnego
+replaya Playwright w tej zmianie; poniższy status bazuje na zmianach kodu,
+route-mappingach i targetowanych testach Vitest/Bun.
+
+| ID | Status po TASK-204 | Dowód / właściciel |
+|---|---|---|
+| BUG-1 | Bez zmian, nadal regression-smoke po TASK-195 | `PostsListPage` / `PostsTable`; brak nowego kodu w TASK-204 |
+| BUG-2 | Bez zmian, nadal regression-smoke po TASK-195 | Posts list search placeholder; brak nowego kodu w TASK-204 |
+| BUG-3 | Bez zmian, nadal regression-smoke po TASK-195 | `PostEditorTopBar` / shell action labels |
+| BUG-4 | Bez zmian, nadal regression-smoke po TASK-195 | `DocumentInspector` category dropdown i `MediaPicker`; taxonomy failure osobno w BUG-7 |
+| BUG-5 | Naprawione w shared admin toaster contract | `AdminApp` montuje `Toaster` z `containerAriaLabel`, close button i bounded duration; test `adminApp.test.tsx` |
+| UX-1 | Naprawione | `PostRevisionDrawer` pokazuje fallback metadata dla krótkich/pustych rewizji zamiast `No preview available...`; test `post-hooks-and-drawers-wave.test.tsx` |
+| UX-2 | Bez zmian, regression-smoke po TASK-195 | focus/details discoverability właścicielem pozostaje editor shell/layout |
+| UX-3 | Bez zmian, regression-smoke po TASK-195 | collapsed SEO summary właścicielem pozostaje `DocumentInspector` |
+| UX-4 | Jawnie nadal otwarte jako capability gap | Nie dodano label-only bloków. Pełna naprawa wymaga ruchu razem przez `blockCatalog.ts`, `postBlockDocument.ts`, `postBlockNormalizer.ts`, `postBlockRuntimeMapper.ts`, `postBlockRuntimeRenderer.tsx`, canvas/inspector/media picker i docs |
+| UX-5 | Bez zmian, regression-smoke po TASK-195 | slug route context bez zmiany stored slug values |
+| UX-6 | Bez zmian, nadal zweryfikowane po TASK-195 | typography helper copy |
+| UX-7 | Naprawione | `BlockInserter` ma category-scoped placeholder i aria-label; testy `post-block-inserter-wave.test.tsx`, `block-inserter-wave.test.tsx`, `post-block-catalog-search.test.ts` |
+| BUG-6 | Naprawione | `PostRevisionDrawer` używa `SheetDescription` dla opisu drawera; test `post-hooks-and-drawers-wave.test.tsx` |
+| BUG-7 | Naprawione na granicy API/UI | `taxonomyRoutes` mapuje unexpected errors do `taxonomy_unexpected_error`, a Posts inspector pokazuje `Could not load categories.` + retry; testy `taxonomy.test.ts`, `post-document-inspector-wave.test.tsx`, `post-block-editor-shell-wave.test.tsx` |
+| Realtime console: `site.adminPath` settings read | Naprawione na browser-facing API boundary | `settingsRoutes` mapuje unexpected settings errors do `settings_error` / `Could not complete settings request.`; test `settings.test.ts`. Źródłowy Render/Postgres outage pozostaje runtime/environment symptomem, nie udaje sukcesu |
+| Realtime console: posts autosave `CONNECTION_CLOSED` | Naprawione na autosave route boundary | `postsRoutes` mapuje unexpected autosave failures do `post_autosave_failed` / `Could not autosave post.`; test `postsRoutes.test.ts`. UI nadal pokazuje truthful autosave failure state |
+
+Walidacja wykonana dla TASK-204:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/block-inserter-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-inserter-sidebar.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts`
+- `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/taxonomy.test.ts tests/integration/routes/settings.test.ts tests/integration/routes/postsRoutes.test.ts`

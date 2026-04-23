@@ -170,6 +170,9 @@ const postShellState = vi.hoisted(() => ({
       if (key === "loading") this.editor.loading = false;
       if (key === "deletingPost") this.editor.deletingPost = false;
     }
+    this.editor.post = {
+      updatedAt: "2026-03-08T10:00:00.000Z",
+    };
     this.editor.moveToTrash.mockResolvedValue(true);
     this.editor.saveDraft.mockResolvedValue(undefined);
     this.editor.preview.mockResolvedValue(undefined);
@@ -189,12 +192,51 @@ const postShellState = vi.hoisted(() => ({
     this.preferences.setPreferences.mockReset();
     this.preferences.resetPreferences.mockReset();
     toastState.success.mockReset();
+    taxonomyClientState.getTaxonomyOverview.mockReset();
+    taxonomyClientState.getTaxonomyOverview.mockResolvedValue(
+      taxonomyClientState.overview
+    );
   },
 }));
 
 const toastState = vi.hoisted(() => ({
   success: vi.fn(),
 }));
+
+const taxonomyClientState = vi.hoisted(() => {
+  const overview = {
+    taxonomies: {
+      category: {
+        id: "taxonomy-category",
+        typeId: "post",
+        name: "Categories",
+        slug: "category",
+        kind: "category",
+        createdAt: "",
+        updatedAt: "",
+      },
+      tag: null,
+    },
+    terms: {
+      categories: [
+        {
+          id: "cat-1",
+          taxonomyId: "taxonomy-category",
+          name: "News",
+          slug: "news",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      tags: [],
+    },
+  };
+
+  return {
+    overview,
+    getTaxonomyOverview: vi.fn(async () => overview),
+  };
+});
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -215,18 +257,7 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
 }));
 
 vi.mock("@/services/taxonomyClient", () => ({
-  getTaxonomyOverview: vi.fn(async () => ({
-    taxonomies: {
-      category: { id: "taxonomy-category", typeId: "post", name: "Categories", slug: "category", kind: "category", createdAt: "", updatedAt: "" },
-      tag: null,
-    },
-    terms: {
-      categories: [
-        { id: "cat-1", taxonomyId: "taxonomy-category", name: "News", slug: "news", createdAt: "", updatedAt: "" },
-      ],
-      tags: [],
-    },
-  })),
+  getTaxonomyOverview: taxonomyClientState.getTaxonomyOverview,
 }));
 
 vi.mock("@/services/siteSettingsClient", () => ({
@@ -292,10 +323,20 @@ vi.mock("../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar", () =
   PostDetailsSidebar: ({
     document,
   }: {
-    document?: { onMoveToTrash?: () => void };
+    document?: {
+      onMoveToTrash?: () => void;
+      onTaxonomyRetry?: () => void;
+      taxonomyError?: string | null;
+    };
   }) => (
     <div>
       <div>post-details-sidebar</div>
+      <div>{document?.taxonomyError ?? ""}</div>
+      {document?.onTaxonomyRetry ? (
+        <button type="button" onClick={() => document.onTaxonomyRetry?.()}>
+          retry-taxonomy
+        </button>
+      ) : null}
       <button type="button" onClick={() => document?.onMoveToTrash?.()}>
         move-to-trash
       </button>
@@ -635,6 +676,57 @@ test("PostBlockEditorShell retries autosave and emits publish success toast", as
     expect(toastState.success).toHaveBeenCalledWith("Post published");
   } finally {
     view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell hides raw taxonomy errors and retries overview loading", async () => {
+  const { ApiClientError } = await import("../../../core/admin/services/apiClient");
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.editor.post = {
+    ...postShellState.editor.post,
+    typeId: "post",
+  } as never;
+  taxonomyClientState.getTaxonomyOverview
+    .mockRejectedValueOnce(
+      new ApiClientError(
+        "taxonomy_unexpected_error",
+        'Failed query: select "content_terms"."id" from "content_terms"',
+        500
+      )
+    )
+    .mockResolvedValueOnce(taxonomyClientState.overview);
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Could not load categories.");
+    expect(view.container.textContent).not.toContain("Failed query");
+    expect(view.container.textContent).not.toContain("content_terms");
+
+    const retryButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "retry-taxonomy"
+    );
+    expect(retryButton).toBeInstanceOf(HTMLButtonElement);
+
+    await act(async () => {
+      (retryButton as HTMLButtonElement).click();
+      await flushMicrotasks();
+    });
+
+    expect(taxonomyClientState.getTaxonomyOverview).toHaveBeenCalledTimes(2);
+    expect(view.container.textContent).not.toContain("Failed query");
+  } finally {
+    view.cleanup();
+    postShellState.editor.post = {
+      updatedAt: "2026-03-08T10:00:00.000Z",
+    } as never;
   }
 });
 

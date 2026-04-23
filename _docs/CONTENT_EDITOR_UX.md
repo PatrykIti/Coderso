@@ -54,14 +54,20 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   - `Details` dla prawego inspectora posta/bloku.
 - `Details` ma stan pressed/expanded zgodny z prawym panelem i nie dzieli
   odpowiedzialnosci z inserterem.
-- Publish / Update daje jawny success feedback przez shared admin toast.
+- Publish / Update daje jawny success feedback przez shared admin toast z
+  dostepnym `Admin notifications` live region.
 - Gdy autosave nie powiedzie sie, editor pokazuje `Autosave paused` z akcja
-  `Retry now`; draft pozostaje dirty do skutecznego zapisu.
-- Revisions drawer ma bounded read-only preview przed restore.
+  `Retry now`; route boundary zwraca bounded `post_autosave_failed` copy, a
+  draft pozostaje dirty do skutecznego zapisu.
+- Revisions drawer ma opis a11y i bounded read-only preview przed restore; dla
+  pustych/krotkich rewizji pokazuje metadata snapshotu zamiast negatywnego
+  empty state.
 
 ## Post inspector
 
 - Kategorie sa wybierane z listy kategorii, bez wpisywania surowego term ID.
+  Jesli taxonomy overview nie zaladuje sie, inspector pokazuje friendly error i
+  retry zamiast surowego SQL/query output.
 - Featured image reuse’uje `MediaPicker` i ogranicza wybor do `image/*`.
 - Sekcja `Advanced` pokazuje badge `SEO {done}/3` nawet w stanie zwinietym.
 - Pole slug pokazuje:
@@ -73,6 +79,9 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
 
 - Typography helper copy nie sugeruje nowego modelu stanu; wyjasnia obecny
   kontrakt toolbaru i rozroznia stan disabled/unavailable.
+- Block inserter zawęża search do aktywnej kategorii i zmienia placeholder /
+  aria-label na `Search Text blocks...`, `Search Media blocks...` albo
+  `Search Interactive blocks...`.
 - W inserterze:
   - `Embed` nalezy do kategorii `Media`,
   - `Separator` nalezy do kategorii `Text`,
