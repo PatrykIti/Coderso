@@ -307,7 +307,7 @@ test("PageEditor scrolls to and highlights a newly inserted block", async () => 
     expect(view.container.textContent).toContain("settings:");
 
     await act(async () => {
-      vi.advanceTimersByTime(0);
+      vi.runOnlyPendingTimers();
       await Promise.resolve();
     });
 
