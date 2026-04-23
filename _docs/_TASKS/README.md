@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 65 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1004 tasks
 
@@ -38,6 +38,23 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-201 | Media Library QA Recovery and Asset Management UX | High | Large | Media QA family from `_docs/PLAYWRIGHT/SUMMARY-MEDIA.md`: metadata confidence, dimensions, empty states, usage navigation, bulk actions, upload clarity, and closure |
+| TASK-201-01 | Metadata Save Feedback and Asset Identity | High | Large | Business area: visible autosave/copy feedback, readable asset names, and missing-alt accessibility signals |
+| TASK-201-01-01 | Metadata Autosave Status and Copy URL Feedback | High | Medium | Technical leaf: blur autosave saving/saved/failed states plus copied/failed feedback |
+| TASK-201-01-02 | Human Readable Naming and Missing Alt Signals | High | Medium | Technical leaf: title/original-name display precedence and image missing-alt warnings |
+| TASK-201-02 | Image Dimensions and File Information | High | Large | Business area: persist and render image dimensions through the media service contract |
+| TASK-201-02-01 | Image Dimension Extraction and Persistence | High | Medium | Technical leaf: upload-time dimension parser and persisted width/height |
+| TASK-201-02-02 | Legacy Dimension Backfill and Details Rendering | Medium | Medium | Technical leaf: bounded backfill/recovery plus truthful details rendering |
+| TASK-201-03 | Filter Empty States and Load More Truth | High | Medium | Business area: empty filter/search states and real load-more/loaded-count behavior |
+| TASK-201-03-01 | Empty State Copy and Upload Recovery CTA | Medium | Small | Technical leaf: no-assets, no-filter-results, and no-search-results states |
+| TASK-201-03-02 | Pagination Has-More Contract and Loaded Counts | Medium | Medium | Technical leaf: hide dead load-more controls and add bounded pagination metadata if needed |
+| TASK-201-04 | Usage Navigation and Reference Contracts | High | Large | Business area: replace hard-coded usage examples with bounded references and canonical navigation |
+| TASK-201-04-01 | Media Usage Read Model | High | Medium | Technical leaf: internal usage summaries across current page/entry/post/commerce owners |
+| TASK-201-04-02 | Usage Entry Navigation and Affordance Fallback | Medium | Medium | Technical leaf: AdminLink destinations for resolvable targets and non-clickable fallback state |
+| TASK-201-05 | Bulk Asset Actions and Upload Surface Clarity | Medium | Large | Business area: library multi-select, safe bulk actions, clearer upload zone, and preference placement |
+| TASK-201-05-01 | Multi Select Bulk Delete and Download | Medium | Medium | Technical leaf: visible-scope selection, confirmed bulk delete, and safe download behavior |
+| TASK-201-05-02 | Upload Zone Separation and Open Details Preference Placement | Medium | Medium | Technical leaf: separate upload/grid surfaces and preserve `media.openAfterUpload` ownership |
+| TASK-201-06 | QA Docs and Closure | Medium | Medium | Final validation, source Playwright report closure, docs, changelog, and board sync |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
