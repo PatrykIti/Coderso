@@ -64,6 +64,8 @@ Direction:
 - active type stays selected after grouping/filtering,
 - hide-empty toggle does not hide active type unexpectedly,
 - create collection action remains accessible.
+- If an `EntryList` suite mocks `EntryTypeSidebar`, add or update direct
+  `EntryTypeSidebar` owner coverage and list it in final TASK-203 validation.
 
 ## Documentation Updates Required
 

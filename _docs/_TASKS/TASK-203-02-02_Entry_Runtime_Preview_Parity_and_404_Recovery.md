@@ -61,6 +61,9 @@ No child task files.
   - preview action opens shared dialog,
   - preview API failure renders token-safe recovery copy,
   - iframe/loopback failure copy remains stable.
+  - `EntryEditor` tests that mock `RuntimePreviewDialog` prove only that the
+    dialog is opened; token-safe copy and iframe failure behavior must be proven
+    against the real `RuntimePreviewDialog` owner suite.
 - Bun:
   - content preview route is registered,
   - preview URL resolver follows configured/public fallback rules,

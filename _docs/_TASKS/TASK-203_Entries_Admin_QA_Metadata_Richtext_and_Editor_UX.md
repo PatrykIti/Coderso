@@ -45,6 +45,9 @@ Execution contract for this family:
 - do not duplicate code paths that already have owners; reuse current
   `EntryEditor`, `FieldRenderer`, `EntryMetadataPanel`, `entriesClient`,
   `contentEntryRoutes`, `entryService`, `previewUrls`, and public runtime seams;
+- keep every fix on the checked-in owner that already carries the responsibility;
+  do not add a new helper, component, route, cache path, or adapter until the leaf
+  records why the current owner cannot keep the contract readable;
 - every leaf must start from the current checked-in owner code, not from stale
   report assumptions; if the code moved, update the owner notes in that leaf
   before patching implementation;
@@ -74,6 +77,11 @@ Execution contract for this family:
   one-off replacements;
 - keep implementation tied to the code that exists in this branch and avoid
   speculative redesigns outside the Playwright findings.
+- mocked shell tests may prove wiring only. A leaf that changes
+  `FieldRenderer`, `EntryMetadataPanel`, `RuntimePreviewDialog`,
+  `EntryTypeSidebar`, route/service behavior, or cache/client behavior must add
+  or update direct owner coverage for that module; closure must not accept
+  assertions hidden behind mocks as the only proof of the real contract.
 
 ## Sub-Tasks
 
@@ -204,6 +212,24 @@ Reuse-first rules:
 3. Replace native confirms and wire duplicate/danger-zone actions.
 4. Tighten sidebar, SEO, taxonomy, and help guidance.
 5. Replay report, sync docs, board, changelog, and closure notes.
+
+Dependency notes:
+
+- `TASK-203-01-01` must land before UI feedback relies on bounded metadata
+  errors, because it owns route/service error mapping and client cache semantics.
+- `TASK-203-01-02` must land before delete/duplicate leaves depend on shared
+  success/error feedback.
+- `TASK-203-01-03` must build on the dirty-state model from `TASK-203-01-02`
+  instead of adding a separate guard.
+- `TASK-203-02-02` cannot close the preview 404 from the report without
+  `publicSite`/runtime proof or an exact follow-up owner.
+- `TASK-203-03-02` must reuse the existing
+  `EntryTable` -> `EntryList` -> `entriesClient` -> `contentEntryRoutes` ->
+  `entryService` path; a product decision to remove Duplicate must be a separate
+  task before implementation.
+- `TASK-203-04-02` must reuse `site.contentRoutes`, `siteSettingsClient`,
+  `AdminLink`, and `adminPaths` for SEO/taxonomy navigation instead of adding
+  Entries-only URL or route helpers.
 
 ## Testing Requirements
 

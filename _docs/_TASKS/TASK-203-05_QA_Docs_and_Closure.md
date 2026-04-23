@@ -34,6 +34,11 @@ No child task files.
 - Verify any new helper/component introduced by a leaf has an explicit owner and
   removes real complexity instead of duplicating an existing Entries, preview,
   route, validation, cache, or navigation contract.
+- Verify mocked shell tests were not used as the only proof for real owner
+  behavior. Shell mocks can prove `EntryEditor` orchestration, but direct owner
+  tests must prove changed behavior in `FieldRenderer`, `EntryMetadataPanel`,
+  `RuntimePreviewDialog`, `EntryTypeSidebar`, `entriesClient`,
+  `contentEntryRoutes`, and `entryService`.
 - Verify each leaf documents unresolved ownership boundaries before code merges;
   closure must not accept "implicit" ownership for route, service, UI feedback,
   cache, navigation, rich text, preview, SEO, taxonomy, or delete/duplicate
@@ -93,10 +98,17 @@ Out of scope:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run vitest run --config vitest.config.ts tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-editor-shell-wave.test.tsx tests/vitest/ui/entry-metadata.test.tsx tests/vitest/ui/content-entry-editor.test.tsx tests/vitest/ui/entry-field-relation.test.tsx tests/vitest/ui/content-entries.test.tsx tests/vitest/ui/entry-bulk-actions.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/contentTypesClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/server/previewUrls.test.ts`
+- `bun run test:vitest tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-editor-shell-wave.test.tsx tests/vitest/ui/entry-metadata.test.tsx tests/vitest/ui/content-entry-editor.test.tsx tests/vitest/ui/entry-field-relation.test.tsx tests/vitest/ui/content-entries.test.tsx tests/vitest/ui/entry-bulk-actions.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/contentTypesClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/server/previewUrls.test.ts`
+- Run Vitest through the shipped repo script above. Do not use
+  `bun run vitest run` as the closure command unless the repo script is broken
+  and the deviation is recorded with the exact failure.
 - If `TASK-203-02-01` creates `tests/vitest/ui/entry-richtext-field.test.tsx`,
   append that file to the Vitest command above; otherwise rich text assertions
   must be present in `tests/vitest/ui/entry-field-relation.test.tsx`.
+- The final Vitest set must include direct owner assertions for any owner touched
+  by the leaves. If the existing listed suite mocks the owner under review, add
+  or update a direct owner suite and append it to the command before closing the
+  family.
 - If route/service/runtime owners changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
   - the route suite must include the metadata publish permission case if

@@ -90,6 +90,9 @@ Direction:
 - disabled taxonomy copy includes Engine settings link for the current content
   type and the test asserts the canonical href,
 - help can collapse and remains accessible.
+- `EntryEditor` shell tests that mock `EntryMetadataPanel` prove only prop
+  wiring; SEO URL, taxonomy link, and help-collapse behavior must be asserted in
+  a direct `EntryMetadataPanel` owner suite.
 
 ## Documentation Updates Required
 

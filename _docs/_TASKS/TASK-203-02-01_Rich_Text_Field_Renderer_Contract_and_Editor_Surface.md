@@ -90,6 +90,8 @@ Direction:
 - rich text coverage must live in either `tests/vitest/ui/entry-field-relation.test.tsx`
   or `tests/vitest/ui/entry-richtext-field.test.tsx`; whichever file contains
   the assertions must be listed in the TASK-203 final validation command,
+- `EntryEditor` shell tests that mock `FieldRenderer` are orchestration coverage
+  only and cannot be the sole proof for this leaf,
 - reused Posts rich text pieces keep their existing owner tests green when
   touched,
 - text/number/boolean/select/media/relation branches remain stable.
