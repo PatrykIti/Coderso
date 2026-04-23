@@ -40,9 +40,11 @@ No child task files.
   normalization parity if reused
 - `core/services/posts/editor/postRichTextSanitizer.ts` for sanitizer parity if
   reused
-- `tests/vitest/ui/entry-field-relation.test.tsx`
+- `tests/vitest/ui/entry-field-relation.test.tsx` for existing field-renderer
+  regression coverage
 - `tests/vitest/ui/content-entry-editor.test.tsx`
-- new or extended `tests/vitest/ui/entry-richtext-field.test.tsx`
+- optional dedicated `tests/vitest/ui/entry-richtext-field.test.tsx` only if
+  rich text assertions would make the existing owner suite too broad
 
 ## Implementation Sketch
 
@@ -61,6 +63,12 @@ Direction:
 - keep normalizers in an Entries/content-field owner,
 - do not create a second rich text grammar, sanitizer, or toolbar command model
   when the current Posts rich text contracts can be reused safely,
+- prefer extending the current `FieldRenderer`/Entries field owner seams before
+  adding a new component or helper; add a new owner only when the current module
+  cannot keep the contract readable without import-time coupling,
+- if the owner boundary between Entries field logic and reusable Posts rich text
+  pieces is unclear, document the responsibility decision in this leaf before
+  changing code,
 - support legacy strings,
 - do not import `db/client`, server routes, settings services, or Posts runtime
   renderers at module import time.
@@ -79,6 +87,9 @@ Direction:
 - rich text field does not render as textarea-only,
 - legacy string value displays and emits safely,
 - structured editor changes call `onChange` with expected serialized value,
+- rich text coverage must live in either `tests/vitest/ui/entry-field-relation.test.tsx`
+  or `tests/vitest/ui/entry-richtext-field.test.tsx`; whichever file contains
+  the assertions must be listed in the TASK-203 final validation command,
 - reused Posts rich text pieces keep their existing owner tests green when
   touched,
 - text/number/boolean/select/media/relation branches remain stable.

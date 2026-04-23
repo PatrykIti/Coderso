@@ -29,6 +29,9 @@ No child task files.
   tokens.
 - Verify each closed finding was repaired through its existing owner seam, not a
   duplicate route/component/helper introduced only for this wave.
+- Verify any new helper/component introduced by a leaf has an explicit owner and
+  removes real complexity instead of duplicating an existing Entries, preview,
+  route, validation, cache, or navigation contract.
 - Create/link follow-up tasks for still-reproducible preview-host/runtime issues
   or approved out-of-scope capability gaps.
 
@@ -68,6 +71,9 @@ Out of scope:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run vitest run --config vitest.config.ts tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-editor-shell-wave.test.tsx tests/vitest/ui/entry-metadata.test.tsx tests/vitest/ui/content-entry-editor.test.tsx tests/vitest/ui/entry-field-relation.test.tsx tests/vitest/ui/content-entries.test.tsx tests/vitest/ui/entry-bulk-actions.test.tsx tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/contentTypesClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/server/previewUrls.test.ts`
+- If `TASK-203-02-01` creates `tests/vitest/ui/entry-richtext-field.test.tsx`,
+  append that file to the Vitest command above; otherwise rich text assertions
+  must be present in `tests/vitest/ui/entry-field-relation.test.tsx`.
 - If route/service/runtime owners changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
 - If preview runtime behavior changed or the report's content-preview 404 is

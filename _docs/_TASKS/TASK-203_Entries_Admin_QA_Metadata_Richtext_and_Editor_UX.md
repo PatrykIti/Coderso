@@ -46,6 +46,10 @@ Execution contract for this family:
 - every fix must name the owner responsible for the behavior it changes; if an
   owner boundary is unclear during implementation, document the decision in the
   leaf before patching code;
+- new helpers/components are allowed only when the current owner seam cannot keep
+  the existing contract readable; the leaf must name the owner, responsibility,
+  and why reuse through the current Entries/preview/route/cache/navigation path is
+  not enough;
 - use current repo helpers for navigation, cache, validation, CSRF, preview URL
   resolution, rich text normalization, and app dialogs instead of inventing
   one-off replacements;
