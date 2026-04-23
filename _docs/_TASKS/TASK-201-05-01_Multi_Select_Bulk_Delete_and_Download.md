@@ -27,6 +27,9 @@ No child task files.
 - `core/admin/services/mediaClient.ts`
 - add `core/admin/ui/media/MediaBulkActionsBar.tsx` if it keeps the library
   shell smaller
+- no backend archive/download route by default; add one only if the existing
+  authorized media URLs cannot safely satisfy the selected-visible download
+  contract and the new route is covered by a security contract and tests
 - `tests/vitest/ui/media-library.test.tsx`
 - `tests/vitest/ui/media-card.test.tsx`
 - `tests/vitest/ui/media-picker.test.tsx`
@@ -44,8 +47,11 @@ No child task files.
   - bulk delete requires confirmation,
   - delete applies only to selected visible IDs,
   - partial failures are visible,
-  - download URLs must be current media URLs and should not expose backend-only
-    credentials.
+  - bulk download applies only to selected visible IDs,
+  - download URLs must be current authorized media URLs and should not expose
+    backend-only credentials, signed secrets, or storage keys,
+  - internal delivery mode must remain protected; the browser action should use
+    the same authorized `/media/*` contract the user can already access.
 
 ## Testing Requirements
 
@@ -55,6 +61,9 @@ No child task files.
   - selected count,
   - bulk delete confirmation/cancel/apply,
   - partial delete failure,
+  - bulk download creates safe link/open actions for selected visible assets,
+  - bulk download ignores unavailable/empty URLs and reports a user-safe partial
+    failure instead of silently doing nothing,
   - selected item details click behavior remains coherent,
   - `MediaPicker` still supports its current `selectedIds` flow.
 
@@ -67,4 +76,5 @@ No child task files.
 
 1. Multi-select is discoverable and keyboard-accessible.
 2. Bulk delete is confirmed and failure-aware.
-3. Bulk download does not require a new unsafe backend path.
+3. Bulk download operates on selected visible assets through the existing
+   authorized URL contract and does not require a new unsafe backend path.

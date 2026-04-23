@@ -64,13 +64,18 @@ model:
 - Pages:
   - scan `pages.currentData` and `pages.publishedData` for known widget/page
     media references,
+  - include page/layout media references that the current code stores as
+    `background.media.assetId` or equivalent widget/module `assetId` fields,
   - return page title, id/slug, context such as draft/published data, and a
     resolvable admin destination when available.
 - Content entries:
   - scan `contentEntries.data`,
   - include the owning content type slug/id needed by admin entry routes,
   - handle single media fields and multi-media arrays that match the existing
-    content field contract from `_docs/MEDIA_SPEC.md`.
+    content field contract from `_docs/MEDIA_SPEC.md`,
+  - handle current media candidate object shapes used by existing resolvers and
+    editors, including `{ id: "<media-id>" }`, `{ assetId: "<media-id>" }`, and
+    URL objects that also carry an exact media id.
 - Posts:
   - include direct `posts.featuredMediaId`,
   - scan post block documents for `attrs.mediaId`,
@@ -85,11 +90,23 @@ Avoid broad substring-only matches. Normalize exact ids from known shapes first;
 if a fallback text walk is needed, it must be bounded, tested against partial
 string false positives, and documented as compatibility support.
 
+Owner note:
+
+- `mediaUsageService` owns discovery and normalization of supported persisted
+  shapes. UI drawers, search helpers, and admin navigation must consume its
+  summaries instead of re-scanning JSON or duplicating reference parsing.
+- If a persisted owner stores a media reference shape that is not covered here,
+  document the unsupported shape in this leaf or the closure report before
+  adding a new scanner path.
+
 ## Testing Requirements
 
 - Bun:
   - finds page references in `currentData` and `publishedData`,
   - finds content-entry media fields in single and multi-value shapes,
+  - finds exact object-shaped references such as `{ id }` and `{ assetId }`
+    without matching arbitrary unrelated `id` fields,
+  - finds page/widget layout references stored as `assetId`,
   - finds post `featuredMediaId`, block `attrs.mediaId`, and rich-text
     `data-media-id` references,
   - finds commerce product `mediaIds` references,

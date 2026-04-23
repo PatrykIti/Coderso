@@ -60,6 +60,12 @@ Implementation principle:
 - keep fixes grounded in current code paths and tests; do not create a new
   media management model, notification host, navigation DSL, storage contract,
   or bulk API unless the existing owner cannot satisfy the report safely,
+- prefer extending existing owner modules and shared helpers over creating new
+  abstractions; add a new helper/module only when it becomes the clear owner of
+  a real contract such as dimension parsing or usage discovery,
+- keep user-facing behavior simple and logically consistent: visible controls
+  must have a real owner callback/result, and unavailable actions must render as
+  unavailable instead of pretending to work,
 - when ownership is unclear during implementation, document the chosen owner in
   the leaf before coding so later leaves do not add a second path.
 
@@ -161,8 +167,13 @@ Current owner seams in code:
     - owns display-name, date/size, dimension, and kind formatting helpers.
 - Server/service contract:
   - `core/server/routes/mediaRoutes.ts`
-    - owns route orchestration, permission checks, validation calls, and mapping
-      media-domain errors to API errors.
+    - owns route orchestration, permission checks, validation calls, and the
+      central media-domain error mapping (`mapMediaError` or the existing route
+      mapper if one already exists). New usage, backfill, pagination, or replace
+      routes must not add ad-hoc error translation; existing media errors such as
+      `media_not_found`, `media_file_invalid`, `media_file_too_large`,
+      `media_mime_not_allowed`, and `media_storage_unavailable` should be mapped
+      through the same boundary when that route family is touched.
   - `core/server/validation/mediaSchemas.ts`
     - owns strict media route payload/query schemas.
   - `core/services/media/mediaService.ts`

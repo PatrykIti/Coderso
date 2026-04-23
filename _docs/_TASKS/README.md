@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 115 tasks
+- **To Do:** 116 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1004 tasks
 
@@ -49,6 +49,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-204-03-01 | Category Scoped Search Copy and Regression Proof | Medium | Small | Technical leaf: scoped placeholder/copy and tests proving query + category intersection |
 | TASK-204-03-02 | Media Block Capability Contract for Video Gallery Audio File | Medium | Large | Technical leaf: implement accepted media block types end to end or keep unsupported capability explicitly open with owners |
 | TASK-204-04 | QA Docs and Playwright Source Closure | Medium | Medium | Final validation, source report closure including realtime console errors, docs, changelog, and board sync for TASK-204 |
+| TASK-204-04-01 | Runtime Console Error Triage Settings and Autosave | High | Medium | Technical leaf: separate `site.adminPath` and posts autosave console errors from taxonomy BUG-7 and fix or classify their owner seams |
 | TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`: metadata/save feedback, rich text, preview, row actions, sidebar, SEO/taxonomy, and closure |
 | TASK-203-01 | Metadata Save, Status, and Feedback Contract | High | Large | Business area: metadata route/client errors, save feedback, status dirty state, and action clarity |
 | TASK-203-01-01 | Metadata Route, Service Error Mapping, and API Client State | High | Medium | Technical leaf: bounded metadata errors plus cache-safe client state |

@@ -104,10 +104,13 @@ No child task files.
   current visible/list pagination contract, not fixed copy.
 - `BUG-6`: usage entries must come from the bounded usage read model and use
   canonical admin navigation only when the target is resolvable.
+  Usage coverage must include exact `assetId` / `id` object-shaped references
+  already used by page/widget/content code, not only simple string fields.
 - `UX-1` / `UX-2`: readable names and missing-alt warnings must come from shared
   media display helpers and existing media metadata.
 - `UX-3`: bulk selection must operate on the visible asset set and must not
-  change `MediaPicker` selection semantics.
+  change `MediaPicker` selection semantics. Bulk download must be covered with
+  safe URL/anchor behavior and user-safe partial failure handling.
 - `UX-4` / `UX-5`: upload separation and `media.openAfterUpload` placement must
   keep the same upload handler and user-setting key.
 - Grid/list positive: the toolbar view mode must render distinct usable views
@@ -117,7 +120,9 @@ No child task files.
   be counted as preserved behavior.
 - Route boundary: any usage, backfill, pagination, or replace route added by the
   family must include route registration, permission, validation, and mapped
-  `ApiError` coverage.
+  `ApiError` coverage. If an existing media route is touched while adding the
+  family work, map the existing media-domain errors through the same centralized
+  route boundary instead of adding route-local ad-hoc translations.
 - Preserved positives: grid/list switching, search, filters, native file picker,
   media settings access mode, replace/delete affordances, delivery access mode,
   and media cache invalidation must still work after all leaves land.
