@@ -31,16 +31,22 @@ No child task files.
   - write deterministic schema metadata.
 - `core/admin/services/contentTypesClient.ts:6-40`
   - extend typed schema metadata.
-- `core/admin/ui/entries/FieldRenderer.tsx` if multi-select entry editing needs
-  a renderer update.
+- `core/admin/ui/entries/FieldRenderer.tsx`
+  - update select rendering so single-select keeps scalar values and
+    multi-select reads/writes arrays from the declared schema.
+- `core/services/content/validation.ts`
+  - no parallel validator; rely on the existing AJV schema contract and add tests
+    if new keywords/array constraints are introduced.
 - `tests/vitest/ui/schema-mapping.test.ts`
 - `tests/vitest/ui/field-editor-layout.test.tsx` or a new field-editor select
   owner suite.
+- `tests/vitest/ui/entry-field-renderer.test.tsx` or the current entry renderer
+  owner suite.
+- `tests/unit/content/validation.test.ts`
 
 ## Security Contract
 
-- Visibility: internal admin schema editor; entry renderer if multi-select is
-  enabled.
+- Visibility: internal admin schema editor and entry renderer for multi-select.
 - Auth model: unchanged.
 - RBAC: `content:write` for schema save.
 - CSRF: existing content type update route.
@@ -58,7 +64,9 @@ No child task files.
 - Labels generate stable values until values are manually edited.
 - Legacy comma/enum data reads correctly.
 - Multi-select writes JSON Schema array metadata and reads it back.
-- Entry renderer validation remains compatible with legacy single-select.
+- Entry renderer writes arrays for multi-select and scalar values for legacy
+  single-select.
+- Content validation accepts/rejects arrays according to the generated schema.
 
 ## Documentation Updates Required
 
@@ -72,3 +80,5 @@ No child task files.
 1. Select options are managed as rows, not comma text.
 2. Multi-select has an explicit schema contract.
 3. Existing select fields still load and save safely.
+4. Entry editing uses the same schema contract; no separate select runtime is
+   invented for this leaf.

@@ -23,7 +23,16 @@ No child task files.
 
 - `core/services/content/typeService.ts:24-108`
   - add `content_type_has_entries` guard,
+  - add dependency guards for existing owner references that would cascade or
+    orphan data,
   - keep `content_type_not_found` machine-readable.
+- `core/db/schema.ts:655-689`
+  - account for `custom_screens.content_type_id` and
+    `content_entries.type_id` cascade behavior before delete.
+- `core/db/schema.ts:813-829`
+  - account for `content_taxonomies.type_id` references.
+- existing settings/listing owner helpers if the type is referenced by
+  `site.contentRoutes`, listing queries/templates, or another current read model.
 - `core/server/routes/contentTypeRoutes.ts:34-92`
   - add `mapContentTypeError`,
   - map not found/conflict/invalid errors to `ApiError`.
@@ -43,6 +52,8 @@ No child task files.
   confirmation payload is introduced.
 - Anti-abuse:
   - block delete while entries exist,
+  - block delete while custom screens, taxonomies, content routes, listings, or
+    other known owner references still depend on the type,
   - do not rely on client-side entryCount as authority,
   - return mapped conflict instead of raw DB/cascade errors.
 
@@ -51,6 +62,9 @@ No child task files.
 - Route registration still includes `DELETE /content-types/:id`.
 - Deleting a missing id maps to 404.
 - Deleting a type with entries maps to conflict.
+- Deleting a type with custom screens or taxonomies maps to conflict.
+- Any referenced settings/listing owner that cannot be checked here gets a named
+  owner note and follow-up before the delete UI is considered complete.
 - Deleting a zero-entry type invalidates content type caches.
 
 ## Documentation Updates Required
@@ -61,6 +75,6 @@ No child task files.
 
 ## Acceptance Criteria
 
-1. Server-side delete cannot cascade-delete entries silently.
+1. Server-side delete cannot cascade-delete entries or custom screens silently.
 2. Known domain errors are mapped at the route boundary.
 3. Client cache is invalidated only after successful deletion.

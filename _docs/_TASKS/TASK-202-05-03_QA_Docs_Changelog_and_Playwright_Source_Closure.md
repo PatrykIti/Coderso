@@ -22,7 +22,8 @@ No child task files.
 ## Files to Change
 
 - `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md`
-  - add fixed/open evidence mapping for each report item.
+  - add fixed/open evidence mapping for each report item and name the owning
+    code area for any remaining open dependency.
 - `_docs/CONTENT_TYPES_SPEC.md`
 - `_docs/CONTENT_FIELDS.md`
 - `_docs/CONTENT_RELATIONS.md`
@@ -54,6 +55,9 @@ No child task files.
   `DATABASE_URL` is reachable.
 - Replay `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md` scenarios manually or with the
   available Playwright harness and record evidence/open follow-ups.
+- Closure must prove fixes used existing owners (`typeService`, route
+  validation/mapping, cached admin client, schema mapping, entry renderer, and
+  current DB/settings owner seams) instead of introducing parallel contracts.
 
 ## Documentation Updates Required
 
@@ -61,6 +65,7 @@ No child task files.
 
 ## Acceptance Criteria
 
-1. Each Engine report item maps to fixed evidence or a named open follow-up.
+1. Each Engine report item maps to fixed evidence or a named open follow-up with
+   an explicit owner/responsibility note.
 2. Source docs, task board, and changelog are synchronized.
 3. Final validation commands are recorded with pass/fail status.

@@ -32,10 +32,13 @@ Current code shows the gaps:
 
 ## Scope
 
-- Validate duplicate names and slugs before create.
+- Validate duplicate names and slugs before create in the UI for quick feedback
+  and in the existing `typeService`/route contract as the authoritative guard.
 - On successful create, navigate to `/admin/coderso/engine/:id` through shared
   admin routing helpers and show creation feedback.
-- Add a duplicate content type action that copies schema only, never entries.
+- Add a duplicate content type action that copies schema only, never entries,
+  and creates a deterministic unique name/slug through the existing content type
+  contract.
 - Add list row and editor lifecycle entry points for Edit / Duplicate / Delete.
 - Keep actual destructive delete behavior gated by `TASK-202-03`.
 
@@ -53,10 +56,12 @@ Out of scope:
 - `core/admin/ui/content-types/ContentTypeTable.tsx:74-108`
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:318-382`
 - `core/admin/services/contentTypesClient.ts:145-198`
-- `core/server/routes/contentTypeRoutes.ts:54-92` only if duplicate becomes a
-  route-owned operation.
-- `core/services/content/typeService.ts:63-99` only if duplicate/name validation
-  moves server-side.
+- `core/services/content/typeService.ts:63-99`
+  - authoritative duplicate name/slug guard and duplicate clone contract.
+- `core/server/routes/contentTypeRoutes.ts:54-92`
+  - centralized `mapContentTypeError` coverage for duplicate create/clone errors.
+- `core/server/validation/contentSchemas.ts:1-20`
+  - strict shape updates only when the duplicate endpoint/payload requires them.
 
 ## Security Contract
 
@@ -70,6 +75,8 @@ Out of scope:
 - Anti-abuse:
   - duplicate action must not copy entries or secrets,
   - duplicate target name/slug must be explicit and unique,
+  - duplicate create/clone errors come from domain error codes, not DB constraint
+    strings or UI-only checks,
   - success feedback must not expose raw server errors.
 
 ## Testing Requirements
@@ -80,7 +87,10 @@ Out of scope:
   - duplicate action payload and cache invalidation,
   - row action menu accessible labels.
 - Bun:
-  - route registration and route behavior if a duplicate endpoint is added.
+  - duplicate route registration and route behavior,
+  - create duplicate name/slug returns mapped conflict/invalid errors from the
+    server contract,
+  - duplicate clone creates schema-only output with no entries.
 
 ## Documentation Updates Required
 

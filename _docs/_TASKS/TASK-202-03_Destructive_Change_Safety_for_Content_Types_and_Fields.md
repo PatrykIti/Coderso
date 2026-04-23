@@ -32,8 +32,12 @@ Current code shows the risks:
 ## Scope
 
 - Add a server-side content type delete guard.
-- Block delete when entries exist; if product later wants archive/force-delete,
-  that must be a separate explicit contract.
+- Block delete when entries or existing owner dependencies exist; if product
+  later wants archive/force-delete, that must be a separate explicit contract.
+- Scan the current dependency graph before allowing delete instead of relying on
+  database cascades. At minimum cover `contentEntries`, `customScreens`,
+  `contentTaxonomies`, and slug/id based settings/read models such as
+  `site.contentRoutes` or listing owners when they reference the type.
 - Map known domain errors to `ApiError` at the route boundary.
 - Add delete confirmation UI on list/editor surfaces.
 - Add field-removal confirmation and short recovery path.
@@ -50,6 +54,10 @@ Out of scope:
 ## Files to Change
 
 - `core/services/content/typeService.ts:24-108`
+- `core/db/schema.ts:655-689`
+  - verify current cascade references before defining delete safety.
+- existing owner services/helpers for referenced settings/listings when the
+  dependency is not owned by `typeService`.
 - `core/server/routes/contentTypeRoutes.ts:34-92`
 - `core/admin/services/contentTypesClient.ts:184-198`
 - `core/admin/ui/content-types/ContentTypeTable.tsx:104-108`
@@ -72,7 +80,8 @@ Out of scope:
   payloads unless a future explicit confirmation token is added.
 - Anti-abuse:
   - delete requires exact id/name/slug context in UI confirmation,
-  - server blocks deletion when entries exist,
+  - server blocks deletion when entries or other owner dependencies exist,
+  - delete guards must not silently trigger `onDelete: "cascade"` side effects,
   - field removal confirmation must name the field and avoid accidental
     selection drift,
   - error messages must be machine-readable internally and user-readable in UI.
@@ -82,6 +91,9 @@ Out of scope:
 - Bun route/service:
   - delete zero-entry content type succeeds,
   - delete with entries returns a mapped conflict,
+  - delete with custom screens/taxonomies/settings/listing references returns a
+    mapped conflict or a named follow-up owner when the dependency cannot be
+    checked in this leaf,
   - delete missing id returns mapped not found,
   - route registration still includes DELETE.
 - Vitest:

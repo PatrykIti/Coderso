@@ -41,7 +41,8 @@ Current code shows the gaps:
 - Replace comma-separated select options with option rows.
 - Support label/value option pairs and deterministic value slugs.
 - Add multi-select field behavior using existing JSON Schema-compatible array
-  metadata.
+  metadata, including the entry renderer/validation owners needed for the new
+  value shape.
 - Add number constraints: min, max, integer/decimal format, and step.
 - Preserve current `xFieldType`, `xFieldConfig`, `enum`, `default`, `required`,
   relation, media, and layout behavior.
@@ -62,10 +63,13 @@ Out of scope:
 - `core/admin/ui/content-types/FieldEditor.tsx:425-434`
 - `core/admin/ui/content-types/schemaMapping.ts:3-274`
 - `core/admin/services/contentTypesClient.ts:6-40`
-- `core/services/content/validation.ts` only if number/select schema
-  validation changes.
-- `core/admin/ui/entries/FieldRenderer.tsx` only if multi-select entry input
-  requires renderer changes.
+- `core/services/content/validation.ts`
+  - keep the existing AJV contract as owner; edit only if new schema metadata
+    needs explicit keyword support, but always add validation coverage for the
+    declared select/number value shapes.
+- `core/admin/ui/entries/FieldRenderer.tsx`
+  - required when multi-select is introduced because entry editing currently
+    renders select fields as a single value.
 
 ## Security Contract
 
@@ -90,8 +94,13 @@ Out of scope:
   - readable fallback labels for camelCase and kebab-case schema keys,
   - select option rows round-trip through `schemaMapping`,
   - multi-select schema round-trip,
+  - entry renderer reads/writes multi-select arrays while preserving legacy
+    single-select values,
+  - content validation accepts/rejects the declared array shape through the
+    existing AJV schema contract,
   - number min/max/format/step round-trip and invalid-range handling.
-- Bun only if entry validation/runtime behavior changes.
+- Bun/content validation coverage is required when select/number schema value
+  shapes change.
 
 ## Documentation Updates Required
 

@@ -27,7 +27,10 @@ No child task files.
 - `core/admin/ui/content-types/ContentTypeTable.tsx:32-117`
   - render sortable headers and filtered empty state.
 - `tests/vitest/ui/content-type-table.test.tsx`
+  - presentation-only table assertions.
 - `tests/vitest/ui-integration/contentTypes.test.tsx`
+  - list-owned search/sort/status behavior with mocked `listContentTypesCached`
+    data, because `ContentTypeList` owns filtering state.
 
 ## Security Contract
 
@@ -44,6 +47,7 @@ No child task files.
 - Status filter is active only after `TASK-202-05-01` adds real status; before
   that, no fake status filter is shipped.
 - Empty states distinguish loading, no records, and no filter results.
+- Tests prove filtering/sorting in the list owner, not only static table SSR.
 
 ## Documentation Updates Required
 

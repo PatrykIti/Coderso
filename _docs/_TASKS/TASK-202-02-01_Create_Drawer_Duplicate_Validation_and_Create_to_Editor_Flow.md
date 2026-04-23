@@ -27,6 +27,14 @@ No child task files.
   - navigate to the created editor using shared admin navigation.
 - `core/admin/utils/adminPaths.ts`
   - reference only if route helper coverage needs an explicit helper.
+- `core/services/content/typeService.ts:63-76`
+  - reject duplicate names and slugs before insert.
+- `core/server/routes/contentTypeRoutes.ts:54-66`
+  - map duplicate-name/slug domain errors to stable API errors.
+- `core/server/validation/contentSchemas.ts:1-10`
+  - keep create payload strict; extend only if the real contract changes.
+- `tests/unit/content/typeService.test.ts`
+- `tests/integration/routes/contentTypes.test.ts`
 - `tests/vitest/ui-integration/contentTypes.test.tsx`
 - `tests/vitest/ui/content-type-table.test.tsx` if create flow stays list-owned.
 
@@ -37,15 +45,19 @@ No child task files.
 - RBAC: `content:write`.
 - CSRF: existing `createContentType` CSRF flow.
 - Rate-limit bucket: `admin_write`.
-- Reject-unknown validation: unchanged create payload shape unless server-side
-  duplicate validation adds explicit error mapping.
+- Reject-unknown validation: unchanged create payload shape unless the existing
+  route schema explicitly changes.
 - Anti-abuse:
-  - client validation is advisory; server uniqueness remains authoritative,
+  - client validation is advisory; `typeService` uniqueness remains
+    authoritative for both name and slug,
   - duplicate errors must be readable without leaking DB constraint details.
 
 ## Testing Requirements
 
 - Create drawer blocks duplicate name and slug from current cached/list data.
+- `typeService` rejects duplicate names and slugs even when the client misses
+  the conflict.
+- Route tests cover mapped duplicate errors, not raw thrown strings.
 - Slug auto-generation still locks after manual edit.
 - Successful create navigates to `/admin/coderso/engine/:id`.
 - Success feedback names the created collection.

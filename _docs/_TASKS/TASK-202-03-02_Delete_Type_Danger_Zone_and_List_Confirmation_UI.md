@@ -40,7 +40,7 @@ No child task files.
 - Reject-unknown validation: no client-side bypass of route guard.
 - Anti-abuse:
   - confirmation names the exact content type name and slug,
-  - UI explains blocked delete when entries exist,
+  - UI explains blocked delete when entries or other owner dependencies exist,
   - no native `window.confirm`; use shared dialog primitives.
 
 ## Testing Requirements
@@ -49,6 +49,9 @@ No child task files.
 - List row delete opens a branded confirmation dialog.
 - Confirm calls the shared client and removes the row only after success.
 - Blocked delete surfaces a user-readable conflict message.
+- Conflict details name the responsible owner area when the server reports one
+  (entries, custom screens, taxonomies, routes/listings, or a documented
+  follow-up).
 
 ## Documentation Updates Required
 
@@ -59,5 +62,5 @@ No child task files.
 ## Acceptance Criteria
 
 1. Content type delete is discoverable but never immediate.
-2. The confirmation identifies name, slug, and entry impact.
+2. The confirmation identifies name, slug, and dependency impact.
 3. Delete failure does not remove local list/detail state.

@@ -60,13 +60,15 @@ This umbrella covers five owner areas:
    - relation dropdown disambiguation,
    - source tracing for UUID-like screen type names.
 2. Create, duplicate, and row actions:
-   - duplicate-name validation in creation flows,
+   - duplicate-name validation in creation flows, with `typeService` and route
+     error mapping as the authoritative guard instead of UI-only blocking,
    - create-to-editor navigation with feedback,
    - duplicate content type cloning without entries,
    - list/editor lifecycle action entry points.
 3. Destructive safety:
-   - content type delete guard that blocks types with entries unless a later
-     explicit archive contract is approved,
+   - content type delete guard that blocks types with entries and other existing
+     owner dependencies that would otherwise cascade or orphan references unless
+     a later explicit archive/cleanup contract is approved,
    - route/domain error mapping,
    - list/editor delete confirmation,
    - field removal confirmation and recovery.
@@ -127,6 +129,9 @@ Reuse-first rule:
 
 - Keep `contentTypesClient.ts` as the single cached admin client for Engine
   reads/writes.
+- Keep existing domain owners as the source of truth. UI validation can improve
+  feedback, but create/delete/status correctness must live in `typeService`,
+  route validation/mapping, and the current DB/settings owner seams.
 - Keep route modules orchestration-only: validate payloads, enforce permission,
   delegate business rules to `typeService`, and map known domain errors through
   centralized `mapContentTypeError`.
@@ -138,6 +143,10 @@ Reuse-first rule:
   mount rather than adding Engine-only notification infrastructure.
 - Use durable schema metadata in `xFieldConfig`; do not store UI-only state in
   browser cache or unversioned ad-hoc fields.
+- Do not add parallel clients, cleanup scripts, schema builders, notification
+  hosts, or generated helpers when an existing owner already exists. If
+  ownership is unclear during implementation, document the responsible owner and
+  the reason before writing the fix.
 
 ## Security Contract
 
