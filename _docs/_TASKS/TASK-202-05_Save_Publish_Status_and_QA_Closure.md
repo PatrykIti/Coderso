@@ -40,6 +40,10 @@ Current code shows the status mismatch:
   `TASK-202-03-02`, and save/publish in `TASK-202-05-02`.
 - Keep cache updates and route prefetch consistent after status mutations.
 - Replay all Engine report findings and update source docs with evidence.
+- Inventory the existing duplicate/test/`Screen <uuid>` records from
+  `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md`. If the safe delete/archive path is
+  available, clean them through that path or document why a named owner must
+  handle the remaining data cleanup later.
 
 Out of scope:
 
@@ -103,6 +107,9 @@ Out of scope:
   - every `BUG-*` and `UX-*` item in
     `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md` is marked fixed or linked to an open
     follow-up with owner evidence.
+  - existing duplicate/test/`Screen <uuid>` records are either cleaned through
+    the guarded path or recorded as open data cleanup with owner,
+    responsibility, and dependency.
 
 ## Documentation Updates Required
 
@@ -120,3 +127,5 @@ Out of scope:
 2. List status badges are backed by a real contract or removed from the fake
    contract path.
 3. TASK-202 closes with source-report evidence, docs, changelog, and board sync.
+4. Source-prevention fixes and existing-record cleanup are reported separately
+   so the family does not hide remaining dirty data behind new validation.

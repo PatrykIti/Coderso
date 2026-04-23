@@ -28,9 +28,14 @@ No child task files.
 - `core/admin/utils/adminPaths.ts`
   - reference only if route helper coverage needs an explicit helper.
 - `core/services/content/typeService.ts:63-76`
-  - reject duplicate names and slugs before insert.
-- `core/server/routes/contentTypeRoutes.ts:54-66`
-  - map duplicate-name/slug domain errors to stable API errors.
+  - reject duplicate names and slugs before insert; keep shared normalization
+    helpers reusable by update without creating a second validator.
+- `core/services/content/typeService.ts:78-99`
+  - reject update collisions with other records while allowing the current
+    record to keep its own name/slug.
+- `core/server/routes/contentTypeRoutes.ts:54-82`
+  - map create and update duplicate-name/slug domain errors to stable API
+    errors.
 - `core/server/validation/contentSchemas.ts:1-10`
   - keep create payload strict; extend only if the real contract changes.
 - `tests/unit/content/typeService.test.ts`
@@ -57,7 +62,10 @@ No child task files.
 - Create drawer blocks duplicate name and slug from current cached/list data.
 - `typeService` rejects duplicate names and slugs even when the client misses
   the conflict.
-- Route tests cover mapped duplicate errors, not raw thrown strings.
+- `typeService` rejects update collisions with another content type but accepts
+  same-record name/slug persistence.
+- Route tests cover mapped create/update duplicate errors, not raw thrown
+  strings.
 - Slug auto-generation still locks after manual edit.
 - Successful create navigates to `/admin/coderso/engine/:id`.
 - Success feedback names the created collection.

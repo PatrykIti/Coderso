@@ -27,6 +27,9 @@ Do not create a detached screen-name helper or cleanup-only script to make this
 report pass. The fix must execute in the current writer that creates or can
 create content types. If ownership is unclear during implementation, document the
 candidate owner, its responsibility, and the evidence before patching behavior.
+Existing bad records remain data cleanup, not proof that the generator guard
+failed. That cleanup is owned by the final source-report closure after
+`TASK-202-03` makes delete/archive safe.
 
 ## Sub-Tasks
 
@@ -93,6 +96,9 @@ No child task files.
   direct `contentTypes` writes.
 - Manual inventory note in closure documenting which path created the reported
   records.
+- Closure must distinguish source prevention from existing-record cleanup and
+  must not claim the current instance is clean unless the duplicated/test/UUID
+  records were removed or archived through the guarded path.
 
 ## Documentation Updates Required
 

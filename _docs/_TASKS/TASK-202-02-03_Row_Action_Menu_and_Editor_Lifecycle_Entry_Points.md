@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Engine + Admin/UI + Accessibility
 **Estimated Effort:** Small
-**Dependencies:** TASK-202-02, TASK-202-03
+**Dependencies:** TASK-202-02, TASK-202-02-02; TASK-202-03-01 only to enable active Delete
 **Status:** To Do
 
 ---
@@ -12,8 +12,11 @@
 ## Overview
 
 Replace the single `Edit` action from `ContentTypeTable.tsx:104-108` with a
-clear lifecycle action surface for Edit, Duplicate, and Delete. Delete remains
-disabled or confirmation-gated until `TASK-202-03` server safety is ready.
+clear lifecycle action surface for Edit, Duplicate, and Delete. This leaf owns
+discoverable entry points only. Delete must render disabled or unavailable until
+`TASK-202-03-01` lands the server guard, then `TASK-202-03-02` owns enabling the
+real delete confirmation flow. Do not make this leaf depend on all of
+`TASK-202-03`; that creates a cycle with the destructive-safety family.
 
 ## Sub-Tasks
 
@@ -53,7 +56,9 @@ No child task files.
 ## Testing Requirements
 
 - Row menu contains accessible Edit, Duplicate, and Delete actions.
-- Delete action is disabled or opens confirmation according to `TASK-202-03`.
+- Delete action is disabled or unavailable before `TASK-202-03-01`; after the
+  guarded delete service exists, `TASK-202-03-02` may wire the active
+  confirmation flow through this entry point.
 - Editor lifecycle actions mirror list behavior through the chosen existing
   owner without hand-built hrefs or a second action system.
 

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Engine + Admin/UI + API + Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-202, TASK-202-02
+**Dependencies:** TASK-202
 **Status:** To Do
 
 ---
@@ -50,6 +50,10 @@ Current code shows the risks:
   `typeService` domain errors.
 - Map known domain errors to `ApiError` at the route boundary.
 - Add delete confirmation UI on list/editor surfaces.
+- Reuse the row/editor entry points from `TASK-202-02-03` when present, but do
+  not depend on the whole create/duplicate family. Destructive safety owns the
+  server guard and confirmation behavior; lifecycle discovery owns only the
+  non-destructive menu/action surface.
 - Add field-removal confirmation and short recovery path.
 - Keep schema dirty state and selected-field fallback deterministic after field
   removal.

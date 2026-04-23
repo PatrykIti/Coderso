@@ -34,6 +34,10 @@ Current code shows the gaps:
 
 - Validate duplicate names and slugs before create in the UI for quick feedback
   and in the existing `typeService`/route contract as the authoritative guard.
+- Validate duplicate names and slugs on content type update as well. Editing an
+  existing type may keep its own name/slug, but it must not collide with another
+  type. This belongs in `typeService` and route error mapping, not only in the
+  create drawer.
 - On successful create, navigate to `/admin/coderso/engine/:id` through shared
   admin routing helpers and show creation feedback.
 - Add a duplicate content type action that copies schema only, never entries,
@@ -57,9 +61,11 @@ Out of scope:
 - `core/admin/ui/content-types/ContentTypeEditor.tsx:318-382`
 - `core/admin/services/contentTypesClient.ts:145-198`
 - `core/services/content/typeService.ts:63-99`
-  - authoritative duplicate name/slug guard and duplicate clone contract.
+  - authoritative duplicate name/slug guards for create and update, ignore-self
+    update behavior, and duplicate clone contract.
 - `core/server/routes/contentTypeRoutes.ts:54-92`
-  - centralized `mapContentTypeError` coverage for duplicate create/clone errors.
+  - centralized `mapContentTypeError` coverage for duplicate create, update,
+    and clone errors.
 - `core/server/validation/contentSchemas.ts:1-20`
   - strict shape updates only when the duplicate endpoint/payload requires them.
 
@@ -75,8 +81,8 @@ Out of scope:
 - Anti-abuse:
   - duplicate action must not copy entries or secrets,
   - duplicate target name/slug must be explicit and unique,
-  - duplicate create/clone errors come from domain error codes, not DB constraint
-    strings or UI-only checks,
+  - duplicate create/update/clone errors come from domain error codes, not DB
+    constraint strings or UI-only checks,
   - success feedback must not expose raw server errors.
 
 ## Testing Requirements
@@ -90,6 +96,8 @@ Out of scope:
   - duplicate route registration and route behavior,
   - create duplicate name/slug returns mapped conflict/invalid errors from the
     server contract,
+  - update duplicate name/slug returns mapped conflict/invalid errors while
+    preserving same-record updates,
   - duplicate clone creates schema-only output with no entries.
 
 ## Documentation Updates Required

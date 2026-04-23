@@ -15,6 +15,11 @@ Close TASK-202 against the original Playwright report, not only against task
 board state. This leaf owns final evidence for every Engine `BUG-*` and `UX-*`
 finding.
 
+Closure must separate three states: fixed in code, fixed in existing data, and
+open with a named owner. Prevention-only changes do not close the existing
+duplicate/test/`Screen <uuid>` records unless the data was cleaned through the
+guarded path or explicitly left as an owned follow-up.
+
 ## Sub-Tasks
 
 No child task files.
@@ -24,6 +29,8 @@ No child task files.
 - `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md`
   - add fixed/open evidence mapping for each report item and name the owning
     code area for any remaining open dependency.
+  - include an inventory row for duplicate names, test types, and
+    `Screen <uuid>` records from the source report with fixed/open data state.
 - `_docs/CONTENT_TYPES_SPEC.md`
 - `_docs/CONTENT_FIELDS.md`
 - `_docs/CONTENT_RELATIONS.md`
@@ -55,6 +62,10 @@ No child task files.
   `DATABASE_URL` is reachable.
 - Replay `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md` scenarios manually or with the
   available Playwright harness and record evidence/open follow-ups.
+- Inventory current content types after the implementation. Existing duplicate,
+  test, and `Screen <uuid>` records must be removed/archived only through the
+  guarded delete/archive path, or left as explicit open cleanup with owner,
+  responsibility, and dependency.
 - Closure must prove fixes used existing owners (`typeService`, route
   validation/mapping, cached admin client, schema mapping, entry renderer, and
   current DB/settings owner seams) instead of introducing parallel contracts.
@@ -67,5 +78,8 @@ No child task files.
 
 1. Each Engine report item maps to fixed evidence or a named open follow-up with
    an explicit owner/responsibility note.
-2. Source docs, task board, and changelog are synchronized.
-3. Final validation commands are recorded with pass/fail status.
+2. Existing duplicate/test/`Screen <uuid>` records are either cleaned through the
+   safe path or remain visibly open with owner, responsibility, dependency, and
+   evidence.
+3. Source docs, task board, and changelog are synchronized.
+4. Final validation commands are recorded with pass/fail status.

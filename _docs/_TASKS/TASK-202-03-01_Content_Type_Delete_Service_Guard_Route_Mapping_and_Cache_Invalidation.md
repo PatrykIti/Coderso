@@ -27,6 +27,8 @@ No child task files.
   - add `content_type_has_entries` guard,
   - add dependency guards for existing owner references that would cascade or
     orphan data,
+  - keep the delete contract in this service as the owner for admin/API and
+    assistant execution; do not introduce a second delete helper,
   - keep `content_type_not_found` machine-readable.
 - `core/db/schema.ts:655-689`
   - account for `custom_screens.content_type_id` and

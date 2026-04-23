@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Engine + Admin/UI + UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-202-05-01, TASK-202-02-02, TASK-202-03-02
+**Dependencies:** TASK-202-05-01
 **Status:** To Do
 
 ---
@@ -18,7 +18,8 @@ admin feedback pattern.
 This leaf owns the save/publish feedback and verifies the shared toaster
 contract. Duplicate and delete feedback stay with the leaves that implement
 those actions (`TASK-202-02-02` and `TASK-202-03-02`) so the action owner also
-owns the user-visible result state.
+owns the user-visible result state, but those action leaves must not block
+fixing `Save draft` / `Publish` feedback.
 
 ## Sub-Tasks
 

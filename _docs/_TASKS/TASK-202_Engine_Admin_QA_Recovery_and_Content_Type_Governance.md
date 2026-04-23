@@ -62,6 +62,9 @@ This umbrella covers five owner areas:
 2. Create, duplicate, and row actions:
    - duplicate-name validation in creation flows, with `typeService` and route
      error mapping as the authoritative guard instead of UI-only blocking,
+   - duplicate-name and duplicate-slug validation in update flows as well, with
+     ignore-self behavior owned by `typeService` and mapped by
+     `contentTypeRoutes`,
    - create-to-editor navigation with feedback,
    - duplicate content type cloning without entries,
    - list/editor lifecycle action entry points.
@@ -81,7 +84,8 @@ This umbrella covers five owner areas:
    - real content type `draft` / `published` status model or an explicit removal
      of fake status semantics,
    - shared toast feedback for save/publish/create/duplicate/delete,
-   - source report replay and docs/changelog closure.
+   - source report replay, existing dirty-record inventory, and docs/changelog
+     closure.
 
 Out of scope:
 
@@ -140,6 +144,10 @@ Reuse-first rule:
   second schema builder, duplicate admin client, duplicate delete service,
   detached validator, or one-off cleanup/generator helper when the current repo
   already has an owner.
+- Repair the code that exists. If a fix needs shared behavior, put it in the
+  current owner (`typeService`, route validation/error mapping,
+  `contentTypesClient`, schema mapping, `FieldRenderer`, or the documented
+  generator owner) instead of adding a parallel path.
 - If ownership is unclear during implementation, stop at the leaf, name the
   candidate owner area, its responsibility, and the evidence before writing the
   fix. Do not hide unclear ownership behind a broad UI workaround.
@@ -178,6 +186,9 @@ Reuse-first rule:
 - If an existing contract cannot safely cover a report item, keep the shipped
   fix inside current contracts and record a named follow-up with owner
   responsibility instead of inventing a new product path in this family.
+- If a direct writer/delete path must remain outside the shared owner, the leaf
+  must name the owner, responsibility, reason for the exception, and targeted
+  proof. Silent bypasses are not acceptable.
 - Fix the code that exists. Do not create duplicate abstractions, duplicate
   clients, detached validators, detached cleanup scripts, or "new engine"
   helpers to work around current owners.
@@ -218,6 +229,12 @@ Reuse-first rule:
 5. Land real status/feedback behavior and keep cache/prefetch stable.
 6. Replay `_docs/PLAYWRIGHT/SUMMARY-ENGINE.md`, update docs, changelog, and the
    task board.
+7. Inventory the existing duplicate/test/`Screen <uuid>` records from the source
+   report. After guarded delete/archive behavior exists, either clean them up
+   through the approved path or leave an explicit open follow-up with owner,
+   responsibility, dependency, and evidence. Do not mark the source report closed
+   by prevention-only changes if the current data state still contains the
+   reported records.
 
 ## Testing Requirements
 

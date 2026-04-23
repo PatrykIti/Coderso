@@ -102,10 +102,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-202-04-02 | Human Readable Label Backfill and Display Normalization | Medium | Small | Technical leaf: readable fallback labels without destructive schema rewrites |
 | TASK-202-04-03 | Select Options Builder and Multi Select Schema Contract | High | Medium | Technical leaf: option rows, label/value values, multi-select, and schema round-trip |
 | TASK-202-04-04 | Number Field Constraints, Format, and Step Schema Mapping | Medium | Medium | Technical leaf: min/max/integer/decimal/step controls and validation |
-| TASK-202-05 | Save, Publish, Status, and QA Closure | High | Large | Business area: real content type status, save/publish feedback, and source report closure |
+| TASK-202-05 | Save, Publish, Status, and QA Closure | High | Large | Business area: real content type status, save/publish feedback, source report closure, and existing dirty-record inventory |
 | TASK-202-05-01 | Content Type Draft Published Status Model and Migration | High | Medium | Technical leaf: persist real draft/published status with migration artifacts |
 | TASK-202-05-02 | Save Draft, Publish Feedback, Badge, and Shared Toaster | High | Medium | Technical leaf: truthful save/publish toasts and status badge updates |
-| TASK-202-05-03 | QA Docs, Changelog, and Playwright Source Closure | Medium | Medium | Technical leaf: replay SUMMARY-ENGINE and sync docs, changelog, and board |
+| TASK-202-05-03 | QA Docs, Changelog, and Playwright Source Closure | Medium | Medium | Technical leaf: replay SUMMARY-ENGINE, inventory existing duplicate/test/UUID records, and sync docs, changelog, and board |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
