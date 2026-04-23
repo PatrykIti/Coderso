@@ -1,0 +1,77 @@
+# TASK-203-02-01: Rich Text Field Renderer Contract and Editor Surface
+# FileName: TASK-203-02-01_Rich_Text_Field_Renderer_Contract_and_Editor_Surface.md
+
+**Priority:** High
+**Category:** CMS/Entries + Admin/UI + Content Fields
+**Estimated Effort:** Large
+**Dependencies:** TASK-203-02
+**Status:** To Do
+
+---
+
+## Overview
+
+Replace the textarea-only `richtext` branch with a real editing surface while
+preserving the Entries field contract.
+
+## Sub-Tasks
+
+No child task files.
+
+## Files to Change
+
+- `core/admin/ui/entries/FieldRenderer.tsx:186-226`
+- `core/admin/ui/entries/EntryEditor.tsx:820-827`
+- `core/admin/ui/content-types/schemaMapping.ts`
+- `core/admin/ui/posts/editor/*` for reusable, Bun-free references only
+- `tests/vitest/ui/entry-field-relation.test.tsx`
+- `tests/vitest/ui/content-entry-editor.test.tsx`
+- new or extended `tests/vitest/ui/entry-richtext-field.test.tsx`
+
+## Implementation Sketch
+
+```ts
+case "richtext":
+  return (
+    <EntryRichTextField
+      value={normalizeEntryRichTextValue(value)}
+      onChange={(next) => onChange(serializeEntryRichTextValue(next))}
+    />
+  );
+```
+
+Direction:
+
+- keep normalizers in an Entries/content-field owner,
+- support legacy strings,
+- do not import `db/client`, server routes, settings services, or Posts runtime
+  renderers at module import time.
+
+## Security Contract
+
+- Visibility: internal admin field editor only.
+- Auth/RBAC/CSRF: inherited from existing entry update route.
+- Rate-limit bucket: `admin_write` for saves.
+- Reject-unknown validation: serialized value must match the content schema.
+- Anti-abuse: no script execution, no secret logging, no weakened public
+  render sanitization.
+
+## Testing Requirements
+
+- rich text field does not render as textarea-only,
+- legacy string value displays and emits safely,
+- structured editor changes call `onChange` with expected serialized value,
+- text/number/boolean/select/media/relation branches remain stable.
+
+## Documentation Updates Required
+
+- `_docs/CONTENT_FIELDS.md`
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/_TASKS/README.md`
+
+## Acceptance Criteria
+
+1. Engine `richtext` fields expose formatting/editing affordances.
+2. Existing string-backed rich text entries remain compatible.
+3. `FieldRenderer` remains Bun-free and Vitest-owned.
+

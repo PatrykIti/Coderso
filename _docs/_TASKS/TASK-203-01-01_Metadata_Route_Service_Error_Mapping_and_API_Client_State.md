@@ -1,0 +1,80 @@
+# TASK-203-01-01: Metadata Route, Service Error Mapping, and API Client State
+# FileName: TASK-203-01-01_Metadata_Route_Service_Error_Mapping_and_API_Client_State.md
+
+**Priority:** High
+**Category:** CMS/Entries + Admin/API + Services
+**Estimated Effort:** Medium
+**Dependencies:** TASK-203-01
+**Status:** To Do
+
+---
+
+## Overview
+
+Make the metadata route/client robust enough for UI feedback. The report saw a
+500 from the metadata endpoint; this leaf bounds known failures without hiding
+unknown server errors.
+
+## Sub-Tasks
+
+No child task files.
+
+## Files to Change
+
+- `core/server/routes/contentEntryRoutes.ts:47-85`
+- `core/server/routes/contentEntryRoutes.ts:151-205`
+- `core/services/content/entryService.ts:694-770`
+- `core/server/validation/contentSchemas.ts:51-88`
+- `core/admin/services/entriesClient.ts:291-314`
+- `tests/integration/routes/contentTypes.test.ts`
+- `tests/unit/content/entryService.test.ts`
+- `tests/vitest/admin/entriesClient.test.ts`
+
+## Implementation Sketch
+
+```ts
+const mapped = mapEntryMetadataError(error);
+if (mapped) throw mapped;
+throw error;
+```
+
+Direction:
+
+- map only current service errors,
+- keep unknown failures visible as failures,
+- do not turn raw 500s into fake validation successes,
+- keep cache writes only after successful responses.
+
+## Security Contract
+
+- Visibility: internal admin route only.
+- Auth/RBAC: unchanged `content:write` / `content:publish`.
+- CSRF: unchanged through `withCsrf`.
+- Rate-limit bucket: `admin_write`.
+- Reject-unknown validation: unchanged strict metadata schema.
+- Anti-abuse: bounded error codes/messages only; no server internals in API
+  responses.
+
+## Testing Requirements
+
+- Bun:
+  - metadata route registration,
+  - schedule/taxonomy/SEO success,
+  - invalid schedule, disabled taxonomy, missing taxonomy, and auth-required
+    publish transitions where feasible.
+- Vitest:
+  - `updateEntryMetadata()` uses CSRF,
+  - successful response updates/broadcasts cache,
+  - failed response does not optimistically mutate cache.
+
+## Documentation Updates Required
+
+- `_docs/CMS_API.md` if error codes change.
+- `_docs/_TASKS/README.md`
+
+## Acceptance Criteria
+
+1. Known metadata failures map to bounded API errors.
+2. Unknown failures do not leak internals.
+3. Successful metadata saves keep list/detail cache coherent.
+

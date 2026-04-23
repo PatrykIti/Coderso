@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 87 tasks
+- **To Do:** 102 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1004 tasks
 
@@ -38,6 +38,21 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-203 | Entries Admin QA Metadata, Rich Text, and Editor UX | High | Large | Entries QA family from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`: metadata/save feedback, rich text, preview, row actions, sidebar, SEO/taxonomy, and closure |
+| TASK-203-01 | Metadata Save, Status, and Feedback Contract | High | Large | Business area: metadata route/client errors, save feedback, status dirty state, and action clarity |
+| TASK-203-01-01 | Metadata Route, Service Error Mapping, and API Client State | High | Medium | Technical leaf: bounded metadata errors plus cache-safe client state |
+| TASK-203-01-02 | Editor Save, Update, Metadata Feedback, and Dirty State | High | Medium | Technical leaf: visible success/failure feedback and metadata dirty state |
+| TASK-203-01-03 | Status, Save Action Consolidation, and Metadata Dirty Guard | Medium | Medium | Technical leaf: remove duplicate save ambiguity and guard local status edits |
+| TASK-203-02 | Schema-Driven Rich Text and Runtime Preview | High | Large | Business area: rich text field rendering plus shared preview parity and 404 recovery |
+| TASK-203-02-01 | Rich Text Field Renderer Contract and Editor Surface | High | Large | Technical leaf: replace textarea-only rich text branch while preserving legacy entry data |
+| TASK-203-02-02 | Entry Runtime Preview Parity and 404 Recovery | Medium | Medium | Technical leaf: shared preview dialog/copy and token-safe runtime failure handling |
+| TASK-203-03 | Row Actions, Delete, Duplicate, and Danger Zone | High | Large | Business area: replace native confirms, add editor danger zone, and wire duplicate end to end |
+| TASK-203-03-01 | Delete Confirmation, List/Bulk, and Editor Danger Zone | High | Medium | Technical leaf: app dialogs for row/bulk/editor delete |
+| TASK-203-03-02 | Duplicate Entry Route, Client, and List Feedback | High | Medium | Technical leaf: make visible duplicate action real and cache-safe |
+| TASK-203-04 | Content Type Sidebar, SEO, Taxonomy, and Help Guidance | Medium | Large | Business area: sidebar scanability plus metadata guidance cleanup |
+| TASK-203-04-01 | Content Type Sidebar Grouping, Counts, and Hide Empty Types | Medium | Medium | Technical leaf: non-destructive sidebar grouping/filtering for many content types |
+| TASK-203-04-02 | Metadata Panel SEO URL, Taxonomy Link, and Collapsible Help | Medium | Medium | Technical leaf: replace hardcoded SEO URL and add internal taxonomy repair path |
+| TASK-203-05 | QA, Docs, and Closure | Medium | Medium | Final validation, Playwright finding map, docs, changelog, and board closure |
 | TASK-201 | Media Library QA Recovery and Asset Management UX | High | Large | Media QA family from `_docs/PLAYWRIGHT/SUMMARY-MEDIA.md`: metadata confidence, dimensions, empty states, usage navigation, bulk actions, upload clarity, and closure |
 | TASK-201-01 | Metadata Save Feedback and Asset Identity | High | Large | Business area: visible autosave/copy feedback, readable asset names, and missing-alt accessibility signals |
 | TASK-201-01-01 | Metadata Autosave Status and Copy URL Feedback | High | Medium | Technical leaf: blur autosave saving/saved/failed states plus copied/failed feedback |

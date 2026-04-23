@@ -1,0 +1,200 @@
+# TASK-203: Entries Admin QA Metadata, Rich Text, and Editor UX
+# FileName: TASK-203_Entries_Admin_QA_Metadata_Richtext_and_Editor_UX.md
+
+**Priority:** High
+**Category:** CMS/Entries + Admin/UI + UX + Accessibility
+**Estimated Effort:** Large
+**Dependencies:** TASK-003, TASK-043, TASK-048, TASK-053-07, TASK-059
+**Status:** To Do
+
+---
+
+## Overview
+
+Address the Entries admin findings from `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md`
+without changing the `content_entries` storage model or creating parallel
+Entries editor systems.
+
+Findings covered by this family:
+
+- `BUG-1`: `Save metadata` / `Update` can hit the metadata endpoint with a 500
+  and no actionable UI feedback.
+- `BUG-2`: Engine `richtext` fields render as plain textarea controls.
+- `BUG-3`: row delete uses native `window.confirm()`.
+- `BUG-4`: row `Duplicate` is visible but currently has no real handler.
+- `BUG-5`: duplicate `Save draft` actions make save responsibility unclear.
+- `BUG-6`: editor lacks an in-context delete/danger-zone action.
+- `BUG-7`: save/update success feedback is missing.
+- `BUG-8`: SEO preview hardcodes `https://nextless.cms/blog/...`.
+- `UX-1`: content-type sidebar needs better grouping/filtering for 35+ types.
+- `UX-2`: status changes are local until a separate metadata save.
+- `UX-3`: `What is this?` help is always expanded.
+- `UX-4`: preview needs shared-runtime parity and 404 recovery evidence.
+- `UX-5`: disabled taxonomy state lacks a link to the owning Engine settings.
+
+Closure must map every report item to a fixed leaf, explicit follow-up, or
+documented out-of-scope decision.
+
+## Sub-Tasks
+
+- `TASK-203-01_Metadata_Save_Status_and_Feedback_Contract.md`
+- `TASK-203-02_Schema_Driven_Rich_Text_and_Runtime_Preview.md`
+- `TASK-203-03_Row_Actions_Delete_Duplicate_and_Danger_Zone.md`
+- `TASK-203-04_Content_Type_Sidebar_SEO_Taxonomy_and_Help_Guidance.md`
+- `TASK-203-05_QA_Docs_and_Closure.md`
+
+## Scope
+
+1. Metadata and save confidence:
+   - route/service/client error mapping,
+   - success/failure feedback,
+   - explicit metadata dirty state,
+   - unambiguous save actions.
+2. Schema-driven editing and preview:
+   - real rich text editor for Engine `richtext`,
+   - legacy string compatibility,
+   - shared runtime preview failure handling.
+3. Row and destructive actions:
+   - branded row/bulk/editor delete confirmation,
+   - real duplicate flow or explicit removal decision.
+4. Sidebar and metadata affordances:
+   - non-destructive content-type grouping/filtering,
+   - SEO URL from settings/content routes,
+   - taxonomy enablement link,
+   - collapsible help.
+5. QA/docs/closure:
+   - targeted Bun/Vitest validation,
+   - Playwright report replay,
+   - docs, board, changelog, and source-report closure.
+
+Out of scope:
+
+- DB cleanup for generated `Screen [UUID]` content types,
+- moving Entries onto Posts storage/routes,
+- new public write endpoints,
+- admin cache/router rewrites,
+- broad Playwright lane migration.
+
+## Architecture
+
+Current owner seams:
+
+- Entries list/row/bulk/sidebar:
+  - `core/admin/ui/entries/EntryList.tsx:57`
+  - `core/admin/ui/entries/EntryList.tsx:231`
+  - `core/admin/ui/entries/EntryList.tsx:311`
+  - `core/admin/ui/entries/EntryTable.tsx:71`
+  - `core/admin/ui/entries/EntryTypeSidebar.tsx:33`
+- Entry editor save/metadata/preview:
+  - `core/admin/ui/entries/EntryEditor.tsx:110`
+  - `core/admin/ui/entries/EntryEditor.tsx:321`
+  - `core/admin/ui/entries/EntryEditor.tsx:364`
+  - `core/admin/ui/entries/EntryEditor.tsx:391`
+  - `core/admin/ui/entries/EntryEditor.tsx:470`
+  - `core/admin/ui/entries/EntryEditor.tsx:641`
+  - `core/admin/ui/entries/EntryEditor.tsx:843`
+- Metadata panel:
+  - `core/admin/ui/entries/EntryMetadataPanel.tsx:83`
+  - `core/admin/ui/entries/EntryMetadataPanel.tsx:107`
+  - `core/admin/ui/entries/EntryMetadataPanel.tsx:314`
+  - `core/admin/ui/entries/EntryMetadataPanel.tsx:382`
+- Field rendering:
+  - `core/admin/ui/entries/FieldRenderer.tsx:164`
+  - `core/admin/ui/entries/FieldRenderer.tsx:212`
+  - `core/admin/ui/content-types/schemaMapping.ts`
+- Client/route/service:
+  - `core/admin/services/entriesClient.ts:291`
+  - `core/admin/services/entriesClient.ts:366`
+  - `core/server/routes/contentEntryRoutes.ts:87`
+  - `core/server/routes/contentEntryRoutes.ts:151`
+  - `core/server/routes/contentEntryRoutes.ts:220`
+  - `core/server/validation/contentSchemas.ts:51`
+  - `core/services/content/entryService.ts:533`
+  - `core/services/content/entryService.ts:565`
+  - `core/services/content/entryService.ts:694`
+  - `core/server/utils/previewUrls.ts`
+
+Reuse-first rules:
+
+- keep `EntryEditor` as the Entries owner;
+- do not import Posts storage/runtime shells into `FieldRenderer`;
+- extract shared rich text pieces only if they stay Bun-free;
+- pass SEO/taxonomy display context into `EntryMetadataPanel` instead of
+  fetching inside the panel;
+- keep cache invalidation in `entriesClient`/`cacheBus`;
+- use shared admin path/link helpers for new internal links;
+- keep destructive actions exact-id and visible-scope based.
+
+## Security Contract
+
+- Visibility: internal admin Entries UI plus existing read-only token preview.
+- Auth model: authenticated admin session/API key where supported.
+- RBAC: `content:read`, `content:write`, `content:publish`.
+- CSRF: all mutating admin calls continue through shared CSRF client behavior.
+- Rate-limit buckets: existing `admin_read`, `admin_write`, `public_read`.
+- Reject-unknown validation: create/update/metadata/duplicate payloads remain
+  schema-first and strict.
+- Anti-abuse:
+  - no public write path,
+  - destructive actions require confirmation,
+  - duplicate must create a draft and preserve slug uniqueness,
+  - preview/feedback must not expose tokens, headers, stack traces, or secrets.
+
+## Implementation Order
+
+1. Fix metadata route/client state and save/status feedback.
+2. Fix rich text rendering and runtime preview parity.
+3. Replace native confirms and wire duplicate/danger-zone actions.
+4. Tighten sidebar, SEO, taxonomy, and help guidance.
+5. Replay report, sync docs, board, changelog, and closure notes.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- Vitest owner suites:
+  - `tests/vitest/ui/entry-list-wave.test.tsx`
+  - `tests/vitest/ui/entry-table-wave.test.tsx`
+  - `tests/vitest/ui/entry-editor-shell-wave.test.tsx`
+  - `tests/vitest/ui/entry-metadata.test.tsx`
+  - `tests/vitest/ui/content-entry-editor.test.tsx`
+  - `tests/vitest/ui/entry-field-relation.test.tsx`
+  - `tests/vitest/ui/content-entries.test.tsx`
+  - `tests/vitest/ui/entry-bulk-actions.test.tsx`
+  - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
+  - `tests/vitest/admin/entriesClient.test.ts`
+  - `tests/vitest/admin/contentTypesClient.test.ts`
+  - `tests/vitest/admin/siteSettingsClient.test.ts`
+  - `tests/vitest/admin/adminApp.test.tsx`
+  - `tests/vitest/server/previewUrls.test.ts`
+- Bun suites if route/service/runtime owners change:
+  - `set -a && source .env && set +a && bun test tests/integration/routes/contentTypes.test.ts tests/unit/content/entryService.test.ts tests/unit/site/publicEntryRenderer.test.tsx`
+
+## Documentation Updates Required
+
+- `_docs/CONTENT_LIST_UX.md`
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/CONTENT_FIELDS.md`
+- `_docs/CMS_SPEC.md`
+- `_docs/CMS_API.md`
+- `_docs/PREVIEW_SPEC.md`
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache semantics change
+- `docs/coderso/entries-list-type-selection-and-creation.md`
+- `docs/coderso/content-type-editor-and-schema-builder.md` if field/taxonomy
+  guidance changes
+- `_docs/PLAYWRIGHT/SUMMARY-ENTRIES.md` during closure
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- new `_docs/_CHANGELOG/*` entry when TASK-203 closes
+
+## Acceptance Criteria
+
+1. Every `BUG-*` and `UX-*` from the Entries report has an owner and closure
+   path.
+2. Metadata/status/save failures and successes are visible to users.
+3. Engine `richtext` fields no longer render as textarea-only controls.
+4. Delete/duplicate actions are explicit, confirmed where destructive, and
+   cache-safe.
+5. SEO URL, taxonomy guidance, preview failure handling, help density, and
+   content-type sidebar scanability match current admin contracts.
+
