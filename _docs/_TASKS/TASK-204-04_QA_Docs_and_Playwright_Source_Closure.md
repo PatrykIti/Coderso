@@ -32,7 +32,13 @@ No child task files.
   - `UX-7`,
   - `BUG-6`,
   - `BUG-7`.
+- Classify the `Bledy z konsoli real time` block separately from `BUG-7`:
+  - `site.adminPath` settings read failed with raw Drizzle query output;
+  - `POST /admin/api/posts/:id/autosave` failed after `CONNECTION_CLOSED`.
 - Separate fixed, still-open capability, and environment/runtime failure states.
+- If those console failures remain reproducible, record named follow-up owners:
+  `core/services/settings/settingsService.ts` for settings/admin-path reads and
+  `core/server/routes/postsRoutes.ts` for autosave route/error behavior.
 - Update product docs if the editor/API contract changed.
 - Update task board and changelog when `TASK-204` is complete.
 
@@ -43,6 +49,8 @@ Out of scope:
   end to end;
 - running broad destructive DB scenarios without verifying `DATABASE_URL`
   reachability first.
+- treating the settings/autosave console errors as fixed merely because the
+  taxonomy selector no longer leaks raw SQL.
 
 ## Files to Change
 
@@ -74,6 +82,9 @@ Out of scope:
 - Additional media block contract suites if new media block types were accepted.
 - Manual Playwright replay of the Posts scenarios listed in the
   `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` re-verification section.
+- Console capture must explicitly state whether the `site.adminPath` settings
+  query and posts autosave `CONNECTION_CLOSED` failures reproduced or were
+  environment-only during the replay.
 
 ## Documentation Updates Required
 
@@ -93,3 +104,5 @@ Out of scope:
 2. Source docs, task board, and changelog agree with the final implementation.
 3. Validation commands are recorded with pass/fail status.
 4. Any skipped DB/runtime validation is stated with the concrete reason.
+5. The source report's realtime console errors are not left ambiguous: each has
+   fixed evidence, environment-only evidence, or a named follow-up owner.

@@ -30,6 +30,19 @@ or newly observed issues from the fresh replay:
 - `BUG-7`: `GET /admin/api/content-types/post/terms` can return a 500 and the
   Posts inspector can surface raw SQL/query text to users.
 
+The same source report also includes a `Bledy z konsoli real time` block with
+two runtime/database symptoms outside the taxonomy selector itself:
+
+- `settings` read for `site.adminPath` failed with raw Drizzle query output;
+- `POST /admin/api/posts/:id/autosave` failed after a
+  `CONNECTION_CLOSED` database error.
+
+`TASK-204` must not silently fold those console findings into `BUG-7`. Closure
+must classify them separately as fixed, environment-only, or still-open with
+named owners. If still reproducible, the durable follow-up owners are
+`core/services/settings/settingsService.ts` for the settings/admin-path read and
+`core/server/routes/postsRoutes.ts` for the autosave route/error contract.
+
 This is a follow-up polish and contract-hardening family. It must not reopen
 closed `TASK-195` work such as list selection, search placeholder, Details
 button semantics, raw featured image IDs, category dropdown existence, slug URL
@@ -67,6 +80,8 @@ state where closed and still-open Posts findings are indistinguishable.
 4. QA/docs/closure:
    - replay the Posts report after the leaf work,
    - update source docs, task board, and changelog when the family closes.
+   - classify the source report's realtime console errors separately from
+     `BUG-7`, with named follow-up owners if they remain reproducible.
 
 Out of scope:
 
@@ -74,6 +89,8 @@ Out of scope:
 - creating public Posts write endpoints;
 - adding a second Posts-only toast host or event bus;
 - pretending backend/database failures succeeded in the UI;
+- root-causing transient Render/Postgres availability unless the replay proves
+  a deterministic app-level settings or autosave error contract bug;
 - adding new media block labels in the catalog without schema/defaults,
   editor, normalizer, runtime renderer, and tests;
 - broad redesign of the Posts editor shell, Entries editor, or media library.
@@ -111,6 +128,9 @@ Current owner seams:
   - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:100`
   - `core/services/posts/editor/postBlockDocument.ts:3`
   - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
+- realtime console error triage:
+  - `core/services/settings/settingsService.ts`
+  - `core/server/routes/postsRoutes.ts`
 
 Reuse-first rules:
 
@@ -126,6 +146,9 @@ Reuse-first rules:
 - if new media block types are accepted, update the full block contract across
   schema/types, defaults, normalizers, editor controls, runtime renderer, and
   tests in one coherent leaf.
+- console errors from the source report must be mapped to their actual owners
+  and must not be treated as taxonomy UI closure unless the failing call is the
+  taxonomy terms endpoint.
 
 ## Security Contract
 
@@ -157,7 +180,9 @@ Reuse-first rules:
 3. Tighten block inserter active-category search copy/proof.
 4. Decide and implement or explicitly keep open the broader media capability
    gap with named owners.
-5. Replay the Posts Playwright checklist, update docs, changelog, and board.
+5. Replay the Posts Playwright checklist, including console capture for
+   settings/admin-path reads and autosave failures.
+6. Update docs, changelog, and board with fixed, deferred, or follow-up status.
 
 ## Testing Requirements
 
@@ -174,7 +199,9 @@ Reuse-first rules:
   - rerun the Posts checklist from `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` with
     Playwright CLI or equivalent browser evidence;
   - capture the console state for the revision dialog warning and taxonomy
-    terms failure path.
+    terms failure path;
+  - capture whether the `site.adminPath` settings read and posts autosave
+    `CONNECTION_CLOSED` errors still reproduce.
 
 ## Documentation Updates Required
 
@@ -205,3 +232,6 @@ Reuse-first rules:
    block contract or left explicitly open with named owners and no false closure.
 8. `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` is updated with per-item closure evidence
    for every remaining `BUG-*` and `UX-*` item from the 2026-04-23 replay.
+9. The realtime console error block from the source report is classified
+   separately, with `settingsService` and/or `postsRoutes` follow-up ownership
+   recorded if those failures remain reproducible.
