@@ -38,6 +38,9 @@ Current owner evidence:
 - Disambiguate duplicate content-type names with current slug/path context.
 - Add hide-empty/grouping affordances when derivable from current summaries.
 - Replace hardcoded SEO domain with settings/content-route context.
+- Resolve SEO route context from the active Entries content type and
+  `site.contentRoutes`; do not reuse Posts-only route helpers or hardcoded
+  `/blog`/`/post` paths for generic entries.
 - Add Engine settings navigation for disabled taxonomy.
 - Collapse or persist-dismiss help without removing first-use guidance.
 
@@ -81,6 +84,8 @@ Out of scope:
 - duplicate type names remain readable by showing slug or equivalent current
   content-type context,
 - SEO preview configured URL and fallback placeholder,
+- SEO route tests prove active content-type route ownership rather than Posts
+  fallback behavior,
 - taxonomy disabled state includes internal settings link,
 - help is collapsible/persistently dismissible,
 - new links use shared admin path helpers.

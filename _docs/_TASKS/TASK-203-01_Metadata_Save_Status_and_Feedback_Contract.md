@@ -12,12 +12,16 @@
 ## Overview
 
 Repair metadata save and save-feedback behavior from `BUG-1`, `BUG-5`,
-`BUG-7`, and `UX-2`.
+`BUG-7`, and `UX-2`. Use the current checked-in call graph as the source of
+truth; if toolbar `Update` no longer calls the metadata endpoint, keep the fix
+on the actual metadata/status path and do not add a compatibility detour.
 
 Current code paths:
 
 - `EntryEditor.tsx:364-389` saves title/slug/data.
-- `EntryEditor.tsx:391-423` publishes or updates.
+- `EntryEditor.tsx:391-423` handles publish/update intent. In the current code,
+  the already-published branch delegates to content save; metadata/status writes
+  stay under `handleSaveMetadata()`.
 - `EntryEditor.tsx:425-428` changes status locally.
 - `EntryEditor.tsx:470-525` saves metadata.
 - `EntryEditor.tsx:641-670` renders toolbar save/update.
@@ -39,6 +43,8 @@ Current code paths:
 - Show success/failure feedback for metadata, draft save, publish, and update.
 - Track status/schedule/taxonomy/SEO as metadata dirty state.
 - Remove or relabel duplicate `Save draft` so each action has one role.
+- Reuse the existing admin feedback/toast mount and dirty-state patterns instead
+  of introducing an Entries-only notifier or navigation guard.
 
 Out of scope:
 

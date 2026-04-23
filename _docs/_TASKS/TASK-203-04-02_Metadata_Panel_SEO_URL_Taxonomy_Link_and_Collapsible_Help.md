@@ -21,7 +21,10 @@ Ownership:
   route, and Engine-link context, then passing it into the panel.
 - `EntryMetadataPanel` stays presentational and must not fetch settings,
   content types, routes, or taxonomy config at import/render time.
-- `siteSettingsClient` owns public URL/content-route normalization.
+- `siteSettingsClient` owns public URL/content-route normalization. It must grow
+  or reuse a generic content-route resolver for the current `contentTypeSlug`;
+  do not reuse the Posts-only slug helper/fallback when rendering generic
+  Entries SEO previews.
 - `AdminLink` plus `adminPaths` own canonical Engine navigation.
 
 ## Sub-Tasks
@@ -50,13 +53,17 @@ No child task files.
 const seoPreviewUrl =
   publicBaseUrl && routeUsesSlug
     ? `${publicBaseUrl}${entryPath}`
-    : `yourdomain.com/${contentTypeSlug}/${slug || "[slug]"}`;
+    : `/${contentTypeSlug}/${slug || "[slug]"}`;
 ```
 
 Direction:
 
 - concrete URL only from trustworthy site settings and route context,
 - otherwise show neutral placeholder/route hint,
+- route context must come from `site.contentRoutes` for the active content type,
+  with a generic `/{contentTypeSlug}/:slug` hint only when no enabled route is
+  configured; do not hard-code `/blog`, `/post`, `nextless.cms`, or any
+  posts-specific fallback for Entries,
 - taxonomy link goes to the current content type editor/settings route through
   shared helpers, e.g. `/content-types/${contentTypeId}` or
   `/content-types/${contentTypeId}/schema` resolved by `AdminLink` to the
@@ -77,6 +84,8 @@ Direction:
 
 - configured public URL appears when available,
 - fallback placeholder appears when context is missing,
+- content-route resolution uses the active content type, not the Posts helper or
+  a hardcoded `/blog` path,
 - `nextless.cms` is not hardcoded,
 - disabled taxonomy copy includes Engine settings link for the current content
   type and the test asserts the canonical href,
@@ -98,3 +107,5 @@ Direction:
 3. The repair path uses current admin navigation helpers and names the Engine
    content type editor as the owner of taxonomy enablement.
 4. Help no longer permanently occupies sidebar space.
+5. Generic Entries SEO preview does not reuse Posts-only route helpers or
+   hardcoded blog/post paths.

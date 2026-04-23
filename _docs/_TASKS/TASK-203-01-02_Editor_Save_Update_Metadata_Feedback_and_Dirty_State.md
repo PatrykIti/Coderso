@@ -14,6 +14,16 @@
 Add visible feedback for entry save/update/metadata flows and track metadata
 changes separately from field-data changes.
 
+Ownership:
+
+- `EntryEditor` owns calling existing save/update/metadata client wrappers,
+  marking content-vs-metadata dirty state, and clearing each dirty flag only
+  after its successful owner response.
+- `EntryMetadataPanel` owns presentational dirty/saving affordances only; it must
+  not fetch, mutate, or duplicate metadata persistence.
+- Shared admin feedback stays with the existing `sonner`/`Toaster` mount. Do not
+  add an Entries-only toaster, fallback state, or local notification wrapper.
+
 ## Sub-Tasks
 
 No child task files.
@@ -47,6 +57,7 @@ No child task files.
   - save draft success/failure,
   - publish/update success/failure,
   - metadata save success/API failure,
+  - shared toast success/error assertions for save/update/metadata,
   - status/SEO/taxonomy/schedule dirty state.
 - `tests/vitest/ui/entry-metadata.test.tsx`
   - metadata panel dirty/saving affordance if presentation changes.
@@ -62,3 +73,5 @@ No child task files.
 1. Save/update/metadata successes are visible.
 2. Save/update/metadata failures are actionable.
 3. Metadata dirty state is distinct from field dirty state.
+4. Feedback is delivered through the existing shared admin notifier, not a local
+   Entries-only path.

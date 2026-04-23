@@ -31,6 +31,9 @@ Current evidence:
 
 - Replace native row/bulk delete confirms with app dialogs.
 - Add an editor danger zone for exact-entry delete.
+- Show shared success/failure feedback for row, bulk, and editor delete; the
+  editor danger-zone success path must redirect to the list and confirm deletion
+  visibly.
 - Implement the visible duplicate action end to end, or remove it with product
   sign-off captured during closure.
 - Keep selection visible-scope based and cache-safe.
@@ -74,6 +77,7 @@ Out of scope:
 
 - Vitest:
   - row/bulk/editor delete dialog cancel/confirm paths,
+  - delete success/error feedback through the existing admin feedback surface,
   - duplicate row action, success/error feedback, cache refresh,
   - `entriesClient` delete/duplicate cache behavior.
 - Bun:

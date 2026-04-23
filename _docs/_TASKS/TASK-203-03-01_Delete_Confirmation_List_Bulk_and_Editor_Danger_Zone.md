@@ -13,6 +13,19 @@
 
 Replace native delete confirmations and add an editor-local delete path.
 
+Ownership:
+
+- `EntryList` owns row and bulk delete orchestration over the existing
+  `entriesClient.deleteEntry()` wrapper and visible-scope selection state.
+- `EntryEditor` owns the editor danger-zone action for the currently loaded
+  exact entry and the post-delete navigation back to the Entries list.
+- Confirmation UI must reuse the repo's app dialog/Radix AlertDialog pattern
+  used by adjacent admin surfaces; do not add another delete-dialog abstraction
+  unless the current UI owner cannot carry the state clearly.
+- Feedback must use the existing shared admin notifier or current Entries error
+  surface; do not reintroduce `window.confirm()` or add a local notification
+  path.
+
 ## Sub-Tasks
 
 No child task files.
@@ -40,9 +53,10 @@ No child task files.
 ## Testing Requirements
 
 - row delete opens dialog and cancel blocks delete,
-- confirm deletes and refreshes,
+- confirm deletes, refreshes, and shows success/failure feedback,
 - bulk delete dialog includes selected count,
-- editor danger zone deletes and navigates back,
+- editor danger zone deletes, navigates back, and shows the delete success toast
+  required by the Playwright report,
 - no test stubs depend on `window.confirm()`.
 
 ## Documentation Updates Required
@@ -57,3 +71,5 @@ No child task files.
 1. Row and bulk delete use app dialogs.
 2. Editor delete confirms before mutation.
 3. Success refreshes list/cache and failure stays visible.
+4. Editor danger-zone delete redirects to the list and emits the shared success
+   feedback expected by the report.

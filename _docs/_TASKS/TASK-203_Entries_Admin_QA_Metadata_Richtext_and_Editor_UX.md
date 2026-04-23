@@ -17,8 +17,10 @@ Entries editor systems.
 
 Findings covered by this family:
 
-- `BUG-1`: `Save metadata` / `Update` can hit the metadata endpoint with a 500
-  and no actionable UI feedback.
+- `BUG-1`: metadata/status save paths can surface a raw metadata endpoint 500
+  and no actionable UI feedback. Verify the current checked-in call path before
+  patching; do not assume toolbar `Update` still calls metadata if the code has
+  already diverged.
 - `BUG-2`: Engine `richtext` fields render as plain textarea controls.
 - `BUG-3`: row delete uses native `window.confirm()`.
 - `BUG-4`: row `Duplicate` is visible but currently has no real handler.
@@ -43,6 +45,9 @@ Execution contract for this family:
 - do not duplicate code paths that already have owners; reuse current
   `EntryEditor`, `FieldRenderer`, `EntryMetadataPanel`, `entriesClient`,
   `contentEntryRoutes`, `entryService`, `previewUrls`, and public runtime seams;
+- do not add production fallbacks, one-off wrappers, local toasters, duplicate
+  dialogs, or alternate API routes only to satisfy tests; adjust the existing
+  owner or its tests to match the real contract;
 - fix the checked-in contracts that exist today before adding abstractions; do
   not introduce convenience wrappers, duplicate routes, duplicate dialogs, or
   one-off helpers when the current owner can carry the behavior cleanly;
@@ -53,6 +58,10 @@ Execution contract for this family:
   the existing contract readable; the leaf must name the owner, responsibility,
   and why reuse through the current Entries/preview/route/cache/navigation path is
   not enough;
+- keep the fix tied to current source files and repo docs; if a report symptom
+  is already partially fixed by newer code, update the leaf with current
+  evidence and close only the remaining gap instead of reintroducing stale
+  assumptions;
 - use current repo helpers for navigation, cache, validation, CSRF, preview URL
   resolution, rich text normalization, and app dialogs instead of inventing
   one-off replacements;

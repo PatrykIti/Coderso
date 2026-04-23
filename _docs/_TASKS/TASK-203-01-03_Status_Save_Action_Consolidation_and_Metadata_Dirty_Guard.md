@@ -15,6 +15,17 @@ Remove duplicate save ambiguity and make local status changes safe. The toolbar
 and sidebar both render `Save draft`, while the status dropdown changes state
 that is only persisted later by metadata save.
 
+Ownership:
+
+- `EntryEditor` owns the authoritative dirty-state model and the guard that
+  prevents local metadata edits from being overwritten or abandoned silently.
+- `EntryMetadataPanel` owns status/schedule/SEO/taxonomy controls as
+  presentational inputs; it does not own persistence or navigation blocking.
+- Any leave-page/back/refresh protection must reuse the existing admin dirty
+  pattern from the current codebase where applicable (for example the Page
+  editor `beforeunload`/dirty warning path) instead of adding an Entries-only
+  global event layer.
+
 ## Sub-Tasks
 
 No child task files.
@@ -43,6 +54,10 @@ No child task files.
 - only one content `Save draft` action per desktop/mobile surface,
 - metadata save is clearly scoped if it remains separate,
 - status dropdown sets metadata dirty state,
+- status/schedule/SEO/taxonomy dirty state triggers the same visible unsaved
+  warning and leave-page guard as content dirty state,
+- route/internal refresh with dirty metadata defers or asks through the existing
+  dirty contract instead of silently reloading stale remote data,
 - no test depends on confusing duplicate save labels.
 
 ## Documentation Updates Required
@@ -57,3 +72,5 @@ No child task files.
 1. There are no two indistinguishable `Save draft` actions.
 2. Status edits clearly require metadata save or use an explicit save path.
 3. Desktop and mobile details surfaces behave consistently.
+4. Users cannot leave or refresh away from dirty metadata edits without the
+   existing admin dirty-state warning/guard applying.

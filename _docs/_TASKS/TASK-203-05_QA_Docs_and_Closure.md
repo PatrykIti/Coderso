@@ -34,6 +34,16 @@ No child task files.
 - Verify any new helper/component introduced by a leaf has an explicit owner and
   removes real complexity instead of duplicating an existing Entries, preview,
   route, validation, cache, or navigation contract.
+- Verify implementation did not add stale compatibility paths for assumptions
+  that no longer match the current code, such as treating toolbar `Update` as a
+  metadata call if the checked-in call graph no longer does that.
+- Verify status/schedule/SEO/taxonomy dirty metadata uses the existing admin
+  dirty-state warning/guard and cannot be abandoned by route/back/refresh flows
+  without warning.
+- Verify delete/danger-zone success and failure feedback uses the existing shared
+  admin feedback surface.
+- Verify generic Entries SEO preview uses the active content type and
+  `site.contentRoutes`, not Posts-only helpers or hardcoded blog/post paths.
 - Create/link follow-up tasks for still-reproducible preview-host/runtime issues
   or approved out-of-scope capability gaps.
 
@@ -96,6 +106,8 @@ Out of scope:
   - row delete and duplicate,
   - editor danger-zone delete,
   - save/update feedback,
+  - dirty metadata leave-page guard,
+  - row/bulk/editor delete feedback,
   - SEO URL,
   - taxonomy disabled link,
   - runtime preview success/failure,
