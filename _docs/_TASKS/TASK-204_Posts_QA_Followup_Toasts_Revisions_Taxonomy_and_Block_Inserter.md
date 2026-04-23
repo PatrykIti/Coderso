@@ -45,32 +45,42 @@ named owners. If still reproducible, the durable follow-up owners are
 
 This is a follow-up polish and contract-hardening family. It must not reopen
 closed `TASK-195` work such as list selection, search placeholder, Details
-button semantics, raw featured image IDs, category dropdown existence, slug URL
-context, or typography helper copy unless the fresh replay proves a regression
-in those exact seams.
+button semantics, raw featured image IDs, category dropdown existence, focus
+mode/right-rail discoverability, collapsed SEO summary, slug URL context, or
+typography helper copy unless the fresh replay proves a regression in those
+exact seams.
 
-Closure must map every remaining item in the manual re-verification section of
-`_docs/PLAYWRIGHT/SUMMARY-POSTS.md` to fixed evidence, an explicit open
-capability decision, or a named follow-up. Do not leave the source report in a
-state where closed and still-open Posts findings are indistinguishable.
+Closure must map every source report finding in
+`_docs/PLAYWRIGHT/SUMMARY-POSTS.md` to fixed evidence, `TASK-195` prior-closure
+regression smoke, an explicit open capability decision, or a named follow-up. Do
+not leave the source report in a state where closed and still-open Posts
+findings are indistinguishable.
 
 ## Source Report Coverage Matrix
 
 | Source finding | 2026-04-23 replay status | TASK-204 owner |
 |---|---|---|
+| `BUG-1` bulk select | Verified working after `TASK-195` | `TASK-204-04` regression smoke only |
+| `BUG-2` search placeholder | Verified working after `TASK-195` | `TASK-204-04` regression smoke only |
+| `BUG-3` Details button semantics | Verified working after `TASK-195` | `TASK-204-04` regression smoke only |
+| `BUG-4` raw category/featured-image IDs | Verified picker/dropdown replacement after `TASK-195`; taxonomy failure is separate `BUG-7` | `TASK-204-04` regression smoke only |
 | `BUG-5` publish/update toast | Partial: mutation feedback works, visible toast/live-region proof missing | `TASK-204-01-01` |
 | `UX-1` revision preview | Partial: preview toggle exists, but short revisions can show only empty fallback | `TASK-204-01-02` |
+| `UX-2` focus mode hides Post settings | Covered by `TASK-195-02-01` through existing preference/layout restore seams; replay must keep right-rail discoverability explicit | `TASK-204-04` regression smoke only |
+| `UX-3` collapsed Advanced hides SEO | Covered by `TASK-195-03-02`; replay must keep collapsed SEO summary visible | `TASK-204-04` regression smoke only |
 | `UX-4` Media tab capabilities | Partial: `Image` + `Embed` are present, but `Video`, `Gallery`, `Audio`, and `File` remain capability decisions | `TASK-204-03-02` |
+| `UX-5` slug lacks URL context | Covered by `TASK-195-03-02`; replay must keep create/edit slug route context visible without changing stored slug values | `TASK-204-04` regression smoke only |
+| `UX-6` typography helper copy | Verified working after `TASK-195` | `TASK-204-04` regression smoke only |
 | `UX-7` block search scope | Partial: scoped search needs active-category copy plus regression/browser proof | `TASK-204-03-01` |
 | `BUG-6` revisions Radix description warning | New replay bug | `TASK-204-01-02` |
 | `BUG-7` taxonomy terms 500/raw SQL UI | New replay bug | `TASK-204-02-01`, then `TASK-204-02-02` |
 | Realtime console: `site.adminPath` settings read | Separate runtime/database symptom, not taxonomy | `TASK-204-04-01` |
 | Realtime console: posts autosave `CONNECTION_CLOSED` | Separate runtime/database symptom, not taxonomy | `TASK-204-04-01` |
 
-The same replay also verified `BUG-1`, `BUG-2`, `BUG-3`, `BUG-4`, and `UX-6`
-as working after `TASK-195`. `TASK-204` should keep them as regression smoke
-evidence during replay, but must not allocate new implementation work to them
-unless the fresh run proves they regressed.
+The `TASK-195`-owned rows stay in this matrix because they are still source
+report findings. `TASK-204` should keep them as regression smoke evidence
+during replay, but must not allocate new implementation work to them unless the
+fresh run proves they regressed.
 
 ## Sub-Tasks
 
@@ -98,9 +108,40 @@ unless the fresh run proves they regressed.
      gap for `Video`, `Gallery`, `Audio`, and `File`.
 4. QA/docs/closure:
    - replay the Posts report after the leaf work,
+   - record regression-smoke evidence for `TASK-195`-owned source findings:
+     `BUG-1`, `BUG-2`, `BUG-3`, `BUG-4`, `UX-2`, `UX-3`, `UX-5`, and `UX-6`,
    - update source docs, task board, and changelog when the family closes.
    - classify the source report's realtime console errors separately from
      `BUG-7`, with named follow-up owners if they remain reproducible.
+
+## Contract Repair Rules
+
+All child tasks inherit these execution rules:
+
+- Fix the existing owner seam first. If the owner is unclear during
+  implementation, stop and document the responsible module before changing code.
+- Do not create duplicate toasters, taxonomy clients, admin endpoints, block
+  catalogs, layout state, or renderer paths to make tests pass.
+- Keep presentation components presentational:
+  - `DocumentInspector` receives category state/retry props and does not fetch;
+  - `PostRevisionDrawer` renders existing revision data and does not become a
+    second editor;
+  - header/top-bar components reflect actions and state, while shell/hooks own
+    async orchestration.
+- Route modules stay route-boundary owners: validate/authenticate, call the
+  service, map known machine-readable errors, and return bounded API errors.
+  Services own domain invariants; clients and UI own user-facing recovery.
+- Product capability gaps must not be closed by labels only. Media block
+  expansion is fixed only when schema, defaults, normalizer, editor, runtime,
+  tests, and docs move together; otherwise the source report stays explicitly
+  open with named owners.
+- Dependencies matter:
+  - `TASK-204-02-01` route/client sanitization must land before
+    `TASK-204-02-02` UI retry can claim `BUG-7` closure;
+  - `TASK-204-03-01` scoped-search contract must be preserved by any
+    `TASK-204-03-02` media capability work;
+  - `TASK-204-04-01` console triage evidence must be consumed before
+    `TASK-204-04` closes the family.
 
 Out of scope:
 
@@ -124,21 +165,31 @@ Current owner seams:
   - `core/admin/components/ui/sonner.tsx:13`
   - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:551`
   - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:556`
+  - responsibility: `AdminApp` mounts the shared toaster, `sonner.tsx`
+    configures it, and `PostBlockEditorShell` dispatches post-specific feedback
+    only after the existing mutation path succeeds.
 - revision drawer:
   - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:59`
   - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:89`
   - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:96`
   - `core/admin/ui/posts/editor/PostRevisionDrawer.tsx:141`
+  - responsibility: `PostRevisionDrawer` owns sheet accessibility and bounded
+    preview presentation over existing revision payloads.
 - taxonomy route/client/inspector:
   - `core/server/routes/taxonomyRoutes.ts:34`
   - `core/server/routes/taxonomyRoutes.ts:112`
   - `core/server/routes/taxonomyRoutes.ts:152`
+  - `core/services/content/taxonomyService.ts`
   - `core/admin/services/apiClient.ts:60`
   - `core/admin/services/taxonomyClient.ts:62`
   - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:239`
   - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx:254`
   - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:150`
   - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx:171`
+  - responsibility: `taxonomyRoutes` maps route errors, `taxonomyService`
+    owns taxonomy read invariants, `taxonomyClient` owns the admin fetch
+    contract, `PostBlockEditorShell` normalizes failed load state, and
+    `DocumentInspector` only renders safe copy/options/retry from props.
 - block inserter and media capability contract:
   - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx:62`
   - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx:130`
@@ -146,7 +197,27 @@ Current owner seams:
   - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:72`
   - `core/admin/ui/posts/editor/blocks/blockCatalog.ts:100`
   - `core/services/posts/editor/postBlockDocument.ts:3`
+  - `core/services/posts/editor/postBlockNormalizer.ts`
+  - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
+  - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx`
   - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
+  - responsibility: `blockCatalog.ts` owns category/search metadata,
+    document/normalizer modules own schema/defaults, editor surfaces own
+    insertion/inspection, and runtime renderer owns public deterministic output.
+- `TASK-195` regression-smoke owners:
+  - `core/admin/ui/posts/PostsListPage.tsx` and
+    `core/admin/ui/posts/PostsTable.tsx` for list bulk/select and placeholder
+    behavior;
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`,
+    `core/admin/ui/posts/editor/hooks/usePostEditorPreferences.ts`, and
+    `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts` for Details,
+    focus/right-rail discoverability, and layout restore;
+  - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx`,
+    `core/admin/ui/posts/PostsCreateDrawer.tsx`, and
+    `core/admin/services/siteSettingsClient.ts` for SEO summary and slug route
+    context;
+  - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` for typography
+    helper copy.
 - realtime console error triage:
   - `core/server/routes/settingsRoutes.ts`
   - `core/services/settings/settingsService.ts`
@@ -154,6 +225,9 @@ Current owner seams:
   - `core/admin/services/siteSettingsClient.ts`
   - `core/admin/services/postsClient.ts`
   - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
+  - responsibility: settings routes/service own `site.adminPath` read behavior,
+    posts route/schema own autosave error contracts, and admin clients/hooks own
+    bounded browser-facing failure copy.
 
 Reuse-first rules:
 
@@ -211,7 +285,8 @@ Reuse-first rules:
    through `TASK-204-04-01`, fixing bounded error contracts in-family only when
    the replay proves an app-owned leak or user-facing failure.
 6. Replay the Posts Playwright checklist, including console capture for
-   settings/admin-path reads and autosave failures.
+   settings/admin-path reads, autosave failures, and regression smoke for the
+   `TASK-195`-owned focus/SEO/slug and already-verified list/editor fixes.
 7. Update docs, changelog, and board with fixed, deferred, or follow-up status.
 
 ## Testing Requirements
@@ -232,6 +307,9 @@ Reuse-first rules:
 - QA replay:
   - rerun the Posts checklist from `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` with
     Playwright CLI or equivalent browser evidence;
+  - include regression smoke for `BUG-1`, `BUG-2`, `BUG-3`, `BUG-4`, `UX-2`,
+    `UX-3`, `UX-5`, and `UX-6` so original report findings remain explicitly
+    closed;
   - capture the console state for the revision dialog warning and taxonomy
     terms failure path;
   - capture whether the `site.adminPath` settings read and posts autosave
@@ -265,7 +343,8 @@ Reuse-first rules:
 7. `UX-4` media capability scope is either implemented across the full Posts
    block contract or left explicitly open with named owners and no false closure.
 8. `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` is updated with per-item closure evidence
-   for every remaining `BUG-*` and `UX-*` item from the 2026-04-23 replay.
+   for every original and replayed `BUG-*` / `UX-*` source finding, with
+   `TASK-195`-owned items labeled as prior closure plus regression smoke.
 9. The realtime console error block from the source report is classified
    separately, with `settingsService` and/or `postsRoutes` follow-up ownership
    recorded if those failures remain reproducible.

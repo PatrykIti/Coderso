@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Posts + Block Editor + Runtime
 **Estimated Effort:** Large
-**Dependencies:** TASK-204-03
+**Dependencies:** TASK-204-03, TASK-204-03-01
 **Status:** To Do
 
 ---
@@ -54,6 +54,11 @@ Before coding, decide the product contract for each requested type:
 If the accepted scope is smaller than all four types, update
 `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` to leave the remaining capability open with
 the exact owner and reason. Do not mark `UX-4` fixed by adding unsupported labels.
+
+This leaf must preserve the scoped-search contract from `TASK-204-03-01`.
+Media work may extend the current catalog and editor/runtime contracts, but it
+must not fork `BlockInserter`, add a second catalog search helper, or create
+labels that normalize into unsupported block types.
 
 ## Security Contract
 
