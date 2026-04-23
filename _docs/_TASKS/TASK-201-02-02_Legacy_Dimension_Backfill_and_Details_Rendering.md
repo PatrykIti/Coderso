@@ -56,7 +56,9 @@ No child task files.
 - Bun:
   - backfill updates missing dimensions for an existing image row,
   - backfill is a no-op when dimensions already exist,
-  - route contract test if exposed through `mediaRoutes`.
+  - route contract test if exposed through `mediaRoutes`,
+  - any backfill route maps validation/not-found/storage failures through the
+    media route/API error boundary instead of raw error responses.
 - Vitest:
   - details renders `width x height px`,
   - missing image dimensions show truthful `Unknown`/pending copy instead of a

@@ -32,7 +32,8 @@ No child task files.
   domain module
 - `core/server/routes/mediaRoutes.ts`
   - owns internal read route registration, permission checks, strict query
-    validation, and known media-domain error mapping.
+    validation, and known media-domain error mapping through the media route/API
+    error boundary.
 - `core/server/validation/mediaSchemas.ts` only if query params are added
 - `tests/unit/media/mediaUsageService.test.ts`
 - `tests/integration/routes/media.test.ts`
@@ -97,7 +98,9 @@ string false positives, and documented as compatibility support.
   - handles no usage,
   - handles malformed page/entry/post JSON safely,
   - caps each family result set,
-  - route registration includes the usage endpoint and permission middleware.
+  - route registration includes the usage endpoint and permission middleware,
+  - not-found, malformed query, and unexpected usage-service errors map to
+    machine-readable API errors instead of leaking raw error responses.
 
 ## Documentation Updates Required
 

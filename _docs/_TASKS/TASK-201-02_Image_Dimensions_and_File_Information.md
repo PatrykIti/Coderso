@@ -85,7 +85,8 @@ Out of scope:
   - `uploadMedia` persists dimensions for images and leaves non-images null,
   - legacy backfill updates only missing dimensions and handles missing storage
     objects safely,
-  - route wiring/permission test if a new admin endpoint is added.
+  - route wiring, permission, validation, and mapped API error tests if a new
+    admin endpoint is added.
 - Vitest:
   - details drawer/panel renders dimensions with `px`,
   - unknown dimensions use truthful copy,

@@ -76,7 +76,8 @@ Out of scope:
 - Bun:
   - usage service finds media IDs in current supported owners,
   - usage service caps results and handles malformed JSON safely,
-  - route registration and permission coverage for usage endpoint.
+  - route registration, permission, validation, and mapped API error coverage
+    for the usage endpoint.
 - Vitest:
   - media client fetches usage summaries,
   - drawer renders navigable links for resolvable usage,

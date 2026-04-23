@@ -58,7 +58,9 @@ No child task files.
 - Bun if API changes:
   - `GET /media` validates pagination params,
   - `hasMore` and total/next cursor are deterministic,
-  - unauthorized access still fails via existing route middleware.
+  - unauthorized access still fails via existing route middleware,
+  - malformed pagination and media-list domain errors map through the media
+    route/API error boundary instead of leaking raw error responses.
 
 ## Documentation Updates Required
 

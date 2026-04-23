@@ -43,7 +43,12 @@ The report findings that must stay explicitly tracked are:
 This family must preserve what the report marked as already good: grid/list
 switching, realtime search, type filters, native file picker upload, media
 settings access mode, existing replace/delete affordances, the current media
-delivery access model, and the admin cache invalidation behavior.
+delivery access model, and the admin cache invalidation behavior. "Preserve"
+means verify and repair the current owner path when the checked-out code has
+drifted from the report, not assume the positive is already implemented. In the
+current code, the toolbar owns a `view` state but `MediaGrid` still renders only
+the grid surface, and the details `Replace` button is visible without an action
+owner. Those gaps are owned by dedicated leaves in this family.
 
 Implementation principle:
 
@@ -83,7 +88,8 @@ This umbrella covers five owner areas:
 3. List truthfulness:
    - filter/search empty states,
    - `Load More Assets` visibility based on real `hasMore`/loaded-count state,
-   - cache-safe list refresh after mutation.
+   - cache-safe list refresh after mutation,
+   - real grid/list view parity from the existing toolbar `view` state.
 4. Usage navigation:
    - replace hard-coded usage examples with a real bounded usage read model,
    - navigate through canonical admin helpers when a target is resolvable,
@@ -91,6 +97,8 @@ This umbrella covers five owner areas:
 5. Asset management and upload clarity:
    - visible-scope multi-select,
    - bulk delete/download with explicit destructive confirmation,
+   - a real replace action for the existing details affordance or an explicit
+     non-interactive/open follow-up state during closure,
    - clearer upload/dropzone placement,
    - stronger placement for `media.openAfterUpload`.
 
@@ -114,7 +122,8 @@ Current owner seams in code:
   - `core/admin/ui/media/MediaLibraryPage.tsx`
     - owns page state, filtered/visible asset set, selected details asset,
       upload orchestration, open-after-upload preference wiring, list/grid mode,
-      and the decision to show empty states or load-more controls.
+      replace-action orchestration, and the decision to show empty states or
+      load-more controls.
   - `core/admin/ui/media/MediaToolbar.tsx`
     - owns search/filter/view/preference controls only; it must not own media
       persistence, navigation, or cache state.
@@ -131,14 +140,17 @@ Current owner seams in code:
     - owns `media.openAfterUpload`; do not create a second browser storage key.
 - Grid/card/details presentation:
   - `core/admin/ui/media/MediaGrid.tsx`
-    - owns grid/list presentation wiring and reusable selection props shared by
-      the library, picker, and post editor surfaces.
+    - owns grid/list presentation wiring from the existing `view` prop and
+      reusable selection props shared by the library, picker, and post editor
+      surfaces. It must not create a second media-list state model.
   - `core/admin/ui/media/MediaCard.tsx`
     - owns card display, selected state, readable names, missing-alt card badge,
       and keyboard-accessible per-card selection affordance.
   - `core/admin/ui/media/MediaDetailsDrawer.tsx`
     - owns the primary details drawer, metadata draft state, save/copy feedback,
-      usage rendering, and details actions.
+      usage rendering, and details actions. Visible actions such as Replace must
+      call an owner callback with a real async result or be rendered as
+      unavailable; no inert action buttons.
   - `core/admin/ui/media/MediaDetailsPanel.tsx`
     - secondary details component; if kept, it must receive the same display
       name, dimension, and metadata-save semantics as the drawer or be retired
@@ -155,7 +167,8 @@ Current owner seams in code:
     - owns strict media route payload/query schemas.
   - `core/services/media/mediaService.ts`
     - owns media domain mutations, metadata merge semantics, upload defaults,
-      dimension persistence/backfill orchestration, and storage adapter calls.
+      dimension persistence/backfill orchestration, same-id replace semantics
+      if implemented, and storage adapter calls.
   - `core/services/media/storage/adapter.ts`
     - owns the storage read/write/delete interface; only extend it if legacy
       dimension backfill cannot use the current `get(key)` read path safely.
@@ -201,12 +214,19 @@ Reuse-first rule:
   shape,
 - keep `MediaGrid` usable by both `MediaLibraryPage` and `MediaPicker`; library
   bulk selection must not break picker selection semantics,
+- keep grid/list switching in the existing media grid/card components; do not
+  add a parallel list component with separate filtering, cache, or selection
+  state unless the leaf proves the shared component cannot stay simple,
 - use existing `sonner` / shared `AdminApp` toaster mounting for feedback rather
   than adding a media-only toaster host,
 - keep media cache updates on `mediaClient` and `cacheBus`; do not introduce
   mount-force refetch loops,
 - use current per-item `DELETE /media/:id` unless a new bulk route is explicitly
   justified and covered by route/security tests,
+- keep the existing Replace affordance honest: either implement it through the
+  media drawer -> page -> client -> service route owner chain with cache
+  invalidation and route error mapping, or remove the clickable styling and
+  record an explicit open state in the source report,
 - route usage navigation through `AdminLink`, `resolveAdminHref`, and existing
   admin path helpers,
 - keep dimensions in the media service/domain contract; UI fallback probing may
@@ -264,8 +284,9 @@ Reuse-first rule:
 - Vitest:
   - `set -a && source .env && set +a && bun run vitest run --config vitest.config.ts tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-details.test.tsx tests/vitest/ui/media-details-panel.test.tsx tests/vitest/ui/media-card.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui-integration/media.test.tsx tests/vitest/mediaUi/mediaLibrary.test.tsx tests/vitest/mediaUi/mediaSettingsDrawer.test.tsx tests/vitest/admin/mediaClient.test.ts`
   - add new focused suites under `tests/vitest/mediaUi/*` or `tests/vitest/ui/*`
-    for bulk bar, empty state, usage navigation, upload layout, and metadata
-    autosave feedback as leaves land.
+    for bulk bar, empty state, usage navigation, upload layout, grid/list view
+    parity, replace action feedback, and metadata autosave feedback as leaves
+    land.
   - include regression coverage that grid/list switching renders distinct
     usable views while preserving search/filter selection state.
 - Bun:
@@ -303,3 +324,6 @@ Reuse-first rule:
    summaries with clear affordance.
 6. Multi-select and upload preferences improve library operations without
    breaking `MediaPicker` or the existing storage/security contract.
+7. Report positives that are currently only partial in code, especially
+   grid/list switching and Replace, are either implemented through their named
+   owner paths or recorded as explicit open states with no misleading UI.

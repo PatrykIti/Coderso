@@ -25,7 +25,9 @@ Closure responsibility note:
 - closure must verify preserved report positives, especially grid/list
   switching, realtime search, type filters, native file picker upload, media
   settings access mode, replace/delete affordances, media delivery access, and
-  cache invalidation behavior.
+  cache invalidation behavior. If a positive flow was only partially implemented
+  in the checked-out code, closure must show the owner leaf that fixed it or mark
+  the source report item as explicitly open.
 
 ## Sub-Tasks
 
@@ -42,6 +44,8 @@ No child task files.
 - `tests/vitest/mediaUi/mediaLibrary.test.tsx`
 - `tests/vitest/mediaUi/mediaSettingsDrawer.test.tsx`
 - `tests/vitest/admin/mediaClient.test.ts`
+- focused grid/list view parity coverage added by `TASK-201-03-03`
+- focused replace action coverage added by `TASK-201-05-03`
 - `tests/vitest/admin/userSettingsClient.test.ts` if preference ownership changed
 - `tests/unit/media/mediaService.test.ts`
 - `tests/unit/media/imageDimensions.test.ts` if added by TASK-201-02
@@ -106,6 +110,14 @@ No child task files.
   change `MediaPicker` selection semantics.
 - `UX-4` / `UX-5`: upload separation and `media.openAfterUpload` placement must
   keep the same upload handler and user-setting key.
+- Grid/list positive: the toolbar view mode must render distinct usable views
+  from the same media list owner state.
+- Replace positive: the details Replace button must be real and tested, or be
+  explicitly unavailable with an open source-report state; no inert button can
+  be counted as preserved behavior.
+- Route boundary: any usage, backfill, pagination, or replace route added by the
+  family must include route registration, permission, validation, and mapped
+  `ApiError` coverage.
 - Preserved positives: grid/list switching, search, filters, native file picker,
   media settings access mode, replace/delete affordances, delivery access mode,
   and media cache invalidation must still work after all leaves land.

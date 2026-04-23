@@ -20,6 +20,7 @@ and a real loaded-count/has-more contract.
 
 - `TASK-201-03-01_Empty_State_Copy_and_Upload_Recovery_CTA.md`
 - `TASK-201-03-02_Pagination_Has_More_Contract_and_Loaded_Counts.md`
+- `TASK-201-03-03_Grid_List_View_Mode_Parity.md`
 
 ## Scope
 
@@ -27,6 +28,8 @@ and a real loaded-count/has-more contract.
   search results.
 - Hide `Load More Assets` when there is nothing to load.
 - Add loaded-count copy such as `Showing 7 of 7` when useful.
+- Make the existing grid/list toolbar state change the actual rendered media
+  layout while preserving the same filtered item set.
 - Preserve cached list hydration and background revalidation behavior.
 - Add pagination metadata only if the current API/client cannot represent
   `hasMore` from available data.
@@ -43,6 +46,7 @@ Out of scope:
 - `core/admin/ui/media/MediaLibraryPage.tsx`
 - `core/admin/ui/media/MediaToolbar.tsx`
 - `core/admin/ui/media/MediaGrid.tsx`
+- `core/admin/ui/media/MediaCard.tsx` if list/card variants are needed
 - `core/admin/services/mediaClient.ts`
 - `core/server/routes/mediaRoutes.ts` only if list pagination metadata is added
 - `core/server/validation/mediaSchemas.ts` only if query validation is added
@@ -74,6 +78,8 @@ Out of scope:
   - empty search state,
   - load-more hidden when all loaded,
   - load-more visible only when `hasMore` is true,
+  - grid/list switching renders distinct usable views from the same filtered
+    assets,
   - cache hydration still skips blocking loading state.
 - Bun:
   - route/client pagination tests if the API contract changes.
@@ -91,3 +97,4 @@ Out of scope:
 2. `Load More Assets` is not rendered when there are no more assets.
 3. Media list caching remains consistent after upload, metadata update, and
    delete.
+4. Grid/list switching is a real presentation change, not toolbar-only state.

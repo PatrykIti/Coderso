@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 102 tasks
+- **To Do:** 104 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1004 tasks
 
@@ -63,12 +63,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-201-03 | Filter Empty States and Load More Truth | High | Medium | Business area: empty filter/search states and real load-more/loaded-count behavior |
 | TASK-201-03-01 | Empty State Copy and Upload Recovery CTA | Medium | Small | Technical leaf: no-assets, no-filter-results, and no-search-results states |
 | TASK-201-03-02 | Pagination Has-More Contract and Loaded Counts | Medium | Medium | Technical leaf: hide dead load-more controls and add bounded pagination metadata if needed |
+| TASK-201-03-03 | Grid List View Mode Parity | Medium | Small | Technical leaf: make toolbar grid/list mode render distinct views through the existing media presenter |
 | TASK-201-04 | Usage Navigation and Reference Contracts | High | Large | Business area: replace hard-coded usage examples with bounded references and canonical navigation |
 | TASK-201-04-01 | Media Usage Read Model | High | Medium | Technical leaf: internal usage summaries across current page/entry/post/commerce owners |
 | TASK-201-04-02 | Usage Entry Navigation and Affordance Fallback | Medium | Medium | Technical leaf: AdminLink destinations for resolvable targets and non-clickable fallback state |
 | TASK-201-05 | Bulk Asset Actions and Upload Surface Clarity | Medium | Large | Business area: library multi-select, safe bulk actions, clearer upload zone, and preference placement |
 | TASK-201-05-01 | Multi Select Bulk Delete and Download | Medium | Medium | Technical leaf: visible-scope selection, confirmed bulk delete, and safe download behavior |
 | TASK-201-05-02 | Upload Zone Separation and Open Details Preference Placement | Medium | Medium | Technical leaf: separate upload/grid surfaces and preserve `media.openAfterUpload` ownership |
+| TASK-201-05-03 | Replace Action Owner and Details Actions | Medium | Medium | Technical leaf: make the existing Replace affordance real through media owners or explicitly unavailable |
 | TASK-201-06 | QA Docs and Closure | Medium | Medium | Final validation, source Playwright report closure, docs, changelog, and board sync |
 | TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
 | TASK-202-01 | Engine List Discovery and Content Type Identity | High | Large | Business area: search/sort/filter list, duplicate-name context, relation labels, and screen UUID hygiene |
