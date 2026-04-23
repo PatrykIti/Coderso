@@ -2,10 +2,11 @@ import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
-import { contentTypes } from "../../../core/db/schema";
+import { contentEntries, contentTypes } from "../../../core/db/schema";
 import {
   createContentType,
   deleteContentType,
+  duplicateContentType,
   updateContentType,
 } from "../../../core/services/content/typeService";
 
@@ -30,11 +31,12 @@ const schema = {
   },
 };
 
-let contentTypeId: string | undefined;
+const cleanupTypeIds = new Set<string>();
 
 afterAll(async () => {
-  if (contentTypeId) {
-    await db.delete(contentTypes).where(eq(contentTypes.id, contentTypeId));
+  for (const id of cleanupTypeIds) {
+    await db.delete(contentEntries).where(eq(contentEntries.typeId, id));
+    await db.delete(contentTypes).where(eq(contentTypes.id, id));
   }
 });
 
@@ -45,7 +47,7 @@ testIfDb("create and update content type", async () => {
     schema,
   });
 
-  contentTypeId = created.id;
+  cleanupTypeIds.add(created.id);
 
   const updated = await updateContentType(created.id, {
     name: "Blog Updated",
@@ -56,5 +58,52 @@ testIfDb("create and update content type", async () => {
   const removed = await deleteContentType(created.id);
   expect(removed?.id).toBe(created.id);
 
-  contentTypeId = undefined;
+  cleanupTypeIds.delete(created.id);
+});
+
+testIfDb("duplicate content type copies schema as a draft with unique identity", async () => {
+  const created = await createContentType({
+    name: `Products ${randomUUID()}`,
+    slug: `products-${randomUUID()}`,
+    schema,
+    status: "published",
+  });
+  cleanupTypeIds.add(created.id);
+
+  const duplicated = await duplicateContentType(created.id);
+  if (!duplicated) throw new Error("expected duplicate");
+  cleanupTypeIds.add(duplicated.id);
+
+  expect(duplicated.name.startsWith("Copy of ")).toBe(true);
+  expect(duplicated.slug.endsWith("-copy")).toBe(true);
+  expect(duplicated.status).toBe("draft");
+  expect(duplicated.schema).toEqual(created.schema);
+});
+
+testIfDb("content type validation rejects generated screen UUID names", async () => {
+  await expect(
+    createContentType({
+      name: "Screen 2dcaeaad",
+      slug: `screen-${randomUUID()}`,
+      schema,
+    })
+  ).rejects.toThrow("content_type_name_generated_uuid");
+});
+
+testIfDb("delete content type is blocked while entries exist", async () => {
+  const created = await createContentType({
+    name: `Guarded ${randomUUID()}`,
+    slug: `guarded-${randomUUID()}`,
+    schema,
+  });
+  cleanupTypeIds.add(created.id);
+
+  await db.insert(contentEntries).values({
+    typeId: created.id,
+    slug: "entry-one",
+    title: "Entry One",
+    data: { title: "Entry One" },
+  });
+
+  await expect(deleteContentType(created.id)).rejects.toThrow("content_type_has_entries");
 });

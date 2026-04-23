@@ -4,6 +4,7 @@ import {
   clearContentTypesCache,
   createContentType,
   deleteContentType,
+  duplicateContentType,
   getCachedContentTypes,
   getContentType,
   getContentTypeCached,
@@ -104,6 +105,42 @@ test("createContentType uses CSRF and posts payload", async () => {
   }
 });
 
+test("duplicateContentType uses CSRF and posts duplicate payload", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      id: "ct-copy",
+      name: "Copy of Blog",
+      slug: "blog-copy",
+      status: "draft",
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      createdAt: "2026-02-14T00:00:00.000Z",
+      updatedAt: "2026-02-14T00:00:00.000Z",
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    await duplicateContentType("ct-1", { name: "Copy of Blog" });
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/content-types/ct-1/duplicate");
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ name: "Copy of Blog" });
+    expect(getCachedContentTypes()?.[0]?.id).toBe("ct-copy");
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
 test("updateContentType uses CSRF and patches payload", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -168,6 +205,7 @@ test("listContentTypesCached returns cached items without fetch", async () => {
         id: "ct-1",
         name: "Blog",
         slug: "blog",
+        status: "published" as const,
         schema: { type: "object", additionalProperties: false as const, properties: {} },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
@@ -202,6 +240,7 @@ test("getContentTypeCached returns cached entry by id", async () => {
         id: "ct-2",
         name: "Docs",
         slug: "docs",
+        status: "draft" as const,
         schema: { type: "object", additionalProperties: false as const, properties: {} },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
@@ -232,6 +271,7 @@ test("updateContentType updates cached entries", async () => {
       id: "ct-3",
       name: "Updated",
       slug: "updated",
+      status: "published",
       schema: { type: "object", additionalProperties: false, properties: {} },
       createdAt: "2026-02-14T00:00:00.000Z",
       updatedAt: "2026-02-14T00:00:00.000Z",
@@ -245,6 +285,7 @@ test("updateContentType updates cached entries", async () => {
         id: "ct-3",
         name: "Old",
         slug: "old",
+        status: "draft",
         schema: { type: "object", additionalProperties: false, properties: {} },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
@@ -279,6 +320,7 @@ test("listContentTypesCached reads from local storage", async () => {
         id: "ct-9",
         name: "FAQ",
         slug: "faq",
+        status: "draft" as const,
         schema: { type: "object", additionalProperties: false, properties: {} },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",

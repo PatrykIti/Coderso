@@ -107,8 +107,11 @@ const buildPreviewValue = (field: ContentField, property?: ContentSchemaProperty
       return 1;
     case "boolean":
       return true;
-    case "select":
-      return field.options?.[0] ?? `${field.label} option`;
+    case "select": {
+      const firstOption = Array.isArray(field.options) ? field.options[0] : undefined;
+      if (typeof firstOption === "string") return firstOption;
+      return firstOption?.value ?? `${field.label} option`;
+    }
     case "media":
       return "https://images.unsplash.com/photo-1498050108023-c5249f4df085";
     case "relation":

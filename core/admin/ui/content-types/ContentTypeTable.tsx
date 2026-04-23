@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -9,6 +10,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { withAdminBasePath } from "@/utils/adminPaths";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 
@@ -20,13 +28,21 @@ const statusStyles = {
 export type ContentTypeRow = ContentTypeSummary & {
   fieldCount: number;
   status: "published" | "draft";
+  duplicateNameCount?: number;
 };
+
+export type ContentTypeSortKey = "name" | "slug" | "fieldCount" | "status";
 
 export type ContentTypeTableProps = {
   rows: ContentTypeRow[];
   basePath: string;
   isLoading?: boolean;
   emptyMessage?: string;
+  sortKey?: ContentTypeSortKey;
+  sortDirection?: "asc" | "desc";
+  onSort?: (key: ContentTypeSortKey) => void;
+  onDuplicate?: (row: ContentTypeRow) => void;
+  onDelete?: (row: ContentTypeRow) => void;
 };
 
 export function ContentTypeTable({
@@ -34,23 +50,44 @@ export function ContentTypeTable({
   basePath,
   isLoading,
   emptyMessage,
+  sortKey,
+  sortDirection,
+  onSort,
+  onDuplicate,
+  onDelete,
 }: ContentTypeTableProps) {
+  const renderSortableHead = (key: ContentTypeSortKey, label: string) => {
+    const active = sortKey === key;
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="-ml-2 h-8 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        onClick={() => onSort?.(key)}
+      >
+        {label}
+        {active ? ` ${sortDirection === "desc" ? "↓" : "↑"}` : ""}
+      </Button>
+    );
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
-            <TableHead className="pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Name
+            <TableHead className="pl-4">
+              {renderSortableHead("name", "Name")}
             </TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Slug
+            <TableHead>
+              {renderSortableHead("slug", "Slug")}
             </TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Fields
+            <TableHead>
+              {renderSortableHead("fieldCount", "Fields")}
             </TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Status
+            <TableHead>
+              {renderSortableHead("status", "Status")}
             </TableHead>
             <TableHead className="pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Actions
@@ -85,6 +122,11 @@ export function ContentTypeTable({
                       >
                         {type.name}
                       </AdminLink>
+                      {type.duplicateNameCount && type.duplicateNameCount > 1 ? (
+                        <Badge variant="secondary" className="text-[10px] uppercase">
+                          Duplicate name
+                        </Badge>
+                      ) : null}
                       <p className="text-xs text-muted-foreground">
                         {type.fieldCount} fields
                       </p>
@@ -102,9 +144,37 @@ export function ContentTypeTable({
                     </Badge>
                   </TableCell>
                   <TableCell className="py-4 pr-4 text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <AdminLink href={editHref} prefetch>Edit</AdminLink>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Open actions for ${type.name}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem asChild>
+                          <AdminLink href={editHref} prefetch>
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </AdminLink>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onDuplicate?.(type)}>
+                          <Copy className="h-4 w-4" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onDelete?.(type)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );

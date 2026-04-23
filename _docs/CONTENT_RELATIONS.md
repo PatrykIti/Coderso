@@ -56,6 +56,8 @@ Multi relation:
 ## Admin UI behavior
 
 - Content Type Editor: wybierasz target z listy + przełącznik "Allow multiple".
+  Opcje pokazuja nazwe i slug, np. `News (news-855f2ed1)`, zeby odroznic
+  typy o tej samej nazwie.
 - Entry Editor: wyszukiwarka + lista wpisow; multi‑select gdy włączone.
 
 ## Praktyczny flow (krok po kroku)

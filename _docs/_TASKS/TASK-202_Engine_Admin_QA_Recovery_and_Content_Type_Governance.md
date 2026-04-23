@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + UX + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-003, TASK-048, TASK-053-08, TASK-184-03, TASK-190
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

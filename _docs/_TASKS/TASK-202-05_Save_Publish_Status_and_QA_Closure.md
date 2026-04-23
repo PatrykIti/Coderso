@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + DB + QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-202, TASK-202-01, TASK-202-02, TASK-202-03, TASK-202-04
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

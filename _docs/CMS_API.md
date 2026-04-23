@@ -1707,8 +1707,36 @@ Permissions: `content:read`, `content:write`, `content:publish`
 
 - `GET /content-types`
 - `POST /content-types`
+- `POST /content-types/:id/duplicate`
 - `PATCH /content-types/:id`
 - `DELETE /content-types/:id`
+
+Content type payload:
+
+```json
+{
+  "name": "Blog Post",
+  "slug": "blog-post",
+  "status": "draft",
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
+```
+
+`status` is `draft` or `published`. Create defaults to `draft`; existing rows
+from the TASK-202 migration were retained as `published`.
+
+Duplicate payload accepts optional `name` / `slug`; without them the service
+creates a unique `Copy of ...` draft and copies schema only, never entries.
+
+Delete returns `{ "ok": true }` only after the content type dependency guard
+passes. Known conflicts are mapped to HTTP 409:
+`content_type_has_entries`, `content_type_has_custom_screens`,
+`content_type_has_taxonomies`, `content_type_has_content_routes`,
+`content_type_has_listings`.
 
 - `GET /content/:type/entries`
 - `POST /content/:type/entries`

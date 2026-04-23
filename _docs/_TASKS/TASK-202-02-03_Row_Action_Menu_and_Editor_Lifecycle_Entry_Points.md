@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-202-02, TASK-202-02-02; TASK-202-03-01 only to enable active Delete
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

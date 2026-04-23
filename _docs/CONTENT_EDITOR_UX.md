@@ -18,6 +18,16 @@ Przyklad:
 - **Relation**: „Relations connect entries together (e.g. Testimonials → Projects).”
 - **Media**: „Media fields link entries to images/files from the Media Library.”
 
+TASK-202 dopina lifecycle i authoring UX dla Engine:
+- lista content types ma search, sort i filtr statusu,
+- duplicate-name badge oraz relation dropdown z nazwa + slug rozrozniaja typy,
+- nowy typ po utworzeniu przechodzi do edytora i pokazuje toast,
+- Duplicate tworzy draft schema-only bez entries,
+- Delete type jest dostepne z listy i edytora, ale wymaga potwierdzenia oraz
+  przechodzi przez server-side dependency guard,
+- Remove field wymaga potwierdzenia i ma lokalne undo przed zapisem,
+- Save draft / Publish pokazuja shared admin toast i status badge.
+
 ## Entry Editor – helpery pod polami
 
 Kazde pole w edytorze wpisu ma tekst pomocniczy pod kontrolka.

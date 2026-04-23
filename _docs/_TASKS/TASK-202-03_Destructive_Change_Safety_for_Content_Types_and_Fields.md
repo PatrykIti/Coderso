@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + API + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-202
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

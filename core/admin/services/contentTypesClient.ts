@@ -4,12 +4,15 @@ import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 
 export type ContentSchemaProperty = {
-  type?: "string" | "number" | "boolean" | "array";
-  items?: { type?: "string" };
+  type?: "string" | "number" | "integer" | "boolean" | "array";
+  items?: { type?: "string"; enum?: string[] };
   title?: string;
   description?: string;
   enum?: string[];
   default?: string | number | boolean | string[];
+  minimum?: number;
+  maximum?: number;
+  multipleOf?: number;
   maxItems?: number;
   xFieldType?: string;
   xFieldConfig?: Record<string, unknown>;
@@ -28,6 +31,7 @@ export type ContentTypeSummary = {
   name: string;
   slug: string;
   schema: ContentSchema;
+  status: "draft" | "published";
   createdAt: string;
   updatedAt: string;
   entryCount?: number;
@@ -37,6 +41,7 @@ export type ContentTypePayload = {
   name: string;
   slug: string;
   schema: ContentSchema;
+  status?: "draft" | "published";
 };
 
 let cachedContentTypes: ContentTypeSummary[] | null = null;
@@ -158,6 +163,30 @@ export async function createContentType(payload: ContentTypePayload) {
     broadcastCacheEvent({ key: cacheKeys.contentTypeDetail(created.id), action: "update" });
   }
   return created;
+}
+
+export async function duplicateContentType(
+  id: string,
+  payload: { name?: string; slug?: string } = {}
+) {
+  const duplicated = await apiRequest<ContentTypeSummary>(
+    `/content-types/${id}/duplicate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+  if (duplicated) {
+    upsertCachedContentType(duplicated);
+    broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "update" });
+    broadcastCacheEvent({
+      key: cacheKeys.contentTypeDetail(duplicated.id),
+      action: "update",
+    });
+  }
+  return duplicated;
 }
 
 export async function updateContentType(

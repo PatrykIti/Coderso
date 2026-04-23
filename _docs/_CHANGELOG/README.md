@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 730 | 2026-04-23 | TASK-202 engine admin QA recovery | CMS Engine/Admin UI |
 | 727 | 2026-04-23 | TASK-200 menus list parity | CMS Menus/Admin UI |
 | 726 | 2026-04-23 | TASK-199 posts list header bulk actions | CMS Posts/Admin UI |
 | 725 | 2026-04-23 | TASK-198 page list header bulk actions | CMS Pages/Admin UI |

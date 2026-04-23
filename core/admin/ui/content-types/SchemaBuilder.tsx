@@ -98,6 +98,7 @@ type FieldSettingsPanelProps = {
   defaultError?: string | null;
   relationError?: string | null;
   relationTargets?: Array<{ slug: string; name: string }>;
+  existingNames?: Array<{ id: string; name: string }>;
   onChange: (next: ContentField) => void;
   onRemove: () => void;
   className?: string;
@@ -109,6 +110,7 @@ export function FieldSettingsPanel({
   defaultError,
   relationError,
   relationTargets,
+  existingNames,
   onChange,
   onRemove,
   className,
@@ -123,6 +125,7 @@ export function FieldSettingsPanel({
             defaultError={defaultError}
             relationError={relationError}
             relationTargets={relationTargets}
+            existingNames={existingNames}
             onChange={onChange}
             onRemove={onRemove}
           />
@@ -145,14 +148,31 @@ export type FieldType =
   | "media"
   | "relation";
 
+export type SelectOption = {
+  id: string;
+  label: string;
+  value: string;
+  valueLocked?: boolean;
+};
+
+export type NumberFieldConfig = {
+  format?: "integer" | "decimal";
+  min?: number;
+  max?: number;
+  step?: number;
+};
+
 export type ContentField = {
   id: string;
   name: string;
   type: FieldType;
   label: string;
+  keyAuto?: boolean;
   help?: string;
   required?: boolean;
-  options?: string[];
+  options?: SelectOption[];
+  multiple?: boolean;
+  number?: NumberFieldConfig;
   relation?: { target: string; multiple?: boolean };
   media?: { multiple?: boolean; accept?: string[]; maxItems?: number };
   defaultValue?: string;
@@ -178,6 +198,33 @@ export function validateFieldName(
   if (isDuplicate) return "Field name must be unique.";
   return null;
 }
+
+export const slugifyFieldName = (value: string) =>
+  value
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+export const makeUniqueFieldName = (
+  value: string,
+  existingNames: Array<{ id: string; name: string }>,
+  currentId?: string
+) => {
+  const base = slugifyFieldName(value) || "field";
+  let candidate = base;
+  let index = 2;
+  while (
+    existingNames.some(
+      (entry) => entry.name === candidate && entry.id !== currentId
+    )
+  ) {
+    candidate = `${base}-${index}`;
+    index += 1;
+  }
+  return candidate;
+};
 
 type SchemaBuilderProps = {
   fields: ContentField[];
@@ -208,6 +255,7 @@ export function SchemaBuilder({
       name,
       type: "text",
       label: "New field",
+      keyAuto: true,
       required: false,
     };
     onChange([...fields, nextField]);

@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + Relations
 **Estimated Effort:** Medium
 **Dependencies:** TASK-202-01
-**Status:** To Do
+**Status:** Done (2026-04-23)
 
 ---
 

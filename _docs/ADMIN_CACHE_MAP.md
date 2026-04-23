@@ -52,9 +52,12 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Content types list
   - UI: `core/admin/ui/content-types/ContentTypeList.tsx`
   - Cached APIs: `listContentTypesCached`, `getCachedContentTypes`
+  - Mutations: create, duplicate, delete update or invalidate `contentTypes:list`
 - Content type editor
   - UI: `core/admin/ui/content-types/ContentTypeEditor.tsx`
-  - Cached APIs: `getContentTypeCached`
+  - Cached APIs: `getContentTypeCached`, `listContentTypesCached`
+  - Mutations: save draft, publish, duplicate, delete update or invalidate
+    `contentTypes:detail:<id>` and `contentTypes:list`
 - Schema builder
   - UI: `core/admin/ui/content-types/SchemaBuilderPage.tsx`
   - Cached APIs: `listContentTypesCached`, `getContentTypeCached`

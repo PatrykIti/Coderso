@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import {
@@ -17,6 +17,10 @@ import {
   solutionKitInstallRuns,
 } from "../../db/schema";
 import { logAudit } from "../audit/auditService";
+import {
+  normalizeContentTypeName,
+  normalizeContentTypeSlug,
+} from "../content/typeService";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
 import type {
   SolutionKitContentTypeBlueprint,
@@ -66,6 +70,7 @@ type ContentTypeSnapshot = {
   name: string;
   slug: string;
   schema: JsonRecord;
+  status: "draft" | "published";
   taxonomy: {
     categories: Array<{ id: string; name: string; slug: string }>;
     tags: Array<{ id: string; name: string; slug: string }>;
@@ -160,6 +165,7 @@ type InstallPlanOperation =
       payload: {
         slug: string;
         name: string;
+        status: "draft" | "published";
         schema: JsonRecord;
         taxonomy: {
           categories?: SolutionKitTaxonomyTerm[];
@@ -364,6 +370,7 @@ const normalizeTaxonomyTerms = (items?: SolutionKitTaxonomyTerm[]) => {
 const normalizeContentTypeBlueprint = (value: SolutionKitContentTypeBlueprint) => ({
   slug: normalizeString(value.slug),
   name: normalizeString(value.name),
+  status: (value.status === "published" ? "published" : "draft") as "draft" | "published",
   schema: isRecord(value.schema) ? asRecord(value.schema) : defaultContentTypeSchema(),
   taxonomy: {
     categories: normalizeTaxonomyTerms(value.taxonomy?.categories),
@@ -599,6 +606,7 @@ const snapshotContentType = async (
   name: row.name,
   slug: row.slug,
   schema: asRecord(row.schema),
+  status: row.status as "draft" | "published",
   taxonomy: await listTaxonomyState(executor, row.id),
 });
 
@@ -1282,6 +1290,7 @@ const planOperations = (blueprint: SolutionKitResourceBlueprint): InstallPlanOpe
       payload: {
         slug,
         name,
+        status: normalized.status,
         schema: normalized.schema,
         taxonomy: normalized.taxonomy,
       },
@@ -1359,10 +1368,25 @@ const executeContentTypeOperation = async (
   op: Extract<InstallPlanOperation, { resourceType: "content_type" }>,
   dryRun: boolean
 ): Promise<InstallOperationResult> => {
+  const normalizedName = normalizeContentTypeName(op.payload.name);
+  const normalizedSlug = normalizeContentTypeSlug(op.payload.slug);
   const [existing] = await executor
     .select()
     .from(contentTypes)
-    .where(eq(contentTypes.slug, op.payload.slug));
+    .where(eq(contentTypes.slug, normalizedSlug));
+  const [nameConflict] = await executor
+    .select({ id: contentTypes.id })
+    .from(contentTypes)
+    .where(
+      existing
+        ? and(
+            sql`lower(${contentTypes.name}) = ${normalizedName.toLowerCase()}`,
+            ne(contentTypes.id, existing.id)
+          )
+        : sql`lower(${contentTypes.name}) = ${normalizedName.toLowerCase()}`
+    )
+    .limit(1);
+  if (nameConflict) throw new Error("solution_kit_content_type_name_exists");
 
   if (!existing) {
     const predictedTaxonomy = {
@@ -1374,10 +1398,11 @@ const executeContentTypeOperation = async (
         operation: "create",
         beforeSnapshot: null,
         afterSnapshot: {
-          id: `predicted:${op.payload.slug}`,
-          name: op.payload.name,
-          slug: op.payload.slug,
+          id: `predicted:${normalizedSlug}`,
+          name: normalizedName,
+          slug: normalizedSlug,
           schema: op.payload.schema,
+          status: op.payload.status,
           taxonomy: predictedTaxonomy,
         },
         rollbackAction: { strategy: "delete_created" },
@@ -1387,9 +1412,10 @@ const executeContentTypeOperation = async (
     const [created] = await executor
       .insert(contentTypes)
       .values({
-        name: op.payload.name,
-        slug: op.payload.slug,
+        name: normalizedName,
+        slug: normalizedSlug,
         schema: op.payload.schema,
+        status: op.payload.status,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -1419,7 +1445,8 @@ const executeContentTypeOperation = async (
   const taxonomyChanged = !compareTaxonomyState(beforeSnapshot.taxonomy, expectedTaxonomy);
   const patch: Partial<typeof contentTypes.$inferInsert> = {};
 
-  if (existing.name !== op.payload.name) patch.name = op.payload.name;
+  if (existing.name !== normalizedName) patch.name = normalizedName;
+  if (existing.status !== op.payload.status) patch.status = op.payload.status;
   if (!isDeepStrictEqual(existing.schema, op.payload.schema)) {
     patch.schema = op.payload.schema;
   }
@@ -1440,6 +1467,7 @@ const executeContentTypeOperation = async (
       afterSnapshot: {
         ...beforeSnapshot,
         ...(patch.name ? { name: patch.name } : {}),
+        ...(patch.status ? { status: patch.status } : {}),
         ...(patch.schema ? { schema: asRecord(patch.schema) } : {}),
         ...(taxonomyChanged ? { taxonomy: expectedTaxonomy } : {}),
       },
@@ -1926,6 +1954,7 @@ const parseContentTypeSnapshot = (payload: JsonRecord): ContentTypeSnapshot => (
   name: String(payload.name ?? ""),
   slug: String(payload.slug ?? ""),
   schema: asRecord(payload.schema),
+  status: payload.status === "published" ? "published" : "draft",
   taxonomy: {
     categories: Array.isArray(asRecord(payload.taxonomy).categories)
       ? (asRecord(payload.taxonomy).categories as unknown[])
@@ -2182,6 +2211,7 @@ const rollbackUpdatedResource = async (
             name: snapshot.name,
             slug: snapshot.slug,
             schema: snapshot.schema,
+            status: snapshot.status,
             updatedAt: new Date(),
           })
           .where(eq(contentTypes.id, snapshot.id))
@@ -2194,6 +2224,7 @@ const rollbackUpdatedResource = async (
             name: snapshot.name,
             slug: snapshot.slug,
             schema: snapshot.schema,
+            status: snapshot.status,
             createdAt: new Date(),
             updatedAt: new Date(),
           })

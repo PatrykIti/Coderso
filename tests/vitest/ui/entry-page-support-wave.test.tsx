@@ -894,6 +894,29 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
     textView.rerender(
       <FieldRenderer
         field={{
+          id: "field-select-multiple",
+          name: "channels",
+          type: "select",
+          label: "Channels",
+          multiple: true,
+          options: [
+            { id: "option-web", label: "Website", value: "web" },
+            { id: "option-email", label: "Email", value: "email" },
+          ],
+        }}
+        value={["web"]}
+        onChange={onChange}
+      />
+    );
+    const multiCheckboxes = textView.container.querySelectorAll("input[type='checkbox']");
+    act(() => {
+      (multiCheckboxes[1] as HTMLInputElement | undefined)?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith(["web", "email"]);
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
           id: "field-media",
           name: "gallery",
           type: "media",
