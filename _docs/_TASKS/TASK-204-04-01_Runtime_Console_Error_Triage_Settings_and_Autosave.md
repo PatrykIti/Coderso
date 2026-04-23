@@ -33,6 +33,9 @@ No child task files.
 - Reproduce or simulate the settings/admin-path read failure path from the
   source report.
 - Reproduce or simulate the posts autosave `CONNECTION_CLOSED` failure path.
+- Treat the settings path as the admin browser `GET /admin/api/settings`
+  contract used by `siteSettingsClient.getSiteSettings()`, including the
+  `site.adminPath` read performed under `listSettings()` / settings resolution.
 - For each path, identify whether raw SQL/query text reaches:
   - the API response body,
   - browser-visible UI copy,
@@ -76,14 +79,18 @@ Out of scope:
 
 - Treat settings and autosave as two independent findings.
 - Start with route-boundary tests:
-  - settings route failures should not return raw Drizzle query text if the
-    response is intended for the admin browser;
+  - settings route failures from `GET /settings` / settings resolution should
+    not return raw Drizzle query text if the response is intended for the admin
+    browser;
   - posts autosave unexpected failures should map to stable safe copy if the
     current route/global handler would expose the raw `CONNECTION_CLOSED`
     message to the browser.
 - Do not change `toErrorResponse()` globally unless a broader task explicitly
   owns that policy. Prefer route-family mapping for the observed Posts replay
   paths.
+- Check the client/UI boundary too: `usePostEditorState` currently displays
+  `ApiClientError.message` for autosave failures, so route-safe copy is enough
+  only when all reachable API/network failure messages are already bounded.
 - Keep server diagnostics useful, but do not let SQL, stack traces, credentials,
   database hosts, or raw driver messages become user-facing copy.
 - If a failure cannot be reproduced with a reachable database, record that as a

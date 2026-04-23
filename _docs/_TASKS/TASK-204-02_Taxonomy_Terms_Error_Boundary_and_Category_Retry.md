@@ -35,6 +35,10 @@ This subtask owns both boundaries:
 - Add retry affordance to the Posts category selector without moving API
   fetching into `DocumentInspector`.
 - Add route/client/UI tests for the failure path.
+- Treat the API route and the browser UI as two separate leak boundaries:
+  bounded API copy is required, and the Posts shell must still avoid rendering
+  raw `ApiClientError.message` when the failure comes from a network/proxy/dev
+  response that is not already sanitized.
 
 Out of scope:
 
@@ -84,7 +88,8 @@ Out of scope:
 - Vitest:
   - `taxonomyClient.getTaxonomyOverview()` preserves typed success and rejected
     failures,
-  - Posts shell maps taxonomy failures to safe copy,
+  - Posts shell maps taxonomy failures to safe copy from code/status rather than
+    blindly forwarding `error.message`,
   - `DocumentInspector` renders retry/fallback state without raw SQL.
 - Manual Playwright:
   - simulate or reproduce the 500 path and confirm the inspector shows friendly

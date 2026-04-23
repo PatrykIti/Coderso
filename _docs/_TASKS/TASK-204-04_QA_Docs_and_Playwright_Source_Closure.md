@@ -32,6 +32,9 @@ versus what `TASK-204` repaired or intentionally left open.
   - `UX-7`,
   - `BUG-6`,
   - `BUG-7`.
+- Keep the same source report explicit that `BUG-1`, `BUG-2`, `BUG-3`,
+  `BUG-4`, and `UX-6` were already verified by the 2026-04-23 replay and were
+  only regression-smoked in this family unless a new run proves otherwise.
 - Classify the `Bledy z konsoli real time` block separately from `BUG-7`:
   - `site.adminPath` settings read failed with raw Drizzle query output;
   - `POST /admin/api/posts/:id/autosave` failed after `CONNECTION_CLOSED`.
@@ -95,6 +98,8 @@ Out of scope:
 - Console capture must explicitly state whether the `site.adminPath` settings
   query and posts autosave `CONNECTION_CLOSED` failures reproduced or were
   environment-only during the replay.
+- Console/network capture must distinguish browser-visible API payloads from
+  server-only logs so route/client leaks are not confused with diagnostic logs.
 
 ## Documentation Updates Required
 

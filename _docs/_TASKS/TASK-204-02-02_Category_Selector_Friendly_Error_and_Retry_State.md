@@ -38,6 +38,9 @@ No child task files.
 
 - Add a retry callback prop from shell to inspector.
 - Use bounded user copy such as `Could not load categories.` plus `Try again`.
+- In `PostBlockEditorShell`, normalize `ApiClientError` and unknown failures
+  into a controlled taxonomy view state before passing props to
+  `DocumentInspector`; do not pass through `error.message`.
 - Keep `No category` selectable if that is still valid for the current post.
 - Do not show raw `error.message` when it contains SQL/query text.
 - Keep unrelated editor actions available while taxonomy is failed.
@@ -61,6 +64,8 @@ No child task files.
   - keeps `No category` behavior stable.
 - `tests/vitest/ui-integration/post-document-inspector.test.tsx`
   - shell-to-inspector failure/retry props work through the real owner seam.
+  - a simulated API/client failure containing `Failed query: select ...` is
+    not rendered by the shell or inspector.
 
 ## Documentation Updates Required
 

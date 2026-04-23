@@ -54,6 +54,24 @@ Closure must map every remaining item in the manual re-verification section of
 capability decision, or a named follow-up. Do not leave the source report in a
 state where closed and still-open Posts findings are indistinguishable.
 
+## Source Report Coverage Matrix
+
+| Source finding | 2026-04-23 replay status | TASK-204 owner |
+|---|---|---|
+| `BUG-5` publish/update toast | Partial: mutation feedback works, visible toast/live-region proof missing | `TASK-204-01-01` |
+| `UX-1` revision preview | Partial: preview toggle exists, but short revisions can show only empty fallback | `TASK-204-01-02` |
+| `UX-4` Media tab capabilities | Partial: `Image` + `Embed` are present, but `Video`, `Gallery`, `Audio`, and `File` remain capability decisions | `TASK-204-03-02` |
+| `UX-7` block search scope | Partial: scoped search needs active-category copy plus regression/browser proof | `TASK-204-03-01` |
+| `BUG-6` revisions Radix description warning | New replay bug | `TASK-204-01-02` |
+| `BUG-7` taxonomy terms 500/raw SQL UI | New replay bug | `TASK-204-02-01`, then `TASK-204-02-02` |
+| Realtime console: `site.adminPath` settings read | Separate runtime/database symptom, not taxonomy | `TASK-204-04-01` |
+| Realtime console: posts autosave `CONNECTION_CLOSED` | Separate runtime/database symptom, not taxonomy | `TASK-204-04-01` |
+
+The same replay also verified `BUG-1`, `BUG-2`, `BUG-3`, `BUG-4`, and `UX-6`
+as working after `TASK-195`. `TASK-204` should keep them as regression smoke
+evidence during replay, but must not allocate new implementation work to them
+unless the fresh run proves they regressed.
+
 ## Sub-Tasks
 
 - `TASK-204-01_Post_Feedback_and_Revision_Drawer_Reliability.md`
