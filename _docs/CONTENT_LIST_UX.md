@@ -36,7 +36,7 @@ Gdy zaznaczysz wpisy na liscie:
   - accessible search label: `Search posts by title`
 - Checkbox w naglowku zaznacza tylko aktualnie widoczne wiersze po filtrach.
 - Toolbar bulk actions pojawia sie dopiero po zaznaczeniu co najmniej jednego
-  posta i obsluguje:
+  posta, jest renderowany inline w header actions obok `New`, i obsluguje:
   - Publish
   - Move to Draft
   - Delete

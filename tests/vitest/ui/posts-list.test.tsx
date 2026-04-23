@@ -24,7 +24,7 @@ test("PostsListPage renders shell and loading state", () => {
   });
 
   expect(html).toContain("Posts");
-  expect(html).toContain("Create New Post");
+  expect(html).toContain("New");
   expect(html).toContain("Loading posts");
 });
 

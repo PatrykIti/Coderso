@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1002 tasks
+- **Done:** 1003 tasks
 
 ---
 
@@ -105,6 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-199 | Posts List Header Bulk Actions | Medium | Small | Done: Posts bulk controls now appear inline in the header actions beside `New`, matching Pages without pushing the table down |
 | TASK-198 | Page List Header Bulk Actions | Medium | Small | Done: Pages bulk controls now appear inline in the header actions beside `New`, so row selection no longer pushes the table down |
 | TASK-197 | Pages Builder Library Panel Scroll Containment | Medium | Small | Done: the Pages builder left rail now keeps its tab/search chrome fixed and scrolls widgets/templates/forms inside the active list viewport on desktop and mobile |
 | TASK-196 | Menus Admin IA, Reliability, and Editor Clarity | High | Large | Done: Menus now starts from a list screen, edits one chosen menu per route, confirms item delete in UI, and ships docs/test closure |

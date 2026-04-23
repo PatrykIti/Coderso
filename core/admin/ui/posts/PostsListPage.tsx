@@ -395,10 +395,59 @@ export function PostsListPage() {
           title="Posts"
           description="Create and publish articles rendered by widgets and templates."
           actions={
-            <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Create New Post
-            </Button>
+            <>
+              {selectedIds.length > 0 ? (
+                <div
+                  data-post-bulk-actions="inline"
+                  className="flex min-w-0 flex-wrap items-center justify-end gap-2"
+                >
+                  <div className="flex shrink-0 items-center gap-2 text-sm">
+                    <span className="font-semibold text-foreground">
+                      {selectedIds.length} post{selectedIds.length === 1 ? "" : "s"} selected
+                    </span>
+                    <span className="sr-only">
+                      Apply a bulk action to the visible selection.
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={bulkAction}
+                      onValueChange={(value) =>
+                        setBulkAction(value as "" | "publish" | "unpublish" | "delete")
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-[160px]">
+                        <SelectValue placeholder="Bulk actions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="publish">Publish</SelectItem>
+                        <SelectItem value="unpublish">Move to Draft</SelectItem>
+                        <SelectItem value="delete">Delete</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={handleBulkApply}
+                      disabled={!bulkAction || isBulkWorking}
+                    >
+                      {isBulkWorking ? "Applying..." : "Apply"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSelection}
+                      aria-label="Clear selection"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </>
           }
         />
         {error ? (
@@ -412,41 +461,6 @@ export function PostsListPage() {
             <AlertTitle>{bulkFeedback.title}</AlertTitle>
             <AlertDescription>{bulkFeedback.message}</AlertDescription>
           </Alert>
-        ) : null}
-        {selectedIds.length > 0 ? (
-          <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold text-foreground">
-                {selectedIds.length} post{selectedIds.length === 1 ? "" : "s"} selected
-              </span>
-              <span className="text-muted-foreground">
-                Apply a bulk action to the visible selection.
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={bulkAction}
-                onValueChange={(value) =>
-                  setBulkAction(value as "" | "publish" | "unpublish" | "delete")
-                }
-              >
-                <SelectTrigger className="h-8 w-full sm:w-[220px]">
-                  <SelectValue placeholder="Bulk actions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="publish">Publish</SelectItem>
-                  <SelectItem value="unpublish">Move to Draft</SelectItem>
-                  <SelectItem value="delete">Delete</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={handleBulkApply} disabled={!bulkAction || isBulkWorking}>
-                {isBulkWorking ? "Applying..." : "Apply"}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={clearSelection}>
-                Clear selection
-              </Button>
-            </div>
-          </div>
         ) : null}
         <PageFilters
           search={searchQuery}

@@ -1229,6 +1229,12 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     });
 
     expect(view.container.textContent).toContain("2 posts selected");
+    expect(
+      view.container.querySelector('[data-post-bulk-actions="inline"]')
+    ).not.toBeNull();
+    expect(
+      (view.container.textContent ?? "").indexOf("2 posts selected")
+    ).toBeLessThan((view.container.textContent ?? "").indexOf("New"));
 
     act(() => {
       setInputValue(searchInput ?? undefined, "unknown");
@@ -1265,7 +1271,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     act(() => {
       buttons()
-        .find((button) => button.textContent?.includes("Create New Post"))
+        .find((button) => button.textContent === "New")
         ?.click();
     });
 
@@ -1365,6 +1371,9 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
     });
 
     expect(view.container.textContent).toContain("2 posts selected");
+    expect(
+      view.container.querySelector('[data-post-bulk-actions="inline"]')
+    ).not.toBeNull();
 
     const bulkSelect = Array.from(view.container.querySelectorAll("select")).find((select) =>
       select.querySelector('option[value="publish"]')
@@ -1521,7 +1530,7 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
 
     act(() => {
       buttons()
-        .find((button) => button.textContent?.includes("Create New Post"))
+        .find((button) => button.textContent === "New")
         ?.click();
       setInputValue(titleInput() ?? undefined, "Launch Memo");
     });
@@ -1625,7 +1634,7 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
 
     await act(async () => {
       buttons().find((button) => button.textContent === "New")?.click();
-      buttons().find((button) => button.textContent?.includes("Create New Post"))?.click();
+      buttons().filter((button) => button.textContent === "New")[1]?.click();
       buttons().find((button) => button.textContent === "edit-page-row")?.click();
       buttons().find((button) => button.textContent === "preview-page-row")?.click();
       buttons().find((button) => button.textContent === "publish-page-row")?.click();
