@@ -38,6 +38,9 @@ No child task files.
 - `tests/vitest/ui/media-library.test.tsx`
 - `tests/vitest/ui/media-details.test.tsx`
 - `tests/vitest/ui/media-details-panel.test.tsx`
+  - only while `MediaDetailsPanel` remains a supported/exported component; if it
+    is retired, closure must remove stale imports/tests and document that
+    decision.
 - `tests/vitest/ui/media-card.test.tsx`
 - `tests/vitest/ui/media-picker.test.tsx`
 - `tests/vitest/ui-integration/media.test.tsx`
@@ -125,8 +128,14 @@ No child task files.
   family must include route registration, permission, validation, and mapped
   `ApiError` coverage. If an existing media route is touched while adding the
   family work, map the existing media-domain errors through the same centralized
-  route boundary instead of adding route-local ad-hoc translations. Persisted
-  dimension recovery must not be hidden behind a read-only `GET` route.
+  media route boundary instead of relying only on the global HTTP server fallback
+  or adding handler-local ad-hoc translations. Persisted dimension recovery must
+  not be hidden behind a read-only `GET` route.
+- Secondary details surface: closure must state whether `MediaDetailsPanel`
+  remains supported. If yes, it must share the same display-name, dimension, and
+  save/copy semantics as the drawer through shared helpers. If no, remove the
+  component/tests/imports in the implementing leaf instead of leaving a stale
+  duplicate details path.
 - Preserved positives: grid/list switching, search, filters, native file picker,
   media settings access mode, replace/delete affordances, delivery access mode,
   and media cache invalidation must still work after all leaves land.

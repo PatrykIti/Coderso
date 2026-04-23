@@ -43,6 +43,9 @@ Out of scope:
 - `core/services/media/mediaService.ts`
 - add `core/services/media/mediaUsageService.ts`
 - `core/server/routes/mediaRoutes.ts`
+  - owns `GET /media/:id/usage` registration if added, permission checks,
+    validation, and route-local media error mapping. Do not rely only on the
+    global HTTP server media error fallback for new usage errors.
 - `core/server/validation/mediaSchemas.ts` only if query params are added
 - `core/admin/services/mediaClient.ts`
 - `core/admin/ui/media/MediaDetailsDrawer.tsx`
@@ -76,8 +79,8 @@ Out of scope:
 - Bun:
   - usage service finds media IDs in current supported owners,
   - usage service caps results and handles malformed JSON safely,
-  - route registration, permission, validation, and mapped API error coverage
-    for the usage endpoint.
+  - route registration, permission, validation, and route-owned mapped API error
+    coverage for the usage endpoint.
 - Vitest:
   - media client fetches usage summaries,
   - drawer renders navigable links for resolvable usage,

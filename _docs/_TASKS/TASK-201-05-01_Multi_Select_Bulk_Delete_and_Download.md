@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Media + Admin/UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-201-05
+**Dependencies:** TASK-201-05, TASK-201-03-01, TASK-201-03-02
 **Status:** To Do
 
 ---
@@ -14,6 +14,10 @@
 Add a Media library multi-select mode with visible-scope bulk delete and bulk
 download. Reuse current grid/card selection primitives where possible while
 keeping `MediaPicker` behavior stable.
+
+Visible scope comes from the `TASK-201-03` filtered/loaded asset contract. This
+leaf must not keep a separate hidden all-media list or duplicate picker
+selection state.
 
 ## Sub-Tasks
 
@@ -58,6 +62,7 @@ No child task files.
 - Vitest:
   - entering/exiting select mode,
   - visible select all and indeterminate state,
+  - selected IDs are pruned when the visible filtered/loaded set changes,
   - selected count,
   - bulk delete confirmation/cancel/apply,
   - partial delete failure,

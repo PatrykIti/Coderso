@@ -33,7 +33,10 @@ No child task files.
 - `core/server/routes/mediaRoutes.ts`
   - owns internal read route registration, permission checks, strict query
     validation, and known media-domain error mapping through the media route/API
-    error boundary.
+    error boundary. If the current app still has media error compatibility
+    mapping in `core/server/httpServer.ts`, this leaf must not add another
+    handler-local fallback; establish one route-owned `mapMediaError` path and
+    cover it directly.
 - `core/server/validation/mediaSchemas.ts` only if query params are added
 - `tests/unit/media/mediaUsageService.test.ts`
 - `tests/integration/routes/media.test.ts`
@@ -118,6 +121,8 @@ Owner note:
   - route registration includes the usage endpoint and permission middleware,
   - not-found, malformed query, and unexpected usage-service errors map to
     machine-readable API errors instead of leaking raw error responses.
+  - route mapping tests exercise the route-owned media mapper, not only the
+    global HTTP server fallback.
 
 ## Documentation Updates Required
 

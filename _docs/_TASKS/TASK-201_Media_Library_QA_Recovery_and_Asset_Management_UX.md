@@ -55,6 +55,10 @@ Implementation principle:
 - repair the existing media/admin contracts instead of introducing parallel
   flows, duplicate helpers, or media-only infrastructure where shared owners
   already exist,
+- start from the current checked-out owner seam and extend that seam only when
+  the existing contract cannot satisfy the report safely; do not design a second
+  media browser, metadata save flow, notification path, route layer, or storage
+  abstraction for the same behavior,
 - name the owner and responsibility before changing a boundary that spans UI,
   client, route, service, storage, cache, or navigation,
 - fix the owner contract that produces the behavior instead of masking it in a
@@ -167,9 +171,12 @@ Current owner seams in code:
       call an owner callback with a real async result or be rendered as
       unavailable; no inert action buttons.
   - `core/admin/ui/media/MediaDetailsPanel.tsx`
-    - secondary details component; if kept, it must receive the same display
-      name, dimension, and metadata-save semantics as the drawer or be retired
-      deliberately in a separate cleanup.
+    - secondary/test-covered details component. It is not the primary Media
+      Library details owner in the current checked-out UI. Do not use it as a
+      second implementation path for fixes that belong to the drawer/page/client
+      chain. If it remains exported, it must consume the same display-name,
+      dimension, and metadata-save helpers as the drawer; if it is unused, retire
+      it deliberately with its tests instead of leaving stale semantics behind.
   - `core/admin/ui/media/types.ts`
     - owns UI-facing media item and usage summary types.
   - `core/admin/ui/media/utils.ts`
@@ -177,12 +184,15 @@ Current owner seams in code:
 - Server/service contract:
   - `core/server/routes/mediaRoutes.ts`
     - owns route orchestration, permission checks, validation calls, and the
-      central media-domain error mapping (`mapMediaError` or the existing route
-      mapper if one already exists). New usage, backfill, pagination, or replace
-      routes must not add ad-hoc error translation; existing media errors such as
-      `media_not_found`, `media_file_invalid`, `media_file_too_large`,
-      `media_mime_not_allowed`, and `media_storage_unavailable` should be mapped
-      through the same boundary when that route family is touched.
+      route-owned media-domain error mapping. The current global HTTP server may
+      still contain compatibility mappings for existing media errors, but new
+      usage, backfill, pagination, or replace routes must establish a
+      `mapMediaError`-style boundary here and cover it directly. Existing media
+      errors such as `media_not_found`, `media_file_invalid`,
+      `media_file_too_large`, `media_mime_not_allowed`, and
+      `media_storage_unavailable` should move through that same media route
+      boundary when this family touches the route surface. Do not add ad-hoc
+      per-handler translations.
   - `core/server/validation/mediaSchemas.ts`
     - owns strict media route payload/query schemas.
   - `core/services/media/mediaService.ts`
@@ -242,6 +252,9 @@ Reuse-first rule:
   than adding a media-only toaster host,
 - keep media cache updates on `mediaClient` and `cacheBus`; do not introduce
   mount-force refetch loops,
+- keep the secondary `MediaDetailsPanel` from becoming a parallel owner. Shared
+  helpers belong in `core/admin/ui/media/utils.ts` / `types.ts`; page state and
+  async mutation results belong in `MediaLibraryPage` / `mediaClient`.
 - use current per-item `DELETE /media/:id` unless a new bulk route is explicitly
   justified and covered by route/security tests,
 - keep the existing Replace affordance honest: either implement it through the
@@ -305,9 +318,15 @@ Dependency notes:
   reuse the same parser and persistence semantics as new uploads.
 - `TASK-201-04-02` must land after `TASK-201-04-01` because navigation consumes
   usage summaries and must not rescan content JSON in the drawer.
+- `TASK-201-05-01` must land after `TASK-201-03-01` and `TASK-201-03-02`
+  because visible-scope bulk selection depends on the same filtered/loaded asset
+  contract that drives empty states and `Load More Assets`.
 - `TASK-201-05-03` must land after `TASK-201-02-01` if same-id replacement is
   implemented, because replacement must update dimensions through the upload
   parser owner.
+- `TASK-201-06` must verify the final `MediaDetailsPanel` decision: either the
+  panel is aligned through the same helpers as the drawer or it is retired with
+  its tests. Closure cannot leave it as a stale duplicate details contract.
 
 ## Testing Requirements
 
@@ -322,10 +341,16 @@ Dependency notes:
     land.
   - include regression coverage that grid/list switching renders distinct
     usable views while preserving search/filter selection state.
+  - keep `media-details-panel.test.tsx` only while `MediaDetailsPanel` remains a
+    supported/exported component; if the implementation retires that panel,
+    remove or replace the stale panel tests in the same leaf that retires it.
 - Bun:
   - `set -a && source .env && set +a && bun test tests/unit/media tests/integration/routes/media.test.ts`
   - DB-backed media service assertions should run only when `DATABASE_URL` is
     reachable; otherwise closure must record skipped DB coverage.
+  - if any media route is touched, include direct `mapMediaError` / route-boundary
+    tests in `tests/integration/routes/media.test.ts`; do not rely only on the
+    global HTTP server fallback mapping.
 - If runtime asset delivery behavior changes, also run the relevant runtime
   media delivery suite under `tests/integration/server` or add one if missing.
 

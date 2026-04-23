@@ -33,6 +33,9 @@ No child task files.
   the recovery itself owned by `mediaService`; `MediaDetailsDrawer` should render
   loading/success/failure state from that owner path instead of reading image
   pixels itself.
+- Do not move recovery or rendering responsibility into `MediaDetailsPanel`.
+  That component is a secondary/test-covered surface in the current tree; align
+  it through the same helpers only if it remains supported.
 - Update the selected item and media list cache from the recovered media row so
   the drawer, grid/list, and picker see one consistent record shape.
 - If selected-asset recovery cannot be implemented safely in this leaf, document
@@ -51,7 +54,9 @@ No child task files.
 - `core/admin/services/mediaClient.ts`
 - `core/admin/ui/media/MediaLibraryPage.tsx`
 - `core/admin/ui/media/MediaDetailsDrawer.tsx`
-- `core/admin/ui/media/MediaDetailsPanel.tsx`
+- `core/admin/ui/media/MediaDetailsPanel.tsx` only if kept as a supported
+  secondary surface; otherwise remove the stale component/tests in the same
+  cleanup.
 - `tests/unit/media/mediaService.test.ts`
 - `tests/integration/routes/media.test.ts` if a recovery route is added
 - `tests/vitest/ui/media-details.test.tsx`
@@ -92,6 +97,9 @@ No child task files.
   - missing image dimensions show truthful `Unknown`/pending copy instead of a
     meaningless dash,
   - non-image file info remains readable.
+  - `MediaDetailsPanel` assertions are required only while that component
+    remains a supported export; otherwise closure must prove it was retired
+    cleanly and no caller imports it.
 
 ## Documentation Updates Required
 

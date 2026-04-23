@@ -29,6 +29,8 @@ repairs the current Replace affordance without breaking `MediaPicker`.
 - Add a library-owned multi-select mode separate from details selection.
 - Support visible-scope select all, clear selection, bulk delete, and bulk
   download.
+- Base visible-scope selection on the filtered/loaded asset contract from
+  `TASK-201-03`; do not create a second hidden list model for bulk operations.
 - Confirm destructive bulk delete.
 - Reuse existing `deleteMedia` per item unless a new route is justified later.
 - Make the existing `Replace` details action real through the media drawer,
@@ -46,6 +48,18 @@ Out of scope:
 - changing upload validation or allowed MIME settings,
 - leaving visible details actions clickable without an owner callback and
   tested async result.
+
+## Dependency Notes
+
+- `TASK-201-05-01` depends on `TASK-201-03-01` and `TASK-201-03-02` because
+  select-all and bulk operations need the same truthful visible asset set that
+  drives empty states, loaded counts, and `Load More Assets`.
+- `TASK-201-05-03` depends on `TASK-201-02-01` if same-id replacement is
+  implemented, because replacement must reuse upload-time validation and
+  dimension extraction rather than adding a replacement-only parser.
+- `TASK-201-05-02` may land independently after this parent, but it must keep
+  `media.openAfterUpload` in `userSettingsClient` and must not duplicate the
+  upload input/drop handler.
 
 ## Files to Change
 

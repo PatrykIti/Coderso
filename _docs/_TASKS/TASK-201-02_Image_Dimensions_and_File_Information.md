@@ -30,6 +30,10 @@ provides a bounded recovery path for existing rows.
   existing image rows when details are opened/refreshed.
 - Render dimensions as `415 x 66 px` consistently.
 - Distinguish `Unknown` image dimensions from non-image assets where useful.
+- Treat `MediaDetailsDrawer` as the primary details surface. If
+  `MediaDetailsPanel` is still exported after this wave, align it through the
+  same shared dimension/display helpers; otherwise retire the component and its
+  tests deliberately instead of maintaining a second details contract.
 
 Out of scope:
 
@@ -55,7 +59,9 @@ Out of scope:
 - `core/admin/ui/media/MediaLibraryPage.tsx` if details-open recovery is wired
   through the page owner
 - `core/admin/ui/media/MediaDetailsDrawer.tsx`
-- `core/admin/ui/media/MediaDetailsPanel.tsx`
+- `core/admin/ui/media/MediaDetailsPanel.tsx` only if it remains exported; align
+  it through the same helpers as the drawer or remove the stale secondary path
+  with its tests.
 - `core/admin/ui/media/utils.ts`
 - `tests/unit/media/mediaService.test.ts`
 - add `tests/unit/media/imageDimensions.test.ts`
@@ -100,6 +106,8 @@ Out of scope:
     cached record,
   - unknown dimensions use truthful copy,
   - media client preserves width/height cache updates.
+  - if `MediaDetailsPanel` is retired, replace panel-specific assertions with
+    coverage proving the remaining drawer/helper path owns dimension rendering.
 
 ## Documentation Updates Required
 

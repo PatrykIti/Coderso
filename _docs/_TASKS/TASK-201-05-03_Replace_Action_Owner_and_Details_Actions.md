@@ -59,7 +59,9 @@ Out of scope:
   - owns the replace admin API wrapper, cache update, and `cacheBus` broadcast.
 - `core/server/routes/mediaRoutes.ts`
   - owns internal route registration, permission checks, CSRF path, validation,
-    and mapping media-domain errors to `ApiError`.
+    and mapping media-domain errors to `ApiError` through the route-owned media
+    mapper. Do not rely only on the existing global HTTP server fallback or add
+    per-handler ad-hoc translations.
 - `core/server/validation/mediaSchemas.ts`
   - owns strict replace payload validation if a new route payload is added.
 - `core/services/media/mediaService.ts`
@@ -102,8 +104,8 @@ Out of scope:
   - non-image replacements clear image dimensions when appropriate,
   - disallowed MIME/oversized files fail through existing upload validation,
   - missing media maps to `media_not_found`,
-  - route registration, permission, CSRF, validation, and mapped `ApiError`
-    coverage for the replace endpoint.
+  - route registration, permission, CSRF, validation, and route-owned mapped
+    `ApiError` coverage for the replace endpoint.
 - Vitest:
   - details drawer opens the replace file input and shows replacing/success/error
     states,
