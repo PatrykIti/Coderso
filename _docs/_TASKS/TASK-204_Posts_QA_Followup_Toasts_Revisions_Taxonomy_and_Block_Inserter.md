@@ -60,6 +60,7 @@ state where closed and still-open Posts findings are indistinguishable.
 - `TASK-204-02_Taxonomy_Terms_Error_Boundary_and_Category_Retry.md`
 - `TASK-204-03_Block_Inserter_Search_and_Media_Capability_Followup.md`
 - `TASK-204-04_QA_Docs_and_Playwright_Source_Closure.md`
+- `TASK-204-04-01_Runtime_Console_Error_Triage_Settings_and_Autosave.md`
 
 ## Scope
 
@@ -129,8 +130,12 @@ Current owner seams:
   - `core/services/posts/editor/postBlockDocument.ts:3`
   - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
 - realtime console error triage:
+  - `core/server/routes/settingsRoutes.ts`
   - `core/services/settings/settingsService.ts`
   - `core/server/routes/postsRoutes.ts`
+  - `core/admin/services/siteSettingsClient.ts`
+  - `core/admin/services/postsClient.ts`
+  - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
 
 Reuse-first rules:
 
@@ -149,6 +154,10 @@ Reuse-first rules:
 - console errors from the source report must be mapped to their actual owners
   and must not be treated as taxonomy UI closure unless the failing call is the
   taxonomy terms endpoint.
+- `site.adminPath` settings reads and posts autosave failures are separate
+  runtime observations. They need direct triage through `TASK-204-04-01`
+  before closure can decide whether they are fixed in this family,
+  environment-only, or linked to a named follow-up.
 
 ## Security Contract
 
@@ -180,9 +189,12 @@ Reuse-first rules:
 3. Tighten block inserter active-category search copy/proof.
 4. Decide and implement or explicitly keep open the broader media capability
    gap with named owners.
-5. Replay the Posts Playwright checklist, including console capture for
+5. Triage the source report's settings/admin-path and autosave console errors
+   through `TASK-204-04-01`, fixing bounded error contracts in-family only when
+   the replay proves an app-owned leak or user-facing failure.
+6. Replay the Posts Playwright checklist, including console capture for
    settings/admin-path reads and autosave failures.
-6. Update docs, changelog, and board with fixed, deferred, or follow-up status.
+7. Update docs, changelog, and board with fixed, deferred, or follow-up status.
 
 ## Testing Requirements
 
@@ -193,6 +205,10 @@ Reuse-first rules:
   - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/admin/taxonomyClient.test.ts`
 - Bun route/service suites if taxonomy route mapping changes:
   - `set -a && source .env && set +a && bun test tests/integration/routes/taxonomy.test.ts`
+- Bun route/service suites if settings or posts autosave error mapping changes:
+  - `set -a && source .env && set +a && bun test tests/integration/routes/settings.test.ts tests/integration/routes/postsRoutes.test.ts`
+- Vitest suites if settings/admin-path or autosave UI/client handling changes:
+  - `bun run test:vitest -- tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/postsClient.test.ts tests/vitest/ui-integration/post-autosave-flow.test.tsx`
 - If new media block types are added:
   - `bun run test:vitest -- tests/vitest/posts/postBlockDocument.test.ts tests/vitest/posts/post-block-normalizer-writing-canvas.test.ts tests/vitest/posts/post-block-runtime-renderer.test.tsx tests/vitest/posts/post-block-transforms.test.ts tests/vitest/ui-integration/post-block-inserter.test.tsx`
 - QA replay:

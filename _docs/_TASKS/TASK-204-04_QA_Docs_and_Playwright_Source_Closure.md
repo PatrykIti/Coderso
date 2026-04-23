@@ -18,7 +18,7 @@ versus what `TASK-204` repaired or intentionally left open.
 
 ## Sub-Tasks
 
-No child task files.
+- `TASK-204-04-01_Runtime_Console_Error_Triage_Settings_and_Autosave.md`
 
 ## Scope
 
@@ -35,6 +35,9 @@ No child task files.
 - Classify the `Bledy z konsoli real time` block separately from `BUG-7`:
   - `site.adminPath` settings read failed with raw Drizzle query output;
   - `POST /admin/api/posts/:id/autosave` failed after `CONNECTION_CLOSED`.
+- Consume the explicit `TASK-204-04-01` evidence before closing: each console
+  finding must be fixed in-family, classified as environment-only with proof,
+  or linked to a follow-up with the exact owner seam.
 - Separate fixed, still-open capability, and environment/runtime failure states.
 - If those console failures remain reproducible, record named follow-up owners:
   `core/services/settings/settingsService.ts` for settings/admin-path reads and
@@ -51,10 +54,13 @@ Out of scope:
   reachability first.
 - treating the settings/autosave console errors as fixed merely because the
   taxonomy selector no longer leaks raw SQL.
+- closing from the source report alone without running or recording the
+  `TASK-204-04-01` triage decision.
 
 ## Files to Change
 
 - `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`
+- `_docs/_TASKS/TASK-204-04-01_Runtime_Console_Error_Triage_Settings_and_Autosave.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_SPEC.md`
 - `_docs/CMS_API.md` if taxonomy API contract changed
@@ -79,6 +85,10 @@ Out of scope:
 - targeted Vitest suites from `TASK-204-01` through `TASK-204-03`
 - Bun taxonomy route suite if `taxonomyRoutes.ts` changed:
   - `set -a && source .env && set +a && bun test tests/integration/routes/taxonomy.test.ts`
+- Bun settings/posts route suites if `TASK-204-04-01` changes those boundaries:
+  - `set -a && source .env && set +a && bun test tests/integration/routes/settings.test.ts tests/integration/routes/postsRoutes.test.ts`
+- Vitest admin/client/UI suites if `TASK-204-04-01` changes browser handling:
+  - `bun run test:vitest -- tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/postsClient.test.ts tests/vitest/ui-integration/post-autosave-flow.test.tsx`
 - Additional media block contract suites if new media block types were accepted.
 - Manual Playwright replay of the Posts scenarios listed in the
   `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` re-verification section.
