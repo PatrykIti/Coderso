@@ -194,6 +194,8 @@ test("FormPicker renders loading, error, filtering, and add flows", () => {
   const view = mount(<FormPicker onAdd={onAdd} />);
 
   try {
+    expect(view.container.firstElementChild?.className).toContain("min-h-0");
+    expect(view.container.firstElementChild?.className).toContain("overflow-hidden");
     expect(view.container.textContent).toContain("Loading forms...");
 
     formsState.current = { items: [], isLoading: false, error: "Request failed" };
@@ -259,6 +261,8 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
   const view = mount(<TemplatePicker onAdd={onAdd} />);
 
   try {
+    expect(view.container.firstElementChild?.className).toContain("min-h-0");
+    expect(view.container.firstElementChild?.className).toContain("overflow-hidden");
     expect(view.container.textContent).toContain("Loading templates...");
 
     templatesState.current = { items: [], isLoading: false, error: "Broken feed" };
@@ -333,6 +337,8 @@ test("WidgetPicker groups registry items by category, supports slot context, and
   );
 
   try {
+    expect(view.container.firstElementChild?.className).toContain("min-h-0");
+    expect(view.container.firstElementChild?.className).toContain("overflow-hidden");
     expect(view.container.textContent).toContain("Insert into Hero Content");
     expect(view.container.textContent).toContain("Content");
     expect(view.container.textContent).toContain("Feature Grid");

@@ -14,4 +14,13 @@ test("PageEditorPage renders key panels", () => {
   expect(html).toContain("Runtime preview device");
   expect(html).toContain("Runtime preview");
   expect(html).toContain("History");
+  expect(html).toMatch(
+    /data-slot="tabs"[^>]*class="[^"]*min-h-0[^"]*overflow-hidden[^"]*"/
+  );
+  expect(html).toMatch(
+    /data-slot="tabs-content"[^>]*class="[^"]*min-h-0[^"]*flex-1[^"]*overflow-hidden[^"]*"/
+  );
+  expect(html).toMatch(
+    /data-slot="scroll-area"[^>]*class="[^"]*min-h-0[^"]*flex-1[^"]*p-4[^"]*"/
+  );
 });

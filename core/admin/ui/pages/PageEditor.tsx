@@ -1169,7 +1169,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <SheetDescription className="sr-only">
             Browse available components and widgets.
           </SheetDescription>
-          <div className="flex h-full flex-col overflow-y-auto">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
             {renderLibraryPanel()}
           </div>
         </SheetContent>

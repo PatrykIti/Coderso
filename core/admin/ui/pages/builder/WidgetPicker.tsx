@@ -76,7 +76,7 @@ export function WidgetPicker({
   );
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="border-b p-4">
+      <div className="shrink-0 border-b p-4">
         {contextLabel ? (
           <div className="mb-3 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-2">

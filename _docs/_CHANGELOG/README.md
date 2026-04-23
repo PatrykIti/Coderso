@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 724 | 2026-04-23 | TASK-197 pages builder library scroll containment | CMS Pages/Admin UI |
 | 723 | 2026-04-22 | TASK-194 pages admin UX reliability and polish | CMS Pages/Admin UI |
 | 722 | 2026-04-22 | TASK-195 posts admin QA recovery | QA/CMS Posts |
 | 721 | 2026-04-22 | TASK-196 menus list-first editor and UX closure | Admin/UI |

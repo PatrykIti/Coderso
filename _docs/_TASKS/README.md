@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1000 tasks
+- **Done:** 1001 tasks
 
 ---
 
@@ -105,6 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-197 | Pages Builder Library Panel Scroll Containment | Medium | Small | Done: the Pages builder left rail now keeps its tab/search chrome fixed and scrolls widgets/templates/forms inside the active list viewport on desktop and mobile |
 | TASK-196 | Menus Admin IA, Reliability, and Editor Clarity | High | Large | Done: Menus now starts from a list screen, edits one chosen menu per route, confirms item delete in UI, and ships docs/test closure |
 | TASK-196-04 | QA, Docs, and Closure | Medium | Medium | Done: targeted Menus Vitest matrix, docs source-of-truth sync, changelog, and board closure landed |
 | TASK-196-03 | Editor Feedback and Field Guidance | Medium | Medium | Done: explicit save toast plus clearer `Location` and `Icon Name` guidance without changing stored contracts |
