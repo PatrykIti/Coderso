@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Media + Admin/UI + Cache
 **Estimated Effort:** Medium
-**Dependencies:** TASK-206
+**Dependencies:** TASK-206, TASK-206-00
 **Status:** To Do
 
 ---
@@ -12,7 +12,10 @@
 ## Overview
 
 Align Media route-entry and picker hydration with the existing admin cache
-contract used by Pages, Posts, and Menus.
+contract used by the current Pages and Menus list surfaces.
+
+Use the current Pages/Menus list mount policy as the parity baseline. Posts is
+not a TASK-206 parity baseline until its own mount policy gap is repaired.
 
 The current Media client already owns `media:list`, `getCachedMedia`, and
 `listMediaCached`, but `MediaLibraryPage` and `MediaPicker` still force network
@@ -39,6 +42,8 @@ contract is actually honored.
 ## Implementation Direction
 
 - Start with `MediaLibraryPage`; it is the visible reported issue.
+- Do not add Media-specific TTL behavior here. Expired-cache fallback must come
+  from `TASK-206-00` and the shared admin cache contract.
 - Use the generic list-cache policy shape before adding Media-only code. If the
   existing `resolveCacheRefreshBackground` helper is enough, keep it. If the
   mount decision needs a reusable helper for both library and picker, extend the

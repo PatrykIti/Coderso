@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Media + Admin/UI + Cache
 **Estimated Effort:** Medium
-**Dependencies:** TASK-206-01
+**Dependencies:** TASK-206-01, TASK-206-00
 **Status:** To Do
 
 ---
@@ -40,6 +40,9 @@ No child task files.
   state.
 - Use `getCachedMedia()` only as the initial cache source.
 - Replace the unconditional forced mount refresh with a cache-aware decision.
+- Treat expired-cache behavior as already owned by the shared cache TTL contract
+  from `TASK-206-00`; do not add a `MediaLibraryPage` or `mediaClient` special
+  case just for expired rows.
 - Reuse `resolveCacheRefreshBackground` for background-vs-foreground state if it
   fits.
 - Export a small pure helper only if tests need stable policy coverage. If
@@ -120,3 +123,5 @@ useEffect(() => {
 2. Missing media cache still performs the initial foreground fetch.
 3. The page still supports explicit forced refresh after true invalidation or
    user action.
+4. Expired cache behavior is validated through the shared TTL contract, not a
+   page-local bypass.

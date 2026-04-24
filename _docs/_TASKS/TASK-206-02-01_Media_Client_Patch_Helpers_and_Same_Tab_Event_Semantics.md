@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Media + Admin/Client + Cache
 **Estimated Effort:** Medium
-**Dependencies:** TASK-206-01-01
+**Dependencies:** TASK-206-01-01, TASK-206-00
 **Status:** To Do
 
 ---
@@ -48,6 +48,8 @@ No child task files.
   can consume the just-patched in-memory list, but cross-tab events must
   re-read the storage-backed `media:list` value first, or fall back to one
   background reload if that cache is missing/expired.
+- The missing/expired distinction belongs to the shared TTL owner from
+  `TASK-206-00`; do not duplicate TTL math inside the event handler.
 - Keep any event-read helper in `mediaClient.ts` or extend the existing generic
   `cacheBus` contract in place; do not add a Media-specific side bus or route
   state owner.
@@ -126,6 +128,8 @@ cannot be hidden by stale in-memory rows in the current tab.
   - `recoverMediaDimensions` patches cached row and broadcasts update,
   - `replaceMedia` patches cached row and broadcasts update,
   - `deleteMedia` removes cached row without fetching full list.
+  - event-read helpers do not return expired in-memory cache rows over the
+    storage-backed TTL result.
 - `tests/vitest/ui/media-library.test.tsx`
   - `media:list` update event with cached rows updates UI state without calling
     forced full refresh,

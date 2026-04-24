@@ -12,9 +12,13 @@
 ## Overview
 
 Repair the Media admin cache lifecycle so opening `/admin/media` from the
-sidebar behaves like Pages, Posts, and Menus: cached rows render immediately,
-fresh `media:list` cache is reused, and the screen does not force a full
-`GET /media` reload on every route entry.
+sidebar behaves like the current Pages and Menus list surfaces: cached rows
+render immediately, fresh `media:list` cache is reused, and the screen does not
+force a full `GET /media` reload on every route entry.
+
+Posts currently has its own mount policy gap and is not the parity baseline for
+this task family. If Posts parity is needed, create a separate Posts cache task
+instead of silently expanding TASK-206.
 
 This task also closes the follow-up cache consistency gap created by that same
 flow: media mutations should patch the known `media:list` record set when the
@@ -55,6 +59,10 @@ the custom case is handled through the shared contract.
   force a redundant full-list reload.
 - Prefetch remains warmup-only. It must call cached list APIs with `force:
   false` and must not become a hidden full reload path.
+- Expired-cache behavior must be owned by the shared admin cache layer, not by a
+  Media-only branch. If implementation claims expired `media:list` falls back to
+  a full read, complete the generic in-memory TTL contract in `TASK-206-00`
+  first and apply the same pattern to the affected list clients.
 - Keep `MediaGrid` reusable for both `MediaLibraryPage` and `MediaPicker`.
 - Prefer existing shared primitives (`cacheRefresh`, `storageCache`, `cacheBus`,
   `adminPrefetch`, `MediaGrid`, `Button`/dialog/layout components) before adding
@@ -69,6 +77,7 @@ the custom case is handled through the shared contract.
 
 ## Sub-Tasks
 
+- [ ] TASK-206-00: Admin Cache In-Memory TTL Contract
 - [ ] TASK-206-01: Media Mount Hydration and Picker Cache Policy
   - [ ] TASK-206-01-01: Media Library Mount Refresh Policy
   - [ ] TASK-206-01-02: Media Picker Cache Reuse and Shared Policy Helper
@@ -81,6 +90,14 @@ the custom case is handled through the shared contract.
 
 ## Scope
 
+0. Shared admin cache TTL correctness:
+   - fix any in-memory cache path that can keep returning stale rows after the
+     storage envelope TTL expired,
+   - do this in a shared cache/client helper or existing generic cache owner,
+     not as a `mediaClient`-only special case,
+   - cover at least Media plus the list surfaces used as parity references
+     (Pages and Menus), and include Posts if it shares the same helper or client
+     pattern during implementation.
 1. Media route entry and list hydration:
    - hydrate from `getCachedMedia()` on first render,
    - do not show foreground `Loading assets...` when valid cached rows exist,
@@ -139,6 +156,10 @@ Current owner seams:
   - must reuse the same cached media data and not create a second list source.
 - `core/admin/utils/cacheBus.ts`
   - owns same-tab and cross-tab cache event delivery.
+- `core/admin/utils/storageCache.ts`
+  - owns shared storage envelope TTL semantics,
+  - must be extended or reused if in-memory list caches need timestamp-aware
+    expiration; do not add a Media-only TTL workaround.
 - `core/admin/utils/cacheRefresh.ts`
   - owns generic background refresh decision helper for hydrated list surfaces.
 - `core/admin/utils/adminPrefetch.ts`
@@ -156,15 +177,17 @@ instead of introducing new documentation-only behavior.
 
 ## Implementation Order
 
-1. Complete `TASK-206-01-01` so `MediaLibraryPage` stops force-refreshing when
+1. Complete `TASK-206-00` first so expired-cache behavior stays generic before
+   Media route-entry logic starts relying on it.
+2. Complete `TASK-206-01-01` so `MediaLibraryPage` stops force-refreshing when
    cache exists.
-2. Complete `TASK-206-01-02` so `MediaPicker` uses the same cache mount policy.
-3. Complete `TASK-206-02-01` to make client-side mutation cache patches and
+3. Complete `TASK-206-01-02` so `MediaPicker` uses the same cache mount policy.
+4. Complete `TASK-206-02-01` to make client-side mutation cache patches and
    same-tab cache events avoid redundant full-list reloads.
-4. Complete `TASK-206-02-02` to make uploads add one new record to cache through
+5. Complete `TASK-206-02-02` to make uploads add one new record to cache through
    the existing media service/route/client contract.
-5. Complete `TASK-206-03-01` to lock the request/prefetch regression matrix.
-6. Complete `TASK-206-03-02` with docs, changelog, board sync, and final
+6. Complete `TASK-206-03-01` to lock the request/prefetch regression matrix.
+7. Complete `TASK-206-03-02` with docs, changelog, board sync, and final
    validation.
 
 ## Pseudocode
@@ -284,7 +307,7 @@ returning row data without broad route churn.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 - Vitest admin/client:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/admin-prefetch-policy.test.ts tests/vitest/admin/adminPrefetch.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/storageCache.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/menusClient.test.ts tests/vitest/admin/postsClient.test.ts tests/vitest/admin/admin-prefetch-policy.test.ts tests/vitest/admin/adminPrefetch.test.ts`
 - Vitest UI:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-picker.test.tsx`
 - Perf/regression if request instrumentation is updated:
@@ -328,5 +351,6 @@ set -a && source .env && set +a
    cache is missing/expired, instead of reusing stale module memory.
 8. `/media` sidebar prefetch remains warmup-only with `force: false`.
 9. Explicit refresh, true invalidation, expired cache, or missing cache can still
-   load the full media list.
+   load the full media list through the shared cache TTL contract, not through a
+   Media-only TTL branch.
 10. Docs and tests describe the actual implementation, not a parallel plan.

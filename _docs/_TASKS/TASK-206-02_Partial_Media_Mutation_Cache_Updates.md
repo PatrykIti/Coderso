@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Media + Admin/Client + Cache
 **Estimated Effort:** Large
-**Dependencies:** TASK-206-01
+**Dependencies:** TASK-206-01, TASK-206-00
 **Status:** To Do
 
 ---
@@ -58,6 +58,9 @@ full `GET /media`.
   needed for cache-event handling, or extend the existing generic cache-bus
   event metadata in a backward-compatible way. Do not add a separate Media
   event bus or route-local state manager.
+- Storage-first event hydration must still respect the shared TTL contract from
+  `TASK-206-00`. If the storage-backed cache is expired or unavailable, fall
+  back to one background list reload instead of applying stale in-memory rows.
 - For update-like operations, broadcast `update` only after the cache was
   patched.
 - For delete, remove the id from cache before broadcasting.

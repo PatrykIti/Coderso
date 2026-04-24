@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Media + Docs + QA
 **Estimated Effort:** Small
-**Dependencies:** TASK-206-03-01
+**Dependencies:** TASK-206-03-01, TASK-206-00
 **Status:** To Do
 
 ---
@@ -45,6 +45,10 @@ No child task files.
 ## Documentation Checklist
 
 - `_docs/ADMIN_CACHE.md`
+  - add shared in-memory TTL policy:
+    - TTL applies to storage envelopes and module-level read-through cache,
+    - expired memory values fall through to storage/network instead of serving
+      stale rows.
   - add Media lifecycle policy:
     - cache present -> no forced mount reload,
     - cache missing -> foreground load,
@@ -77,7 +81,7 @@ At closure, run:
 ```sh
 bun --cwd core lint
 bun --cwd core lint:types
-./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/admin-prefetch-policy.test.ts tests/vitest/admin/adminPrefetch.test.ts
+./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/admin/storageCache.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/menusClient.test.ts tests/vitest/admin/postsClient.test.ts tests/vitest/admin/admin-prefetch-policy.test.ts tests/vitest/admin/adminPrefetch.test.ts
 ```
 
 If upload response/service route changed:
@@ -101,7 +105,9 @@ bun test tests/perf/admin-prefetch-budget.test.ts
 ## Acceptance Criteria
 
 1. `_docs/ADMIN_CACHE.md` describes the final Media lifecycle.
-2. `_docs/ADMIN_CACHE_MAP.md` points to the actual Media cache owners.
-3. `_docs/_TASKS/README.md` statistics and status tables are synced.
-4. Changelog entry records implementation scope and validation.
-5. No TASK-206 file remains with stale status or stale validation notes.
+2. `_docs/ADMIN_CACHE.md` describes the shared in-memory TTL behavior if
+   `TASK-206-00` lands with this family.
+3. `_docs/ADMIN_CACHE_MAP.md` points to the actual Media cache owners.
+4. `_docs/_TASKS/README.md` statistics and status tables are synced.
+5. Changelog entry records implementation scope and validation.
+6. No TASK-206 file remains with stale status or stale validation notes.

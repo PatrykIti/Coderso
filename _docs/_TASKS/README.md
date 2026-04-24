@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 75 tasks
+- **To Do:** 76 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1081 tasks
 
@@ -39,6 +39,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-206 | Media Admin Cache Lifecycle and Partial List Updates | High | Large | Repair Media route-entry cache lifecycle and partial mutation updates without creating a second media flow |
+| TASK-206-00 | Admin Cache In-Memory TTL Contract | High | Medium | Make shared in-memory admin list caches obey the same TTL as storage envelopes before Media relies on expired-cache fallback |
 | TASK-206-01 | Media Mount Hydration and Picker Cache Policy | High | Medium | Align Media Library and MediaPicker hydration with the existing Pages/Menus cache policy |
 | TASK-206-01-01 | Media Library Mount Refresh Policy | High | Medium | Stop forcing full `GET /media` on `/admin/media` mount when `media:list` is fresh |
 | TASK-206-01-02 | Media Picker Cache Reuse and Shared Policy Helper | Medium | Medium | Reuse `media:list` in picker browse/selection flows without forced reload |

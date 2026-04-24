@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Media + Admin/UI + Cache
 **Estimated Effort:** Medium
-**Dependencies:** TASK-206-01-01
+**Dependencies:** TASK-206-01-01, TASK-206-00
 **Status:** To Do
 
 ---
@@ -39,6 +39,9 @@ No child task files.
   create a picker-only cache policy, picker-only grid, or parallel selection
   store when `mediaClient`, `MediaGrid`, and shared dialog/list patterns already
   cover the behavior.
+- Do not add picker-local expired-cache logic. If cache expiry matters for
+  selection resolution, it must be handled by the shared TTL contract from
+  `TASK-206-00`.
 - If picker and library need the same cache-mount decision, consume a generic
   helper from the existing shared cache owner; only keep local picker code for
   picker-specific concerns such as selected id resolution, accept filtering, and
