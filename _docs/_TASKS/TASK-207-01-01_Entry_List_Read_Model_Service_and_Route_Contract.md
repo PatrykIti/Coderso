@@ -30,7 +30,13 @@ No child task files.
   - include existing entry summary fields plus `contentType`.
 - `core/server/routes/contentEntryRoutes.ts`
   - add an internal all-entries GET route,
+  - validate `ctx.query` with the schema owner before delegating,
   - keep type-scoped routes unchanged.
+- `core/server/validation/contentSchemas.ts`
+  - add `contentEntryAllEntriesQuerySchema` or a similarly named empty query
+    schema with `properties: {}` and `additionalProperties: false`,
+  - keep query validation centralized here instead of adding route-local
+    `Object.keys(ctx.query)` checks.
 - `tests/unit/content/entryService.test.ts`
   - cover the joined read model when `DATABASE_URL` is available.
 - `tests/integration/routes/contentTypes.test.ts`
@@ -48,7 +54,10 @@ Route sketch:
 router.get(
   "/content/entries",
   requirePermission("content:read"),
-  async () => listEntriesWithContentTypes()
+  async (ctx) => {
+    validate(contentEntryAllEntriesQuerySchema, ctx.query);
+    return listEntriesWithContentTypes();
+  }
 );
 ```
 
@@ -64,9 +73,10 @@ implementation.
 - CSRF: not required for GET.
 - Rate-limit bucket: `admin_read`.
 - Reject-unknown validation: no request body; the initial all-entries route is
-  queryless and must reject unsupported query params instead of ignoring them.
-  If a later task moves filters server-side, add a strict query schema in that
-  task before accepting query input.
+  queryless and must reject unsupported query params through an empty query
+  schema in `core/server/validation/contentSchemas.ts` instead of ignoring them
+  or manually inspecting `ctx.query` in the route. If a later task moves filters
+  server-side, extend that schema in the task before accepting query input.
 - Anti-abuse: read-only; no public write or token exposure.
 
 ## Testing Requirements
@@ -79,8 +89,8 @@ implementation.
   - assert the final all-entries route path is registered explicitly.
   - assert the route requests `content:read` before returning data.
   - assert a queryless route rejects unsupported query params, for example
-    `?status=draft`, instead of ignoring them or silently enabling server-side
-    filtering.
+    `?status=draft`, through the `contentSchemas.ts` schema owner instead of
+    ignoring them or silently enabling server-side filtering.
   - assert the existing type-scoped entry list route remains registered and
     continues to resolve through `/content/:type/entries`.
 
@@ -100,3 +110,5 @@ implementation.
    explicit.
 5. Route tests prove unsupported query params are rejected until a later task
    introduces a strict server-side filter schema.
+6. The route strictness implementation uses the shared validation schema owner
+   and does not add route-local manual query inspection.

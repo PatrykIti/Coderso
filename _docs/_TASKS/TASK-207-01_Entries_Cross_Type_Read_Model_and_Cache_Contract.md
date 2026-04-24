@@ -29,6 +29,9 @@ entry editors, relation fields, widgets, and current assistant invalidation.
 
 - `core/services/content/entryService.ts`
 - `core/server/routes/contentEntryRoutes.ts`
+- `core/server/validation/contentSchemas.ts`
+  - add an empty all-entries query schema with `additionalProperties: false`
+    if the first version of the route stays queryless.
 - `core/admin/services/entriesClient.ts`
 - `core/admin/services/cachePolicy.ts`
 - `core/admin/utils/adminPrefetch.ts`
@@ -69,13 +72,18 @@ without joining data in the component.
 - CSRF: not required for GET reads.
 - Rate-limit bucket: `admin_read`.
 - Reject-unknown validation: keep the initial route queryless, or validate and
-  reject unknown query params if filters are later moved server-side.
+  reject unknown query params if filters are later moved server-side. For the
+  queryless version, the reject-unknown contract belongs in
+  `contentSchemas.ts`, not in a route-local manual query inspection.
 - Anti-abuse: no public write path and no secret/provider data in browser cache.
 
 ## Testing Requirements
 
 - `bun test tests/unit/content/entryService.test.ts`
 - `bun test tests/integration/routes/contentTypes.test.ts`
+- Route strictness coverage must prove the all-entries GET validates
+  `ctx.query` through the content schema owner and rejects an unsupported query
+  such as `?status=draft`.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
 
 ## Documentation Updates Required
@@ -95,4 +103,3 @@ without joining data in the component.
 3. The all-entries list has its own cache key and invalidation plan.
 4. Prefetch/cache docs name the all-entries owner and do not leave hidden cache
    state undocumented.
-

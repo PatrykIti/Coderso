@@ -98,6 +98,10 @@ resource-specific list system. The canonical route remains
   write invalidation. It has no all-entries list cache.
 - `core/server/routes/contentEntryRoutes.ts` exposes only type-scoped entry list
   reads. A cross-type internal read route is needed for a true all-entries list.
+- `core/server/validation/contentSchemas.ts` owns content-entry request/query
+  validation. The all-entries route strictness must be expressed there with an
+  empty query schema, then consumed by the route via `validate(...)`; do not add
+  ad hoc `Object.keys(ctx.query)` checks in `contentEntryRoutes.ts`.
 - `core/services/content/entryService.ts` owns the DB read model; the cross-type
   list should be a join/read model here rather than client-side N+1 fetches.
 - `core/admin/services/cachePolicy.ts`, `core/admin/utils/adminPrefetch.ts`,
@@ -145,8 +149,9 @@ resource-specific list system. The canonical route remains
 - Rate-limit buckets: existing `admin_read` for list reads and `admin_write` for
   mutations.
 - Reject-unknown validation: new route/query payloads must be schema-first and
-  reject unsupported fields; if the all-entries list remains queryless, do not
-  read ad hoc query params.
+  reject unsupported fields; if the all-entries list remains queryless, add an
+  empty query schema in `core/server/validation/contentSchemas.ts`, validate
+  `ctx.query`, and do not read or manually inspect ad hoc query params.
 - Anti-abuse: no public write path; destructive row/bulk delete requires an
   explicit token-backed confirmation and operates only on controlled visible
   selected entry refs (`id` plus owning `contentType.slug`), not on hidden rows
@@ -182,8 +187,9 @@ resource-specific list system. The canonical route remains
   - `bun test tests/integration/routes/contentTypes.test.ts`
   - route coverage must include the all-entries route registration,
     `content:read` permission, unsupported-query rejection for the queryless
-    contract, and regression coverage that `/content/:type/entries` remains
-    available for existing type-scoped consumers.
+    contract through the `contentSchemas.ts` schema owner, and regression
+    coverage that `/content/:type/entries` remains available for existing
+    type-scoped consumers.
 
 ## Documentation Updates Required
 
