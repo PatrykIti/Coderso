@@ -89,6 +89,21 @@ An equivalent local implementation is acceptable only if it is resource-neutral
 and reused consistently by the touched clients. The key requirement is that
 memory and storage TTL semantics cannot drift.
 
+Before adding a new helper file, check whether the existing generic owners can
+carry the behavior:
+
+- `core/admin/utils/storageCache.ts` already owns the localStorage envelope TTL
+  and should remain the source of truth for storage-backed expiration.
+- `core/admin/utils/readThroughCache.ts` already owns TTL-aware in-memory
+  read-through semantics for high-frequency reads. If it can be extended without
+  coupling it to browser storage, prefer that over introducing a second
+  in-memory cache abstraction.
+
+Do not create a Media-only `mediaCachePolicy`, `mediaMemoryCache`, or
+route-local TTL module. The final helper may live in `storageCache.ts`,
+`readThroughCache.ts`, or an existing generic cache owner, but all touched list
+clients must consume the same timestamp-aware pattern.
+
 ## Security Contract
 
 - Visibility: internal admin client cache only.

@@ -109,12 +109,23 @@ contains the post-delete row set.
 Cache-event storage-first read:
 
 ```ts
-const getCachedMediaForEvent = () => readMediaCache() ?? cachedMedia;
+const getCachedMediaForEvent = () => {
+  const storageBacked = readMediaCache();
+  if (storageBacked) return storageBacked;
+  return mediaListCache.peekFresh() ?? null;
+};
 ```
 
-The exact helper name can differ, but the owner must stay in
-`mediaClient.ts`. UI event handlers should use that storage-backed event read
-path before deciding that a forced background reload is necessary.
+The exact helper/API name can differ, but the owner must stay in
+`mediaClient.ts` or the shared helper introduced by `TASK-206-00`. The helper
+must never fall back to raw module-level `cachedMedia` after the storage
+envelope is missing or expired. It may return an in-memory value only when that
+memory value carries its own TTL state and is still fresh under the shared
+contract. Otherwise it returns `null`, and the UI performs one background list
+reload.
+
+UI event handlers should use that storage-backed, TTL-aware event read path
+before deciding that a forced background reload is necessary.
 
 ## Security Contract
 

@@ -108,8 +108,12 @@ If delete keeps `invalidate` for compatibility, the UI must still first apply
 the event cache helper when it contains a patched row set.
 
 For `update` events, the event-read helper should prefer `readMediaCache()` over
-the module-level `cachedMedia` value so another tab's patched `media:list`
-cannot be hidden by stale in-memory rows in the current tab.
+module-level memory so another tab's patched `media:list` cannot be hidden by
+stale in-memory rows in the current tab. If storage is missing or expired, the
+helper must not silently return raw `cachedMedia`; it may return memory only
+through the timestamp-aware helper from `TASK-206-00`. If no fresh storage or
+fresh memory value exists, return `null` and let the UI perform one background
+reload.
 
 ## Security Contract
 
@@ -128,8 +132,10 @@ cannot be hidden by stale in-memory rows in the current tab.
   - `recoverMediaDimensions` patches cached row and broadcasts update,
   - `replaceMedia` patches cached row and broadcasts update,
   - `deleteMedia` removes cached row without fetching full list.
-  - event-read helpers do not return expired in-memory cache rows over the
-    storage-backed TTL result.
+  - event-read helpers prefer storage-backed patched rows over stale module
+    memory,
+  - event-read helpers return `null`, not raw stale memory, when storage is
+    missing/expired and the timestamp-aware memory helper is also expired.
 - `tests/vitest/ui/media-library.test.tsx`
   - `media:list` update event with cached rows updates UI state without calling
     forced full refresh,

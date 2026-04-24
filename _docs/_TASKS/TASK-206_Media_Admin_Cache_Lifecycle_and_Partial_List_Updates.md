@@ -238,6 +238,12 @@ useEffect(() => {
 Cache event handling should prefer patched cache for updates:
 
 ```ts
+const getCachedMediaForEvent = () => {
+  const storageBacked = readMediaCache();
+  if (storageBacked) return storageBacked;
+  return mediaListCache.peekFresh() ?? null;
+};
+
 subscribeCacheEvents((event) => {
   if (event.key !== cacheKeys.mediaList) return;
 
@@ -253,6 +259,12 @@ subscribeCacheEvents((event) => {
   refresh({ force: true, background: true });
 });
 ```
+
+`getCachedMediaForEvent` is illustrative. The actual implementation may use a
+different helper name, but it must be storage-first and TTL-aware. It must not
+fall back to raw module-level `cachedMedia` after the storage envelope is
+missing or expired; only the shared timestamp-aware memory helper from
+`TASK-206-00` may satisfy event hydration without a network reload.
 
 Upload partial path if `POST /media` returns a full row:
 
