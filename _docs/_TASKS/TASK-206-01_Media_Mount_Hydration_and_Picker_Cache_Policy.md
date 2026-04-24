@@ -42,8 +42,9 @@ contract is actually honored.
 - Use the generic list-cache policy shape before adding Media-only code. If the
   existing `resolveCacheRefreshBackground` helper is enough, keep it. If the
   mount decision needs a reusable helper for both library and picker, extend the
-  existing generic `cacheRefresh` owner with a resource-neutral helper instead
-  of exporting policy from `MediaLibraryPage` or creating a side file.
+  existing generic `cacheRefresh` owner with a resource-neutral helper such as
+  `resolveListMountRefreshOptions` instead of exporting policy from
+  `MediaLibraryPage` or creating a side file.
 - Keep any Media-specific logic limited to Media row mapping, picker selection,
   or upload/drawer state that cannot be expressed by the generic cache helper.
 - Apply the same policy to `MediaPicker` after the library is correct.
@@ -54,7 +55,7 @@ contract is actually honored.
 ## Pseudocode
 
 ```ts
-export function resolveMediaListMountRefreshOptions(hasInitialCache: boolean) {
+export function resolveListMountRefreshOptions(hasInitialCache: boolean) {
   return {
     force: !hasInitialCache,
     background: hasInitialCache,
@@ -68,7 +69,7 @@ const hasInitialCache = initialCached !== null;
 const hasHydratedRef = useRef(hasInitialCache);
 
 useEffect(() => {
-  refresh(resolveMediaListMountRefreshOptions(hasInitialCache));
+  refresh(resolveListMountRefreshOptions(hasInitialCache));
 }, [hasInitialCache, refresh]);
 ```
 

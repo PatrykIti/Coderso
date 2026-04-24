@@ -42,12 +42,15 @@ No child task files.
 - Replace the unconditional forced mount refresh with a cache-aware decision.
 - Reuse `resolveCacheRefreshBackground` for background-vs-foreground state if it
   fits.
-- Export a small pure helper only if tests need stable policy coverage.
+- Export a small pure helper only if tests need stable policy coverage. If
+  exported, put the resource-neutral helper in
+  `core/admin/utils/cacheRefresh.ts` as `resolveListMountRefreshOptions`;
+  otherwise keep local mount-policy code inside existing Media files.
 
 ## Pseudocode
 
 ```ts
-export function resolveMediaListMountRefreshOptions(hasInitialCache: boolean) {
+export function resolveListMountRefreshOptions(hasInitialCache: boolean) {
   return {
     force: !hasInitialCache,
     background: hasInitialCache,
@@ -83,7 +86,7 @@ const refresh = useCallback(async (options?: { force?: boolean; background?: boo
 }, []);
 
 useEffect(() => {
-  refresh(resolveMediaListMountRefreshOptions(hasInitialCache)).catch(() => undefined);
+  refresh(resolveListMountRefreshOptions(hasInitialCache)).catch(() => undefined);
 }, [hasInitialCache, refresh]);
 ```
 

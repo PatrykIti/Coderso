@@ -51,6 +51,8 @@ observable: ordinary navigation to Media with fresh cache should not issue
 Request regression assertion shape:
 
 ```ts
+// @vitest-environment happy-dom
+
 const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
 globalThis.fetch = async (input, init) => {
   calls.push({ input, init });
@@ -58,11 +60,19 @@ globalThis.fetch = async (input, init) => {
 };
 
 seedLocalCache(cacheKeys.mediaList, cachedMediaRows);
-renderAdminUi(<MediaLibraryPage />, { path: "/admin/media" });
+const view = mountWithCreateRootAndAct(
+  <AdminRouterProvider initialPath="/admin/media">
+    <MediaLibraryPage />
+  </AdminRouterProvider>
+);
 await flushEffects();
 
 expect(calls.some((call) => String(call.input).endsWith("/media"))).toBe(false);
+view.cleanup();
 ```
+
+Do not use `renderAdminUi()` / `renderToString()` as request-level proof for
+mount behavior, because server rendering does not execute `useEffect`.
 
 Prefetch assertion shape:
 

@@ -53,6 +53,11 @@ full `GET /media`.
 - Keep Media-specific mutation code limited to the `MediaRecord` merge/remove
   rules and upload response handling owned by `mediaClient` and
   `mediaService`.
+- Event hydration must not reuse stale module memory after another tab patches
+  `media:list`. Add the smallest `mediaClient`-owned storage-first read seam
+  needed for cache-event handling, or extend the existing generic cache-bus
+  event metadata in a backward-compatible way. Do not add a separate Media
+  event bus or route-local state manager.
 - For update-like operations, broadcast `update` only after the cache was
   patched.
 - For delete, remove the id from cache before broadcasting.
@@ -95,8 +100,18 @@ export async function deleteMedia(id: string) {
 
 Use `invalidate` only when the client cannot construct a truthful partial cache
 state. If delete remains `invalidate` for cross-tab semantics, the current tab
-must still avoid immediate full reload when `getCachedMedia()` already contains
-the post-delete row set.
+must still avoid immediate full reload when the event cache helper already
+contains the post-delete row set.
+
+Cache-event storage-first read:
+
+```ts
+const getCachedMediaForEvent = () => readMediaCache() ?? cachedMedia;
+```
+
+The exact helper name can differ, but the owner must stay in
+`mediaClient.ts`. UI event handlers should use that storage-backed event read
+path before deciding that a forced background reload is necessary.
 
 ## Security Contract
 
@@ -112,6 +127,7 @@ the post-delete row set.
   - if upload response changes, route/service response shape must be explicit.
 - Anti-abuse:
   - no repeated full-list reload after same-tab mutation,
+  - no stale in-memory cache reuse after cross-tab `media:list` update events,
   - no client loop fetching the same media row repeatedly,
   - no storage of privileged data outside the current media record shape.
 
@@ -139,5 +155,6 @@ the post-delete row set.
 1. Known media mutations patch `media:list` without reloading unchanged assets.
 2. Same-tab cache events do not immediately undo partial patching with full
    forced reloads.
-3. Cross-tab cache subscribers still become consistent.
+3. Cross-tab cache subscribers hydrate from storage-backed patched rows or fall
+   back to one background reload when storage cache is unavailable.
 4. Upload has a deterministic one-record cache update path.

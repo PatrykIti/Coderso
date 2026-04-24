@@ -128,6 +128,8 @@ Current owner seams:
   - owns list/detail API wrappers for media,
   - owns `media:list` localStorage read/write/clear behavior,
   - owns in-memory promise dedupe for list reads,
+  - owns any storage-first cache-event read helper needed to avoid stale
+    in-memory rows after cross-tab updates,
   - owns mutation-time cache patching and cache-bus broadcasts.
 - `core/admin/ui/media/MediaLibraryPage.tsx`
   - owns screen mount hydration, loading state, filters/search/view,
@@ -170,13 +172,19 @@ instead of introducing new documentation-only behavior.
 Shared mount policy shape:
 
 ```ts
-export function resolveMediaListMountRefreshOptions(hasInitialCache: boolean) {
+export function resolveListMountRefreshOptions(hasInitialCache: boolean) {
   return {
     force: !hasInitialCache,
     background: hasInitialCache,
   };
 }
 ```
+
+If this helper is exported, it belongs in the generic
+`core/admin/utils/cacheRefresh.ts` owner, not in a Media-only sidecar module.
+If the final implementation follows the existing Pages/Menus local helper
+pattern instead, keep it inside the existing page/picker files and do not create
+a new Media policy file.
 
 Media library mount:
 
@@ -200,7 +208,7 @@ const refresh = useCallback(async (options?: RefreshOptions) => {
 }, []);
 
 useEffect(() => {
-  refresh(resolveMediaListMountRefreshOptions(hasInitialCache));
+  refresh(resolveListMountRefreshOptions(hasInitialCache));
 }, [hasInitialCache, refresh]);
 ```
 
@@ -211,7 +219,7 @@ subscribeCacheEvents((event) => {
   if (event.key !== cacheKeys.mediaList) return;
 
   if (event.action === "update") {
-    const cached = getCachedMedia();
+    const cached = getCachedMediaForEvent();
     if (cached) {
       setItems(cached.map(toMediaItem));
       hasHydratedRef.current = true;
@@ -315,7 +323,10 @@ set -a && source .env && set +a
 5. Upload adds the new asset through a partial cache update path.
 6. Cache-bus updates from same-tab media mutations do not cause redundant full
    list reloads.
-7. `/media` sidebar prefetch remains warmup-only with `force: false`.
-8. Explicit refresh, true invalidation, expired cache, or missing cache can still
+7. Cache-bus updates from another tab hydrate from the storage-backed
+   `media:list` value, or deliberately fall back to a background reload if that
+   cache is missing/expired, instead of reusing stale module memory.
+8. `/media` sidebar prefetch remains warmup-only with `force: false`.
+9. Explicit refresh, true invalidation, expired cache, or missing cache can still
    load the full media list.
-9. Docs and tests describe the actual implementation, not a parallel plan.
+10. Docs and tests describe the actual implementation, not a parallel plan.

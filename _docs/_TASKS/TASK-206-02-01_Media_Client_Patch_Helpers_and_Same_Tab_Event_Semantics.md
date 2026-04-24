@@ -44,8 +44,15 @@ No child task files.
   inspection seam.
 - Treat server responses as source of truth for updated media rows.
 - Prefer `update` events for patched cache state.
+- Do not let cache-event hydration reuse stale module memory. Same-tab events
+  can consume the just-patched in-memory list, but cross-tab events must
+  re-read the storage-backed `media:list` value first, or fall back to one
+  background reload if that cache is missing/expired.
+- Keep any event-read helper in `mediaClient.ts` or extend the existing generic
+  `cacheBus` contract in place; do not add a Media-specific side bus or route
+  state owner.
 - In `MediaLibraryPage`, for `media:list` `update` events:
-  - read `getCachedMedia()`,
+  - read the storage-backed event cache helper from `mediaClient`,
   - map rows through `toMediaItem`,
   - update state without forced network reload,
   - fall back to forced background refresh only if cache is unavailable.
@@ -55,7 +62,7 @@ No child task files.
 
 ```ts
 const applyCachedMediaRows = () => {
-  const cached = getCachedMedia();
+  const cached = getCachedMediaForEvent();
   if (!cached) return false;
   setItems(cached.map(toMediaItem));
   hasHydratedRef.current = true;
@@ -96,7 +103,11 @@ if (result?.ok) {
 ```
 
 If delete keeps `invalidate` for compatibility, the UI must still first apply
-`getCachedMedia()` when it contains a patched row set.
+the event cache helper when it contains a patched row set.
+
+For `update` events, the event-read helper should prefer `readMediaCache()` over
+the module-level `cachedMedia` value so another tab's patched `media:list`
+cannot be hidden by stale in-memory rows in the current tab.
 
 ## Security Contract
 
@@ -105,6 +116,7 @@ If delete keeps `invalidate` for compatibility, the UI must still first apply
 - Reject-unknown validation: unchanged.
 - Anti-abuse:
   - same-tab updates must not cause immediate full-list reloads,
+  - cross-tab updates must not reuse stale in-memory rows,
   - no new polling or route loop.
 
 ## Testing Requirements
@@ -117,6 +129,8 @@ If delete keeps `invalidate` for compatibility, the UI must still first apply
 - `tests/vitest/ui/media-library.test.tsx`
   - `media:list` update event with cached rows updates UI state without calling
     forced full refresh,
+  - cross-tab-like update event with stale in-memory rows applies the
+    storage-backed list or falls back to one background reload,
   - true invalidation/missing cache still supports background reload.
 
 ## Documentation Updates Required
@@ -129,4 +143,6 @@ If delete keeps `invalidate` for compatibility, the UI must still first apply
 1. Update-like media mutations patch the known cache row.
 2. Delete removes only the known cache row.
 3. Same-tab update events do not force `GET /media`.
-4. Missing cache still recovers through background list reload.
+4. Cross-tab update events do not render stale in-memory rows when storage has
+   the patched list.
+5. Missing cache still recovers through background list reload.

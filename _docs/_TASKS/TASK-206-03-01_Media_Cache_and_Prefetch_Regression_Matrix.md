@@ -44,16 +44,46 @@ No child task files.
 - Seed `localStorage` through the existing admin cache envelope.
 - Reset `clearMediaCache()` between tests.
 - Assert exact `force` options where components mock `listMediaCached`.
+- Request-level UI tests must run component effects. Use the existing
+  `// @vitest-environment happy-dom` + `createRoot`/`act` pattern used by other
+  interactive admin suites. `renderAdminUi()`/`renderToString()` is acceptable
+  only for SSR smoke assertions; it must not be used as proof that mount effects
+  avoided `GET /media`.
 - Keep test fixtures close to the real `MediaRecord` shape.
 
 ## Pseudocode
 
 ```ts
+// @vitest-environment happy-dom
+
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+
 function seedMediaCache(rows: MediaRecord[]) {
   localStorage.setItem(
     cacheKeys.mediaList,
     JSON.stringify({ value: rows, savedAt: Date.now() })
   );
+}
+
+function mountMediaLibrary() {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  act(() => {
+    root.render(
+      <AdminRouterProvider initialPath="/admin/media">
+        <MediaLibraryPage />
+      </AdminRouterProvider>
+    );
+  });
+  return {
+    host,
+    cleanup: () => {
+      act(() => root.unmount());
+      host.remove();
+    },
+  };
 }
 ```
 
@@ -61,11 +91,12 @@ function seedMediaCache(rows: MediaRecord[]) {
 test("media library cached mount does not fetch full media list", async () => {
   seedMediaCache([mediaRow]);
   const fetchCalls = spyOnFetch();
+  const view = mountMediaLibrary();
 
-  renderAdminUi(<MediaLibraryPage />, { path: "/admin/media" });
   await flushEffects();
 
   expect(fetchCalls.fullMediaListGets()).toHaveLength(0);
+  view.cleanup();
 });
 ```
 
@@ -90,6 +121,8 @@ test("media client update patches cached list", async () => {
 - Anti-abuse:
   - tests must fail if route-entry or prefetch behavior regresses into repeated
     full-list request bursts.
+  - effect-backed tests must fail if they are accidentally reduced to
+    server-render-only assertions.
 
 ## Testing Requirements
 
@@ -107,5 +140,7 @@ test("media client update patches cached list", async () => {
 
 1. Tests fail if cached Media route entry performs a full list read.
 2. Tests fail if MediaPicker forces reload after cache hydration.
-3. Tests fail if known mutation paths reload unchanged assets.
-4. Prefetch tests continue to prove `force: false`.
+3. Tests prove cross-tab-like update events do not apply stale in-memory media
+   rows over storage-backed patched rows.
+4. Tests fail if known mutation paths reload unchanged assets.
+5. Prefetch tests continue to prove `force: false`.
