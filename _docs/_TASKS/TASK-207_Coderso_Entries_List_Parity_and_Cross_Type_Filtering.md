@@ -62,8 +62,11 @@ resource-specific list system. The canonical route remains
   contract as the table.
 - Own schemas, normalization, and cache keys in the existing service/client
   layers. Routes should stay orchestration-only.
-- Use the shared canonical admin navigation helpers: `AdminLink`,
-  `adminPaths`, and `prefetchAdminRoute`.
+- Use the shared canonical admin navigation path that already exists in the
+  repo: `AdminLink`, `core/admin/utils/adminPaths.ts`
+  (`resolveAdminHref` / `resolveAdminRoutePath`), and the existing
+  `prefetchAdminRoute` wiring. Do not add a new `adminPaths` object, Entries
+  route helper, or local path canonicalizer.
 - Preserve existing per-type routes and caches used by editors, widgets,
   relation fields, and assistant action invalidation.
 - Add the cross-type list read model additively; do not break
@@ -107,6 +110,10 @@ resource-specific list system. The canonical route remains
 - `core/admin/services/cachePolicy.ts`, `core/admin/utils/adminPrefetch.ts`,
   `_docs/ADMIN_CACHE.md`, and `_docs/ADMIN_CACHE_MAP.md` must stay aligned if a
   new all-entries list cache is added.
+- Route/link changes must extend the current canonical admin path owner
+  (`core/admin/utils/adminPaths.ts`) and its existing tests only when a new
+  alias is truly required. Normal Entries and Engine links should be expressed
+  through `AdminLink` hrefs that the existing helper already canonicalizes.
 
 ## Sub-Tasks
 

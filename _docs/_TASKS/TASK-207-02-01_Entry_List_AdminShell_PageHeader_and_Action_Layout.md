@@ -18,6 +18,10 @@ The screen should use `AdminShell`, `PageHeader`, a centered `max-w-6xl` list
 container, and an action area where selected-row bulk controls can render inline
 to the left of `New`.
 
+Use the existing `AdminShell` contract from `core/admin/ui/layouts/AdminShell.tsx`
+and the shared `PageHeader` component. Do not introduce a second Entries shell,
+new layout wrapper, or local header component for this screen.
+
 ## Sub-Tasks
 
 No child task files.

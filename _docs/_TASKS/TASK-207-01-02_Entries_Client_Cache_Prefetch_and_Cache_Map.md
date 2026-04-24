@@ -47,8 +47,11 @@ No child task files.
   - subscribe to the all-entries cache key and refresh without dirty-state or
     selection overwrites.
 - `core/admin/utils/adminPrefetch.ts`
-  - warm `/coderso/entries` with content types and the all-entries list if it
-    stays inside prefetch budgets.
+  - update the existing `/coderso/entries` entry in `defaultEntries` to warm
+    content types and the all-entries list if it stays inside prefetch budgets,
+  - keep prefetch ownership in `adminPrefetch.ts` / `AdminLink` router
+    integration; do not add route-local hover/focus prefetch code in
+    `EntryList.tsx`.
 - `core/admin/services/assistantClient.ts`
   - invalidate the all-entries list on strict `entry.*` action results.
 - `tests/vitest/admin/entriesClient.test.ts`
@@ -86,6 +89,7 @@ No child task files.
    and the all-entries list.
 3. Assistant `entry.*` execution cache events cannot leave the all-entries list
    stale.
-4. `/coderso/entries` prefetch remains bounded and tested.
+4. `/coderso/entries` prefetch remains bounded, tested, and owned by the
+   existing `adminPrefetch.ts` registry rather than local Entries UI code.
 5. `EntryList` hydrates from the all-entries cache first and then revalidates in
    the background through the shared admin cache lifecycle.
