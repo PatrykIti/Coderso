@@ -1,9 +1,9 @@
-# TASK-205: Content Type Admin Parity, Scroll, Tokens, and Bulk Actions
+# TASK-205: Admin List Pagination, Popup Tokens, and Content Type Parity
 # FileName: TASK-205_Content_Type_Admin_Parity_Scroll_Tokens_and_Bulk_Actions.md
 
 **Priority:** High
 **Category:** CMS/Engine + Admin/UI + UX
-**Estimated Effort:** Large
+**Estimated Effort:** Very Large
 **Dependencies:** TASK-202, TASK-198, TASK-199, TASK-200
 **Status:** To Do
 
@@ -11,9 +11,11 @@
 
 ## Overview
 
-Follow-up fixes for the Content Types admin surface after the Engine QA recovery.
-The content type editor and list are functionally stronger after `TASK-202`, but
-the surface still misses list parity and has one layout defect:
+Follow-up fixes for the Content Types admin surface after the Engine QA recovery
+and for the shared first-screen list contract used by Content Types, Pages,
+Posts, and Menus. The content type editor and list are functionally stronger
+after `TASK-202`, but the surface still misses list parity and has one layout
+defect:
 
 - the JSON schema preview in the right editor panel cannot be scrolled
   comfortably when a content type has many fields,
@@ -23,16 +25,30 @@ the surface still misses list parity and has one layout defect:
   `Next` controls like Pages, Posts, and Menus,
 - the Content Types list has no controlled multi-select state or bulk actions.
 
-This task keeps the existing content type API and admin route model. It should
-extend the current `ContentTypeList`, `ContentTypeTable`, and
-`ContentTypeEditor` seams instead of introducing a parallel list manager or a
-second editor flow.
+The existing Pages, Posts, and Menus list footers also need to be completed:
+`Previous` / `Next` controls must become real client-side pagination controls
+with a default page size of 10 and an explicit page-size selector. Their row and
+bulk delete confirmations, plus adjacent create/history popups in those list
+families, must be token-backed so Admin UI Theme templates affect their visual
+treatment.
+
+The pagination/page-size work should be implemented through one shared admin
+list pagination contract, not four local copies of the same state math. Resource
+screens may keep their own filtering, sorting, selection, and resource copy, but
+page-size options, page clamping, visible-row slicing, footer controls, and
+`Previous` / `Next` behavior should come from shared code unless a concrete
+resource-specific blocker is documented before implementation.
+
+This task keeps the existing API and admin route models. It should extend the
+current `ContentTypeList`, `ContentTypeTable`, `ContentTypeEditor`,
+`PageListPage`, `PostsListPage`, and `MenuListPage` seams instead of introducing
+parallel managers or second editor flows.
 
 ## Sub-Tasks
 
 - [ ] TASK-205-01: Content Type JSON Preview Scroll Containment
-- [ ] TASK-205-02: Content Type Admin Popup Token Compliance
-- [ ] TASK-205-03: Content Type List Footer and Pagination Parity
+- [ ] TASK-205-02: Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus
+- [ ] TASK-205-03: Admin List Footer, Page Size, and Pagination Completion
 - [ ] TASK-205-04: Content Type List Selection and Bulk Actions
 - [ ] TASK-205-05: QA, Docs, and Closure
 
@@ -43,22 +59,33 @@ second editor flow.
    - JSON schema area scrolls vertically when the schema is long,
    - long JSON lines do not break the page or hide the footer metadata,
    - mobile sheet preview keeps the same behavior.
-2. Make Content Types popups token-compliant:
+2. Make Content Types, Pages, Posts, and Menus popups token-compliant:
    - use shared `Dialog`, `Sheet`, `Alert`, `Button`, and `toast` surfaces,
    - remove hard-coded rose/amber background and border classes from content
      type confirmation callouts,
+   - replace native `window.confirm()` row/bulk/revision confirmations in
+     Pages, Posts, and Menus with shared Admin UI dialog patterns,
+   - audit create drawers/dialogs, delete dialogs, revision restore/discard
+     confirmations, and destructive dropdown affordances for token-backed
+     classes,
    - use Admin UI token-backed classes or shared component variants mapped in
      `core/admin/styles/globals.css`,
    - preserve accessible titles, descriptions, focus handling, and destructive
      affordances.
-3. Add the list footer and pagination/count affordance:
-   - show `Showing X of Y content types`,
-   - render `Previous` and `Next` controls in the same footer layout as
-     Pages/Posts/Menus,
-   - keep search, status filter, and sort applied before pagination,
-   - reset or clamp the page index when filters change.
+3. Complete list footer, page-size, and pagination behavior:
+   - apply to Content Types, Pages, Posts, and Menus list screens,
+   - create a shared admin list pagination helper/component pair and consume it
+     from all four list screens,
+   - default to 10 rows per page,
+   - let users choose `10`, `20`, `30`, `50`, `100`, `150`, `200`, or `500`
+     rows per page,
+   - show `Showing X-Y of Z <resource>` or equivalent truthful filtered count,
+   - keep search, status filter, resource-specific filters, and sort applied
+     before pagination,
+   - reset or clamp the page index when filters, sort, or page size change,
+   - disable `Previous` on the first page and `Next` on the last page.
 4. Add controlled multi-select and bulk actions:
-   - header checkbox selects only currently visible/paginated rows,
+   - header checkbox selects only the currently visible paginated rows,
    - row checkboxes reflect controlled `selectedIds`,
    - selected-row controls render inline in `PageHeader.actions` to the left of
      `New`,
@@ -74,8 +101,11 @@ second editor flow.
 - No new public content type runtime behavior.
 - No new content type states beyond `draft` and `published`.
 - No table-specific design system fork for Content Types.
-- Do not replace the existing `/admin/content-types` and
-  `/admin/content-types/:id` route model.
+- Do not replace the current canonical `/admin/coderso/engine` route model or
+  the existing `/admin/content-types` alias handled by shared admin path
+  helpers.
+- No server-side pagination API in this task; lists keep the current full-list
+  read contract and paginate client-side after filtering/sorting.
 
 ## Files to Change
 
@@ -100,6 +130,46 @@ second editor flow.
 - `core/admin/services/contentTypesClient.ts`
   - reuse `updateContentType(id, { status })` and `deleteContentType(id)` for
     bulk actions unless a concrete limitation requires a small wrapper.
+- `core/admin/ui/shared/useListPagination.ts`
+  - create the shared page-size, clamp/reset, visible-row slicing, and range
+    metadata contract for client-side admin lists.
+- `core/admin/ui/shared/ListPaginationFooter.tsx`
+  - create the shared token-backed footer with count copy, page-size selector,
+    and `Previous` / `Next` controls.
+- `core/admin/ui/pages/PageListPage.tsx`
+  - replace native row/bulk delete confirms with token-backed dialog state,
+  - consume the shared list pagination hook/footer instead of owning duplicate
+    pagination math.
+- `core/admin/ui/pages/PageTable.tsx`
+  - receive only paginated rows and keep controlled selection scoped to the
+    visible page.
+- `core/admin/ui/pages/PageCreateDrawer.tsx`
+  - audit token-backed sheet and error surfaces.
+- `core/admin/ui/pages/PageRevisionDrawer.tsx`
+  - replace restore/discard native confirmations with token-backed dialog
+    surfaces.
+- `core/admin/ui/posts/PostsListPage.tsx`
+  - replace native row/bulk delete confirms with token-backed dialog state,
+  - consume the shared list pagination hook/footer instead of owning duplicate
+    pagination math.
+- `core/admin/ui/posts/PostsTable.tsx`
+  - receive only paginated rows and keep controlled selection scoped to the
+    visible page.
+- `core/admin/ui/posts/PostsCreateDrawer.tsx`
+  - audit token-backed sheet and error surfaces.
+- `core/admin/ui/posts/editor/PostRevisionDrawer.tsx`
+  - replace restore native confirmation with a token-backed dialog surface.
+- `core/admin/ui/menus/MenuListPage.tsx`
+  - replace native row/bulk delete confirms with token-backed dialog state,
+  - consume the shared list pagination hook/footer instead of owning duplicate
+    pagination math.
+- `core/admin/ui/menus/MenuCreateDialog.tsx`
+  - audit token-backed dialog and error surfaces.
+- `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
+  - keep the existing shared dialog token-compliant if shared variants change.
+- `core/admin/ui/shared/*`
+  - add confirmation helper(s) only if they remove real popup duplication
+    without hiding resource-specific copy.
 - `core/admin/components/ui/alert.tsx`
   - add a token-backed warning/destructive callout variant only if current
     shared variants are not enough.
@@ -111,15 +181,31 @@ second editor flow.
 - `tests/vitest/ui/content-type-table.test.tsx`
   - cover controlled checkbox rendering, selected row state, and row actions.
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
-  - add or update list footer, pagination, visible-scope selection, and bulk
-    action coverage.
+  - create a focused Content Types list parity suite for footer, pagination,
+    visible-scope selection, and bulk action coverage.
+- `tests/vitest/ui/list-pagination.test.tsx`
+  - create focused coverage for the shared admin pagination contract, including
+    default page size, options, range metadata, clamping, and empty state.
+- `tests/vitest/ui-integration/contentTypes.test.tsx`
+  - keep the existing Content Types smoke assertions aligned if the list shell
+    markup changes.
+- `tests/vitest/ui/page-post-list-wave.test.tsx`
+  - update Pages/Posts pagination, page-size, and token-backed confirmation
+    coverage.
+- `tests/vitest/ui/page-list.test.tsx`, `tests/vitest/ui/posts-list.test.tsx`,
+  and `tests/vitest/ui/menu-list-page.test.tsx`
+  - update SSR/list shell assertions for page-size and truthful footer copy.
+- `tests/vitest/ui/menu-list-page-actions.test.tsx`
+  - update Menus pagination, page-size, and token-backed confirmation coverage.
 - `tests/vitest/admin/contentTypesClient.test.ts`
   - cover any new client wrappers or cache/invalidation paths.
 - `tests/integration/routes/contentTypes.test.ts`
   - update only if route behavior changes; existing PATCH/DELETE route coverage
     should remain sufficient if bulk uses existing per-item routes.
 - `_docs/CONTENT_LIST_UX.md`
-  - document Content Types list parity once implemented.
+  - document shared list pagination/page-size behavior for Content Types,
+    Pages, Posts, and Menus,
+  - document Content Types visible-scope selection and bulk action behavior.
 - `_docs/DESIGN_TOKENS.md`
   - update only if a new shared token/variant contract is added.
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`
@@ -131,13 +217,41 @@ second editor flow.
 
 ## Implementation Direction
 
-Derive list state in this order:
+Derive resource-specific list state first, then pass the filtered/sorted rows
+into the shared pagination contract:
 
 ```ts
 const filteredRows = filterContentTypes(types, query, statusFilter);
 const sortedRows = sortContentTypes(filteredRows, sortKey, sortDirection);
-const paginatedRows = sortedRows.slice(pageStart, pageEnd);
+const pagination = useListPagination(sortedRows, {
+  defaultPageSize: 10,
+  pageSizeOptions: [10, 20, 30, 50, 100, 150, 200, 500],
+});
+const paginatedRows = pagination.visibleRows;
 const visibleIds = paginatedRows.map((row) => row.id);
+```
+
+The shared contract should own the repeated math once:
+
+```ts
+const pageSizeOptions = [10, 20, 30, 50, 100, 150, 200, 500] as const;
+const pageSize = selectedPageSize ?? 10;
+const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+const clampedPage = Math.min(pageIndex, totalPages - 1);
+const pageStart = clampedPage * pageSize;
+const pageEnd = pageStart + pageSize;
+const paginatedRows = sortedRows.slice(pageStart, pageEnd);
+```
+
+`ContentTypeList`, `PageListPage`, `PostsListPage`, and `MenuListPage` should
+all render the same shared footer component, passing only resource-specific
+labels and disabled/loading context:
+
+```tsx
+<ListPaginationFooter
+  resourceLabel="pages"
+  pagination={pagination}
+/>
 ```
 
 Selection must follow the visible row set:
@@ -160,10 +274,10 @@ const results = await Promise.allSettled(
 );
 ```
 
-Token compliance means no content-type-specific hard-coded destructive/warning
-palette like `bg-rose-50`, `border-rose-200`, `text-rose-900`,
-`bg-amber-50`, or `border-amber-200` inside the content type popups. Prefer
-shared component variants mapped to Admin UI Theme tokens.
+Token compliance means no hard-coded destructive/warning palette like
+`bg-rose-50`, `border-rose-200`, `text-rose-900`, `bg-amber-50`, or
+`border-amber-200` inside the targeted popups. Prefer shared component variants
+mapped to Admin UI Theme tokens.
 
 ## Security Contract
 
@@ -182,7 +296,7 @@ shared component variants mapped to Admin UI Theme tokens.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-editor.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/admin/contentTypesClient.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/ui/content-type-editor.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list.test.tsx tests/vitest/ui/posts-list.test.tsx tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/admin/contentTypesClient.test.ts`
 - `bun test tests/integration/routes/contentTypes.test.ts` only if API route
   behavior or validation changes.
 
@@ -194,7 +308,7 @@ shared component variants mapped to Admin UI Theme tokens.
   change.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- `_docs/_CHANGELOG/<next>-YYYY-MM-DD-task-205-content-type-admin-parity.md`
+- `_docs/_CHANGELOG/<next>-YYYY-MM-DD-task-205-admin-list-popup-parity.md`
 
 ## Acceptance Criteria
 
@@ -202,9 +316,13 @@ shared component variants mapped to Admin UI Theme tokens.
    preview scrolls without trapping or hiding content.
 2. Content type dialogs, sheets, dropdowns, toasts, and warning/destructive
    callouts use shared Admin UI token-backed surfaces.
-3. The Content Types list footer matches Pages/Posts/Menus with filtered count
-   and `Previous` / `Next` controls.
-4. Content Types support visible-scope row selection and inline header bulk
+3. Pages, Posts, Menus, and Content Types list popups and destructive
+   confirmations use shared Admin UI token-backed surfaces.
+4. Content Types, Pages, Posts, and Menus paginate list rows client-side after
+   filtering/sorting, default to 10 rows, expose the required page-size options,
+   and wire functional `Previous` / `Next` controls through one shared
+   pagination contract.
+5. Content Types support visible-scope row selection and inline header bulk
    actions.
-5. Bulk publish, move-to-draft, and delete preserve cache consistency,
+6. Bulk publish, move-to-draft, and delete preserve cache consistency,
    confirmation, and partial-failure feedback.

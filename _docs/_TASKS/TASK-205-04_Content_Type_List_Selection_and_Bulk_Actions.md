@@ -11,14 +11,17 @@
 
 ## Overview
 
-Add Pages/Posts/Menus-style visible-scope selection and inline bulk actions to
-the Content Types list.
+Add visible-scope selection and inline bulk actions to the Content Types list so
+it matches the corrected Pages/Posts/Menus list contract.
 
 The current table has row actions for edit, duplicate, and delete, but there is
 no way to select multiple content types or run bulk publish/draft/delete actions.
-The implementation should copy the existing list behavior pattern from Pages,
-Posts, and Menus while preserving the stricter content type delete guard from
-`typeService`.
+The implementation should follow the shared admin list pattern from Pages,
+Posts, and Menus, after TASK-205-03 makes that pattern real pagination instead
+of a static footer. Do not copy the current native `window.confirm()` behavior
+from those lists; bulk delete must use the token-backed confirmation dialog
+pattern from TASK-205-02 while preserving the stricter content type delete guard
+from `typeService`.
 
 ## Sub-Tasks
 
@@ -29,10 +32,12 @@ No child task files.
 - `core/admin/ui/content-types/ContentTypeList.tsx`
   - own `selectedIds`, `bulkAction`, and `isBulkWorking`,
   - derive `visibleIds` from the paginated row set,
-  - trim selection when filters/pagination remove rows from view,
+  - trim selection when filters, sort, page-size, or pagination remove rows from
+    view,
   - render inline bulk controls in `PageHeader.actions` to the left of `New`,
   - run per-item bulk publish/draft/delete and refresh cache afterward,
-  - surface partial failures.
+  - surface partial failures,
+  - use token-backed dialog state for bulk delete confirmation.
 - `core/admin/ui/content-types/ContentTypeTable.tsx`
   - add controlled header checkbox,
   - add row checkboxes,
@@ -50,8 +55,9 @@ No child task files.
   - no new route expected; use existing strict `PATCH /content-types/:id` and
     `DELETE /content-types/:id`.
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
-  - cover visible-scope selection, header checkbox, inline bulk controls, clear
-    selection, and partial-failure feedback.
+  - create this focused suite if it does not exist yet, and cover visible-scope
+    selection, header checkbox, inline bulk controls, clear selection, and
+    partial-failure feedback.
 - `tests/vitest/ui/content-type-table.test.tsx`
   - cover controlled selected row rendering and row checkbox labels.
 - `tests/vitest/admin/contentTypesClient.test.ts`
@@ -63,7 +69,7 @@ No child task files.
 
 ## Implementation Direction
 
-Follow the current Pages/Posts/Menus pattern:
+Follow the corrected Pages/Posts/Menus inline header-action pattern:
 
 ```tsx
 <PageHeader
@@ -90,7 +96,8 @@ Bulk action behavior:
 
 - `Publish` maps to `updateContentType(id, { status: "published" })`.
 - `Move to Draft` maps to `updateContentType(id, { status: "draft" })`.
-- `Delete` maps to `deleteContentType(id)` and must confirm before executing.
+- `Delete` maps to `deleteContentType(id)` and must confirm through a shared
+  Admin UI dialog before executing.
 - All actions operate on controlled selected IDs from the visible/paginated row
   set.
 - After action completion, refresh the list from cache with `force: true`,
@@ -113,13 +120,16 @@ truthfully instead of treating the whole bulk operation as successful.
 - Reject-unknown validation: existing `contentSchemas` strict payload validation
   remains the route boundary.
 - Anti-abuse: no public write path; destructive bulk delete requires explicit
-  confirmation and runs only against selected visible IDs.
+  token-backed confirmation and runs only against selected visible IDs.
 
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/admin/contentTypesClient.test.ts`
+- `tests/vitest/ui/content-type-list-parity.test.tsx` must prove selection is
+  page-visible scoped after page-size and `Previous` / `Next` changes and that
+  bulk delete does not call `window.confirm()`.
 - `bun test tests/integration/routes/contentTypes.test.ts` only if routes change.
 
 ## Documentation Updates Required
@@ -137,5 +147,7 @@ truthfully instead of treating the whole bulk operation as successful.
    `ContentTypeTable`.
 3. Bulk controls render inline in the header actions area to the left of `New`.
 4. Bulk publish and move-to-draft update status and refresh cache.
-5. Bulk delete requires confirmation, respects server delete guards, and reports
-   partial failures.
+5. Page, filter, sort, and page-size changes trim or clear selection so hidden
+   rows are not mutated accidentally.
+6. Bulk delete requires a token-backed shared confirmation, respects server
+   delete guards, and reports partial failures.
