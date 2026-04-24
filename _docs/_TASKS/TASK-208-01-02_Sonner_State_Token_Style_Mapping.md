@@ -16,9 +16,11 @@ toast state styling.
 
 The current wrapper maps only normal toast background/text/border variables.
 This leaf adds success, error, warning, and info state variables backed by Admin
-UI Theme tokens. It must preserve the existing dynamic theme handoff from
-`useTheme()` so Admin UI Theme mode changes update all toast states through
-runtime CSS variables.
+UI Theme tokens. Sonner's documented `richColors` prop reads these state
+variables when rendering typed `toast.success`, `toast.error`, `toast.warning`,
+and `toast.info` notifications. It must preserve the existing dynamic theme
+handoff from `useTheme()` so Admin UI Theme mode changes update all toast states
+through runtime CSS variables.
 
 ## Sub-Tasks
 
@@ -28,6 +30,8 @@ No child task files.
 
 - Keep this logic in the shared Sonner wrapper, not in Pages/Posts/Menus/Engine
   or Entries components.
+- Keep `richColors` on the shared `AdminApp` toaster. The wrapper's job is to
+  override Sonner's rich-color variables with Admin UI Theme variables.
 - Preserve the current dynamic `useTheme()` behavior. Do not hard-code
   `theme="light"` or any other fixed mode in the wrapper.
 - Reference Admin UI Theme CSS variables directly in the style map so the active
@@ -41,8 +45,11 @@ No child task files.
   - `--admin-state-success`,
   - `--admin-state-danger`,
   - `--admin-state-warning`.
-- If Sonner's inline/default styles still win, add one shared selector block in
-  `core/admin/styles/globals.css` scoped to `.toaster [data-sonner-toast]`.
+- Prefer the wrapper `style` map because Sonner applies it to the toaster host
+  and its rich-color selectors read CSS variables from that host. Add a shared
+  selector block in `core/admin/styles/globals.css` scoped to
+  `.toaster [data-sonner-toast]` only if a rendered regression proves the
+  variable map is not enough.
 - Do not hard-code Tailwind color families such as `emerald`, `rose`, `red`,
   `green`, `slate`, or `amber`.
 
@@ -81,7 +88,8 @@ return (
 );
 ```
 
-Fallback CSS if needed:
+Fallback CSS only if a rendered regression proves the host variables are not
+winning:
 
 ```css
 .toaster [data-sonner-toast][data-type="success"] {
@@ -96,7 +104,8 @@ Fallback CSS if needed:
 - `tests/vitest/admin/sonner.test.tsx`
   - render the wrapper directly or through a focused mock,
   - assert success/error/warning/info variables contain Admin UI token names,
-  - assert no rich color prop is required for visible state styling,
+  - assert state styling is compatible with the shared host's `richColors`
+    configuration and does not use Sonner's bundled HSL palette values,
   - assert the wrapper forwards the dynamic `useTheme()` value instead of a
     hard-coded literal theme.
 
@@ -112,8 +121,8 @@ Fallback CSS if needed:
 
 1. Success, error, warning, info, and normal toast state variables are mapped to
    Admin UI Theme tokens.
-2. Light Admin UI themes no longer inherit black/default Sonner state surfaces
-   unless the active token set explicitly defines that look.
+2. Light Admin UI themes no longer inherit Sonner's bundled state palettes unless
+   the active token set explicitly defines that look.
 3. The mapping is shared and resource-neutral.
 4. Theme mode changes propagate through dynamic Admin UI Theme variables and the
    shared wrapper, not through hard-coded state palettes.

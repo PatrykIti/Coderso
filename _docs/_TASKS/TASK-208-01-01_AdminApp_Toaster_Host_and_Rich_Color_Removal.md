@@ -11,9 +11,13 @@
 
 ## Overview
 
-Keep the shared Admin UI toaster mounted once in `AdminApp`, but remove the
-configuration that lets Sonner's rich/default state palettes bypass Admin UI
-Theme tokens.
+Keep the shared Admin UI toaster mounted once in `AdminApp`, but make its
+documented Sonner rich-color state path safe for Admin UI Theme tokens.
+
+In this repo, "rich color removal" means removing Sonner's default bundled
+palette as the visual source of truth, not removing the `richColors` prop. Sonner
+uses `richColors` to activate typed success/error/warning/info selectors, and
+the shared wrapper must make those selectors read token-backed CSS variables.
 
 ## Sub-Tasks
 
@@ -24,11 +28,12 @@ No child task files.
 - Inspect `core/admin/app/AdminApp.tsx` around the existing `<Toaster />`.
 - Preserve:
   - `position="top-right"`,
+  - `richColors`,
   - `closeButton`,
   - `duration={4000}`,
   - `containerAriaLabel="Admin notifications"`.
-- Remove `richColors` from the shared host unless the paired Sonner wrapper can
-  prove that `richColors` still uses Admin UI Theme token variables.
+- Do not remove `richColors`; instead pair it with `TASK-208-01-02`, which
+  proves that Sonner's rich-color variables are backed by Admin UI Theme tokens.
 - Do not add another toaster in any resource list.
 
 ## Pseudocode
@@ -37,6 +42,7 @@ No child task files.
 // core/admin/app/AdminApp.tsx
 <Toaster
   position="top-right"
+  richColors
   closeButton
   duration={4000}
   containerAriaLabel="Admin notifications"
@@ -46,15 +52,20 @@ No child task files.
 Do not do this:
 
 ```tsx
-// Avoid state palettes not owned by Admin UI Theme tokens.
-<Toaster richColors />
+// core/admin/components/ui/sonner.tsx
+// Avoid leaving only normal variables while AdminApp enables richColors.
+style={{
+  "--normal-bg": "var(--popover)",
+  "--normal-text": "var(--popover-foreground)",
+  "--normal-border": "var(--border)",
+}}
 ```
 
 ## Testing Requirements
 
 - `tests/vitest/admin/adminApp.test.tsx`
   - update the mocked `Toaster` to expose received props,
-  - assert `richColors` is absent or false,
+  - assert `richColors` is present and true,
   - assert the existing position/close/duration/aria props remain.
 
 ## Documentation Updates Required in This Round
@@ -66,4 +77,5 @@ Do not do this:
 
 1. `AdminApp` mounts one shared toaster.
 2. The toaster is still top-right, closeable, duration-bound, and accessible.
-3. `richColors` no longer controls admin toast state visuals.
+3. `richColors` remains enabled, but Sonner's default bundled palette no longer
+   controls admin toast state visuals.

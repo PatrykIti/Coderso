@@ -20,8 +20,8 @@ No child task files.
 ## Implementation Checklist
 
 - Keep `tests/vitest/admin/adminApp.test.tsx` focused on the app-level host:
-  one toaster, top-right position, close button, duration, accessible label, and
-  no `richColors` prop.
+  one toaster, top-right position, `richColors`, close button, duration, and
+  accessible label.
 - Add `tests/vitest/admin/sonner.test.tsx` for the wrapper internals because
   `adminApp.test.tsx` mocks `@/components/ui/sonner` and cannot prove the real
   token style map.
@@ -50,10 +50,10 @@ expect(toasterProps).toHaveLength(1);
 expect(toasterProps[0]).toMatchObject({
   position: "top-right",
   closeButton: true,
+  richColors: true,
   duration: 4000,
   containerAriaLabel: "Admin notifications",
 });
-expect(toasterProps[0]?.richColors).toBeUndefined();
 ```
 
 If the wrapper style is tested separately:
@@ -73,7 +73,8 @@ expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
 - `tests/vitest/admin/sonner.test.tsx`
   - assert token-backed state style variables,
   - assert the dynamic `useTheme()` value is forwarded,
-  - assert state styling does not depend on `richColors`.
+  - assert state styling supports the shared `richColors` host and does not use
+    Sonner's bundled HSL palette values.
 
 ## Documentation Updates Required in This Round
 
@@ -82,7 +83,7 @@ expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
 
 ## Acceptance Criteria
 
-1. Tests fail if `richColors` is reintroduced on the shared admin toaster.
+1. Tests fail if `richColors` is removed from the shared admin toaster.
 2. Tests fail if the shared toaster stops being top-right/accessible/closeable.
 3. Tests cover the token variable names used for toast states.
 4. Tests fail if the wrapper hard-codes a theme instead of using the active

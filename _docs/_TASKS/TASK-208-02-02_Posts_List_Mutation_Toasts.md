@@ -38,7 +38,8 @@ No child task files.
   the real mutation and the existing refresh path.
 - In `runBulkAction`, call the shared success helper on full success and the
   shared error helper on partial/full failure while preserving `bulkFeedback`.
-  The message and count calculation must come from the shared helper.
+  The message, count calculation, pluralization, and partial-failure summary must
+  come from the shared helper result, not from local Posts string construction.
 - Do not copy the Pages implementation as a local formatter. Posts should use
   the same generic helper API with a Posts adapter and keep the current
   `refresh`, `bulkFeedback`, selection cleanup, and navigation behavior.
@@ -102,6 +103,30 @@ Inside confirmed delete execution:
 ```tsx
 await runBulkAction("delete", pendingBulkDeleteIds);
 // runBulkAction owns the final shared bulk toast after mutations settle.
+```
+
+Bulk result handling inside `runBulkAction` should follow the same shape as
+Pages:
+
+```tsx
+const results = await Promise.allSettled(ids.map((id) => runPostMutation(action, id)));
+const feedback = postsToast.bulkResult({ action, targets: ids, results });
+
+await refresh({ force: true, background: true });
+
+if (!feedback.ok) {
+  setBulkFeedback(null);
+  setError(feedback.message);
+  postsToast.emitBulkResult(feedback);
+  return;
+}
+
+clearSelection();
+setBulkFeedback({
+  title: "Bulk action completed",
+  message: feedback.inlineMessage,
+});
+postsToast.emitBulkResult(feedback);
 ```
 
 ## Testing Requirements

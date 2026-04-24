@@ -50,24 +50,27 @@ const runBulkAction = async (action) => {
     selectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
   );
 
-  const failed = results.filter((result) => result.status === "rejected").length;
-  if (failed > 0) {
-    const message = entriesToast.bulkErrorMessage({ action, failed, total: selectedRefs.length });
-    setError(message);
-    entriesToast.error(message);
+  const feedback = entriesToast.bulkResult({ action, targets: selectedRefs, results });
+  if (!feedback.ok) {
+    setError(feedback.message);
+    entriesToast.emitBulkResult(feedback);
     return;
   }
 
-  entriesToast.bulkSuccess(action, selectedRefs.length);
+  entriesToast.emitBulkResult(feedback);
 };
 
 const confirmDelete = async () => {
   const results = await Promise.allSettled(
     deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
   );
-  const feedback = entriesToast.bulkResult({ action: "delete", results });
+  const feedback = entriesToast.bulkResult({
+    action: "delete",
+    targets: deleteRequest.refs,
+    results,
+  });
   entriesToast.emitBulkResult(feedback);
-  if (!feedback.success) setError(feedback.message);
+  if (!feedback.ok) setError(feedback.message);
 };
 ```
 
@@ -96,4 +99,4 @@ const confirmDelete = async () => {
    tests.
 3. Existing inline partial-failure feedback remains intact.
 4. Entries bulk/delete copy comes from the shared helper/adapter and not from a
-   local Entries-only formatter.
+   local Entries-only formatter or local count/pluralization branch.

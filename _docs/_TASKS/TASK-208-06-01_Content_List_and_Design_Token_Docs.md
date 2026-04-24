@@ -32,8 +32,10 @@ No child task files.
   - Explicitly state delete toasts fire after confirmation and mutation
     completion.
 - `_docs/DESIGN_TOKENS.md`
-  - shared Admin UI toaster uses Admin UI Theme token variables,
-  - Sonner rich/default hard-coded palettes are not allowed for admin toasts,
+  - shared Admin UI toaster uses Sonner `richColors` plus Admin UI Theme token
+    variables,
+  - Sonner rich/default hard-coded palettes are not allowed to remain the visual
+    source of truth for admin toasts,
   - normal/success/error/warning/info states map through shared tokens,
   - custom Admin UI Theme modes update toast visuals dynamically through CSS
     variables.
@@ -62,6 +64,7 @@ Design token wording direction:
 
 ```md
 Shared toasts:
+- `core/admin/app/AdminApp.tsx` keeps one documented `richColors` Sonner host.
 - `core/admin/components/ui/sonner.tsx` owns toast state token mapping.
 - `core/admin/ui/shared/listActionToasts.ts` owns list action success/error and
   bulk result message helpers.

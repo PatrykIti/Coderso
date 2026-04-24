@@ -16,11 +16,14 @@ new notification calls.
 
 The implementation must keep a single `<Toaster />` host in `AdminApp` and make
 normal, success, error, warning, and info toasts derive their visual treatment
-from Admin UI Theme variables. This is the foundation that prevents new list
-toasts from reproducing the current black/green/red Sonner default styling under
-a light Admin UI Theme. The variables must stay dynamic so any custom Admin UI
-Theme mode update flows into every toast state through the active CSS variable
-set instead of a hard-coded wrapper palette.
+from Admin UI Theme variables. Sonner's documented `richColors` prop should
+remain enabled because Sonner uses it to apply typed success/error/warning/info
+state selectors. The shared wrapper must override the Sonner state CSS variables
+with Admin UI Theme tokens so new list toasts do not reproduce the current
+black/green/red/yellow/blue bundled palette under a light Admin UI Theme. The
+variables must stay dynamic so any custom Admin UI Theme mode update flows into
+every toast state through the active CSS variable set instead of a hard-coded
+wrapper palette.
 
 ## Sub-Tasks
 
@@ -30,8 +33,9 @@ set instead of a hard-coded wrapper palette.
 
 ## Implementation Round
 
-1. Update the `AdminApp` toaster host so it remains top-right and accessible but
-   does not opt into Sonner hard-coded rich colors.
+1. Update the `AdminApp` toaster host so it remains top-right, accessible, and
+   `richColors` enabled, while the shared wrapper prevents Sonner's bundled rich
+   color values from being the visual source of truth.
 2. Update the shared Sonner wrapper to expose token-backed state styles.
 3. Add a direct wrapper regression test for token variables and keep
    `AdminApp` coverage focused on the single host configuration.
@@ -58,7 +62,8 @@ set instead of a hard-coded wrapper palette.
   - assert one shared toaster is mounted,
   - assert `position="top-right"`, `closeButton`, `duration={4000}`, and
     `containerAriaLabel="Admin notifications"` remain,
-  - assert `richColors` is not passed.
+  - assert `richColors` is passed intentionally and the wrapper test proves that
+    rich-color state variables are token-backed.
 - Add `tests/vitest/admin/sonner.test.tsx`:
   - assert the Sonner wrapper receives token-backed style variables for success,
     error, warning, info, and normal states,
@@ -76,7 +81,7 @@ set instead of a hard-coded wrapper palette.
 
 1. The app still mounts exactly one shared Admin UI toaster.
 2. The toaster stays top-right, closeable, duration-bound, and accessible.
-3. Sonner rich/default state palettes no longer control admin toast state
+3. Sonner rich/default bundled state palettes no longer control admin toast state
    surfaces.
 4. Toast state colors are controlled by Admin UI Theme tokens or shared admin
    CSS variables.

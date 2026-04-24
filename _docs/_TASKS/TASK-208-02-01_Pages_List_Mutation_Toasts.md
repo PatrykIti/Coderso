@@ -37,10 +37,14 @@ No child task files.
 - In `runDelete`, toast only after `deletePage(id)` succeeds from the
   confirmation dialog path and the existing refresh path completes.
 - In `runBulkAction`, toast after all selected mutations settle:
-  - full success: call the shared bulk success helper,
-  - partial/full failure: preserve inline feedback and call the shared error
-    helper.
-  Use the shared helper for both the final message and plural/count handling.
+  - call the shared bulk-result helper with `action`, target ids, and the
+    `Promise.allSettled` results,
+  - full success: emit the helper result after the existing refresh/selection
+    cleanup path,
+  - partial/full failure: preserve inline feedback by using the helper-returned
+    `message` and emit the same helper result as the top-right error toast.
+  The shared helper owns final message, plural/count handling, and failure
+  summary math.
 - Do not introduce local page upsert/status/remove helpers only for toast
   delivery. Pages currently refresh after mutations; keep that orchestration and
   add the shared toast at the end of the same success/error branch.
@@ -105,18 +109,18 @@ Bulk flow:
 
 ```tsx
 const results = await Promise.allSettled(ids.map((id) => runPageMutation(action, id)));
-const failed = results.filter((result) => result.status === "rejected").length;
+const feedback = pagesToast.bulkResult({ action, targets: ids, results });
 
-if (failed > 0) {
-  const message = pagesToast.bulkErrorMessage({ action, failed, total: ids.length });
-  setError(message);
-  pagesToast.error(message);
+await refresh({ force: true, background: true });
+
+if (!feedback.ok) {
+  setError(feedback.message);
+  pagesToast.emitBulkResult(feedback);
   return;
 }
 
-await refresh({ force: true, background: true });
 handleClearSelection();
-pagesToast.bulkSuccess(action, ids.length);
+pagesToast.emitBulkResult(feedback);
 ```
 
 ## Testing Requirements

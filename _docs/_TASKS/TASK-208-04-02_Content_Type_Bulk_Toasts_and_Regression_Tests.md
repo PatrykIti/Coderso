@@ -25,7 +25,7 @@ No child task files.
 - Preserve current `bulkFeedback` state.
 - On full success, call the shared list-action success helper.
 - On partial/full failure, call the shared list-action error helper with the
-  same truthful failure count/message used inline.
+  same truthful helper-returned message used inline.
 - Keep bulk delete confirmation dialog and only emit delete toast after confirm.
 - Preserve the current state model: failures set `setError(message)` and keep
   failed IDs selected; full success clears selection and may keep the existing
@@ -42,26 +42,23 @@ const runBulkAction = async (action, ids) => {
     return deleteContentType(id);
   }));
 
-  const failedIds = ids.filter((_, index) => results[index]?.status === "rejected");
-  const failed = failedIds.length;
-  const successCount = ids.length - failed;
+  const feedback = contentTypeToast.bulkResult({ action, targets: ids, results });
   const nextTypes = await listContentTypesCached({ force: true });
   setTypes(nextTypes);
 
-  if (failed > 0) {
-    const message = contentTypeToast.bulkErrorMessage({ action, failed, total: ids.length });
-    setSelectedIds(failedIds);
-    setError(message);
-    contentTypeToast.error(message);
+  if (!feedback.ok) {
+    setSelectedIds(feedback.failedTargets);
+    setError(feedback.message);
+    contentTypeToast.emitBulkResult(feedback);
     return;
   }
 
   handleClearSelection();
   setBulkFeedback({
     title: "Bulk action completed",
-    message: contentTypeToast.bulkInlineSuccessMessage({ action, succeeded: successCount }),
+    message: feedback.inlineMessage,
   });
-  contentTypeToast.bulkSuccess(action, ids.length);
+  contentTypeToast.emitBulkResult(feedback);
 };
 ```
 
@@ -90,4 +87,4 @@ const runBulkAction = async (action, ids) => {
 2. Partial failures emit error toasts and preserve inline details.
 3. Bulk delete toast is emitted only after the confirmation dialog path.
 4. Bulk message and failure count behavior comes from the shared helper/adapter,
-   not a Content-Type-only message function.
+   not a Content-Type-only message function or local count/pluralization branch.

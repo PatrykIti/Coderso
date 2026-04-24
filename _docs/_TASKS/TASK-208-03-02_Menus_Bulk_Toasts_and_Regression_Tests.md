@@ -27,7 +27,8 @@ No child task files.
   - call the shared list-action toast success helper.
 - On partial/full failure:
   - preserve existing inline error state,
-  - call the shared list-action toast error helper.
+  - call the shared list-action toast error helper with the same helper-returned
+    message.
 - Keep bulk delete confirmation dialog; do not toast until the confirm button
   triggers `runBulkAction("delete", pendingBulkDeleteIds)`.
 
@@ -36,18 +37,17 @@ No child task files.
 ```tsx
 const runBulkAction = async (action, ids) => {
   const results = await Promise.allSettled(ids.map((id) => mutateMenu(action, id)));
-  const failed = results.filter((result) => result.status === "rejected").length;
+  const feedback = menusToast.bulkResult({ action, targets: ids, results });
   await refresh({ force: true, background: true });
 
-  if (failed > 0) {
-    const message = menusToast.bulkErrorMessage({ action, failed, total: ids.length });
-    setError(message);
-    menusToast.error(message);
+  if (!feedback.ok) {
+    setError(feedback.message);
+    menusToast.emitBulkResult(feedback);
     return;
   }
 
   handleClearSelection();
-  menusToast.bulkSuccess(action, ids.length);
+  menusToast.emitBulkResult(feedback);
 };
 ```
 
@@ -77,4 +77,4 @@ const runBulkAction = async (action, ids) => {
 2. Menus bulk failures emit error toasts and keep inline error feedback.
 3. Bulk delete toast appears only after the confirmation dialog mutation.
 4. Menus bulk success/error messages come from the shared helper/adapter instead
-   of Menus-only message functions.
+   of Menus-only message functions or local count/pluralization branches.
