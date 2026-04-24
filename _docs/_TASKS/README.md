@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 75 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1081 tasks
 
@@ -38,6 +38,33 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-206 | Media Admin Cache Lifecycle and Partial List Updates | High | Large | Repair Media route-entry cache lifecycle and partial mutation updates without creating a second media flow |
+| TASK-206-01 | Media Mount Hydration and Picker Cache Policy | High | Medium | Align Media Library and MediaPicker hydration with the existing Pages/Menus cache policy |
+| TASK-206-01-01 | Media Library Mount Refresh Policy | High | Medium | Stop forcing full `GET /media` on `/admin/media` mount when `media:list` is fresh |
+| TASK-206-01-02 | Media Picker Cache Reuse and Shared Policy Helper | Medium | Medium | Reuse `media:list` in picker browse/selection flows without forced reload |
+| TASK-206-02 | Partial Media Mutation Cache Updates | High | Large | Patch `media:list` for known upload/update/recover/replace/delete changes |
+| TASK-206-02-01 | Media Client Patch Helpers and Same-Tab Event Semantics | High | Medium | Keep same-tab cache events from triggering redundant full-list reloads after patched updates |
+| TASK-206-02-02 | Upload Response Row Contract and Cache Upsert | High | Medium | Return or fetch one authoritative uploaded row and upsert it instead of invalidating the full gallery |
+| TASK-206-03 | Regression Proof, Prefetch, Docs, and Closure | Medium | Medium | Prove request behavior, prefetch warmup, docs, changelog, and board closure |
+| TASK-206-03-01 | Media Cache and Prefetch Regression Matrix | Medium | Medium | Add request-level tests for cached Media navigation, picker reuse, mutations, upload, and prefetch |
+| TASK-206-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Sync ADMIN_CACHE docs, cache map, changelog, task statuses, and validation evidence |
+| TASK-207 | Coderso Entries List Parity and Cross-Type Filtering | High | Very Large | Entries first-screen parity with Pages/Posts/Menus/Content Types, all-entries read model, content-type column/link, advanced filters, shared pagination, and token-backed actions |
+| TASK-207-01 | Entries Cross-Type Read Model and Cache Contract | High | Large | Business/technical foundation: one internal all-entries read model plus cache/prefetch/docs alignment |
+| TASK-207-01-01 | Entry List Read Model Service and Route Contract | High | Medium | Technical leaf: service-level all-entries join and internal `content:read` route |
+| TASK-207-01-02 | Entries Client Cache, Prefetch, and Cache Map | High | Medium | Technical leaf: all-entries client cache key, invalidation, prefetch, assistant cache events, and cache docs |
+| TASK-207-02 | Entries List Shell Parity With Admin Lists | High | Large | Business/UI wave: make `/admin/coderso/entries` match Pages, Posts, Menus, and Content Types without a second flow |
+| TASK-207-02-01 | Entry List AdminShell, PageHeader, and Action Layout | High | Medium | Technical leaf: shared shell/header/action layout and compact `New` action |
+| TASK-207-02-02 | Entry Table Content Type Column and Engine Links | High | Medium | Technical leaf: row content-type column with canonical Engine editor links |
+| TASK-207-02-03 | Shared Pagination and Visible-Scope Selection | High | Medium | Technical leaf: shared footer, default page-size contract, and visible-row selection trimming |
+| TASK-207-03 | Entries Filter Model - Basic and Advanced | High | Large | Business/UI wave: compact search/status filters plus collapsible advanced filters with content type |
+| TASK-207-03-01 | Basic Search, Status, and Filter Reset Contract | High | Small | Technical leaf: basic row search/status behavior and reset |
+| TASK-207-03-02 | Advanced Content Type, Author, and Date Filters | High | Medium | Technical leaf: collapsible advanced filters starting with content type |
+| TASK-207-03-03 | Filter State, Selection Trim, and Empty States | Medium | Medium | Technical leaf: filter/page/selection safety and truthful empty/loading states |
+| TASK-207-04 | Entries Bulk Actions, Popups, and Token Compliance | High | Large | Business/UI wave: inline bulk actions, partial-failure feedback, and Admin UI Theme token-backed popups |
+| TASK-207-04-01 | Entries Inline Bulk Actions and Partial-Failure Feedback | High | Medium | Technical leaf: header inline bulk controls and visible selected-ID execution |
+| TASK-207-04-02 | Entry Row/Bulk Delete Dialog Token Compliance | High | Medium | Technical leaf: shared themed confirmation for row and bulk delete |
+| TASK-207-04-03 | Entries Create/Action Popup Theme Token Audit | Medium | Medium | Technical leaf: create drawer, row actions, alerts, and action popups follow shared theme tokens |
+| TASK-207-05 | QA, Docs, and Closure | Medium | Medium | Closure leaf: targeted Bun/Vitest validation, docs, changelog, and board sync |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
