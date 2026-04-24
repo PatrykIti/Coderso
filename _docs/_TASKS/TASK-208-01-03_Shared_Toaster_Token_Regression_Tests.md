@@ -27,6 +27,9 @@ No child task files.
   token style map.
 - In the wrapper test, mock `sonner` and `next-themes`, render `Toaster`, and
   capture props passed to the underlying Sonner component.
+- Assert forwarded wrapper props are merged safely: caller `className` is appended
+  while `.toaster` remains present, and caller `style` extends the shared
+  token-backed style map instead of replacing it.
 - Add a rendered or CSS-selector contract proof for the visible floating toast
   surface. The proof must cover the shell, title/description text, border, close
   button, and typed success/error/warning/info state colors with a custom Admin
@@ -75,6 +78,9 @@ expect(style["--normal-text"]).toBe("var(--popover-foreground)");
 expect(style["--normal-border"]).toBe("var(--border)");
 expect(style["--gray12"]).toBe("var(--popover-foreground)");
 expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
+expect(capturedProps.className).toContain("toaster");
+expect(capturedProps.className).toContain("custom-class");
+expect(capturedProps.style["--custom-offset"]).toBe("12px");
 ```
 
 CSS selector contract when `globals.css` is required:
@@ -106,6 +112,7 @@ expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"]:hover [d
   - assert the dynamic `useTheme()` value is forwarded,
   - assert state styling supports the shared `richColors` host and does not use
     Sonner's bundled HSL palette values.
+  - assert prop forwarding cannot drop `.toaster` or replace the shared style map.
 
 ## Documentation Updates Required in This Round
 
@@ -121,3 +128,5 @@ expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"]:hover [d
    token ownership.
 5. Tests fail if the wrapper hard-codes a theme instead of using the active
    Admin UI Theme mode.
+6. Tests fail if forwarded `className` or `style` props replace the shared
+   `.toaster` selector or token variable defaults.

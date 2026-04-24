@@ -31,6 +31,9 @@ No child task files.
     `new Error(message)` so `MenuCreateDialog` keeps local error copy; or
   - emit through the same shared helper from `MenuCreateDialog` catch if the
     dialog remains the owner of normalized failure copy.
+  Top-right error toasts are only for rejected `createMenu` mutations/API
+  failures. Local dialog validation such as an empty menu name remains inline-only
+  and must not emit a floating toast.
 - Add success/error toasts in `handlePublish`, `handleUnpublish`, and confirmed
   `runDelete`.
 - Do not change `/admin/menus` list-first routing.
@@ -106,6 +109,8 @@ const runDelete = async (id: string) => {
     `onCreate` success and rejected paths, or add a focused `MenuCreateDialog`
     test that uses the real dialog and proves the local dialog error plus the
     top-right error toast,
+  - assert empty-name validation keeps local dialog feedback without emitting a
+    top-right error toast if that validation path is covered in this suite,
   - assert row publish/unpublish success and failure toasts,
   - assert row delete toast only appears after confirmation.
 
@@ -119,7 +124,8 @@ const runDelete = async (id: string) => {
 ## Acceptance Criteria
 
 1. Menus list create and row lifecycle actions toast on success/error.
-2. `MenuCreateDialog` still renders local validation/API error feedback.
+2. `MenuCreateDialog` still renders local validation/API error feedback, and
+   validation-only errors do not emit floating toasts.
 3. Row delete toast fires only after confirmed mutation completion.
 4. Generic error normalization and action copy live in the shared helper/adapter,
    not as duplicated Menus-only helpers.

@@ -23,6 +23,10 @@ No child task files.
 - Inspect `core/admin/ui/content-types/ContentTypeCreateDrawer.tsx`.
 - If the drawer catches `createContentType` errors and only sets local `error`,
   also call the shared list-action error-toast helper.
+- Emit the top-right error toast only for rejected `createContentType`
+  mutations/API failures. Local validation failures such as duplicate name,
+  duplicate slug, or missing required fields remain inline drawer feedback and do
+  not emit floating toasts.
 - Keep `ContentTypeList.handleCreated` success toast in
   `core/admin/ui/content-types/ContentTypeList.tsx`, but route the success copy
   through the Content Type adapter/config.
@@ -80,7 +84,9 @@ const handleCreated = (created) => {
     focused `ContentTypeCreateDrawer` test that renders the real drawer and
     proves the local drawer error plus the top-right error toast,
   - preserve drawer inline error assertion if one exists or add one if the test
-    already covers drawer errors.
+    already covers drawer errors,
+  - assert duplicate-name/duplicate-slug validation remains local-only and does
+    not emit a top-right error toast when that validation path is covered.
 
 ## Documentation Updates Required in This Round
 
@@ -93,7 +99,9 @@ const handleCreated = (created) => {
 
 1. Content Type create success still uses the shared top-right toast.
 2. Content Type create failure shows both local drawer feedback and top-right
-   error toast.
+   error toast when the create mutation/API call rejects.
 3. Parent/drawer ownership stays unchanged.
 4. Create success/error copy and fallback handling come from the shared
    list-action toast helper/adapter.
+5. Local duplicate/missing-field validation remains inline-only and does not emit
+   floating toasts.

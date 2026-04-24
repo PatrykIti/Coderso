@@ -32,6 +32,9 @@ No child task files.
   state or navigation preference is applied.
 - In `handleCreate` catch, keep `setError(message)` and also call
   the shared error-toast helper.
+- Emit create error toasts only for rejected `createPage` mutations/API failures.
+  Local drawer validation or disabled-submit states stay inline-only and must not
+  emit floating toasts.
 - In `handlePublish` and `handleUnpublish`, toast after the client mutation and
   existing `refresh({ force: true, background: true })` call succeeds.
 - In `runDelete`, toast only after `deletePage(id)` succeeds from the
@@ -131,7 +134,8 @@ pagesToast.emitBulkResult(feedback);
     behavior by verifying final emitted success/error messages,
   - in the existing create/navigation test, assert the final success toast after
     create,
-  - in the existing failure test, assert the final error toast,
+  - in the existing rejected create-mutation failure test, assert the final error
+    toast,
   - in the publish/unpublish/delete test, assert success and failure toasts,
   - in the bulk publish test, assert the success toast after mutation completion,
   - add a delete-confirm assertion that no delete toast fires before clicking the
@@ -153,3 +157,4 @@ pagesToast.emitBulkResult(feedback);
 3. Existing inline error and bulk feedback behavior is preserved.
 4. Generic error normalization, bulk counts, and pluralization are not
    duplicated inside `PageListPage`.
+5. Local create validation/disabled states do not emit floating toasts.

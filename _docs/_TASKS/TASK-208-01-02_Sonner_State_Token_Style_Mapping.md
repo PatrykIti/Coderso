@@ -37,6 +37,10 @@ No child task files.
   override Sonner's rich-color variables with Admin UI Theme variables.
 - Preserve the current dynamic `useTheme()` behavior. Do not hard-code
   `theme="light"` or any other fixed mode in the wrapper.
+- Preserve the shared wrapper ownership when forwarding props. Destructure
+  caller `className` and `style`, merge `className` so the `.toaster` selector is
+  never lost, and merge styles as `{ ...adminToastStyle, ...style }` so callers
+  can extend layout variables without removing the token-backed defaults.
 - Reference Admin UI Theme CSS variables directly in the style map so the active
   theme profile/template can update toast colors without remounting or rewriting
   resource components.
@@ -48,6 +52,7 @@ No child task files.
   - `--popover`,
   - `--popover-foreground`,
   - `--border`,
+  - `--ring`,
   - `--radius`,
   - `--admin-state-success`,
   - `--admin-state-danger`,
@@ -64,6 +69,7 @@ No child task files.
 
 ```tsx
 // core/admin/components/ui/sonner.tsx
+const { className, style, ...sonnerProps } = props;
 const { theme = "system" } = useTheme();
 
 const adminToastStyle = {
@@ -93,10 +99,10 @@ const adminToastStyle = {
 
 return (
   <Sonner
+    {...sonnerProps}
     theme={theme as ToasterProps["theme"]}
-    className="toaster group"
-    style={adminToastStyle}
-    {...props}
+    className={className ? `toaster group ${className}` : "toaster group"}
+    style={{ ...adminToastStyle, ...style }}
   />
 );
 ```
@@ -154,7 +160,9 @@ variables:
   - assert state styling is compatible with the shared host's `richColors`
     configuration and does not use Sonner's bundled HSL palette values,
   - assert the wrapper forwards the dynamic `useTheme()` value instead of a
-    hard-coded literal theme.
+    hard-coded literal theme,
+  - assert caller `className` and `style` props are merged without dropping the
+    `.toaster` selector or the token-backed default CSS variables.
 
 ## Documentation Updates Required in This Round
 
@@ -177,3 +185,5 @@ variables:
 4. The mapping is shared and resource-neutral.
 5. Theme mode changes propagate through dynamic Admin UI Theme variables and the
    shared wrapper, not through hard-coded state palettes.
+6. Forwarded `className` and `style` props cannot remove the `.toaster` selector
+   or replace the shared token variable map.

@@ -78,6 +78,10 @@ In scope:
   - `MenuCreateDialog`,
   - `ContentTypeCreateDrawer`,
   - `EntryCreateDrawer`;
+  Local create validation remains inline-only. Top-right create error toasts are
+  for rejected create mutations/API failures, not for required-field, duplicate,
+  or other client-side validation states that are already shown beside the field
+  or inside the drawer/dialog.
 - shared toast host and token mapping:
   - `core/admin/app/AdminApp.tsx`,
   - `core/admin/components/ui/sonner.tsx`,
@@ -197,6 +201,8 @@ Shared toaster and token layer:
 - `core/admin/components/ui/sonner.tsx`
   - own the token-backed style mapping for toast state surfaces and every
     Sonner CSS variable that can be set on the toaster host.
+  - merge forwarded `className` and `style` props without losing the `.toaster`
+    selector or replacing the shared token-backed CSS variable defaults.
 - `core/admin/styles/globals.css`
   - add scoped Sonner selectors when component-level style variables are not
     enough to override default Sonner state colors, description text, close
@@ -267,6 +273,9 @@ Tests:
 - `tests/vitest/ui/entry-list-wave.test.tsx`
 - any adjacent create drawer/dialog test that already owns validation/error
   feedback for these list-created resources.
+- include rejected create-mutation coverage when a drawer/dialog owns API error
+  rendering; do not require top-right toasts for local required-field or
+  duplicate validation states.
 
 Docs and governance:
 

@@ -32,6 +32,9 @@ No child task files.
   `handleEntryCreated` after the list/cache state is updated.
 - In `core/admin/ui/entries/EntryCreateDrawer.tsx`, emit a shared error toast
   in the create catch path while preserving the drawer-local error alert.
+- Emit the top-right error toast only for rejected `createEntry` mutations/API
+  failures. Local drawer validation such as missing content type, title, or slug
+  remains inline/disabled-state feedback and must not emit a floating toast.
 - Route create success/error copy through the shared list-action toast helper
   with an Entries adapter/config.
 - Because both `EntryList` and `EntryCreateDrawer` need the Entries adapter,
@@ -93,6 +96,8 @@ try {
     mock to trigger a rejected create path, or add a focused `EntryCreateDrawer`
     test that renders the real drawer and proves the local drawer error plus the
     top-right error toast,
+  - assert local disabled/required-field validation does not emit a top-right
+    error toast when that validation path is covered,
   - ensure navigation assertions for `openAfterCreate` still pass.
 
 ## Documentation Updates Required in This Round
@@ -105,10 +110,12 @@ try {
 ## Acceptance Criteria
 
 1. Entry create success emits a shared top-right toast.
-2. Entry create failure emits a shared top-right error toast and keeps local
-   drawer error feedback.
+2. Entry create mutation/API failure emits a shared top-right error toast and
+   keeps local drawer error feedback.
 3. Existing create navigation/scope behavior is unchanged.
 4. `GET /content-entries` stays the list read-model API; it is not treated as
    the editor navigation route.
 5. Create success/error copy and fallback handling come from the shared
    list-action toast helper/adapter.
+6. Local missing-field or disabled-state validation remains inline-only and does
+   not emit floating toasts.

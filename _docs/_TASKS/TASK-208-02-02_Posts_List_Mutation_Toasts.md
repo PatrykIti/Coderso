@@ -34,6 +34,9 @@ No child task files.
   succeeds.
 - In `handleCreate` catch, keep `setError(message)` and call
   the shared error-toast helper.
+- Emit create error toasts only for rejected `createPost` mutations/API failures.
+  Local drawer validation or disabled-submit states stay inline-only and must not
+  emit floating toasts.
 - In `handlePublish`, `handleUnpublish`, and confirmed `runDelete`, toast after
   the real mutation and the existing refresh path.
 - Preserve the existing editor navigation route. `PostsListPage` currently
@@ -136,7 +139,7 @@ postsToast.emitBulkResult(feedback);
 ## Testing Requirements
 
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
-  - assert Posts create success/failure toasts,
+  - assert Posts create success and rejected create-mutation failure toasts,
   - assert Posts publish/unpublish/delete success/failure toasts,
   - assert Posts bulk publish/unpublish/delete success toasts,
   - assert partial failures emit the expected error toast and keep inline
@@ -161,3 +164,4 @@ postsToast.emitBulkResult(feedback);
 3. Delete toasts are never emitted before confirmation.
 4. Generic error normalization, bulk counts, and pluralization are not
    duplicated inside `PostsListPage`.
+5. Local create validation/disabled states do not emit floating toasts.
