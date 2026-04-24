@@ -108,6 +108,10 @@ vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
     pageDetail: (id: string) => `page-detail:${id}`,
   },
+  cacheTtlMs: {
+    list: 300_000,
+    detail: 300_000,
+  },
 }));
 
 vi.mock("@/services/pagesClient", () => ({
@@ -305,11 +309,6 @@ test("PageEditor scrolls to and highlights a newly inserted block", async () => 
     expect(rows).toHaveLength(2);
     expect(rows[1]?.className).toContain("border-emerald-500/40");
     expect(view.container.textContent).toContain("settings:");
-
-    await act(async () => {
-      vi.runOnlyPendingTimers();
-      await Promise.resolve();
-    });
 
     expect(scrollIntoViewSpy).toHaveBeenCalled();
 

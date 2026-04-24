@@ -46,6 +46,8 @@ const schema = {
   },
 };
 
+const uniqueName = (prefix: string) => `${prefix} ${randomUUID()}`;
+
 let contentTypeId: string | undefined;
 let entryId: string | undefined;
 let userId: string | undefined;
@@ -80,7 +82,7 @@ testIfDb("publish flow creates revisions and preview", async () => {
   userId = user?.id;
 
   const type = await createContentType({
-    name: "News",
+    name: uniqueName("News"),
     slug: `news-${randomUUID()}`,
     schema,
   });
@@ -113,7 +115,7 @@ testIfDb("publish flow creates revisions and preview", async () => {
 
 testIfDb("enforces slug uniqueness per type", async () => {
   const type = await createContentType({
-    name: "FAQ",
+    name: uniqueName("FAQ"),
     slug: `faq-${randomUUID()}`,
     schema,
   });
@@ -141,12 +143,12 @@ testIfDb("enforces slug uniqueness per type", async () => {
 
 testIfDb("listEntriesWithContentTypes returns cross-type rows with owner metadata", async () => {
   const articlesType = await createContentType({
-    name: "Articles",
+    name: uniqueName("Articles"),
     slug: `articles-${randomUUID()}`,
     schema,
   });
   const productsType = await createContentType({
-    name: "Products",
+    name: uniqueName("Products"),
     slug: `products-${randomUUID()}`,
     schema,
   });
@@ -178,7 +180,7 @@ testIfDb("listEntriesWithContentTypes returns cross-type rows with owner metadat
     expect(articleRow?.contentType).toEqual({
       id: articlesType.id,
       slug: articlesType.slug,
-      name: "Articles",
+      name: articlesType.name,
       status: "draft",
     });
     expect(productRow?.contentType.slug).toBe(productsType.slug);
@@ -209,7 +211,7 @@ testIfDb("updateEntry preserves author metadata", async () => {
   userId = user?.id;
 
   const type = await createContentType({
-    name: "Notes",
+    name: uniqueName("Notes"),
     slug: `notes-${randomUUID()}`,
     schema,
   });
@@ -235,7 +237,7 @@ testIfDb("updateEntry preserves author metadata", async () => {
 
 testIfDb("updateEntryMetadata stores taxonomy tags, schedule, and SEO", async () => {
   const type = await createContentType({
-    name: "Blog",
+    name: uniqueName("Blog"),
     slug: `blog-${randomUUID()}`,
     schema,
   });
@@ -287,7 +289,7 @@ testIfDb("duplicateEntry creates a draft copy with unique slug and metadata", as
   userId = user?.id;
 
   const type = await createContentType({
-    name: "Stories",
+    name: uniqueName("Stories"),
     slug: `stories-${randomUUID()}`,
     schema,
   });
@@ -344,7 +346,7 @@ testIfDb("validates relation entry IDs", async () => {
   const teamSlug = `teams-${randomUUID()}`;
 
   const projectType = await createContentType({
-    name: "Projects",
+    name: uniqueName("Projects"),
     slug: projectSlug,
     schema: {
       type: "object",
@@ -357,7 +359,7 @@ testIfDb("validates relation entry IDs", async () => {
   });
 
   const teamType = await createContentType({
-    name: "Teams",
+    name: uniqueName("Teams"),
     slug: teamSlug,
     schema: {
       type: "object",
@@ -432,7 +434,7 @@ testIfDb("validates relation entry IDs", async () => {
 
 testIfDb("validates media asset IDs and types", async () => {
   const type = await createContentType({
-    name: "Gallery",
+    name: uniqueName("Gallery"),
     slug: `gallery-${randomUUID()}`,
     schema: {
       type: "object",
@@ -527,7 +529,7 @@ testIfDb("validates media asset IDs and types", async () => {
 
 testIfDb("updateEntryMetadata requires scheduledAt for scheduled status", async () => {
   const type = await createContentType({
-    name: "FAQ",
+    name: uniqueName("FAQ"),
     slug: `faq-${randomUUID()}`,
     schema,
   });

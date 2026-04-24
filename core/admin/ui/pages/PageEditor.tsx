@@ -462,20 +462,14 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         ? CSS.escape(pendingScrollBlockId)
         : pendingScrollBlockId.replace(/["\\]/g, "\\$&");
 
-    const timeoutId = window.setTimeout(() => {
-      const target = document.querySelector(
-        `[data-block-id="${escapedId}"]`
-      ) as HTMLElement | null;
-      if (!target) return;
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-      const focusTarget = target.querySelector<HTMLElement>("[data-block-select='true']");
-      focusTarget?.focus({ preventScroll: true });
-      setPendingScrollBlockId(null);
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
+    const target = document.querySelector(
+      `[data-block-id="${escapedId}"]`
+    ) as HTMLElement | null;
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    const focusTarget = target.querySelector<HTMLElement>("[data-block-select='true']");
+    focusTarget?.focus({ preventScroll: true });
+    setPendingScrollBlockId(null);
   }, [blocks, pendingScrollBlockId]);
 
   const refreshPage = useCallback(

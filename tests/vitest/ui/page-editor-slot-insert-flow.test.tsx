@@ -183,6 +183,10 @@ vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
     pageDetail: (id: string) => `page-detail:${id}`,
   },
+  cacheTtlMs: {
+    list: 300_000,
+    detail: 300_000,
+  },
 }));
 
 vi.mock("@/services/pagesClient", () => ({

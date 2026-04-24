@@ -573,7 +573,7 @@ test("entry leaf components forward filter and entry actions", () => {
         authorOptions={[{ value: "john", label: "John" }]}
         updatedFrom=""
         updatedTo=""
-        advancedOpen={false}
+        advancedOpen={true}
         onSearchChange={onSearchChange}
         onStatusChange={onStatusChange}
         onTypeChange={onTypeChange}
@@ -627,10 +627,10 @@ test("entry leaf components forward filter and entry actions", () => {
 
     act(() => {
       setInputValue(input ?? undefined, "pricing");
-      setSelectValue(selects[0], "post");
-      setSelectValue(selects[1], "published");
+      setSelectValue(selects[0], "published");
+      setSelectValue(selects[1], "post");
       setSelectValue(selects[2], "john");
-      buttons.find((button) => button.textContent?.includes("Clear All"))?.click();
+      buttons.find((button) => button.textContent?.includes("Clear"))?.click();
       buttons.find((button) => button.className.includes("text-left"))?.click();
     });
 
