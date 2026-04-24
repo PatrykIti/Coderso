@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 69 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1109 tasks
 
@@ -38,6 +38,27 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-208 | Admin List Action Toasts and Theme Tokens | High | Large | Consistent top-right token-backed Admin UI toasts for list create, publish, unpublish/draft, and delete across Pages, Posts, Menus, Engine, and Entries |
+| TASK-208-01 | Shared Sonner Token Contract | High | Medium | Shared Admin UI toaster host and state styles use Admin UI Theme tokens before resource list toasts are added |
+| TASK-208-01-01 | AdminApp Toaster Host and Rich Color Removal | High | Small | Remove Sonner rich/default color opt-in while preserving one top-right accessible toaster |
+| TASK-208-01-02 | Sonner State Token Style Mapping | High | Medium | Map normal, success, error, warning, and info toast surfaces to Admin UI Theme variables |
+| TASK-208-01-03 | Shared Toaster Token Regression Tests | High | Small | Add admin app tests for shared toaster props and token-backed state variables |
+| TASK-208-02 | Pages and Posts List Toast Parity | High | Large | Pages and Posts list create, publish, unpublish, delete, and bulk actions emit shared top-right toasts |
+| TASK-208-02-01 | Pages List Mutation Toasts | High | Medium | Add Pages list success/error toasts while preserving inline feedback and delete confirmation order |
+| TASK-208-02-02 | Posts List Mutation Toasts | High | Medium | Add Posts list success/error toasts while preserving inline feedback and delete confirmation order |
+| TASK-208-02-03 | Pages Posts Toast Regression Tests | High | Medium | Cover Pages/Posts create, lifecycle, bulk, failure, and delete-confirm toast timing |
+| TASK-208-03 | Menus List Toast Parity | High | Medium | Menus create, row lifecycle, bulk, and confirmed delete actions emit shared top-right toasts |
+| TASK-208-03-01 | Menus Create Row Lifecycle Toasts | High | Medium | Add Menus create/publish/unpublish/delete success and error toast feedback |
+| TASK-208-03-02 | Menus Bulk Toasts and Regression Tests | High | Medium | Add Menus bulk publish/unpublish/delete toasts and focused regression coverage |
+| TASK-208-04 | Engine Content Type List Toast Parity | High | Medium | Fill Engine content type create-error and bulk lifecycle toast gaps |
+| TASK-208-04-01 | Content Type Create Error Toasts | High | Small | Add create failure toast coverage while preserving existing create success parent flow |
+| TASK-208-04-02 | Content Type Bulk Toasts and Regression Tests | High | Medium | Add bulk publish/draft/delete toasts and partial-failure coverage for Content Types |
+| TASK-208-05 | Entries List Toast Parity | High | Medium | Add Entries create toasts and verify existing bulk/delete toast behavior |
+| TASK-208-05-01 | Entry Create Toasts | High | Small | Add Entry create success/error top-right toasts without changing navigation or scope |
+| TASK-208-05-02 | Entry Bulk Delete Toast Audit and Tests | High | Medium | Audit and cover Entries bulk/update/delete toast timing and partial failures |
+| TASK-208-06 | Docs, Changelog, and Closure | Medium | Medium | Update source docs, changelog, board, and validation evidence after implementation |
+| TASK-208-06-01 | Content List and Design Token Docs | Medium | Small | Document final list toast behavior and shared Sonner/Admin UI Theme token mapping |
+| TASK-208-06-02 | Validation Changelog and Task Board Closure | Medium | Small | Run targeted validation and close TASK-208 changelog/task board bookkeeping |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
