@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** QA + Documentation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-205-01, TASK-205-02, TASK-205-03, TASK-205-04
+**Dependencies:** TASK-205-01, TASK-205-02, TASK-205-03-01, TASK-205-03-02, TASK-205-03-03, TASK-205-04
 **Status:** To Do
 
 ---
@@ -15,8 +15,9 @@ Close the TASK-205 follow-up wave with targeted verification, source-of-truth
 docs, task board updates, and changelog entry.
 
 This closure task must prove the content type editor/list defects are fixed,
-Pages/Posts/Menus received the same popup token and pagination corrections, and
-the implementation stays aligned with the Admin UI Theme token contract.
+Pages/Posts/Menus received the same popup token and shared pagination
+corrections, and the implementation stays aligned with the Admin UI Theme token
+contract.
 
 ## Sub-Tasks
 
@@ -88,7 +89,8 @@ No child task files.
 
 ## Acceptance Criteria
 
-1. All TASK-205 task files have final status and validation notes.
+1. All TASK-205 task files, including `TASK-205-03-*` pagination leaves, have
+   final status and validation notes.
 2. Task board statistics match the final status changes.
 3. Changelog entry records user-facing fixes, owner files, and validation.
 4. Docs explain changed list, shared pagination, page-size, popup token, and

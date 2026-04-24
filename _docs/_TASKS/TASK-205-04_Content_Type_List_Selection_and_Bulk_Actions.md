@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Engine + Admin/UI + Admin API
 **Estimated Effort:** Large
-**Dependencies:** TASK-205, TASK-205-03, TASK-198, TASK-199, TASK-200
+**Dependencies:** TASK-205, TASK-205-03-01, TASK-205-03-02, TASK-198, TASK-199, TASK-200
 **Status:** To Do
 
 ---
@@ -17,11 +17,11 @@ it matches the corrected Pages/Posts/Menus list contract.
 The current table has row actions for edit, duplicate, and delete, but there is
 no way to select multiple content types or run bulk publish/draft/delete actions.
 The implementation should follow the shared admin list pattern from Pages,
-Posts, and Menus, after TASK-205-03 makes that pattern real pagination instead
-of a static footer. Do not copy the current native `window.confirm()` behavior
-from those lists; bulk delete must use the token-backed confirmation dialog
-pattern from TASK-205-02 while preserving the stricter content type delete guard
-from `typeService`.
+Posts, and Menus after `TASK-205-03-01` creates the shared pagination contract
+and `TASK-205-03-02` adapts Content Types to visible paginated rows. Do not copy
+the current native `window.confirm()` behavior from those lists; bulk delete
+must use the token-backed confirmation dialog pattern from TASK-205-02 while
+preserving the stricter content type delete guard from `typeService`.
 
 ## Sub-Tasks
 

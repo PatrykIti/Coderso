@@ -1,5 +1,5 @@
-# TASK-205-03: Admin List Footer, Page Size, and Pagination Completion
-# FileName: TASK-205-03_Content_Type_List_Footer_and_Pagination_Parity.md
+# TASK-205-03: Shared Admin List Pagination Contract
+# FileName: TASK-205-03_Shared_Admin_List_Pagination_Contract.md
 
 **Priority:** Medium
 **Category:** CMS/Engine + Admin/UI
@@ -28,7 +28,9 @@ resource labels, and resource-specific loading/empty/selection behavior.
 
 ## Sub-Tasks
 
-No child task files.
+- [ ] TASK-205-03-01: Shared Pagination Hook and Footer
+- [ ] TASK-205-03-02: Admin List Resource Adapters
+- [ ] TASK-205-03-03: Pagination Regression Matrix and Docs
 
 ## Files to Change
 
@@ -36,7 +38,9 @@ No child task files.
   - create the generic client-side pagination contract for admin list screens,
   - export the default page size and allowed page-size options,
   - return visible rows, visible range metadata, disabled previous/next state,
-    and page-size/page navigation setters.
+    and page-size/page navigation setters,
+  - own reset/clamp behavior so resource screens do not reimplement pagination
+    math.
 - `core/admin/ui/shared/ListPaginationFooter.tsx`
   - create the shared footer UI used by Content Types, Pages, Posts, and Menus,
   - render truthful count copy, the page-size selector, and `Previous` / `Next`
@@ -82,29 +86,77 @@ No child task files.
 
 ## Implementation Direction
 
-Use a small shared client-side pagination contract. The API continues to return
-the current full list in this task; pagination happens after filtering and
-sorting.
+Implement in dependency order:
+
+1. `TASK-205-03-01` creates the shared hook/footer and focused contract tests.
+2. `TASK-205-03-02` adapts Content Types, Pages, Posts, and Menus to that hook
+   after their existing filtering/sorting logic.
+3. `TASK-205-03-03` records the cross-resource regression matrix and docs.
+
+The API continues to return the current full list in this task; pagination
+happens client-side after filtering and sorting. Do not add four local page
+state implementations.
+
+The hook should expose a typed contract rather than resource-specific state:
 
 ```ts
-const pageSizeOptions = [10, 20, 30, 50, 100, 150, 200, 500] as const;
-const pageSize = selectedPageSize ?? 10;
-const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
-const clampedPage = Math.min(pageIndex, totalPages - 1);
-const visibleRows = sortedRows.slice(
-  clampedPage * pageSize,
-  clampedPage * pageSize + pageSize
-);
+export const ADMIN_LIST_PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100, 150, 200, 500] as const;
+export const DEFAULT_ADMIN_LIST_PAGE_SIZE = 10;
+
+export type ListPaginationState<T> = {
+  pageIndex: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  rangeStart: number;
+  rangeEnd: number;
+  visibleRows: T[];
+  canPreviousPage: boolean;
+  canNextPage: boolean;
+  setPageSize: (next: number) => void;
+  previousPage: () => void;
+  nextPage: () => void;
+  resetPage: () => void;
+};
 ```
 
-The four list screens should call that contract after they finish
-resource-specific filtering/sorting:
+Core hook pseudocode:
 
 ```ts
 const pagination = useListPagination(sortedRows, {
-  defaultPageSize: 10,
-  pageSizeOptions,
+  resetKey: `${query}:${statusFilter}:${sortKey}:${sortDirection}`,
 });
+
+function useListPagination<T>(rows: T[], options?: UseListPaginationOptions) {
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSizeState] = useState(DEFAULT_ADMIN_LIST_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const clampedPageIndex = Math.min(pageIndex, totalPages - 1);
+  const pageStart = clampedPageIndex * pageSize;
+  const visibleRows = rows.slice(pageStart, pageStart + pageSize);
+
+  useEffect(() => setPageIndex(0), [options?.resetKey]);
+  useEffect(() => setPageIndex((current) => Math.min(current, totalPages - 1)), [totalPages]);
+
+  return {
+    pageIndex: clampedPageIndex,
+    pageSize,
+    totalItems: rows.length,
+    totalPages,
+    rangeStart: rows.length === 0 ? 0 : pageStart + 1,
+    rangeEnd: Math.min(pageStart + pageSize, rows.length),
+    visibleRows,
+    canPreviousPage: clampedPageIndex > 0,
+    canNextPage: clampedPageIndex < totalPages - 1,
+    setPageSize: (next) => {
+      setPageSizeState(normalizePageSize(next));
+      setPageIndex(0);
+    },
+    previousPage: () => setPageIndex((current) => Math.max(0, current - 1)),
+    nextPage: () => setPageIndex((current) => Math.min(totalPages - 1, current + 1)),
+    resetPage: () => setPageIndex(0),
+  };
+}
 ```
 
 Footer copy should be truthful for the filtered set and rendered through the
@@ -119,6 +171,14 @@ clamp the page index when filters, sort, or page size changes.
 
 Selection must be page-visible scoped. Header checkboxes select only the rows in
 the current paginated result, not hidden rows on other pages.
+
+## Security Contract
+
+- Visibility: internal admin UI read/list surfaces only.
+- Auth/RBAC/CSRF/rate-limit: unchanged; this task does not add endpoints or new
+  write calls.
+- Reject-unknown validation: unchanged.
+- Anti-abuse: unchanged; pagination only changes client-side visible row state.
 
 ## Testing Requirements
 

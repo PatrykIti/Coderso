@@ -48,7 +48,10 @@ parallel managers or second editor flows.
 
 - [ ] TASK-205-01: Content Type JSON Preview Scroll Containment
 - [ ] TASK-205-02: Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus
-- [ ] TASK-205-03: Admin List Footer, Page Size, and Pagination Completion
+- [ ] TASK-205-03: Shared Admin List Pagination Contract
+  - [ ] TASK-205-03-01: Shared Pagination Hook and Footer
+  - [ ] TASK-205-03-02: Admin List Resource Adapters
+  - [ ] TASK-205-03-03: Pagination Regression Matrix and Docs
 - [ ] TASK-205-04: Content Type List Selection and Bulk Actions
 - [ ] TASK-205-05: QA, Docs, and Closure
 
@@ -74,8 +77,11 @@ parallel managers or second editor flows.
      affordances.
 3. Complete list footer, page-size, and pagination behavior:
    - apply to Content Types, Pages, Posts, and Menus list screens,
-   - create a shared admin list pagination helper/component pair and consume it
-     from all four list screens,
+   - create the shared admin list pagination helper/component pair in
+     `TASK-205-03-01`,
+   - consume it from all four list screens through resource adapters in
+     `TASK-205-03-02`,
+   - prove cross-resource regression behavior and docs in `TASK-205-03-03`,
    - default to 10 rows per page,
    - let users choose `10`, `20`, `30`, `50`, `100`, `150`, `200`, or `500`
      rows per page,
@@ -217,15 +223,15 @@ parallel managers or second editor flows.
 
 ## Implementation Direction
 
-Derive resource-specific list state first, then pass the filtered/sorted rows
-into the shared pagination contract:
+Implement shared pagination as one generic contract, then adapt each list into
+it. Derive resource-specific list state first, then pass the filtered/sorted
+rows into the shared pagination contract:
 
 ```ts
 const filteredRows = filterContentTypes(types, query, statusFilter);
 const sortedRows = sortContentTypes(filteredRows, sortKey, sortDirection);
 const pagination = useListPagination(sortedRows, {
-  defaultPageSize: 10,
-  pageSizeOptions: [10, 20, 30, 50, 100, 150, 200, 500],
+  resetKey: JSON.stringify({ query, statusFilter, sortKey, sortDirection }),
 });
 const paginatedRows = pagination.visibleRows;
 const visibleIds = paginatedRows.map((row) => row.id);
