@@ -350,7 +350,7 @@ export function ContentTypeList() {
         </div>
       }
     >
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Content Types"
           description="Create reusable schemas for structured content entries."

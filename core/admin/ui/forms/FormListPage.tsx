@@ -73,7 +73,7 @@ export function FormListPage() {
         </div>
       }
     >
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Forms"
           description="Build custom forms and embed them across pages."
