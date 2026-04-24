@@ -27,8 +27,11 @@ No child task files.
 ## Files to Change
 
 - `core/admin/ui/media/MediaPicker.tsx`
-- `core/admin/ui/media/MediaLibraryPage.tsx` only if a shared local helper is
-  exported from the page module and reused.
+- `core/admin/ui/media/MediaLibraryPage.tsx` only if the call site must be
+  aligned to consume the same generic cache helper introduced by
+  `TASK-206-01-01`.
+- `core/admin/utils/cacheRefresh.ts` only if the picker and library need a
+  reusable resource-neutral mount-policy helper.
 - `tests/vitest/ui/media-picker.test.tsx`
 - `tests/vitest/ui/media-library.test.tsx` if helper tests live there.
 
@@ -42,8 +45,10 @@ No child task files.
 - Do not add picker-local expired-cache logic. If cache expiry matters for
   selection resolution, it must be handled by the shared TTL contract from
   `TASK-206-00`.
-- If picker and library need the same cache-mount decision, consume a generic
-  helper from the existing shared cache owner; only keep local picker code for
+- If picker and library need the same cache-mount decision, add or consume a
+  generic helper from the existing shared cache owner
+  (`core/admin/utils/cacheRefresh.ts`). Do not export cache policy from
+  `MediaLibraryPage` into the picker; only keep local picker code for
   picker-specific concerns such as selected id resolution, accept filtering, and
   multi-select limits.
 - Preserve lazy behavior:
