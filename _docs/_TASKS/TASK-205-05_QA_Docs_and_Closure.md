@@ -17,7 +17,9 @@ docs, task board updates, and changelog entry.
 This closure task must prove the content type editor/list defects are fixed,
 Pages/Posts/Menus received the same popup token and shared pagination
 corrections, and the implementation stays aligned with the Admin UI Theme token
-contract.
+contract. Popup token closure is visual: changing the active Admin UI Theme
+template must affect targeted popup backgrounds, foreground text, borders,
+overlays, focus, validation/error, warning, and destructive treatments.
 
 ## Sub-Tasks
 
@@ -80,6 +82,8 @@ No child task files.
     dialogs instead of native browser prompts,
   - Menus editor item-delete dialog using token-backed destructive/warning
     surfaces while preserving descendant-impact copy,
+  - Menus item drawer/form validation and destructive affordances using Admin
+    UI Theme-backed semantic styling,
   - visible-scope multi-select and bulk actions.
 
 ## Documentation Updates Required
@@ -98,8 +102,8 @@ No child task files.
    final status and validation notes.
 2. Task board statistics match the final status changes.
 3. Changelog entry records user-facing fixes, owner files, and validation.
-4. Docs explain changed list, shared pagination, page-size, popup token, and
-   cache behavior.
+4. Docs explain changed list, shared pagination, page-size, popup visual token,
+   and cache behavior.
 5. Any skipped DB/API tests are explicitly recorded with reason.
 6. Closure notes confirm the implementation repaired existing owners instead of
    adding duplicate pagination, popup, or bulk route systems.

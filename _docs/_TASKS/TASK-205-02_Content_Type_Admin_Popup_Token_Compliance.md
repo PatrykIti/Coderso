@@ -14,6 +14,13 @@
 Audit every targeted Content Types, Pages, Posts, and Menus popup/action surface
 and make sure Admin UI Theme template changes affect the visual treatment.
 
+This is a visual UI contract. Popup compliance means dialogs, sheets, drawers,
+confirmation callouts, validation/error copy, destructive affordances, focus
+rings, overlays, borders, backgrounds, and foreground colors must be driven by
+the active Admin UI Theme tokens rather than fixed Tailwind color palettes. A
+theme edited in the `Admin UI Theme` CMS section must be able to change these
+popup surfaces consistently with the rest of the admin panel.
+
 The content type area already uses shared `Dialog`, `Sheet`, `Button`, `Alert`,
 and `toast` primitives, but destructive and warning callouts in the delete and
 field-remove dialogs currently use hard-coded rose/amber Tailwind palettes. This
@@ -84,10 +91,29 @@ Menus:
 - `core/admin/ui/menus/MenuCreateDialog.tsx`
   - create dialog,
   - create validation and API error alerts.
+- `core/admin/ui/menus/MenuItemDrawer.tsx`
+  - menu item editor drawer,
+  - delete affordance inside the drawer.
+- `core/admin/ui/menus/MenuItemForm.tsx`
+  - menu item validation feedback rendered inside the drawer.
 - `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
   - replace the hard-coded destructive callout palette with a token-backed shared
     surface,
   - preserve descendant-impact copy and existing editor delete behavior.
+
+## Visual Token Contract
+
+- Admin UI Theme is the visual source of truth for targeted popup surfaces.
+- Popups must use shared primitives (`Dialog`, `Sheet`, `Alert`, `Button`,
+  `toast`) or semantic classes backed by admin CSS variables.
+- Fixed palettes such as `rose`, `amber`, `slate`, or other literal Tailwind
+  color families are not allowed for popup background, border, foreground,
+  destructive, warning, validation, or focus treatment when a shared token exists.
+- Resource components may keep their own copy and action orchestration, but they
+  may not introduce resource-specific popup style systems.
+- If the current shared components cannot express warning/destructive popup
+  states, extend the shared component/token mapping once and document the new
+  token in `_docs/DESIGN_TOKENS.md`.
 
 ## Files to Change
 
@@ -119,6 +145,12 @@ Menus:
     state.
 - `core/admin/ui/menus/MenuCreateDialog.tsx`
   - audit dialog and validation feedback for token-backed classes.
+- `core/admin/ui/menus/MenuItemDrawer.tsx`
+  - replace hard-coded destructive text classes with token-backed button or
+    semantic destructive styling.
+- `core/admin/ui/menus/MenuItemForm.tsx`
+  - replace hard-coded validation error text classes with token-backed
+    destructive/error text styling.
 - `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
   - replace the current hard-coded destructive callout palette with a
     token-backed shared surface while keeping the descendant-count copy.
@@ -163,7 +195,7 @@ Menus:
 - Resource components own dialog state and resource-specific copy:
   `ContentTypeList`, `ContentTypeEditor`, `PageListPage`, `PageRevisionDrawer`,
   `PostsListPage`, `PostRevisionDrawer`, `MenuListPage`, and
-  `MenuItemDeleteDialog`.
+  `MenuItemDrawer` / `MenuItemDeleteDialog`.
 - Shared UI primitives own reusable token semantics. Add or extend
   `core/admin/components/ui/alert.tsx` or `core/admin/components/ui/dialog.tsx`
   only when the current shared variants cannot express the needed warning or
@@ -185,6 +217,11 @@ either:
 - semantic classes derived from shadcn/Admin UI variables such as
   `bg-card`, `text-card-foreground`, `text-destructive`, `border-border`, and
   `text-muted-foreground`.
+
+Treat popup token compliance as appearance binding, not as a route or permission
+change. The implementation should make the active Admin UI Theme visibly affect
+the targeted popup backgrounds, text, borders, overlays, destructive/warning
+states, validation copy, and focus treatment.
 
 Remove targeted popup classes like:
 
@@ -214,6 +251,8 @@ and destructive button variants.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-editor.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
 - Add a focused shared `Alert` variant test if `components/ui/alert.tsx` gains a
   new variant.
+- Add or update focused Menus editor/drawer assertions if `MenuItemDrawer` or
+  `MenuItemForm` markup changes while removing hard-coded popup colors.
 
 ## Documentation Updates Required
 
@@ -231,6 +270,7 @@ and destructive button variants.
 3. Targeted dialog/sheet surfaces continue to use shared Admin UI primitives.
 4. Toasts continue to flow through the global Admin toaster.
 5. A changed Admin UI Theme template can affect popup background, foreground,
-   border, destructive, and warning colors through tokens.
+   border, overlay, focus, validation/error, destructive, and warning colors
+   through tokens.
 6. No new resource-specific popup style system, route, or write contract is added
    to solve a theming problem.

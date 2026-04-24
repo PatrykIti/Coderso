@@ -87,7 +87,12 @@ parallel managers or second editor flows.
    - long JSON lines do not break the page or hide the footer metadata,
    - mobile sheet preview keeps the same behavior.
 2. Make Content Types, Pages, Posts, and Menus popups token-compliant:
+   - treat popup token compliance as a visual Admin UI Theme contract, not as an
+     API/security change,
    - use shared `Dialog`, `Sheet`, `Alert`, `Button`, and `toast` surfaces,
+   - ensure popup backgrounds, foreground text, borders, overlays, focus rings,
+     destructive/warning states, and validation/error copy are driven by the
+     active Admin UI Theme tokens,
    - remove hard-coded rose/amber background and border classes from content
      type and menu-item confirmation callouts,
    - replace native `window.confirm()` row/bulk/revision confirmations in
@@ -198,6 +203,12 @@ parallel managers or second editor flows.
     pagination math.
 - `core/admin/ui/menus/MenuCreateDialog.tsx`
   - audit token-backed dialog and error surfaces.
+- `core/admin/ui/menus/MenuItemDrawer.tsx`
+  - audit delete affordance and drawer styling for Admin UI Theme token
+    dependency.
+- `core/admin/ui/menus/MenuItemForm.tsx`
+  - audit validation feedback inside the drawer for token-backed destructive
+    styling.
 - `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
   - replace the current hard-coded destructive callout palette with a
     token-backed shared surface while preserving descendant-impact copy.
@@ -311,8 +322,10 @@ const results = await Promise.allSettled(
 
 Token compliance means no hard-coded destructive/warning palette like
 `bg-rose-50`, `border-rose-200`, `text-rose-900`, `bg-amber-50`, or
-`border-amber-200` inside the targeted popups. Prefer shared component variants
-mapped to Admin UI Theme tokens.
+`border-amber-200` inside the targeted popups. Popup appearance should come from
+shared component variants or semantic classes mapped to Admin UI Theme tokens so
+changes in the `Admin UI Theme` CMS section affect the popup surfaces together
+with the rest of the admin panel.
 
 ## Security Contract
 
@@ -354,11 +367,14 @@ mapped to Admin UI Theme tokens.
    callouts use shared Admin UI token-backed surfaces.
 3. Pages, Posts, Menus, and Content Types list popups and destructive
    confirmations use shared Admin UI token-backed surfaces.
-4. Content Types, Pages, Posts, and Menus paginate list rows client-side after
+4. Changing an Admin UI Theme template can visibly affect targeted popup
+   backgrounds, foreground text, borders, overlays, focus, validation/error,
+   warning, and destructive treatments.
+5. Content Types, Pages, Posts, and Menus paginate list rows client-side after
    filtering/sorting, default to 10 rows, expose the required page-size options,
    and wire functional `Previous` / `Next` controls through one shared
    pagination contract.
-5. Content Types support visible-scope row selection and inline header bulk
+6. Content Types support visible-scope row selection and inline header bulk
    actions.
-6. Bulk publish, move-to-draft, and delete preserve cache consistency,
+7. Bulk publish, move-to-draft, and delete preserve cache consistency,
    confirmation, and partial-failure feedback.
