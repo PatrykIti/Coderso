@@ -30,6 +30,10 @@ No child task files.
     `/coderso/engine/:id` route through `AdminLink`,
   - keep title links pointing to `/entries/:type/:id` so existing editor routing
     is preserved.
+- `core/admin/ui/entries/EntryGrid.tsx` only if the card renderer remains:
+  - accept the same all-entries list item shape,
+  - build each card title link from that row's `contentType.slug`,
+  - do not accept one global `entryTypeSlug` for a cross-type result set.
 - `tests/vitest/ui/entry-table-wave.test.tsx`
 - `tests/vitest/ui/entry-table-title.test.tsx`
 
@@ -57,3 +61,5 @@ No child task files.
 3. Duplicate content-type names remain understandable by including slug/context
    in secondary copy when needed.
 4. Entry title links continue to open the existing entry editor.
+5. If the grid/card renderer remains, it uses the same row-owned content-type
+   context as the table.

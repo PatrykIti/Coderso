@@ -56,6 +56,10 @@ resource-specific list system. The canonical route remains
 
 - Extend current Entries owners. Do not create a second entries manager,
   entries route family, editor flow, table framework, or local pagination copy.
+- Do not keep a stale secondary list/card mode that still depends on one
+  `activeSlug`. The current grid/card surface must either be removed from the
+  first-screen list parity work or upgraded to consume the same all-entries row
+  contract as the table.
 - Own schemas, normalization, and cache keys in the existing service/client
   layers. Routes should stay orchestration-only.
 - Use the shared canonical admin navigation helpers: `AdminLink`,
@@ -81,6 +85,9 @@ resource-specific list system. The canonical route remains
   type-sidebar layout.
 - `core/admin/ui/entries/EntryTable.tsx` owns table row rendering but currently
   lacks content-type metadata, Engine links, and shared pagination.
+- `core/admin/ui/entries/EntryGrid.tsx` is still wired through one
+  `entryTypeSlug`; it cannot remain as a cross-type card/list alternative unless
+  it is upgraded to route each card through the row's owning `contentType.slug`.
 - `core/admin/ui/entries/EntryFilters.tsx` owns always-visible search/type/status
   /author controls; it needs a basic/advanced split instead of a second filter
   flow.

@@ -26,6 +26,8 @@ No child task files.
 
 - `core/admin/ui/entries/EntryList.tsx`
   - replace the primary `SplitShell`/sidebar list layout for the list screen,
+  - remove the old list/grid toggle unless `EntryGrid` is upgraded in the same
+    implementation to consume each row's owning content type,
   - keep breadcrumbs,
   - render `PageHeader title="Entries"`,
   - keep a compact `New` button,
@@ -33,6 +35,8 @@ No child task files.
     flow still needs collection creation from this surface.
 - `tests/vitest/ui/content-entries.test.tsx`
 - `tests/vitest/ui/entry-list-wave.test.tsx`
+- `tests/vitest/ui/entry-table-wave.test.tsx` or a focused card-view suite if
+  the grid/card renderer is kept.
 
 ## Security Contract
 
@@ -59,3 +63,5 @@ No child task files.
 3. The create action label is compact and consistent with the list pattern.
 4. The former type sidebar behavior is represented by filters, not a second
    navigation flow.
+5. The former grid/card toggle is not left behind as a separate `activeSlug`
+   path.

@@ -18,6 +18,12 @@ This is not a new flow. The current `EntryList` remains the route owner for
 `/admin/coderso/entries`; it should consume the all-entries read model, render
 the shared list shell, and navigate to the existing entry editor route.
 
+The existing list/grid toggle is part of the old active-content-type screen
+shape. The parity implementation should remove that toggle unless the same task
+also upgrades the grid/card renderer to the all-entries item contract. A card
+view must not survive as a second Entries flow that routes through one stale
+`activeSlug`.
+
 ## Sub-Tasks
 
 - [ ] TASK-207-02-01: Entry List AdminShell, PageHeader, and Action Layout
@@ -28,6 +34,8 @@ the shared list shell, and navigate to the existing entry editor route.
 
 - `core/admin/ui/entries/EntryList.tsx`
 - `core/admin/ui/entries/EntryTable.tsx`
+- `core/admin/ui/entries/EntryGrid.tsx` only if the card view is intentionally
+  kept and upgraded to the cross-type row contract.
 - `core/admin/ui/entries/EntryCreateDrawer.tsx` only if default content-type
   selection needs to work without a sidebar active slug.
 - `tests/vitest/ui/content-entries.test.tsx`
@@ -62,4 +70,4 @@ the shared list shell, and navigate to the existing entry editor route.
 3. `New` remains available and opens the existing create drawer.
 4. Entry title links still route to `/coderso/entries/:type/:id`.
 5. No editor route or storage contract is duplicated.
-
+6. No stale grid/card view remains wired to a single `activeSlug`.
