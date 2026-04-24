@@ -515,10 +515,14 @@ const replacePostTaxonomies = async (
   postId: string,
   input: { categoryId?: string | null; tagIds?: string[] }
 ): Promise<PostTaxonomyAssignments> => {
-  const normalizedTagIds = Array.from(new Set(input.tagIds ?? [])).filter(Boolean);
+  const shouldUpdateCategory = input.categoryId !== undefined;
+  const shouldUpdateTags = input.tagIds !== undefined;
+  const normalizedTagIds = shouldUpdateTags
+    ? Array.from(new Set(input.tagIds ?? [])).filter(Boolean)
+    : [];
   const termIds = [
-    ...(input.categoryId ? [input.categoryId] : []),
-    ...normalizedTagIds,
+    ...(shouldUpdateCategory && input.categoryId ? [input.categoryId] : []),
+    ...(shouldUpdateTags ? normalizedTagIds : []),
   ];
 
   const termRows =
@@ -540,14 +544,14 @@ const replacePostTaxonomies = async (
     throw new Error("taxonomy_term_missing");
   }
 
-  if (input.categoryId) {
+  if (shouldUpdateCategory && input.categoryId) {
     const category = termRows.find((term) => term.id === input.categoryId) ?? null;
     if (!category || category.kind !== "category") {
       throw new Error("taxonomy_term_invalid");
     }
   }
 
-  if (normalizedTagIds.length > 0) {
+  if (shouldUpdateTags && normalizedTagIds.length > 0) {
     const tagTerms = termRows.filter((term) => normalizedTagIds.includes(term.id));
     const invalid = tagTerms.some((term) => term.kind !== "tag");
     if (invalid) throw new Error("taxonomy_term_invalid");
@@ -560,8 +564,12 @@ const replacePostTaxonomies = async (
       .where(eq(postTermAssignments.postId, postId));
 
     const assignedTermIds = existingAssignments.map((item) => item.termId);
+    const clearKinds = [
+      ...(shouldUpdateCategory ? ["category"] : []),
+      ...(shouldUpdateTags ? ["tag"] : []),
+    ];
     let clearIds: string[] = [];
-    if (assignedTermIds.length > 0) {
+    if (assignedTermIds.length > 0 && clearKinds.length > 0) {
       const clearRows = await tx
         .select({ id: contentTerms.id })
         .from(contentTerms)
@@ -569,7 +577,7 @@ const replacePostTaxonomies = async (
         .where(
           and(
             inArray(contentTerms.id, assignedTermIds),
-            inArray(contentTaxonomies.kind, ["category", "tag"])
+            inArray(contentTaxonomies.kind, clearKinds)
           )
         );
 
@@ -588,8 +596,12 @@ const replacePostTaxonomies = async (
     }
 
     const assignments: Array<{ postId: string; termId: string }> = [];
-    if (input.categoryId) assignments.push({ postId, termId: input.categoryId });
-    normalizedTagIds.forEach((id) => assignments.push({ postId, termId: id }));
+    if (shouldUpdateCategory && input.categoryId) {
+      assignments.push({ postId, termId: input.categoryId });
+    }
+    if (shouldUpdateTags) {
+      normalizedTagIds.forEach((id) => assignments.push({ postId, termId: id }));
+    }
     if (assignments.length > 0) {
       await tx.insert(postTermAssignments).values(assignments);
     }
@@ -740,7 +752,9 @@ export async function updatePostMetadata(
 
   if (input.taxonomy !== undefined) {
     const taxonomy = await replacePostTaxonomies(id, input.taxonomy);
-    nextTags = taxonomy.tags.map((term) => term.name);
+    if (input.taxonomy.tagIds !== undefined) {
+      nextTags = taxonomy.tags.map((term) => term.name);
+    }
   }
 
   const currentSeo = normalizeSeo(existing.seo) ?? {};

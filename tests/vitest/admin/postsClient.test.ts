@@ -153,12 +153,20 @@ test("autosavePost posts payload with CSRF", async () => {
 
   try {
     resetCsrfToken();
-    await autosavePost("post-1", { title: "Autosaved" });
+    await autosavePost("post-1", {
+      title: "Autosaved",
+      tags: ["Launch"],
+      taxonomy: { categoryId: "cat-1" },
+    });
 
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/posts/post-1/autosave");
     const body = JSON.parse(calls[1]?.init?.body as string);
-    expect(body.title).toBe("Autosaved");
+    expect(body).toMatchObject({
+      title: "Autosaved",
+      tags: ["Launch"],
+      taxonomy: { categoryId: "cat-1" },
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -125,3 +125,10 @@ No child task files.
 2. Featured image selection reuses the media picker, shows the chosen asset, and
    accepts image assets only.
 3. The underlying posts metadata payload remains backward compatible.
+
+## Follow-up Notes
+
+- 2026-04-24: Posts metadata persistence now keeps free-text `tags` independent
+  from category-only taxonomy changes. `taxonomy.tagIds` still owns taxonomy tag
+  assignment and may mirror tag names into `posts.tags` only when `tagIds` is
+  explicitly present in the payload.

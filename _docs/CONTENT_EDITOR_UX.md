@@ -99,6 +99,9 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
 - Kategorie sa wybierane z listy kategorii, bez wpisywania surowego term ID.
   Jesli taxonomy overview nie zaladuje sie, inspector pokazuje friendly error i
   retry zamiast surowego SQL/query output.
+- Tags sa zapisywane jako free-text lista w metadata payload. Zmiana kategorii
+  nie czysci wpisanych tagow; taxonomy tagIds nadpisuja tagi tylko gdy sa
+  jawnie wyslane.
 - Featured image reuse’uje `MediaPicker` i ogranicza wybor do `image/*`.
 - Sekcja `Advanced` pokazuje badge `SEO {done}/3` nawet w stanie zwinietym.
 - Pole slug pokazuje:

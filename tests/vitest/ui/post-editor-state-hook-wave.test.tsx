@@ -696,6 +696,38 @@ test("usePostEditorState autosaves dirty content and surfaces autosave api error
   }
 });
 
+test("usePostEditorState autosaves metadata-only tag and category changes", async () => {
+  hookState.cachedPost = hookState.createPost("post-1");
+  hookState.fetchedPost = hookState.cachedPost;
+
+  const view = mountHook();
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    act(() => {
+      view.current().setTagsInput("Launch, News, launch");
+      view.current().setCategoryId("cat-2");
+    });
+    expect(view.current().hasUnsavedChanges).toBe(true);
+
+    await act(async () => {
+      await hookState.autosaveOptions?.onAutosave();
+    });
+    await waitFor(() => view.current().autosaveSaving === false);
+
+    expect(hookState.autosaveCalls).toHaveLength(1);
+    expect(hookState.autosaveCalls[0]?.payload).toMatchObject({
+      tags: ["Launch", "News"],
+      taxonomy: { categoryId: "cat-2" },
+    });
+    expect(view.current().tagsInput).toBe("Launch, News");
+    expect(view.current().categoryId).toBe("cat-2");
+    expect(view.current().hasUnsavedChanges).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("usePostEditorState saveDraft normalizes metadata payload and clears blank featured image", async () => {
   hookState.cachedPost = hookState.createPost("post-1");
   hookState.fetchedPost = hookState.cachedPost;
