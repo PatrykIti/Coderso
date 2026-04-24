@@ -39,11 +39,13 @@ No child task files.
   Entries adapter/config, not a local formatter.
 - Replace local bulk/delete count and partial-failure string construction with
   the shared helper result so inline `setError` and floating `toast.error` use
-  the same message.
+  the same helper-returned `inlineMessage` / `toastMessage` copy.
 - Preserve current `EntryList` orchestration ownership: `handleBulkApply` keeps
   working-state cleanup and non-delete selection cleanup, confirmed delete keeps
   `setDeleteRequest(null)`, and both paths refresh `entries:list:all` through
   `refreshEntries({ force: true, background: true })` before final cleanup.
+  Do not use the shared helper to decide whether selection is retained; it only
+  returns target-aware feedback metadata.
 - Use a generic target-aware helper shape for bulk operations. Entries bulk
   helpers must accept `SelectedEntryRef` / `{ id, typeSlug }` targets instead of
   coercing everything to plain ids, because delete and metadata updates need the
@@ -86,7 +88,7 @@ const handleBulkApply = async () => {
   setError(null);
   try {
     const feedback = await runBulkAction(bulkAction);
-    if (!feedback.ok) setError(feedback.message);
+    if (!feedback.ok) setError(feedback.inlineMessage ?? feedback.toastMessage);
     handleClearSelection();
   } finally {
     setIsBulkWorking(false);
@@ -105,7 +107,7 @@ const confirmDeleteRequest = async () => {
 
   await refreshEntries({ force: true, background: true });
   entriesToast.emitBulkResult(feedback);
-  if (!feedback.ok) setError(feedback.message);
+  if (!feedback.ok) setError(feedback.inlineMessage ?? feedback.toastMessage);
   if (deleteRequest.mode === "bulk") handleClearSelection();
   setDeleteRequest(null);
 };

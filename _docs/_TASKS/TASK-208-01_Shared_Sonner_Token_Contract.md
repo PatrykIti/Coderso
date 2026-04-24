@@ -16,7 +16,9 @@ new notification calls.
 
 The implementation must keep a single `<Toaster />` host in `AdminApp` and make
 normal, success, error, warning, and info toasts derive their visual treatment
-from Admin UI Theme variables. Sonner's documented `richColors` prop should
+from Admin UI Theme variables. Info uses the neutral popover token set unless a
+separate token-contract task adds a first-class Admin UI Theme info state.
+Sonner's documented `richColors` prop should
 remain enabled because Sonner uses it to apply typed success/error/warning/info
 state selectors. The shared wrapper must override the Sonner state CSS variables
 with Admin UI Theme tokens so new list toasts do not reproduce the current

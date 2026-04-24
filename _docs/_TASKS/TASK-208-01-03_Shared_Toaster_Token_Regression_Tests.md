@@ -32,11 +32,11 @@ No child task files.
   token-backed style map instead of replacing it.
 - Add a rendered or CSS-selector contract proof for the visible floating toast
   surface. The proof must cover the shell, title/description text, border, close
-  button, and typed success/error/warning/info state colors with a custom Admin
-  UI Theme token fixture. If `happy-dom` cannot reliably resolve CSS variables
-  for Sonner's generated DOM, assert the wrapper host variables plus the scoped
-  `.toaster [data-sonner-toast]` selectors that override Sonner hard-coded
-  description and close-button styles.
+  button, typed success/error/warning state colors, and neutral info variables
+  with a custom Admin UI Theme token fixture. If `happy-dom` cannot reliably
+  resolve CSS variables for Sonner's generated DOM, assert the wrapper host
+  variables plus the scoped `.toaster [data-sonner-toast]` selectors that
+  override Sonner hard-coded description and close-button styles.
 - Keep the direct wrapper test Bun-free and inside the Vitest admin/UI lane.
 
 ## Pseudocode

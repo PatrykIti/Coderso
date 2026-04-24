@@ -15,14 +15,18 @@ Make `core/admin/components/ui/sonner.tsx` the shared owner for token-backed
 toast state styling.
 
 The current wrapper maps only normal toast background/text/border variables.
-This leaf adds success, error, warning, and info state variables backed by Admin
-UI Theme tokens. Sonner's documented `richColors` prop reads these state
-variables when rendering typed `toast.success`, `toast.error`, `toast.warning`,
-and `toast.info` notifications. It must preserve the existing dynamic theme
-handoff from `useTheme()` so Admin UI Theme mode changes update all toast states
-through runtime CSS variables. The visual contract covers the entire floating
-toast window: shell, title, description text, border, close button, focus state,
-and typed state colors must all derive from the active Admin UI Theme
+This leaf adds success, error, warning, and info Sonner variables without
+inventing a new Admin UI Theme token family. Success, warning, and error map to
+the existing `state.success`, `state.warning`, and `state.danger` tokens. Info
+uses the neutral popover/background token set unless a separate token-contract
+task adds a first-class Admin UI Theme info state. Sonner's documented
+`richColors` prop reads these state variables when rendering typed
+`toast.success`, `toast.error`, `toast.warning`, and `toast.info`
+notifications. It must preserve the existing dynamic theme handoff from
+`useTheme()` so Admin UI Theme mode changes update all toast states through
+runtime CSS variables. The visual contract covers the entire floating toast
+window: shell, title, description text, border, close button, focus state, and
+typed state colors must all derive from the active Admin UI Theme
 template/profile.
 
 ## Sub-Tasks
@@ -57,6 +61,9 @@ No child task files.
   - `--admin-state-success`,
   - `--admin-state-danger`,
   - `--admin-state-warning`.
+- Do not introduce `--admin-state-info` in this task. Map Sonner's `--info-*`
+  variables to neutral Admin UI Theme variables unless the Admin UI Theme token
+  schema is extended by a separate task.
 - Prefer the wrapper `style` map because Sonner applies it to the toaster host
   and its rich-color selectors read CSS variables from that host. Add a shared
   selector block in `core/admin/styles/globals.css` scoped to
@@ -149,7 +156,8 @@ variables:
 
 - `tests/vitest/admin/sonner.test.tsx`
   - render the wrapper directly or through a focused mock,
-  - assert success/error/warning/info variables contain Admin UI token names,
+  - assert success/error/warning variables contain Admin UI state token names
+    and info variables contain neutral Admin UI popover token names,
   - assert normal, state, description, border, and close-button styling is
     backed by Admin UI Theme variables or by `.toaster`-scoped shared CSS,
   - assert toast and close-button focus rings plus close-button hover styling do

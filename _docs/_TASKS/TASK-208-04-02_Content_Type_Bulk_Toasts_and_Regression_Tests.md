@@ -25,7 +25,8 @@ No child task files.
 - Preserve current `bulkFeedback` state.
 - On full success, call the shared list-action success helper.
 - On partial/full failure, call the shared list-action error helper with the
-  same truthful helper-returned message used inline.
+  same truthful helper-returned `inlineMessage` / `toastMessage` copy used
+  inline.
 - Keep bulk delete confirmation dialog and only emit delete toast after confirm.
 - Preserve the current state model: failures set `setError(message)` and keep
   failed IDs selected; full success clears selection and may keep the existing
@@ -48,7 +49,7 @@ const runBulkAction = async (action, ids) => {
 
   if (!feedback.ok) {
     setSelectedIds(feedback.failedTargets);
-    setError(feedback.message);
+    setError(feedback.inlineMessage ?? feedback.toastMessage);
     contentTypeToast.emitBulkResult(feedback);
     return;
   }

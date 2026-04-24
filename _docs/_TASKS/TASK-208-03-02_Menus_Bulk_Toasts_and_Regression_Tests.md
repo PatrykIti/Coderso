@@ -31,6 +31,10 @@ No child task files.
     message.
 - Keep bulk delete confirmation dialog; do not toast until the confirm button
   triggers `runBulkAction("delete", pendingBulkDeleteIds)`.
+- Preserve the current Menus bulk selection cleanup behavior. `MenuListPage`
+  clears selection after refresh even when some selected mutations fail; adding
+  a shared toast must not retain failed selections unless a separate task changes
+  that contract.
 
 ## Pseudocode
 
@@ -39,14 +43,14 @@ const runBulkAction = async (action, ids) => {
   const results = await Promise.allSettled(ids.map((id) => mutateMenu(action, id)));
   const feedback = menusToast.bulkResult({ action, targets: ids, results });
   await refresh({ force: true, background: true });
+  handleClearSelection();
 
   if (!feedback.ok) {
-    setError(feedback.message);
+    setError(feedback.inlineMessage ?? feedback.toastMessage);
     menusToast.emitBulkResult(feedback);
     return;
   }
 
-  handleClearSelection();
   menusToast.emitBulkResult(feedback);
 };
 ```

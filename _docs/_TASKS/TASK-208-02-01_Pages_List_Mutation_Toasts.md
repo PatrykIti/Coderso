@@ -45,9 +45,13 @@ No child task files.
   - full success: emit the helper result after the existing refresh/selection
     cleanup path,
   - partial/full failure: preserve inline feedback by using the helper-returned
-    `message` and emit the same helper result as the top-right error toast.
-  The shared helper owns final message, plural/count handling, and failure
-  summary math.
+    `inlineMessage` or `toastMessage` and emit the same helper result as the
+    top-right error toast.
+  The shared helper owns final `toastMessage` / `inlineMessage` copy,
+  plural/count handling, and failure summary math.
+- Preserve the current Pages bulk selection behavior. `PageListPage` currently
+  clears selection after the bulk refresh even when some selected mutations fail;
+  adding toasts must not silently change that behavior.
 - Do not introduce local page upsert/status/remove helpers only for toast
   delivery. Pages currently refresh after mutations; keep that orchestration and
   add the shared toast at the end of the same success/error branch.
@@ -115,14 +119,14 @@ const results = await Promise.allSettled(ids.map((id) => runPageMutation(action,
 const feedback = pagesToast.bulkResult({ action, targets: ids, results });
 
 await refresh({ force: true, background: true });
+handleClearSelection();
 
 if (!feedback.ok) {
-  setError(feedback.message);
+  setError(feedback.inlineMessage ?? feedback.toastMessage);
   pagesToast.emitBulkResult(feedback);
   return;
 }
 
-handleClearSelection();
 pagesToast.emitBulkResult(feedback);
 ```
 

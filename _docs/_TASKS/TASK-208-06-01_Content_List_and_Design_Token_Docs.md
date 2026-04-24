@@ -36,7 +36,9 @@ No child task files.
     variables,
   - Sonner rich/default hard-coded palettes are not allowed to remain the visual
     source of truth for admin toasts,
-  - normal/success/error/warning/info states map through shared tokens,
+  - normal/success/error/warning states map through shared tokens and info maps
+    to the neutral popover token set unless a separate token-contract task adds
+    an Admin UI Theme info state,
   - floating toast shell, title, description, border, focus/close affordance,
     and typed state colors inherit from the active Admin UI Theme
     template/profile,

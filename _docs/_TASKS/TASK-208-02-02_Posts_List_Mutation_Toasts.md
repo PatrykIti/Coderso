@@ -49,6 +49,8 @@ No child task files.
 - Do not copy the Pages implementation as a local formatter. Posts should use
   the same generic helper API with a Posts adapter and keep the current
   `refresh`, `bulkFeedback`, selection cleanup, and navigation behavior.
+  Posts currently clear selection after the bulk refresh before surfacing
+  partial-failure copy; adding toasts must preserve that cleanup behavior.
 
 ## Pseudocode
 
@@ -120,15 +122,15 @@ const results = await Promise.allSettled(ids.map((id) => runPostMutation(action,
 const feedback = postsToast.bulkResult({ action, targets: ids, results });
 
 await refresh({ force: true, background: true });
+clearSelection();
 
 if (!feedback.ok) {
   setBulkFeedback(null);
-  setError(feedback.message);
+  setError(feedback.inlineMessage ?? feedback.toastMessage);
   postsToast.emitBulkResult(feedback);
   return;
 }
 
-clearSelection();
 setBulkFeedback({
   title: "Bulk action completed",
   message: feedback.inlineMessage,

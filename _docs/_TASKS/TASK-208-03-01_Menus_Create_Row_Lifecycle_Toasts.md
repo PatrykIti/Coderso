@@ -27,8 +27,11 @@ No child task files.
 - Handle create success in `handleCreate` after `createMenu` succeeds and the
   list is updated.
 - For create failure, either:
-  - catch in `handleCreate`, call the shared error-toast helper, then rethrow
-    `new Error(message)` so `MenuCreateDialog` keeps local error copy; or
+  - catch in `handleCreate`, call the shared error-toast helper, and rethrow
+    `new Error(message)` so `MenuCreateDialog` keeps the create-local error
+    copy; do not also write the create failure into the list-level `error`
+    state, because that state renders under the list-level `Unable to load
+    menus` alert; or
   - emit through the same shared helper from `MenuCreateDialog` catch if the
     dialog remains the owner of normalized failure copy.
   Top-right error toasts are only for rejected `createMenu` mutations/API
@@ -64,7 +67,6 @@ const handleCreate = async (payload) => {
     return created;
   } catch (error) {
     const message = menusToast.errorMessage(error, "create");
-    setError(message);
     menusToast.error(message);
     throw new Error(message);
   }

@@ -30,7 +30,9 @@ documented `richColors` prop is the correct trigger for typed success, error,
 warning, and info state selectors, but the shared wrapper must override the
 Sonner state CSS variables with Admin UI Theme variables. All normal, success,
 warning, info, and error toast surfaces must be driven by Admin UI Theme tokens
-and shared admin CSS variables. This includes the toast shell, background,
+and shared admin CSS variables. Info uses the neutral Admin UI popover token set
+unless a separate Admin UI Theme token-contract task adds a first-class info
+state. This includes the toast shell, background,
 foreground text, description text, border, focus/close affordance, and typed
 state surfaces; no visible part of the floating toast may rely on Sonner's
 bundled black/green/red/yellow/blue or gray palettes. Those variables must remain
@@ -59,7 +61,7 @@ contract is still uneven:
 | Menus | create dialog/list lifecycle actions use local or inline errors | no top-right toast for create/publish/unpublish/delete success or failure |
 | Engine content types | create, duplicate, and row delete already use `toast`; bulk publish/draft/delete mostly rely on inline feedback or error only | bulk state changes do not consistently toast; create errors remain local-only |
 | Entries | duplicate, bulk update, and delete already use `toast`; create success/error is not fully covered | create from list needs the same top-right success/error contract |
-| Shared toaster | `AdminApp` mounts one top-right `<Toaster richColors />`; `sonner.tsx` maps only normal toast colors | success/error/warning/info variables, description text, and close-button styling still fall back to Sonner defaults unless the wrapper/global scoped selectors override them with Admin UI Theme tokens |
+| Shared toaster | `AdminApp` mounts one top-right `<Toaster richColors />`; `sonner.tsx` maps only normal toast colors | success/error/warning variables, neutral info variables, description text, and close-button styling still fall back to Sonner defaults unless the wrapper/global scoped selectors override them with Admin UI Theme tokens |
 
 ## Scope
 
@@ -212,7 +214,7 @@ Shared toaster and token layer:
     intentionally rich-color enabled through the shared token-backed wrapper.
 - `tests/vitest/admin/sonner.test.tsx`
   - render the shared wrapper directly and assert token-backed dynamic style
-    variables for normal, success, error, warning, and info states.
+    variables for normal, success, error, warning, and neutral info states.
   - include a rendered or CSS-selector contract proof that a custom Admin UI
     Theme template/profile controls the visible floating toast shell, title,
     description, border, and close button, not Sonner's bundled hard-coded
@@ -231,10 +233,16 @@ Shared list-action feedback:
     contract.
   - expose helpers that can normalize `unknown` errors and summarize
     `Promise.allSettled` output into a typed result such as
-    `{ ok, action, message, succeededCount, failedCount, failedTargets }`.
-    Resource screens may use the returned `failedTargets` for selection cleanup
-    and the returned `message` for existing inline feedback, but they must not
-    rebuild the same count, pluralization, or partial-failure copy locally.
+    `{ ok, action, toastMessage, inlineMessage, succeededCount, failedCount, failedTargets }`.
+    `toastMessage` is the final floating toast copy; `inlineMessage` is the
+    optional screen alert copy and may match `toastMessage` when no shorter
+    inline copy is needed.
+  - resource screens may use `failedTargets`, `toastMessage`, and
+    `inlineMessage`, but they must preserve their current selection cleanup
+    semantics instead of letting the helper decide whether failed rows remain
+    selected. Content Types currently keep failed IDs selected; Pages, Posts,
+    Menus, and Entries must keep their existing cleanup behavior unless a
+    separate parity task explicitly changes it.
   - expose one emit helper for the final `toast.success`/`toast.error` call so
     resource screens do not branch into local `toast.success` / `toast.error`
     calls for targeted list actions.
@@ -352,11 +360,11 @@ adjacent focused Vitest suite in the same validation run.
 4. The admin app still has exactly one shared toaster host mounted from
    `AdminApp` with top-right positioning, `richColors`, close button, duration,
    and accessible notification labeling.
-5. Normal, success, error, warning, and info toast visuals are controlled by
-   Admin UI Theme tokens through the shared Sonner CSS variable map and any
-   required scoped Sonner selectors. Light themes must not render Sonner's
-   default rich-color palette unless the active theme tokens explicitly define
-   that look.
+5. Normal, success, error, warning, and neutral info toast visuals are
+   controlled by Admin UI Theme tokens through the shared Sonner CSS variable
+   map and any required scoped Sonner selectors. Light themes must not render
+   Sonner's default rich-color palette unless the active theme tokens explicitly
+   define that look.
 6. The floating toast shell, title, description, border, focus/close affordance,
    and typed state colors all inherit from the active Admin UI Theme
    template/profile and are covered by focused regression tests.
