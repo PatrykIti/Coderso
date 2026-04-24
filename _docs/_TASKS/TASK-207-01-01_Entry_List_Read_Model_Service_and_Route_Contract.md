@@ -29,7 +29,7 @@ No child task files.
   - order by `contentEntries.updatedAt desc`,
   - include existing entry summary fields plus `contentType`.
 - `core/server/routes/contentEntryRoutes.ts`
-  - add an internal all-entries GET route,
+  - add the internal all-entries GET route at `/content-entries`,
   - validate `ctx.query` with the schema owner before delegating,
   - keep type-scoped routes unchanged.
 - `core/server/validation/contentSchemas.ts`
@@ -52,7 +52,7 @@ Route sketch:
 
 ```ts
 router.get(
-  "/content/entries",
+  "/content-entries",
   requirePermission("content:read"),
   async (ctx) => {
     validate(contentEntryAllEntriesQuerySchema, ctx.query);
@@ -61,9 +61,13 @@ router.get(
 );
 ```
 
-If the route matcher has an exact-path concern, choose a non-conflicting path
-such as `/content-entries` and document the final path in this task before
-implementation.
+The path is intentionally not `/content/entries`. The current server router
+matches registered route definitions in order, and the repo already owns
+`GET /content/:type/entries` for type-scoped reads. A `/content/entries` route
+would either be captured as `type = "entries"` when registered after the dynamic
+route, or would reserve `entries` as a special content-type slug when registered
+before it. Keep the additive all-entries contract on `/content-entries` and
+leave `/content/:type/entries` unchanged.
 
 ## Security Contract
 
@@ -86,13 +90,15 @@ implementation.
     and proves `listEntriesWithContentTypes()` returns one `updatedAt desc`
     all-entries result set with row-owned `contentType` metadata.
 - `bun test tests/integration/routes/contentTypes.test.ts`
-  - assert the final all-entries route path is registered explicitly.
+  - assert `GET /content-entries` is registered explicitly.
   - assert the route requests `content:read` before returning data.
   - assert a queryless route rejects unsupported query params, for example
-    `?status=draft`, through the `contentSchemas.ts` schema owner instead of
-    ignoring them or silently enabling server-side filtering.
+    `/content-entries?status=draft`, through the `contentSchemas.ts` schema
+    owner instead of ignoring them or silently enabling server-side filtering.
   - assert the existing type-scoped entry list route remains registered and
     continues to resolve through `/content/:type/entries`.
+  - assert the new all-entries route does not depend on route registration order
+    against `/content/:type/entries`.
 
 ## Documentation Updates Required
 

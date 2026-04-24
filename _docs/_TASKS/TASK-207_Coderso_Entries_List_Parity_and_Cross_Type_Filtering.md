@@ -71,6 +71,11 @@ resource-specific list system. The canonical route remains
   relation fields, and assistant action invalidation.
 - Add the cross-type list read model additively; do not break
   `listEntriesCached(typeSlug)`.
+- The final cross-type admin read route is `GET /content-entries` under the
+  existing internal admin API prefix. Do not use `GET /content/entries` for this
+  task: the current router matches registered routes in order and the existing
+  `GET /content/:type/entries` route would either capture it as
+  `type = "entries"` or force `entries` to become a reserved content-type slug.
 - Use client-side filtering/pagination like the current Pages/Posts/Menus/Engine
   lists unless a later task explicitly introduces server-side pagination.
 - Reuse the existing shared admin cache pattern: cache keys in
@@ -100,7 +105,9 @@ resource-specific list system. The canonical route remains
 - `core/admin/services/entriesClient.ts` owns type-scoped list/detail caches and
   write invalidation. It has no all-entries list cache.
 - `core/server/routes/contentEntryRoutes.ts` exposes only type-scoped entry list
-  reads. A cross-type internal read route is needed for a true all-entries list.
+  reads. `GET /content-entries` is the cross-type internal read route for the
+  true all-entries list; `/content/:type/entries` remains the type-scoped
+  contract for editors, widgets, relation fields, and existing clients.
 - `core/server/validation/contentSchemas.ts` owns content-entry request/query
   validation. The all-entries route strictness must be expressed there with an
   empty query schema, then consumed by the route via `validate(...)`; do not add
@@ -192,7 +199,7 @@ resource-specific list system. The canonical route remains
 - Bun route/service tests when the read route/service changes:
   - `bun test tests/unit/content/entryService.test.ts`
   - `bun test tests/integration/routes/contentTypes.test.ts`
-  - route coverage must include the all-entries route registration,
+  - route coverage must include `GET /content-entries` registration,
     `content:read` permission, unsupported-query rejection for the queryless
     contract through the `contentSchemas.ts` schema owner, and regression
     coverage that `/content/:type/entries` remains available for existing

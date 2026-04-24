@@ -65,8 +65,11 @@ without joining data in the component.
 ## Security Contract
 
 - Visibility: internal admin read route only.
-- Endpoint: add an internal all-entries GET route, for example
-  `GET /admin/api/content/entries`.
+- Endpoint: add the internal all-entries GET route as
+  `GET /admin/api/content-entries`.
+  Do not use `GET /admin/api/content/entries`, because the existing
+  type-scoped `GET /admin/api/content/:type/entries` route would collide with
+  it under the current ordered route matcher.
 - Auth model: authenticated admin session / admin API key where supported.
 - RBAC: `content:read`.
 - CSRF: not required for GET reads.
@@ -81,9 +84,10 @@ without joining data in the component.
 
 - `bun test tests/unit/content/entryService.test.ts`
 - `bun test tests/integration/routes/contentTypes.test.ts`
-- Route strictness coverage must prove the all-entries GET validates
+- Route strictness coverage must prove `GET /content-entries` validates
   `ctx.query` through the content schema owner and rejects an unsupported query
-  such as `?status=draft`.
+  such as `/content-entries?status=draft`, while the existing
+  `/content/:type/entries` route remains type-scoped.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
 
 ## Documentation Updates Required
