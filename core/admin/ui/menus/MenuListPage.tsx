@@ -53,7 +53,10 @@ import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { MenuCreateDialog } from "@/ui/menus/MenuCreateDialog";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 
@@ -447,6 +450,9 @@ export function MenuListPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<MenuBulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
   const hasHydratedRef = useRef(hasInitialCache);
   const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
     const force = options?.force ?? false;
@@ -521,9 +527,16 @@ export function MenuListPage() {
     () => filterMenus(items, searchQuery, statusFilter, locationFilter),
     [items, searchQuery, statusFilter, locationFilter]
   );
+  const pagination = useListPagination(filteredItems, {
+    resetKey: JSON.stringify({
+      searchQuery,
+      statusFilter,
+      locationFilter,
+    }),
+  });
   const visibleIds = useMemo(
-    () => filteredItems.map((item) => item.id),
-    [filteredItems]
+    () => pagination.visibleRows.map((item) => item.id),
+    [pagination.visibleRows]
   );
   const selectedCount = selectedIds.length;
   const isAllSelected =
@@ -569,24 +582,26 @@ export function MenuListPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Delete this menu? This cannot be undone."
-      );
-      if (!confirmed) return;
-    }
+  const runDelete = async (id: string) => {
+    setDeletingId(id);
     setError(null);
     try {
       await deleteMenu(id);
       await refresh({ force: true, background: true });
+      setPendingDeleteId(null);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
       } else {
         setError("Failed to delete menu.");
       }
+    } finally {
+      setDeletingId(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
   };
 
   const handleToggleMenu = (id: string) => {
@@ -604,23 +619,15 @@ export function MenuListPage() {
     setBulkAction("");
   };
 
-  const handleBulkApply = async () => {
-    if (!bulkAction || selectedIds.length === 0) return;
-
-    if (bulkAction === "delete" && typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        `Delete ${selectedIds.length} menu${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`
-      );
-      if (!confirmed) return;
-    }
-
+  const runBulkAction = async (action: MenuBulkActionValue, ids: string[]) => {
+    if (ids.length === 0) return;
     setError(null);
     setIsBulkWorking(true);
     try {
       const results = await Promise.allSettled(
-        selectedIds.map((id) => {
-          if (bulkAction === "publish") return publishMenu(id);
-          if (bulkAction === "unpublish") return moveMenuToDraft(id);
+        ids.map((id) => {
+          if (action === "publish") return publishMenu(id);
+          if (action === "unpublish") return moveMenuToDraft(id);
           return deleteMenu(id);
         })
       );
@@ -634,13 +641,25 @@ export function MenuListPage() {
       if (failedCount > 0) {
         setError(
           failedCount === results.length
-            ? `Bulk ${bulkAction} failed for ${failedCount} selected menu${failedCount === 1 ? "" : "s"}.`
-            : `Bulk ${bulkAction} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
+            ? `Bulk ${action} failed for ${failedCount} selected menu${failedCount === 1 ? "" : "s"}.`
+            : `Bulk ${action} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
         );
       }
     } finally {
       setIsBulkWorking(false);
+      setPendingBulkDeleteIds([]);
     }
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+
+    if (bulkAction === "delete") {
+      setPendingBulkDeleteIds(selectedIds);
+      return;
+    }
+
+    void runBulkAction(bulkAction, selectedIds);
   };
 
   return (
@@ -701,7 +720,7 @@ export function MenuListPage() {
           </div>
         ) : (
           <MenuListTable
-            items={filteredItems}
+            items={pagination.visibleRows}
             emptyMessage={
               items.length > 0
                 ? "No menus match your current filters."
@@ -718,25 +737,43 @@ export function MenuListPage() {
             onDelete={handleDelete}
           />
         )}
-        <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Showing {filteredItems.length} of {items.length} menus
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              Previous
-            </Button>
-            <Button variant="outline" size="sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <ListPaginationFooter
+          resourceLabel="menus"
+          pagination={pagination}
+          isLoading={isLoading}
+        />
       </div>
 
       <MenuCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={handleCreate}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+        title="Delete menu?"
+        description="Delete this menu? This cannot be undone."
+        confirmLabel="Delete menu"
+        confirmingLabel="Deleting..."
+        isConfirming={deletingId === pendingDeleteId}
+        onConfirm={() => {
+          if (pendingDeleteId) return runDelete(pendingDeleteId);
+        }}
+      />
+      <ConfirmActionDialog
+        open={pendingBulkDeleteIds.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setPendingBulkDeleteIds([]);
+        }}
+        title="Delete selected menus?"
+        description={`Delete ${pendingBulkDeleteIds.length} menu${pendingBulkDeleteIds.length === 1 ? "" : "s"}? This cannot be undone.`}
+        confirmLabel="Delete selected"
+        confirmingLabel="Deleting..."
+        isConfirming={isBulkWorking}
+        onConfirm={() => runBulkAction("delete", pendingBulkDeleteIds)}
       />
     </AdminShell>
   );

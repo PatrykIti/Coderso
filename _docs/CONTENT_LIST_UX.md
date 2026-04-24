@@ -28,6 +28,30 @@ Gdy zaznaczysz wpisy na liscie:
 - Zaznaczenie dotyczy wpisow widocznych po filtrach.
 - W widoku grid selection jest czyszczone, aby uniknac ukrytych zaznaczen.
 
+## Shared Admin List Pagination
+
+- Content Types, Pages, Posts, and Menus use one shared client-side pagination
+  owner:
+  - `core/admin/ui/shared/useListPagination.ts` owns page-size normalization,
+    page index, clamping, range metadata, and visible-row slicing.
+  - `core/admin/ui/shared/ListPaginationFooter.tsx` owns the footer UI,
+    page-size selector, count copy, and `Previous` / `Next` controls.
+- Lists keep their own search, filters, sort, loading state, empty state,
+  resource copy, and write orchestration. They pass the filtered/sorted rows
+  into the shared pagination contract.
+- Default page size is `10`.
+- Page-size options are `10`, `20`, `30`, `50`, `100`, `150`, `200`, and
+  `500`.
+- Footer copy is based on the filtered set, for example
+  `Showing 1-10 of 42 pages`; empty lists render truthful zero-state copy.
+- Search, status filters, resource-specific filters, and sorting happen before
+  pagination.
+- Filter, sort, and page-size changes reset or clamp the page index so the
+  footer never points to an empty hidden page.
+- Header selection consumers select only the current paginated visible rows.
+  Hidden rows from other pages are trimmed from selection before bulk actions
+  can mutate them.
+
 ## Entries parity
 
 - Entries sidebar groups content types into populated and empty collections,
@@ -55,8 +79,9 @@ Gdy zaznaczysz wpisy na liscie:
   - Delete
 - Po bulk action selection jest czyszczone, lista odswiezana, a wynik surfacowany
   jako success lub partial-failure message.
-- Stopka listy pokazuje liczbe widocznych postow wzgledem pelnej listy oraz
-  zachowuje ten sam uklad `Previous` / `Next` co Pages i Menus.
+- Stopka listy korzysta ze wspolnego kontraktu paginacji, pokazuje zakres
+  widocznych postow wzgledem przefiltrowanej listy i obsluguje prawdziwe
+  `Previous` / `Next`.
 
 ## Pages parity
 
@@ -69,6 +94,26 @@ Gdy zaznaczysz wpisy na liscie:
 - Pages list rows keep real author identity from authoritative list payloads;
   detail or mutation payloads that do not resolve `author` must not overwrite
   cached list author state.
+- Pages list uses the shared admin pagination footer after filtering and keeps
+  header selection scoped to the current visible page.
+
+## Content Types parity
+
+- Content Types use the same shared pagination footer as Pages, Posts, and
+  Menus after search, status filtering, and table sorting.
+- The Content Types table receives only the current visible paginated rows.
+- Header selection applies only to the current visible page. Page, filter, sort,
+  and page-size changes trim hidden IDs from selection.
+- Bulk controls render inline in the header actions area beside `New` and
+  support:
+  - Publish,
+  - Move to Draft,
+  - Delete.
+- Bulk publish and draft reuse the existing content type update client contract.
+- Bulk delete reuses the existing content type delete client contract and the
+  existing service guards; guarded failures are reported as partial-failure
+  copy instead of being hidden.
+- Destructive row and bulk delete use the shared Admin UI confirmation dialog.
 
 ## Menus parity
 
@@ -92,3 +137,5 @@ Gdy zaznaczysz wpisy na liscie:
 - Menus persist whole-menu lifecycle state via `draft` / `published`.
   Existing menus migrate as `published` so public navigation does not disappear;
   new menus default to `draft`.
+- Menus list uses the shared admin pagination footer after filtering and keeps
+  header selection scoped to the current visible page.

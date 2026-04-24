@@ -1,4 +1,5 @@
 import { History, RotateCcw, Trash2, X } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { PageRevision } from "@/services/pagesClient";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 export type PageRevisionDrawerProps = {
   open: boolean;
@@ -48,131 +50,164 @@ export function PageRevisionDrawer({
   onRestore,
   onDiscard,
 }: PageRevisionDrawerProps) {
+  const [pendingRestore, setPendingRestore] = useState<PageRevision | null>(null);
+  const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
+
   const handleRestore = (revision: PageRevision) => {
-    const label =
-      revision.kind === "autosave"
-        ? "Restore this autosave? Current unsaved changes may be overwritten."
-        : "Restore this revision? Current unsaved changes may be overwritten.";
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(label);
-      if (!confirmed) return;
-    }
-    onRestore(revision.id);
+    setPendingRestore(revision);
   };
 
   const handleDiscard = (revisionId: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Discard this autosave? It will be removed from history."
-      );
-      if (!confirmed) return;
-    }
-    onDiscard(revisionId);
+    setPendingDiscardId(revisionId);
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        showCloseButton={false}
-        className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
-      >
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div className="space-y-1">
-            <SheetTitle>Page history</SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground">
-              Restore published revisions or manage the latest settings autosave.
-            </SheetDescription>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
+        >
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div className="space-y-1">
+              <SheetTitle>Page history</SheetTitle>
+              <SheetDescription className="text-xs text-muted-foreground">
+                Restore published revisions or manage the latest settings autosave.
+              </SheetDescription>
+            </div>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close page history">
+                <X className="h-4 w-4" />
+              </Button>
+            </SheetClose>
           </div>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close page history">
-              <X className="h-4 w-4" />
-            </Button>
-          </SheetClose>
-        </div>
 
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="space-y-4 px-6 py-6">
-            {isLoading ? (
-              <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                Loading revisions...
-              </div>
-            ) : error ? (
-              <div className="rounded-xl border border-destructive/40 bg-background p-6 text-center text-sm text-destructive">
-                {error}
-              </div>
-            ) : revisions.length === 0 ? (
-              <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                No revisions yet.
-              </div>
-            ) : (
-              revisions.map((revision) => {
-                const author = revision.createdBy?.name?.trim()
-                  ? revision.createdBy.name
-                  : revision.createdBy?.email || "System";
-                const label =
-                  revision.kind === "autosave"
-                    ? "Not saved"
-                    : `Version ${revision.version}`;
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-4 px-6 py-6">
+              {isLoading ? (
+                <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  Loading revisions...
+                </div>
+              ) : error ? (
+                <div className="rounded-xl border border-destructive/40 bg-background p-6 text-center text-sm text-destructive">
+                  {error}
+                </div>
+              ) : revisions.length === 0 ? (
+                <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  No revisions yet.
+                </div>
+              ) : (
+                revisions.map((revision) => {
+                  const author = revision.createdBy?.name?.trim()
+                    ? revision.createdBy.name
+                    : revision.createdBy?.email || "System";
+                  const label =
+                    revision.kind === "autosave"
+                      ? "Not saved"
+                      : `Version ${revision.version}`;
 
-                return (
-                  <div key={revision.id} className="space-y-3 rounded-xl border bg-background p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold">{label}</p>
-                          <Badge
-                            variant={revision.kind === "autosave" ? "secondary" : "outline"}
-                            className="text-[10px] uppercase"
-                          >
-                            {revision.kind === "autosave" ? "Autosave" : "Published"}
-                          </Badge>
+                  return (
+                    <div key={revision.id} className="space-y-3 rounded-xl border bg-background p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold">{label}</p>
+                            <Badge
+                              variant={revision.kind === "autosave" ? "secondary" : "outline"}
+                              className="text-[10px] uppercase"
+                            >
+                              {revision.kind === "autosave" ? "Autosave" : "Published"}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTimestamp(revision.createdAt)} · {author}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {formatTimestamp(revision.createdAt)} · {author}
-                        </p>
+                        <History className="mt-0.5 h-4 w-4 text-muted-foreground" />
                       </div>
-                      <History className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                    </div>
 
-                    {revision.title || revision.slug ? (
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        {revision.title ? <p>Title: {revision.title}</p> : null}
-                        {revision.slug ? <p>Slug: {revision.slug}</p> : null}
-                      </div>
-                    ) : null}
+                      {revision.title || revision.slug ? (
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          {revision.title ? <p>Title: {revision.title}</p> : null}
+                          {revision.slug ? <p>Slug: {revision.slug}</p> : null}
+                        </div>
+                      ) : null}
 
-                    <Separator />
+                      <Separator />
 
-                    <div className="flex items-center justify-end gap-2">
-                      {revision.kind === "autosave" ? (
+                      <div className="flex items-center justify-end gap-2">
+                        {revision.kind === "autosave" ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={discardingId === revision.id}
+                            onClick={() => handleDiscard(revision.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {discardingId === revision.id ? "Discarding..." : "Discard"}
+                          </Button>
+                        ) : null}
                         <Button
                           size="sm"
-                          variant="ghost"
-                          disabled={discardingId === revision.id}
-                          onClick={() => handleDiscard(revision.id)}
+                          variant="outline"
+                          disabled={restoringId === revision.id}
+                          onClick={() => handleRestore(revision)}
                         >
-                          <Trash2 className="h-4 w-4" />
-                          {discardingId === revision.id ? "Discarding..." : "Discard"}
+                          <RotateCcw className="h-4 w-4" />
+                          {restoringId === revision.id ? "Restoring..." : "Restore"}
                         </Button>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={restoringId === revision.id}
-                        onClick={() => handleRestore(revision)}
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        {restoringId === revision.id ? "Restoring..." : "Restore"}
-                      </Button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+      <ConfirmActionDialog
+        open={Boolean(pendingRestore)}
+        onOpenChange={(next) => {
+          if (!next) setPendingRestore(null);
+        }}
+        title={
+          pendingRestore?.kind === "autosave"
+            ? "Restore autosave?"
+            : "Restore revision?"
+        }
+        description={
+          pendingRestore?.kind === "autosave"
+            ? "Restore this autosave? Current unsaved changes may be overwritten."
+            : "Restore this revision? Current unsaved changes may be overwritten."
+        }
+        confirmLabel="Restore"
+        confirmingLabel="Restoring..."
+        isConfirming={restoringId === pendingRestore?.id}
+        onConfirm={() => {
+          if (!pendingRestore) return;
+          onRestore(pendingRestore.id);
+          setPendingRestore(null);
+        }}
+      >
+        Current editor state can be replaced by the selected snapshot.
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
+        open={Boolean(pendingDiscardId)}
+        onOpenChange={(next) => {
+          if (!next) setPendingDiscardId(null);
+        }}
+        title="Discard autosave?"
+        description="Discard this autosave? It will be removed from history."
+        confirmLabel="Discard autosave"
+        confirmingLabel="Discarding..."
+        isConfirming={discardingId === pendingDiscardId}
+        onConfirm={() => {
+          if (!pendingDiscardId) return;
+          onDiscard(pendingDiscardId);
+          setPendingDiscardId(null);
+        }}
+      />
+    </>
   );
 }

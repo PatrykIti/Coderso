@@ -4,47 +4,49 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-type TestMenuSummary = {
+type TestContentType = {
   id: string;
   name: string;
-  location: string | null;
+  slug: string;
+  schema: {
+    type: "object";
+    additionalProperties: false;
+    properties: Record<string, unknown>;
+  };
   status: "draft" | "published";
-  publishedAt: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
-const menuListState = vi.hoisted(() => {
-  const menus: TestMenuSummary[] = [
-    {
-      id: "menu-1",
-      name: "Primary",
-      location: "primary",
-      status: "published",
-      publishedAt: "2026-04-22T00:00:00.000Z",
-      createdAt: "2026-04-22T00:00:00.000Z",
-    },
-    {
-      id: "menu-2",
-      name: "Footer",
-      location: null,
-      status: "draft",
-      publishedAt: null,
-      createdAt: "2026-04-22T00:00:00.000Z",
-    },
-  ];
+const contentTypeListState = vi.hoisted(() => {
+  const makeTypes = () =>
+    Array.from({ length: 12 }, (_, index): TestContentType => {
+      const number = String(index + 1).padStart(2, "0");
+      return {
+        id: `type-${number}`,
+        name: `Type ${number}`,
+        slug: `type-${number}`,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            title: { type: "string" },
+          },
+        },
+        status: index % 2 === 0 ? "draft" : "published",
+        createdAt: "2026-04-24T00:00:00.000Z",
+        updatedAt: "2026-04-24T00:00:00.000Z",
+      };
+    });
 
   return {
-    menus: menus.map((menu) => ({ ...menu })),
-    publishCalls: [] as string[],
-    draftCalls: [] as string[],
+    types: makeTypes(),
+    updateCalls: [] as Array<{ id: string; status?: "draft" | "published" }>,
     deleteCalls: [] as string[],
-    refreshCalls: [] as Array<{ force?: boolean }>,
     reset() {
-      this.menus = menus.map((menu) => ({ ...menu }));
-      this.publishCalls = [];
-      this.draftCalls = [];
+      this.types = makeTypes();
+      this.updateCalls = [];
       this.deleteCalls = [];
-      this.refreshCalls = [];
     },
   };
 });
@@ -52,7 +54,13 @@ const menuListState = vi.hoisted(() => {
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/alert", () => ({
-  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Alert: ({
+    children,
+    variant,
+  }: {
+    children: React.ReactNode;
+    variant?: string;
+  }) => <div data-alert-variant={variant ?? "default"}>{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
@@ -64,24 +72,21 @@ vi.mock("@/components/ui/badge", () => ({
 vi.mock("@/components/ui/button", () => ({
   Button: ({
     children,
-    onClick,
     disabled,
-    asChild,
+    onClick,
+    type = "button",
     ...props
   }: {
     children: React.ReactNode;
-    onClick?: () => void;
     disabled?: boolean;
-    asChild?: boolean;
+    onClick?: () => void;
+    type?: "button" | "submit" | "reset";
     [key: string]: unknown;
-  }) =>
-    asChild && React.isValidElement(children) ? (
-      children
-    ) : (
-      <button type="button" onClick={onClick} disabled={disabled} {...props}>
-        {children}
-      </button>
-    ),
+  }) => (
+    <button type={type} disabled={disabled} onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
@@ -96,8 +101,8 @@ vi.mock("@/components/ui/checkbox", () => ({
   }) => (
     <button
       aria-label={ariaLabel}
-      type="button"
       aria-pressed={checked === true}
+      type="button"
       onClick={() => onCheckedChange?.(checked !== true)}
     >
       checkbox
@@ -225,35 +230,26 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
-    menusList: "menusList",
+    contentTypesList: "contentTypesList",
+    contentTypeDetail: (id: string) => `contentTypeDetail:${id}`,
   },
 }));
 
-vi.mock("@/services/menusClient", () => ({
-  getCachedMenus: () => menuListState.menus,
-  listMenusCached: vi.fn(async (options?: { force?: boolean }) => {
-    menuListState.refreshCalls.push({ force: options?.force });
-    return menuListState.menus;
-  }),
-  createMenu: vi.fn(),
-  publishMenu: vi.fn(async (id: string) => {
-    menuListState.publishCalls.push(id);
-    menuListState.menus = menuListState.menus.map((menu) =>
-      menu.id === id
-        ? { ...menu, status: "published", publishedAt: "2026-04-23T00:00:00.000Z" }
-        : menu
-    );
-  }),
-  moveMenuToDraft: vi.fn(async (id: string) => {
-    menuListState.draftCalls.push(id);
-    menuListState.menus = menuListState.menus.map((menu) =>
-      menu.id === id ? { ...menu, status: "draft", publishedAt: null } : menu
-    );
-  }),
-  deleteMenu: vi.fn(async (id: string) => {
-    menuListState.deleteCalls.push(id);
-    menuListState.menus = menuListState.menus.filter((menu) => menu.id !== id);
+vi.mock("@/services/contentTypesClient", () => ({
+  getCachedContentTypes: () => contentTypeListState.types,
+  listContentTypesCached: vi.fn(async () => contentTypeListState.types),
+  duplicateContentType: vi.fn(),
+  deleteContentType: vi.fn(async (id: string) => {
+    contentTypeListState.deleteCalls.push(id);
+    contentTypeListState.types = contentTypeListState.types.filter((type) => type.id !== id);
     return { ok: true };
+  }),
+  updateContentType: vi.fn(async (id: string, payload: { status?: "draft" | "published" }) => {
+    contentTypeListState.updateCalls.push({ id, status: payload.status });
+    contentTypeListState.types = contentTypeListState.types.map((type) =>
+      type.id === id && payload.status ? { ...type, status: payload.status } : type
+    );
+    return contentTypeListState.types.find((type) => type.id === id);
   }),
 }));
 
@@ -265,10 +261,6 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
   AdminShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@/ui/menus/MenuCreateDialog", () => ({
-  MenuCreateDialog: () => <div data-testid="menu-create-dialog" />,
 }));
 
 vi.mock("@/ui/shared/AdminLink", () => ({
@@ -283,7 +275,7 @@ vi.mock("@/ui/shared/AdminLink", () => ({
     prefetch?: boolean;
     [key: string]: unknown;
   }) => (
-    <a href={`/admin${href}`} {...props}>
+    <a href={href} {...props}>
       {children}
     </a>
   ),
@@ -296,7 +288,7 @@ vi.mock("@/ui/shared/PageHeader", () => ({
     actions,
   }: {
     title: string;
-    description: string;
+    description?: string;
     actions?: React.ReactNode;
   }) => (
     <header>
@@ -307,15 +299,29 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/utils/adminPaths", () => ({
+  resolveAdminBasePath: () => "/admin",
+  withAdminBasePath: (_basePath: string, path: string) => `/admin${path}`,
+}));
+
 vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: () => () => undefined,
 }));
 
-vi.mock("@/utils/cacheRefresh", () => ({
-  resolveCacheRefreshBackground: () => true,
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
 }));
 
-const { MenuListPage } = await import("../../../core/admin/ui/menus/MenuListPage");
+vi.mock("../../../core/admin/ui/content-types/ContentTypeCreateDrawer", () => ({
+  ContentTypeCreateDrawer: () => <div data-testid="content-type-create-drawer" />,
+}));
+
+const { ContentTypeList } = await import(
+  "../../../core/admin/ui/content-types/ContentTypeList"
+);
 
 const flush = () => act(async () => Promise.resolve());
 
@@ -324,7 +330,7 @@ const mount = () => {
   document.body.appendChild(host);
   const root = createRoot(host);
   act(() => {
-    root.render(<MenuListPage />);
+    root.render(<ContentTypeList />);
   });
   return {
     host,
@@ -335,143 +341,122 @@ const mount = () => {
   };
 };
 
+const setSelectValue = (select: HTMLSelectElement | undefined, value: string) => {
+  if (!select) return;
+  select.value = value;
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+const findSelectWithOption = (host: HTMLElement, value: string) =>
+  Array.from(host.querySelectorAll("select")).find((select) =>
+    select.querySelector(`option[value="${value}"]`)
+  ) as HTMLSelectElement | undefined;
+
 beforeEach(() => {
-  menuListState.reset();
+  contentTypeListState.reset();
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
   document.body.innerHTML = "";
 });
 
-test("MenuListPage filters rows and bulk publishes only selected visible menus", async () => {
+test("ContentTypeList uses shared pagination footer and page-size options", async () => {
   const view = mount();
   try {
     await flush();
 
-    expect(view.host.textContent).toContain("Primary");
-    expect(view.host.textContent).toContain("Footer");
+    expect(view.host.textContent).toContain("Showing 1-10 of 12 content types");
+    expect(view.host.textContent).toContain("Type 10");
+    expect(view.host.textContent).not.toContain("Type 11");
 
-    const selects = Array.from(view.host.querySelectorAll("select"));
-    await act(async () => {
-      selects[0]!.value = "draft";
-      selects[0]!.dispatchEvent(new Event("change", { bubbles: true }));
+    act(() => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Next")
+        ?.click();
     });
 
-    expect(view.host.textContent).not.toContain("Primary");
-    expect(view.host.textContent).toContain("Footer");
+    expect(view.host.textContent).toContain("Showing 11-12 of 12 content types");
+    expect(view.host.textContent).toContain("Type 11");
 
-    const selectAll = view.host.querySelector(
-      'button[aria-label="Select all menus"]'
-    ) as HTMLButtonElement;
-    await act(async () => {
-      selectAll.click();
-      await Promise.resolve();
+    act(() => {
+      setSelectValue(findSelectWithOption(view.host, "20"), "20");
     });
 
-    const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
-    await act(async () => {
-      bulkSelect.value = "publish";
-      bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-
-    const apply = Array.from(view.host.querySelectorAll("button")).find(
-      (button) => button.textContent === "Apply"
-    );
-    await act(async () => {
-      apply?.click();
-      await Promise.resolve();
-    });
-
-    expect(menuListState.publishCalls).toEqual(["menu-2"]);
-    expect(menuListState.publishCalls).not.toContain("menu-1");
+    expect(view.host.textContent).toContain("Showing 1-12 of 12 content types");
+    expect(view.host.textContent).toContain("Type 11");
   } finally {
     view.cleanup();
   }
 });
 
-test("MenuListPage selection is scoped to the paginated visible menus", async () => {
-  menuListState.menus = Array.from({ length: 12 }, (_, index) => ({
-    id: `menu-${index + 1}`,
-    name: `Menu ${String(index + 1).padStart(2, "0")}`,
-    location: index % 2 === 0 ? "primary" : null,
-    status: "draft",
-    publishedAt: null,
-    createdAt: "2026-04-22T00:00:00.000Z",
-  }));
-
+test("ContentTypeList keeps selection page-visible and applies bulk actions through existing client", async () => {
   const view = mount();
   try {
     await flush();
 
-    expect(view.host.textContent).toContain("Showing 1-10 of 12 menus");
-    expect(view.host.textContent).toContain("Menu 10");
-    expect(view.host.textContent).not.toContain("Menu 11");
-
-    const selectAll = view.host.querySelector(
-      'button[aria-label="Select all menus"]'
-    ) as HTMLButtonElement;
-    await act(async () => {
-      selectAll.click();
-      await Promise.resolve();
+    act(() => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Next")
+        ?.click();
     });
 
-    expect(view.host.textContent).toContain("Selected 10");
+    const selectAll = view.host.querySelector(
+      'button[aria-label="Select all content types"]'
+    ) as HTMLButtonElement;
+    act(() => {
+      selectAll.click();
+    });
+
+    expect(view.host.textContent).toContain("Selected 2");
+
+    act(() => {
+      setSelectValue(findSelectWithOption(view.host, "publish"), "publish");
+    });
 
     await act(async () => {
       Array.from(view.host.querySelectorAll("button"))
-        .find((button) => button.textContent === "Next")
+        .find((button) => button.textContent === "Apply")
         ?.click();
       await Promise.resolve();
     });
 
-    expect(view.host.textContent).toContain("Showing 11-12 of 12 menus");
-    expect(view.host.textContent).toContain("Menu 11");
-    expect(view.host.textContent).not.toContain("Selected 10");
+    expect(contentTypeListState.updateCalls).toEqual([
+      { id: "type-11", status: "published" },
+      { id: "type-12", status: "published" },
+    ]);
+    expect(view.host.textContent).toContain("Bulk action completed");
+    expect(view.host.textContent).not.toContain("Selected 2");
   } finally {
     view.cleanup();
   }
 });
 
-test("MenuListPage requires confirmation before bulk delete", async () => {
+test("ContentTypeList delete confirmation uses token-backed dialog copy", async () => {
   const view = mount();
   try {
     await flush();
 
     const selectAll = view.host.querySelector(
-      'button[aria-label="Select all menus"]'
+      'button[aria-label="Select all content types"]'
     ) as HTMLButtonElement;
-    await act(async () => {
-      selectAll.click();
-      await Promise.resolve();
-    });
-
-    const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
-    await act(async () => {
-      bulkSelect.value = "delete";
-      bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-
-    const apply = Array.from(view.host.querySelectorAll("button")).find(
-      (button) => button.textContent === "Apply"
-    );
-    await act(async () => {
-      apply?.click();
-      await Promise.resolve();
-    });
-
-    expect(view.host.textContent).toContain("Delete selected menus?");
-    expect(view.host.textContent).toContain("Delete 2 menus? This cannot be undone.");
-    expect(menuListState.deleteCalls).toEqual([]);
-
-    const cancel = Array.from(view.host.querySelectorAll("button")).find(
-      (button) => button.textContent === "Cancel"
-    );
     act(() => {
-      cancel?.click();
+      selectAll.click();
+    });
+    act(() => {
+      setSelectValue(findSelectWithOption(view.host, "delete"), "delete");
     });
 
-    expect(menuListState.deleteCalls).toEqual([]);
+    act(() => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Apply")
+        ?.click();
+    });
+
+    expect(view.host.textContent).toContain("Delete selected content types?");
+    expect(view.host.innerHTML).not.toContain("border-rose-200");
+    expect(view.host.innerHTML).not.toContain("bg-rose-50/70");
+    expect(contentTypeListState.deleteCalls).toEqual([]);
   } finally {
     view.cleanup();
   }

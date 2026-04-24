@@ -46,7 +46,27 @@ vi.mock("@/components/ui/button", () => ({
       <button type="button" onClick={onClick} disabled={disabled} {...props}>
         {children}
       </button>
-    ),
+  ),
+}));
+
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+}));
+
+vi.mock("@/components/ui/alert", () => ({
+  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/ui/scroll-area", () => ({
@@ -396,17 +416,6 @@ test("revision drawers render states and gate restore/discard with confirmation"
     "../../../core/admin/ui/pages/PageRevisionDrawer"
   );
 
-  const confirmSpy = vi
-    .fn()
-    .mockReturnValueOnce(true)
-    .mockReturnValueOnce(true)
-    .mockReturnValueOnce(false);
-  Object.defineProperty(window, "confirm", {
-    configurable: true,
-    writable: true,
-    value: confirmSpy,
-  });
-
   const onRestorePost = vi.fn();
   const onRestorePage = vi.fn();
   const onDiscardPage = vi.fn();
@@ -505,24 +514,55 @@ test("revision drawers render states and gate restore/discard with confirmation"
     expect(view.container.textContent).toContain("Not saved");
     expect(view.container.textContent).toContain("Title: Landing");
 
-    const buttons = Array.from(view.container.querySelectorAll("button"));
     act(() => {
-      buttons.find((button) => button.textContent === "Preview")?.click();
-      buttons.find((button) => button.textContent === "Restore")?.click();
-      buttons.find((button) => button.textContent === "Discard")?.click();
-      buttons
-        .filter((button) => button.textContent === "Restore")[1]
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Preview")
         ?.click();
     });
 
     expect(view.container.textContent).toContain("First preview block");
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Restore")
+        ?.click();
+    });
+    expect(view.container.textContent).toContain("Restore revision?");
+    act(() => {
+      const restoreButtons = Array.from(view.container.querySelectorAll("button"))
+        .filter((button) => button.textContent === "Restore");
+      restoreButtons[restoreButtons.length - 1]?.click();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Discard")
+        ?.click();
+    });
+    expect(view.container.textContent).toContain("Discard autosave?");
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Discard autosave")
+        ?.click();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .filter((button) => button.textContent === "Restore")[1]
+        ?.click();
+    });
+    expect(view.container.textContent).toContain("Restore autosave?");
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Cancel")
+        ?.click();
+    });
+
     expect(onRestorePost).toHaveBeenCalledWith("post-rev-1");
     expect(onDiscardPage).toHaveBeenCalledWith("page-rev-2");
     expect(onRestorePage).not.toHaveBeenCalled();
-    expect(confirmSpy).toHaveBeenCalledTimes(3);
   } finally {
     view.cleanup();
-    Reflect.deleteProperty(window, "confirm");
   }
 });
 

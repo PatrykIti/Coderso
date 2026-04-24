@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,14 +38,16 @@ export function MenuItemDeleteDialog({
             will be removed from the current draft menu.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-2 rounded-lg border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm text-rose-900">
+        <Alert variant="destructive">
+          <AlertDescription className="space-y-2">
           <p>This action cannot be undone after you save the menu.</p>
           <p>
             {hasChildren
               ? `This also removes ${childLabel}.`
               : "Only this item will be removed."}
           </p>
-        </div>
+          </AlertDescription>
+        </Alert>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

@@ -3,15 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,17 +20,85 @@ import {
   duplicateContentType,
   getCachedContentTypes,
   listContentTypesCached,
+  updateContentType,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { resolveAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "./ContentTypeCreateDrawer";
 import { ContentTypeTable, type ContentTypeRow } from "./ContentTypeTable";
 import { countSchemaFields } from "./schemaMapping";
+
+type ContentTypeBulkActionValue = "publish" | "draft" | "delete";
+
+function ContentTypeBulkActionsBar({
+  selectedCount,
+  action,
+  onActionChange,
+  onApply,
+  onClear,
+  isApplying,
+}: {
+  selectedCount: number;
+  action: ContentTypeBulkActionValue | "";
+  onActionChange: (value: ContentTypeBulkActionValue | "") => void;
+  onApply: () => void;
+  onClear: () => void;
+  isApplying: boolean;
+}) {
+  return (
+    <div
+      data-content-type-bulk-actions="inline"
+      className="flex min-w-0 flex-wrap items-center justify-end gap-2"
+    >
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge variant="secondary" className="text-[10px] uppercase tracking-widest">
+          Selected {selectedCount}
+        </Badge>
+        <span className="sr-only">
+          Apply a bulk action to the selected content types.
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={action}
+          onValueChange={(value) =>
+            onActionChange(value as ContentTypeBulkActionValue)
+          }
+        >
+          <SelectTrigger className="h-8 w-[160px]">
+            <SelectValue placeholder="Bulk actions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="publish">Publish</SelectItem>
+            <SelectItem value="draft">Move to Draft</SelectItem>
+            <SelectItem value="delete" className="text-destructive">
+              Delete
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={onApply} disabled={!action || isApplying}>
+          {isApplying ? "Applying..." : "Apply"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          aria-label="Clear selection"
+        >
+          Clear
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function ContentTypeList() {
   const { navigate } = useAdminRouter();
@@ -52,7 +113,15 @@ export function ContentTypeList() {
   const [sortKey, setSortKey] = useState<"name" | "slug" | "fieldCount" | "status">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [pendingDelete, setPendingDelete] = useState<ContentTypeRow | null>(null);
+  const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<ContentTypeBulkActionValue | "">("");
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [bulkFeedback, setBulkFeedback] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const duplicateNameCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -91,6 +160,29 @@ export function ContentTypeList() {
     });
     return mapped;
   }, [duplicateNameCounts, query, sortDirection, sortKey, statusFilter, types]);
+  const pagination = useListPagination(rows, {
+    resetKey: JSON.stringify({
+      query,
+      statusFilter,
+      sortKey,
+      sortDirection,
+    }),
+  });
+  const visibleIds = useMemo(
+    () => pagination.visibleRows.map((row) => row.id),
+    [pagination.visibleRows]
+  );
+  const selectedCount = selectedIds.length;
+  const isAllSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => visibleIds.includes(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [visibleIds]);
 
   useEffect(() => {
     let active = true;
@@ -175,6 +267,78 @@ export function ContentTypeList() {
     }
   };
 
+  const handleToggleRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((typeId) => typeId !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedIds(isAllSelected ? [] : visibleIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setBulkAction("");
+  };
+
+  const runBulkAction = async (
+    action: ContentTypeBulkActionValue,
+    ids: string[]
+  ) => {
+    if (ids.length === 0) return;
+    setIsBulkWorking(true);
+    setError(null);
+    setBulkFeedback(null);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => {
+          if (action === "publish") return updateContentType(id, { status: "published" });
+          if (action === "draft") return updateContentType(id, { status: "draft" });
+          return deleteContentType(id);
+        })
+      );
+      const failedIds = ids.filter((_, index) => results[index]?.status === "rejected");
+      const successCount = ids.length - failedIds.length;
+      const nextTypes = await listContentTypesCached({ force: true });
+      setTypes(nextTypes);
+
+      if (failedIds.length > 0) {
+        setSelectedIds(failedIds);
+        setError(
+          failedIds.length === ids.length
+            ? `Bulk ${action} failed for ${failedIds.length} selected content type${failedIds.length === 1 ? "" : "s"}.`
+            : `Bulk ${action} finished with partial failures: ${successCount} succeeded, ${failedIds.length} failed.`
+        );
+        return;
+      }
+
+      handleClearSelection();
+      setBulkFeedback({
+        title: "Bulk action completed",
+        message: `Successfully applied ${action} to ${successCount} content type${successCount === 1 ? "" : "s"}.`,
+      });
+    } catch (err) {
+      const message = isApiClientError(err)
+        ? err.message
+        : "Bulk action failed.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsBulkWorking(false);
+      setPendingBulkDeleteIds([]);
+    }
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+    if (bulkAction === "delete") {
+      setPendingBulkDeleteIds(selectedIds);
+      return;
+    }
+    void runBulkAction(bulkAction, selectedIds);
+  };
+
   return (
     <AdminShell
       activeHref="/admin/content-types"
@@ -191,16 +355,34 @@ export function ContentTypeList() {
           title="Content Types"
           description="Create reusable schemas for structured content entries."
           actions={
-            <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" />
-              New type
-            </Button>
+            <>
+              {selectedCount > 0 ? (
+                <ContentTypeBulkActionsBar
+                  selectedCount={selectedCount}
+                  action={bulkAction}
+                  onActionChange={setBulkAction}
+                  onApply={handleBulkApply}
+                  onClear={handleClearSelection}
+                  isApplying={isBulkWorking}
+                />
+              ) : null}
+              <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                New type
+              </Button>
+            </>
           }
         />
         {error ? (
           <Alert variant="destructive">
             <AlertTitle>Unable to load content types</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {bulkFeedback ? (
+          <Alert>
+            <AlertTitle>{bulkFeedback.title}</AlertTitle>
+            <AlertDescription>{bulkFeedback.message}</AlertDescription>
           </Alert>
         ) : null}
         <div className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-[minmax(0,1fr)_180px]">
@@ -230,7 +412,7 @@ export function ContentTypeList() {
           </Select>
         </div>
         <ContentTypeTable
-          rows={rows}
+          rows={pagination.visibleRows}
           basePath={basePath}
           isLoading={isLoading}
           emptyMessage={
@@ -240,9 +422,19 @@ export function ContentTypeList() {
           }
           sortKey={sortKey}
           sortDirection={sortDirection}
+          selectedIds={selectedIds}
+          isAllSelected={isAllSelected}
+          isIndeterminate={isIndeterminate}
+          onToggleAll={handleToggleAll}
+          onToggleRow={handleToggleRow}
           onSort={handleSortChange}
           onDuplicate={handleDuplicate}
           onDelete={(row) => setPendingDelete(row)}
+        />
+        <ListPaginationFooter
+          resourceLabel="content types"
+          pagination={pagination}
+          isLoading={isLoading}
         />
       </div>
       <ContentTypeCreateDrawer
@@ -251,41 +443,44 @@ export function ContentTypeList() {
         existingTypes={types}
         onCreated={handleCreated}
       />
-      <Dialog
+      <ConfirmActionDialog
         open={Boolean(pendingDelete)}
         onOpenChange={(open) => {
           if (!open) setPendingDelete(null);
         }}
+        title="Delete content type?"
+        description={
+          <>
+            <span className="font-medium text-foreground">
+              {pendingDelete?.name}
+            </span>{" "}
+            ({pendingDelete?.slug}) will be deleted only if no entries or
+            dependent owners reference it.
+          </>
+        }
+        confirmLabel="Delete type"
+        confirmingLabel="Deleting..."
+        isConfirming={isDeleting}
+        onConfirm={handleDelete}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete content type?</DialogTitle>
-            <DialogDescription>
-              <span className="font-medium text-foreground">
-                {pendingDelete?.name}
-              </span>{" "}
-              ({pendingDelete?.slug}) will be deleted only if no entries or
-              dependent owners reference it.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm text-rose-900">
-            The server blocks deletion for entries, custom screens, taxonomies,
-            content routes, and listings.
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPendingDelete(null)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete type"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        The server blocks deletion for entries, custom screens, taxonomies,
+        content routes, and listings.
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
+        open={pendingBulkDeleteIds.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setPendingBulkDeleteIds([]);
+        }}
+        title="Delete selected content types?"
+        description={`Delete ${pendingBulkDeleteIds.length} content type${pendingBulkDeleteIds.length === 1 ? "" : "s"}? This cannot be undone after the server accepts the request.`}
+        confirmLabel="Delete selected"
+        confirmingLabel="Deleting..."
+        isConfirming={isBulkWorking}
+        onConfirm={() => runBulkAction("delete", pendingBulkDeleteIds)}
+      >
+        The server blocks deletion for entries, custom screens, taxonomies,
+        content routes, and listings.
+      </ConfirmActionDialog>
     </AdminShell>
   );
 }

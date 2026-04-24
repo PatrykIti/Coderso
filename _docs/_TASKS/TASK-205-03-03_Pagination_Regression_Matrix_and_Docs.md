@@ -5,7 +5,7 @@
 **Category:** QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-205-03-01, TASK-205-03-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -119,3 +119,11 @@ Content Types selection contract.
 4. `_docs/CONTENT_LIST_UX.md` describes one shared pagination contract with
    resource-specific copy notes and states that Content Types bulk selection is
    completed in `TASK-205-04`.
+
+## Completion Notes
+
+- Regression matrix covers the shared pagination contract plus Content Types,
+  Pages, Posts, and Menus adapters.
+- `_docs/CONTENT_LIST_UX.md` now records the single shared pagination owner,
+  page-size options, filter/sort-before-pagination behavior, and visible-page
+  selection semantics.

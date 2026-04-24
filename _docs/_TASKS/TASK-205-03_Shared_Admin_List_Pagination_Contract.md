@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-205, TASK-198, TASK-199, TASK-200
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -34,9 +34,9 @@ create a second Content Types bulk flow.
 
 ## Sub-Tasks
 
-- [ ] TASK-205-03-01: Shared Pagination Hook and Footer
-- [ ] TASK-205-03-02: Admin List Resource Adapters
-- [ ] TASK-205-03-03: Pagination Regression Matrix and Docs
+- [x] TASK-205-03-01: Shared Pagination Hook and Footer
+- [x] TASK-205-03-02: Admin List Resource Adapters
+- [x] TASK-205-03-03: Pagination Regression Matrix and Docs
 
 ## Files to Change
 
@@ -217,3 +217,14 @@ actions through that existing seam.
    and `MenuListPage`.
 8. Content Types bulk selection remains owned by `TASK-205-04`; this task only
    prepares the shared visible-row contract that selection consumes.
+
+## Completion Notes
+
+- Shared hook/footer now own default page size, allowed page-size options,
+  clamping, range metadata, and visible-row slicing for Content Types, Pages,
+  Posts, and Menus.
+- Resource screens keep their filtering, sorting, selection copy, and action
+  orchestration, then consume the shared visible-row contract.
+- Regression coverage lives in `list-pagination.test.tsx`,
+  `content-type-list-parity.test.tsx`, `page-post-list-wave.test.tsx`,
+  `menu-list-page-actions.test.tsx`, and shell-list suites.

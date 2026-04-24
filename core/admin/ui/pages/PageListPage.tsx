@@ -21,7 +21,10 @@ import {
   setUserSetting,
 } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
@@ -72,6 +75,9 @@ export function PageListPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<PageBulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
   const hasHydratedRef = useRef(hasInitialCache);
 
@@ -148,9 +154,16 @@ export function PageListPage() {
     () => filterPages(items, searchQuery, statusFilter, authorFilter),
     [items, searchQuery, statusFilter, authorFilter]
   );
+  const pagination = useListPagination(filteredItems, {
+    resetKey: JSON.stringify({
+      searchQuery,
+      statusFilter,
+      authorFilter,
+    }),
+  });
   const visibleIds = useMemo(
-    () => filteredItems.map((page) => page.id),
-    [filteredItems]
+    () => pagination.visibleRows.map((page) => page.id),
+    [pagination.visibleRows]
   );
   const selectedCount = selectedIds.length;
   const isAllSelected =
@@ -258,24 +271,26 @@ export function PageListPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Delete this page? This cannot be undone."
-      );
-      if (!confirmed) return;
-    }
+  const runDelete = async (id: string) => {
+    setDeletingId(id);
     setError(null);
     try {
       await deletePage(id);
       await refresh({ force: true, background: true });
+      setPendingDeleteId(null);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
       } else {
         setError("Failed to delete page.");
       }
+    } finally {
+      setDeletingId(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
   };
 
   const handleTogglePage = (id: string) => {
@@ -293,22 +308,18 @@ export function PageListPage() {
     setBulkAction("");
   };
 
-  const handleBulkApply = async () => {
-    if (!bulkAction || selectedIds.length === 0) return;
-    if (bulkAction === "delete" && typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        `Delete ${selectedIds.length} page${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`
-      );
-      if (!confirmed) return;
-    }
-
+  const runBulkAction = async (
+    action: PageBulkActionValue,
+    ids: string[]
+  ) => {
+    if (ids.length === 0) return;
     setIsBulkWorking(true);
     setError(null);
     try {
       const results = await Promise.allSettled(
-        selectedIds.map((id) => {
-          if (bulkAction === "publish") return publishPage(id);
-          if (bulkAction === "unpublish") return unpublishPage(id);
+        ids.map((id) => {
+          if (action === "publish") return publishPage(id);
+          if (action === "unpublish") return unpublishPage(id);
           return deletePage(id);
         })
       );
@@ -328,7 +339,17 @@ export function PageListPage() {
       }
     } finally {
       setIsBulkWorking(false);
+      setPendingBulkDeleteIds([]);
     }
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+    if (bulkAction === "delete") {
+      setPendingBulkDeleteIds(selectedIds);
+      return;
+    }
+    void runBulkAction(bulkAction, selectedIds);
   };
 
   const handleDrawerOpenChange = (next: boolean) => {
@@ -403,7 +424,7 @@ export function PageListPage() {
           </div>
         ) : (
           <PageTable
-            items={filteredItems}
+            items={pagination.visibleRows}
             emptyMessage={
               items.length > 0
                 ? "No pages match your current filters."
@@ -422,19 +443,11 @@ export function PageListPage() {
             onDelete={handleDelete}
           />
         )}
-        <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Showing {filteredItems.length} of {items.length} pages
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              Previous
-            </Button>
-            <Button variant="outline" size="sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <ListPaginationFooter
+          resourceLabel="pages"
+          pagination={pagination}
+          isLoading={isLoading}
+        />
       </div>
       <PageCreateDrawer
         key={drawerKey}
@@ -445,6 +458,32 @@ export function PageListPage() {
         onOpenAfterCreateChange={handleOpenAfterCreateChange}
         isSubmitting={isSubmitting}
         error={error}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+        title="Delete page?"
+        description="Delete this page? This cannot be undone."
+        confirmLabel="Delete page"
+        confirmingLabel="Deleting..."
+        isConfirming={deletingId === pendingDeleteId}
+        onConfirm={() => {
+          if (pendingDeleteId) return runDelete(pendingDeleteId);
+        }}
+      />
+      <ConfirmActionDialog
+        open={pendingBulkDeleteIds.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setPendingBulkDeleteIds([]);
+        }}
+        title="Delete selected pages?"
+        description={`Delete ${pendingBulkDeleteIds.length} page${pendingBulkDeleteIds.length === 1 ? "" : "s"}? This cannot be undone.`}
+        confirmLabel="Delete selected"
+        confirmingLabel="Deleting..."
+        isConfirming={isBulkWorking}
+        onConfirm={() => runBulkAction("delete", pendingBulkDeleteIds)}
       />
     </AdminShell>
   );

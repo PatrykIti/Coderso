@@ -169,8 +169,8 @@ function MenuItemDrawerContent({
         </Button>
         {canDelete ? (
           <Button
-            variant="ghost"
-            className="w-full text-rose-600"
+            variant="destructive"
+            className="w-full"
             onClick={() => onDelete(item)}
           >
             Delete Item

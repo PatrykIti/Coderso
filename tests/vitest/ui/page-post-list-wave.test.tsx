@@ -146,6 +146,21 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+}));
+
 vi.mock("@/components/ui/checkbox", () => ({
   Checkbox: ({
     checked,
@@ -828,11 +843,6 @@ test("PageListPage loads without cache, refreshes on matching cache events, and 
 });
 
 test("PageListPage opens drawer via sheet controls, creates with navigation, and reports action failures", async () => {
-  Object.defineProperty(window, "confirm", {
-    configurable: true,
-    writable: true,
-    value: vi.fn(() => true),
-  });
   Object.defineProperty(window, "open", {
     configurable: true,
     writable: true,
@@ -931,11 +941,12 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
     await act(async () => {
       buttons().find((button) => button.textContent === "delete-page-row")?.click();
       await flushMicrotasks();
+      buttons().find((button) => button.textContent === "Delete page")?.click();
+      await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Delete page denied.");
   } finally {
     view.cleanup();
-    Reflect.deleteProperty(window, "confirm");
     Reflect.deleteProperty(window, "open");
   }
 });
@@ -968,7 +979,7 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
       await flushMicrotasks();
     });
 
-    expect(view.container.textContent).toContain("Showing 2 of 2 pages");
+    expect(view.container.textContent).toContain("Showing 1-2 of 2 pages");
     expect(pagePostState.pageRefreshCalls).toEqual([
       { force: false, background: undefined },
     ]);
@@ -989,7 +1000,7 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
     });
 
     expect(view.container.textContent).toContain("No pages match your current filters.");
-    expect(view.container.textContent).toContain("Showing 0 of 2 pages");
+    expect(view.container.textContent).toContain("Showing 0 of 0 pages");
 
     act(() => {
       setInputValue(searchInput ?? undefined, "docs");
@@ -998,7 +1009,7 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
     });
 
     expect(view.container.textContent).toContain("Docs hub");
-    expect(view.container.textContent).toContain("Showing 1 of 2 pages");
+    expect(view.container.textContent).toContain("Showing 1-1 of 1 pages");
     expect(
       Array.from(view.container.querySelectorAll("button")).filter(
         (button) => button.textContent === "edit-page-row"
@@ -1173,6 +1184,81 @@ test("PageListPage shows bulk actions for visible selection, trims hidden select
   }
 });
 
+test("PageListPage and PostsListPage scope selection to the paginated visible rows", async () => {
+  pagePostState.pages = Array.from({ length: 12 }, (_, index) => ({
+    ...pagePostState.pages[0],
+    id: `page-${index + 1}`,
+    title: `Page ${String(index + 1).padStart(2, "0")}`,
+    slug: `/page-${index + 1}`,
+  }));
+  pagePostState.posts = Array.from({ length: 12 }, (_, index) => ({
+    ...pagePostState.posts[0],
+    id: `post-${index + 1}`,
+    title: `Post ${String(index + 1).padStart(2, "0")}`,
+    slug: `post-${index + 1}`,
+    tags: [`tag-${index + 1}`],
+  }));
+
+  const { PageListPage } = await import(
+    "../../../core/admin/ui/pages/PageListPage"
+  );
+  const { PostsListPage } = await import(
+    "../../../core/admin/ui/posts/PostsListPage"
+  );
+
+  const view = mount(
+    <>
+      <PageListPage />
+      <PostsListPage />
+    </>
+  );
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+
+    act(() => {
+      buttons().find((button) => button.textContent === "toggle-page-all")?.click();
+    });
+
+    expect(view.container.textContent).toContain("Selected 10");
+    expect(view.container.textContent).toContain("page-selected:10");
+
+    await act(async () => {
+      buttons().filter((button) => button.textContent === "Next")[0]?.click();
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Page 11");
+    expect(view.container.textContent).toContain("page-selected:0");
+    expect(view.container.textContent).not.toContain("Selected 10");
+
+    const selectAllPosts = view.container.querySelector(
+      'input[aria-label="Select all posts"]'
+    );
+    act(() => {
+      if (selectAllPosts instanceof HTMLInputElement) {
+        selectAllPosts.click();
+      }
+    });
+
+    expect(view.container.textContent).toContain("10 posts selected");
+
+    await act(async () => {
+      buttons().filter((button) => button.textContent === "Next")[1]?.click();
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Post 11");
+    expect(view.container.textContent).not.toContain("10 posts selected");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips cancelled deletes, and creates without editor navigation when preference is off", async () => {
   pagePostState.posts = [
     {
@@ -1194,12 +1280,6 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     },
   ];
 
-  Object.defineProperty(window, "confirm", {
-    configurable: true,
-    writable: true,
-    value: vi.fn(() => false),
-  });
-
   const { PostsListPage } = await import(
     "../../../core/admin/ui/posts/PostsListPage"
   );
@@ -1213,7 +1293,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     expect(view.container.textContent).toContain("Product launch");
     expect(view.container.textContent).toContain("Roadmap");
-    expect(view.container.textContent).toContain("Showing 2 of 2 posts");
+    expect(view.container.textContent).toContain("Showing 1-2 of 2 posts");
     expect(pagePostState.postRefreshCalls).toEqual([
       { force: true, background: true },
     ]);
@@ -1244,7 +1324,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     expect(view.container.textContent).not.toContain("Product launch");
     expect(view.container.textContent).not.toContain("Roadmap");
     expect(view.container.textContent).not.toContain("posts selected");
-    expect(view.container.textContent).toContain("Showing 0 of 2 posts");
+    expect(view.container.textContent).toContain("Showing 0 of 0 posts");
 
     act(() => {
       setInputValue(searchInput ?? undefined, "campaign");
@@ -1253,7 +1333,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     expect(view.container.textContent).toContain("Product launch");
     expect(view.container.textContent).not.toContain("Roadmap");
     expect(view.container.textContent).not.toContain("posts selected");
-    expect(view.container.textContent).toContain("Showing 1 of 2 posts");
+    expect(view.container.textContent).toContain("Showing 1-1 of 1 posts");
 
     await act(async () => {
       pagePostState.postSubscribers.forEach((handler) =>
@@ -1268,6 +1348,11 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     act(() => {
       buttons().find((button) => button.textContent === "delete-post-row")?.click();
+    });
+
+    expect(view.container.textContent).toContain("Delete post?");
+    act(() => {
+      buttons().find((button) => button.textContent === "Cancel")?.click();
     });
 
     expect(pagePostState.deletePostCalls).toEqual([]);
@@ -1323,17 +1408,10 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     ).toBe("false");
   } finally {
     view.cleanup();
-    Reflect.deleteProperty(window, "confirm");
   }
 });
 
 test("PostsListPage bulk toolbar applies visible-scope actions and clears selection", async () => {
-  Object.defineProperty(window, "confirm", {
-    configurable: true,
-    writable: true,
-    value: vi.fn(() => true),
-  });
-
   pagePostState.posts = [
     {
       ...pagePostState.posts[0],
@@ -1424,13 +1502,16 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
         .find((button) => button.textContent === "Apply")
         ?.click();
       await flushMicrotasks();
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Delete selected")
+        ?.click();
+      await flushMicrotasks();
     });
 
     expect(pagePostState.deletePostCalls).toEqual(["post-2"]);
     expect(view.container.textContent).not.toContain("1 post selected");
   } finally {
     view.cleanup();
-    Reflect.deleteProperty(window, "confirm");
   }
 });
 
@@ -1485,11 +1566,6 @@ test("PostsListPage loads without cache, refreshes on matching cache events, and
 });
 
 test("PostsListPage opens drawer via sheet controls, creates with navigation, and reports action failures", async () => {
-  Object.defineProperty(window, "confirm", {
-    configurable: true,
-    writable: true,
-    value: vi.fn(() => true),
-  });
   Object.defineProperty(window, "open", {
     configurable: true,
     writable: true,
@@ -1590,11 +1666,12 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
     await act(async () => {
       buttons().find((button) => button.textContent === "delete-post-row")?.click();
       await flushMicrotasks();
+      buttons().find((button) => button.textContent === "Delete post")?.click();
+      await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Delete denied.");
   } finally {
     view.cleanup();
-    Reflect.deleteProperty(window, "confirm");
     Reflect.deleteProperty(window, "open");
   }
 });
@@ -1605,12 +1682,6 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     writable: true,
     value: (url: string) => pagePostState.previewUrlCalls.push(url),
   });
-  Object.defineProperty(window, "confirm", {
-    configurable: true,
-    writable: true,
-    value: vi.fn(() => true),
-  });
-
   const { PageListPage } = await import(
     "../../../core/admin/ui/pages/PageListPage"
   );
@@ -1643,13 +1714,25 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
       buttons().find((button) => button.textContent === "publish-page-row")?.click();
       buttons().find((button) => button.textContent === "unpublish-page-row")?.click();
       buttons().find((button) => button.textContent === "duplicate-page-row")?.click();
-      buttons().find((button) => button.textContent === "delete-page-row")?.click();
       buttons().find((button) => button.textContent === "edit-post-row")?.click();
       buttons().find((button) => button.textContent === "preview-post-row")?.click();
       buttons().find((button) => button.textContent === "publish-post-row")?.click();
       buttons().find((button) => button.textContent === "unpublish-post-row")?.click();
       buttons().find((button) => button.textContent === "duplicate-post-row")?.click();
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      buttons().find((button) => button.textContent === "delete-page-row")?.click();
+      await flushMicrotasks();
+      buttons().find((button) => button.textContent === "Delete page")?.click();
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
       buttons().find((button) => button.textContent === "delete-post-row")?.click();
+      await flushMicrotasks();
+      buttons().find((button) => button.textContent === "Delete post")?.click();
       await flushMicrotasks();
     });
 
@@ -1672,6 +1755,5 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     expect(pagePostState.getUserSettings).toHaveBeenCalled();
   } finally {
     view.cleanup();
-    Reflect.deleteProperty(window, "confirm");
   }
 });

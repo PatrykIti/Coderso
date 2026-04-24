@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-202, TASK-198, TASK-199, TASK-200
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -70,14 +70,14 @@ parallel managers or second editor flows.
 
 ## Sub-Tasks
 
-- [ ] TASK-205-01: Content Type JSON Preview Scroll Containment
-- [ ] TASK-205-02: Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus
-- [ ] TASK-205-03: Shared Admin List Pagination Contract
-  - [ ] TASK-205-03-01: Shared Pagination Hook and Footer
-  - [ ] TASK-205-03-02: Admin List Resource Adapters
-  - [ ] TASK-205-03-03: Pagination Regression Matrix and Docs
-- [ ] TASK-205-04: Content Type List Selection and Bulk Actions
-- [ ] TASK-205-05: QA, Docs, and Closure
+- [x] TASK-205-01: Content Type JSON Preview Scroll Containment
+- [x] TASK-205-02: Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus
+- [x] TASK-205-03: Shared Admin List Pagination Contract
+  - [x] TASK-205-03-01: Shared Pagination Hook and Footer
+  - [x] TASK-205-03-02: Admin List Resource Adapters
+  - [x] TASK-205-03-03: Pagination Regression Matrix and Docs
+- [x] TASK-205-04: Content Type List Selection and Bulk Actions
+- [x] TASK-205-05: QA, Docs, and Closure
 
 ## Scope
 
@@ -144,6 +144,20 @@ parallel managers or second editor flows.
   helpers.
 - No server-side pagination API in this task; lists keep the current full-list
   read contract and paginate client-side after filtering/sorting.
+
+## Completion Notes
+
+- Completed shared client-side pagination through
+  `core/admin/ui/shared/useListPagination.ts` and
+  `core/admin/ui/shared/ListPaginationFooter.tsx`.
+- Content Types, Pages, Posts, and Menus now pass filtered/sorted rows into the
+  shared pagination contract and tables receive only visible rows.
+- Popup compliance was repaired through shared Admin UI primitives, including
+  `ConfirmActionDialog` and token-backed `Alert` variants, without adding
+  resource-specific popup style systems.
+- Content Types bulk actions reuse existing `updateContentType` and
+  `deleteContentType` client/write contracts; no new bulk endpoint or route
+  behavior was introduced.
 
 ## Files to Change
 

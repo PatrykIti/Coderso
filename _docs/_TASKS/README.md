@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 57 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1072 tasks
+- **Done:** 1081 tasks
 
 ---
 
@@ -38,15 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-205 | Admin List Pagination, Popup Tokens, and Content Type Parity | High | Very Large | Follow-up for content type editor JSON scroll, Admin UI Theme token-compliant popups across Content Types/Pages/Posts/Menus, shared real list pagination/page size, and Content Types bulk actions |
-| TASK-205-01 | Content Type JSON Preview Scroll Containment | High | Medium | Fix right-panel/mobile schema preview scroll for content types with many fields |
-| TASK-205-02 | Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus | High | Large | Replace hard-coded/native confirmations with token-backed Admin UI popups, including Menu item delete callouts, without new popup style forks |
-| TASK-205-03 | Shared Admin List Pagination Contract | Medium | Large | Complete Content Types/Pages/Posts/Menus footer pagination through one shared helper/footer with default 10 rows and page-size selector |
-| TASK-205-03-01 | Shared Pagination Hook and Footer | High | Medium | Create the resource-agnostic hook/footer, page-size constants, range metadata, and focused generic tests |
-| TASK-205-03-02 | Admin List Resource Adapters | High | Large | Adapt Content Types, Pages, Posts, and Menus to the shared pagination contract without duplicating page math |
-| TASK-205-03-03 | Pagination Regression Matrix and Docs | Medium | Medium | Prove shared pagination, page-size, clamp, and existing visible-row selection behavior; Content Types bulk selection closes in TASK-205-04 |
-| TASK-205-04 | Content Type List Selection and Bulk Actions | High | Large | Add visible-scope row selection plus bulk publish, draft, and delete actions after shared pagination and token dialogs are in place |
-| TASK-205-05 | QA, Docs, and Closure | Medium | Medium | Targeted validation, docs updates, changelog, and board closure |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -114,6 +105,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-205 | Admin List Pagination, Popup Tokens, and Content Type Parity | High | Very Large | Done: shared list pagination, token-backed confirmations, content type JSON scroll containment, and Content Types bulk parity shipped |
+| TASK-205-05 | QA, Docs, and Closure | Medium | Medium | Done: TASK-205 docs, changelog 735, board closure, and validation evidence synced |
+| TASK-205-04 | Content Type List Selection and Bulk Actions | High | Large | Done: Content Types visible-page selection plus bulk publish, draft, and delete reuse existing client/write contracts |
+| TASK-205-03-03 | Pagination Regression Matrix and Docs | Medium | Medium | Done: shared pagination regression matrix and list UX docs updated |
+| TASK-205-03-02 | Admin List Resource Adapters | High | Large | Done: Content Types, Pages, Posts, and Menus consume the shared pagination hook/footer after filtering and sorting |
+| TASK-205-03-01 | Shared Pagination Hook and Footer | High | Medium | Done: resource-agnostic pagination hook/footer, page-size options, range metadata, and focused tests added |
+| TASK-205-03 | Shared Admin List Pagination Contract | Medium | Large | Done: one shared client-side pagination contract now backs Content Types, Pages, Posts, and Menus |
+| TASK-205-02 | Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus | High | Large | Done: targeted hard-coded/native confirmations replaced with token-backed shared Admin UI surfaces |
+| TASK-205-01 | Content Type JSON Preview Scroll Containment | High | Medium | Done: desktop and mobile content type JSON preview scroll containment repaired |
 | TASK-202 | Engine Admin QA Recovery and Content Type Governance | High | Large | Done: Engine/content type UX, lifecycle, destructive safety, schema controls, and QA closure from SUMMARY-ENGINE |
 | TASK-202-05 | Save, Publish, Status, and QA Closure | High | Large | Done: real content type status, save/publish feedback, source report closure, and existing dirty-record inventory |
 | TASK-202-05-03 | QA Docs, Changelog, and Playwright Source Closure | Medium | Medium | Done: replayed SUMMARY-ENGINE, synced docs/changelog/board, and recorded validation |

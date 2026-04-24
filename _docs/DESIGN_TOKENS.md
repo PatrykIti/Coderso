@@ -69,6 +69,18 @@ card: { bg, border }
 state: { success, warning, danger }
 ```
 
+### Admin Popup State Surfaces
+
+- Shared admin popups should use `Dialog`, `Sheet`, `Alert`, `Button`, and
+  toast primitives instead of fixed Tailwind color families.
+- `Alert` exposes a token-backed `warning` variant mapped to
+  `--admin-state-warning`.
+- Destructive dialog and callout states use shared destructive button/alert
+  variants backed by Admin UI state tokens.
+- Resource screens may own confirmation copy and action state, but popup
+  backgrounds, foreground text, borders, overlays, focus, validation copy,
+  warning state, and destructive state should remain token-driven.
+
 ## Example usage
 
 ```css

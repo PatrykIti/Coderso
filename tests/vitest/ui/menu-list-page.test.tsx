@@ -70,7 +70,7 @@ test("MenuListPage renders cached menus with editor links", () => {
     expect(html).toContain("/admin/menus/menu-1");
     expect(html).toContain("Published");
     expect(html).toContain("Open menu actions");
-    expect(normalizedHtml).toContain("Showing 1 of 1 menus");
+    expect(normalizedHtml).toContain("Showing 1-1 of 1 menus");
     expect(html).toContain("Previous");
     expect(html).toContain("Next");
     expect(html).not.toContain("Open editor");

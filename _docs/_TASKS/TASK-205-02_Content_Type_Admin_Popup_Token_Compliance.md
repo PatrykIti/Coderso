@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + Design Tokens
 **Estimated Effort:** Large
 **Dependencies:** TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -258,6 +258,17 @@ and destructive button variants.
 
 - `_docs/DESIGN_TOKENS.md` only if a new shared warning/destructive variant is
   added.
+
+## Completion Notes
+
+- Added a shared token-backed `ConfirmActionDialog` for targeted row, bulk, and
+  revision confirmations.
+- Added the shared `Alert` warning variant mapped to Admin UI state tokens and
+  replaced targeted hard-coded rose/amber popup callouts with shared semantic
+  surfaces.
+- Pages, Posts, and Menus targeted row/bulk/revision confirmations now use
+  React dialog state instead of native `window.confirm()`.
+- No API, auth, RBAC, CSRF, or route contract changed.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 

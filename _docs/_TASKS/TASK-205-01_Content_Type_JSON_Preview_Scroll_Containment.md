@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -82,3 +82,12 @@ DOM class contract explicit enough for Vitest to assert the containment.
 3. The editor center and field settings panels remain independently usable.
 4. Tests prove the preview uses bounded scroll containment instead of relying on
    page-level overflow.
+
+## Completion Notes
+
+- `ContentTypePreviewPanel` now owns a bounded `min-h-0 flex-1 overflow-auto`
+  JSON scroll region with horizontal overflow for long schema lines.
+- `ContentTypeEditor` keeps the desktop right panel and mobile preview sheet
+  bounded so preview scrolling does not depend on page-level overflow.
+- Covered by `tests/vitest/ui/content-type-editor.test.tsx` and
+  `tests/vitest/ui/content-type-preview-panel.test.tsx`.

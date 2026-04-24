@@ -31,7 +31,10 @@ import {
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageFilters } from "../pages/PageFilters";
 import { PostsCreateDrawer } from "./PostsCreateDrawer";
@@ -84,6 +87,9 @@ export function PostsListPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"" | "publish" | "unpublish" | "delete">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
   const [bulkFeedback, setBulkFeedback] = useState<{
     title: string;
     message: string;
@@ -180,13 +186,26 @@ export function PostsListPage() {
     () => filterPosts(items, searchQuery, statusFilter, authorFilter),
     [items, searchQuery, statusFilter, authorFilter]
   );
-  const visibleIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
+  const pagination = useListPagination(filteredItems, {
+    resetKey: JSON.stringify({
+      searchQuery,
+      statusFilter,
+      authorFilter,
+    }),
+  });
+  const visibleIds = useMemo(
+    () => pagination.visibleRows.map((item) => item.id),
+    [pagination.visibleRows]
+  );
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedIds.length > 0 && !isAllSelected;
 
   useEffect(() => {
-    setSelectedIds((prev) => prev.filter((id) => visibleIds.includes(id)));
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => visibleIds.includes(id));
+      return next.length === prev.length ? prev : next;
+    });
   }, [visibleIds]);
 
   const clearSelection = useCallback(() => {
@@ -299,44 +318,43 @@ export function PostsListPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("Delete this post? This cannot be undone.");
-      if (!confirmed) return;
-    }
+  const runDelete = async (id: string) => {
+    setDeletingId(id);
     setError(null);
     setBulkFeedback(null);
     try {
       await deletePost(id);
       await refresh({ force: true, background: true });
+      setPendingDeleteId(null);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
       } else {
         setError("Failed to delete post.");
       }
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const handleBulkApply = async () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
 
-    if (bulkAction === "delete" && typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        `Delete ${selectedIds.length} post${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`
-      );
-      if (!confirmed) return;
-    }
-
+  const runBulkAction = async (
+    action: "publish" | "unpublish" | "delete",
+    ids: string[]
+  ) => {
+    if (ids.length === 0) return;
     setError(null);
     setBulkFeedback(null);
     setIsBulkWorking(true);
 
     try {
       const results = await Promise.allSettled(
-        selectedIds.map((id) => {
-          if (bulkAction === "publish") return publishPost(id);
-          if (bulkAction === "unpublish") return unpublishPost(id);
+        ids.map((id) => {
+          if (action === "publish") return publishPost(id);
+          if (action === "unpublish") return unpublishPost(id);
           return deletePost(id);
         })
       );
@@ -350,19 +368,31 @@ export function PostsListPage() {
       if (failedCount > 0) {
         setError(
           failedCount === results.length
-            ? `Bulk ${bulkAction} failed for ${failedCount} selected post${failedCount === 1 ? "" : "s"}.`
-            : `Bulk ${bulkAction} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
+            ? `Bulk ${action} failed for ${failedCount} selected post${failedCount === 1 ? "" : "s"}.`
+            : `Bulk ${action} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
         );
         return;
       }
 
       setBulkFeedback({
         title: "Bulk action completed",
-        message: `Successfully applied ${bulkAction} to ${successCount} post${successCount === 1 ? "" : "s"}.`,
+        message: `Successfully applied ${action} to ${successCount} post${successCount === 1 ? "" : "s"}.`,
       });
     } finally {
       setIsBulkWorking(false);
+      setPendingBulkDeleteIds([]);
     }
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+
+    if (bulkAction === "delete") {
+      setPendingBulkDeleteIds(selectedIds);
+      return;
+    }
+
+    void runBulkAction(bulkAction, selectedIds);
   };
 
   const handleDrawerOpenChange = (next: boolean) => {
@@ -479,7 +509,7 @@ export function PostsListPage() {
           </div>
         ) : (
           <PostsTable
-            items={filteredItems}
+            items={pagination.visibleRows}
             emptyMessage={
               items.length > 0
                 ? "No posts match your current filters."
@@ -498,19 +528,11 @@ export function PostsListPage() {
             onDelete={handleDelete}
           />
         )}
-        <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Showing {filteredItems.length} of {items.length} posts
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              Previous
-            </Button>
-            <Button variant="outline" size="sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <ListPaginationFooter
+          resourceLabel="posts"
+          pagination={pagination}
+          isLoading={isLoading}
+        />
       </div>
       <PostsCreateDrawer
         key={drawerKey}
@@ -522,6 +544,32 @@ export function PostsListPage() {
         isSubmitting={isSubmitting}
         error={error}
         slugRouteContext={slugRouteContext}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+        title="Delete post?"
+        description="Delete this post? This cannot be undone."
+        confirmLabel="Delete post"
+        confirmingLabel="Deleting..."
+        isConfirming={deletingId === pendingDeleteId}
+        onConfirm={() => {
+          if (pendingDeleteId) return runDelete(pendingDeleteId);
+        }}
+      />
+      <ConfirmActionDialog
+        open={pendingBulkDeleteIds.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setPendingBulkDeleteIds([]);
+        }}
+        title="Delete selected posts?"
+        description={`Delete ${pendingBulkDeleteIds.length} post${pendingBulkDeleteIds.length === 1 ? "" : "s"}? This cannot be undone.`}
+        confirmLabel="Delete selected"
+        confirmingLabel="Deleting..."
+        isConfirming={isBulkWorking}
+        onConfirm={() => runBulkAction("delete", pendingBulkDeleteIds)}
       />
     </AdminShell>
   );

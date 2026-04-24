@@ -101,7 +101,7 @@ export function MenuCreateDialog({
               navigation placement.
             </p>
           </div>
-          {error ? <p className="text-xs text-rose-500">{error}</p> : null}
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <Separator />
         <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">

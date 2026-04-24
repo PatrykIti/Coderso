@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-205-03-01, TASK-198, TASK-199, TASK-200
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -153,3 +153,12 @@ inside `ContentTypeList`, `PageListPage`, `PostsListPage`, or `MenuListPage`.
 3. Tables receive only the currently visible paginated rows.
 4. Header selection applies only to the current page of visible rows.
 5. No targeted list owns duplicate pagination math.
+
+## Completion Notes
+
+- `ContentTypeList`, `PageListPage`, `PostsListPage`, and `MenuListPage`
+  consume the shared pagination hook/footer after their existing filter/sort
+  logic.
+- Page-visible selection now uses paginated visible IDs for existing Pages,
+  Posts, and Menus flows, and the same seam is used by Content Types selection.
+- No resource-local pagination math or second list manager was introduced.

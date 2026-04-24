@@ -74,7 +74,7 @@ export function MenuItemForm({
           placeholder="Menu label"
         />
         {errors?.label ? (
-          <p className="text-xs text-rose-500">{errors.label}</p>
+          <p className="text-xs text-destructive">{errors.label}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
             Text displayed in the menu.
@@ -128,7 +128,7 @@ export function MenuItemForm({
             </SelectContent>
           </Select>
           {errors?.link ? (
-            <p className="text-xs text-rose-500">{errors.link}</p>
+            <p className="text-xs text-destructive">{errors.link}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
               Choose an existing page to link.
@@ -144,7 +144,7 @@ export function MenuItemForm({
             placeholder="https://"
           />
           {errors?.link ? (
-            <p className="text-xs text-rose-500">{errors.link}</p>
+            <p className="text-xs text-destructive">{errors.link}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
               Use a full URL for external links.

@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { PostRevision } from "@/services/postsClient";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { postRichTextToPlainText } from "../../../../services/posts/editor/postRichTextSerializer";
 
 type PostRevisionDrawerProps = {
@@ -93,104 +94,119 @@ export function PostRevisionDrawer({
   onRestore,
 }: PostRevisionDrawerProps) {
   const [previewRevisionId, setPreviewRevisionId] = useState<string | null>(null);
+  const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
 
   const handleRestore = (revisionId: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Restore this revision? Current unsaved changes may be overwritten."
-      );
-      if (!confirmed) return;
-    }
-    onRestore(revisionId);
+    setPendingRestoreId(revisionId);
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        showCloseButton={false}
-        className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
+        >
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div className="space-y-1">
+              <SheetTitle>Post revisions</SheetTitle>
+              <SheetDescription className="text-xs text-muted-foreground">
+                Restore an earlier snapshot of this post.
+              </SheetDescription>
+            </div>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close revisions">
+                <X className="h-4 w-4" />
+              </Button>
+            </SheetClose>
+          </div>
+
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-4 px-6 py-6">
+              {isLoading ? (
+                <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  Loading revisions...
+                </div>
+              ) : error ? (
+                <div className="rounded-xl border border-destructive/40 bg-background p-6 text-center text-sm text-destructive">
+                  {error}
+                </div>
+              ) : revisions.length === 0 ? (
+                <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  No revisions yet.
+                </div>
+              ) : (
+                revisions.map((revision) => {
+                  const author = revision.createdBy?.name?.trim()
+                    ? revision.createdBy.name
+                    : revision.createdBy?.email || "System";
+
+                  return (
+                    <div key={revision.id} className="rounded-xl border bg-background p-4">
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">Version {revision.version}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTimestamp(revision.createdAt)} · {author}
+                          </p>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {countBlocks(revision)} blocks
+                        </div>
+                      </div>
+                      {previewRevisionId === revision.id ? (
+                        <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+                          {resolveRevisionPreview(revision, author)}
+                        </div>
+                      ) : null}
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setPreviewRevisionId((current) =>
+                              current === revision.id ? null : revision.id
+                            )
+                          }
+                        >
+                          {previewRevisionId === revision.id ? "Hide preview" : "Preview"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={restoringId === revision.id}
+                          onClick={() => handleRestore(revision.id)}
+                        >
+                          {restoringId === revision.id ? "Restoring..." : "Restore"}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+      <ConfirmActionDialog
+        open={Boolean(pendingRestoreId)}
+        onOpenChange={(next) => {
+          if (!next) setPendingRestoreId(null);
+        }}
+        title="Restore revision?"
+        description="Restore this revision? Current unsaved changes may be overwritten."
+        confirmLabel="Restore"
+        confirmingLabel="Restoring..."
+        isConfirming={restoringId === pendingRestoreId}
+        onConfirm={() => {
+          if (!pendingRestoreId) return;
+          onRestore(pendingRestoreId);
+          setPendingRestoreId(null);
+        }}
       >
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div className="space-y-1">
-            <SheetTitle>Post revisions</SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground">
-              Restore an earlier snapshot of this post.
-            </SheetDescription>
-          </div>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close revisions">
-              <X className="h-4 w-4" />
-            </Button>
-          </SheetClose>
-        </div>
-
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="space-y-4 px-6 py-6">
-            {isLoading ? (
-              <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                Loading revisions...
-              </div>
-            ) : error ? (
-              <div className="rounded-xl border border-destructive/40 bg-background p-6 text-center text-sm text-destructive">
-                {error}
-              </div>
-            ) : revisions.length === 0 ? (
-              <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                No revisions yet.
-              </div>
-            ) : (
-              revisions.map((revision) => {
-                const author = revision.createdBy?.name?.trim()
-                  ? revision.createdBy.name
-                  : revision.createdBy?.email || "System";
-
-                return (
-                  <div key={revision.id} className="rounded-xl border bg-background p-4">
-                    <div className="mb-2 flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">Version {revision.version}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatTimestamp(revision.createdAt)} · {author}
-                        </p>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {countBlocks(revision)} blocks
-                      </div>
-                    </div>
-                    {previewRevisionId === revision.id ? (
-                      <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-                        {resolveRevisionPreview(revision, author)}
-                      </div>
-                    ) : null}
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          setPreviewRevisionId((current) =>
-                            current === revision.id ? null : revision.id
-                          )
-                        }
-                      >
-                        {previewRevisionId === revision.id ? "Hide preview" : "Preview"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={restoringId === revision.id}
-                        onClick={() => handleRestore(revision.id)}
-                      >
-                        {restoringId === revision.id ? "Restoring..." : "Restore"}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+        Current editor state can be replaced by the selected snapshot.
+      </ConfirmActionDialog>
+    </>
   );
 }

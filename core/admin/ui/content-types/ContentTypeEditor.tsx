@@ -6,14 +6,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -38,6 +30,7 @@ import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { ContentTypePreviewPanel } from "./ContentTypePreviewPanel";
 import {
@@ -438,7 +431,7 @@ export function ContentTypeEditor() {
       }
       rightPanel={
         previewHidden ? null : (
-          <div className="flex h-full min-h-0 flex-col overflow-y-auto p-6">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden p-6">
             <ContentTypePreviewPanel name={name} slug={slug} fields={fields} />
           </div>
         )
@@ -727,69 +720,51 @@ export function ContentTypeEditor() {
           <SheetDescription className="sr-only">
             View the generated JSON schema.
           </SheetDescription>
-          <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden p-6">
             <ContentTypePreviewPanel name={name} slug={slug} fields={fields} />
           </div>
         </SheetContent>
       </Sheet>
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete content type?</DialogTitle>
-            <DialogDescription>
-              <span className="font-medium text-foreground">{name}</span>{" "}
-              ({slug}) will be removed only if no entries or dependent owners
-              reference it.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm text-rose-900">
-            The server blocks deletion for entries, custom screens, taxonomies,
-            content routes, and listings. This cannot be undone after it succeeds.
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete type"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
+      <ConfirmActionDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete content type?"
+        description={
+          <>
+            <span className="font-medium text-foreground">{name}</span> ({slug})
+            will be removed only if no entries or dependent owners reference it.
+          </>
+        }
+        confirmLabel="Delete type"
+        confirmingLabel="Deleting..."
+        isConfirming={isDeleting}
+        onConfirm={handleDelete}
+      >
+        The server blocks deletion for entries, custom screens, taxonomies,
+        content routes, and listings. This cannot be undone after it succeeds.
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
         open={Boolean(pendingFieldRemoval)}
         onOpenChange={(open) => {
           if (!open) setPendingFieldRemoval(null);
         }}
+        title="Remove field?"
+        description={
+          <>
+            <span className="font-medium text-foreground">
+              {pendingFieldRemoval?.label}
+            </span>{" "}
+            ({pendingFieldRemoval?.name}) will be removed from this local schema
+            draft.
+          </>
+        }
+        confirmLabel="Remove field"
+        tone="warning"
+        onConfirm={confirmFieldRemoval}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Remove field?</DialogTitle>
-            <DialogDescription>
-              <span className="font-medium text-foreground">
-                {pendingFieldRemoval?.label}
-              </span>{" "}
-              ({pendingFieldRemoval?.name}) will be removed from this local schema draft.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
-            Removing a field can affect existing entries after you save the schema.
-            You can undo the local removal before saving.
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingFieldRemoval(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmFieldRemoval}>
-              Remove field
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        Removing a field can affect existing entries after you save the schema.
+        You can undo the local removal before saving.
+      </ConfirmActionDialog>
     </EditorShell>
   );
 }

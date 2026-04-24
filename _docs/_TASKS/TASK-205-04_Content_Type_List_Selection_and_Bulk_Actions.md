@@ -5,7 +5,7 @@
 **Category:** CMS/Engine + Admin/UI + Admin API
 **Estimated Effort:** Large
 **Dependencies:** TASK-205, TASK-205-02, TASK-205-03-01, TASK-205-03-02, TASK-198, TASK-199, TASK-200
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -172,3 +172,14 @@ truthfully instead of treating the whole bulk operation as successful.
    delete guards, and reports partial failures.
 7. No duplicate pagination state, new bulk endpoint, or resource-specific dialog
    system is introduced for Content Types.
+
+## Completion Notes
+
+- `ContentTypeList` owns controlled selected IDs, bulk action state, visible-ID
+  selection trimming, partial-failure feedback, and refresh-after-write.
+- `ContentTypeTable` stays a presentation adapter with controlled header and row
+  checkboxes plus selected-row styling.
+- Bulk publish/draft/delete reuse existing per-item content type client helpers;
+  route and service contracts remain unchanged.
+- Bulk delete uses the shared token-backed confirmation dialog and preserves
+  guarded delete failures as actionable partial-failure copy.

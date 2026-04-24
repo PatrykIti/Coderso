@@ -22,7 +22,7 @@ export function ContentTypePreviewPanel({
   const schema = buildSchemaFromFields(fields);
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Schema Preview</h3>
@@ -36,8 +36,8 @@ export function ContentTypePreviewPanel({
         </Button>
       </div>
       <Separator />
-      <ScrollArea className="flex-1 rounded-lg border bg-muted/40 p-3">
-        <pre className="text-xs leading-relaxed text-muted-foreground">
+      <ScrollArea className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/40 p-3">
+        <pre className="min-w-max whitespace-pre text-xs leading-relaxed text-muted-foreground">
           {JSON.stringify(schema, null, 2)}
         </pre>
       </ScrollArea>

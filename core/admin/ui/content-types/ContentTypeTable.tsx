@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +39,13 @@ export type ContentTypeTableProps = {
   basePath: string;
   isLoading?: boolean;
   emptyMessage?: string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
   sortKey?: ContentTypeSortKey;
   sortDirection?: "asc" | "desc";
+  onToggleAll?: () => void;
+  onToggleRow?: (id: string) => void;
   onSort?: (key: ContentTypeSortKey) => void;
   onDuplicate?: (row: ContentTypeRow) => void;
   onDelete?: (row: ContentTypeRow) => void;
@@ -50,8 +56,13 @@ export function ContentTypeTable({
   basePath,
   isLoading,
   emptyMessage,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
   sortKey,
   sortDirection,
+  onToggleAll,
+  onToggleRow,
   onSort,
   onDuplicate,
   onDelete,
@@ -77,6 +88,13 @@ export function ContentTypeTable({
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
+            <TableHead className="w-10 pl-4">
+              <Checkbox
+                aria-label="Select all content types"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
+            </TableHead>
             <TableHead className="pl-4">
               {renderSortableHead("name", "Name")}
             </TableHead>
@@ -97,21 +115,29 @@ export function ContentTypeTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="px-4 py-6 text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="px-4 py-6 text-sm text-muted-foreground">
                 Loading content types...
               </TableCell>
             </TableRow>
           ) : rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="px-4 py-6 text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="px-4 py-6 text-sm text-muted-foreground">
                 {emptyMessage ?? "No content types yet. Create the first one to get started."}
               </TableCell>
             </TableRow>
           ) : (
             rows.map((type) => {
               const editHref = withAdminBasePath(basePath, `/content-types/${type.id}`);
+              const isSelected = selectedIds.includes(type.id);
               return (
-                <TableRow key={type.id}>
+                <TableRow key={type.id} className={isSelected ? "bg-muted/30" : undefined}>
+                  <TableCell className="pl-4">
+                    <Checkbox
+                      aria-label={`Select ${type.name}`}
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleRow?.(type.id)}
+                    />
+                  </TableCell>
                   <TableCell className="pl-4 py-4">
                     <div className="space-y-1">
                       <AdminLink

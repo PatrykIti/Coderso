@@ -5,7 +5,7 @@
 **Category:** Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-205-03
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -138,3 +138,11 @@ state approved by the existing list copy.
    `500`.
 5. Empty, first-page, last-page, page-size-change, and row-count-shrink cases
    are covered by Vitest.
+
+## Completion Notes
+
+- Implemented `useListPagination`, page-size constants, page-size normalization,
+  reset/clamp behavior, and visible-row slicing in one resource-agnostic module.
+- Implemented `ListPaginationFooter` with truthful range copy, page-size
+  selector, and shared Previous/Next controls.
+- Covered by `tests/vitest/ui/list-pagination.test.tsx`.

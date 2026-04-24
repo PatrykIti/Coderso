@@ -31,4 +31,6 @@ test("ContentTypeTable renders name as edit link", () => {
   expect(html).toContain("/admin/coderso/engine/type-1");
   expect(html).toContain("Duplicate name");
   expect(html).toContain("Open actions for Blog");
+  expect(html).toContain("Select all content types");
+  expect(html).toContain("Select Blog");
 });

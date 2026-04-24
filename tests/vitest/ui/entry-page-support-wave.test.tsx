@@ -208,6 +208,34 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onConfirm,
+    children,
+  }: {
+    open: boolean;
+    title: React.ReactNode;
+    description?: React.ReactNode;
+    confirmLabel: string;
+    onConfirm: () => void;
+    children?: React.ReactNode;
+  }) =>
+    open ? (
+      <div role="dialog">
+        <p>{title}</p>
+        {description ? <p>{description}</p> : null}
+        {children}
+        <button type="button" onClick={onConfirm}>
+          {`Confirm ${confirmLabel}`}
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("@/components/ui/switch", () => ({
   Switch: ({
     checked,
@@ -714,13 +742,34 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
       buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
       buttons.find((button) => button.textContent?.includes("Close and keep draft"))?.click();
       buttons.find((button) => button.textContent === "Discard")?.click();
-      buttons.find((button) => button.textContent === "Restore")?.click();
-      buttons.find((button) => button.textContent === "Edit")?.click();
-      buttons.find((button) => button.textContent === "Preview")?.click();
-      buttons.find((button) => button.textContent === "Publish")?.click();
-      buttons.find((button) => button.textContent === "Unpublish")?.click();
-      buttons.find((button) => button.textContent === "Duplicate")?.click();
-      buttons.find((button) => button.textContent === "Delete")?.click();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Confirm Discard autosave")
+        ?.click();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Restore")
+        ?.click();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Confirm Restore")
+        ?.click();
+    });
+
+    act(() => {
+      const nextButtons = Array.from(view.container.querySelectorAll("button"));
+      nextButtons.find((button) => button.textContent === "Edit")?.click();
+      nextButtons.find((button) => button.textContent === "Preview")?.click();
+      nextButtons.find((button) => button.textContent === "Publish")?.click();
+      nextButtons.find((button) => button.textContent === "Unpublish")?.click();
+      nextButtons.find((button) => button.textContent === "Duplicate")?.click();
+      nextButtons.find((button) => button.textContent === "Delete")?.click();
     });
 
     expect(onSave).toHaveBeenCalled();

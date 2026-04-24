@@ -46,12 +46,12 @@ export function MenuItemRow({
   const toneClass =
     settings.badge?.tone === "accent"
       ? "border-sky-200 bg-sky-500/10 text-sky-700"
-      : settings.badge?.tone === "success"
-        ? "border-emerald-200 bg-emerald-500/10 text-emerald-700"
+        : settings.badge?.tone === "success"
+          ? "border-emerald-200 bg-emerald-500/10 text-emerald-700"
         : settings.badge?.tone === "warning"
-          ? "border-amber-200 bg-amber-500/10 text-amber-700"
+          ? "border-[var(--admin-state-warning)] bg-card text-[var(--admin-state-warning)]"
           : settings.badge?.tone === "danger"
-            ? "border-rose-200 bg-rose-500/10 text-rose-700"
+            ? "border-destructive bg-card text-destructive"
             : "border-border bg-muted/40 text-foreground";
   return (
     <div
@@ -105,7 +105,7 @@ export function MenuItemRow({
           className={cn(
             "pointer-events-none flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground",
             item.status === "error" &&
-              "bg-rose-500/10 text-rose-500 border border-rose-200"
+              "border border-destructive bg-card text-destructive"
           )}
         >
           {item.status === "error" ? (
@@ -153,7 +153,7 @@ export function MenuItemRow({
         {item.status === "error" ? (
           <Badge
             variant="outline"
-            className="pointer-events-none border-rose-200 bg-rose-500/10 text-rose-600"
+            className="pointer-events-none border-destructive bg-card text-destructive"
           >
             Missing URL
           </Badge>
@@ -175,6 +175,7 @@ export function MenuItemRow({
         <Button
           variant="ghost"
           size="icon"
+          className="text-destructive hover:text-destructive"
           aria-label={`Delete ${label}`}
           title={`Delete ${label}`}
           onClick={(event) => {

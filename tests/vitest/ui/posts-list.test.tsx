@@ -63,7 +63,7 @@ test("PostsListPage renders cached posts without loading placeholder", () => {
     const normalizedHtml = html.replaceAll("<!-- -->", "");
 
     expect(html).toContain("Cached post");
-    expect(normalizedHtml).toContain("Showing 1 of 1 posts");
+    expect(normalizedHtml).toContain("Showing 1-1 of 1 posts");
     expect(html).toContain("Previous");
     expect(html).toContain("Next");
     expect(html).not.toContain("Loading posts");

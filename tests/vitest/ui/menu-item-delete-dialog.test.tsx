@@ -46,6 +46,9 @@ test("MenuItemDeleteDialog renders item impact and supports cancel/confirm", () 
     expect(document.body.textContent).toContain("Delete menu item?");
     expect(document.body.textContent).toContain("About");
     expect(document.body.textContent).toContain("This also removes 2 child items.");
+    expect(document.body.innerHTML).not.toContain("border-rose-200");
+    expect(document.body.innerHTML).not.toContain("bg-rose-50/70");
+    expect(document.body.innerHTML).not.toContain("text-rose-900");
 
     const buttons = Array.from(document.body.querySelectorAll("button"));
 

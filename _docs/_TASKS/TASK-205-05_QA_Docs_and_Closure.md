@@ -5,7 +5,7 @@
 **Category:** QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-205-01, TASK-205-02, TASK-205-03-01, TASK-205-03-02, TASK-205-03-03, TASK-205-04
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -107,3 +107,15 @@ No child task files.
 5. Any skipped DB/API tests are explicitly recorded with reason.
 6. Closure notes confirm the implementation repaired existing owners instead of
    adding duplicate pagination, popup, or bulk route systems.
+
+## Completion Notes
+
+- Task files, task board, source docs, and changelog 735 were updated for the
+  TASK-205 family.
+- Targeted Vitest, `bun --cwd core lint`, `bun --cwd core lint:types`, and the
+  full Vitest lane are the closure validation set for this UI/domain change.
+- Bun route tests were not required because no API route behavior, payload
+  schema, auth, CSRF, or service invariant changed.
+- The implementation repaired existing owners: shared pagination helper/footer,
+  shared popup primitives, resource list orchestration, and existing content
+  type client write contracts.
