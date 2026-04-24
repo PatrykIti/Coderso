@@ -17,6 +17,14 @@ prefetch, assistant cache events, and docs.
 The new all-entries list cache is additive. Type-scoped caches remain the owner
 for editor/detail flows and relation/widget selectors.
 
+Use the existing shared admin cache pattern that Pages, Posts, Menus, Content
+Types, and other admin resources already follow. That pattern is generic at the
+infrastructure level (`cachePolicy` keys, `storageCache` localStorage envelopes,
+`cacheBus` events, resource-client cached wrappers, and UI cache hydration plus
+background revalidation), while each resource still owns its typed cache keys,
+response types, mutation invalidation, and docs map entries. Do not introduce a
+second Entries-specific cache system or a new generic cache framework.
+
 ## Sub-Tasks
 
 No child task files.
@@ -32,6 +40,12 @@ No child task files.
   - update create/update/metadata/duplicate/delete/publish/unpublish helpers to
     update or invalidate the all-entries cache in addition to the type-scoped
     cache.
+- `core/admin/ui/entries/EntryList.tsx`
+  - hydrate `/admin/coderso/entries` from `getCachedAllEntries()` when present,
+  - revalidate through `listAllEntriesCached()` in the same background-refresh
+    style as current Pages/Posts/Menus lists,
+  - subscribe to the all-entries cache key and refresh without dirty-state or
+    selection overwrites.
 - `core/admin/utils/adminPrefetch.ts`
   - warm `/coderso/entries` with content types and the all-entries list if it
     stays inside prefetch budgets.
@@ -73,3 +87,5 @@ No child task files.
 3. Assistant `entry.*` execution cache events cannot leave the all-entries list
    stale.
 4. `/coderso/entries` prefetch remains bounded and tested.
+5. `EntryList` hydrates from the all-entries cache first and then revalidates in
+   the background through the shared admin cache lifecycle.

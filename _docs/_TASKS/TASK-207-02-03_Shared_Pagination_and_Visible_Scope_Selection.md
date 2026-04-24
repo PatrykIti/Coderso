@@ -27,7 +27,8 @@ No child task files.
 - `core/admin/ui/entries/EntryList.tsx`
   - call `useListPagination(filteredEntries, { resetKey })`,
   - pass only `pagination.visibleRows` to `EntryTable`,
-  - derive `visibleIds` from paginated rows,
+  - derive visible selection refs from paginated rows as
+    `{ id, typeSlug: entry.contentType.slug }`,
   - trim selected IDs when filters/page/page size hide rows.
 - `core/admin/ui/entries/EntryTable.tsx`
   - remove local static footer and separators,
@@ -41,6 +42,9 @@ No child task files.
 - Auth/RBAC/CSRF/rate-limit: unchanged.
 - Reject-unknown validation: unchanged.
 - Anti-abuse: bulk actions can only mutate controlled selected visible IDs.
+  For the cross-type list, execution must resolve each selected id to the
+  visible row's owning `contentType.slug`; never execute bulk work against a
+  hidden row or against a single stale `activeSlug`.
 
 ## Testing Requirements
 
@@ -60,3 +64,5 @@ No child task files.
 4. Filtering happens before pagination.
 5. Header checkbox selects only current visible paginated rows.
 6. Selection is trimmed when page, page size, filter, or sort changes hide rows.
+7. Cross-type selected rows keep their owning content-type slug for later row
+   and bulk mutations.

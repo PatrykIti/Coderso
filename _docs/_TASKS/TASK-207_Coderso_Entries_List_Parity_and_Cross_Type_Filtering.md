@@ -47,6 +47,10 @@ resource-specific list system. The canonical route remains
    minimum. Author and updated-date filters should live there if implemented.
 6. Bulk actions, row actions, create drawer, delete dialogs, feedback alerts, and
    dropdowns must use existing Admin UI theme tokens/shared primitives.
+7. Cross-type row selection must keep enough execution context for mutations.
+   The selected execution model cannot be only `selectedIds` plus one
+   `activeSlug`; it must resolve each visible selected row to its entry id and
+   owning `contentType.slug` before calling existing per-entry client helpers.
 
 ## Repair Rules
 
@@ -62,6 +66,11 @@ resource-specific list system. The canonical route remains
   `listEntriesCached(typeSlug)`.
 - Use client-side filtering/pagination like the current Pages/Posts/Menus/Engine
   lists unless a later task explicitly introduces server-side pagination.
+- Reuse the existing shared admin cache pattern: cache keys in
+  `cachePolicy.ts`, localStorage envelope helpers from `storageCache`,
+  same-tab/cross-tab synchronization through `cacheBus`, cached wrappers in the
+  resource client, and background revalidation in the UI. Do not add a second
+  Entries cache abstraction or a resource-specific cache framework.
 - If a current owner cannot keep the contract readable, update the task leaf
   with the real owner decision before adding a helper.
 
@@ -133,7 +142,8 @@ resource-specific list system. The canonical route remains
   read ad hoc query params.
 - Anti-abuse: no public write path; destructive row/bulk delete requires an
   explicit token-backed confirmation and operates only on controlled visible
-  selected IDs.
+  selected entry refs (`id` plus owning `contentType.slug`), not on hidden rows
+  or a stale single active content-type slug.
 
 ## Implementation Order
 
@@ -187,4 +197,3 @@ resource-specific list system. The canonical route remains
    primitives.
 7. Existing type-scoped editor/widget/relation/assistant contracts remain
    backward compatible.
-

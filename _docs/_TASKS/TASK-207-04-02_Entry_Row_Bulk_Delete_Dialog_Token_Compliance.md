@@ -36,7 +36,8 @@ No child task files.
   `deleteEntry(typeSlug, id)`.
 - Reject-unknown validation: unchanged.
 - Anti-abuse: explicit confirmation for destructive row and bulk delete; selected
-  IDs must come from visible controlled selection.
+  refs must come from visible controlled selection and include each row's owning
+  `typeSlug` before calling `deleteEntry(typeSlug, id)`.
 
 ## Testing Requirements
 
@@ -58,3 +59,5 @@ No child task files.
 3. Confirmation copy includes the target context.
 4. No native browser confirm is used.
 5. Popup styling comes from shared primitives/tokens.
+6. Cross-type bulk delete executes against per-row `{ typeSlug, id }` refs and
+   does not reuse a single stale `activeSlug`.

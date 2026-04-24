@@ -17,6 +17,11 @@ Move Entries bulk actions from a full card below filters into the inline
 The behavior should match the visible-scope model used by Pages, Posts, Menus,
 and Content Types.
 
+Because the Entries list is cross-type after TASK-207-01/02, bulk execution
+must resolve each selected visible row to `{ id, typeSlug }` before calling the
+existing per-entry client helpers. Do not reuse the old single `activeSlug`
+execution model for all selected rows.
+
 ## Sub-Tasks
 
 No child task files.
@@ -37,6 +42,9 @@ No child task files.
 - Rate-limit bucket: `admin_write`.
 - Reject-unknown validation: existing route schemas.
 - Anti-abuse: actions run only for controlled visible selected IDs.
+  The execution set must be visible selected entry refs (`id` plus owning
+  `typeSlug`), so hidden rows and rows from a different content type cannot be
+  mutated accidentally.
 
 ## Testing Requirements
 
@@ -55,3 +63,6 @@ No child task files.
 3. Apply is disabled without an action or while running.
 4. Success, failure, and partial-failure feedback is visible.
 5. Selection clears only on full success; actionable failures preserve context.
+6. Cross-type bulk publish/draft/archive/delete calls existing per-entry
+   `entriesClient` helpers with each row's own `typeSlug`, not with a global
+   active content type.

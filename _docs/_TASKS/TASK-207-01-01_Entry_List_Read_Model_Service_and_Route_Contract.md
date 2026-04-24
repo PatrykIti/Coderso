@@ -62,9 +62,10 @@ implementation.
 - RBAC: `content:read`.
 - CSRF: not required for GET.
 - Rate-limit bucket: `admin_read`.
-- Reject-unknown validation: no request body; reject or ignore unsupported query
-  params only according to the shared route validation convention chosen during
-  implementation.
+- Reject-unknown validation: no request body; the initial all-entries route is
+  queryless and must reject unsupported query params instead of ignoring them.
+  If a later task moves filters server-side, add a strict query schema in that
+  task before accepting query input.
 - Anti-abuse: read-only; no public write or token exposure.
 
 ## Testing Requirements
