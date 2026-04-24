@@ -1,7 +1,12 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
-import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import {
+  clearLocalCache,
+  createMemoryBackedLocalCache,
+  readLocalCache,
+  writeLocalCache,
+} from "@/utils/storageCache";
 
 export type PageStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -78,10 +83,15 @@ export type PageTemplateOptionsResponse = {
   templates: PageTemplateOption[];
 };
 
-let cachedPages: PageSummary[] | null = null;
 let cachedPagesPromise: Promise<PageSummary[]> | null = null;
 
 const isPageList = (value: unknown): value is PageSummary[] => Array.isArray(value);
+
+const pagesListCache = createMemoryBackedLocalCache({
+  key: cacheKeys.pagesList,
+  ttlMs: cacheTtlMs.list,
+  validate: isPageList,
+});
 
 const isPageDetail = (value: unknown): value is PageDetail =>
   Boolean(value && typeof value === "object");
@@ -109,7 +119,7 @@ const toPageSummaryPatch = (page: PageSummary | PageDetail) => {
 };
 
 const readPagesCache = () =>
-  readLocalCache(cacheKeys.pagesList, cacheTtlMs.list, isPageList);
+  pagesListCache.read();
 
 const readPageDetailCache = (id: string) =>
   readLocalCache(cacheKeys.pageDetail(id), cacheTtlMs.detail, isPageDetail);
@@ -119,13 +129,12 @@ const writePageDetailCache = (page: PageDetail) => {
 };
 
 const primePagesCacheInternal = (items: PageSummary[]) => {
-  cachedPages = items;
   cachedPagesPromise = null;
-  writeLocalCache(cacheKeys.pagesList, items);
+  pagesListCache.write(items);
 };
 
 const mergeCachedPageIntoList = (page: PageSummary | PageDetail) => {
-  const current = cachedPages ?? readPagesCache() ?? [];
+  const current = readPagesCache() ?? [];
   const summaryPatch = toPageSummaryPatch(page);
   const index = current.findIndex((item) => item.id === summaryPatch.id);
   const next = [...current];
@@ -145,7 +154,7 @@ const mergeCachedPageIntoList = (page: PageSummary | PageDetail) => {
 };
 
 const updateCachedPageStatus = (id: string, status: PageStatus) => {
-  const current = cachedPages ?? readPagesCache();
+  const current = readPagesCache();
   if (current) {
     primePagesCacheInternal(
       current.map((item) => (item.id === id ? { ...item, status } : item))
@@ -158,25 +167,19 @@ const updateCachedPageStatus = (id: string, status: PageStatus) => {
 };
 
 const removeCachedPage = (id: string) => {
-  const current = cachedPages ?? readPagesCache();
+  const current = readPagesCache();
   clearLocalCache(cacheKeys.pageDetail(id));
   if (!current) return;
   primePagesCacheInternal(current.filter((item) => item.id !== id));
 };
 
-export const getCachedPages = () => {
-  if (cachedPages) return cachedPages;
-  const cached = readPagesCache();
-  if (cached) cachedPages = cached;
-  return cachedPages;
-};
+export const getCachedPages = () => readPagesCache();
 
 export const getCachedPageDetail = (id: string) => readPageDetailCache(id);
 
 export const clearPagesCache = () => {
-  cachedPages = null;
   cachedPagesPromise = null;
-  clearLocalCache(cacheKeys.pagesList);
+  pagesListCache.clear();
 };
 
 export async function listPages() {

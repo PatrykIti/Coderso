@@ -5,7 +5,7 @@
 **Category:** Admin/Cache + Performance
 **Estimated Effort:** Medium
 **Dependencies:** TASK-206
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

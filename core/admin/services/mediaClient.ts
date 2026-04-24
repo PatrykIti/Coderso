@@ -1,7 +1,7 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
-import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import { createMemoryBackedLocalCache } from "@/utils/storageCache";
 
 export type MediaRecord = {
   id: string;
@@ -73,22 +73,23 @@ export const normalizeClipboardImageFile = (file: File, now = new Date()) => {
   });
 };
 
-let cachedMedia: MediaRecord[] | null = null;
 let cachedMediaPromise: Promise<MediaRecord[]> | null = null;
 
 const isMediaList = (value: unknown): value is MediaRecord[] => Array.isArray(value);
 
-const readMediaCache = () =>
-  readLocalCache(cacheKeys.mediaList, cacheTtlMs.list, isMediaList);
+const mediaListCache = createMemoryBackedLocalCache({
+  key: cacheKeys.mediaList,
+  ttlMs: cacheTtlMs.list,
+  validate: isMediaList,
+});
 
 const primeMediaCacheInternal = (items: MediaRecord[]) => {
-  cachedMedia = items;
   cachedMediaPromise = null;
-  writeLocalCache(cacheKeys.mediaList, items);
+  mediaListCache.write(items);
 };
 
 const upsertCachedMedia = (item: MediaRecord) => {
-  const current = cachedMedia ?? readMediaCache() ?? [];
+  const current = getCachedMedia() ?? [];
   const index = current.findIndex((media) => media.id === item.id);
   const next = [...current];
   if (index === -1) {
@@ -100,22 +101,18 @@ const upsertCachedMedia = (item: MediaRecord) => {
 };
 
 const removeCachedMedia = (id: string) => {
-  const current = cachedMedia ?? readMediaCache();
+  const current = getCachedMedia();
   if (!current) return;
   primeMediaCacheInternal(current.filter((media) => media.id !== id));
 };
 
-export const getCachedMedia = () => {
-  if (cachedMedia) return cachedMedia;
-  const cached = readMediaCache();
-  if (cached) cachedMedia = cached;
-  return cachedMedia;
-};
+export const getCachedMedia = () => mediaListCache.read();
+
+export const getCachedMediaForEvent = () => mediaListCache.readStorageFirst();
 
 export const clearMediaCache = () => {
-  cachedMedia = null;
   cachedMediaPromise = null;
-  clearLocalCache(cacheKeys.mediaList);
+  mediaListCache.clear();
 };
 
 export async function listMedia() {
@@ -151,8 +148,8 @@ export async function uploadMedia(file: File, meta?: MediaUpdatePayload) {
     { withCsrf: true }
   );
   if (result) {
-    clearMediaCache();
-    broadcastCacheEvent({ key: cacheKeys.mediaList, action: "invalidate" });
+    upsertCachedMedia(result);
+    broadcastCacheEvent({ key: cacheKeys.mediaList, action: "update" });
   }
   return result;
 }
@@ -234,7 +231,7 @@ export async function deleteMedia(id: string) {
   );
   if (result?.ok) {
     removeCachedMedia(id);
-    broadcastCacheEvent({ key: cacheKeys.mediaList, action: "invalidate" });
+    broadcastCacheEvent({ key: cacheKeys.mediaList, action: "update" });
   }
   return result;
 }

@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/Client + Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-206-01, TASK-206-00
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -23,8 +23,8 @@ full `GET /media`.
 
 ## Sub-Tasks
 
-- [ ] TASK-206-02-01: Media Client Patch Helpers and Same-Tab Event Semantics
-- [ ] TASK-206-02-02: Upload Response Row Contract and Cache Upsert
+- [x] TASK-206-02-01: Media Client Patch Helpers and Same-Tab Event Semantics
+- [x] TASK-206-02-02: Upload Response Row Contract and Cache Upsert
 
 ## Files to Change
 

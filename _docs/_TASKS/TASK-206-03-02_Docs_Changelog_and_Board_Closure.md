@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Docs + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-206-03-01, TASK-206-00
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -101,6 +101,25 @@ bun test tests/perf/admin-prefetch-budget.test.ts
 ## Documentation Updates Required
 
 - Same as Files to Change.
+
+## Completion Notes
+
+- `core/admin/utils/storageCache.ts` now owns the shared TTL-aware
+  memory-backed list cache helper.
+- Media Library and Media Picker reuse fresh `media:list` cache without forced
+  route-entry or closed-picker reloads.
+- Media upload/update/recover/replace/delete patch `media:list` and broadcast
+  `update`; same-tab update events hydrate from the patched cache before full
+  reload fallback.
+- `POST /media` now returns the full persisted media row so the admin client can
+  upsert the uploaded asset.
+- DB-backed media service assertions were added, but real DB execution was not
+  available in this worktree because no `.env`/reachable `DATABASE_URL` was
+  present. The suite was checked with a placeholder `DATABASE_URL` and skipped
+  as designed.
+- Additional root `bun run lint:repo` still fails on unrelated existing
+  content/widgets/forms test fixtures missing newer `ContentTypeSummary.status`
+  / `SelectOption` shapes; this did not come from TASK-206 files.
 
 ## Acceptance Criteria
 

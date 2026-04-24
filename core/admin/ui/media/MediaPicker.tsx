@@ -81,11 +81,13 @@ export function MediaPicker({
   const canAddMore =
     !multiple || !maxItems || selectedIds.length < maxItems;
 
-  const refresh = useCallback(async (force = false) => {
-    setIsLoading(true);
+  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    if (!options?.background) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
-      const result = await listMediaCached({ force });
+      const result = await listMediaCached({ force: options?.force ?? false });
       setItems(result.map(toMediaItem));
     } catch (err) {
       if (isApiClientError(err)) {
@@ -94,7 +96,9 @@ export function MediaPicker({
         setError("Failed to load media assets.");
       }
     } finally {
-      setIsLoading(false);
+      if (!options?.background) {
+        setIsLoading(false);
+      }
       setHasLoaded(true);
     }
   }, []);
@@ -106,8 +110,11 @@ export function MediaPicker({
     if (cached) {
       setItems(cached.map(toMediaItem));
       setIsLoading(false);
+      setHasLoaded(true);
+      void refresh({ force: false, background: true });
+      return;
     }
-    void refresh(true);
+    void refresh({ force: false, background: false });
   }, [hasLoaded, isOpen, refresh, selectedIds.length]);
 
   const filteredItems = useMemo(() => {

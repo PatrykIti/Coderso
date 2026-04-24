@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
   createMenu,
@@ -13,7 +13,7 @@ import {
   publishMenu,
   type MenuSummary,
 } from "../../../core/admin/services/menusClient";
-import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -52,6 +52,10 @@ const makeMenuSummary = (overrides: Partial<MenuSummary> = {}): MenuSummary => (
 beforeEach(() => {
   resetCaches();
   resetCsrfToken();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 test("listMenus hits /menus", async () => {
@@ -115,6 +119,46 @@ test("listMenusCached reads from local storage", async () => {
     const result = await listMenusCached();
     expect(result).toEqual(cached);
     expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("listMenusCached ignores expired in-memory list cache", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-24T10:00:00.000Z"));
+
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  const stale = [makeMenuSummary({ id: "menu-stale", name: "Stale" })];
+  const fresh = [makeMenuSummary({ id: "menu-fresh", name: "Fresh" })];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(fresh);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    storage.setItem(
+      cacheKeys.menusList,
+      JSON.stringify({ value: stale, savedAt: Date.now() })
+    );
+    expect(await listMenusCached()).toEqual(stale);
+
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));
+
+    expect(await listMenusCached()).toEqual(fresh);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/menus");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {

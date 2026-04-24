@@ -1462,6 +1462,13 @@ Upload payload (multipart):
 - `title`: string (optional)
 - `caption`: string (optional)
 
+Upload response:
+
+- `POST /media` returns the full persisted media record (`id`, `key`, `url`,
+  `originalName`, `type`, `mimeType`, `size`, dimensions when available,
+  metadata, `createdAt`, and `createdBy`). Admin clients use this row as the
+  authoritative cache-upsert payload.
+
 Update metadata payload:
 
 ```json

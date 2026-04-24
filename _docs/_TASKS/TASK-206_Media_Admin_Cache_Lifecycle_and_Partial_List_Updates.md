@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/UI + Cache/Performance
 **Estimated Effort:** Large
 **Dependencies:** TASK-201, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -77,16 +77,16 @@ the custom case is handled through the shared contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-206-00: Admin Cache In-Memory TTL Contract
-- [ ] TASK-206-01: Media Mount Hydration and Picker Cache Policy
-  - [ ] TASK-206-01-01: Media Library Mount Refresh Policy
-  - [ ] TASK-206-01-02: Media Picker Cache Reuse and Shared Policy Helper
-- [ ] TASK-206-02: Partial Media Mutation Cache Updates
-  - [ ] TASK-206-02-01: Media Client Patch Helpers and Same-Tab Event Semantics
-  - [ ] TASK-206-02-02: Upload Response Row Contract and Cache Upsert
-- [ ] TASK-206-03: Regression Proof, Prefetch, Docs, and Closure
-  - [ ] TASK-206-03-01: Media Cache and Prefetch Regression Matrix
-  - [ ] TASK-206-03-02: Docs, Changelog, and Board Closure
+- [x] TASK-206-00: Admin Cache In-Memory TTL Contract
+- [x] TASK-206-01: Media Mount Hydration and Picker Cache Policy
+  - [x] TASK-206-01-01: Media Library Mount Refresh Policy
+  - [x] TASK-206-01-02: Media Picker Cache Reuse and Shared Policy Helper
+- [x] TASK-206-02: Partial Media Mutation Cache Updates
+  - [x] TASK-206-02-01: Media Client Patch Helpers and Same-Tab Event Semantics
+  - [x] TASK-206-02-02: Upload Response Row Contract and Cache Upsert
+- [x] TASK-206-03: Regression Proof, Prefetch, Docs, and Closure
+  - [x] TASK-206-03-01: Media Cache and Prefetch Regression Matrix
+  - [x] TASK-206-03-02: Docs, Changelog, and Board Closure
 
 ## Scope
 

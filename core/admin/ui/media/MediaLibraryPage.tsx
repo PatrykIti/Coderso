@@ -10,6 +10,7 @@ import { cacheKeys } from "@/services/cachePolicy";
 import {
   deleteMedia,
   getCachedMedia,
+  getCachedMediaForEvent,
   getMediaUsage,
   listMediaCached,
   recoverMediaDimensions,
@@ -39,6 +40,10 @@ import {
 import { resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import {
+  resolveCacheRefreshBackground,
+  resolveListMountRefreshOptions,
+} from "@/utils/cacheRefresh";
 
 type UsageLoadState = {
   state: "idle" | "loading" | "loaded" | "error";
@@ -64,7 +69,8 @@ const defaultDimensionState: DimensionRecoveryState = {
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
-  const initialCached = getCachedMedia();
+  const initialCached = useMemo(() => getCachedMedia(), []);
+  const hasInitialCache = initialCached !== null;
   const [items, setItems] = useState<MediaItem[]>(() =>
     initialCached ? initialCached.map(toMediaItem) : []
   );
@@ -78,7 +84,7 @@ export function MediaLibraryPage() {
   const [openAfterUpload, setOpenAfterUpload] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(() => !initialCached);
+  const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [usageById, setUsageById] = useState<Record<string, UsageLoadState>>({});
@@ -91,7 +97,7 @@ export function MediaLibraryPage() {
   const [isSettingsSaving, setIsSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
-  const hasHydratedRef = useRef(false);
+  const hasHydratedRef = useRef(hasInitialCache);
 
   const initialSelectedId = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -102,7 +108,10 @@ export function MediaLibraryPage() {
   const refresh = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
       const force = options?.force ?? false;
-      const background = options?.background ?? hasHydratedRef.current;
+      const background = resolveCacheRefreshBackground({
+        explicitBackground: options?.background,
+        hasHydrated: hasHydratedRef.current,
+      });
       if (!background) {
         setIsLoading(true);
       }
@@ -126,16 +135,26 @@ export function MediaLibraryPage() {
     []
   );
 
+  const applyCachedMediaRows = useCallback(() => {
+    const cached = getCachedMediaForEvent();
+    if (!cached) return false;
+    setItems(cached.map(toMediaItem));
+    hasHydratedRef.current = true;
+    setIsLoading(false);
+    return true;
+  }, []);
+
   useEffect(() => {
-    refresh({ force: true }).catch(() => undefined);
-  }, [refresh]);
+    refresh(resolveListMountRefreshOptions(hasInitialCache)).catch(() => undefined);
+  }, [hasInitialCache, refresh]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.mediaList) return;
+      if (event.action === "update" && applyCachedMediaRows()) return;
       refresh({ force: true, background: true }).catch(() => undefined);
     });
-  }, [refresh]);
+  }, [applyCachedMediaRows, refresh]);
 
   useEffect(() => {
     let active = true;
@@ -218,7 +237,7 @@ export function MediaLibraryPage() {
         const result = await uploadMedia(file);
         uploaded.push(result);
       }
-      await refresh({ force: true, background: true });
+      applyCachedMediaRows();
       if (uploaded[0]?.id) {
         setSelectedId(uploaded[0].id);
         setIsDrawerOpen(openAfterUpload);

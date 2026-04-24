@@ -172,6 +172,17 @@ testIfDb("upload/update/delete media", async () => {
   });
 
   createdMediaId = uploaded.id;
+  expect(uploaded).toMatchObject({
+    alt: "Alt",
+    title: "Title",
+    caption: "Caption",
+    type: "file",
+    mimeType: "text/plain",
+    size: content.length,
+    originalName: "hello.txt",
+  });
+  expect(uploaded.key).toBeTruthy();
+  expect(uploaded.url).toContain(uploaded.key);
   const row = await getMediaById(uploaded.id);
   expect(row?.alt).toBe("Alt");
   expect(row?.title).toBe("Title");

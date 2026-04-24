@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/Cache + Testing
 **Estimated Effort:** Medium
 **Dependencies:** TASK-206-00, TASK-206-01-01, TASK-206-01-02, TASK-206-02-01, TASK-206-02-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

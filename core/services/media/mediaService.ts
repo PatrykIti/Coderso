@@ -14,12 +14,6 @@ export type MediaMeta = {
   caption?: string | null;
 };
 
-export type UploadResult = {
-  id: string;
-  url: string;
-  key: string;
-};
-
 type MediaConfig = {
   maxSizeBytes: number;
   allowedMime: string[];
@@ -116,7 +110,7 @@ export async function uploadMedia(
   file: UploadFile,
   meta: MediaMeta,
   userId?: string
-): Promise<UploadResult> {
+) {
   const config = await getConfig();
 
   const buffer = await toBuffer(file);
@@ -157,7 +151,7 @@ export async function uploadMedia(
     })
     .returning();
 
-  return { id: row.id, url: row.url, key: row.key };
+  return row;
 }
 
 export async function listMedia() {

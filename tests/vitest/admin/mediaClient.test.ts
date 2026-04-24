@@ -1,9 +1,11 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import {
   createClipboardImageFilename,
   clearMediaCache,
   deleteMedia,
+  getCachedMedia,
+  getCachedMediaForEvent,
   getMediaUsage,
   listMedia,
   listMediaCached,
@@ -13,9 +15,14 @@ import {
   updateMedia,
   uploadClipboardImage,
   uploadMedia,
+  type MediaRecord,
 } from "../../../core/admin/services/mediaClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
-import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
+import {
+  subscribeCacheEvents,
+  type CacheEvent,
+} from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -40,6 +47,38 @@ const createLocalStorage = () => {
 const resetCaches = () => {
   clearMediaCache();
 };
+
+const mediaRecord = (overrides: Partial<MediaRecord> = {}): MediaRecord => ({
+  id: overrides.id ?? "media-1",
+  key: overrides.key ?? "key-1",
+  url: overrides.url ?? "https://example.com/1.png",
+  type: overrides.type ?? "image",
+  mimeType: overrides.mimeType ?? "image/png",
+  size: overrides.size ?? 1200,
+  width: overrides.width ?? null,
+  height: overrides.height ?? null,
+  alt: overrides.alt ?? null,
+  title: overrides.title ?? null,
+  caption: overrides.caption ?? null,
+  originalName: overrides.originalName ?? "image.png",
+  createdAt: overrides.createdAt ?? "2026-02-14T00:00:00.000Z",
+  createdBy: overrides.createdBy ?? null,
+});
+
+const setCacheValue = (
+  storage: ReturnType<typeof createLocalStorage>,
+  value: unknown,
+  savedAt = Date.now()
+) => {
+  storage.setItem(cacheKeys.mediaList, JSON.stringify({ value, savedAt }));
+};
+
+afterEach(() => {
+  resetCaches();
+  resetCsrfToken();
+  vi.useRealTimers();
+});
+
 test("listMedia hits GET /media", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -310,5 +349,174 @@ test("listMediaCached reads from local storage", async () => {
       (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
     resetCaches();
+  }
+});
+
+test("listMediaCached ignores expired in-memory list cache", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-24T10:00:00.000Z"));
+
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  const stale = [mediaRecord({ id: "media-stale", key: "stale" })];
+  const fresh = [mediaRecord({ id: "media-fresh", key: "fresh" })];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(fresh);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    setCacheValue(storage, stale);
+    expect(await listMediaCached()).toEqual(stale);
+
+    vi.setSystemTime(
+      new Date(Date.now() + cacheTtlMs.list + 1000)
+    );
+
+    const result = await listMediaCached();
+    expect(result).toEqual(fresh);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/media");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("getCachedMediaForEvent prefers fresh storage over in-memory list", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const memoryRows = [mediaRecord({ id: "media-memory", title: "Memory" })];
+  const storageRows = [mediaRecord({ id: "media-storage", title: "Storage" })];
+
+  globalThis.fetch = async () => jsonResponse([]);
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    setCacheValue(storage, memoryRows);
+    expect(await listMediaCached()).toEqual(memoryRows);
+
+    setCacheValue(storage, storageRows);
+
+    expect(getCachedMediaForEvent()).toEqual(storageRows);
+    expect(getCachedMedia()).toEqual(storageRows);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("getCachedMediaForEvent returns null after storage and memory expire", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-24T10:00:00.000Z"));
+
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const rows = [mediaRecord({ id: "media-expired" })];
+
+  globalThis.fetch = async () => jsonResponse([]);
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    setCacheValue(storage, rows);
+    expect(await listMediaCached()).toEqual(rows);
+
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));
+
+    expect(getCachedMediaForEvent()).toBeNull();
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("media mutations patch the cached list and broadcast update events", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const events: CacheEvent[] = [];
+  const unsubscribe = subscribeCacheEvents((event) => events.push(event));
+  const rows = [
+    mediaRecord({ id: "media-1", title: "One" }),
+    mediaRecord({ id: "media-2", title: "Two" }),
+  ];
+  const responses = [
+    jsonResponse({ token: "csrf-token" }),
+    jsonResponse(mediaRecord({ id: "media-1", title: "Updated" })),
+    jsonResponse(mediaRecord({ id: "media-1", title: "Recovered", width: 320 })),
+    jsonResponse(mediaRecord({ id: "media-1", title: "Replaced", key: "replaced" })),
+    jsonResponse(mediaRecord({ id: "media-3", title: "Uploaded", key: "uploaded" })),
+    jsonResponse({ ok: true }),
+  ];
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return responses.shift() ?? jsonResponse({ token: "csrf-token" });
+    }
+    return responses.shift() ?? jsonResponse({});
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    setCacheValue(storage, rows);
+    expect(await listMediaCached()).toEqual(rows);
+
+    await updateMedia("media-1", { title: "Updated" });
+    expect(getCachedMedia()?.map((item) => item.title)).toEqual(["Updated", "Two"]);
+
+    await recoverMediaDimensions("media-1");
+    expect(getCachedMedia()?.[0]?.title).toBe("Recovered");
+    expect(getCachedMedia()?.[0]?.width).toBe(320);
+
+    const file = new File(["img"], "replacement.png", { type: "image/png" });
+    await replaceMedia("media-1", file);
+    expect(getCachedMedia()?.[0]?.key).toBe("replaced");
+
+    const uploaded = await uploadMedia(
+      new File(["img"], "upload.png", { type: "image/png" })
+    );
+    expect(uploaded.title).toBe("Uploaded");
+    expect(getCachedMedia()?.map((item) => item.id)).toEqual([
+      "media-3",
+      "media-1",
+      "media-2",
+    ]);
+
+    await deleteMedia("media-1");
+    expect(getCachedMedia()?.map((item) => item.id)).toEqual(["media-3", "media-2"]);
+    expect(events.filter((event) => event.key === cacheKeys.mediaList)).toHaveLength(5);
+    expect(events.filter((event) => event.key === cacheKeys.mediaList)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: cacheKeys.mediaList, action: "update" }),
+      ])
+    );
+  } finally {
+    unsubscribe();
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
   }
 });

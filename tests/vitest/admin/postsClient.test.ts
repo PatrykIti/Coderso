@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import {
   autosavePost,
@@ -13,7 +13,7 @@ import {
   restorePostRevision,
 } from "../../../core/admin/services/postsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
-import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -37,6 +37,10 @@ const createLocalStorage = () => {
 const resetCaches = () => {
   clearPostsCache();
 };
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 test("listPosts hits GET /posts", async () => {
   const originalFetch = globalThis.fetch;
@@ -296,6 +300,69 @@ test("listPostsCached reads from local storage", async () => {
     const result = await listPostsCached();
     expect(result).toEqual(cached);
     expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("listPostsCached ignores expired in-memory list cache", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-24T10:00:00.000Z"));
+
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  const stale = [
+    {
+      id: "post-stale",
+      typeId: "post-type",
+      title: "Stale",
+      slug: "stale",
+      status: "draft" as const,
+      data: {},
+      tags: [],
+      scheduledAt: null,
+      createdAt: "2026-02-14T00:00:00.000Z",
+      updatedAt: "2026-02-14T00:00:00.000Z",
+      publishedAt: null,
+      author: null,
+    },
+  ];
+  const fresh = [
+    {
+      ...stale[0],
+      id: "post-fresh",
+      title: "Fresh",
+      slug: "fresh",
+    },
+  ];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(fresh);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    storage.setItem(
+      cacheKeys.postsList,
+      JSON.stringify({ value: stale, savedAt: Date.now() })
+    );
+    expect(await listPostsCached()).toEqual(stale);
+
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));
+
+    expect(await listPostsCached()).toEqual(fresh);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/posts");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {

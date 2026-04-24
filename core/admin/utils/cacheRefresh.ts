@@ -8,3 +8,9 @@ export function resolveCacheRefreshBackground(input: {
   return input.hasHydrated;
 }
 
+export function resolveListMountRefreshOptions(hasInitialCache: boolean) {
+  return {
+    force: !hasInitialCache,
+    background: hasInitialCache,
+  };
+}

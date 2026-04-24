@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import {
   autosavePage,
@@ -21,7 +21,7 @@ import {
   updatePage,
 } from "../../../core/admin/services/pagesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
-import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
 import {
   subscribeCacheEvents,
   type CacheEvent,
@@ -132,6 +132,10 @@ const pageDetail = (overrides: Partial<{
   ...(Object.prototype.hasOwnProperty.call(overrides, "author")
     ? { author: overrides.author ?? null }
     : {}),
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 test("listPages hits GET /pages", async () => {
@@ -506,6 +510,31 @@ test("listPagesCached dedupes in-flight reads and force refreshes cache", async 
     expect(forcedFetch.calls).toHaveLength(1);
     expect(forced).toEqual([pageSummary({ id: "page-2", title: "Forced" })]);
     forcedFetch.restore();
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("listPagesCached ignores expired in-memory list cache", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-24T10:00:00.000Z"));
+
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const stale = [pageSummary({ id: "page-stale", title: "Stale" })];
+  const fresh = [pageSummary({ id: "page-fresh", title: "Fresh" })];
+  const fetchMock = installFetch(async () => jsonResponse(fresh));
+
+  try {
+    resetCaches();
+    setCacheValue(storage, cacheKeys.pagesList, stale);
+    expect(await listPagesCached()).toEqual(stale);
+
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));
+
+    expect(await listPagesCached()).toEqual(fresh);
+    expect(fetchMock.calls).toHaveLength(1);
+    expect(fetchMock.calls[0]?.input).toBe("/admin/api/pages");
   } finally {
     fetchMock.restore();
     restoreStorage();

@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { resolveCacheRefreshBackground } from "../../../core/admin/utils/cacheRefresh";
+import {
+  resolveCacheRefreshBackground,
+  resolveListMountRefreshOptions,
+} from "../../../core/admin/utils/cacheRefresh";
 
 test("resolveCacheRefreshBackground respects explicit override", () => {
   expect(
@@ -30,4 +33,15 @@ test("resolveCacheRefreshBackground falls back to hydration state", () => {
       hasHydrated: false,
     })
   ).toBe(false);
+});
+
+test("resolveListMountRefreshOptions forces only missing-cache mounts", () => {
+  expect(resolveListMountRefreshOptions(true)).toEqual({
+    force: false,
+    background: true,
+  });
+  expect(resolveListMountRefreshOptions(false)).toEqual({
+    force: true,
+    background: false,
+  });
 });

@@ -1,7 +1,12 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
-import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import {
+  clearLocalCache,
+  createMemoryBackedLocalCache,
+  readLocalCache,
+  writeLocalCache,
+} from "@/utils/storageCache";
 
 export type PostStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -97,11 +102,17 @@ export type PostAutosaveResponse = {
   reusedRevision: boolean;
 };
 
-let cachedPosts: PostSummary[] | null = null;
 let cachedPostsPromise: Promise<PostSummary[]> | null = null;
 const cachedPostDetails = new Map<string, PostDetail>();
 
 const isPostList = (value: unknown): value is PostSummary[] => Array.isArray(value);
+
+const postsListCache = createMemoryBackedLocalCache({
+  key: cacheKeys.postsList,
+  ttlMs: cacheTtlMs.list,
+  validate: isPostList,
+});
+
 const isPostDetail = (value: unknown): value is PostDetail =>
   Boolean(value && typeof value === "object");
 
@@ -127,19 +138,18 @@ const toPostDetail = (post: PostSummary | PostDetail): PostDetail => ({
 });
 
 const readPostsCache = () =>
-  readLocalCache(cacheKeys.postsList, cacheTtlMs.list, isPostList);
+  postsListCache.read();
 
 const readPostDetailCache = (id: string) =>
   readLocalCache(cacheKeys.postDetail(id), cacheTtlMs.detail, isPostDetail);
 
 const primePostsCache = (items: PostSummary[]) => {
-  cachedPosts = items;
   cachedPostsPromise = null;
-  writeLocalCache(cacheKeys.postsList, items);
+  postsListCache.write(items);
 };
 
 const upsertCachedPost = (post: PostSummary | PostDetail) => {
-  const current = cachedPosts ?? readPostsCache() ?? [];
+  const current = readPostsCache() ?? [];
   const summary = toPostSummary(post);
   const index = current.findIndex((item) => item.id === summary.id);
   const next = [...current];
@@ -153,7 +163,7 @@ const upsertCachedPost = (post: PostSummary | PostDetail) => {
 };
 
 const updateCachedPostStatus = (id: string, status: PostStatus) => {
-  const current = cachedPosts ?? readPostsCache();
+  const current = readPostsCache();
   if (current) {
     primePostsCache(
       current.map((item) => (item.id === id ? { ...item, status } : item))
@@ -169,25 +179,19 @@ const updateCachedPostStatus = (id: string, status: PostStatus) => {
 };
 
 const removeCachedPost = (id: string) => {
-  const current = cachedPosts ?? readPostsCache();
+  const current = readPostsCache();
   if (current) primePostsCache(current.filter((item) => item.id !== id));
   cachedPostDetails.delete(id);
   clearLocalCache(cacheKeys.postDetail(id));
 };
 
 export const clearPostsCache = () => {
-  cachedPosts = null;
   cachedPostsPromise = null;
   cachedPostDetails.clear();
-  clearLocalCache(cacheKeys.postsList);
+  postsListCache.clear();
 };
 
-export const getCachedPosts = () => {
-  if (cachedPosts) return cachedPosts;
-  const cached = readPostsCache();
-  if (cached) cachedPosts = cached;
-  return cachedPosts;
-};
+export const getCachedPosts = () => readPostsCache();
 
 export const getCachedPostDetail = (id: string) => {
   const existing = cachedPostDetails.get(id);

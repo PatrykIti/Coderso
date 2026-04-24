@@ -21,6 +21,13 @@ Defaults live in `core/admin/services/cachePolicy.ts`:
 - `cacheTtlMs.list`: 5 minutes
 - `cacheTtlMs.detail`: 5 minutes
 
+List clients that keep module-level in-memory rows use
+`createMemoryBackedLocalCache` from `core/admin/utils/storageCache.ts`. The TTL
+applies to both the storage envelope and the in-memory envelope. Expired memory
+is cleared before storage/network fallback, so a stale module variable cannot
+keep serving rows after `localStorage` expired or was patched by another cache
+owner.
+
 ### Cache keys
 Defined in `core/admin/services/cachePolicy.ts`:
 - `pages:list`
@@ -162,7 +169,8 @@ Consumers subscribe and revalidate when matching keys change.
 2. If cache is missing, fetch in foreground (`force: false`, empty cache triggers network read).
 3. If cache exists, mount does not force network refresh.
 4. On explicit user action (Refresh/Save/Publish/Delete) use `force: true`.
-5. On cache invalidation/update events use `force: true` in background.
+5. On cache update events, hydrate from the patched cache when available.
+6. On true invalidation or explicit refresh, use `force: true` in background.
 
 ### Editors
 1. Hydrate from cache.
@@ -204,10 +212,22 @@ Clients update caches and broadcast events on:
 
 - Media list cache (`media:list`) is owned by
   `core/admin/services/mediaClient.ts`.
-- `uploadMedia()` invalidates the list after successful multipart upload.
+- `MediaLibraryPage` hydrates from `getCachedMedia()` on first render. If
+  cache exists, route entry uses a background cached read; if cache is missing,
+  it performs the foreground list load.
+- `MediaPicker` resolves selected media and opened browse states from
+  `getCachedMedia()` / `listMediaCached({ force: false })` before network
+  fallback. Closed pickers with no selection stay idle.
+- `getCachedMediaForEvent()` reads storage first, then fresh memory, so same-tab
+  `update` events can apply the row set that was just patched by the mutation
+  owner without a redundant full `GET /media`.
+- `uploadMedia()` upserts the authoritative uploaded media row into the list
+  cache and broadcasts `update`.
 - `updateMedia()`, `recoverMediaDimensions()`, and `replaceMedia()` upsert the
   returned media record into the list cache and broadcast `update`.
-- `deleteMedia()` removes the record and broadcasts `invalidate`.
+- `deleteMedia()` removes the record and broadcasts `update`.
+- Full-list reload is still allowed for missing/expired cache, explicit refresh,
+  or true invalidation.
 - Usage lookups (`GET /media/:id/usage`) are read-only, bounded API calls and
   are not stored in browser cache.
 
@@ -234,7 +254,9 @@ Clients update caches and broadcast events on:
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.
-2. Use `readLocalCache` / `writeLocalCache` / `clearLocalCache`.
+2. Use `readLocalCache` / `writeLocalCache` / `clearLocalCache` for
+   storage-only cache or `createMemoryBackedLocalCache` when the client also
+   keeps module-level in-memory rows.
 3. Add cached `list*Cached` / `get*Cached` wrappers in the service client.
 4. Broadcast cache events after mutations.
 5. In UI, hydrate from cache then revalidate in background.

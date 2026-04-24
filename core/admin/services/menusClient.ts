@@ -1,7 +1,12 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
-import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import {
+  clearLocalCache,
+  createMemoryBackedLocalCache,
+  readLocalCache,
+  writeLocalCache,
+} from "@/utils/storageCache";
 import type { MenuItemSettings } from "../../services/menus/menuItemSettings";
 
 export type MenuSummary = {
@@ -40,7 +45,6 @@ export type MenuItemInput = {
   settings?: MenuItemSettings;
 };
 
-let cachedMenus: MenuSummary[] | null = null;
 let cachedMenusPromise: Promise<MenuSummary[]> | null = null;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -67,11 +71,17 @@ const isMenuSummary = (value: unknown): value is MenuSummary => {
 const isMenuList = (value: unknown): value is MenuSummary[] =>
   Array.isArray(value) && value.every(isMenuSummary);
 
+const menusListCache = createMemoryBackedLocalCache({
+  key: cacheKeys.menusList,
+  ttlMs: cacheTtlMs.list,
+  validate: isMenuList,
+});
+
 const isMenuDetail = (value: unknown): value is MenuWithItems =>
   isRecord(value) && isMenuSummary(value.menu) && Array.isArray(value.items);
 
 const readMenusCache = () =>
-  readLocalCache(cacheKeys.menusList, cacheTtlMs.list, isMenuList);
+  menusListCache.read();
 
 const readMenuDetailCache = (id: string) =>
   readLocalCache(cacheKeys.menuDetail(id), cacheTtlMs.detail, isMenuDetail);
@@ -81,13 +91,12 @@ const writeMenuDetailCache = (payload: MenuWithItems) => {
 };
 
 const primeMenusCacheInternal = (items: MenuSummary[]) => {
-  cachedMenus = items;
   cachedMenusPromise = null;
-  writeLocalCache(cacheKeys.menusList, items);
+  menusListCache.write(items);
 };
 
 const upsertCachedMenuSummary = (menu: MenuSummary) => {
-  const current = cachedMenus ?? readMenusCache() ?? [];
+  const current = readMenusCache() ?? [];
   const index = current.findIndex((item) => item.id === menu.id);
   const next = [...current];
   if (index === -1) {
@@ -104,25 +113,19 @@ const upsertCachedMenuDetail = (payload: MenuWithItems) => {
 };
 
 const removeCachedMenu = (id: string) => {
-  const current = cachedMenus ?? readMenusCache();
+  const current = readMenusCache();
   if (!current) return;
   primeMenusCacheInternal(current.filter((item) => item.id !== id));
   clearLocalCache(cacheKeys.menuDetail(id));
 };
 
-export const getCachedMenus = () => {
-  if (cachedMenus) return cachedMenus;
-  const cached = readMenusCache();
-  if (cached) cachedMenus = cached;
-  return cachedMenus;
-};
+export const getCachedMenus = () => readMenusCache();
 
 export const getCachedMenuDetail = (id: string) => readMenuDetailCache(id);
 
 export const clearMenusCache = () => {
-  cachedMenus = null;
   cachedMenusPromise = null;
-  clearLocalCache(cacheKeys.menusList);
+  menusListCache.clear();
 };
 
 export async function listMenus() {

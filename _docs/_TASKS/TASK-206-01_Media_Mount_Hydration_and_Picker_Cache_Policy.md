@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/UI + Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-206, TASK-206-00
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -25,8 +25,8 @@ contract is actually honored.
 
 ## Sub-Tasks
 
-- [ ] TASK-206-01-01: Media Library Mount Refresh Policy
-- [ ] TASK-206-01-02: Media Picker Cache Reuse and Shared Policy Helper
+- [x] TASK-206-01-01: Media Library Mount Refresh Policy
+- [x] TASK-206-01-02: Media Picker Cache Reuse and Shared Policy Helper
 
 ## Files to Change
 

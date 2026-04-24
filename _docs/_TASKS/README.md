@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 76 tasks
+- **To Do:** 65 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1081 tasks
+- **Done:** 1092 tasks
 
 ---
 
@@ -38,17 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-206 | Media Admin Cache Lifecycle and Partial List Updates | High | Large | Repair Media route-entry cache lifecycle and partial mutation updates without creating a second media flow |
-| TASK-206-00 | Admin Cache In-Memory TTL Contract | High | Medium | Make shared in-memory admin list caches obey the same TTL as storage envelopes before Media relies on expired-cache fallback |
-| TASK-206-01 | Media Mount Hydration and Picker Cache Policy | High | Medium | Align Media Library and MediaPicker hydration with the existing Pages/Menus cache policy |
-| TASK-206-01-01 | Media Library Mount Refresh Policy | High | Medium | Stop forcing full `GET /media` on `/admin/media` mount when `media:list` is fresh |
-| TASK-206-01-02 | Media Picker Cache Reuse and Shared Policy Helper | Medium | Medium | Reuse `media:list` in picker browse/selection flows without forced reload |
-| TASK-206-02 | Partial Media Mutation Cache Updates | High | Large | Patch `media:list` for known upload/update/recover/replace/delete changes |
-| TASK-206-02-01 | Media Client Patch Helpers and Same-Tab Event Semantics | High | Medium | Keep same-tab cache events from triggering redundant full-list reloads after patched updates |
-| TASK-206-02-02 | Upload Response Row Contract and Cache Upsert | High | Medium | Return or fetch one authoritative uploaded row and upsert it instead of invalidating the full gallery |
-| TASK-206-03 | Regression Proof, Prefetch, Docs, and Closure | Medium | Medium | Prove request behavior, prefetch warmup, docs, changelog, and board closure |
-| TASK-206-03-01 | Media Cache and Prefetch Regression Matrix | Medium | Medium | Add request-level tests for cached Media navigation, picker reuse, mutations, upload, and prefetch |
-| TASK-206-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Sync ADMIN_CACHE docs, cache map, changelog, task statuses, and validation evidence |
 | TASK-207 | Coderso Entries List Parity and Cross-Type Filtering | High | Very Large | Entries first-screen parity with Pages/Posts/Menus/Content Types, all-entries read model, content-type column/link, advanced filters, shared pagination, and token-backed actions |
 | TASK-207-01 | Entries Cross-Type Read Model and Cache Contract | High | Large | Business/technical foundation: one internal all-entries read model plus cache/prefetch/docs alignment |
 | TASK-207-01-01 | Entry List Read Model Service and Route Contract | High | Medium | Technical leaf: service-level all-entries join and internal `content:read` route |
@@ -133,6 +122,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-206 | Media Admin Cache Lifecycle and Partial List Updates | High | Large | Done: shared TTL-aware list cache, Media mount/picker cache reuse, partial media mutation updates, upload row response, docs, and validation shipped |
+| TASK-206-03 | Regression Proof, Prefetch, Docs, and Closure | Medium | Medium | Done: regression matrix, docs, changelog 736, board closure, and validation evidence synced |
+| TASK-206-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Done: ADMIN_CACHE, cache map, CMS API, changelog, task statuses, and validation notes synced |
+| TASK-206-03-01 | Media Cache and Prefetch Regression Matrix | Medium | Medium | Done: request-level Vitest coverage proves cached Media navigation, picker reuse, mutation updates, upload upsert, and TTL behavior |
+| TASK-206-02 | Partial Media Mutation Cache Updates | High | Large | Done: media updates, recovery, replace, delete, and upload patch `media:list` without full-list invalidation |
+| TASK-206-02-02 | Upload Response Row Contract and Cache Upsert | High | Medium | Done: upload service returns the authoritative media row so the admin client can upsert it |
+| TASK-206-02-01 | Media Client Patch Helpers and Same-Tab Event Semantics | High | Medium | Done: patched same-tab cache events hydrate from cache before falling back to full reload |
+| TASK-206-01 | Media Mount Hydration and Picker Cache Policy | High | Medium | Done: Media Library and MediaPicker reuse fresh `media:list` and avoid forced reload on ordinary entry |
+| TASK-206-01-02 | Media Picker Cache Reuse and Shared Policy Helper | Medium | Medium | Done: picker resolves selected and opened states from cache before foreground fetch |
+| TASK-206-01-01 | Media Library Mount Refresh Policy | High | Medium | Done: `/admin/media` uses cache-present/background and cache-missing/foreground mount options |
+| TASK-206-00 | Admin Cache In-Memory TTL Contract | High | Medium | Done: shared memory-backed storage cache applies TTL to module memory and storage envelopes |
 | TASK-205 | Admin List Pagination, Popup Tokens, and Content Type Parity | High | Very Large | Done: shared list pagination, token-backed confirmations, content type JSON scroll containment, and Content Types bulk parity shipped |
 | TASK-205-05 | QA, Docs, and Closure | Medium | Medium | Done: TASK-205 docs, changelog 735, board closure, and validation evidence synced |
 | TASK-205-04 | Content Type List Selection and Bulk Actions | High | Large | Done: Content Types visible-page selection plus bulk publish, draft, and delete reuse existing client/write contracts |

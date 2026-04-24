@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Admin/Cache + QA/Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-206-00, TASK-206-01, TASK-206-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -21,8 +21,8 @@ observable: ordinary navigation to Media with fresh cache should not issue
 
 ## Sub-Tasks
 
-- [ ] TASK-206-03-01: Media Cache and Prefetch Regression Matrix
-- [ ] TASK-206-03-02: Docs, Changelog, and Board Closure
+- [x] TASK-206-03-01: Media Cache and Prefetch Regression Matrix
+- [x] TASK-206-03-02: Docs, Changelog, and Board Closure
 
 ## Files to Change
 

@@ -98,12 +98,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Media
 - Media library
   - UI: `core/admin/ui/media/MediaLibraryPage.tsx`
-  - Cached APIs: `listMediaCached`, `getCachedMedia`
+  - Cached APIs: `listMediaCached`, `getCachedMedia`, `getCachedMediaForEvent`
   - Mutating cached APIs: `uploadMedia`, `updateMedia`, `recoverMediaDimensions`, `replaceMedia`, `deleteMedia`
+  - Cache bus: `media:list` update events hydrate from patched cache; explicit refresh/true invalidation may reload the list
   - Read-only uncached API: `getMediaUsage`
 - Media picker
   - UI: `core/admin/ui/media/MediaPicker.tsx`
   - Cached APIs: `listMediaCached`, `getCachedMedia`
+  - Cache policy: closed/no-selection state does not fetch; selected/open state reuses fresh `media:list` before network fallback
 
 ## Menus / Themes / Site Settings
 - Menus list
