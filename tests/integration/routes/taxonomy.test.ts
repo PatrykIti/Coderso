@@ -46,6 +46,7 @@ test("taxonomy routes are registered", () => {
 
 test("taxonomy route mapper preserves known domain errors", () => {
   const missingTerm = mapTaxonomyDomainError(new Error("taxonomy_term_missing"));
+  const missingTaxonomy = mapTaxonomyDomainError(new Error("taxonomy_not_found"));
   const duplicateSlug = mapTaxonomyDomainError({
     code: "23505",
     constraint: "content_terms_taxonomy_slug_idx",
@@ -54,6 +55,9 @@ test("taxonomy route mapper preserves known domain errors", () => {
   expect(missingTerm).toBeInstanceOf(ApiError);
   expect(missingTerm?.code).toBe("taxonomy_term_missing");
   expect(missingTerm?.status).toBe(404);
+  expect(missingTaxonomy).toBeInstanceOf(ApiError);
+  expect(missingTaxonomy?.code).toBe("taxonomy_not_found");
+  expect(missingTaxonomy?.status).toBe(404);
   expect(duplicateSlug).toBeInstanceOf(ApiError);
   expect(duplicateSlug?.code).toBe("term_slug_duplicate");
   expect(duplicateSlug?.status).toBe(400);

@@ -90,3 +90,10 @@ Direction:
 1. The API never sends raw query text for taxonomy overview failures.
 2. Known taxonomy domain errors stay machine-readable.
 3. The client can distinguish failure from an empty successful category list.
+
+## Follow-up Notes
+
+- 2026-04-24: `taxonomyService` now owns slug-to-UUID resolution for
+  `/content-types/:id/taxonomies` and `/content-types/:id/terms`. This keeps the
+  existing Posts editor `typeId: "post"` contract while preserving UUID-backed
+  taxonomy storage and route-boundary error mapping.

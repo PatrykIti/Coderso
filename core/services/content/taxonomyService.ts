@@ -1,7 +1,12 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { contentTaxonomies, contentTermAssignments, contentTerms } from "../../db/schema";
+import {
+  contentTaxonomies,
+  contentTermAssignments,
+  contentTerms,
+  contentTypes,
+} from "../../db/schema";
 
 export type TaxonomyKind = "category" | "tag";
 
@@ -64,6 +69,27 @@ const resolveSlug = (name: string, slug?: string | null) => {
   return candidate || null;
 };
 
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const resolveContentTypeId = async (identifier: string) => {
+  const normalized = normalizeString(identifier);
+  if (!normalized) return null;
+
+  const [row] = await db
+    .select({ id: contentTypes.id })
+    .from(contentTypes)
+    .where(
+      uuidPattern.test(normalized)
+        ? or(eq(contentTypes.id, normalized), eq(contentTypes.slug, normalized))
+        : eq(contentTypes.slug, normalized)
+    )
+    .limit(1);
+
+  if (row) return row.id;
+  return uuidPattern.test(normalized) ? normalized : null;
+};
+
 const defaultTaxonomy = (kind: TaxonomyKind) => {
   if (kind === "category") {
     return { name: "Categories", slug: "categories" };
@@ -72,10 +98,13 @@ const defaultTaxonomy = (kind: TaxonomyKind) => {
 };
 
 export async function listTaxonomies(typeId: string): Promise<ContentTaxonomy[]> {
+  const resolvedTypeId = await resolveContentTypeId(typeId);
+  if (!resolvedTypeId) return [];
+
   const rows = await db
     .select()
     .from(contentTaxonomies)
-    .where(eq(contentTaxonomies.typeId, typeId))
+    .where(eq(contentTaxonomies.typeId, resolvedTypeId))
     .orderBy(asc(contentTaxonomies.kind));
   return rows.map((row) => ({ ...row, kind: row.kind as TaxonomyKind }));
 }
@@ -84,10 +113,18 @@ export async function getTaxonomyByKind(
   typeId: string,
   kind: TaxonomyKind
 ): Promise<ContentTaxonomy | null> {
+  const resolvedTypeId = await resolveContentTypeId(typeId);
+  if (!resolvedTypeId) return null;
+
   const [row] = await db
     .select()
     .from(contentTaxonomies)
-    .where(and(eq(contentTaxonomies.typeId, typeId), eq(contentTaxonomies.kind, kind)));
+    .where(
+      and(
+        eq(contentTaxonomies.typeId, resolvedTypeId),
+        eq(contentTaxonomies.kind, kind)
+      )
+    );
   return row ? { ...row, kind: row.kind as TaxonomyKind } : null;
 }
 
@@ -95,7 +132,10 @@ export async function setTaxonomyConfig(
   typeId: string,
   config: TaxonomyConfig
 ) {
-  const existing = await listTaxonomies(typeId);
+  const resolvedTypeId = await resolveContentTypeId(typeId);
+  if (!resolvedTypeId) throw new Error("taxonomy_not_found");
+
+  const existing = await listTaxonomies(resolvedTypeId);
   const byKind = new Map(existing.map((item) => [item.kind, item]));
 
   const handleKind = async (kind: TaxonomyKind, enabled?: boolean) => {
@@ -106,7 +146,7 @@ export async function setTaxonomyConfig(
       const [created] = await db
         .insert(contentTaxonomies)
         .values({
-          typeId,
+          typeId: resolvedTypeId,
           kind,
           name: defaults.name,
           slug: defaults.slug,
@@ -126,7 +166,7 @@ export async function setTaxonomyConfig(
   await handleKind("category", config.categories);
   await handleKind("tag", config.tags);
 
-  return listTaxonomies(typeId);
+  return listTaxonomies(resolvedTypeId);
 }
 
 export async function listTerms(taxonomyId: string): Promise<ContentTerm[]> {

@@ -11,6 +11,7 @@ import { createEntry } from "../../../core/services/content/entryService";
 import {
   createTerm,
   getEntryTaxonomies,
+  getTaxonomyOverview,
   listTaxonomies,
   listTerms,
   replaceEntryTaxonomies,
@@ -59,9 +60,10 @@ afterAll(async () => {
 });
 
 testIfDb("taxonomy config creates defaults", async () => {
+  const id = randomUUID();
   const type = await createContentType({
-    name: "Blog",
-    slug: `blog-${randomUUID()}`,
+    name: `Blog ${id}`,
+    slug: `blog-${id}`,
     schema,
   });
   contentTypeId = type.id;
@@ -78,9 +80,10 @@ testIfDb("taxonomy config creates defaults", async () => {
 });
 
 testIfDb("terms and assignments resolve tags", async () => {
+  const id = randomUUID();
   const type = await createContentType({
-    name: "News",
-    slug: `news-${randomUUID()}`,
+    name: `News ${id}`,
+    slug: `news-${id}`,
     schema,
   });
   contentTypeId = type.id;
@@ -122,4 +125,30 @@ testIfDb("terms and assignments resolve tags", async () => {
   await cleanup();
   contentTypeId = undefined;
   entryId = undefined;
+});
+
+testIfDb("taxonomy services resolve content type slug identifiers", async () => {
+  const id = randomUUID();
+  const type = await createContentType({
+    name: `Post Alias ${id}`,
+    slug: `post-alias-${id}`,
+    schema,
+  });
+  contentTypeId = type.id;
+
+  const items = await setTaxonomyConfig(type.slug, {
+    categories: true,
+    tags: true,
+  });
+  expect(items.length).toBe(2);
+
+  const list = await listTaxonomies(type.slug);
+  expect(list.map((item) => item.typeId)).toEqual([type.id, type.id]);
+
+  const overview = await getTaxonomyOverview(type.slug);
+  expect(overview.taxonomies.category?.typeId).toBe(type.id);
+  expect(overview.taxonomies.tag?.typeId).toBe(type.id);
+
+  await cleanup();
+  contentTypeId = undefined;
 });

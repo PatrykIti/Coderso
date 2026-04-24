@@ -353,3 +353,12 @@ Walidacja wykonana dla TASK-204:
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/block-inserter-wave.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/post-document-inspector-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui-integration/post-block-inserter.test.tsx tests/vitest/ui-integration/post-editor-inserter-sidebar.test.tsx tests/vitest/posts/post-block-catalog-search.test.ts`
 - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/taxonomy.test.ts tests/integration/routes/settings.test.ts tests/integration/routes/postsRoutes.test.ts`
+
+Follow-up 2026-04-24:
+
+- Widoczny w panelu Posts `taxonomy_unexpected_error` nie był tylko transient DB
+  failure. Root cause: dedicated Posts zwraca stable `typeId: "post"`, a
+  taxonomy storage ma UUID-backed `content_taxonomies.type_id`.
+- `taxonomyService` rozwiązuje teraz content type slug przez `content_types`
+  przed query/mutacją taxonomy rows, więc `/admin/api/content-types/post/terms`
+  nie porównuje już tekstowego `post` z UUID column.

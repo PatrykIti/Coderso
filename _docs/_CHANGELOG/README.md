@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 732 | 2026-04-24 | Posts taxonomy slug resolution | CMS Posts/Taxonomy |
 | 731 | 2026-04-23 | TASK-203 entries admin QA metadata rich text editor UX | QA/CMS Entries |
 | 730 | 2026-04-23 | TASK-202 engine admin QA recovery | CMS Engine/Admin UI |
 | 729 | 2026-04-23 | TASK-201 media library QA recovery | CMS Media/Admin UI |

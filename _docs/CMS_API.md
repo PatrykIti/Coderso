@@ -1926,6 +1926,11 @@ Permissions: `content:read` / `content:write`
 - `PATCH /terms/:id`
 - `DELETE /terms/:id`
 
+`/content-types/:id/*` accepts the content type UUID and the stable content
+type slug. The dedicated Posts editor uses `post`; the taxonomy service resolves
+that slug to the persisted `content_types.id` before querying UUID-backed
+taxonomy rows.
+
 Taxonomy config payload (example):
 
 ```json
@@ -1955,6 +1960,8 @@ Taxonomy overview error contract:
 - known taxonomy/domain errors keep their machine-readable codes;
 - unexpected backend/database failures from `/content-types/:id/terms` map to
   `taxonomy_unexpected_error` with message `Could not load taxonomy terms.`;
+- unknown content type slugs do not query UUID-backed taxonomy rows with raw
+  slug text; taxonomy writes map missing targets to `taxonomy_not_found`;
 - the Posts inspector renders safe category-load copy plus retry and must not
   display raw SQL/query text.
 

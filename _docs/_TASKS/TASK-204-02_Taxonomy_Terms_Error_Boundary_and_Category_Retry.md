@@ -108,3 +108,12 @@ Out of scope:
 2. Posts inspector never renders raw SQL/query text.
 3. Users get a clear retry path and can keep editing unrelated post content.
 4. Tests cover route, client, and UI failure handling.
+
+## Follow-up Notes
+
+- 2026-04-24: The remaining visible `taxonomy_unexpected_error` in the Posts
+  inspector was traced to the dedicated Posts contract using stable type id/slug
+  `post` while `content_taxonomies.type_id` is UUID-backed. `taxonomyService`
+  now resolves content type slugs through `content_types` before querying or
+  mutating taxonomy rows, so `GET /admin/api/content-types/post/terms` no
+  longer sends raw slug text into UUID comparisons.

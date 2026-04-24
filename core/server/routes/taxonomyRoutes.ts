@@ -84,6 +84,8 @@ export const mapTaxonomyDomainError = (error: unknown) => {
 
   if (!(error instanceof Error)) return null;
   switch (error.message) {
+    case "taxonomy_not_found":
+      return new ApiError("taxonomy_not_found", "Taxonomy not found", 404);
     case "term_name_required":
       return new ApiError("term_name_required", "Term name is required", 400);
     case "term_slug_invalid":
