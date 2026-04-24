@@ -41,10 +41,16 @@ targeted Vitest coverage and required lint/type checks.
 ## Testing Requirements
 
 ```bash
-bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
+bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/content-type-create-drawer.test.tsx tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx
 bun --cwd core lint
 bun --cwd core lint:types
 ```
+
+If `ContentTypeCreateDrawer` coverage is implemented by extending an existing
+drawer-focused suite instead of creating
+`tests/vitest/ui/content-type-create-drawer.test.tsx`, replace that filename in
+the command with the exact suite that owns the real drawer create-error tests
+and record the substitution in the validation notes.
 
 ## Documentation Updates Required in This Round
 

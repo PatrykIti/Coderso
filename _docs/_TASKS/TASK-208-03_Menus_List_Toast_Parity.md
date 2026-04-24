@@ -43,6 +43,7 @@ Menus adapter/config for labels, action copy, and fallback errors.
 - `core/admin/ui/menus/MenuCreateDialog.tsx`
 - `core/admin/ui/shared/listActionToasts.ts`
 - `tests/vitest/ui/menu-list-page-actions.test.tsx`
+- `tests/vitest/ui/menu-leaf-components.test.tsx`
 - `tests/vitest/ui/list-action-toasts.test.ts`
 
 ## Testing Requirements
@@ -54,6 +55,14 @@ Menus adapter/config for labels, action copy, and fallback errors.
   - assert bulk publish/unpublish/delete success and partial failure toast
     behavior,
   - assert delete toasts appear after confirm, not on initial delete click.
+- Update `tests/vitest/ui/menu-leaf-components.test.tsx` when
+  `MenuCreateDialog` remains the owner of local validation/API error rendering:
+  - render the real dialog,
+  - assert rejected `onCreate` keeps local dialog error feedback,
+  - assert the adapter-backed top-right error toast is emitted for rejected
+    create mutations/API failures,
+  - assert local empty-name validation remains inline-only and emits no
+    top-right toast.
 - Update `tests/vitest/ui/list-action-toasts.test.ts` if the Menus adapter adds
   helper branches not already covered by Pages/Posts.
 

@@ -157,9 +157,9 @@ Out of scope:
 |-------|-------------|---------------|-----------------------|
 | TASK-208-01 | `AdminApp.tsx`, `sonner.tsx`, optional `globals.css` | `tests/vitest/admin/adminApp.test.tsx`, `tests/vitest/admin/sonner.test.tsx` | `_docs/DESIGN_TOKENS.md` |
 | TASK-208-02 | `listActionToasts.ts`, `PageListPage.tsx`, `PostsListPage.tsx`, create drawers only if needed | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/page-post-list-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
-| TASK-208-03 | `listActionToasts.ts`, `MenuListPage.tsx`, `MenuCreateDialog.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/menu-list-page-actions.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
-| TASK-208-04 | `listActionToasts.ts`, `ContentTypeList.tsx`, `ContentTypeCreateDrawer.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/content-type-list-parity.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
-| TASK-208-05 | `listActionToasts.ts`, `EntryList.tsx`, `EntryCreateDrawer.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/entry-list-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-03 | `listActionToasts.ts`, `MenuListPage.tsx`, `MenuCreateDialog.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/menu-list-page-actions.test.tsx`, `tests/vitest/ui/menu-leaf-components.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-04 | `listActionToasts.ts`, `ContentTypeList.tsx`, `ContentTypeCreateDrawer.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/content-type-list-parity.test.tsx`, `tests/vitest/ui/content-type-create-drawer.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-05 | `listActionToasts.ts`, `EntryList.tsx`, `EntryCreateDrawer.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/entry-list-wave.test.tsx`, `tests/vitest/ui/entry-page-support-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
 | TASK-208-06 | docs/changelog/task board | validation command list below | `_docs/DESIGN_TOKENS.md`, `_docs/CONTENT_LIST_UX.md`, `_docs/_CHANGELOG/README.md`, `_docs/_TASKS/README.md` |
 
 ## Dependency Order
@@ -295,11 +295,24 @@ Tests:
 - `tests/vitest/ui/menu-list-page-actions.test.tsx`
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
 - `tests/vitest/ui/entry-list-wave.test.tsx`
+- `tests/vitest/ui/menu-leaf-components.test.tsx`
+  - required when `MenuCreateDialog` owns create validation/API error rendering,
+    because `menu-list-page-actions.test.tsx` currently stubs that dialog.
+- `tests/vitest/ui/content-type-create-drawer.test.tsx`
+  - add this focused suite for real `ContentTypeCreateDrawer` create mutation
+    failure/local-validation coverage; if the implementation instead extends an
+    existing drawer-focused suite, the closure validation command must name that
+    suite explicitly.
+- `tests/vitest/ui/entry-page-support-wave.test.tsx`
+  - required when `EntryCreateDrawer` receives the adapter-backed create error
+    callback, because `entry-list-wave.test.tsx` currently stubs the drawer and
+    cannot prove reusable non-list consumers stay inline-only.
 - any adjacent create drawer/dialog test that already owns validation/error
   feedback for these list-created resources.
 - include rejected create-mutation coverage when a drawer/dialog owns API error
   rendering; do not require top-right toasts for local required-field or
-  duplicate validation states.
+  duplicate validation states. A list-wave test with a mocked drawer/dialog is
+  not sufficient for drawer/dialog-owned API error behavior.
 
 Docs and governance:
 
@@ -330,7 +343,7 @@ Docs and governance:
 Run the targeted Vitest lane for the touched Bun-free admin/UI surfaces:
 
 ```bash
-bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
+bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/content-type-create-drawer.test.tsx tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx
 ```
 
 Run the required repo checks:
@@ -341,7 +354,8 @@ bun --cwd core lint:types
 ```
 
 If create drawer/dialog tests are changed outside the listed suites, include the
-adjacent focused Vitest suite in the same validation run.
+adjacent focused Vitest suite in the same validation run and name it in the task
+validation notes.
 
 ## Documentation Updates Required
 

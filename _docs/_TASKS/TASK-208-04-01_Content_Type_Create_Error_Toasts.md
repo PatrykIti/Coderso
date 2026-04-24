@@ -81,15 +81,19 @@ const handleCreated = (created) => {
 
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
   - assert existing create success toast still fires,
-  - add create failure setup and assert the expected final error toast,
-  - current coverage stubs `ContentTypeCreateDrawer`; extend that mock to drive
-    the parent `onCreated` success path and the rejected create path, or add a
-    focused `ContentTypeCreateDrawer` test that renders the real drawer and
-    proves the local drawer error plus the top-right error toast,
-  - preserve drawer inline error assertion if one exists or add one if the test
-    already covers drawer errors,
-  - assert duplicate-name/duplicate-slug validation remains local-only and does
-    not emit a top-right error toast when that validation path is covered.
+  - current coverage stubs `ContentTypeCreateDrawer`; extend that mock only to
+    drive the parent `onCreated` success path and prove parent/list success
+    toast behavior.
+- Add `tests/vitest/ui/content-type-create-drawer.test.tsx` for the real drawer
+  create-error branch:
+  - render the real `ContentTypeCreateDrawer`,
+  - assert rejected `createContentType` keeps local drawer error feedback and
+    emits the expected adapter-backed top-right error toast,
+  - assert duplicate-name, duplicate-slug, and missing-field validation remains
+    local-only and does not emit a top-right error toast,
+  - if the implementation extends an existing drawer-focused suite instead of
+    adding this file, name that exact suite in the validation notes and closure
+    command.
 
 ## Documentation Updates Required in This Round
 

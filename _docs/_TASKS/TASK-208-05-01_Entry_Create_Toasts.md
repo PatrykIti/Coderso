@@ -112,16 +112,18 @@ try {
 
 - `tests/vitest/ui/entry-list-wave.test.tsx`
   - in the existing create-in-current-type test, assert the final success toast,
-  - add or extend create failure coverage and assert the final error toast,
-  - current coverage uses a success-only `EntryCreateDrawer` mock; extend that
-    mock to trigger a rejected create path, or add a focused `EntryCreateDrawer`
-    test that renders the real drawer and proves the local drawer error plus the
-    opted-in adapter-backed top-right error toast,
+  - current coverage uses a success-only `EntryCreateDrawer` mock; keep this
+    suite focused on the list-owned create success path and on passing the
+    adapter-backed create-error callback prop into the drawer.
+- `tests/vitest/ui/entry-page-support-wave.test.tsx`
+  - render the real `EntryCreateDrawer`,
+  - assert rejected `createEntry` with the adapter-backed callback supplied by
+    `EntryList` keeps local drawer error feedback and emits the expected
+    top-right error toast,
   - assert local disabled/required-field validation does not emit a top-right
-    error toast when that validation path is covered,
-  - assert a non-list consumer or a direct drawer render without the adapter
-    callback keeps local inline error behavior without emitting a top-right
-    toast,
+    error toast,
+  - assert a direct/non-list drawer render without the adapter callback keeps
+    local inline error behavior without emitting a top-right toast,
   - ensure navigation assertions for `openAfterCreate` still pass.
 
 ## Documentation Updates Required in This Round

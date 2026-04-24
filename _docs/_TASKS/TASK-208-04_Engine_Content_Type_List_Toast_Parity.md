@@ -45,17 +45,26 @@ adapter instead of keeping Content-Type-only message and error logic.
 - `core/admin/ui/content-types/ContentTypeCreateDrawer.tsx`
 - `core/admin/ui/shared/listActionToasts.ts`
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
+- `tests/vitest/ui/content-type-create-drawer.test.tsx`
 - `tests/vitest/ui/list-action-toasts.test.ts`
 
 ## Testing Requirements
 
 - Update `tests/vitest/ui/content-type-list-parity.test.tsx`:
   - assert create success still toasts,
-  - assert create failure toasts if the drawer owns that failure path,
+  - assert parent/list create success behavior by extending the existing
+    `ContentTypeCreateDrawer` mock only for the parent callback branch,
   - assert bulk publish/draft/delete success emits the expected final toast,
   - assert partial failure emits the expected final error toast while preserving
     inline feedback,
   - assert row delete toast still fires after confirmation.
+- Add or update `tests/vitest/ui/content-type-create-drawer.test.tsx`:
+  - render the real `ContentTypeCreateDrawer`,
+  - assert rejected `createContentType` keeps local drawer error feedback,
+  - assert the adapter-backed top-right error toast is emitted for rejected
+    create mutations/API failures,
+  - assert duplicate-name, duplicate-slug, and missing-field validation remain
+    inline-only with no top-right toast.
 - Update `tests/vitest/ui/list-action-toasts.test.ts` if the Content Type
   adapter adds helper branches not already covered.
 

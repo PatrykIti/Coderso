@@ -61,16 +61,25 @@ tests and docs.
 - `core/admin/ui/entries/EntryCreateDrawer.tsx`
 - `core/admin/ui/shared/listActionToasts.ts`
 - `tests/vitest/ui/entry-list-wave.test.tsx`
+- `tests/vitest/ui/entry-page-support-wave.test.tsx`
 - `tests/vitest/ui/list-action-toasts.test.ts`
 
 ## Testing Requirements
 
 - Update `tests/vitest/ui/entry-list-wave.test.tsx`:
   - assert create success emits the expected final success toast,
-  - assert create failure emits the expected final error toast,
+  - assert create success through the existing list-owned drawer mock,
   - assert bulk publish/draft/archive success and partial failure toasts,
   - assert row and bulk delete success/error toasts still fire after
     confirmation.
+- Update `tests/vitest/ui/entry-page-support-wave.test.tsx` for the real
+  `EntryCreateDrawer` create-error branch:
+  - assert the adapter-backed `onCreateError`/equivalent callback emits the
+    expected top-right error toast for rejected `createEntry` mutations/API
+    failures when supplied by `EntryList`,
+  - assert the drawer keeps local error feedback,
+  - assert a direct/non-list drawer render without the callback keeps current
+    inline-only error behavior and emits no top-right toast.
 - Update `tests/vitest/ui/list-action-toasts.test.ts` if the Entries adapter
   adds helper branches not already covered.
 

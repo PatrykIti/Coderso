@@ -108,11 +108,13 @@ const runDelete = async (id: string) => {
   - add a `sonner` mock,
   - assert create success and failure toasts,
   - current coverage stubs `MenuCreateDialog`; extend that mock to exercise the
-    `onCreate` success and rejected paths, or add a focused `MenuCreateDialog`
-    test that uses the real dialog and proves the local dialog error plus the
-    top-right error toast,
-  - assert empty-name validation keeps local dialog feedback without emitting a
-    top-right error toast if that validation path is covered in this suite,
+    `onCreate` success and rejected paths for the parent/list branch,
+  - update `tests/vitest/ui/menu-leaf-components.test.tsx` for the real
+    `MenuCreateDialog` branch: rejected `onCreate` must keep local dialog error
+    feedback and emit the adapter-backed top-right error toast; empty-name
+    validation must remain inline-only with no top-right toast,
+  - keep list-page create assertions scoped to the parent/list branch; the real
+    dialog validation proof belongs to `menu-leaf-components.test.tsx`,
   - assert row publish/unpublish success and failure toasts,
   - assert row delete toast only appears after confirmation.
 
