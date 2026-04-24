@@ -116,7 +116,7 @@ Out of scope:
 ## Sub-Tasks
 
 - [ ] `TASK-208-01_Shared_Sonner_Token_Contract.md`
-  - [ ] `TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Removal.md`
+  - [ ] `TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Token_Ownership.md`
   - [ ] `TASK-208-01-02_Sonner_State_Token_Style_Mapping.md`
   - [ ] `TASK-208-01-03_Shared_Toaster_Token_Regression_Tests.md`
 - [ ] `TASK-208-02_Pages_and_Posts_List_Toast_Parity.md`

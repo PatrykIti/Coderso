@@ -84,6 +84,9 @@ expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"] [data-de
 expect(css).toContain("color: var(--popover-foreground)");
 expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"] [data-close-button]');
 expect(css).toContain("border-color: var(--border)");
+expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"]:focus-visible');
+expect(css).toContain("box-shadow: 0 0 0 2px var(--ring)");
+expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"]:hover [data-close-button]:hover');
 ```
 
 ## Testing Requirements
@@ -96,6 +99,8 @@ expect(css).toContain("border-color: var(--border)");
     are remapped to Admin UI Theme variables,
   - assert description and close-button selectors are token-backed if a scoped
     CSS fallback is needed,
+  - assert toast focus, close-button focus, and close-button hover selectors are
+    token-backed instead of keeping Sonner's bundled rgba/gray palette,
   - use custom theme-token values that do not match Sonner defaults so the test
     fails on a hard-coded bundled palette fallback,
   - assert the dynamic `useTheme()` value is forwarded,

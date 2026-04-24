@@ -40,6 +40,10 @@ No child task files.
 - Replace local bulk/delete count and partial-failure string construction with
   the shared helper result so inline `setError` and floating `toast.error` use
   the same message.
+- Preserve current `EntryList` orchestration ownership: `handleBulkApply` keeps
+  working-state cleanup and non-delete selection cleanup, confirmed delete keeps
+  `setDeleteRequest(null)`, and both paths refresh `entries:list:all` through
+  `refreshEntries({ force: true, background: true })` before final cleanup.
 - Use a generic target-aware helper shape for bulk operations. Entries bulk
   helpers must accept `SelectedEntryRef` / `{ id, typeSlug }` targets instead of
   coercing everything to plain ids, because delete and metadata updates need the
@@ -59,16 +63,37 @@ const runBulkAction = async (action) => {
     targets: selectedRefs,
     results,
   });
-  if (!feedback.ok) {
-    setError(feedback.message);
-    entriesToast.emitBulkResult(feedback);
+
+  await refreshEntries({ force: true, background: true });
+  entriesToast.emitBulkResult(feedback);
+  return feedback;
+};
+
+const handleBulkApply = async () => {
+  if (!bulkAction || selectedRefs.length === 0) return;
+  if (bulkAction === "delete") {
+    setDeleteRequest({
+      refs: selectedRefs,
+      title: `Delete ${selectedRefs.length} entr${selectedRefs.length === 1 ? "y" : "ies"}?`,
+      description: "Selected entries will be removed permanently.",
+      confirmLabel: selectedRefs.length === 1 ? "Delete entry" : "Delete entries",
+      mode: "bulk",
+    });
     return;
   }
 
-  entriesToast.emitBulkResult(feedback);
+  setIsBulkWorking(true);
+  setError(null);
+  try {
+    const feedback = await runBulkAction(bulkAction);
+    if (!feedback.ok) setError(feedback.message);
+    handleClearSelection();
+  } finally {
+    setIsBulkWorking(false);
+  }
 };
 
-const confirmDelete = async () => {
+const confirmDeleteRequest = async () => {
   const results = await Promise.allSettled(
     deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
   );
@@ -77,8 +102,12 @@ const confirmDelete = async () => {
     targets: deleteRequest.refs,
     results,
   });
+
+  await refreshEntries({ force: true, background: true });
   entriesToast.emitBulkResult(feedback);
   if (!feedback.ok) setError(feedback.message);
+  if (deleteRequest.mode === "bulk") handleClearSelection();
+  setDeleteRequest(null);
 };
 ```
 

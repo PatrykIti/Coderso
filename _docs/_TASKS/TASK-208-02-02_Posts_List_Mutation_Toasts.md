@@ -64,7 +64,7 @@ const postsToast = createListActionToastAdapter({
 const handleCreate = async (payload) => {
   try {
     const post = await createPost(payload);
-    if (openAfterCreate) {
+    if (payload.openAfterCreate) {
       navigate(`/coderso/posts/${encodeURIComponent(post.id)}`);
     } else {
       await refresh({ force: true, background: true });

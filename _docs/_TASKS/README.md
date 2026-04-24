@@ -40,7 +40,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-208 | Admin List Action Toasts and Theme Tokens | High | Large | Consistent top-right token-backed Admin UI toasts for list create, publish, unpublish/draft, and delete across Pages, Posts, Menus, Engine, and Entries |
 | TASK-208-01 | Shared Sonner Token Contract | High | Medium | Shared Admin UI toaster host and state styles use Admin UI Theme tokens before resource list toasts are added |
-| TASK-208-01-01 | AdminApp Toaster Host and Rich Color Removal | High | Small | Keep Sonner richColors as the documented typed-state path while removing Sonner default palettes as the visual source of truth |
+| TASK-208-01-01 | AdminApp Toaster Host and Rich Color Token Ownership | High | Small | Keep Sonner richColors as the documented typed-state path while making Admin UI Theme tokens the visual source of truth |
 | TASK-208-01-02 | Sonner State Token Style Mapping | High | Medium | Map normal, success, error, warning, and info rich-color variables to Admin UI Theme variables |
 | TASK-208-01-03 | Shared Toaster Token Regression Tests | High | Small | Add admin app tests for shared toaster props, richColors, and token-backed state variables |
 | TASK-208-02 | Pages and Posts List Toast Parity | High | Large | Pages and Posts list create, publish, unpublish, delete, and bulk actions emit shared top-right toasts |

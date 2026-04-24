@@ -66,7 +66,7 @@ const pagesToast = createListActionToastAdapter({
 const handleCreate = async (payload) => {
   try {
     const page = await createPage(payload);
-    if (openAfterCreate) navigate(`/pages/${page.id}`);
+    if (payload.openAfterCreate) navigate(`/pages/${page.id}`);
     else {
       await refresh({ force: true, background: true });
       setCreateOpen(false);

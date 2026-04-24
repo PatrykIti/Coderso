@@ -116,6 +116,16 @@ variables:
   border-color: var(--border);
 }
 
+.toaster [data-sonner-toast][data-styled="true"]:focus-visible,
+.toaster [data-sonner-toast][data-styled="true"] [data-close-button]:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.toaster [data-sonner-toast][data-styled="true"]:hover [data-close-button]:hover {
+  background: color-mix(in srgb, var(--popover-foreground) 6%, var(--popover));
+  border-color: var(--border);
+}
+
 .toaster [data-sonner-toast][data-type="success"] {
   background: var(--success-bg);
   color: var(--success-text);
@@ -136,6 +146,8 @@ variables:
   - assert success/error/warning/info variables contain Admin UI token names,
   - assert normal, state, description, border, and close-button styling is
     backed by Admin UI Theme variables or by `.toaster`-scoped shared CSS,
+  - assert toast and close-button focus rings plus close-button hover styling do
+    not rely on Sonner's bundled gray/rgba palette,
   - use a custom Admin UI Theme token fixture with intentionally non-Sonner
     values so the test fails if the rendered floating toast falls back to
     Sonner's bundled palette,

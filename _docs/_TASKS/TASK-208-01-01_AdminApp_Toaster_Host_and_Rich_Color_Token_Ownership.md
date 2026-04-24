@@ -1,5 +1,5 @@
-# TASK-208-01-01: AdminApp Toaster Host and Rich Color Removal
-# FileName: TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Removal.md
+# TASK-208-01-01: AdminApp Toaster Host and Rich Color Token Ownership
+# FileName: TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Token_Ownership.md
 
 **Priority:** High
 **Category:** Admin/UI + Design Tokens
@@ -14,10 +14,11 @@
 Keep the shared Admin UI toaster mounted once in `AdminApp`, but make its
 documented Sonner rich-color state path safe for Admin UI Theme tokens.
 
-In this repo, "rich color removal" means removing Sonner's default bundled
-palette as the visual source of truth, not removing the `richColors` prop. Sonner
-uses `richColors` to activate typed success/error/warning/info selectors, and
-the shared wrapper must make those selectors read token-backed CSS variables.
+In this repo, "rich color token ownership" means keeping Sonner's documented
+typed-state path while making the Admin UI Theme the visual source of truth.
+Do not remove the `richColors` prop: Sonner uses `richColors` to activate typed
+success/error/warning/info selectors, and the shared wrapper must make those
+selectors read token-backed CSS variables instead of Sonner's bundled palette.
 The single shared toaster must also be the only host that receives the active
 Admin UI Theme template/profile variables used by the floating toast shell,
 description, border, close button, and typed state colors.
