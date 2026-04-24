@@ -27,7 +27,15 @@ current shared `sonner` toaster is mounted in `AdminApp`, but it still allows
 Sonner's rich/default color treatment to show black, green, or red hard-coded
 visuals that do not follow the active Admin UI Theme. All normal, success,
 warning, and error toast surfaces must be driven by Admin UI Theme tokens and
-shared admin CSS variables.
+shared admin CSS variables. Those variables must remain dynamic: when an
+operator changes or creates an Admin UI Theme mode, the shared toaster must pick
+up the active mode parameters through CSS variables so every toast and
+token-backed UI surface changes together.
+
+The behavioral source of truth must also be shared. Resource screens should not
+copy their own bulk result math, error normalization, or success/error message
+rules. Add a generic list-action toast helper and use resource-specific adapters
+or parameters for labels, action names, counts, and mutation result metadata.
 
 ## Current Repo Findings
 
@@ -65,6 +73,14 @@ In scope:
   - `core/admin/app/AdminApp.tsx`,
   - `core/admin/components/ui/sonner.tsx`,
   - `core/admin/styles/globals.css` only if CSS token selectors are needed;
+- shared list-action toast contract:
+  - `core/admin/ui/shared/listActionToasts.ts`,
+  - resource adapters/parameters for Pages, Posts, Menus, Content Types, and
+    Entries;
+  - adapter config can stay inline when one component owns the action path; if a
+    list and drawer/dialog both need the same resource copy, extract a small
+    resource-local adapter file such as `entryListToastAdapter.ts` or
+    `contentTypeListToastAdapter.ts`;
 - existing list confirmation dialogs and shared popup primitives when a toast
   change exposes hard-coded styling.
 
@@ -75,6 +91,10 @@ Out of scope:
 - adding new publish/unpublish row actions to a surface that does not currently
   expose that action;
 - changing API route behavior, permissions, payload schemas, or cache ownership;
+- replacing the existing Entries all-items read model. `GET /content-entries`
+  remains the API/read-model endpoint owned by `contentEntryRoutes` and consumed
+  by `entriesClient.listAllEntries()`; editor navigation keeps using the
+  existing admin route aliases;
 - replacing inline partial-failure feedback. Inline feedback can stay, but it
   must be supplemented by the shared top-right toast where the action is a
   list-screen state mutation.
@@ -106,26 +126,29 @@ Out of scope:
 
 | Round | Owner files | Primary tests | Docs updated in round |
 |-------|-------------|---------------|-----------------------|
-| TASK-208-01 | `AdminApp.tsx`, `sonner.tsx`, optional `globals.css` | `tests/vitest/admin/adminApp.test.tsx` | `_docs/DESIGN_TOKENS.md` |
-| TASK-208-02 | `PageListPage.tsx`, `PostsListPage.tsx`, create drawers only if needed | `tests/vitest/ui/page-post-list-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
-| TASK-208-03 | `MenuListPage.tsx`, `MenuCreateDialog.tsx` | `tests/vitest/ui/menu-list-page-actions.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
-| TASK-208-04 | `ContentTypeList.tsx`, `ContentTypeCreateDrawer.tsx` | `tests/vitest/ui/content-type-list-parity.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
-| TASK-208-05 | `EntryList.tsx`, `EntryCreateDrawer.tsx` | `tests/vitest/ui/entry-list-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-01 | `AdminApp.tsx`, `sonner.tsx`, optional `globals.css` | `tests/vitest/admin/adminApp.test.tsx`, `tests/vitest/admin/sonner.test.tsx` | `_docs/DESIGN_TOKENS.md` |
+| TASK-208-02 | `listActionToasts.ts`, `PageListPage.tsx`, `PostsListPage.tsx`, create drawers only if needed | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/page-post-list-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-03 | `listActionToasts.ts`, `MenuListPage.tsx`, `MenuCreateDialog.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/menu-list-page-actions.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-04 | `listActionToasts.ts`, `ContentTypeList.tsx`, `ContentTypeCreateDrawer.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/content-type-list-parity.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
+| TASK-208-05 | `listActionToasts.ts`, `EntryList.tsx`, `EntryCreateDrawer.tsx` | `tests/vitest/ui/list-action-toasts.test.ts`, `tests/vitest/ui/entry-list-wave.test.tsx` | `_docs/CONTENT_LIST_UX.md` |
 | TASK-208-06 | docs/changelog/task board | validation command list below | `_docs/DESIGN_TOKENS.md`, `_docs/CONTENT_LIST_UX.md`, `_docs/_CHANGELOG/README.md`, `_docs/_TASKS/README.md` |
 
 ## Dependency Order
 
 1. `TASK-208-01-*` must land first. It prevents every new resource toast from
    inheriting the wrong Sonner default/rich colors.
-2. `TASK-208-02-*` can land after the shared toaster contract and proves the
+2. Add the generic list-action toast helper before wiring individual resources.
+   The helper owns shared result/error/count behavior; each resource passes
+   adapter parameters such as singular/plural labels and action copy.
+3. `TASK-208-02-*` can land after the shared toaster contract and proves the
    pattern on the largest existing shared Pages/Posts test suite.
-3. `TASK-208-03-*` follows with Menus because it has a separate create dialog
+4. `TASK-208-03-*` follows with Menus because it has a separate create dialog
    and list-first routing contract.
-4. `TASK-208-04-*` follows with Engine content types because some toasts already
+5. `TASK-208-04-*` follows with Engine content types because some toasts already
    exist and the work is mostly gap filling.
-5. `TASK-208-05-*` follows with Entries because bulk/delete toasts already exist
+6. `TASK-208-05-*` follows with Entries because bulk/delete toasts already exist
    and the work is an audit plus create gap closure.
-6. `TASK-208-06-*` closes docs, changelog, task board, and validation after all
+7. `TASK-208-06-*` closes docs, changelog, task board, and validation after all
    implementation leaves are complete.
 
 ## Security Contract
@@ -161,7 +184,27 @@ Shared toaster and token layer:
     enough to override default Sonner state colors.
 - `tests/vitest/admin/adminApp.test.tsx`
   - assert the shared toaster remains top-right, accessible, closeable, and
-    token-driven rather than rich-color driven.
+    rich-color free.
+- `tests/vitest/admin/sonner.test.tsx`
+  - render the shared wrapper directly and assert token-backed dynamic style
+    variables for normal, success, error, warning, and info states.
+
+Shared list-action feedback:
+
+- `core/admin/ui/shared/listActionToasts.ts`
+  - own resource-neutral success/error/bulk result helpers for list mutation
+    feedback.
+  - accept resource adapter parameters for labels, action names, counts,
+    fallback errors, and settled mutation results.
+  - emit through the shared `sonner` toast API; do not style individual
+    resource toasts.
+- Resource-local adapter modules only where needed by multiple components:
+  - keep single-consumer adapter config inline in the list file,
+  - extract shared adapter config beside the resource list/drawer when both need
+    the same copy and fallback behavior.
+- `tests/vitest/ui/list-action-toasts.test.ts`
+  - cover single action success/error, bulk full success, partial failure, and
+    pluralization/count behavior without importing runtime/Bun-only modules.
 
 List surfaces:
 
@@ -197,19 +240,23 @@ Docs and governance:
 1. Update the shared `sonner` wrapper and `AdminApp` toaster configuration first
    so every existing and new toast inherits the same Admin UI Theme token
    behavior.
-2. Add list-action toast calls in Pages and Posts, preserving the existing inline
-   feedback and delete confirmation sequence.
-3. Add Menus list-action toast calls, including create dialog success/failure.
-4. Fill Engine content type bulk-action toast gaps and create error toast gaps.
-5. Fill Entries create toast gaps and verify existing bulk/delete toast behavior.
-6. Add focused tests per surface, then update docs/changelog/task board.
+2. Add the shared `listActionToasts` helper and its Bun-free Vitest coverage.
+3. Add list-action toast calls in Pages and Posts through the shared helper,
+   preserving the existing inline feedback and delete confirmation sequence.
+4. Add Menus list-action toast calls through the shared helper, including create
+   dialog success/failure.
+5. Fill Engine content type bulk-action toast gaps and create error toast gaps
+   through the shared helper.
+6. Fill Entries create toast gaps, keep `GET /content-entries` as the all-entry
+   API read model, and verify existing bulk/delete toast behavior.
+7. Add focused tests per surface, then update docs/changelog/task board.
 
 ## Testing Requirements
 
 Run the targeted Vitest lane for the touched Bun-free admin/UI surfaces:
 
 ```bash
-bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
+bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
 ```
 
 Run the required repo checks:
@@ -231,6 +278,9 @@ adjacent focused Vitest suite in the same validation run.
 - `_docs/DESIGN_TOKENS.md`
   - document that shared Admin UI toasts are token-backed and must not rely on
     Sonner rich/default hard-coded state palettes.
+  - document that toast variables are dynamic Admin UI Theme variables, so
+    custom modes update all token-backed toast states without per-component
+    rewrites.
 - `_docs/_TASKS/README.md`
   - move this task through To Do/In Progress/Done and keep statistics synced.
 - `_docs/_CHANGELOG/{next}-2026-04-24-task-208-admin-list-action-toasts.md`
@@ -252,8 +302,11 @@ adjacent focused Vitest suite in the same validation run.
    Admin UI Theme tokens. Light themes must not render the current black
    Sonner/default rich-color surface unless the active theme tokens explicitly
    define that look.
-6. No resource-specific toaster, hard-coded Tailwind color family, or native
+6. List action feedback is routed through a generic shared helper plus
+   resource-specific adapter parameters; resource screens do not duplicate bulk
+   result math or error normalization.
+7. No resource-specific toaster, hard-coded Tailwind color family, or native
    `window.confirm()` is introduced for the targeted list action feedback.
-7. Targeted Vitest suites plus `bun --cwd core lint` and
+8. Targeted Vitest suites plus `bun --cwd core lint` and
    `bun --cwd core lint:types` pass or any unrelated pre-existing failure is
    isolated and documented before closure.

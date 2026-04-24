@@ -26,12 +26,22 @@ No child task files.
   - Content Types/Engine: create, row delete, bulk publish/draft/delete toast
     contract.
   - Entries: create, bulk status/archive, and delete toast contract.
+  - Entries: preserve `GET /content-entries` as the all-entries API/read model
+    used by `entriesClient.listAllEntries()` and do not document it as the
+    editor navigation route.
   - Explicitly state delete toasts fire after confirmation and mutation
     completion.
 - `_docs/DESIGN_TOKENS.md`
   - shared Admin UI toaster uses Admin UI Theme token variables,
   - Sonner rich/default hard-coded palettes are not allowed for admin toasts,
-  - normal/success/error/warning/info states map through shared tokens.
+  - normal/success/error/warning/info states map through shared tokens,
+  - custom Admin UI Theme modes update toast visuals dynamically through CSS
+    variables.
+- Document the generic list-action toast helper:
+  - shared helper/adaptor owns success/error/bulk result message behavior,
+  - resource screens pass labels, action names, counts, and mutation results,
+  - resource screens do not own toast styling or duplicate generic bulk/error
+    math.
 
 ## Pseudocode
 
@@ -51,7 +61,10 @@ Design token wording direction:
 ```md
 Shared toasts:
 - `core/admin/components/ui/sonner.tsx` owns toast state token mapping.
-- Resource screens call `toast.success/error`; they do not style toast state.
+- `core/admin/ui/shared/listActionToasts.ts` owns list action success/error and
+  bulk result message helpers.
+- Resource screens pass adapter parameters and mutation results; they do not
+  style toast state or duplicate generic count/error logic.
 - Success/error/warning states use `--admin-state-*` tokens.
 ```
 
@@ -65,3 +78,7 @@ implementation test suites for TASK-208-01 through TASK-208-05 pass.
 1. Content list UX docs match the implemented list toast behavior.
 2. Design token docs name the shared Sonner/Admin UI Theme token contract.
 3. Docs do not describe editor-only flows as part of this list-screen task.
+4. Docs keep `/content-entries` as the Entries API/read-model endpoint and do
+   not confuse it with editor navigation.
+5. Docs state that custom Admin UI Theme modes propagate toast colors through
+   dynamic CSS variables.

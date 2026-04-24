@@ -16,7 +16,9 @@ behavior against the new shared token-backed toaster contract.
 
 This leaf should only patch gaps found in the audit. Existing `toast.success`
 and `toast.error` calls in `EntryList` should be preserved unless their timing
-or failure semantics are wrong.
+or failure semantics are wrong. When a gap is patched, route the message through
+the shared list-action toast helper/adaptor instead of adding another
+Entries-only message function.
 
 ## Sub-Tasks
 
@@ -26,14 +28,15 @@ No child task files.
 
 - Inspect `runBulkAction`, `handleBulkApply`, and confirmed delete execution in
   `core/admin/ui/entries/EntryList.tsx`.
-- Confirm `toast.success("Entries updated.")` fires only after all selected
-  metadata mutations succeed.
-- Confirm partial failures call `toast.error(message)` and keep inline
+- Confirm the final bulk success toast fires only after all selected metadata
+  mutations succeed.
+- Confirm partial failures emit the expected final error toast and keep inline
   feedback.
 - Confirm row/bulk delete success/error toasts fire only after the shared
   confirmation dialog path.
 - If success copy is too generic, keep it acceptable unless tests need separate
-  publish/draft/archive copy; do not widen scope to copy-only refactors.
+  publish/draft/archive copy; if copy is changed, implement it via the shared
+  Entries adapter/config, not a local formatter.
 
 ## Pseudocode
 
@@ -46,18 +49,18 @@ const runBulkAction = async (action) => {
 
   const failed = results.filter((result) => result.status === "rejected").length;
   if (failed > 0) {
-    const message = `${failed} entr${failed === 1 ? "y" : "ies"} failed to update.`;
+    const message = entriesToast.bulkErrorMessage({ action, failed, total: selectedRefs.length });
     setError(message);
-    toast.error(message);
+    entriesToast.error(message);
     return;
   }
 
-  toast.success("Entries updated.");
+  entriesToast.bulkSuccess(action, selectedRefs.length);
 };
 
 const confirmDelete = async () => {
   await Promise.allSettled(deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id)));
-  toast.success(deleteRequest.refs.length === 1 ? "Entry deleted." : "Entries deleted.");
+  entriesToast.bulkSuccess("delete", deleteRequest.refs.length);
 };
 ```
 
@@ -69,6 +72,8 @@ const confirmDelete = async () => {
   - existing delete confirmation test: assert no delete toast before confirm and
     success/error toast after confirm,
   - assert no extra toaster host is rendered by `EntryList`.
+- `tests/vitest/ui/list-action-toasts.test.ts`
+  - cover any Entries-specific bulk helper behavior introduced by the audit.
 
 ## Documentation Updates Required in This Round
 
@@ -83,3 +88,5 @@ const confirmDelete = async () => {
 2. Entries row/bulk delete toast ordering after confirmation is covered by
    tests.
 3. Existing inline partial-failure feedback remains intact.
+4. Any changed Entries bulk/delete copy comes from the shared helper/adaptor and
+   not from a local Entries-only formatter.

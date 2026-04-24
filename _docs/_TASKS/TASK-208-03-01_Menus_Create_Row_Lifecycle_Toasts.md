@@ -20,15 +20,17 @@ No child task files.
 
 ## Implementation Checklist
 
-- Add `import { toast } from "sonner";` to
-  `core/admin/ui/menus/MenuListPage.tsx`.
+- Import the shared list-action toast helper from
+  `core/admin/ui/shared/listActionToasts.ts`.
+- Define a Menus adapter/config for menu singular/plural labels, action copy,
+  and fallback errors.
 - Handle create success in `handleCreate` after `createMenu` succeeds and the
   list is updated.
 - For create failure, either:
-  - catch in `handleCreate`, call `toast.error(message)`, then rethrow
+  - catch in `handleCreate`, call the shared error-toast helper, then rethrow
     `new Error(message)` so `MenuCreateDialog` keeps local error copy; or
-  - emit the toast from `MenuCreateDialog` catch if the dialog remains the owner
-    of normalized failure copy.
+  - emit through the same shared helper from `MenuCreateDialog` catch if the
+    dialog remains the owner of normalized failure copy.
 - Add success/error toasts in `handlePublish`, `handleUnpublish`, and confirmed
   `runDelete`.
 - Do not change `/admin/menus` list-first routing.
@@ -36,18 +38,27 @@ No child task files.
 ## Pseudocode
 
 ```tsx
+const menusToast = createListActionToastAdapter({
+  resourceSingular: "menu",
+  resourcePlural: "menus",
+  actions: {
+    create: { success: ({ label }) => `Menu "${label}" created.`, fallbackError: "Failed to create menu." },
+    publish: { success: "Menu published.", fallbackError: "Failed to publish menu." },
+    unpublish: { success: "Menu moved to draft.", fallbackError: "Failed to move menu to draft." },
+    delete: { success: "Menu deleted.", fallbackError: "Failed to delete menu." },
+  },
+});
+
 const handleCreate = async (payload) => {
   try {
     const created = await createMenu(payload);
     setItems((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
-    toast.success(`Menu "${created.name}" created.`);
+    menusToast.success("create", { label: created.name });
     return created;
   } catch (error) {
-    const message = error instanceof Error && error.message
-      ? error.message
-      : "Failed to create menu.";
+    const message = menusToast.errorMessage(error, "create");
     setError(message);
-    toast.error(message);
+    menusToast.error(message);
     throw new Error(message);
   }
 };
@@ -56,11 +67,11 @@ const handlePublish = async (id: string) => {
   try {
     await publishMenu(id);
     markMenuPublished(id);
-    toast.success("Menu published.");
+    menusToast.success("publish");
   } catch (error) {
-    const message = toMenuError(error, "Failed to publish menu.");
+    const message = menusToast.errorMessage(error, "publish");
     setError(message);
-    toast.error(message);
+    menusToast.error(message);
   }
 };
 ```
@@ -72,11 +83,11 @@ const runDelete = async (id: string) => {
   try {
     await deleteMenu(id);
     setItems((prev) => prev.filter((item) => item.id !== id));
-    toast.success("Menu deleted.");
+    menusToast.success("delete");
   } catch (error) {
-    const message = toMenuError(error, "Failed to delete menu.");
+    const message = menusToast.errorMessage(error, "delete");
     setError(message);
-    toast.error(message);
+    menusToast.error(message);
   }
 };
 ```
@@ -101,3 +112,5 @@ const runDelete = async (id: string) => {
 1. Menus list create and row lifecycle actions toast on success/error.
 2. `MenuCreateDialog` still renders local validation/API error feedback.
 3. Row delete toast fires only after confirmed mutation completion.
+4. Generic error normalization and action copy live in the shared helper/adaptor,
+   not as duplicated Menus-only helpers.

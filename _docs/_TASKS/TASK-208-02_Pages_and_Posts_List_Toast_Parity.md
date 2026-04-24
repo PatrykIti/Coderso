@@ -18,6 +18,11 @@ This round must preserve current drawer behavior, inline error messages, bulk
 partial-failure feedback, cache invalidation, navigation preferences, and
 token-backed delete confirmation dialogs.
 
+Pages and Posts should use the shared list-action toast helper introduced in
+this task. The screens pass page/post labels, action names, counts, and fallback
+messages; they should not duplicate generic bulk result and error-normalization
+logic.
+
 ## Sub-Tasks
 
 - [ ] `TASK-208-02-01_Pages_List_Mutation_Toasts.md`
@@ -26,11 +31,13 @@ token-backed delete confirmation dialogs.
 
 ## Implementation Round
 
-1. Add Pages list toasts for create, publish, unpublish, delete, and bulk
+1. Add or reuse the shared `listActionToasts` helper with Pages/Posts adapter
+   parameters.
+2. Add Pages list toasts for create, publish, unpublish, delete, and bulk
    publish/unpublish/delete.
-2. Add Posts list toasts for create, publish, unpublish, delete, and bulk
+3. Add Posts list toasts for create, publish, unpublish, delete, and bulk
    publish/unpublish/delete.
-3. Add focused Vitest assertions for success and failure paths.
+4. Add focused Vitest assertions for success and failure paths.
 
 ## Security Contract
 
@@ -50,14 +57,19 @@ token-backed delete confirmation dialogs.
 - `core/admin/ui/posts/PostsListPage.tsx`
 - `core/admin/ui/posts/PostsCreateDrawer.tsx` only if create failure toast must
   be emitted from the drawer owner.
+- `core/admin/ui/shared/listActionToasts.ts`
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
+- `tests/vitest/ui/list-action-toasts.test.ts`
 
 ## Testing Requirements
 
+- Add or update `tests/vitest/ui/list-action-toasts.test.ts`:
+  - assert generic single-action success/error message helpers,
+  - assert bulk full success and partial failure helpers for Pages/Posts labels.
 - Update `tests/vitest/ui/page-post-list-wave.test.tsx`:
   - add a `sonner` mock if missing,
-  - assert Pages create success and create failure call `toast.success` /
-    `toast.error`,
+  - assert Pages create success and create failure emit the expected final
+    success/error toast through the shared helper,
   - assert Pages publish/unpublish/delete success and failure paths toast,
   - assert Pages bulk publish/unpublish/delete success and partial failure toast,
   - assert Posts equivalent paths toast,
@@ -78,3 +90,5 @@ token-backed delete confirmation dialogs.
    completion.
 3. Existing inline and partial-failure feedback remains visible.
 4. Delete toasts are emitted only after the confirmed delete mutation resolves.
+5. Pages and Posts use the generic list-action toast helper plus resource
+   adapter parameters instead of per-screen duplicated feedback math.

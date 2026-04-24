@@ -30,7 +30,7 @@ No child task files.
 ## Testing Requirements
 
 ```bash
-bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
+bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
 bun --cwd core lint
 bun --cwd core lint:types
 ```
@@ -66,7 +66,13 @@ Tasks: TASK-208, TASK-208-01, ..., TASK-208-06-02
 
 ### Admin UI
 - Shared Sonner toaster now uses Admin UI Theme tokens for state visuals.
+- Toast state variables stay dynamic so custom Admin UI Theme modes update every
+  token-backed toast surface.
+- List action feedback now goes through a generic helper plus resource
+  adapters/parameters.
 - Pages, Posts, Menus, Engine, and Entries list mutations emit top-right toasts.
+- Entries preserve `GET /content-entries` as the all-entry read model while
+  editor navigation remains on existing admin route aliases.
 
 ### QA
 - Added/updated focused Vitest coverage for toaster and list action feedback.
@@ -83,3 +89,5 @@ Tasks: TASK-208, TASK-208-01, ..., TASK-208-06-02
 2. `_docs/_TASKS/README.md` counts and tables are synchronized.
 3. Changelog entry and index are synchronized.
 4. Final implementation summary names any skipped/unavailable validation.
+5. Validation includes the direct Sonner wrapper test and shared
+   list-action-toast helper test.

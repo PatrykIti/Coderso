@@ -16,7 +16,8 @@ delete, and bulk lifecycle mutations.
 
 This leaf mirrors the Pages implementation style while preserving Posts-specific
 tag/filter behavior, create preferences, cache refresh handling, and current
-inline bulk feedback.
+inline bulk feedback. It should reuse the same generic list-action toast helper
+with a Posts adapter/config instead of copying Pages message logic.
 
 ## Sub-Tasks
 
@@ -24,29 +25,45 @@ No child task files.
 
 ## Implementation Checklist
 
-- Add `import { toast } from "sonner";` to
+- Import the shared list-action toast helper from
+  `core/admin/ui/shared/listActionToasts.ts` in
   `core/admin/ui/posts/PostsListPage.tsx`.
-- In `handleCreate`, call `toast.success` after `createPost` succeeds.
+- Define a Posts adapter/config for post singular/plural labels, action copy,
+  and fallback errors.
+- In `handleCreate`, call the shared success helper after `createPost`
+  succeeds.
 - In `handleCreate` catch, keep `setError(message)` and call
-  `toast.error(message)`.
+  the shared error-toast helper.
 - In `handlePublish`, `handleUnpublish`, and confirmed `runDelete`, toast after
   the real mutation and local state update.
-- In `runBulkAction`, call `toast.success` on full success and `toast.error` on
-  partial/full failure while preserving `bulkFeedback`.
+- In `runBulkAction`, call the shared success helper on full success and the
+  shared error helper on partial/full failure while preserving `bulkFeedback`.
+  The message and count calculation must come from the shared helper.
 
 ## Pseudocode
 
 ```tsx
+const postsToast = createListActionToastAdapter({
+  resourceSingular: "post",
+  resourcePlural: "posts",
+  actions: {
+    create: { success: ({ label }) => `Post "${label}" created.`, fallbackError: "Failed to create post." },
+    publish: { success: "Post published.", fallbackError: "Failed to publish post." },
+    unpublish: { success: "Post moved to draft.", fallbackError: "Failed to unpublish post." },
+    delete: { success: "Post deleted.", fallbackError: "Failed to delete post." },
+  },
+});
+
 const handleCreate = async (payload) => {
   try {
     const post = await createPost(payload);
     upsertPostInState(post);
-    toast.success(`Post "${post.title}" created.`);
+    postsToast.success("create", { label: post.title });
     if (openAfterCreate) navigate(`/posts/${post.id}`);
   } catch (error) {
-    const message = getActionError(error, "Failed to create post.");
+    const message = postsToast.errorMessage(error, "create");
     setError(message);
-    toast.error(message);
+    postsToast.error(message);
   }
 };
 
@@ -54,11 +71,11 @@ const handleUnpublish = async (id: string) => {
   try {
     await unpublishPost(id);
     markPostDraft(id);
-    toast.success("Post moved to draft.");
+    postsToast.success("unpublish");
   } catch (error) {
-    const message = getActionError(error, "Failed to unpublish post.");
+    const message = postsToast.errorMessage(error, "unpublish");
     setError(message);
-    toast.error(message);
+    postsToast.error(message);
   }
 };
 ```
@@ -78,7 +95,7 @@ Inside confirmed delete execution:
 
 ```tsx
 await runBulkAction("delete", pendingBulkDeleteIds);
-toast.success("Posts deleted.");
+postsToast.bulkSuccess("delete", pendingBulkDeleteIds.length);
 ```
 
 ## Testing Requirements
@@ -87,8 +104,11 @@ toast.success("Posts deleted.");
   - assert Posts create success/failure toasts,
   - assert Posts publish/unpublish/delete success/failure toasts,
   - assert Posts bulk publish/unpublish/delete success toasts,
-  - assert partial failures call `toast.error` and keep inline feedback,
+  - assert partial failures emit the expected error toast and keep inline
+    feedback,
   - assert delete toast waits for confirmation.
+- `tests/vitest/ui/list-action-toasts.test.ts`
+  - cover the shared helper behavior used by the Posts adapter.
 
 ## Documentation Updates Required in This Round
 
@@ -100,6 +120,9 @@ toast.success("Posts deleted.");
 
 ## Acceptance Criteria
 
-1. Posts list state mutations call shared `toast` on success and error.
+1. Posts list state mutations call the shared list-action toast helper on
+   success and error.
 2. Bulk feedback remains visible and truthful.
 3. Delete toasts are never emitted before confirmation.
+4. Generic error normalization, bulk counts, and pluralization are not
+   duplicated inside `PostsListPage`.

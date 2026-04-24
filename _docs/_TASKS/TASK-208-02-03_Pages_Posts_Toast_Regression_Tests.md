@@ -13,6 +13,10 @@
 
 Add regression coverage for Pages and Posts list mutation toast delivery.
 
+Keep the generic list-action helper covered in its own focused suite. This
+resource wave should prove that Pages and Posts pass the correct adapter
+parameters and emit the final toast after the real mutation path.
+
 ## Sub-Tasks
 
 No child task files.
@@ -23,6 +27,9 @@ No child task files.
 - Add one hoisted `sonner` mock that captures `toast.success` and
   `toast.error`.
 - Reset toast mocks in `beforeEach`.
+- Add or update `tests/vitest/ui/list-action-toasts.test.ts` for helper-level
+  single action, bulk success, partial failure, and singular/plural count
+  behavior.
 - Prefer extending current list action tests instead of adding broad duplicate
   render paths.
 
@@ -79,6 +86,8 @@ expect(toastMock.error).toHaveBeenCalledWith(expect.stringMatching(/failed/i));
   - update existing Pages create/action/bulk tests,
   - update existing Posts create/action/bulk tests,
   - add delete-confirm ordering assertions where not already covered.
+- `tests/vitest/ui/list-action-toasts.test.ts`
+  - cover generic helper behavior without importing Pages/Posts components.
 
 ## Documentation Updates Required in This Round
 
@@ -90,3 +99,5 @@ expect(toastMock.error).toHaveBeenCalledWith(expect.stringMatching(/failed/i));
 1. The suite proves Pages list toast success and error paths.
 2. The suite proves Posts list toast success and error paths.
 3. The suite proves delete toast ordering after confirmation.
+4. Shared helper behavior is covered outside the resource screens so
+   count/pluralization branches are not duplicated in every resource suite.

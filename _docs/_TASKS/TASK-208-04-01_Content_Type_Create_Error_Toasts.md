@@ -22,28 +22,40 @@ No child task files.
 
 - Inspect `core/admin/ui/content-types/ContentTypeCreateDrawer.tsx`.
 - If the drawer catches `createContentType` errors and only sets local `error`,
-  also call `toast.error(message)`.
+  also call the shared list-action error-toast helper.
 - Keep `ContentTypeList.handleCreated` success toast in
-  `core/admin/ui/content-types/ContentTypeList.tsx`.
+  `core/admin/ui/content-types/ContentTypeList.tsx`, but route the success copy
+  through the Content Type adapter/config.
+- Reuse `core/admin/ui/shared/listActionToasts.ts` for error normalization and
+  action copy.
+- Because both `ContentTypeList` and `ContentTypeCreateDrawer` need the Content
+  Type adapter, extract a small resource-local adapter module if needed instead
+  of duplicating the same config in both components.
 - Do not navigate or mutate list state from the drawer; keep the parent
   `onCreated` callback as the success owner.
 
 ## Pseudocode
 
 ```tsx
-// core/admin/ui/content-types/ContentTypeCreateDrawer.tsx
-import { toast } from "sonner";
+// Shared by the list and create drawer, for example from
+// core/admin/ui/content-types/contentTypeListToastAdapter.ts.
+const contentTypeToast = createListActionToastAdapter({
+  resourceSingular: "collection",
+  resourcePlural: "collections",
+  actions: {
+    create: { success: ({ label }) => `Collection "${label}" created.`, fallbackError: "Failed to create content type." },
+    delete: { success: "Collection deleted.", fallbackError: "Failed to delete content type." },
+  },
+});
 
 try {
   const created = await createContentType(payload);
   onCreated?.(created);
   resetForm();
 } catch (error) {
-  const message = error instanceof Error && error.message
-    ? error.message
-    : "Failed to create content type.";
+  const message = contentTypeToast.errorMessage(error, "create");
   setError(message);
-  toast.error(message);
+  contentTypeToast.error(message);
 }
 ```
 
@@ -53,7 +65,7 @@ Success stays in parent:
 // core/admin/ui/content-types/ContentTypeList.tsx
 const handleCreated = (created) => {
   setTypes((prev) => [created, ...prev]);
-  toast.success(`Collection "${created.name}" created.`);
+  contentTypeToast.success("create", { label: created.name });
   navigate(`/content-types/${encodeURIComponent(created.id)}`);
 };
 ```
@@ -62,7 +74,7 @@ const handleCreated = (created) => {
 
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
   - assert existing create success toast still fires,
-  - add create failure setup and assert `toast.error(message)`,
+  - add create failure setup and assert the expected final error toast,
   - preserve drawer inline error assertion if one exists or add one if the test
     already covers drawer errors.
 
@@ -79,3 +91,5 @@ const handleCreated = (created) => {
 2. Content Type create failure shows both local drawer feedback and top-right
    error toast.
 3. Parent/drawer ownership stays unchanged.
+4. Create success/error copy and fallback handling come from the shared
+   list-action toast helper/adaptor.

@@ -23,23 +23,14 @@ No child task files.
 - Update `runBulkAction` in
   `core/admin/ui/content-types/ContentTypeList.tsx`.
 - Preserve current `bulkFeedback` state.
-- On full success, call `toast.success(...)`.
-- On partial/full failure, call `toast.error(...)` with the same truthful
-  failure count/message used inline.
+- On full success, call the shared list-action success helper.
+- On partial/full failure, call the shared list-action error helper with the
+  same truthful failure count/message used inline.
 - Keep bulk delete confirmation dialog and only emit delete toast after confirm.
 
 ## Pseudocode
 
 ```tsx
-const contentTypeBulkSuccessMessage = (
-  action: ContentTypeBulkActionValue,
-  count: number
-) => {
-  if (action === "publish") return count === 1 ? "Collection published." : "Collections published.";
-  if (action === "draft") return count === 1 ? "Collection moved to draft." : "Collections moved to draft.";
-  return count === 1 ? "Collection deleted." : "Collections deleted.";
-};
-
 const runBulkAction = async (action, ids) => {
   const results = await Promise.allSettled(ids.map((id) => {
     if (action === "publish") return updateContentType(id, { status: "published" });
@@ -49,14 +40,14 @@ const runBulkAction = async (action, ids) => {
 
   const failed = results.filter((result) => result.status === "rejected").length;
   if (failed > 0) {
-    const message = `${failed} collection action${failed === 1 ? "" : "s"} failed.`;
+    const message = contentTypeToast.bulkErrorMessage({ action, failed, total: ids.length });
     setBulkFeedback({ variant: "destructive", title: "Bulk action failed", message });
-    toast.error(message);
+    contentTypeToast.error(message);
     return;
   }
 
   applyContentTypeBulkState(action, ids);
-  toast.success(contentTypeBulkSuccessMessage(action, ids.length));
+  contentTypeToast.bulkSuccess(action, ids.length);
 };
 ```
 
@@ -67,7 +58,10 @@ const runBulkAction = async (action, ids) => {
   - add bulk draft assertion if no existing path covers it,
   - existing bulk delete confirmation test: assert no toast before confirm and
     success toast after confirm,
-  - add partial failure mock and assert `toast.error` plus inline feedback.
+  - add partial failure mock and assert the expected final error toast plus
+    inline feedback.
+- `tests/vitest/ui/list-action-toasts.test.ts`
+  - cover shared bulk success/error count behavior used by Content Types.
 
 ## Documentation Updates Required in This Round
 
@@ -81,3 +75,5 @@ const runBulkAction = async (action, ids) => {
 1. Content Type bulk publish/draft/delete emit success toasts after full success.
 2. Partial failures emit error toasts and preserve inline details.
 3. Bulk delete toast is emitted only after the confirmation dialog path.
+4. Bulk message and failure count behavior comes from the shared helper/adaptor,
+   not a Content-Type-only message function.

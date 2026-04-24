@@ -23,36 +23,49 @@ No child task files.
 
 ## Implementation Checklist
 
-- Add `import { toast } from "sonner";` to
+- Import the shared list-action toast helper from
+  `core/admin/ui/shared/listActionToasts.ts` in
   `core/admin/ui/pages/PageListPage.tsx`.
+- Define a Pages adapter/config for the helper with page singular/plural labels,
+  create/publish/draft/delete action copy, and fallback error messages.
 - In `handleCreate`, toast after `createPage` succeeds and after local list
   state or navigation preference is applied.
 - In `handleCreate` catch, keep `setError(message)` and also call
-  `toast.error(message)`.
+  the shared error-toast helper.
 - In `handlePublish` and `handleUnpublish`, toast after the client mutation and
   local state update succeed.
 - In `runDelete`, toast only after `deletePage(id)` succeeds from the
   confirmation dialog path.
 - In `runBulkAction`, toast after all selected mutations settle:
-  - full success: `toast.success(...)`,
-  - partial/full failure: preserve inline feedback and call `toast.error(...)`.
+  - full success: call the shared bulk success helper,
+  - partial/full failure: preserve inline feedback and call the shared error
+    helper.
+  Use the shared helper for both the final message and plural/count handling.
 
 ## Pseudocode
 
 ```tsx
-const toErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error && error.message ? error.message : fallback;
+const pagesToast = createListActionToastAdapter({
+  resourceSingular: "page",
+  resourcePlural: "pages",
+  actions: {
+    create: { success: ({ label }) => `Page "${label}" created.`, fallbackError: "Failed to create page." },
+    publish: { success: "Page published.", fallbackError: "Failed to publish page." },
+    unpublish: { success: "Page moved to draft.", fallbackError: "Failed to unpublish page." },
+    delete: { success: "Page deleted.", fallbackError: "Failed to delete page." },
+  },
+});
 
 const handleCreate = async (payload) => {
   try {
     const page = await createPage(payload);
     upsertPageInState(page);
-    toast.success(`Page "${page.title}" created.`);
+    pagesToast.success("create", { label: page.title });
     if (openAfterCreate) navigate(`/pages/${page.id}`);
   } catch (error) {
-    const message = toErrorMessage(error, "Failed to create page.");
+    const message = pagesToast.errorMessage(error, "create");
     setError(message);
-    toast.error(message);
+    pagesToast.error(message);
   }
 };
 
@@ -60,11 +73,11 @@ const handlePublish = async (id: string) => {
   try {
     await publishPage(id);
     markPagePublished(id);
-    toast.success("Page published.");
+    pagesToast.success("publish");
   } catch (error) {
-    const message = toErrorMessage(error, "Failed to publish page.");
+    const message = pagesToast.errorMessage(error, "publish");
     setError(message);
-    toast.error(message);
+    pagesToast.error(message);
   }
 };
 
@@ -72,11 +85,11 @@ const runDelete = async (id: string) => {
   try {
     await deletePage(id);
     removePageFromState(id);
-    toast.success("Page deleted.");
+    pagesToast.success("delete");
   } catch (error) {
-    const message = toErrorMessage(error, "Failed to delete page.");
+    const message = pagesToast.errorMessage(error, "delete");
     setError(message);
-    toast.error(message);
+    pagesToast.error(message);
   }
 };
 ```
@@ -88,21 +101,24 @@ const results = await Promise.allSettled(ids.map((id) => runPageMutation(action,
 const failed = results.filter((result) => result.status === "rejected").length;
 
 if (failed > 0) {
-  const message = `${failed} page action${failed === 1 ? "" : "s"} failed.`;
+  const message = pagesToast.bulkErrorMessage({ action, failed, total: ids.length });
   setBulkFeedback({ variant: "destructive", title: "Bulk action failed", message });
-  toast.error(message);
+  pagesToast.error(message);
   return;
 }
 
-toast.success(action === "publish" ? "Pages published." : "Pages moved to draft.");
+pagesToast.bulkSuccess(action, ids.length);
 ```
 
 ## Testing Requirements
 
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - add or reuse a hoisted `sonner` mock,
-  - in the existing create/navigation test, assert `toast.success` after create,
-  - in the existing failure test, assert `toast.error`,
+  - assert Pages calls route through the shared list-action toast helper
+    behavior by verifying final emitted success/error messages,
+  - in the existing create/navigation test, assert the final success toast after
+    create,
+  - in the existing failure test, assert the final error toast,
   - in the publish/unpublish/delete test, assert success and failure toasts,
   - in the bulk publish test, assert the success toast after mutation completion,
   - add a delete-confirm assertion that no delete toast fires before clicking the
@@ -118,6 +134,9 @@ toast.success(action === "publish" ? "Pages published." : "Pages moved to draft.
 
 ## Acceptance Criteria
 
-1. Pages list state mutations call the shared `toast` API on success and error.
+1. Pages list state mutations call the shared list-action toast helper on
+   success and error.
 2. Delete toast fires only from the confirmed delete path.
 3. Existing inline error and bulk feedback behavior is preserved.
+4. Generic error normalization, bulk counts, and pluralization are not
+   duplicated inside `PageListPage`.

@@ -24,48 +24,45 @@ No child task files.
 - On full success:
   - update local item statuses/removals as today,
   - clear selection as today,
-  - call `toast.success(...)`.
+  - call the shared list-action toast success helper.
 - On partial/full failure:
   - preserve existing inline error state,
-  - call `toast.error(...)`.
+  - call the shared list-action toast error helper.
 - Keep bulk delete confirmation dialog; do not toast until the confirm button
   triggers `runBulkAction("delete", pendingBulkDeleteIds)`.
 
 ## Pseudocode
 
 ```tsx
-const bulkSuccessMessage = (action: MenuBulkActionValue, count: number) => {
-  if (action === "publish") return count === 1 ? "Menu published." : "Menus published.";
-  if (action === "unpublish") return count === 1 ? "Menu moved to draft." : "Menus moved to draft.";
-  return count === 1 ? "Menu deleted." : "Menus deleted.";
-};
-
 const runBulkAction = async (action, ids) => {
   const results = await Promise.allSettled(ids.map((id) => mutateMenu(action, id)));
   const failed = results.filter((result) => result.status === "rejected").length;
 
   if (failed > 0) {
-    const message = `${failed} menu action${failed === 1 ? "" : "s"} failed.`;
+    const message = menusToast.bulkErrorMessage({ action, failed, total: ids.length });
     setError(message);
-    toast.error(message);
+    menusToast.error(message);
     return;
   }
 
   applyBulkState(action, ids);
   handleClearSelection();
-  toast.success(bulkSuccessMessage(action, ids.length));
+  menusToast.bulkSuccess(action, ids.length);
 };
 ```
 
 ## Testing Requirements
 
 - `tests/vitest/ui/menu-list-page-actions.test.tsx`
-  - existing bulk publish test: assert `toast.success("Menus published.")` or
-    equivalent message,
+  - existing bulk publish test: assert the final `"Menus published."` or
+    equivalent success toast message,
   - existing bulk delete confirmation test: assert no delete toast before
     confirm and success toast after confirm,
-  - add partial failure setup for one selected menu and assert `toast.error`,
+  - add partial failure setup for one selected menu and assert the final error
+    toast,
   - keep selection scope assertions intact.
+- `tests/vitest/ui/list-action-toasts.test.ts`
+  - cover shared bulk success/error count behavior used by Menus.
 
 ## Documentation Updates Required in This Round
 
@@ -79,3 +76,5 @@ const runBulkAction = async (action, ids) => {
 1. Menus bulk publish/unpublish/delete emit success toasts after full success.
 2. Menus bulk failures emit error toasts and keep inline error feedback.
 3. Bulk delete toast appears only after the confirmation dialog mutation.
+4. Menus bulk success/error messages come from the shared helper/adaptor instead
+   of Menus-only message functions.

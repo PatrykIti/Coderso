@@ -19,11 +19,15 @@ No child task files.
 
 ## Implementation Checklist
 
-- Extend the existing `tests/vitest/admin/adminApp.test.tsx` Sonner mock rather
-  than adding a new test-only toaster.
-- Capture props passed to the mock `Toaster`.
-- If `sonner.tsx` is tested through direct rendering instead of the mock, keep
-  the test Bun-free and inside the Vitest admin/UI lane.
+- Keep `tests/vitest/admin/adminApp.test.tsx` focused on the app-level host:
+  one toaster, top-right position, close button, duration, accessible label, and
+  no `richColors` prop.
+- Add `tests/vitest/admin/sonner.test.tsx` for the wrapper internals because
+  `adminApp.test.tsx` mocks `@/components/ui/sonner` and cannot prove the real
+  token style map.
+- In the wrapper test, mock `sonner` and `next-themes`, render `Toaster`, and
+  capture props passed to the underlying Sonner component.
+- Keep the direct wrapper test Bun-free and inside the Vitest admin/UI lane.
 
 ## Pseudocode
 
@@ -55,16 +59,21 @@ expect(toasterProps[0]?.richColors).toBeUndefined();
 If the wrapper style is tested separately:
 
 ```tsx
+// tests/vitest/admin/sonner.test.tsx
 expect(style["--success-text"]).toBe("var(--admin-state-success)");
 expect(style["--error-text"]).toBe("var(--admin-state-danger)");
 expect(style["--warning-text"]).toBe("var(--admin-state-warning)");
+expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
 ```
 
 ## Testing Requirements
 
 - `tests/vitest/admin/adminApp.test.tsx`
-  - add or extend one test for shared toaster host props,
-  - add or extend one assertion for token-backed state style variables.
+  - add or extend one test for shared toaster host props.
+- `tests/vitest/admin/sonner.test.tsx`
+  - assert token-backed state style variables,
+  - assert the dynamic `useTheme()` value is forwarded,
+  - assert state styling does not depend on `richColors`.
 
 ## Documentation Updates Required in This Round
 
@@ -76,3 +85,5 @@ expect(style["--warning-text"]).toBe("var(--admin-state-warning)");
 1. Tests fail if `richColors` is reintroduced on the shared admin toaster.
 2. Tests fail if the shared toaster stops being top-right/accessible/closeable.
 3. Tests cover the token variable names used for toast states.
+4. Tests fail if the wrapper hard-codes a theme instead of using the active
+   Admin UI Theme mode.

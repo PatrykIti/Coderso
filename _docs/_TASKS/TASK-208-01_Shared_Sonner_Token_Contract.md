@@ -18,7 +18,9 @@ The implementation must keep a single `<Toaster />` host in `AdminApp` and make
 normal, success, error, warning, and info toasts derive their visual treatment
 from Admin UI Theme variables. This is the foundation that prevents new list
 toasts from reproducing the current black/green/red Sonner default styling under
-a light Admin UI Theme.
+a light Admin UI Theme. The variables must stay dynamic so any custom Admin UI
+Theme mode update flows into every toast state through the active CSS variable
+set instead of a hard-coded wrapper palette.
 
 ## Sub-Tasks
 
@@ -31,7 +33,9 @@ a light Admin UI Theme.
 1. Update the `AdminApp` toaster host so it remains top-right and accessible but
    does not opt into Sonner hard-coded rich colors.
 2. Update the shared Sonner wrapper to expose token-backed state styles.
-3. Add focused regression tests before resource list work starts.
+3. Add a direct wrapper regression test for token variables and keep
+   `AdminApp` coverage focused on the single host configuration.
+4. Add focused regression tests before resource list work starts.
 
 ## Security Contract
 
@@ -46,6 +50,7 @@ a light Admin UI Theme.
 - `core/admin/components/ui/sonner.tsx`
 - `core/admin/styles/globals.css` only if Sonner state selectors are required.
 - `tests/vitest/admin/adminApp.test.tsx`
+- `tests/vitest/admin/sonner.test.tsx`
 
 ## Testing Requirements
 
@@ -53,9 +58,12 @@ a light Admin UI Theme.
   - assert one shared toaster is mounted,
   - assert `position="top-right"`, `closeButton`, `duration={4000}`, and
     `containerAriaLabel="Admin notifications"` remain,
-  - assert `richColors` is not passed,
+  - assert `richColors` is not passed.
+- Add `tests/vitest/admin/sonner.test.tsx`:
   - assert the Sonner wrapper receives token-backed style variables for success,
-    error, warning, info, and normal states.
+    error, warning, info, and normal states,
+  - assert the wrapper preserves the current `useTheme()`-derived theme instead
+    of hard-coding a specific mode.
 
 ## Documentation Updates Required in This Round
 
@@ -72,3 +80,5 @@ a light Admin UI Theme.
    surfaces.
 4. Toast state colors are controlled by Admin UI Theme tokens or shared admin
    CSS variables.
+5. Custom Admin UI Theme modes update toast visuals through dynamic variable
+   values without resource-specific styling changes.

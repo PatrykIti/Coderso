@@ -18,6 +18,16 @@ round must add missing create success/error feedback and verify that existing
 bulk publish/draft/archive/delete toasts still align with the shared token-backed
 toaster contract.
 
+Entries have a distinct all-entries read model: `entriesClient.listAllEntries()`
+calls `GET /content-entries`, which is implemented in
+`core/server/routes/contentEntryRoutes.ts` and returns entries with content type
+metadata. Keep that endpoint and read-model flow intact. Editor navigation still
+uses the current admin route aliases (`/entries/:type/:id` and canonical
+`/coderso/entries/:type/:id`) unless a separate routing task changes them.
+
+Entries should also use the generic list-action toast helper/adaptor for new and
+audited feedback behavior rather than growing Entries-only copy/count helpers.
+
 ## Sub-Tasks
 
 - [ ] `TASK-208-05-01_Entry_Create_Toasts.md`
@@ -37,16 +47,20 @@ toaster contract.
 
 - `core/admin/ui/entries/EntryList.tsx`
 - `core/admin/ui/entries/EntryCreateDrawer.tsx`
+- `core/admin/ui/shared/listActionToasts.ts`
 - `tests/vitest/ui/entry-list-wave.test.tsx`
+- `tests/vitest/ui/list-action-toasts.test.ts`
 
 ## Testing Requirements
 
 - Update `tests/vitest/ui/entry-list-wave.test.tsx`:
-  - assert create success calls `toast.success`,
-  - assert create failure calls `toast.error`,
+  - assert create success emits the expected final success toast,
+  - assert create failure emits the expected final error toast,
   - assert bulk publish/draft/archive success and partial failure toasts,
   - assert row and bulk delete success/error toasts still fire after
     confirmation.
+- Update `tests/vitest/ui/list-action-toasts.test.ts` if the Entries adapter
+  adds helper branches not already covered.
 
 ## Documentation Updates Required in This Round
 
@@ -61,3 +75,7 @@ toaster contract.
 2. Existing duplicate, bulk, and delete toasts remain intact.
 3. Partial failures stay truthful and visible.
 4. No editor-only flow is changed.
+5. `GET /content-entries` remains the all-entries API/read model; admin editor
+   navigation remains on the existing Entries route aliases.
+6. Entries reuse the generic list-action toast helper/adaptor for shared error,
+   count, and bulk message behavior.

@@ -41,7 +41,7 @@ targeted Vitest coverage and required lint/type checks.
 ## Testing Requirements
 
 ```bash
-bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
+bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/entry-list-wave.test.tsx
 bun --cwd core lint
 bun --cwd core lint:types
 ```
@@ -57,6 +57,10 @@ bun --cwd core lint:types
 
 1. Source docs describe the final top-right list toast contract.
 2. Design token docs describe the shared Sonner/Admin UI Theme token mapping.
-3. Changelog records the implementation and validation evidence.
-4. All TASK-208 task files and board rows are moved to Done only after
+3. Docs describe the generic list-action toast helper plus resource
+   adapters/parameters.
+4. Entries docs preserve `GET /content-entries` as the all-entries read model
+   while keeping editor navigation on the existing admin route aliases.
+5. Changelog records the implementation and validation evidence.
+6. All TASK-208 task files and board rows are moved to Done only after
    validation.

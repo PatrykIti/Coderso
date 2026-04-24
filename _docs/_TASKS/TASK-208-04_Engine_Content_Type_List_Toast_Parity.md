@@ -18,6 +18,10 @@ Content Types already have some toast behavior for create, duplicate, and row
 delete. This round must preserve that behavior while adding missing create-error
 and bulk lifecycle notifications for publish, draft/unpublish, and delete.
 
+Content Types should reuse the generic list-action toast helper with an Engine
+content type adapter/config. Existing direct toast calls can be kept only when
+they delegate to the shared message/error contract instead of duplicating it.
+
 ## Sub-Tasks
 
 - [ ] `TASK-208-04-01_Content_Type_Create_Error_Toasts.md`
@@ -38,16 +42,21 @@ and bulk lifecycle notifications for publish, draft/unpublish, and delete.
 
 - `core/admin/ui/content-types/ContentTypeList.tsx`
 - `core/admin/ui/content-types/ContentTypeCreateDrawer.tsx`
+- `core/admin/ui/shared/listActionToasts.ts`
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
+- `tests/vitest/ui/list-action-toasts.test.ts`
 
 ## Testing Requirements
 
 - Update `tests/vitest/ui/content-type-list-parity.test.tsx`:
   - assert create success still toasts,
   - assert create failure toasts if the drawer owns that failure path,
-  - assert bulk publish/draft/delete success calls `toast.success`,
-  - assert partial failure calls `toast.error` while preserving inline feedback,
+  - assert bulk publish/draft/delete success emits the expected final toast,
+  - assert partial failure emits the expected final error toast while preserving
+    inline feedback,
   - assert row delete toast still fires after confirmation.
+- Update `tests/vitest/ui/list-action-toasts.test.ts` if the Content Type
+  adapter adds helper branches not already covered.
 
 ## Documentation Updates Required in This Round
 
@@ -63,3 +72,5 @@ and bulk lifecycle notifications for publish, draft/unpublish, and delete.
 2. Bulk partial failure remains truthful and visible inline.
 3. No content-type-specific toaster host or styling is introduced.
 4. Existing delete guard behavior is unchanged.
+5. Content Types use the generic list-action toast helper/adaptor for shared
+   error and bulk message behavior.

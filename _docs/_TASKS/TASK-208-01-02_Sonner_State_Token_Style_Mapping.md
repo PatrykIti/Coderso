@@ -16,7 +16,9 @@ toast state styling.
 
 The current wrapper maps only normal toast background/text/border variables.
 This leaf adds success, error, warning, and info state variables backed by Admin
-UI Theme tokens.
+UI Theme tokens. It must preserve the existing dynamic theme handoff from
+`useTheme()` so Admin UI Theme mode changes update all toast states through
+runtime CSS variables.
 
 ## Sub-Tasks
 
@@ -26,6 +28,11 @@ No child task files.
 
 - Keep this logic in the shared Sonner wrapper, not in Pages/Posts/Menus/Engine
   or Entries components.
+- Preserve the current dynamic `useTheme()` behavior. Do not hard-code
+  `theme="light"` or any other fixed mode in the wrapper.
+- Reference Admin UI Theme CSS variables directly in the style map so the active
+  theme profile/template can update toast colors without remounting or rewriting
+  resource components.
 - Use existing token variables:
   - `--popover`,
   - `--popover-foreground`,
@@ -43,6 +50,8 @@ No child task files.
 
 ```tsx
 // core/admin/components/ui/sonner.tsx
+const { theme = "system" } = useTheme();
+
 const adminToastStyle = {
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
@@ -64,7 +73,7 @@ const adminToastStyle = {
 
 return (
   <Sonner
-    theme="light"
+    theme={theme as ToasterProps["theme"]}
     className="toaster group"
     style={adminToastStyle}
     {...props}
@@ -84,16 +93,20 @@ Fallback CSS if needed:
 
 ## Testing Requirements
 
-- `tests/vitest/admin/adminApp.test.tsx`
-  - expose wrapper style props in the mock,
+- `tests/vitest/admin/sonner.test.tsx`
+  - render the wrapper directly or through a focused mock,
   - assert success/error/warning/info variables contain Admin UI token names,
-  - assert no rich color prop is required for visible state styling.
+  - assert no rich color prop is required for visible state styling,
+  - assert the wrapper forwards the dynamic `useTheme()` value instead of a
+    hard-coded literal theme.
 
 ## Documentation Updates Required in This Round
 
 - `_docs/DESIGN_TOKENS.md`
   - add a short section that Admin UI floating toasts are backed by shared
     Sonner variables and Admin UI Theme state tokens.
+  - document that new/custom Admin UI Theme modes propagate through CSS
+    variables and must not require per-resource toast styling.
 
 ## Acceptance Criteria
 
@@ -102,3 +115,5 @@ Fallback CSS if needed:
 2. Light Admin UI themes no longer inherit black/default Sonner state surfaces
    unless the active token set explicitly defines that look.
 3. The mapping is shared and resource-neutral.
+4. Theme mode changes propagate through dynamic Admin UI Theme variables and the
+   shared wrapper, not through hard-coded state palettes.
