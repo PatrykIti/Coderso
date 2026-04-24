@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 734 | 2026-04-24 | Posts metadata date-time validation | CMS Posts/Validation |
 | 733 | 2026-04-24 | Posts tag and category metadata save | CMS Posts/Metadata |
 | 732 | 2026-04-24 | Posts taxonomy slug resolution | CMS Posts/Taxonomy |
 | 731 | 2026-04-23 | TASK-203 entries admin QA metadata rich text editor UX | QA/CMS Entries |

@@ -9,6 +9,17 @@ const ajv = new Ajv({
   allowUnionTypes: true,
 });
 
+ajv.addFormat("date-time", {
+  type: "string",
+  validate: (value: string) => {
+    const rfc3339DateTime =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
+    if (!rfc3339DateTime.test(value)) return false;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp);
+  },
+});
+
 const validators = new WeakMap<object, ValidateFunction>();
 
 const formatErrors = (errors: ErrorObject[]) =>

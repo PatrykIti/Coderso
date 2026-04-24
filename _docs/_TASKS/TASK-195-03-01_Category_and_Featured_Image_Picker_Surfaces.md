@@ -132,3 +132,6 @@ No child task files.
   from category-only taxonomy changes. `taxonomy.tagIds` still owns taxonomy tag
   assignment and may mirror tag names into `posts.tags` only when `tagIds` is
   explicitly present in the payload.
+- 2026-04-24: Shared server schema validation now registers `date-time`, so
+  metadata updates that include tags/categories do not fail while compiling the
+  optional `scheduledAt` schema.

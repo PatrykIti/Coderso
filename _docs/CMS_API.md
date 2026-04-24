@@ -838,6 +838,7 @@ can be sent on its own and must not clear or replace those free-text tags.
 `taxonomy.tagIds`, when explicitly provided, is the taxonomy-tag assignment
 contract; in that case persisted `posts.tags` mirrors the selected taxonomy tag
 names.
+`scheduledAt`, when present, must be an RFC 3339 `date-time` string.
 
 Autosave response (summary):
 
