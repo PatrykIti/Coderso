@@ -5,7 +5,7 @@
 **Category:** CMS/Entries + Admin/UI + UX + Admin API
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-202, TASK-203, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -124,22 +124,22 @@ resource-specific list system. The canonical route remains
 
 ## Sub-Tasks
 
-- [ ] TASK-207-01: Entries Cross-Type Read Model and Cache Contract
-  - [ ] TASK-207-01-01: Entry List Read Model Service and Route Contract
-  - [ ] TASK-207-01-02: Entries Client Cache, Prefetch, and Cache Map
-- [ ] TASK-207-02: Entries List Shell Parity With Admin Lists
-  - [ ] TASK-207-02-01: Entry List AdminShell, PageHeader, and Action Layout
-  - [ ] TASK-207-02-02: Entry Table Content Type Column and Engine Links
-  - [ ] TASK-207-02-03: Shared Pagination and Visible-Scope Selection
-- [ ] TASK-207-03: Entries Filter Model - Basic and Advanced
-  - [ ] TASK-207-03-01: Basic Search, Status, and Filter Reset Contract
-  - [ ] TASK-207-03-02: Advanced Content Type, Author, and Date Filters
-  - [ ] TASK-207-03-03: Filter State, Selection Trim, and Empty States
-- [ ] TASK-207-04: Entries Bulk Actions, Popups, and Token Compliance
-  - [ ] TASK-207-04-01: Entries Inline Bulk Actions and Partial-Failure Feedback
-  - [ ] TASK-207-04-02: Entry Row/Bulk Delete Dialog Token Compliance
-  - [ ] TASK-207-04-03: Entries Create/Action Popup Theme Token Audit
-- [ ] TASK-207-05: QA, Docs, and Closure
+- [x] TASK-207-01: Entries Cross-Type Read Model and Cache Contract
+  - [x] TASK-207-01-01: Entry List Read Model Service and Route Contract
+  - [x] TASK-207-01-02: Entries Client Cache, Prefetch, and Cache Map
+- [x] TASK-207-02: Entries List Shell Parity With Admin Lists
+  - [x] TASK-207-02-01: Entry List AdminShell, PageHeader, and Action Layout
+  - [x] TASK-207-02-02: Entry Table Content Type Column and Engine Links
+  - [x] TASK-207-02-03: Shared Pagination and Visible-Scope Selection
+- [x] TASK-207-03: Entries Filter Model - Basic and Advanced
+  - [x] TASK-207-03-01: Basic Search, Status, and Filter Reset Contract
+  - [x] TASK-207-03-02: Advanced Content Type, Author, and Date Filters
+  - [x] TASK-207-03-03: Filter State, Selection Trim, and Empty States
+- [x] TASK-207-04: Entries Bulk Actions, Popups, and Token Compliance
+  - [x] TASK-207-04-01: Entries Inline Bulk Actions and Partial-Failure Feedback
+  - [x] TASK-207-04-02: Entry Row/Bulk Delete Dialog Token Compliance
+  - [x] TASK-207-04-03: Entries Create/Action Popup Theme Token Audit
+- [x] TASK-207-05: QA, Docs, and Closure
 
 ## Non-Goals
 
@@ -228,3 +228,22 @@ resource-specific list system. The canonical route remains
    primitives.
 7. Existing type-scoped editor/widget/relation/assistant contracts remain
    backward compatible.
+
+## Completion Notes
+
+- Completed the all-entries read model through `GET /content-entries`,
+  `listEntriesWithContentTypes()`, strict empty query validation, and route
+  collision proof against `/content/:type/entries`.
+- Added `entries:list:all` with cached client wrappers, prefetch warmup, mutation
+  invalidation, and assistant cache-event coverage while preserving existing
+  type-scoped `entries:list:<typeSlug>` and detail caches.
+- Rebuilt `/admin/coderso/entries` on `AdminShell`, `PageHeader`,
+  `EntryTable`, `EntryFilters`, `EntryBulkActionsBar`,
+  `ConfirmActionDialog`, and `ListPaginationFooter`; removed the first-screen
+  sidebar/grid dependency and kept editor navigation on the existing route.
+- Entries filters are now basic search/status plus collapsible advanced content
+  type, author, and updated-date filters. Selection is trimmed to visible
+  paginated rows and bulk actions execute with `{ id, typeSlug }` refs.
+- Docs, task board, and changelog 737 were synced. DB-backed Bun tests were
+  invoked with `DATABASE_URL` loaded, but DB cases skipped because the test
+  connection was unavailable in this worktree session.

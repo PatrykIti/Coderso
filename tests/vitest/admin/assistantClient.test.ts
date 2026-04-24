@@ -773,6 +773,7 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
         expect.objectContaining({ key: cacheKeys.contentTypesList, action: "invalidate" }),
         expect.objectContaining({ key: cacheKeys.contentTypeDetail("ct-products"), action: "invalidate" }),
         expect.objectContaining({ key: cacheKeys.entriesList("products"), action: "update" }),
+        expect.objectContaining({ key: cacheKeys.entriesAllList, action: "update" }),
         expect.objectContaining({ key: cacheKeys.entryDetail("products", "entry-1"), action: "update" }),
         expect.objectContaining({ key: cacheKeys.formsList, action: "update" }),
         expect.objectContaining({ key: cacheKeys.formDetail("form-lead"), action: "update" }),

@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import {
   createAdminPrefetcher,
@@ -193,5 +193,39 @@ test("prefetcher enforces max concurrency and drains queued work", async () => {
     await flushAsync();
 
     expect(finished).toEqual(["pages", "menus", "media"]);
+  });
+});
+
+test("default entries prefetch warms content types and all entries", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listContentTypesCached = vi.fn().mockResolvedValue([]);
+    const listAllEntriesCached = vi.fn().mockResolvedValue([]);
+
+    vi.doMock("@/services/contentTypesClient", () => ({
+      listContentTypesCached,
+    }));
+    vi.doMock("@/services/entriesClient", () => ({
+      listAllEntriesCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      module.prefetchAdminRoute("/admin/coderso/entries", "/admin", {
+        activeHref: "/admin/pages",
+      });
+      await flushAsync();
+
+      expect(listContentTypesCached).toHaveBeenCalledWith(
+        module.prefetchWarmupOptions
+      );
+      expect(listAllEntriesCached).toHaveBeenCalledWith(
+        module.prefetchWarmupOptions
+      );
+    } finally {
+      vi.doUnmock("@/services/contentTypesClient");
+      vi.doUnmock("@/services/entriesClient");
+      vi.resetModules();
+    }
   });
 });

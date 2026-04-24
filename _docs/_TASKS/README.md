@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 65 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1092 tasks
+- **Done:** 1109 tasks
 
 ---
 
@@ -38,23 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-207 | Coderso Entries List Parity and Cross-Type Filtering | High | Very Large | Entries first-screen parity with Pages/Posts/Menus/Content Types, all-entries read model, content-type column/link, advanced filters, shared pagination, and token-backed actions |
-| TASK-207-01 | Entries Cross-Type Read Model and Cache Contract | High | Large | Business/technical foundation: one internal all-entries read model plus cache/prefetch/docs alignment |
-| TASK-207-01-01 | Entry List Read Model Service and Route Contract | High | Medium | Technical leaf: service-level all-entries join and internal `content:read` route |
-| TASK-207-01-02 | Entries Client Cache, Prefetch, and Cache Map | High | Medium | Technical leaf: all-entries client cache key, invalidation, prefetch, assistant cache events, and cache docs |
-| TASK-207-02 | Entries List Shell Parity With Admin Lists | High | Large | Business/UI wave: make `/admin/coderso/entries` match Pages, Posts, Menus, and Content Types without a second flow |
-| TASK-207-02-01 | Entry List AdminShell, PageHeader, and Action Layout | High | Medium | Technical leaf: shared shell/header/action layout and compact `New` action |
-| TASK-207-02-02 | Entry Table Content Type Column and Engine Links | High | Medium | Technical leaf: row content-type column with canonical Engine editor links |
-| TASK-207-02-03 | Shared Pagination and Visible-Scope Selection | High | Medium | Technical leaf: shared footer, default page-size contract, and visible-row selection trimming |
-| TASK-207-03 | Entries Filter Model - Basic and Advanced | High | Large | Business/UI wave: compact search/status filters plus collapsible advanced filters with content type |
-| TASK-207-03-01 | Basic Search, Status, and Filter Reset Contract | High | Small | Technical leaf: basic row search/status behavior and reset |
-| TASK-207-03-02 | Advanced Content Type, Author, and Date Filters | High | Medium | Technical leaf: collapsible advanced filters starting with content type |
-| TASK-207-03-03 | Filter State, Selection Trim, and Empty States | Medium | Medium | Technical leaf: filter/page/selection safety and truthful empty/loading states |
-| TASK-207-04 | Entries Bulk Actions, Popups, and Token Compliance | High | Large | Business/UI wave: inline bulk actions, partial-failure feedback, and Admin UI Theme token-backed popups |
-| TASK-207-04-01 | Entries Inline Bulk Actions and Partial-Failure Feedback | High | Medium | Technical leaf: header inline bulk controls and visible selected-ID execution |
-| TASK-207-04-02 | Entry Row/Bulk Delete Dialog Token Compliance | High | Medium | Technical leaf: shared themed confirmation for row and bulk delete |
-| TASK-207-04-03 | Entries Create/Action Popup Theme Token Audit | Medium | Medium | Technical leaf: create drawer, row actions, alerts, and action popups follow shared theme tokens |
-| TASK-207-05 | QA, Docs, and Closure | Medium | Medium | Closure leaf: targeted Bun/Vitest validation, docs, changelog, and board sync |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -122,6 +105,23 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-207 | Coderso Entries List Parity and Cross-Type Filtering | High | Very Large | Done: Entries first-screen parity shipped with all-entries read model, content-type column/link, advanced filters, shared pagination, and token-backed actions |
+| TASK-207-05 | QA, Docs, and Closure | Medium | Medium | Done: targeted validation, docs, changelog 737, and board closure synced |
+| TASK-207-04-03 | Entries Create/Action Popup Theme Token Audit | Medium | Medium | Done: create drawer, row actions, alerts, and action popups stay on shared theme primitives |
+| TASK-207-04-02 | Entry Row/Bulk Delete Dialog Token Compliance | High | Medium | Done: row and bulk delete use shared confirmation dialog instead of native confirms |
+| TASK-207-04-01 | Entries Inline Bulk Actions and Partial-Failure Feedback | High | Medium | Done: inline bulk controls execute visible selected refs and retain partial-failure feedback |
+| TASK-207-04 | Entries Bulk Actions, Popups, and Token Compliance | High | Large | Done: inline bulk actions, partial-failure feedback, and token-backed confirmations landed |
+| TASK-207-03-03 | Filter State, Selection Trim, and Empty States | Medium | Medium | Done: filter/page changes trim hidden selections and preserve truthful empty/loading states |
+| TASK-207-03-02 | Advanced Content Type, Author, and Date Filters | High | Medium | Done: advanced filters cover content type, author, and updated-date range |
+| TASK-207-03-01 | Basic Search, Status, and Filter Reset Contract | High | Small | Done: basic search/status and reset contract shipped |
+| TASK-207-03 | Entries Filter Model - Basic and Advanced | High | Large | Done: compact search/status filters plus collapsible advanced filters shipped |
+| TASK-207-02-03 | Shared Pagination and Visible-Scope Selection | High | Medium | Done: shared footer and visible-page `{ id, typeSlug }` selection model landed |
+| TASK-207-02-02 | Entry Table Content Type Column and Engine Links | High | Medium | Done: rows show owning content type and link to Engine editor |
+| TASK-207-02-01 | Entry List AdminShell, PageHeader, and Action Layout | High | Medium | Done: list uses shared shell, header, max-width, and compact `New` action |
+| TASK-207-02 | Entries List Shell Parity With Admin Lists | High | Large | Done: `/admin/coderso/entries` now follows Pages/Posts/Menus/Content Types list pattern |
+| TASK-207-01-02 | Entries Client Cache, Prefetch, and Cache Map | High | Medium | Done: `entries:list:all` cache, prefetch, mutation invalidation, assistant events, and docs shipped |
+| TASK-207-01-01 | Entry List Read Model Service and Route Contract | High | Medium | Done: joined all-entries service and `GET /content-entries` route with strict query schema landed |
+| TASK-207-01 | Entries Cross-Type Read Model and Cache Contract | High | Large | Done: internal all-entries read model plus cache/prefetch/docs alignment shipped |
 | TASK-206 | Media Admin Cache Lifecycle and Partial List Updates | High | Large | Done: shared TTL-aware list cache, Media mount/picker cache reuse, partial media mutation updates, upload row response, docs, and validation shipped |
 | TASK-206-03 | Regression Proof, Prefetch, Docs, and Closure | Medium | Medium | Done: regression matrix, docs, changelog 736, board closure, and validation evidence synced |
 | TASK-206-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Done: ADMIN_CACHE, cache map, CMS API, changelog, task statuses, and validation notes synced |

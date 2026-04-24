@@ -5,7 +5,7 @@
 **Category:** CMS/Entries + Admin API + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-207, TASK-203
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -22,8 +22,8 @@ entry editors, relation fields, widgets, and current assistant invalidation.
 
 ## Sub-Tasks
 
-- [ ] TASK-207-01-01: Entry List Read Model Service and Route Contract
-- [ ] TASK-207-01-02: Entries Client Cache, Prefetch, and Cache Map
+- [x] TASK-207-01-01: Entry List Read Model Service and Route Contract
+- [x] TASK-207-01-02: Entries Client Cache, Prefetch, and Cache Map
 
 ## Files to Change
 

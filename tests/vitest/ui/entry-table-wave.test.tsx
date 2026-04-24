@@ -109,6 +109,24 @@ vi.mock("@/components/ui/table", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/AdminLink", () => ({
+  AdminLink: ({
+    href,
+    children,
+    prefetch: _prefetch,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    prefetch?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 import { EntryTable } from "../../../core/admin/ui/entries/EntryTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -126,6 +144,12 @@ const baseEntry = {
     id: "author-1",
     name: "Ada Lovelace",
     email: "ada@example.com",
+  },
+  contentType: {
+    id: "type-1",
+    slug: "articles",
+    name: "Articles",
+    status: "published",
   },
 };
 
@@ -153,20 +177,18 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("EntryTable renders empty state and footer counts", () => {
+test("EntryTable renders empty state without local pagination footer", () => {
   const { container, cleanup } = mount(
     <EntryTable entries={[]} emptyMessage="Nothing here yet." selectedIds={[]} />
   );
 
   expect(container.textContent).toContain("Nothing here yet.");
-  expect(container.textContent).toContain("Showing");
-  expect(container.textContent).toContain("1-0");
-  expect(container.textContent).toContain("of 0");
+  expect(container.textContent).not.toContain("Showing");
 
   cleanup();
 });
 
-test("EntryTable renders button and static title branches plus author and date fallbacks", () => {
+test("EntryTable renders content type, button branch, author, and date fallbacks", () => {
   const { container, cleanup } = mount(
     <EntryTable
       entries={[
@@ -179,15 +201,23 @@ test("EntryTable renders button and static title branches plus author and date f
           status: "published",
           updatedAt: "",
           author: null,
+          contentType: {
+            id: "type-2",
+            slug: "products",
+            name: "Products",
+            status: "published",
+          },
         },
       ]}
-      selectedIds={["entry-1"]}
+      selectedKeys={["articles:entry-1"]}
       onEdit={() => undefined}
     />
   );
 
   expect(container.textContent).toContain("Hello");
   expect(container.textContent).toContain("World");
+  expect(container.textContent).toContain("Articles");
+  expect(container.textContent).toContain("products");
   expect(container.textContent).toContain("Ada Lovelace");
   expect(container.textContent).toContain("AL");
   expect(container.textContent).toContain("System");

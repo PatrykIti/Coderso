@@ -16,9 +16,15 @@ const entry = {
   createdAt: "2026-02-14T00:00:00.000Z",
   updatedAt: "2026-02-14T00:00:00.000Z",
   author: null,
+  contentType: {
+    id: "type-posts",
+    slug: "posts",
+    name: "Posts",
+    status: "published",
+  },
 };
 
-test("EntryTable renders entry title link when entryTypeSlug provided", () => {
+test("EntryTable renders entry title link from row content type", () => {
   const html = renderToString(
     <AdminRouterProvider initialPath="/admin/coderso/entries">
       <AdminBasePathProvider value="/admin">
@@ -29,7 +35,6 @@ test("EntryTable renders entry title link when entryTypeSlug provided", () => {
           onToggleEntry={() => undefined}
           onToggleAll={() => undefined}
           onDelete={() => undefined}
-          entryTypeSlug="posts"
         />
       </AdminBasePathProvider>
     </AdminRouterProvider>

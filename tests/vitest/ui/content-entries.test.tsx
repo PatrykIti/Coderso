@@ -4,10 +4,10 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { EntryList } from "../../../core/admin/ui/entries/EntryList";
 
-test("EntryList renders sidebar and table", () => {
+test("EntryList renders admin shell list header", () => {
   const html = renderAdminUi(<EntryList />);
 
-  expect(html).toContain("Content Types");
-  expect(html).toContain("Create New Content");
+  expect(html).toContain("Entries");
+  expect(html).toContain("New");
   expect(html).toContain("Loading entries");
 });

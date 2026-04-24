@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 737 | 2026-04-24 | TASK-207 entries list parity | CMS Entries/Admin UI |
 | 736 | 2026-04-24 | TASK-206 media cache lifecycle | CMS Media/Admin Cache |
 | 735 | 2026-04-24 | TASK-205 admin list popup parity | CMS Engine/Admin UI |
 | 734 | 2026-04-24 | Posts metadata date-time validation | CMS Posts/Validation |

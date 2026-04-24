@@ -5,7 +5,7 @@
 **Category:** CMS/Entries + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-207-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -20,9 +20,9 @@ list back to a specific Engine type.
 
 ## Sub-Tasks
 
-- [ ] TASK-207-03-01: Basic Search, Status, and Filter Reset Contract
-- [ ] TASK-207-03-02: Advanced Content Type, Author, and Date Filters
-- [ ] TASK-207-03-03: Filter State, Selection Trim, and Empty States
+- [x] TASK-207-03-01: Basic Search, Status, and Filter Reset Contract
+- [x] TASK-207-03-02: Advanced Content Type, Author, and Date Filters
+- [x] TASK-207-03-03: Filter State, Selection Trim, and Empty States
 
 ## Files to Change
 

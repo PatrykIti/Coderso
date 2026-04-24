@@ -1,9 +1,8 @@
-import { LayoutGrid, List, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -15,188 +14,229 @@ import {
 import {
   deleteEntry,
   duplicateEntry,
-  getCachedEntries,
-  listEntriesCached,
+  getCachedAllEntries,
+  listAllEntriesCached,
   updateEntryMetadata,
+  type EntryListItem,
 } from "@/services/entriesClient";
-import { SplitShell } from "@/ui/layouts/SplitShell";
+import { AdminShell } from "@/ui/layouts/AdminShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { PageHeader } from "@/ui/shared/PageHeader";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 
-import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
 import {
   EntryBulkActionsBar,
   type BulkActionValue,
 } from "./EntryBulkActionsBar";
-import { getContentTypeLabels } from "./contentTypeLabels";
 import { EntryFilters } from "./EntryFilters";
-import { EntryGrid } from "./EntryGrid";
-import { EntryDeleteDialog } from "./EntryDeleteDialog";
 import { EntryTable } from "./EntryTable";
-import { EntryTypeSidebar } from "./EntryTypeSidebar";
 
-type EntryView = "list" | "grid";
+export type SelectedEntryRef = {
+  id: string;
+  typeSlug: string;
+};
+
 type DeleteRequest = {
-  ids: string[];
+  refs: SelectedEntryRef[];
   title: string;
   description: string;
   confirmLabel: string;
   mode: "single" | "bulk";
 };
 
+export type EntryListFilters = {
+  query: string;
+  status: string;
+  typeSlug: string;
+  author: string;
+  updatedFrom: string;
+  updatedTo: string;
+};
+
+export const resolveEntrySelectionKey = (ref: SelectedEntryRef) =>
+  `${ref.typeSlug}:${ref.id}`;
+
+const toEntryRef = (entry: EntryListItem): SelectedEntryRef => ({
+  id: entry.id,
+  typeSlug: entry.contentType.slug,
+});
+
+const parseDateBoundary = (value: string, endOfDay: boolean) => {
+  if (!value) return null;
+  const suffix = endOfDay ? "T23:59:59.999" : "T00:00:00.000";
+  const timestamp = new Date(`${value}${suffix}`).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
 export function filterEntries(
-  entries: Awaited<ReturnType<typeof listEntriesCached>>,
-  query: string,
-  status: string,
-  author: string
+  entries: EntryListItem[],
+  filters: EntryListFilters
 ) {
-  const normalized = query.trim().toLowerCase();
+  const normalized = filters.query.trim().toLowerCase();
+  const updatedFrom = parseDateBoundary(filters.updatedFrom, false);
+  const updatedTo = parseDateBoundary(filters.updatedTo, true);
+
   return entries.filter((entry) => {
+    const updatedAt = new Date(entry.updatedAt).getTime();
     const matchesQuery =
       !normalized ||
       entry.title.toLowerCase().includes(normalized) ||
       entry.slug.toLowerCase().includes(normalized);
-    const matchesStatus = status === "all" || entry.status === status;
+    const matchesStatus =
+      filters.status === "all" || entry.status === filters.status;
+    const matchesType =
+      filters.typeSlug === "all" ||
+      entry.contentType.slug === filters.typeSlug;
     const matchesAuthor =
-      author === "any" || entry.author?.id === author;
-    return matchesQuery && matchesStatus && matchesAuthor;
+      filters.author === "any" || entry.author?.id === filters.author;
+    const matchesUpdatedFrom =
+      updatedFrom === null ||
+      (!Number.isNaN(updatedAt) && updatedAt >= updatedFrom);
+    const matchesUpdatedTo =
+      updatedTo === null || (!Number.isNaN(updatedAt) && updatedAt <= updatedTo);
+
+    return (
+      matchesQuery &&
+      matchesStatus &&
+      matchesType &&
+      matchesAuthor &&
+      matchesUpdatedFrom &&
+      matchesUpdatedTo
+    );
   });
 }
 
 export function EntryList() {
   const { navigate } = useAdminRouter();
+  const initialEntries = useMemo(() => getCachedAllEntries(), []);
+  const initialTypes = useMemo(() => getCachedContentTypes(), []);
+  const hasInitialEntries = initialEntries !== null;
+  const hasInitialTypes = initialTypes !== null;
   const [createOpen, setCreateOpen] = useState(false);
-  const [collectionOpen, setCollectionOpen] = useState(false);
-  const [types, setTypes] = useState<ContentTypeSummary[]>([]);
-  const [activeSlug, setActiveSlug] = useState<string | null>(null);
-  const [entries, setEntries] = useState([] as Awaited<ReturnType<typeof listEntriesCached>>);
-  const [isLoading, setIsLoading] = useState(true);
+  const [entries, setEntries] = useState<EntryListItem[]>(() => initialEntries ?? []);
+  const [types, setTypes] = useState<ContentTypeSummary[]>(() => initialTypes ?? []);
+  const [entriesLoading, setEntriesLoading] = useState(() => !hasInitialEntries);
+  const [typesLoading, setTypesLoading] = useState(() => !hasInitialTypes);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<EntryView>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [updatedFromFilter, setUpdatedFromFilter] = useState("");
+  const [updatedToFilter, setUpdatedToFilter] = useState("");
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [selectedRefs, setSelectedRefs] = useState<SelectedEntryRef[]>([]);
   const [bulkAction, setBulkAction] = useState<BulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const hasHydratedEntriesRef = useRef(hasInitialEntries);
+  const hasHydratedTypesRef = useRef(hasInitialTypes);
 
-  useEffect(() => {
-    let active = true;
-    const cached = getCachedContentTypes();
-    if (cached) {
-      setTypes(cached);
-      setActiveSlug((prev) => prev ?? cached[0]?.slug ?? null);
-      setIsLoading(false);
-    }
-    listContentTypesCached({ force: true })
-      .then((result) => {
-        if (!active) return;
-        setTypes(result);
-        setActiveSlug((prev) => prev ?? result[0]?.slug ?? null);
-        setError(null);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load content types.");
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
+  const refreshEntries = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const background = resolveCacheRefreshBackground({
+        explicitBackground: options?.background,
+        hasHydrated: hasHydratedEntriesRef.current,
       });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    return subscribeCacheEvents((event) => {
-      if (event.key !== cacheKeys.contentTypesList) return;
-      listContentTypesCached({ force: true })
-        .then((result) => setTypes(result))
-        .catch(() => undefined);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!activeSlug) return;
-    let active = true;
-    const cached = getCachedEntries(activeSlug);
-    if (cached) {
-      setEntries(cached);
-      setTypes((prev) =>
-        prev.map((type) =>
-          type.slug === activeSlug
-            ? { ...type, entryCount: cached.length }
-            : type
-        )
-      );
-      setIsLoading(false);
-    }
-    listEntriesCached(activeSlug, { force: true })
-      .then((result) => {
-        if (!active) return;
-        setEntries(result);
-        setTypes((prev) =>
-          prev.map((type) =>
-            type.slug === activeSlug
-              ? { ...type, entryCount: result.length }
-              : type
-          )
-        );
-        setError(null);
-      })
-      .catch((err) => {
-        if (!active) return;
+      if (!background) setEntriesLoading(true);
+      setError(null);
+      try {
+        const next = await listAllEntriesCached({ force: options?.force ?? false });
+        setEntries(next);
+        hasHydratedEntriesRef.current = true;
+      } catch (err) {
         if (isApiClientError(err)) {
           setError(err.message);
         } else {
           setError("Failed to load entries.");
         }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [activeSlug]);
-
-  useEffect(() => {
-    if (!activeSlug) return;
-    return subscribeCacheEvents((event) => {
-      if (event.key !== cacheKeys.entriesList(activeSlug)) return;
-      listEntriesCached(activeSlug, { force: true })
-        .then((result) => {
-          setEntries(result);
-          setTypes((prev) =>
-            prev.map((type) =>
-              type.slug === activeSlug
-                ? { ...type, entryCount: result.length }
-                : type
-            )
-          );
-        })
-        .catch(() => undefined);
-    });
-  }, [activeSlug]);
-
-  const activeType = useMemo(
-    () => types.find((type) => type.slug === activeSlug) ?? null,
-    [types, activeSlug]
+      } finally {
+        if (!background) setEntriesLoading(false);
+      }
+    },
+    []
   );
 
+  const refreshTypes = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const background = resolveCacheRefreshBackground({
+        explicitBackground: options?.background,
+        hasHydrated: hasHydratedTypesRef.current,
+      });
+      if (!background) setTypesLoading(true);
+      try {
+        const next = await listContentTypesCached({ force: options?.force ?? false });
+        setTypes(next);
+        hasHydratedTypesRef.current = true;
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load content types.");
+        }
+      } finally {
+        if (!background) setTypesLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    refreshEntries({
+      force: !hasInitialEntries,
+      background: hasInitialEntries,
+    }).catch(() => undefined);
+  }, [hasInitialEntries, refreshEntries]);
+
+  useEffect(() => {
+    refreshTypes({
+      force: !hasInitialTypes,
+      background: hasInitialTypes,
+    }).catch(() => undefined);
+  }, [hasInitialTypes, refreshTypes]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key === cacheKeys.entriesAllList) {
+        refreshEntries({ force: true, background: true }).catch(() => undefined);
+      }
+      if (event.key === cacheKeys.contentTypesList) {
+        refreshTypes({ force: true, background: true }).catch(() => undefined);
+      }
+    });
+  }, [refreshEntries, refreshTypes]);
+
   const typeOptions = useMemo(() => {
-    return types.map((type) => ({
-      value: type.slug,
-      label: `${type.name} (${type.entryCount ?? 0})`,
-    }));
-  }, [types]);
+    const counts = new Map<string, number>();
+    const labels = new Map<string, { id: string; name: string; slug: string }>();
+    for (const entry of entries) {
+      counts.set(entry.contentType.slug, (counts.get(entry.contentType.slug) ?? 0) + 1);
+      labels.set(entry.contentType.slug, {
+        id: entry.contentType.id,
+        name: entry.contentType.name,
+        slug: entry.contentType.slug,
+      });
+    }
+    for (const type of types) {
+      labels.set(type.slug, { id: type.id, name: type.name, slug: type.slug });
+      if (!counts.has(type.slug)) counts.set(type.slug, type.entryCount ?? 0);
+    }
+    return [
+      { value: "all", label: `Content type: All (${entries.length})` },
+      ...Array.from(labels.values())
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((type) => ({
+          value: type.slug,
+          label: `${type.name} (${counts.get(type.slug) ?? 0})`,
+        })),
+    ];
+  }, [entries, types]);
 
   const authorOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -209,68 +249,220 @@ export function EntryList() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [entries]);
 
-  const filteredEntries = useMemo(
-    () => filterEntries(entries, searchQuery, statusFilter, authorFilter),
-    [entries, searchQuery, statusFilter, authorFilter]
+  const filters = useMemo<EntryListFilters>(
+    () => ({
+      query: searchQuery,
+      status: statusFilter,
+      typeSlug: typeFilter,
+      author: authorFilter,
+      updatedFrom: updatedFromFilter,
+      updatedTo: updatedToFilter,
+    }),
+    [
+      authorFilter,
+      searchQuery,
+      statusFilter,
+      typeFilter,
+      updatedFromFilter,
+      updatedToFilter,
+    ]
   );
-  const visibleIds = useMemo(
-    () => filteredEntries.map((entry) => entry.id),
-    [filteredEntries]
-  );
-  const selectedCount = selectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
-  const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
-  const refreshEntries = async () => {
-    if (!activeSlug) return;
-    const updated = await listEntriesCached(activeSlug, { force: true });
-    setEntries(updated);
-    setTypes((prev) =>
-      prev.map((type) =>
-        type.slug === activeSlug
-          ? { ...type, entryCount: updated.length }
-          : type
-      )
+  const filteredEntries = useMemo(
+    () => filterEntries(entries, filters),
+    [entries, filters]
+  );
+  const pagination = useListPagination(filteredEntries, {
+    resetKey: JSON.stringify(filters),
+  });
+  const visibleKeys = useMemo(
+    () => pagination.visibleRows.map((entry) => resolveEntrySelectionKey(toEntryRef(entry))),
+    [pagination.visibleRows]
+  );
+  const visibleKeySet = useMemo(() => new Set(visibleKeys), [visibleKeys]);
+  const selectedKeys = useMemo(
+    () => selectedRefs.map(resolveEntrySelectionKey),
+    [selectedRefs]
+  );
+  const selectedCount = selectedRefs.length;
+  const isAllSelected =
+    visibleKeys.length > 0 && visibleKeys.every((key) => selectedKeys.includes(key));
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
+  const isLoading = entriesLoading || typesLoading;
+  const defaultCreateTypeSlug =
+    typeFilter !== "all" ? typeFilter : types[0]?.slug ?? entries[0]?.contentType.slug ?? null;
+
+  useEffect(() => {
+    setSelectedRefs((prev) => {
+      const next = prev.filter((ref) => visibleKeySet.has(resolveEntrySelectionKey(ref)));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [visibleKeySet]);
+
+  const findEntry = (id: string) => entries.find((entry) => entry.id === id) ?? null;
+
+  const handleEditEntry = (id: string) => {
+    const entry = findEntry(id);
+    if (!entry) return;
+    navigate(
+      `/entries/${encodeURIComponent(entry.contentType.slug)}/${encodeURIComponent(id)}`
     );
   };
 
-  const handleEditEntry = (id: string) => {
-    if (!activeSlug) return;
-    navigate(`/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(id)}`);
-  };
-
-  const handleDeleteEntry = async (id: string) => {
-    const entry = entries.find((item) => item.id === id);
+  const handleDeleteEntry = (id: string) => {
+    const entry = findEntry(id);
+    if (!entry) return;
     setDeleteRequest({
-      ids: [id],
+      refs: [toEntryRef(entry)],
       title: "Delete entry?",
-      description: `Delete ${entry?.title ?? "this entry"}? This cannot be undone.`,
+      description: `Delete ${entry.title}? This cannot be undone.`,
       confirmLabel: "Delete entry",
       mode: "single",
     });
   };
 
+  const handleDuplicateEntry = async (id: string) => {
+    const entry = findEntry(id);
+    if (!entry) return;
+    setError(null);
+    try {
+      const duplicated = await duplicateEntry(entry.contentType.slug, id);
+      await refreshEntries({ force: true, background: true });
+      toast.success("Entry duplicated.");
+      navigate(
+        `/entries/${encodeURIComponent(entry.contentType.slug)}/${encodeURIComponent(
+          duplicated.id
+        )}`
+      );
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+        toast.error(err.message);
+      } else {
+        setError("Failed to duplicate entry.");
+        toast.error("Failed to duplicate entry.");
+      }
+    }
+  };
+
+  const handleEntryCreated = (
+    entry: { id: string },
+    typeSlug: string,
+    openAfterCreate: boolean
+  ) => {
+    void refreshEntries({ force: true, background: true });
+    void refreshTypes({ force: true, background: true });
+    if (openAfterCreate) {
+      navigate(`/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setAuthorFilter("any");
+    setUpdatedFromFilter("");
+    setUpdatedToFilter("");
+  };
+
+  const handleToggleEntry = (id: string) => {
+    const entry = findEntry(id);
+    if (!entry) return;
+    const ref = toEntryRef(entry);
+    const key = resolveEntrySelectionKey(ref);
+    setSelectedRefs((prev) =>
+      prev.some((item) => resolveEntrySelectionKey(item) === key)
+        ? prev.filter((item) => resolveEntrySelectionKey(item) !== key)
+        : [...prev, ref]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedRefs((_prev) =>
+      isAllSelected ? [] : pagination.visibleRows.map(toEntryRef)
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedRefs([]);
+    setBulkAction("");
+  };
+
+  const runBulkAction = async (action: Exclude<BulkActionValue, "delete">) => {
+    const status =
+      action === "publish" ? "published" : action === "draft" ? "draft" : "archived";
+    const results = await Promise.allSettled(
+      selectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
+    );
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) {
+      const succeeded = results.length - failed;
+      const message = `Updated ${succeeded} entr${succeeded === 1 ? "y" : "ies"}; failed ${failed}.`;
+      toast.error(message);
+      return message;
+    } else {
+      toast.success("Entries updated.");
+    }
+    return null;
+  };
+
+  const handleBulkApply = async () => {
+    if (!bulkAction || selectedRefs.length === 0) return;
+    if (bulkAction === "delete") {
+      setDeleteRequest({
+        refs: selectedRefs,
+        title: `Delete ${selectedRefs.length} entr${
+          selectedRefs.length === 1 ? "y" : "ies"
+        }?`,
+        description: "Selected entries will be removed permanently.",
+        confirmLabel:
+          selectedRefs.length === 1 ? "Delete entry" : "Delete entries",
+        mode: "bulk",
+      });
+      return;
+    }
+    setIsBulkWorking(true);
+    setError(null);
+    try {
+      const feedback = await runBulkAction(bulkAction);
+      await refreshEntries({ force: true, background: true });
+      if (feedback) setError(feedback);
+      handleClearSelection();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+        toast.error(err.message);
+      } else {
+        setError("Bulk action failed.");
+        toast.error("Bulk action failed.");
+      }
+    } finally {
+      setIsBulkWorking(false);
+    }
+  };
+
   const confirmDeleteRequest = async () => {
-    if (!activeSlug || !deleteRequest) return;
-    const ids = deleteRequest.ids;
+    if (!deleteRequest) return;
     setIsDeleting(true);
     setError(null);
     try {
       const results = await Promise.allSettled(
-        ids.map((entryId) => deleteEntry(activeSlug, entryId))
+        deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
       );
-      const failed = results.filter((result) => result.status === "rejected");
-      if (failed.length > 0) {
-        const message = `Failed to delete ${failed.length} entr${
-          failed.length === 1 ? "y" : "ies"
-        }.`;
-        setError(message);
-        toast.error(message);
+      const failed = results.filter((result) => result.status === "rejected").length;
+      let feedback: string | null = null;
+      if (failed > 0) {
+        const succeeded = results.length - failed;
+        feedback = `Deleted ${succeeded} entr${succeeded === 1 ? "y" : "ies"}; failed ${failed}.`;
+        toast.error(feedback);
       } else {
-        toast.success(ids.length === 1 ? "Entry deleted." : "Entries deleted.");
+        toast.success(
+          deleteRequest.refs.length === 1 ? "Entry deleted." : "Entries deleted."
+        );
       }
-      await refreshEntries();
+      await refreshEntries({ force: true, background: true });
+      if (feedback) setError(feedback);
       if (deleteRequest.mode === "bulk") handleClearSelection();
       setDeleteRequest(null);
     } catch (err) {
@@ -286,325 +478,106 @@ export function EntryList() {
     }
   };
 
-  const handleDuplicateEntry = async (id: string) => {
-    if (!activeSlug) return;
-    setError(null);
-    try {
-      const duplicated = await duplicateEntry(activeSlug, id);
-      await refreshEntries();
-      toast.success("Entry duplicated.");
-      navigate(
-        `/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(duplicated.id)}`
-      );
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-        toast.error(err.message);
-      } else {
-        setError("Failed to duplicate entry.");
-        toast.error("Failed to duplicate entry.");
-      }
-    }
-  };
-
-  const handleSelectType = (slug: string) => {
-    setIsLoading(true);
-    setError(null);
-    setActiveSlug(slug);
-  };
-
-  const handleEntryCreated = (
-    entry: { id: string },
-    typeSlug: string,
-    openAfterCreate: boolean
-  ) => {
-    setTypes((prev) =>
-      prev.map((type) =>
-        type.slug === typeSlug
-          ? { ...type, entryCount: (type.entryCount ?? 0) + 1 }
-          : type
-      )
-    );
-    if (typeSlug === activeSlug) {
-      listEntriesCached(typeSlug, { force: true }).then((result) => {
-        setEntries(result);
-        setTypes((prev) =>
-          prev.map((type) =>
-            type.slug === typeSlug
-              ? { ...type, entryCount: result.length }
-              : type
-          )
-        );
-      });
-    }
-    if (openAfterCreate) {
-      navigate(`/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`);
-    }
-  };
-
-  const handleTypeCreated = (type: ContentTypeSummary) => {
-    setTypes((prev) => [type, ...prev]);
-    setActiveSlug(type.slug);
-  };
-
-  const handleClearFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-    setAuthorFilter("any");
-  };
-
-  const handleToggleEntry = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((entryId) => entryId !== id) : [...prev, id]
-    );
-  };
-
-  const handleToggleAll = () => {
-    setSelectedIds((_prev) => (isAllSelected ? [] : visibleIds));
-  };
-
-  const handleClearSelection = () => {
-    setSelectedIds([]);
-    setBulkAction("");
-  };
-
-  const handleBulkApply = async () => {
-    if (!activeSlug || !bulkAction || selectedIds.length === 0) return;
-    if (bulkAction === "delete") {
-      setDeleteRequest({
-        ids: selectedIds,
-        title: `Delete ${selectedIds.length} entr${
-          selectedIds.length === 1 ? "y" : "ies"
-        }?`,
-        description: "Selected entries will be removed permanently.",
-        confirmLabel:
-          selectedIds.length === 1 ? "Delete entry" : "Delete entries",
-        mode: "bulk",
-      });
-      return;
-    }
-    setIsBulkWorking(true);
-    setError(null);
-    try {
-      const results = await Promise.allSettled(
-        selectedIds.map((id) => {
-          const status =
-            bulkAction === "publish"
-              ? "published"
-              : bulkAction === "draft"
-                ? "draft"
-                : "archived";
-          return updateEntryMetadata(activeSlug, id, { status });
-        })
-      );
-      const failed = results.filter((result) => result.status === "rejected");
-      if (failed.length > 0) {
-        const message = `Failed to update ${failed.length} entr${
-          failed.length === 1 ? "y" : "ies"
-        }.`;
-        setError(message);
-        toast.error(message);
-      } else {
-        toast.success("Entries updated.");
-      }
-      await refreshEntries();
-      handleClearSelection();
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-        toast.error(err.message);
-      } else {
-        setError("Bulk action failed.");
-        toast.error("Bulk action failed.");
-      }
-    } finally {
-      setIsBulkWorking(false);
-    }
-  };
-
-  useEffect(() => {
-    setSelectedIds((prev) =>
-      prev.filter((entryId) => entries.some((entry) => entry.id === entryId))
-    );
-  }, [entries]);
-
-  useEffect(() => {
-    if (view === "grid") {
-      handleClearSelection();
-    }
-  }, [view]);
-
-  const typeLabelSource = activeType?.name ?? activeSlug ?? "";
-  const { singular: typeSingular, plural: typePlural } =
-    getContentTypeLabels(typeLabelSource);
-
   return (
-    <SplitShell
+    <AdminShell
       activeHref="/admin/entries"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Content</span>
           <span>/</span>
-          <span className="text-foreground">{typePlural}</span>
+          <span className="text-foreground">Entries</span>
         </div>
       }
     >
-      <div className="flex flex-col gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+        <PageHeader
+          title="Entries"
+          description="Manage content entries across all content types."
+          actions={
+            <>
+              {selectedCount > 0 ? (
+                <EntryBulkActionsBar
+                  selectedCount={selectedCount}
+                  action={bulkAction}
+                  onActionChange={setBulkAction}
+                  onApply={handleBulkApply}
+                  onClear={handleClearSelection}
+                  isApplying={isBulkWorking}
+                  variant="inline"
+                />
+              ) : null}
+              <Button
+                className="gap-2"
+                onClick={() => setCreateOpen(true)}
+                disabled={types.length === 0}
+              >
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </>
+          }
+        />
         {error ? (
           <Alert variant="destructive">
-            <AlertTitle>Unable to load entries</AlertTitle>
+            <AlertTitle>Entries API error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        <div className="rounded-xl border bg-background lg:hidden">
-          <EntryTypeSidebar
-            className="h-[360px]"
-            types={types.map((type) => ({
-              id: type.id,
-              slug: type.slug,
-              name: type.name,
-              count: type.entryCount ?? 0,
-            }))}
-            activeSlug={activeSlug}
-            onSelect={handleSelectType}
-            onCreateCollection={() => setCollectionOpen(true)}
-          />
-        </div>
-        <div className="flex flex-col gap-6 lg:flex-row">
-          <aside className="hidden w-72 shrink-0 overflow-hidden rounded-xl border bg-background lg:block">
-            <EntryTypeSidebar
-              types={types.map((type) => ({
-                id: type.id,
-                slug: type.slug,
-                name: type.name,
-                count: type.entryCount ?? 0,
-              }))}
-              activeSlug={activeSlug}
-              onSelect={handleSelectType}
-              onCreateCollection={() => setCollectionOpen(true)}
-            />
-          </aside>
-          <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight">
-                  {typePlural}
-                </h1>
-                <Badge
-                  variant="secondary"
-                  className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest"
-                >
-                  {typePlural}
-                </Badge>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="hidden items-center rounded-lg border bg-background p-1 shadow-xs sm:flex">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className={
-                      view === "list"
-                        ? "bg-primary/10 text-primary hover:bg-primary/15"
-                        : "text-muted-foreground hover:text-foreground"
-                    }
-                    aria-pressed={view === "list"}
-                    onClick={() => setView("list")}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className={
-                      view === "grid"
-                        ? "bg-primary/10 text-primary hover:bg-primary/15"
-                        : "text-muted-foreground hover:text-foreground"
-                    }
-                    aria-pressed={view === "grid"}
-                    onClick={() => setView("grid")}
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  {`Create New ${typeSingular}`}
-                </Button>
-              </div>
-            </div>
-            <EntryFilters
-              search={searchQuery}
-              status={statusFilter}
-              typeValue={activeSlug ?? (typeOptions[0]?.value ?? "")}
-              typeOptions={typeOptions}
-              author={authorFilter}
-              authorOptions={authorOptions}
-              onSearchChange={setSearchQuery}
-              onStatusChange={setStatusFilter}
-              onTypeChange={handleSelectType}
-              onAuthorChange={setAuthorFilter}
-              onClear={handleClearFilters}
-            />
-            {view === "list" && selectedCount > 0 ? (
-              <EntryBulkActionsBar
-                selectedCount={selectedCount}
-                action={bulkAction}
-                onActionChange={setBulkAction}
-                onApply={handleBulkApply}
-                onClear={handleClearSelection}
-                isApplying={isBulkWorking}
-              />
-            ) : null}
-            {isLoading ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                Loading entries...
-              </div>
-            ) : view === "grid" ? (
-              <EntryGrid
-                entries={filteredEntries}
-                onEdit={handleEditEntry}
-                entryTypeSlug={activeSlug}
-                emptyMessage={
-                  entries.length > 0
-                    ? "No entries match your current filters."
-                    : undefined
-                }
-              />
-            ) : (
-              <EntryTable
-                entries={filteredEntries}
-                onEdit={handleEditEntry}
-                entryTypeSlug={activeSlug}
-                onDelete={handleDeleteEntry}
-                onDuplicate={handleDuplicateEntry}
-                selectedIds={selectedIds}
-                isAllSelected={isAllSelected}
-                isIndeterminate={isIndeterminate}
-                onToggleAll={handleToggleAll}
-                onToggleEntry={handleToggleEntry}
-                emptyMessage={
-                  entries.length > 0
-                    ? "No entries match your current filters."
-                    : undefined
-                }
-              />
-            )}
+        <EntryFilters
+          search={searchQuery}
+          status={statusFilter}
+          typeValue={typeFilter}
+          typeOptions={typeOptions}
+          author={authorFilter}
+          authorOptions={authorOptions}
+          updatedFrom={updatedFromFilter}
+          updatedTo={updatedToFilter}
+          advancedOpen={advancedFiltersOpen}
+          onSearchChange={setSearchQuery}
+          onStatusChange={setStatusFilter}
+          onTypeChange={setTypeFilter}
+          onAuthorChange={setAuthorFilter}
+          onUpdatedFromChange={setUpdatedFromFilter}
+          onUpdatedToChange={setUpdatedToFilter}
+          onAdvancedOpenChange={setAdvancedFiltersOpen}
+          onClear={handleClearFilters}
+        />
+        {isLoading ? (
+          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+            Loading entries...
           </div>
-        </div>
+        ) : (
+          <EntryTable
+            entries={pagination.visibleRows}
+            selectedKeys={selectedKeys}
+            isAllSelected={isAllSelected}
+            isIndeterminate={isIndeterminate}
+            onToggleAll={handleToggleAll}
+            onToggleEntry={handleToggleEntry}
+            onEdit={handleEditEntry}
+            onDelete={handleDeleteEntry}
+            onDuplicate={handleDuplicateEntry}
+            emptyMessage={
+              entries.length > 0
+                ? "No entries match your current filters."
+                : undefined
+            }
+          />
+        )}
+        <ListPaginationFooter
+          resourceLabel="entries"
+          pagination={pagination}
+          isLoading={isLoading}
+        />
       </div>
       <EntryCreateDrawer
         open={createOpen}
         onOpenChange={setCreateOpen}
         types={types}
-        defaultTypeSlug={activeSlug}
+        defaultTypeSlug={defaultCreateTypeSlug}
         onCreated={handleEntryCreated}
       />
-      <ContentTypeCreateDrawer
-        open={collectionOpen}
-        onOpenChange={setCollectionOpen}
-        onCreated={handleTypeCreated}
-      />
-      <EntryDeleteDialog
+      <ConfirmActionDialog
         open={Boolean(deleteRequest)}
         onOpenChange={(open) => {
           if (!open && !isDeleting) setDeleteRequest(null);
@@ -613,10 +586,11 @@ export function EntryList() {
         description={
           deleteRequest?.description ?? "This entry will be removed permanently."
         }
-        confirmLabel={deleteRequest?.confirmLabel}
-        isDeleting={isDeleting}
+        confirmLabel={deleteRequest?.confirmLabel ?? "Delete entry"}
+        confirmingLabel="Deleting..."
+        isConfirming={isDeleting}
         onConfirm={() => void confirmDeleteRequest()}
       />
-    </SplitShell>
+    </AdminShell>
   );
 }

@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 
 import { postAutosaveSchema, postMetadataSchema } from "../../../core/server/validation/postSchemas";
-import { contentEntryMetadataSchema } from "../../../core/server/validation/contentSchemas";
+import {
+  contentEntryAllEntriesQuerySchema,
+  contentEntryMetadataSchema,
+} from "../../../core/server/validation/contentSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
 import { ApiError } from "../../../core/server/errorHandler";
 
@@ -40,6 +43,19 @@ test("schema validator rejects invalid date-time metadata values", () => {
     validate(postMetadataSchema, {
       scheduledAt: "tomorrow",
     });
+    throw new Error("expected_validation_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("validation_error");
+    expect((error as ApiError).status).toBe(400);
+  }
+});
+
+test("all content entries query schema rejects unknown filters", () => {
+  expect(() => validate(contentEntryAllEntriesQuerySchema, {})).not.toThrow();
+
+  try {
+    validate(contentEntryAllEntriesQuerySchema, { type: "posts" });
     throw new Error("expected_validation_error");
   } catch (error) {
     expect(error).toBeInstanceOf(ApiError);

@@ -13,9 +13,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Content Entries
 - Entries list
   - UI: `core/admin/ui/entries/EntryList.tsx`
-  - Cached APIs: `listContentTypesCached`, `listEntriesCached`, `getCachedEntries`
+  - Cached APIs: `listContentTypesCached`, `listAllEntriesCached`, `getCachedAllEntries`
   - Mutations: `duplicateEntry`, `deleteEntry`, `updateEntryMetadata`
-  - Cache bus: `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
+  - Cache bus: `entries:list:all`, `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
 - Entry editor
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
   - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`
@@ -152,7 +152,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - `/pages` -> `listPagesCached`
 - `/coderso/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
 - `/coderso/engine` -> `listContentTypesCached`
-- `/coderso/entries` -> `listContentTypesCached`
+- `/coderso/entries` -> `listContentTypesCached`, `listAllEntriesCached`
 - `/coderso/forms` -> `listFormsCached`
 - `/coderso/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
 - `/coderso/filters` -> `listListingQueriesCached`

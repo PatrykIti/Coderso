@@ -53,6 +53,16 @@ export type EntryDetail = {
   seo: EntrySeo | null;
 };
 
+export type EntryListItem = Omit<EntryDetail, "seo" | "taxonomy"> & {
+  seo?: EntrySeo | null;
+  contentType: {
+    id: string;
+    slug: string;
+    name: string;
+    status: string;
+  };
+};
+
 export type CreateEntryInput = {
   title: string;
   slug: string;
@@ -460,6 +470,66 @@ export async function listEntries(typeId: string) {
           }) ?? "",
         }
       : null,
+  }));
+}
+
+export async function listEntriesWithContentTypes(): Promise<EntryListItem[]> {
+  const rows = await db
+    .select({
+      id: contentEntries.id,
+      typeId: contentEntries.typeId,
+      authorId: contentEntries.authorId,
+      title: contentEntries.title,
+      slug: contentEntries.slug,
+      status: contentEntries.status,
+      tags: contentEntries.tags,
+      data: contentEntries.data,
+      publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
+      createdAt: contentEntries.createdAt,
+      updatedAt: contentEntries.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
+      contentTypeId: contentTypes.id,
+      contentTypeSlug: contentTypes.slug,
+      contentTypeName: contentTypes.name,
+      contentTypeStatus: contentTypes.status,
+    })
+    .from(contentEntries)
+    .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
+    .leftJoin(users, eq(contentEntries.authorId, users.id))
+    .orderBy(desc(contentEntries.updatedAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    typeId: row.typeId,
+    title: row.title,
+    slug: row.slug,
+    status: row.status as EntryStatus,
+    tags: (row.tags ?? []) as string[],
+    data: row.data as EntryData,
+    publishedAt: row.publishedAt,
+    scheduledAt: row.scheduledAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    author: row.authorId
+      ? {
+          id: row.authorId,
+          name: row.authorName ?? null,
+          email:
+            resolveEmailValue({
+              emailEncrypted: row.authorEmailEncrypted,
+              email: row.authorEmail,
+            }) ?? "",
+        }
+      : null,
+    contentType: {
+      id: row.contentTypeId,
+      slug: row.contentTypeSlug,
+      name: row.contentTypeName,
+      status: row.contentTypeStatus,
+    },
   }));
 }
 

@@ -1793,8 +1793,16 @@ passes. Known conflicts are mapped to HTTP 409:
 `content_type_has_taxonomies`, `content_type_has_content_routes`,
 `content_type_has_listings`.
 
+- `GET /content-entries`
 - `GET /content/:type/entries`
 - `POST /content/:type/entries`
+
+`GET /content-entries` is the internal admin all-entries read model used by the
+Entries first-screen list. It requires `content:read`, accepts no query
+parameters, rejects unknown query fields, and returns entry summary fields plus
+row-owned `contentType: { id, slug, name, status }`. The existing
+`/content/:type/entries` route remains the type-scoped contract for editors,
+widgets, relation fields, and existing clients.
 
 ---
 

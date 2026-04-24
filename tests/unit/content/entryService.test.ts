@@ -16,6 +16,7 @@ import {
   updateEntry,
   createEntryPreview,
   getEntry,
+  listEntriesWithContentTypes,
   listEntryRevisions,
   publishEntry,
   unpublishEntry,
@@ -136,6 +137,64 @@ testIfDb("enforces slug uniqueness per type", async () => {
 
   await cleanup();
   contentTypeId = undefined;
+});
+
+testIfDb("listEntriesWithContentTypes returns cross-type rows with owner metadata", async () => {
+  const articlesType = await createContentType({
+    name: "Articles",
+    slug: `articles-${randomUUID()}`,
+    schema,
+  });
+  const productsType = await createContentType({
+    name: "Products",
+    slug: `products-${randomUUID()}`,
+    schema,
+  });
+  let articleEntryId: string | undefined;
+  let productEntryId: string | undefined;
+
+  try {
+    const articleEntry = await createEntry(articlesType.id, {
+      title: "Article entry",
+      slug: `article-${randomUUID()}`,
+      data: { title: "Article entry" },
+    });
+    const productEntry = await createEntry(productsType.id, {
+      title: "Product entry",
+      slug: `product-${randomUUID()}`,
+      data: { title: "Product entry" },
+    });
+    articleEntryId = articleEntry.id;
+    productEntryId = productEntry.id;
+    await db
+      .update(contentEntries)
+      .set({ updatedAt: new Date(Date.now() + 1000) })
+      .where(eq(contentEntries.id, productEntry.id));
+
+    const rows = await listEntriesWithContentTypes();
+    const articleRow = rows.find((row) => row.id === articleEntry.id);
+    const productRow = rows.find((row) => row.id === productEntry.id);
+
+    expect(articleRow?.contentType).toEqual({
+      id: articlesType.id,
+      slug: articlesType.slug,
+      name: "Articles",
+      status: "draft",
+    });
+    expect(productRow?.contentType.slug).toBe(productsType.slug);
+    expect(rows.findIndex((row) => row.id === productEntry.id)).toBeLessThan(
+      rows.findIndex((row) => row.id === articleEntry.id)
+    );
+  } finally {
+    if (articleEntryId) {
+      await db.delete(contentEntries).where(eq(contentEntries.id, articleEntryId));
+    }
+    if (productEntryId) {
+      await db.delete(contentEntries).where(eq(contentEntries.id, productEntryId));
+    }
+    await db.delete(contentTypes).where(eq(contentTypes.id, articlesType.id));
+    await db.delete(contentTypes).where(eq(contentTypes.id, productsType.id));
+  }
 });
 
 testIfDb("updateEntry preserves author metadata", async () => {

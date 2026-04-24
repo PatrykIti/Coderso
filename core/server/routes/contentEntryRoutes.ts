@@ -4,6 +4,7 @@ import {
   deleteEntry,
   duplicateEntry,
   getEntry,
+  listEntriesWithContentTypes,
   listEntries,
   publishEntry,
   unpublishEntry,
@@ -12,6 +13,7 @@ import {
 } from "../../services/content/entryService";
 import { getContentTypeBySlug } from "../../services/content/typeService";
 import {
+  contentEntryAllEntriesQuerySchema,
   contentEntryCreateSchema,
   contentEntryDuplicateSchema,
   contentEntryMetadataSchema,
@@ -93,6 +95,15 @@ export function registerContentEntryRoutes(
   deps: ContentEntryRouteDeps
 ) {
   const { requirePermission, validate } = deps;
+
+  router.get(
+    "/content-entries",
+    requirePermission("content:read"),
+    async (ctx) => {
+      validate(contentEntryAllEntriesQuerySchema, ctx.query);
+      return listEntriesWithContentTypes();
+    }
+  );
 
   router.get(
     "/content/:type/entries",

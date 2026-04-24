@@ -32,6 +32,7 @@ owner.
 Defined in `core/admin/services/cachePolicy.ts`:
 - `pages:list`
 - `pages:detail:<id>`
+- `entries:list:all`
 - `entries:list:<typeSlug>`
 - `entries:detail:<typeSlug>:<id>`
 - `contentTypes:list`
@@ -193,7 +194,7 @@ Clients update caches and broadcast events on:
   sanitized execution `resourceId`, never provider text.
 - Assistant execution cache event coverage:
   - `content-type.*` -> `contentTypes:list`, touched `contentTypes:detail:<id>`
-  - `entry.*` -> `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
+  - `entry.*` -> `entries:list:all`, `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
   - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
   - `page.*` -> `pages:list`, touched `pages:detail:<id>`
   - `form.*` -> `forms:list`, touched `forms:detail:<id>`
@@ -244,6 +245,15 @@ Clients update caches and broadcast events on:
 
 ### Entries list/detail cache note
 
+- Entries first-screen list cache (`entries:list:all`) is the all-content-type
+  list payload for `/admin/coderso/entries`. It is hydrated by
+  `listAllEntriesCached()` and warmed on `/coderso/entries` prefetch together
+  with `contentTypes:list`.
+- Type-scoped caches (`entries:list:<typeSlug>`) remain authoritative for the
+  editor, widgets, relation fields, and existing type-scoped clients.
+- Entry create/update/metadata/duplicate/delete mutations update or invalidate
+  the type-scoped cache and clear/broadcast `entries:list:all` so the cross-type
+  list reloads from the joined read model.
 - Entry duplicate writes the returned clone into `entries:detail:<typeSlug>:<id>`
   and invalidates/broadcasts `entries:list:<typeSlug>` so the list reloads from
   the authoritative list endpoint.

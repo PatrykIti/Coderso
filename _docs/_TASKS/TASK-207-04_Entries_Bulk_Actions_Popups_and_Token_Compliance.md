@@ -5,7 +5,7 @@
 **Category:** CMS/Entries + Admin/UI + Design Tokens
 **Estimated Effort:** Large
 **Dependencies:** TASK-207-02, TASK-207-03, TASK-205-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -19,9 +19,9 @@ client helpers and report partial failures truthfully.
 
 ## Sub-Tasks
 
-- [ ] TASK-207-04-01: Entries Inline Bulk Actions and Partial-Failure Feedback
-- [ ] TASK-207-04-02: Entry Row/Bulk Delete Dialog Token Compliance
-- [ ] TASK-207-04-03: Entries Create/Action Popup Theme Token Audit
+- [x] TASK-207-04-01: Entries Inline Bulk Actions and Partial-Failure Feedback
+- [x] TASK-207-04-02: Entry Row/Bulk Delete Dialog Token Compliance
+- [x] TASK-207-04-03: Entries Create/Action Popup Theme Token Audit
 
 ## Files to Change
 

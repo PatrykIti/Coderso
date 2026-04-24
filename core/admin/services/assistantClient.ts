@@ -5,7 +5,7 @@ import { apiRequest } from "./apiClient";
 import { cacheKeys } from "./cachePolicy";
 import { clearContentTypesCache } from "./contentTypesClient";
 import { clearCustomScreensCache } from "./customScreensClient";
-import { clearEntriesCache } from "./entriesClient";
+import { clearAllEntriesCache, clearEntriesCache } from "./entriesClient";
 import { clearFormsCache } from "./formsClient";
 import { clearListingQueriesCache, clearListingTemplatesCache } from "./listingsClient";
 import { clearMenusCache } from "./menusClient";
@@ -373,6 +373,8 @@ const notifyAssistantExecutionCacheEvent = (input: {
       const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);
       clearEntriesCache(typeSlug);
       emit(cacheKeys.entriesList(typeSlug), cacheAction);
+      clearAllEntriesCache();
+      emit(cacheKeys.entriesAllList, cacheAction);
       if (id) clearAndEmitDetail(cacheKeys.entryDetail(typeSlug, id), cacheAction, emit);
       return;
     }

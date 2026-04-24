@@ -5,7 +5,7 @@
 **Category:** CMS/Entries + Admin/UI + Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-207-02-01, TASK-207-01-01
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

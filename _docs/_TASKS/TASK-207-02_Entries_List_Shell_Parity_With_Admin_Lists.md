@@ -5,7 +5,7 @@
 **Category:** CMS/Entries + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-207-01
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -26,9 +26,9 @@ view must not survive as a second Entries flow that routes through one stale
 
 ## Sub-Tasks
 
-- [ ] TASK-207-02-01: Entry List AdminShell, PageHeader, and Action Layout
-- [ ] TASK-207-02-02: Entry Table Content Type Column and Engine Links
-- [ ] TASK-207-02-03: Shared Pagination and Visible-Scope Selection
+- [x] TASK-207-02-01: Entry List AdminShell, PageHeader, and Action Layout
+- [x] TASK-207-02-02: Entry Table Content Type Column and Engine Links
+- [x] TASK-207-02-03: Shared Pagination and Visible-Scope Selection
 
 ## Files to Change
 

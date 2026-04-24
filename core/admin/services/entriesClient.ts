@@ -27,6 +27,17 @@ export type EntrySummary = {
   seo?: EntrySeo | null;
 };
 
+export type EntryListContentType = {
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+};
+
+export type EntryListItem = EntrySummary & {
+  contentType: EntryListContentType;
+};
+
 export type EntryTaxonomyTerm = {
   id: string;
   name: string;
@@ -74,9 +85,13 @@ export type PreviewResponse = {
 
 const cachedEntries = new Map<string, EntrySummary[]>();
 const cachedEntriesPromise = new Map<string, Promise<EntrySummary[]>>();
+let cachedAllEntries: EntryListItem[] | null = null;
+let cachedAllEntriesPromise: Promise<EntryListItem[]> | null = null;
 const cachedEntryDetails = new Map<string, Map<string, EntryDetail>>();
 
 const isEntryList = (value: unknown): value is EntrySummary[] => Array.isArray(value);
+const isEntryListItemList = (value: unknown): value is EntryListItem[] =>
+  Array.isArray(value);
 const isEntryDetail = (value: unknown): value is EntryDetail =>
   Boolean(value && typeof value === "object");
 
@@ -104,6 +119,9 @@ const toEntryDetail = (entry: EntrySummary | EntryDetail): EntryDetail => ({
 const readEntriesCache = (typeSlug: string) =>
   readLocalCache(cacheKeys.entriesList(typeSlug), cacheTtlMs.list, isEntryList);
 
+const readAllEntriesCache = () =>
+  readLocalCache(cacheKeys.entriesAllList, cacheTtlMs.list, isEntryListItemList);
+
 const readEntryDetailCache = (typeSlug: string, id: string) =>
   readLocalCache(cacheKeys.entryDetail(typeSlug, id), cacheTtlMs.detail, isEntryDetail);
 
@@ -115,6 +133,12 @@ const primeEntriesCacheInternal = (typeSlug: string, items: EntrySummary[]) => {
   cachedEntries.set(typeSlug, items);
   cachedEntriesPromise.delete(typeSlug);
   writeLocalCache(cacheKeys.entriesList(typeSlug), items);
+};
+
+const primeAllEntriesCacheInternal = (items: EntryListItem[]) => {
+  cachedAllEntries = items;
+  cachedAllEntriesPromise = null;
+  writeLocalCache(cacheKeys.entriesAllList, items);
 };
 
 const getCachedEntryDetailsMap = (typeSlug: string) => {
@@ -177,6 +201,13 @@ export const getCachedEntries = (typeSlug: string) => {
   return stored ?? null;
 };
 
+export const getCachedAllEntries = () => {
+  if (cachedAllEntries) return cachedAllEntries;
+  const stored = readAllEntriesCache();
+  if (stored) cachedAllEntries = stored;
+  return stored ?? null;
+};
+
 export const getCachedEntryDetail = (typeSlug: string, id: string) => {
   const map = cachedEntryDetails.get(typeSlug);
   const existing = map?.get(id);
@@ -196,8 +227,25 @@ export const clearEntriesCache = (typeSlug: string) => {
   clearLocalCache(cacheKeys.entriesList(typeSlug));
 };
 
+export const clearAllEntriesCache = () => {
+  cachedAllEntries = null;
+  cachedAllEntriesPromise = null;
+  clearLocalCache(cacheKeys.entriesAllList);
+};
+
+const broadcastAllEntriesListEvent = (action: "invalidate" | "update") => {
+  clearAllEntriesCache();
+  broadcastCacheEvent({ key: cacheKeys.entriesAllList, action });
+};
+
 export async function listEntries(typeSlug: string) {
   return apiRequest<EntrySummary[]>(`/content/${typeSlug}/entries`, {
+    method: "GET",
+  });
+}
+
+export async function listAllEntries() {
+  return apiRequest<EntryListItem[]>("/content-entries", {
     method: "GET",
   });
 }
@@ -216,6 +264,19 @@ export async function listEntriesCached(
   cachedEntriesPromise.set(typeSlug, request);
   const items = await request;
   primeEntriesCacheInternal(typeSlug, items);
+  return items;
+}
+
+export async function listAllEntriesCached(options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedAllEntries();
+    if (cached) return cached;
+    if (cachedAllEntriesPromise) return cachedAllEntriesPromise;
+  }
+  const request = listAllEntries();
+  cachedAllEntriesPromise = request;
+  const items = await request;
+  primeAllEntriesCacheInternal(items);
   return items;
 }
 
@@ -255,6 +316,7 @@ export async function createEntry(typeSlug: string, payload: EntryPayload) {
   if (created) {
     upsertCachedEntry(typeSlug, created);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, created.id),
       action: "update",
@@ -280,6 +342,7 @@ export async function updateEntry(
   if (updated) {
     upsertCachedEntry(typeSlug, updated);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, updated.id),
       action: "update",
@@ -305,6 +368,7 @@ export async function updateEntryMetadata(
   if (updated) {
     upsertCachedEntry(typeSlug, updated);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, updated.id),
       action: "update",
@@ -326,6 +390,7 @@ export async function duplicateEntry(typeSlug: string, id: string) {
   if (duplicated) {
     upsertCachedEntry(typeSlug, duplicated);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, duplicated.id),
       action: "update",
@@ -359,6 +424,7 @@ export async function publishEntry(typeSlug: string, id: string) {
   if (result?.ok) {
     updateCachedEntryStatus(typeSlug, id, "published");
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, id),
       action: "update",
@@ -376,6 +442,7 @@ export async function unpublishEntry(typeSlug: string, id: string) {
   if (result?.ok) {
     updateCachedEntryStatus(typeSlug, id, "draft");
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, id),
       action: "update",
@@ -393,6 +460,7 @@ export async function deleteEntry(typeSlug: string, id: string) {
   if (result?.ok) {
     removeCachedEntry(typeSlug, id);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "invalidate" });
+    broadcastAllEntriesListEvent("invalidate");
     broadcastCacheEvent({
       key: cacheKeys.entryDetail(typeSlug, id),
       action: "invalidate",

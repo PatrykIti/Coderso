@@ -8,6 +8,7 @@ export const cacheTtlMs = {
 export const cacheKeys = {
   pagesList: "pages:list",
   pageDetail: (id: string) => `pages:detail:${id}`,
+  entriesAllList: "entries:list:all",
   entriesList: (typeSlug: string) => `entries:list:${typeSlug}`,
   entryDetail: (typeSlug: string, id: string) =>
     `entries:detail:${typeSlug}:${id}`,

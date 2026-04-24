@@ -5,7 +5,7 @@
 **Category:** QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-207-01-01, TASK-207-01-02, TASK-207-02-01, TASK-207-02-02, TASK-207-02-03, TASK-207-03-01, TASK-207-03-02, TASK-207-03-03, TASK-207-04-01, TASK-207-04-02, TASK-207-04-03
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -98,3 +98,26 @@ No child task files.
 8. Closure notes include the route collision proof: the all-entries route stays
    separate from `/content/:type/entries`, so `entries` is not treated as a
    special content-type slug and existing type-scoped consumers keep working.
+
+## Completion Notes
+
+- Docs updated: `_docs/CONTENT_LIST_UX.md`, `_docs/ADMIN_CACHE.md`,
+  `_docs/ADMIN_CACHE_MAP.md`, `_docs/CMS_API.md`, `_docs/_TASKS/README.md`, and
+  `_docs/_CHANGELOG/737-2026-04-24-task-207-entries-list-parity.md`.
+- Changelog README index now records entry 737.
+- Validation completed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - targeted Vitest admin/UI suite for Entries cache, prefetch, assistant
+    cache events, filters, list wave, table wave/title, and bulk actions
+  - shared list/popup smoke Vitest suite covering pagination, Content Types,
+    Pages/Posts, Menus, and Entry table support
+  - Bun route/schema tests for `GET /content-entries` registration,
+    collision-proof route matching, and strict query schema rejection
+- DB-backed `tests/unit/content/entryService.test.ts` and DB branches inside
+  `tests/integration/routes/contentTypes.test.ts` were invoked with
+  `DATABASE_URL` loaded from the main checkout `.env`, but skipped because the
+  test DB connection was unavailable.
+- Closure kept one Entries flow: no duplicate editor route, no local admin path
+  helper, no separate pagination framework, and no resource-specific popup
+  system were introduced.

@@ -10,10 +10,10 @@ Opisuje UX listy wpisow (Entry List) w panelu admina.
 
 ## Filtry
 
-- Search (tytul, slug)
-- Status (All, Published, Draft, Scheduled, Archived)
-- Author (lista autorow z widocznych wpisow)
-- Type (content type)
+- Basic: Search (tytul, slug) i Status (All, Published, Draft, Scheduled,
+  Archived).
+- Advanced: Type (content type), Author (lista autorow z widocznych wpisow),
+  Updated from, Updated to.
 
 ## Bulk actions
 
@@ -25,8 +25,11 @@ Gdy zaznaczysz wpisy na liscie:
 
 ## Zachowanie
 
-- Zaznaczenie dotyczy wpisow widocznych po filtrach.
-- W widoku grid selection jest czyszczone, aby uniknac ukrytych zaznaczen.
+- Entries first screen pokazuje jeden all-entries table read model z kolumna
+  `Content Type`.
+- Zaznaczenie dotyczy wpisow widocznych po filtrach i na aktualnej stronie
+  paginacji. Bulk execution przenosi `id` razem z `contentType.slug`, bez
+  globalnego `activeSlug`.
 
 ## Shared Admin List Pagination
 
@@ -54,11 +57,14 @@ Gdy zaznaczysz wpisy na liscie:
 
 ## Entries parity
 
-- Entries sidebar groups content types into populated and empty collections,
-  while preserving search and count visibility.
-- `Hide empty content types` is non-destructive; an active empty type remains
-  visible so the current context does not disappear.
-- Duplicate content type display names are disambiguated with the slug.
+- Entries list uses the same `AdminShell`, `PageHeader`, centered list width,
+  inline selected-row bulk actions, and shared pagination footer as Pages,
+  Posts, Menus, and Content Types.
+- Entries no longer starts from a left content-type sidebar or a single active
+  type. The first screen reads `GET /content-entries`, filters client-side, and
+  keeps the existing type-scoped editor route for row navigation.
+- The `Content Type` column links each row back to the owning Engine editor via
+  shared admin navigation.
 - Row delete and bulk delete use the shared app confirmation dialog, not native
   `window.confirm()`.
 - Row duplicate is a real Entries mutation. It creates a draft clone, refreshes

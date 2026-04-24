@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { contentEntries, contentTypes, users } from "../../../core/db/schema";
+import { matchRoute } from "../../../core/server/router";
 import {
   registerContentEntryRoutes,
   type RouteContext,
@@ -81,6 +82,7 @@ test("content routes are registered", () => {
       "GET /content-types/:id",
       "PATCH /content-types/:id",
       "DELETE /content-types/:id",
+      "GET /content-entries",
       "GET /content/:type/entries",
       "POST /content/:type/entries",
       "GET /content/:type/entries/:id",
@@ -93,6 +95,45 @@ test("content routes are registered", () => {
       "POST /content/:type/entries/:id/unpublish",
     ])
   );
+});
+
+test("all entries route does not collide with type-scoped entries routes", () => {
+  const { router, routes } = makeRouter();
+
+  registerContentEntryRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const route = routes.find(
+    (item) => item.method === "GET" && matchRoute(item.path, "/content-entries").matched
+  );
+
+  expect(route?.path).toBe("/content-entries");
+  expect(matchRoute("/content/:type/entries", "/content-entries").matched).toBe(false);
+});
+
+test("all entries route requires content read permission", async () => {
+  const { router, routes } = makeRouter();
+  const permissions: string[] = [];
+
+  registerContentEntryRoutes(router, {
+    requirePermission: (permission) => async () => {
+      permissions.push(permission);
+      throw new Error("permission_checked");
+    },
+    validate: () => undefined,
+  });
+
+  await expect(
+    runRoute(routes, "GET", "/content-entries", {
+      params: {},
+      query: {},
+      body: {},
+    })
+  ).rejects.toThrow("permission_checked");
+
+  expect(permissions).toEqual(["content:read"]);
 });
 
 testIfDb("content entry metadata publish requires publish permission", async () => {

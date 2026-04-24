@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Design Tokens + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-207-04-01, TASK-205-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

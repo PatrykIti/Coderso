@@ -30,6 +30,12 @@ export const contentTypeDuplicateSchema = {
   additionalProperties: false,
 };
 
+export const contentEntryAllEntriesQuerySchema = {
+  type: "object",
+  properties: {},
+  additionalProperties: false,
+};
+
 export const contentEntryCreateSchema = {
   type: "object",
   required: ["title", "slug", "data"],

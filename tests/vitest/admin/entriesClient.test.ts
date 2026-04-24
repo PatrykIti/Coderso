@@ -1,13 +1,17 @@
 import { expect, test } from "vitest";
 
 import {
+  clearAllEntriesCache,
   clearEntriesCache,
   createEntry,
   deleteEntry,
   duplicateEntry,
+  getCachedAllEntries,
   getCachedEntries,
   getEntry,
   getEntryCached,
+  listAllEntries,
+  listAllEntriesCached,
   listEntries,
   listEntriesCached,
   previewEntry,
@@ -41,7 +45,9 @@ const createLocalStorage = () => {
 
 const resetCaches = (typeSlug: string) => {
   clearEntriesCache(typeSlug);
+  clearAllEntriesCache();
 };
+
 test("listEntries hits GET /content/:type/entries", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -54,6 +60,24 @@ test("listEntries hits GET /content/:type/entries", async () => {
   try {
     await listEntries("blog");
     expect(calls[0]?.input).toBe("/admin/api/content/blog/entries");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listAllEntries hits GET /content-entries", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+
+  try {
+    await listAllEntries();
+    expect(calls[0]?.input).toBe("/admin/api/content-entries");
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
@@ -253,7 +277,9 @@ test("deleteEntry uses CSRF and DELETE", async () => {
 
 test("duplicateEntry uses CSRF and primes list/detail caches", async () => {
   const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
   const duplicated = {
     id: "entry-copy",
     typeId: "type-1",
@@ -279,6 +305,23 @@ test("duplicateEntry uses CSRF and primes list/detail caches", async () => {
   try {
     resetCsrfToken();
     resetCaches("blog");
+    const allEntries = [
+      {
+        ...duplicated,
+        contentType: {
+          id: "type-1",
+          slug: "blog",
+          name: "Blog",
+          status: "published",
+        },
+      },
+    ];
+    (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+    storage.setItem(
+      cacheKeys.entriesAllList,
+      JSON.stringify({ value: allEntries, savedAt: Date.now() })
+    );
+    expect(getCachedAllEntries()).toEqual(allEntries);
     const result = await duplicateEntry("blog", "entry-1");
     expect(result.id).toBe("entry-copy");
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
@@ -288,8 +331,14 @@ test("duplicateEntry uses CSRF and primes list/detail caches", async () => {
     expect(calls[1]?.init?.method).toBe("POST");
     expect(calls[1]?.init?.body).toBe(JSON.stringify({}));
     expect(getCachedEntries("blog")?.[0]?.id).toBe("entry-copy");
+    expect(getCachedAllEntries()).toBeNull();
   } finally {
     globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
     resetCaches("blog");
   }
 });
@@ -377,6 +426,57 @@ test("listEntriesCached reads from local storage", async () => {
       (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
     resetCaches("blog");
+  }
+});
+
+test("listAllEntriesCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    clearAllEntriesCache();
+    const cached = [
+      {
+        id: "entry-9",
+        typeId: "type-1",
+        title: "Hello",
+        slug: "hello",
+        status: "draft" as const,
+        data: {},
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+        contentType: {
+          id: "type-1",
+          slug: "blog",
+          name: "Blog",
+          status: "published",
+        },
+      },
+    ];
+    storage.setItem(
+      cacheKeys.entriesAllList,
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await listAllEntriesCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    clearAllEntriesCache();
   }
 });
 
