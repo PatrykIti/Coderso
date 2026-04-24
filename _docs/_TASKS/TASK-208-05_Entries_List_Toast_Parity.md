@@ -31,6 +31,15 @@ copy/count helpers for targeted list actions. Duplicate can keep its existing
 flow unless it is touched, but create, bulk lifecycle, and delete feedback must
 route through the shared helper once this task modifies them.
 
+`EntryCreateDrawer` is reusable outside `EntryList` today, including custom
+screen entry surfaces. Keep that reuse contract explicit: the drawer must not
+hard-code a list-scope floating-toast policy for every consumer. If create error
+toasts are emitted from inside the drawer because the drawer owns
+`createEntry`, wire the behavior through an adapter-backed prop/callback from
+`EntryList`, and keep non-participating consumers on their current local
+inline-only error behavior unless this task also brings them into scope with
+tests and docs.
+
 ## Sub-Tasks
 
 - [ ] `TASK-208-05-01_Entry_Create_Toasts.md`

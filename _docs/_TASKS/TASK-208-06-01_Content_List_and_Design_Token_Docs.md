@@ -75,12 +75,17 @@ Shared toasts:
   bulk result message helpers.
 - Resource screens pass adapter parameters and mutation results; they do not
   style toast state or duplicate generic count/error logic.
+- Targeted list-action toasts always emit through the adapter API. Reusable
+  drawers/dialogs that own create mutations receive adapter-backed feedback from
+  their list owner instead of hard-coding a floating-toast policy for every
+  consumer.
 - The helper does not call list clients, mutate state, refresh caches, or
   navigate; those stay in the existing list components.
 - Success/error/warning states use `--admin-state-*` tokens.
-- The visible toast shell, description text, border, and close button also use
-  Admin UI Theme variables or shared `.toaster`-scoped CSS; they do not inherit
-  Sonner's bundled gray/HSL palette.
+- The visible toast shell, description text, border, close button,
+  action/cancel controls, loading indicator, shadow, hover, and focus states
+  also use Admin UI Theme variables or shared `.toaster`-scoped CSS; they do not
+  inherit Sonner's bundled gray/HSL palette.
 ```
 
 ## Testing Requirements
@@ -97,5 +102,6 @@ implementation test suites for TASK-208-01 through TASK-208-05 pass.
    not confuse it with editor navigation.
 5. Docs state that custom Admin UI Theme modes propagate toast colors through
    dynamic CSS variables.
-6. Docs state that the whole floating toast window, including description and
-   close button, inherits from Admin UI Theme templates/profiles.
+6. Docs state that the whole floating toast window, including description,
+   close button, action/cancel controls, loading indicator, shadow, hover, and
+   focus states, inherits from Admin UI Theme templates/profiles.

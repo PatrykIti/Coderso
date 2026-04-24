@@ -94,10 +94,19 @@ In scope:
     notifications;
   - resource adapters/parameters for Pages, Posts, Menus, Content Types, and
     Entries;
+  - all targeted list-action toast emissions must go through that adapter API.
+    Resource screens and create drawers/dialogs must not add new direct
+    `toast.success` / `toast.error` branches for targeted create, lifecycle,
+    delete, or bulk actions;
   - adapter config can stay inline when one component owns the action path; if a
     list and drawer/dialog both need the same resource copy, extract a small
     resource-local adapter file such as `entryListToastAdapter.ts` or
     `contentTypeListToastAdapter.ts`;
+  - reusable create drawers/dialogs must receive an adapter-backed callback or
+    adapter parameter from their list owner, or otherwise keep their existing
+    inline-only error behavior. Do not hard-code a list-scope toast policy into
+    a reusable drawer unless every current consumer is explicitly in this task's
+    scope and test matrix;
   - adapters must stay thin: labels, action copy, fallback errors, and optional
     message overrides only. They must not own mutation execution, cache refresh,
     navigation, selection trimming, or styling.
@@ -204,11 +213,14 @@ Shared toaster and token layer:
   - own the token-backed style mapping for toast state surfaces and every
     Sonner CSS variable that can be set on the toaster host.
   - merge forwarded `className` and `style` props without losing the `.toaster`
-    selector or replacing the shared token-backed CSS variable defaults.
+    selector or replacing the shared token-backed CSS variable defaults. Caller
+    styles may extend non-token layout properties, but token-owned variables must
+    remain owned by the wrapper.
 - `core/admin/styles/globals.css`
   - add scoped Sonner selectors when component-level style variables are not
     enough to override default Sonner state colors, description text, close
-    button, focus, or border styling.
+    button, action/cancel controls, loading indicator, shadow, hover, focus, or
+    border styling.
 - `tests/vitest/admin/adminApp.test.tsx`
   - assert the shared toaster remains top-right, accessible, closeable, and
     intentionally rich-color enabled through the shared token-backed wrapper.
@@ -217,7 +229,8 @@ Shared toaster and token layer:
     variables for normal, success, error, warning, and neutral info states.
   - include a rendered or CSS-selector contract proof that a custom Admin UI
     Theme template/profile controls the visible floating toast shell, title,
-    description, border, and close button, not Sonner's bundled hard-coded
+    description, border, close button, action/cancel controls, loading
+    indicator, shadow, hover, and focus states, not Sonner's bundled hard-coded
     palette.
 
 Shared list-action feedback:
@@ -256,6 +269,9 @@ Shared list-action feedback:
     the same copy and fallback behavior.
   - do not create per-resource formatter utilities that duplicate the shared
     bulk count, partial-failure, or error-normalization logic.
+  - pass adapter-backed feedback into reusable drawers/dialogs when the mutation
+    is owned inside the drawer/dialog and not visible to the parent success/error
+    branch.
 - `tests/vitest/ui/list-action-toasts.test.ts`
   - cover single action success/error, bulk full success, partial failure, and
     pluralization/count behavior without importing runtime/Bun-only modules.
@@ -373,6 +389,8 @@ adjacent focused Vitest suite in the same validation run.
    result math or error normalization.
 8. Targeted list-action toasts are emitted through the shared helper/adapters,
    not through new resource-local `toast.success` / `toast.error` branches.
+   Reusable drawer/dialog consumers that are not part of this list-toast task
+   must not receive new floating-toast behavior by accident.
 9. No resource-specific toaster, hard-coded Tailwind color family, or native
    `window.confirm()` is introduced for the targeted list action feedback.
 10. Targeted Vitest suites plus `bun --cwd core lint` and

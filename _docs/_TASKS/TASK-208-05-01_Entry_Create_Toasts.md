@@ -30,16 +30,25 @@ No child task files.
 
 - In `core/admin/ui/entries/EntryList.tsx`, emit a shared success toast from
   `handleEntryCreated` after the list/cache state is updated.
-- In `core/admin/ui/entries/EntryCreateDrawer.tsx`, emit a shared error toast
-  in the create catch path while preserving the drawer-local error alert.
+- In `core/admin/ui/entries/EntryCreateDrawer.tsx`, preserve the drawer-local
+  error alert and emit a floating create error only through an adapter-backed
+  callback/prop supplied by `EntryList`.
+- Do not import `sonner` directly or create an Entries-only formatter inside the
+  drawer. The drawer can receive the final adapter-backed error handler or a
+  small adapter slice, but the message normalization and final `toast.error`
+  call must still go through `core/admin/ui/shared/listActionToasts.ts`.
+- Keep existing non-list consumers of `EntryCreateDrawer` unchanged unless this
+  task explicitly adds them to scope. `CustomScreenEntriesPage` currently reuses
+  the drawer; it must not start showing top-right list toasts unless a
+  corresponding custom-screen test/doc update is added.
 - Emit the top-right error toast only for rejected `createEntry` mutations/API
   failures. Local drawer validation such as missing content type, title, or slug
   remains inline/disabled-state feedback and must not emit a floating toast.
 - Route create success/error copy through the shared list-action toast helper
   with an Entries adapter/config.
-- Because both `EntryList` and `EntryCreateDrawer` need the Entries adapter,
-  extract a small resource-local adapter module if needed instead of duplicating
-  the same config in both components.
+- Because both `EntryList` and `EntryCreateDrawer` need the Entries adapter for
+  opted-in list behavior, extract a small resource-local adapter module if
+  needed instead of duplicating the same config in both components.
 - Keep `openAfterCreate` navigation behavior unchanged.
 - Keep the selected/current content type scope unchanged.
 - Keep `GET /content-entries` as the all-entry list read model and keep editor
@@ -54,7 +63,7 @@ No child task files.
 
 ```tsx
 // core/admin/ui/entries/EntryList.tsx
-// Shared by the list and create drawer, for example from
+// Shared by the list and opted-in create drawer feedback, for example from
 // core/admin/ui/entries/entryListToastAdapter.ts.
 const entriesToast = createListActionToastAdapter({
   resourceSingular: "entry",
@@ -74,16 +83,28 @@ const handleEntryCreated = (created, typeSlug, openAfterCreate) => {
     navigate(`/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(created.id)}`);
   }
 };
+
+const handleEntryCreateError = (error: unknown) => {
+  const message = entriesToast.errorMessage(error, "create");
+  entriesToast.error(message);
+  return message;
+};
 ```
 
 ```tsx
+// core/admin/ui/entries/EntryCreateDrawer.tsx
+type EntryCreateDrawerProps = {
+  onCreateError?: (error: unknown) => string;
+  // existing props...
+};
+
 try {
   const created = await createEntry(typeSlug, payload);
   onCreated?.(created, typeSlug, openAfterCreate);
 } catch (error) {
-  const message = entriesToast.errorMessage(error, "create");
+  const message = onCreateError?.(error) ??
+    (isApiClientError(error) ? error.message : "Failed to create entry.");
   setError(message);
-  entriesToast.error(message);
 }
 ```
 
@@ -95,9 +116,12 @@ try {
   - current coverage uses a success-only `EntryCreateDrawer` mock; extend that
     mock to trigger a rejected create path, or add a focused `EntryCreateDrawer`
     test that renders the real drawer and proves the local drawer error plus the
-    top-right error toast,
+    opted-in adapter-backed top-right error toast,
   - assert local disabled/required-field validation does not emit a top-right
     error toast when that validation path is covered,
+  - assert a non-list consumer or a direct drawer render without the adapter
+    callback keeps local inline error behavior without emitting a top-right
+    toast,
   - ensure navigation assertions for `openAfterCreate` still pass.
 
 ## Documentation Updates Required in This Round
@@ -119,3 +143,6 @@ try {
    list-action toast helper/adapter.
 6. Local missing-field or disabled-state validation remains inline-only and does
    not emit floating toasts.
+7. Existing reusable drawer consumers outside `EntryList` do not receive new
+   floating-toast behavior unless they explicitly opt in through the adapter
+   callback and are covered by tests/docs.

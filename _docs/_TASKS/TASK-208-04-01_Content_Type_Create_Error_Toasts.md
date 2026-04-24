@@ -23,6 +23,9 @@ No child task files.
 - Inspect `core/admin/ui/content-types/ContentTypeCreateDrawer.tsx`.
 - If the drawer catches `createContentType` errors and only sets local `error`,
   also call the shared list-action error-toast helper.
+- Do not add a new drawer-local `toast.error` branch. The drawer and parent list
+  must use the same Content Type adapter/config, whether that adapter is inline
+  in the single owner or extracted into a small resource-local module.
 - Emit the top-right error toast only for rejected `createContentType`
   mutations/API failures. Local validation failures such as duplicate name,
   duplicate slug, or missing required fields remain inline drawer feedback and do

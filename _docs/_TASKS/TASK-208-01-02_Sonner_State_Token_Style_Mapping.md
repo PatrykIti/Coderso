@@ -25,9 +25,9 @@ task adds a first-class Admin UI Theme info state. Sonner's documented
 notifications. It must preserve the existing dynamic theme handoff from
 `useTheme()` so Admin UI Theme mode changes update all toast states through
 runtime CSS variables. The visual contract covers the entire floating toast
-window: shell, title, description text, border, close button, focus state, and
-typed state colors must all derive from the active Admin UI Theme
-template/profile.
+window: shell, title, description text, border, close button, action/cancel
+controls, loading indicator, shadow, hover, focus state, and typed state colors
+must all derive from the active Admin UI Theme template/profile.
 
 ## Sub-Tasks
 
@@ -43,14 +43,19 @@ No child task files.
   `theme="light"` or any other fixed mode in the wrapper.
 - Preserve the shared wrapper ownership when forwarding props. Destructure
   caller `className` and `style`, merge `className` so the `.toaster` selector is
-  never lost, and merge styles as `{ ...adminToastStyle, ...style }` so callers
-  can extend layout variables without removing the token-backed defaults.
+  never lost, and merge styles so token-owned variables always win over caller
+  `style`. Callers may extend non-token layout properties, but they must not be
+  able to replace the shared color, border, radius, focus, close-button, action,
+  cancel, loading, or state variable map. If the wrapper needs caller style
+  forwarding, sanitize or allowlist the caller style first, then merge the
+  token map last.
 - Reference Admin UI Theme CSS variables directly in the style map so the active
   theme profile/template can update toast colors without remounting or rewriting
   resource components.
 - Treat Sonner's bundled CSS as hostile to the Admin UI Theme contract wherever
   it hard-codes visible colors. Override any hard-coded description,
-  close-button, border, focus, or state selector through the shared wrapper or a
+  close-button, action button, cancel button, loading icon/spinner, shadow,
+  border, focus, hover, or state selector through the shared wrapper or a
   `.toaster`-scoped block in `core/admin/styles/globals.css`.
 - Use existing token variables:
   - `--popover`,
@@ -86,6 +91,7 @@ const adminToastStyle = {
   "--normal-border-hover": "var(--border)",
   "--normal-bg-hover": "color-mix(in srgb, var(--popover-foreground) 6%, var(--popover))",
   "--gray12": "var(--popover-foreground)",
+  "--gray11": "var(--muted-foreground)",
   "--gray5": "var(--border)",
   "--gray4": "var(--border)",
   "--gray2": "color-mix(in srgb, var(--popover-foreground) 6%, var(--popover))",
@@ -109,7 +115,7 @@ return (
     {...sonnerProps}
     theme={theme as ToasterProps["theme"]}
     className={className ? `toaster group ${className}` : "toaster group"}
-    style={{ ...adminToastStyle, ...style }}
+    style={{ ...style, ...adminToastStyle }}
   />
 );
 ```
@@ -131,12 +137,33 @@ variables:
 
 .toaster [data-sonner-toast][data-styled="true"]:focus-visible,
 .toaster [data-sonner-toast][data-styled="true"] [data-close-button]:focus-visible {
-  box-shadow: 0 0 0 2px var(--ring);
+  box-shadow:
+    0 4px 12px color-mix(in srgb, var(--popover-foreground) 12%, transparent),
+    0 0 0 2px var(--ring);
 }
 
 .toaster [data-sonner-toast][data-styled="true"]:hover [data-close-button]:hover {
   background: color-mix(in srgb, var(--popover-foreground) 6%, var(--popover));
   border-color: var(--border);
+}
+
+.toaster [data-sonner-toast][data-styled="true"] [data-button] {
+  background: var(--popover-foreground);
+  color: var(--popover);
+}
+
+.toaster [data-sonner-toast][data-styled="true"] [data-button]:focus-visible,
+.toaster [data-sonner-toast][data-styled="true"] [data-cancel]:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.toaster [data-sonner-toast][data-styled="true"] [data-cancel] {
+  background: color-mix(in srgb, var(--popover-foreground) 8%, transparent);
+  color: var(--popover-foreground);
+}
+
+.toaster .sonner-loading-bar {
+  background: var(--muted-foreground);
 }
 
 .toaster [data-sonner-toast][data-type="success"] {
@@ -158,10 +185,12 @@ variables:
   - render the wrapper directly or through a focused mock,
   - assert success/error/warning variables contain Admin UI state token names
     and info variables contain neutral Admin UI popover token names,
-  - assert normal, state, description, border, and close-button styling is
-    backed by Admin UI Theme variables or by `.toaster`-scoped shared CSS,
-  - assert toast and close-button focus rings plus close-button hover styling do
-    not rely on Sonner's bundled gray/rgba palette,
+  - assert normal, state, description, border, close-button, action button,
+    cancel button, loading bar, and shadow/focus styling is backed by Admin UI
+    Theme variables or by `.toaster`-scoped shared CSS,
+  - assert toast, action button, cancel button, and close-button focus rings plus
+    close-button hover styling do not rely on Sonner's bundled gray/rgba
+    palette,
   - use a custom Admin UI Theme token fixture with intentionally non-Sonner
     values so the test fails if the rendered floating toast falls back to
     Sonner's bundled palette,
@@ -170,7 +199,7 @@ variables:
   - assert the wrapper forwards the dynamic `useTheme()` value instead of a
     hard-coded literal theme,
   - assert caller `className` and `style` props are merged without dropping the
-    `.toaster` selector or the token-backed default CSS variables.
+    `.toaster` selector or replacing the token-backed default CSS variables.
 
 ## Documentation Updates Required in This Round
 
@@ -179,15 +208,17 @@ variables:
     Sonner variables and Admin UI Theme state tokens.
   - document that new/custom Admin UI Theme modes propagate through CSS
     variables and must not require per-resource toast styling.
-  - document that the floating toast description, close button, border, and
-    focus styling are part of the Admin UI Theme surface, not Sonner defaults.
+  - document that the floating toast description, close button, action/cancel
+    controls, loading indicator, border, shadow, hover, and focus styling are
+    part of the Admin UI Theme surface, not Sonner defaults.
 
 ## Acceptance Criteria
 
 1. Success, error, warning, info, and normal toast state variables are mapped to
    Admin UI Theme tokens.
-2. Description text, close button, border, and focus styling are token-backed or
-   overridden through shared `.toaster`-scoped CSS.
+2. Description text, close button, action/cancel controls, loading indicator,
+   border, shadow, hover, and focus styling are token-backed or overridden
+   through shared `.toaster`-scoped CSS.
 3. Light Admin UI themes no longer inherit Sonner's bundled state palettes unless
    the active token set explicitly defines that look.
 4. The mapping is shared and resource-neutral.

@@ -28,12 +28,12 @@ flows into every toast state through the active CSS variable set instead of a
 hard-coded wrapper palette.
 
 This round also owns the full visible floating-toast surface, not only the state
-swatches. The toast shell, title, description text, border, close button, focus
-ring, and typed state colors must all resolve from Admin UI Theme variables or
-scoped shared admin CSS. If Sonner's bundled stylesheet hard-codes a visible
-sub-part, this task must override it in the shared wrapper or in
-`core/admin/styles/globals.css` with selectors scoped to the shared `.toaster`
-host.
+swatches. The toast shell, title, description text, border, close button,
+action/cancel controls, loading indicator, shadow, hover, focus ring, and typed
+state colors must all resolve from Admin UI Theme variables or scoped shared
+admin CSS. If Sonner's bundled stylesheet hard-codes a visible sub-part, this
+task must override it in the shared wrapper or in `core/admin/styles/globals.css`
+with selectors scoped to the shared `.toaster` host.
 
 ## Sub-Tasks
 
@@ -80,7 +80,8 @@ host.
   - assert the Sonner wrapper receives token-backed style variables for success,
     error, warning, info, and normal states,
   - assert a custom Admin UI Theme template/profile can drive the visible toast
-    shell, foreground, description, border, and close button through CSS
+    shell, foreground, description, border, close button, action/cancel
+    controls, loading indicator, shadow, hover, and focus states through CSS
     variables or scoped shared selectors,
   - assert no test-covered visible toast part still relies on Sonner's bundled
     HSL/hex palettes unless that exact color comes from the active Admin UI
@@ -102,7 +103,7 @@ host.
 3. Sonner rich/default bundled state palettes no longer control admin toast state
    surfaces.
 4. Toast state colors, shell, title, description, border, focus/close affordance,
-   and icon-adjacent text are controlled by Admin UI Theme tokens or shared
-   admin CSS variables.
+   action/cancel controls, loading indicator, shadow, hover, and icon-adjacent
+   text are controlled by Admin UI Theme tokens or shared admin CSS variables.
 5. Custom Admin UI Theme templates/profiles update toast visuals through dynamic
    variable values without resource-specific styling changes.
