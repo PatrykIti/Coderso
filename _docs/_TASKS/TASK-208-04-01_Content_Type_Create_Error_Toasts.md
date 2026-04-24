@@ -75,6 +75,10 @@ const handleCreated = (created) => {
 - `tests/vitest/ui/content-type-list-parity.test.tsx`
   - assert existing create success toast still fires,
   - add create failure setup and assert the expected final error toast,
+  - current coverage stubs `ContentTypeCreateDrawer`; extend that mock to drive
+    the parent `onCreated` success path and the rejected create path, or add a
+    focused `ContentTypeCreateDrawer` test that renders the real drawer and
+    proves the local drawer error plus the top-right error toast,
   - preserve drawer inline error assertion if one exists or add one if the test
     already covers drawer errors.
 

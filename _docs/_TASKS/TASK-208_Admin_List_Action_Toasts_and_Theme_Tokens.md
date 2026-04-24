@@ -210,6 +210,10 @@ Shared list-action feedback:
     feedback.
   - accept resource adapter parameters for labels, action names, counts,
     fallback errors, and settled mutation results.
+  - keep the bulk helper generic over its target type. Pages, Posts, Menus, and
+    Content Types can pass `string` ids, while Entries must pass row-owned
+    `{ id, typeSlug }` refs so the helper never assumes a string-only target
+    contract.
   - expose helpers that can normalize `unknown` errors and summarize
     `Promise.allSettled` output into a typed result such as
     `{ ok, action, message, succeededCount, failedCount, failedTargets }`.

@@ -89,6 +89,10 @@ try {
 - `tests/vitest/ui/entry-list-wave.test.tsx`
   - in the existing create-in-current-type test, assert the final success toast,
   - add or extend create failure coverage and assert the final error toast,
+  - current coverage uses a success-only `EntryCreateDrawer` mock; extend that
+    mock to trigger a rejected create path, or add a focused `EntryCreateDrawer`
+    test that renders the real drawer and proves the local drawer error plus the
+    top-right error toast,
   - ensure navigation assertions for `openAfterCreate` still pass.
 
 ## Documentation Updates Required in This Round

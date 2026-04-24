@@ -36,6 +36,9 @@ No child task files.
   the shared error-toast helper.
 - In `handlePublish`, `handleUnpublish`, and confirmed `runDelete`, toast after
   the real mutation and the existing refresh path.
+- Preserve the existing editor navigation route. `PostsListPage` currently
+  opens created/edited posts at `/coderso/posts/:id`; do not rewrite this to a
+  new `/posts/:id` route while adding toast feedback.
 - In `runBulkAction`, call the shared success helper on full success and the
   shared error helper on partial/full failure while preserving `bulkFeedback`.
   The message, count calculation, pluralization, and partial-failure summary must
@@ -61,8 +64,9 @@ const postsToast = createListActionToastAdapter({
 const handleCreate = async (payload) => {
   try {
     const post = await createPost(payload);
-    if (openAfterCreate) navigate(`/posts/${post.id}`);
-    else {
+    if (openAfterCreate) {
+      navigate(`/coderso/posts/${encodeURIComponent(post.id)}`);
+    } else {
       await refresh({ force: true, background: true });
       setCreateOpen(false);
     }

@@ -102,6 +102,10 @@ const runDelete = async (id: string) => {
 - `tests/vitest/ui/menu-list-page-actions.test.tsx`
   - add a `sonner` mock,
   - assert create success and failure toasts,
+  - current coverage stubs `MenuCreateDialog`; extend that mock to exercise the
+    `onCreate` success and rejected paths, or add a focused `MenuCreateDialog`
+    test that uses the real dialog and proves the local dialog error plus the
+    top-right error toast,
   - assert row publish/unpublish success and failure toasts,
   - assert row delete toast only appears after confirmation.
 

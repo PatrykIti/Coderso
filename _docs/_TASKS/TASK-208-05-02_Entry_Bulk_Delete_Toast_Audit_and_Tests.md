@@ -40,6 +40,10 @@ No child task files.
 - Replace local bulk/delete count and partial-failure string construction with
   the shared helper result so inline `setError` and floating `toast.error` use
   the same message.
+- Use a generic target-aware helper shape for bulk operations. Entries bulk
+  helpers must accept `SelectedEntryRef` / `{ id, typeSlug }` targets instead of
+  coercing everything to plain ids, because delete and metadata updates need the
+  owning content type slug.
 
 ## Pseudocode
 
@@ -50,7 +54,11 @@ const runBulkAction = async (action) => {
     selectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
   );
 
-  const feedback = entriesToast.bulkResult({ action, targets: selectedRefs, results });
+  const feedback = entriesToast.bulkResult<SelectedEntryRef>({
+    action,
+    targets: selectedRefs,
+    results,
+  });
   if (!feedback.ok) {
     setError(feedback.message);
     entriesToast.emitBulkResult(feedback);
@@ -64,7 +72,7 @@ const confirmDelete = async () => {
   const results = await Promise.allSettled(
     deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
   );
-  const feedback = entriesToast.bulkResult({
+  const feedback = entriesToast.bulkResult<SelectedEntryRef>({
     action: "delete",
     targets: deleteRequest.refs,
     results,
