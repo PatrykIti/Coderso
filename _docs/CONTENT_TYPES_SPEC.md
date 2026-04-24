@@ -15,7 +15,9 @@ Cel: wspierac kolekcje danych poza Pages (np. blog, case studies).
   `Screen <uuid>` sa odrzucane, aby generatorzy nie tworzyli nieczytelnych
   typow.
 - Usuniecie content type przechodzi przez guard serwisowy i jest blokowane,
-  gdy typ ma entries, custom screens, taxonomie, content routes albo listings.
+  gdy typ ma entries, custom screens, taxonomie albo listings. Wpisy
+  `site.contentRoutes` dla usuwanego sluga sa czyszczone automatycznie, bo
+  panel Site Settings tworzy je jako route placeholders dla content types.
 
 ## Default content types (core)
 

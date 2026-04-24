@@ -9,6 +9,11 @@ import {
   duplicateContentType,
   updateContentType,
 } from "../../../core/services/content/typeService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -106,4 +111,38 @@ testIfDb("delete content type is blocked while entries exist", async () => {
   });
 
   await expect(deleteContentType(created.id)).rejects.toThrow("content_type_has_entries");
+});
+
+testIfDb("delete content type removes its auto content route reference", async () => {
+  const originalContentRoutes = await getSetting("site.contentRoutes");
+  const created = await createContentType({
+    name: `Routed ${randomUUID()}`,
+    slug: `routed-${randomUUID()}`,
+    schema,
+  });
+  cleanupTypeIds.add(created.id);
+
+  try {
+    await setSetting("site.contentRoutes", [
+      ...((Array.isArray(originalContentRoutes) ? originalContentRoutes : []) as ContentRouteSetting[]),
+      {
+        type: created.slug,
+        listPath: `/${created.slug}`,
+        detailPath: `/${created.slug}/:slug`,
+        enabled: true,
+      },
+    ]);
+
+    const removed = await deleteContentType(created.id);
+    expect(removed?.id).toBe(created.id);
+    cleanupTypeIds.delete(created.id);
+
+    const nextContentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+    expect(
+      Array.isArray(nextContentRoutes) &&
+        nextContentRoutes.some((route) => route.type === created.slug)
+    ).toBe(false);
+  } finally {
+    await setSetting("site.contentRoutes", originalContentRoutes);
+  }
 });

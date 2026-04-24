@@ -133,11 +133,6 @@ const assertUniqueContentTypeSlug = async (slug: string, excludeId?: string) => 
   if (row) throw new Error("content_type_slug_exists");
 };
 
-const hasContentRouteReference = (value: unknown, slug: string) => {
-  if (!Array.isArray(value)) return false;
-  return value.some((entry) => isRecord(entry) && entry.type === slug);
-};
-
 const assertContentTypeDeleteAllowed = async (record: ContentTypeRecord) => {
   const [entry] = await db
     .select({ id: contentEntries.id })
@@ -159,15 +154,6 @@ const assertContentTypeDeleteAllowed = async (record: ContentTypeRecord) => {
     .where(eq(contentTaxonomies.typeId, record.id))
     .limit(1);
   if (taxonomy) throw new Error("content_type_has_taxonomies");
-
-  const [routeSetting] = await db
-    .select({ value: settings.value })
-    .from(settings)
-    .where(eq(settings.key, "site.contentRoutes"))
-    .limit(1);
-  if (hasContentRouteReference(routeSetting?.value, record.slug)) {
-    throw new Error("content_type_has_content_routes");
-  }
 
   const [listing] = await db
     .select({ id: listingQueries.id })
@@ -291,10 +277,31 @@ export async function deleteContentType(id: string): Promise<ContentTypeRecord |
   if (!existing) return null;
   await assertContentTypeDeleteAllowed(existing);
 
-  const [row] = await db
-    .delete(contentTypes)
-    .where(eq(contentTypes.id, id))
-    .returning();
+  const row = await db.transaction(async (tx) => {
+    const [routeSetting] = await tx
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, "site.contentRoutes"))
+      .limit(1);
+    const routes = routeSetting?.value;
+    if (Array.isArray(routes)) {
+      const nextRoutes = routes.filter(
+        (entry) => !isRecord(entry) || entry.type !== existing.slug
+      );
+      if (nextRoutes.length !== routes.length) {
+        await tx
+          .update(settings)
+          .set({ value: nextRoutes, updatedAt: new Date() })
+          .where(eq(settings.key, "site.contentRoutes"));
+      }
+    }
+
+    const [deleted] = await tx
+      .delete(contentTypes)
+      .where(eq(contentTypes.id, id))
+      .returning();
+    return deleted;
+  });
 
   invalidateValidator(id);
   return (row as ContentTypeRecord | undefined) ?? null;

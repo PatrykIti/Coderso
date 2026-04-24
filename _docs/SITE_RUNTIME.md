@@ -41,6 +41,11 @@ Ustawienia sterowane z panelu (Settings → Site):
 - `site.contentRoutes` — mapowanie tras dla content types (list + detail)
 - `site.cacheTtlSeconds` — TTL cache HTML w sekundach (0 = off)
 
+Panel Settings -> Site synchronizuje liste `site.contentRoutes` z aktualnymi
+content types, dodajac domyslne wpisy dla nowych typow. Usuniecie content type
+automatycznie usuwa jego wpis z `site.contentRoutes`, o ile typ nie jest
+blokowany przez entries, taxonomie, custom screens albo listings.
+
 Przykład `site.contentRoutes`:
 
 ```json

@@ -1790,8 +1790,10 @@ creates a unique `Copy of ...` draft and copies schema only, never entries.
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:
 `content_type_has_entries`, `content_type_has_custom_screens`,
-`content_type_has_taxonomies`, `content_type_has_content_routes`,
-`content_type_has_listings`.
+`content_type_has_taxonomies`, `content_type_has_listings`. Any
+`site.contentRoutes` entry for the deleted content type slug is pruned during
+delete, because Site Settings keeps default route placeholders in sync with
+content types.
 
 - `GET /content-entries`
 - `GET /content/:type/entries`
@@ -2530,7 +2532,9 @@ Response:
 - `setup.completed` ustawia stan pierwszej konfiguracji.
 - UI mapping: `site.publicBaseUrl` jest zarzadzane w Settings -> General, a `auth.*TTL*` w Settings -> Security.
 - Setup Wizard zapisuje `site.*`, `auth.*` i finalnie `setup.completed=true` jednym bulk requestem.
-- `site.contentRoutes` mapuje content types na trasy (list + detail).
+- `site.contentRoutes` mapuje content types na trasy (list + detail). Settings
+  -> Site automatycznie dodaje domyslne wpisy dla content types, a delete
+  content type usuwa wpis odpowiadajacy jego slugowi.
 - `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
 - `assistant.launcher.avatar*` sterują floating launcher surface w admin UI.
 - Official assistant corpus jest sourced z root `docs/` i seedowany do DB.
