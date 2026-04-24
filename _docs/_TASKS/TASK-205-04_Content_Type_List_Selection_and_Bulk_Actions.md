@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Engine + Admin/UI + Admin API
 **Estimated Effort:** Large
-**Dependencies:** TASK-205, TASK-205-03-01, TASK-205-03-02, TASK-198, TASK-199, TASK-200
+**Dependencies:** TASK-205, TASK-205-02, TASK-205-03-01, TASK-205-03-02, TASK-198, TASK-199, TASK-200
 **Status:** To Do
 
 ---
@@ -18,10 +18,11 @@ The current table has row actions for edit, duplicate, and delete, but there is
 no way to select multiple content types or run bulk publish/draft/delete actions.
 The implementation should follow the shared admin list pattern from Pages,
 Posts, and Menus after `TASK-205-03-01` creates the shared pagination contract
-and `TASK-205-03-02` adapts Content Types to visible paginated rows. Do not copy
-the current native `window.confirm()` behavior from those lists; bulk delete
-must use the token-backed confirmation dialog pattern from TASK-205-02 while
-preserving the stricter content type delete guard from `typeService`.
+and `TASK-205-03-02` adapts Content Types to visible paginated rows. It also
+depends on `TASK-205-02` so Content Types bulk delete uses the shared
+token-backed confirmation dialog pattern instead of copying the current native
+`window.confirm()` behavior from other lists. Preserve the stricter content type
+delete guard from `typeService`.
 
 ## Sub-Tasks
 
@@ -69,6 +70,22 @@ No child task files.
 
 ## Implementation Direction
 
+Owner responsibilities for this leaf:
+
+- `ContentTypeList` owns selection state, selected-count header actions, bulk
+  orchestration, partial-failure feedback, and the refresh-after-write flow.
+- `ContentTypeTable` owns only controlled checkbox rendering, selected-row
+  styling, and row action presentation.
+- `useListPagination` / `ListPaginationFooter` from `TASK-205-03-01` own page
+  state, page-size controls, visible rows, and footer controls. Do not duplicate
+  that math in Content Types.
+- `contentTypesClient` owns the existing write/cache helpers. Reuse
+  `updateContentType(id, { status })` and `deleteContentType(id)`; add wrappers
+  only if they stay semantic aliases over those same route calls.
+- `typeService` and `contentTypeRoutes` remain the invariant and route-boundary
+  owners. Do not add a bulk endpoint unless a separately documented contract
+  change proves the existing per-item routes cannot satisfy the behavior.
+
 Follow the corrected Pages/Posts/Menus inline header-action pattern:
 
 ```tsx
@@ -100,6 +117,8 @@ Bulk action behavior:
   Admin UI dialog before executing.
 - All actions operate on controlled selected IDs from the visible/paginated row
   set.
+- Bulk delete uses explicit React dialog state from `TASK-205-02`; it must not
+  call `window.confirm()`.
 - After action completion, refresh the list from cache with `force: true`,
   clear selection on full success, and preserve actionable partial failure copy
   if some rows failed.
@@ -151,3 +170,5 @@ truthfully instead of treating the whole bulk operation as successful.
    rows are not mutated accidentally.
 6. Bulk delete requires a token-backed shared confirmation, respects server
    delete guards, and reports partial failures.
+7. No duplicate pagination state, new bulk endpoint, or resource-specific dialog
+   system is introduced for Content Types.

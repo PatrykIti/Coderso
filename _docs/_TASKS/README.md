@@ -40,12 +40,12 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-205 | Admin List Pagination, Popup Tokens, and Content Type Parity | High | Very Large | Follow-up for content type editor JSON scroll, Admin UI Theme token-compliant popups across Content Types/Pages/Posts/Menus, shared real list pagination/page size, and Content Types bulk actions |
 | TASK-205-01 | Content Type JSON Preview Scroll Containment | High | Medium | Fix right-panel/mobile schema preview scroll for content types with many fields |
-| TASK-205-02 | Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus | High | Large | Replace hard-coded/native confirmations with token-backed Admin UI popups for Content Types, Pages, Posts, and Menus |
+| TASK-205-02 | Admin Popup Token Compliance for Content Types, Pages, Posts, and Menus | High | Large | Replace hard-coded/native confirmations with token-backed Admin UI popups, including Menu item delete callouts, without new popup style forks |
 | TASK-205-03 | Shared Admin List Pagination Contract | Medium | Large | Complete Content Types/Pages/Posts/Menus footer pagination through one shared helper/footer with default 10 rows and page-size selector |
 | TASK-205-03-01 | Shared Pagination Hook and Footer | High | Medium | Create the resource-agnostic hook/footer, page-size constants, range metadata, and focused generic tests |
 | TASK-205-03-02 | Admin List Resource Adapters | High | Large | Adapt Content Types, Pages, Posts, and Menus to the shared pagination contract without duplicating page math |
-| TASK-205-03-03 | Pagination Regression Matrix and Docs | Medium | Medium | Prove cross-resource pagination, page-size, clamp, visible-page selection, and document the shared contract |
-| TASK-205-04 | Content Type List Selection and Bulk Actions | High | Large | Add visible-scope row selection plus bulk publish, draft, and delete actions |
+| TASK-205-03-03 | Pagination Regression Matrix and Docs | Medium | Medium | Prove shared pagination, page-size, clamp, and existing visible-row selection behavior; Content Types bulk selection closes in TASK-205-04 |
+| TASK-205-04 | Content Type List Selection and Bulk Actions | High | Large | Add visible-scope row selection plus bulk publish, draft, and delete actions after shared pagination and token dialogs are in place |
 | TASK-205-05 | QA, Docs, and Closure | Medium | Medium | Targeted validation, docs updates, changelog, and board closure |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |

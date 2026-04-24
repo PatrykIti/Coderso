@@ -16,6 +16,12 @@ for the shared Content Types, Pages, Posts, and Menus list contract. This leaf
 keeps TASK-205-05 focused on final family closure while this task owns the
 shared pagination matrix itself.
 
+This leaf must keep the proof centered on one shared pagination contract. It can
+verify that existing Pages, Posts, and Menus selection stays scoped to the
+paginated visible row set, but Content Types bulk selection is not completed here;
+that proof belongs to `TASK-205-04` after the Content Types selection/bulk
+contract exists.
+
 ## Sub-Tasks
 
 No child task files.
@@ -29,7 +35,7 @@ No child task files.
 - `tests/vitest/ui/page-post-list-wave.test.tsx`
   - prove Pages and Posts adoption.
 - `tests/vitest/ui/menu-list-page-actions.test.tsx`
-  - prove Menus adoption and visible-page selection.
+  - prove Menus adoption and existing visible-page selection.
 - `tests/vitest/ui/page-list.test.tsx`
   - keep Pages shell assertions aligned.
 - `tests/vitest/ui/posts-list.test.tsx`
@@ -40,7 +46,8 @@ No child task files.
   - document the shared pagination owner,
   - document page-size options and default,
   - document filter/sort-before-pagination,
-  - document visible-page selection behavior.
+  - document visible-row semantics for selection consumers, with Content Types
+    bulk selection explicitly closed by `TASK-205-04`.
 
 ## Implementation Direction
 
@@ -68,7 +75,8 @@ expect(screen.getByText("Showing 11-20 of 25 pages")).toBeInTheDocument();
 expect(screen.getByText("Page 11")).toBeInTheDocument();
 ```
 
-Visible-page selection proof should use more than 10 rows:
+Existing Pages, Posts, and Menus visible-page selection proof should use more
+than 10 rows:
 
 ```ts
 await user.click(screen.getByRole("checkbox", { name: /select all pages/i }));
@@ -79,7 +87,9 @@ expect(screen.queryByText("10 pages selected")).not.toBeInTheDocument();
 ```
 
 Docs should describe the generic contract first and resource differences second.
-Do not document four independent pagination implementations.
+Do not document four independent pagination implementations. Do not require
+Content Types bulk-selection proof in this leaf before `TASK-205-04` wires the
+Content Types selection contract.
 
 ## Security Contract
 
@@ -105,6 +115,7 @@ Do not document four independent pagination implementations.
 1. Generic hook/footer behavior is tested once in `list-pagination.test.tsx`.
 2. All four resource lists have adapter-level regression coverage.
 3. Tests prove `Previous` / `Next`, page-size changes, filter shrink/clamp, and
-   visible-page selection.
+   existing visible-page selection for resources that already support selection.
 4. `_docs/CONTENT_LIST_UX.md` describes one shared pagination contract with
-   resource-specific copy/selection notes.
+   resource-specific copy notes and states that Content Types bulk selection is
+   completed in `TASK-205-04`.

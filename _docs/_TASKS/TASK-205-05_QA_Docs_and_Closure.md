@@ -64,6 +64,9 @@ No child task files.
   - `tests/vitest/ui/posts-list.test.tsx`
   - `tests/vitest/ui/menu-list-page.test.tsx`
   - `tests/vitest/ui/menu-list-page-actions.test.tsx`
+  - `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
+  - `tests/vitest/ui/page-revision-drawer.test.tsx`
+  - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
   - `tests/vitest/admin/contentTypesClient.test.ts`
 - Bun route tests only if API route behavior changes:
   - `bun test tests/integration/routes/contentTypes.test.ts`
@@ -75,6 +78,8 @@ No child task files.
     limit, page-size selector, and `Previous` / `Next` controls,
   - Pages, Posts, and Menus row/bulk/revision confirmations using themed
     dialogs instead of native browser prompts,
+  - Menus editor item-delete dialog using token-backed destructive/warning
+    surfaces while preserving descendant-impact copy,
   - visible-scope multi-select and bulk actions.
 
 ## Documentation Updates Required
@@ -96,3 +101,5 @@ No child task files.
 4. Docs explain changed list, shared pagination, page-size, popup token, and
    cache behavior.
 5. Any skipped DB/API tests are explicitly recorded with reason.
+6. Closure notes confirm the implementation repaired existing owners instead of
+   adding duplicate pagination, popup, or bulk route systems.

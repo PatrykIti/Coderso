@@ -20,10 +20,12 @@ field-remove dialogs currently use hard-coded rose/amber Tailwind palettes. This
 breaks the Admin UI Theme token contract documented in `_docs/DESIGN_TOKENS.md`
 and mapped in `core/admin/styles/globals.css`.
 
-Pages, Posts, and Menus also still use native `window.confirm()` for row/bulk
-delete and revision restore/discard flows. Those confirmations cannot be themed
-from Admin UI Themes, so this task replaces them with shared Admin UI dialog
-surfaces while preserving the existing service/client/API contracts.
+The Menus editor item-delete dialog also uses a hard-coded destructive rose
+palette. Pages, Posts, and Menus list/revision flows still use native
+`window.confirm()` for row/bulk delete and revision restore/discard flows. Those
+confirmations cannot be themed from Admin UI Themes, so this task replaces them
+with shared Admin UI dialog surfaces while preserving the existing
+service/client/API contracts.
 
 ## Sub-Tasks
 
@@ -83,7 +85,9 @@ Menus:
   - create dialog,
   - create validation and API error alerts.
 - `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
-  - keep existing editor delete dialog token-compliant if shared variants change.
+  - replace the hard-coded destructive callout palette with a token-backed shared
+    surface,
+  - preserve descendant-impact copy and existing editor delete behavior.
 
 ## Files to Change
 
@@ -116,7 +120,8 @@ Menus:
 - `core/admin/ui/menus/MenuCreateDialog.tsx`
   - audit dialog and validation feedback for token-backed classes.
 - `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
-  - keep existing shared dialog compatible with any shared variant changes.
+  - replace the current hard-coded destructive callout palette with a
+    token-backed shared surface while keeping the descendant-count copy.
 - `core/admin/ui/shared/*`
   - add a small shared confirmation component only if it removes real
     duplication across these resources while keeping resource-specific copy.
@@ -142,18 +147,37 @@ Menus:
 - `tests/vitest/ui/menu-list-page-actions.test.tsx`
   - assert Menus row and bulk delete use shared dialog state instead of
     `window.confirm()`.
-- `tests/vitest/ui/page-settings-drawer.test.tsx` or adjacent revision drawer
-  coverage
-  - update if `PageRevisionDrawer` confirmation behavior changes.
-- `tests/vitest/ui/post-block-editor-shell-wave.test.tsx` or adjacent revision
-  drawer coverage
-  - update if `PostRevisionDrawer` confirmation behavior changes.
+- `tests/vitest/ui/menu-item-delete-dialog.test.tsx`
+  - assert the menu-item delete dialog keeps descendant-impact copy and does not
+    render hard-coded rose palette classes.
+- `tests/vitest/ui/page-revision-drawer.test.tsx`
+  - update when `PageRevisionDrawer` restore/discard confirmation behavior
+    changes.
+- `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
+  - update when `PostRevisionDrawer` restore confirmation behavior changes.
 - `tests/vitest/admin/adminApp.test.tsx`
   - update only if toaster/theme application behavior changes.
 
+## Owner Responsibilities
+
+- Resource components own dialog state and resource-specific copy:
+  `ContentTypeList`, `ContentTypeEditor`, `PageListPage`, `PageRevisionDrawer`,
+  `PostsListPage`, `PostRevisionDrawer`, `MenuListPage`, and
+  `MenuItemDeleteDialog`.
+- Shared UI primitives own reusable token semantics. Add or extend
+  `core/admin/components/ui/alert.tsx` or `core/admin/components/ui/dialog.tsx`
+  only when the current shared variants cannot express the needed warning or
+  destructive state.
+- `core/admin/styles/globals.css` owns token mapping only when a required Admin
+  UI Theme state variable is missing. Do not add one-off rose/amber/semantic
+  palette classes in resource components.
+- Existing clients, services, and routes remain the write contract owners. This
+  task changes confirmation and token presentation, not route behavior.
+
 ## Implementation Direction
 
-Do not create content-type-only popup styles. Prefer either:
+Do not create content-type-only, menu-only, or resource-only popup styles. Prefer
+either:
 
 - existing shared variants like `Alert variant="destructive"`,
 - a shared token-backed `Alert variant="warning"` using
@@ -162,7 +186,7 @@ Do not create content-type-only popup styles. Prefer either:
   `bg-card`, `text-card-foreground`, `text-destructive`, `border-border`, and
   `text-muted-foreground`.
 
-Remove content type popup classes like:
+Remove targeted popup classes like:
 
 ```txt
 border-rose-200 bg-rose-50/70 text-rose-900
@@ -187,7 +211,7 @@ and destructive button variants.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-editor.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-editor.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx`
 - Add a focused shared `Alert` variant test if `components/ui/alert.tsx` gains a
   new variant.
 
@@ -200,11 +224,13 @@ and destructive button variants.
 
 ## Acceptance Criteria
 
-1. Content Types delete and field-remove dialogs no longer use hard-coded
-   rose/amber palette classes.
+1. Content Types delete/field-remove dialogs and Menus menu-item delete dialogs
+   no longer use hard-coded rose/amber palette classes.
 2. Pages, Posts, and Menus row, bulk, restore, and discard destructive
    confirmations no longer use native `window.confirm()`.
 3. Targeted dialog/sheet surfaces continue to use shared Admin UI primitives.
 4. Toasts continue to flow through the global Admin toaster.
 5. A changed Admin UI Theme template can affect popup background, foreground,
    border, destructive, and warning colors through tokens.
+6. No new resource-specific popup style system, route, or write contract is added
+   to solve a theming problem.

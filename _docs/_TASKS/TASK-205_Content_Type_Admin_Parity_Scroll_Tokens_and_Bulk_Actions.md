@@ -44,6 +44,30 @@ current `ContentTypeList`, `ContentTypeTable`, `ContentTypeEditor`,
 `PageListPage`, `PostsListPage`, and `MenuListPage` seams instead of introducing
 parallel managers or second editor flows.
 
+## Contract Repair Rules
+
+- Repair existing contracts in place. Do not introduce a second list manager,
+  duplicate pagination implementation, resource-specific table fork, or new bulk
+  endpoint when the current list/client/service contract can be extended.
+- `core/admin/ui/shared/useListPagination.ts` owns pagination state, page-size
+  normalization, clamping, range metadata, and visible-row slicing for all
+  targeted admin lists.
+- `core/admin/ui/shared/ListPaginationFooter.tsx` owns the shared footer UI and
+  token-backed `Previous` / `Next` controls. Resource screens pass labels and
+  loading/empty context only.
+- `ContentTypeList`, `PageListPage`, `PostsListPage`, and `MenuListPage` own
+  resource filtering, sorting, selection copy, and action orchestration. They
+  must pass filtered/sorted rows into the shared pagination contract instead of
+  owning duplicate page math.
+- `ContentTypeTable`, `PageTable`, `PostsTable`, and the Menus internal table
+  stay presentation adapters. They receive visible rows and controlled selection
+  props; they do not fetch, paginate, or mutate data.
+- `contentTypesClient`, existing Pages/Posts/Menus clients, and existing route
+  guards remain the write/cache/security owners. Add tiny semantic wrappers only
+  when they improve readability without changing route semantics.
+- If ownership is unclear during implementation, update this task family first
+  with the real owner and dependency rather than inventing a parallel code path.
+
 ## Sub-Tasks
 
 - [ ] TASK-205-01: Content Type JSON Preview Scroll Containment
@@ -65,12 +89,12 @@ parallel managers or second editor flows.
 2. Make Content Types, Pages, Posts, and Menus popups token-compliant:
    - use shared `Dialog`, `Sheet`, `Alert`, `Button`, and `toast` surfaces,
    - remove hard-coded rose/amber background and border classes from content
-     type confirmation callouts,
+     type and menu-item confirmation callouts,
    - replace native `window.confirm()` row/bulk/revision confirmations in
      Pages, Posts, and Menus with shared Admin UI dialog patterns,
-   - audit create drawers/dialogs, delete dialogs, revision restore/discard
-     confirmations, and destructive dropdown affordances for token-backed
-     classes,
+   - audit create drawers/dialogs, delete dialogs, menu-item delete dialogs,
+     revision restore/discard confirmations, and destructive dropdown affordances
+     for token-backed classes,
    - use Admin UI token-backed classes or shared component variants mapped in
      `core/admin/styles/globals.css`,
    - preserve accessible titles, descriptions, focus handling, and destructive
@@ -81,7 +105,7 @@ parallel managers or second editor flows.
      `TASK-205-03-01`,
    - consume it from all four list screens through resource adapters in
      `TASK-205-03-02`,
-   - prove cross-resource regression behavior and docs in `TASK-205-03-03`,
+   - prove pagination regression behavior and docs in `TASK-205-03-03`,
    - default to 10 rows per page,
    - let users choose `10`, `20`, `30`, `50`, `100`, `150`, `200`, or `500`
      rows per page,
@@ -91,6 +115,9 @@ parallel managers or second editor flows.
    - reset or clamp the page index when filters, sort, or page size change,
    - disable `Previous` on the first page and `Next` on the last page.
 4. Add controlled multi-select and bulk actions:
+   - implement after `TASK-205-02`, `TASK-205-03-01`, and `TASK-205-03-02` so
+     bulk delete uses the shared token-backed dialog contract and the shared
+     pagination visible-row contract,
    - header checkbox selects only the currently visible paginated rows,
    - row checkboxes reflect controlled `selectedIds`,
    - selected-row controls render inline in `PageHeader.actions` to the left of
@@ -124,8 +151,8 @@ parallel managers or second editor flows.
   - adjust only if the shared shell is the true scroll owner; avoid regressions
     in Pages/Posts/Custom Screens editor shells.
 - `core/admin/ui/content-types/ContentTypeList.tsx`
-  - own selected IDs, visible IDs, pagination state, bulk action state, and
-    footer behavior,
+  - own selected IDs, visible IDs derived from pagination, bulk action state, and
+    shared footer wiring,
   - keep search/status/sort as the source of filtered truth.
 - `core/admin/ui/content-types/ContentTypeTable.tsx`
   - accept controlled selection props,
@@ -172,7 +199,8 @@ parallel managers or second editor flows.
 - `core/admin/ui/menus/MenuCreateDialog.tsx`
   - audit token-backed dialog and error surfaces.
 - `core/admin/ui/menus/MenuItemDeleteDialog.tsx`
-  - keep the existing shared dialog token-compliant if shared variants change.
+  - replace the current hard-coded destructive callout palette with a
+    token-backed shared surface while preserving descendant-impact copy.
 - `core/admin/ui/shared/*`
   - add confirmation helper(s) only if they remove real popup duplication
     without hiding resource-specific copy.
@@ -260,7 +288,8 @@ labels and disabled/loading context:
 />
 ```
 
-Selection must follow the visible row set:
+Selection must follow the visible row set exposed by the shared pagination
+contract:
 
 ```ts
 const isAllSelected =
@@ -303,6 +332,7 @@ mapped to Admin UI Theme tokens.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/ui/content-type-editor.test.tsx tests/vitest/ui/content-type-table.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/page-list.test.tsx tests/vitest/ui/posts-list.test.tsx tests/vitest/ui/menu-list-page.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/admin/contentTypesClient.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/menu-item-delete-dialog.test.tsx` when popup/revision/menu-item confirmation behavior changes.
 - `bun test tests/integration/routes/contentTypes.test.ts` only if API route
   behavior or validation changes.
 

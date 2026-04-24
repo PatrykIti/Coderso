@@ -26,6 +26,12 @@ page index, clamping, visible-row slicing, range metadata, and `Previous` /
 `Next` behavior. The four list screens should only supply filtered/sorted rows,
 resource labels, and resource-specific loading/empty/selection behavior.
 
+This task owns pagination and visible-row exposure only. Pages, Posts, and Menus
+already have selection contracts that must be adapted to the paginated visible
+row set. Content Types bulk selection is introduced later in `TASK-205-04`; this
+task must expose the same `visibleRows` / `visibleIds` seam for it, but must not
+create a second Content Types bulk flow.
+
 ## Sub-Tasks
 
 - [ ] TASK-205-03-01: Shared Pagination Hook and Footer
@@ -169,8 +175,11 @@ same `ListPaginationFooter` component:
 Disable `Previous` on the first page and `Next` on the last page. Reset or
 clamp the page index when filters, sort, or page size changes.
 
-Selection must be page-visible scoped. Header checkboxes select only the rows in
-the current paginated result, not hidden rows on other pages.
+Selection must be page-visible scoped where a list already has selection
+behavior. Header checkboxes select only the rows in the current paginated result,
+not hidden rows on other pages. For Content Types, this task provides the
+paginated row set and `TASK-205-04` wires the controlled selection and bulk
+actions through that existing seam.
 
 ## Security Contract
 
@@ -206,3 +215,5 @@ the current paginated result, not hidden rows on other pages.
 7. The repeated page-size, range, clamp, and `Previous` / `Next` math is not
    duplicated separately in `ContentTypeList`, `PageListPage`, `PostsListPage`,
    and `MenuListPage`.
+8. Content Types bulk selection remains owned by `TASK-205-04`; this task only
+   prepares the shared visible-row contract that selection consumes.
