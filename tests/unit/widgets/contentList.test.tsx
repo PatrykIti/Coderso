@@ -49,6 +49,7 @@ const contentTypeRecord = {
   id: "type-1",
   name: "Articles",
   slug: "articles",
+  status: "published",
   schema: {
     type: "object",
     additionalProperties: false,

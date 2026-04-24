@@ -947,7 +947,10 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
           name: "tone",
           type: "select",
           label: "Tone",
-          options: ["warm", "cool"],
+          options: [
+            { id: "tone-warm", label: "Warm", value: "warm" },
+            { id: "tone-cool", label: "Cool", value: "cool" },
+          ],
         }}
         value="warm"
         onChange={onChange}

@@ -17,6 +17,7 @@ const contentListState = vi.hoisted(() => ({
       id: "articles",
       name: "Articles",
       slug: "articles",
+      status: "published",
       schema: {
         type: "object",
         additionalProperties: false,

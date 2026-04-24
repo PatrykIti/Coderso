@@ -142,6 +142,7 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
         id: "type-1",
         slug: "house-projects",
         name: "House Projects",
+        status: "published",
         schema: {
           type: "object",
           additionalProperties: false,
@@ -154,6 +155,7 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
         id: "type-1",
         slug: "house-projects",
         name: "House Projects",
+        status: "published",
         schema: {
           type: "object",
           additionalProperties: false,

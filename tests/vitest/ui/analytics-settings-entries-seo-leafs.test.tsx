@@ -554,6 +554,9 @@ test("entry leaf components forward filter and entry actions", () => {
   const onStatusChange = vi.fn();
   const onTypeChange = vi.fn();
   const onAuthorChange = vi.fn();
+  const onUpdatedFromChange = vi.fn();
+  const onUpdatedToChange = vi.fn();
+  const onAdvancedOpenChange = vi.fn();
   const onClear = vi.fn();
   const onEdit = vi.fn();
   const view = mount(
@@ -568,10 +571,16 @@ test("entry leaf components forward filter and entry actions", () => {
         ]}
         author="any"
         authorOptions={[{ value: "john", label: "John" }]}
+        updatedFrom=""
+        updatedTo=""
+        advancedOpen={false}
         onSearchChange={onSearchChange}
         onStatusChange={onStatusChange}
         onTypeChange={onTypeChange}
         onAuthorChange={onAuthorChange}
+        onUpdatedFromChange={onUpdatedFromChange}
+        onUpdatedToChange={onUpdatedToChange}
+        onAdvancedOpenChange={onAdvancedOpenChange}
         onClear={onClear}
       />
       <EntryGrid

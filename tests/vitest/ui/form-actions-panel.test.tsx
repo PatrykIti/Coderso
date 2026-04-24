@@ -221,6 +221,7 @@ const contentTypeOptions = [
     id: "articles",
     name: "Articles",
     slug: "articles",
+    status: "published" as const,
     schema: {
       type: "object" as const,
       additionalProperties: false as const,
