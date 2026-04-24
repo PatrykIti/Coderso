@@ -34,7 +34,8 @@ No child task files.
 - `tests/unit/content/entryService.test.ts`
   - cover the joined read model when `DATABASE_URL` is available.
 - `tests/integration/routes/contentTypes.test.ts`
-  - cover route registration and `content:read` permission.
+  - cover route registration, `content:read` permission, and queryless
+    fail-closed behavior for unsupported query params.
 
 ## Implementation Direction
 
@@ -71,7 +72,17 @@ implementation.
 ## Testing Requirements
 
 - `bun test tests/unit/content/entryService.test.ts`
+  - add DB-backed coverage that creates at least two content types with entries
+    and proves `listEntriesWithContentTypes()` returns one `updatedAt desc`
+    all-entries result set with row-owned `contentType` metadata.
 - `bun test tests/integration/routes/contentTypes.test.ts`
+  - assert the final all-entries route path is registered explicitly.
+  - assert the route requests `content:read` before returning data.
+  - assert a queryless route rejects unsupported query params, for example
+    `?status=draft`, instead of ignoring them or silently enabling server-side
+    filtering.
+  - assert the existing type-scoped entry list route remains registered and
+    continues to resolve through `/content/:type/entries`.
 
 ## Documentation Updates Required
 
@@ -87,3 +98,5 @@ implementation.
 3. Existing type-scoped list/detail routes continue to pass.
 4. Route tests prove `content:read` is required and route registration is
    explicit.
+5. Route tests prove unsupported query params are rejected until a later task
+   introduces a strict server-side filter schema.

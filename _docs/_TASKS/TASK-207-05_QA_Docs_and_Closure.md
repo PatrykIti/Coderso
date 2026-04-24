@@ -60,6 +60,9 @@ No child task files.
 - `bun --cwd core lint:types`
 - `bun test tests/unit/content/entryService.test.ts`
 - `bun test tests/integration/routes/contentTypes.test.ts`
+  - must include TASK-207 all-entries route registration, `content:read`,
+    unsupported-query rejection while the route is queryless, and unchanged
+    `/content/:type/entries` route registration.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/content-entries.test.tsx tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-list-filters.test.ts tests/vitest/ui/entry-bulk-actions.test.tsx tests/vitest/ui/entry-table-wave.test.tsx tests/vitest/ui/entry-table-title.test.tsx`
 - Broader smoke if implementation touches shared list or popup primitives:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx`
@@ -85,4 +88,6 @@ No child task files.
 5. Any skipped DB-backed tests are recorded with reason.
 6. Closure notes confirm no parallel Entries flow, duplicate pagination, or
    resource-specific popup system was introduced.
-
+7. Closure notes include the route strictness proof: unsupported query params on
+   the all-entries route are rejected until server-side filtering is explicitly
+   designed with a validation schema.

@@ -180,6 +180,10 @@ resource-specific list system. The canonical route remains
 - Bun route/service tests when the read route/service changes:
   - `bun test tests/unit/content/entryService.test.ts`
   - `bun test tests/integration/routes/contentTypes.test.ts`
+  - route coverage must include the all-entries route registration,
+    `content:read` permission, unsupported-query rejection for the queryless
+    contract, and regression coverage that `/content/:type/entries` remains
+    available for existing type-scoped consumers.
 
 ## Documentation Updates Required
 
