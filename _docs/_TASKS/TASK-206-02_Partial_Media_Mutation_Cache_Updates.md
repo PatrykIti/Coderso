@@ -46,6 +46,13 @@ full `GET /media`.
 - Reuse existing `upsertCachedMedia` and `removeCachedMedia`; expose test-only
   behavior through public client methods, not exported internals unless the repo
   already follows that pattern.
+- Keep generic cache mechanics generic. Use `storageCache` and `cacheBus` as-is
+  where they already cover the behavior; if the action model needs a reusable
+  extension, extend the existing generic owner instead of adding a Media-only bus
+  or event system.
+- Keep Media-specific mutation code limited to the `MediaRecord` merge/remove
+  rules and upload response handling owned by `mediaClient` and
+  `mediaService`.
 - For update-like operations, broadcast `update` only after the cache was
   patched.
 - For delete, remove the id from cache before broadcasting.

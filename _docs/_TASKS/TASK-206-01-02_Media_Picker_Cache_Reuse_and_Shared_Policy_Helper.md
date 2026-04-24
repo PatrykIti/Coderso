@@ -35,6 +35,14 @@ No child task files.
 ## Implementation Direction
 
 - Keep `MediaPicker` a consumer of `mediaClient`; do not give it its own cache.
+- Reuse generic cache/loading helpers and existing UI primitives first. Do not
+  create a picker-only cache policy, picker-only grid, or parallel selection
+  store when `mediaClient`, `MediaGrid`, and shared dialog/list patterns already
+  cover the behavior.
+- If picker and library need the same cache-mount decision, consume a generic
+  helper from the existing shared cache owner; only keep local picker code for
+  picker-specific concerns such as selected id resolution, accept filtering, and
+  multi-select limits.
 - Preserve lazy behavior:
   - closed picker with no selected IDs should not fetch,
   - open picker should load enough data to browse/select,

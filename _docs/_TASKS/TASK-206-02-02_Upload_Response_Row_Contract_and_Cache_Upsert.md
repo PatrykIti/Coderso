@@ -49,6 +49,9 @@ Preferred path:
 - Upsert the created record into `media:list` and broadcast `update`.
 - Change `MediaLibraryPage.handleUploadFiles` to use returned records and avoid
   forced full refresh after upload.
+- Use the existing service -> route -> client chain. Do not add a custom upload
+  response adapter file, a second client API, or a UI-only fake row when the
+  generic route/client contract can carry the authoritative media row.
 
 Fallback path only if full-row upload return creates unacceptable churn:
 
@@ -56,6 +59,9 @@ Fallback path only if full-row upload return creates unacceptable churn:
 - Add/reuse a client `getMedia(id)` wrapper for `GET /media/:id`.
 - After upload, fetch only that one media row and upsert it.
 - Do not fetch the full list.
+- The fallback still must reuse the existing generic read/write/cache helpers;
+  it must not create an upload-specific cache envelope, event bus, or gallery
+  state owner.
 
 Do not introduce a second upload flow, bulk upload endpoint, or client-side fake
 media row with incomplete metadata.

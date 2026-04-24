@@ -29,6 +29,14 @@ cache-bus contracts in place. Do not create a second media browser, route-local
 cache layer, media-specific event bus, duplicate storage key, or parallel
 gallery state manager.
 
+Use shared/generic admin primitives first. If the needed behavior is already
+covered by generic cache, prefetch, event, storage, layout, or grid helpers,
+wire Media into that contract instead of adding Media-only files or side
+managers. Add Media-specific code only where the Media row shape, upload flow,
+or picker UI is genuinely different; when a generic helper is almost correct but
+missing a capability, extend the generic owner in a backward-compatible way so
+the custom case is handled through the shared contract.
+
 ## Contract Repair Rules
 
 - Reuse the existing cache contract:
@@ -48,6 +56,11 @@ gallery state manager.
 - Prefetch remains warmup-only. It must call cached list APIs with `force:
   false` and must not become a hidden full reload path.
 - Keep `MediaGrid` reusable for both `MediaLibraryPage` and `MediaPicker`.
+- Prefer existing shared primitives (`cacheRefresh`, `storageCache`, `cacheBus`,
+  `adminPrefetch`, `MediaGrid`, `Button`/dialog/layout components) before adding
+  new Media-specific helpers. If a helper must be shared by library and picker,
+  place it in the existing generic owner or keep it inside the existing files;
+  do not create a sidecar media policy module for a generic list-cache rule.
 - Keep `media.openAfterUpload` owned by `userSettingsClient`; this task does not
   add a second preference key.
 - Keep route modules orchestration-only. If upload response shape changes, the

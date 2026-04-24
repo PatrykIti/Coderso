@@ -39,9 +39,13 @@ contract is actually honored.
 ## Implementation Direction
 
 - Start with `MediaLibraryPage`; it is the visible reported issue.
-- Extract or add only the minimal mount policy helper needed for tests and
-  parity. If the existing `resolveCacheRefreshBackground` helper is enough,
-  keep it and add a local exported `resolveMediaListMountRefreshOptions`.
+- Use the generic list-cache policy shape before adding Media-only code. If the
+  existing `resolveCacheRefreshBackground` helper is enough, keep it. If the
+  mount decision needs a reusable helper for both library and picker, extend the
+  existing generic `cacheRefresh` owner with a resource-neutral helper instead
+  of exporting policy from `MediaLibraryPage` or creating a side file.
+- Keep any Media-specific logic limited to Media row mapping, picker selection,
+  or upload/drawer state that cannot be expressed by the generic cache helper.
 - Apply the same policy to `MediaPicker` after the library is correct.
 - Do not move media item state into a new store.
 - Do not create a second picker cache.
