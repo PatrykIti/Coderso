@@ -33,14 +33,17 @@ No child task files.
 - In `handleCreate` catch, keep `setError(message)` and also call
   the shared error-toast helper.
 - In `handlePublish` and `handleUnpublish`, toast after the client mutation and
-  local state update succeed.
+  existing `refresh({ force: true, background: true })` call succeeds.
 - In `runDelete`, toast only after `deletePage(id)` succeeds from the
-  confirmation dialog path.
+  confirmation dialog path and the existing refresh path completes.
 - In `runBulkAction`, toast after all selected mutations settle:
   - full success: call the shared bulk success helper,
   - partial/full failure: preserve inline feedback and call the shared error
     helper.
   Use the shared helper for both the final message and plural/count handling.
+- Do not introduce local page upsert/status/remove helpers only for toast
+  delivery. Pages currently refresh after mutations; keep that orchestration and
+  add the shared toast at the end of the same success/error branch.
 
 ## Pseudocode
 
@@ -59,9 +62,12 @@ const pagesToast = createListActionToastAdapter({
 const handleCreate = async (payload) => {
   try {
     const page = await createPage(payload);
-    upsertPageInState(page);
-    pagesToast.success("create", { label: page.title });
     if (openAfterCreate) navigate(`/pages/${page.id}`);
+    else {
+      await refresh({ force: true, background: true });
+      setCreateOpen(false);
+    }
+    pagesToast.success("create", { label: page.title });
   } catch (error) {
     const message = pagesToast.errorMessage(error, "create");
     setError(message);
@@ -72,7 +78,7 @@ const handleCreate = async (payload) => {
 const handlePublish = async (id: string) => {
   try {
     await publishPage(id);
-    markPagePublished(id);
+    await refresh({ force: true, background: true });
     pagesToast.success("publish");
   } catch (error) {
     const message = pagesToast.errorMessage(error, "publish");
@@ -84,7 +90,8 @@ const handlePublish = async (id: string) => {
 const runDelete = async (id: string) => {
   try {
     await deletePage(id);
-    removePageFromState(id);
+    await refresh({ force: true, background: true });
+    setPendingDeleteId(null);
     pagesToast.success("delete");
   } catch (error) {
     const message = pagesToast.errorMessage(error, "delete");
@@ -102,11 +109,13 @@ const failed = results.filter((result) => result.status === "rejected").length;
 
 if (failed > 0) {
   const message = pagesToast.bulkErrorMessage({ action, failed, total: ids.length });
-  setBulkFeedback({ variant: "destructive", title: "Bulk action failed", message });
+  setError(message);
   pagesToast.error(message);
   return;
 }
 
+await refresh({ force: true, background: true });
+handleClearSelection();
 pagesToast.bulkSuccess(action, ids.length);
 ```
 

@@ -22,7 +22,7 @@ No child task files.
 
 - Update `runBulkAction` in `core/admin/ui/menus/MenuListPage.tsx`.
 - On full success:
-  - update local item statuses/removals as today,
+  - keep the existing refresh-based list update,
   - clear selection as today,
   - call the shared list-action toast success helper.
 - On partial/full failure:
@@ -37,6 +37,7 @@ No child task files.
 const runBulkAction = async (action, ids) => {
   const results = await Promise.allSettled(ids.map((id) => mutateMenu(action, id)));
   const failed = results.filter((result) => result.status === "rejected").length;
+  await refresh({ force: true, background: true });
 
   if (failed > 0) {
     const message = menusToast.bulkErrorMessage({ action, failed, total: ids.length });
@@ -45,7 +46,6 @@ const runBulkAction = async (action, ids) => {
     return;
   }
 
-  applyBulkState(action, ids);
   handleClearSelection();
   menusToast.bulkSuccess(action, ids.length);
 };
@@ -76,5 +76,5 @@ const runBulkAction = async (action, ids) => {
 1. Menus bulk publish/unpublish/delete emit success toasts after full success.
 2. Menus bulk failures emit error toasts and keep inline error feedback.
 3. Bulk delete toast appears only after the confirmation dialog mutation.
-4. Menus bulk success/error messages come from the shared helper/adaptor instead
+4. Menus bulk success/error messages come from the shared helper/adapter instead
    of Menus-only message functions.

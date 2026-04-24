@@ -38,10 +38,12 @@ No child task files.
   - custom Admin UI Theme modes update toast visuals dynamically through CSS
     variables.
 - Document the generic list-action toast helper:
-  - shared helper/adaptor owns success/error/bulk result message behavior,
+  - shared helper/adapter owns success/error/bulk result message behavior,
   - resource screens pass labels, action names, counts, and mutation results,
   - resource screens do not own toast styling or duplicate generic bulk/error
-    math.
+    math,
+  - resource screens keep owning mutation execution, cache/list refresh,
+    selection cleanup, and navigation.
 
 ## Pseudocode
 
@@ -65,6 +67,8 @@ Shared toasts:
   bulk result message helpers.
 - Resource screens pass adapter parameters and mutation results; they do not
   style toast state or duplicate generic count/error logic.
+- The helper does not call list clients, mutate state, refresh caches, or
+  navigate; those stay in the existing list components.
 - Success/error/warning states use `--admin-state-*` tokens.
 ```
 

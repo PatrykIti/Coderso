@@ -14,11 +14,11 @@
 Verify and harden existing Entries bulk publish/draft/archive/delete toast
 behavior against the new shared token-backed toaster contract.
 
-This leaf should only patch gaps found in the audit. Existing `toast.success`
-and `toast.error` calls in `EntryList` should be preserved unless their timing
-or failure semantics are wrong. When a gap is patched, route the message through
-the shared list-action toast helper/adaptor instead of adding another
-Entries-only message function.
+This leaf audits the existing `EntryList` bulk lifecycle/delete toasts and
+migrates targeted list-action feedback through the shared list-action toast
+helper/adapter. Do not keep Entries-only bulk count, pluralization, or fallback
+error helpers for behavior this task touches. Existing duplicate feedback can
+stay on its current flow unless this task changes duplicate behavior.
 
 ## Sub-Tasks
 
@@ -37,6 +37,9 @@ No child task files.
 - If success copy is too generic, keep it acceptable unless tests need separate
   publish/draft/archive copy; if copy is changed, implement it via the shared
   Entries adapter/config, not a local formatter.
+- Replace local bulk/delete count and partial-failure string construction with
+  the shared helper result so inline `setError` and floating `toast.error` use
+  the same message.
 
 ## Pseudocode
 
@@ -59,8 +62,12 @@ const runBulkAction = async (action) => {
 };
 
 const confirmDelete = async () => {
-  await Promise.allSettled(deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id)));
-  entriesToast.bulkSuccess("delete", deleteRequest.refs.length);
+  const results = await Promise.allSettled(
+    deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
+  );
+  const feedback = entriesToast.bulkResult({ action: "delete", results });
+  entriesToast.emitBulkResult(feedback);
+  if (!feedback.success) setError(feedback.message);
 };
 ```
 
@@ -88,5 +95,5 @@ const confirmDelete = async () => {
 2. Entries row/bulk delete toast ordering after confirmation is covered by
    tests.
 3. Existing inline partial-failure feedback remains intact.
-4. Any changed Entries bulk/delete copy comes from the shared helper/adaptor and
-   not from a local Entries-only formatter.
+4. Entries bulk/delete copy comes from the shared helper/adapter and not from a
+   local Entries-only formatter.

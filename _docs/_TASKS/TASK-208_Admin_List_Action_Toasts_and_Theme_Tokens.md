@@ -34,8 +34,11 @@ token-backed UI surface changes together.
 
 The behavioral source of truth must also be shared. Resource screens should not
 copy their own bulk result math, error normalization, or success/error message
-rules. Add a generic list-action toast helper and use resource-specific adapters
-or parameters for labels, action names, counts, and mutation result metadata.
+rules. Add one generic list-action toast system and use resource-specific
+adapters or parameters for labels, action names, counts, and mutation result
+metadata. The generic system owns notification semantics; resource components
+own their existing mutations, refresh/cache invalidation, selection cleanup, and
+navigation behavior.
 
 ## Current Repo Findings
 
@@ -75,12 +78,17 @@ In scope:
   - `core/admin/styles/globals.css` only if CSS token selectors are needed;
 - shared list-action toast contract:
   - `core/admin/ui/shared/listActionToasts.ts`,
+  - one resource-neutral API for list action success, error, and bulk-result
+    notifications;
   - resource adapters/parameters for Pages, Posts, Menus, Content Types, and
     Entries;
   - adapter config can stay inline when one component owns the action path; if a
     list and drawer/dialog both need the same resource copy, extract a small
     resource-local adapter file such as `entryListToastAdapter.ts` or
     `contentTypeListToastAdapter.ts`;
+  - adapters must stay thin: labels, action copy, fallback errors, and optional
+    message overrides only. They must not own mutation execution, cache refresh,
+    navigation, selection trimming, or styling.
 - existing list confirmation dialogs and shared popup primitives when a toast
   change exposes hard-coded styling.
 
@@ -139,7 +147,9 @@ Out of scope:
    inheriting the wrong Sonner default/rich colors.
 2. Add the generic list-action toast helper before wiring individual resources.
    The helper owns shared result/error/count behavior; each resource passes
-   adapter parameters such as singular/plural labels and action copy.
+   adapter parameters such as singular/plural labels and action copy. The helper
+   returns or emits toast messages only; it must not replace the existing list
+   orchestration in each screen.
 3. `TASK-208-02-*` can land after the shared toaster contract and proves the
    pattern on the largest existing shared Pages/Posts test suite.
 4. `TASK-208-03-*` follows with Menus because it has a separate create dialog
@@ -196,12 +206,20 @@ Shared list-action feedback:
     feedback.
   - accept resource adapter parameters for labels, action names, counts,
     fallback errors, and settled mutation results.
+  - expose helpers that can normalize `unknown` errors, summarize
+    `Promise.allSettled` output, emit the final `toast.success`/`toast.error`,
+    and return the same message for inline feedback where a screen already uses
+    it.
+  - do not call list clients, mutate component state, refresh caches, clear
+    selection, or navigate.
   - emit through the shared `sonner` toast API; do not style individual
     resource toasts.
 - Resource-local adapter modules only where needed by multiple components:
   - keep single-consumer adapter config inline in the list file,
   - extract shared adapter config beside the resource list/drawer when both need
     the same copy and fallback behavior.
+  - do not create per-resource formatter utilities that duplicate the shared
+    bulk count, partial-failure, or error-normalization logic.
 - `tests/vitest/ui/list-action-toasts.test.ts`
   - cover single action success/error, bulk full success, partial failure, and
     pluralization/count behavior without importing runtime/Bun-only modules.
@@ -242,7 +260,8 @@ Docs and governance:
    behavior.
 2. Add the shared `listActionToasts` helper and its Bun-free Vitest coverage.
 3. Add list-action toast calls in Pages and Posts through the shared helper,
-   preserving the existing inline feedback and delete confirmation sequence.
+   preserving the existing refresh/cache behavior, inline feedback, and delete
+   confirmation sequence.
 4. Add Menus list-action toast calls through the shared helper, including create
    dialog success/failure.
 5. Fill Engine content type bulk-action toast gaps and create error toast gaps
@@ -305,8 +324,10 @@ adjacent focused Vitest suite in the same validation run.
 6. List action feedback is routed through a generic shared helper plus
    resource-specific adapter parameters; resource screens do not duplicate bulk
    result math or error normalization.
-7. No resource-specific toaster, hard-coded Tailwind color family, or native
+7. Targeted list-action toasts are emitted through the shared helper/adapters,
+   not through new resource-local `toast.success` / `toast.error` branches.
+8. No resource-specific toaster, hard-coded Tailwind color family, or native
    `window.confirm()` is introduced for the targeted list action feedback.
-8. Targeted Vitest suites plus `bun --cwd core lint` and
+9. Targeted Vitest suites plus `bun --cwd core lint` and
    `bun --cwd core lint:types` pass or any unrelated pre-existing failure is
    isolated and documented before closure.

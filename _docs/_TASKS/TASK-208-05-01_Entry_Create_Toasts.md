@@ -42,6 +42,10 @@ No child task files.
 - Keep `GET /content-entries` as the all-entry list read model and keep editor
   navigation on the existing `/entries/:type/:id` alias unless another task
   changes routing.
+- Do not add a manual all-entries upsert helper in the list. `createEntry`
+  already updates the Entries caches and broadcasts the all-entries cache event;
+  the list currently refreshes entries and content types after create, and that
+  flow should remain the owner.
 
 ## Pseudocode
 
@@ -59,7 +63,8 @@ const entriesToast = createListActionToastAdapter({
 });
 
 const handleEntryCreated = (created, typeSlug, openAfterCreate) => {
-  upsertEntryIntoAllEntries(created, typeSlug);
+  void refreshEntries({ force: true, background: true });
+  void refreshTypes({ force: true, background: true });
   entriesToast.success("create");
 
   if (openAfterCreate) {
@@ -102,4 +107,4 @@ try {
 4. `GET /content-entries` stays the list read-model API; it is not treated as
    the editor navigation route.
 5. Create success/error copy and fallback handling come from the shared
-   list-action toast helper/adaptor.
+   list-action toast helper/adapter.

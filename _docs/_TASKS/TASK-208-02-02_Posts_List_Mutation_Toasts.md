@@ -35,10 +35,13 @@ No child task files.
 - In `handleCreate` catch, keep `setError(message)` and call
   the shared error-toast helper.
 - In `handlePublish`, `handleUnpublish`, and confirmed `runDelete`, toast after
-  the real mutation and local state update.
+  the real mutation and the existing refresh path.
 - In `runBulkAction`, call the shared success helper on full success and the
   shared error helper on partial/full failure while preserving `bulkFeedback`.
   The message and count calculation must come from the shared helper.
+- Do not copy the Pages implementation as a local formatter. Posts should use
+  the same generic helper API with a Posts adapter and keep the current
+  `refresh`, `bulkFeedback`, selection cleanup, and navigation behavior.
 
 ## Pseudocode
 
@@ -57,9 +60,12 @@ const postsToast = createListActionToastAdapter({
 const handleCreate = async (payload) => {
   try {
     const post = await createPost(payload);
-    upsertPostInState(post);
-    postsToast.success("create", { label: post.title });
     if (openAfterCreate) navigate(`/posts/${post.id}`);
+    else {
+      await refresh({ force: true, background: true });
+      setCreateOpen(false);
+    }
+    postsToast.success("create", { label: post.title });
   } catch (error) {
     const message = postsToast.errorMessage(error, "create");
     setError(message);
@@ -70,7 +76,7 @@ const handleCreate = async (payload) => {
 const handleUnpublish = async (id: string) => {
   try {
     await unpublishPost(id);
-    markPostDraft(id);
+    await refresh({ force: true, background: true });
     postsToast.success("unpublish");
   } catch (error) {
     const message = postsToast.errorMessage(error, "unpublish");
@@ -95,7 +101,7 @@ Inside confirmed delete execution:
 
 ```tsx
 await runBulkAction("delete", pendingBulkDeleteIds);
-postsToast.bulkSuccess("delete", pendingBulkDeleteIds.length);
+// runBulkAction owns the final shared bulk toast after mutations settle.
 ```
 
 ## Testing Requirements

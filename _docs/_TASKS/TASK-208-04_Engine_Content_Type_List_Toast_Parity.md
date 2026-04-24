@@ -19,8 +19,9 @@ delete. This round must preserve that behavior while adding missing create-error
 and bulk lifecycle notifications for publish, draft/unpublish, and delete.
 
 Content Types should reuse the generic list-action toast helper with an Engine
-content type adapter/config. Existing direct toast calls can be kept only when
-they delegate to the shared message/error contract instead of duplicating it.
+content type adapter/config. Existing list-action `toast.success` and
+`toast.error` calls touched by this family should be routed through the shared
+adapter instead of keeping Content-Type-only message and error logic.
 
 ## Sub-Tasks
 
@@ -72,5 +73,5 @@ they delegate to the shared message/error contract instead of duplicating it.
 2. Bulk partial failure remains truthful and visible inline.
 3. No content-type-specific toaster host or styling is introduced.
 4. Existing delete guard behavior is unchanged.
-5. Content Types use the generic list-action toast helper/adaptor for shared
+5. Content Types use the generic list-action toast helper/adapter for shared
    error and bulk message behavior.

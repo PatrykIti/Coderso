@@ -92,4 +92,4 @@ const handleCreated = (created) => {
    error toast.
 3. Parent/drawer ownership stays unchanged.
 4. Create success/error copy and fallback handling come from the shared
-   list-action toast helper/adaptor.
+   list-action toast helper/adapter.

@@ -25,8 +25,11 @@ metadata. Keep that endpoint and read-model flow intact. Editor navigation still
 uses the current admin route aliases (`/entries/:type/:id` and canonical
 `/coderso/entries/:type/:id`) unless a separate routing task changes them.
 
-Entries should also use the generic list-action toast helper/adaptor for new and
-audited feedback behavior rather than growing Entries-only copy/count helpers.
+Entries should also use the generic list-action toast helper/adapter for new and
+audited feedback behavior rather than growing or preserving Entries-only
+copy/count helpers for targeted list actions. Duplicate can keep its existing
+flow unless it is touched, but create, bulk lifecycle, and delete feedback must
+route through the shared helper once this task modifies them.
 
 ## Sub-Tasks
 
@@ -77,5 +80,5 @@ audited feedback behavior rather than growing Entries-only copy/count helpers.
 4. No editor-only flow is changed.
 5. `GET /content-entries` remains the all-entries API/read model; admin editor
    navigation remains on the existing Entries route aliases.
-6. Entries reuse the generic list-action toast helper/adaptor for shared error,
+6. Entries reuse the generic list-action toast helper/adapter for shared error,
    count, and bulk message behavior.

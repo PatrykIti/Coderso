@@ -27,6 +27,10 @@ No child task files.
 - On partial/full failure, call the shared list-action error helper with the
   same truthful failure count/message used inline.
 - Keep bulk delete confirmation dialog and only emit delete toast after confirm.
+- Preserve the current state model: failures set `setError(message)` and keep
+  failed IDs selected; full success clears selection and may keep the existing
+  success `bulkFeedback` alert. Do not invent a new `bulkFeedback.variant`
+  contract for failures.
 
 ## Pseudocode
 
@@ -38,15 +42,25 @@ const runBulkAction = async (action, ids) => {
     return deleteContentType(id);
   }));
 
-  const failed = results.filter((result) => result.status === "rejected").length;
+  const failedIds = ids.filter((_, index) => results[index]?.status === "rejected");
+  const failed = failedIds.length;
+  const successCount = ids.length - failed;
+  const nextTypes = await listContentTypesCached({ force: true });
+  setTypes(nextTypes);
+
   if (failed > 0) {
     const message = contentTypeToast.bulkErrorMessage({ action, failed, total: ids.length });
-    setBulkFeedback({ variant: "destructive", title: "Bulk action failed", message });
+    setSelectedIds(failedIds);
+    setError(message);
     contentTypeToast.error(message);
     return;
   }
 
-  applyContentTypeBulkState(action, ids);
+  handleClearSelection();
+  setBulkFeedback({
+    title: "Bulk action completed",
+    message: contentTypeToast.bulkInlineSuccessMessage({ action, succeeded: successCount }),
+  });
   contentTypeToast.bulkSuccess(action, ids.length);
 };
 ```
@@ -75,5 +89,5 @@ const runBulkAction = async (action, ids) => {
 1. Content Type bulk publish/draft/delete emit success toasts after full success.
 2. Partial failures emit error toasts and preserve inline details.
 3. Bulk delete toast is emitted only after the confirmation dialog path.
-4. Bulk message and failure count behavior comes from the shared helper/adaptor,
+4. Bulk message and failure count behavior comes from the shared helper/adapter,
    not a Content-Type-only message function.

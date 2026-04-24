@@ -34,6 +34,10 @@ No child task files.
 - Add success/error toasts in `handlePublish`, `handleUnpublish`, and confirmed
   `runDelete`.
 - Do not change `/admin/menus` list-first routing.
+- Keep the current list ownership: `handleCreate` updates local `items`,
+  lifecycle/delete paths call the existing client and refresh the list, and
+  `MenuCreateDialog` keeps the local dialog error. The shared toast helper
+  supplies normalized messages only.
 
 ## Pseudocode
 
@@ -66,7 +70,7 @@ const handleCreate = async (payload) => {
 const handlePublish = async (id: string) => {
   try {
     await publishMenu(id);
-    markMenuPublished(id);
+    await refresh({ force: true, background: true });
     menusToast.success("publish");
   } catch (error) {
     const message = menusToast.errorMessage(error, "publish");
@@ -82,7 +86,8 @@ Confirmed delete:
 const runDelete = async (id: string) => {
   try {
     await deleteMenu(id);
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    await refresh({ force: true, background: true });
+    setPendingDeleteId(null);
     menusToast.success("delete");
   } catch (error) {
     const message = menusToast.errorMessage(error, "delete");
@@ -112,5 +117,5 @@ const runDelete = async (id: string) => {
 1. Menus list create and row lifecycle actions toast on success/error.
 2. `MenuCreateDialog` still renders local validation/API error feedback.
 3. Row delete toast fires only after confirmed mutation completion.
-4. Generic error normalization and action copy live in the shared helper/adaptor,
+4. Generic error normalization and action copy live in the shared helper/adapter,
    not as duplicated Menus-only helpers.
