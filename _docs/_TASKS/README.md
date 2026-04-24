@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 54 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1072 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-205 | Content Type Admin Parity, Scroll, Tokens, and Bulk Actions | High | Large | Follow-up for content type editor JSON scroll, token-compliant popups, list footer/pagination, and bulk actions |
+| TASK-205-01 | Content Type JSON Preview Scroll Containment | High | Medium | Fix right-panel/mobile schema preview scroll for content types with many fields |
+| TASK-205-02 | Content Type Admin Popup Token Compliance | High | Medium | Audit content type dialogs/sheets/toasts and remove hard-coded warning/destructive palettes |
+| TASK-205-03 | Content Type List Footer and Pagination Parity | Medium | Medium | Add Pages/Posts/Menus-style footer count and Previous/Next controls |
+| TASK-205-04 | Content Type List Selection and Bulk Actions | High | Large | Add visible-scope row selection plus bulk publish, draft, and delete actions |
+| TASK-205-05 | QA, Docs, and Closure | Medium | Medium | Targeted validation, docs updates, changelog, and board closure |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
