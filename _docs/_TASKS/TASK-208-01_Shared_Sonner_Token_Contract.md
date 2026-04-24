@@ -21,9 +21,17 @@ remain enabled because Sonner uses it to apply typed success/error/warning/info
 state selectors. The shared wrapper must override the Sonner state CSS variables
 with Admin UI Theme tokens so new list toasts do not reproduce the current
 black/green/red/yellow/blue bundled palette under a light Admin UI Theme. The
-variables must stay dynamic so any custom Admin UI Theme mode update flows into
-every toast state through the active CSS variable set instead of a hard-coded
-wrapper palette.
+variables must stay dynamic so any custom Admin UI Theme template/profile update
+flows into every toast state through the active CSS variable set instead of a
+hard-coded wrapper palette.
+
+This round also owns the full visible floating-toast surface, not only the state
+swatches. The toast shell, title, description text, border, close button, focus
+ring, and typed state colors must all resolve from Admin UI Theme variables or
+scoped shared admin CSS. If Sonner's bundled stylesheet hard-codes a visible
+sub-part, this task must override it in the shared wrapper or in
+`core/admin/styles/globals.css` with selectors scoped to the shared `.toaster`
+host.
 
 ## Sub-Tasks
 
@@ -37,9 +45,11 @@ wrapper palette.
    `richColors` enabled, while the shared wrapper prevents Sonner's bundled rich
    color values from being the visual source of truth.
 2. Update the shared Sonner wrapper to expose token-backed state styles.
-3. Add a direct wrapper regression test for token variables and keep
+3. Add scoped shared CSS only for Sonner sub-parts that cannot be controlled
+   from the host style map, such as description text or close-button styling.
+4. Add a direct wrapper regression test for token variables and keep
    `AdminApp` coverage focused on the single host configuration.
-4. Add focused regression tests before resource list work starts.
+5. Add focused regression tests before resource list work starts.
 
 ## Security Contract
 
@@ -67,6 +77,12 @@ wrapper palette.
 - Add `tests/vitest/admin/sonner.test.tsx`:
   - assert the Sonner wrapper receives token-backed style variables for success,
     error, warning, info, and normal states,
+  - assert a custom Admin UI Theme template/profile can drive the visible toast
+    shell, foreground, description, border, and close button through CSS
+    variables or scoped shared selectors,
+  - assert no test-covered visible toast part still relies on Sonner's bundled
+    HSL/hex palettes unless that exact color comes from the active Admin UI
+    Theme token fixture,
   - assert the wrapper preserves the current `useTheme()`-derived theme instead
     of hard-coding a specific mode.
 
@@ -83,7 +99,8 @@ wrapper palette.
 2. The toaster stays top-right, closeable, duration-bound, and accessible.
 3. Sonner rich/default bundled state palettes no longer control admin toast state
    surfaces.
-4. Toast state colors are controlled by Admin UI Theme tokens or shared admin
-   CSS variables.
-5. Custom Admin UI Theme modes update toast visuals through dynamic variable
-   values without resource-specific styling changes.
+4. Toast state colors, shell, title, description, border, focus/close affordance,
+   and icon-adjacent text are controlled by Admin UI Theme tokens or shared
+   admin CSS variables.
+5. Custom Admin UI Theme templates/profiles update toast visuals through dynamic
+   variable values without resource-specific styling changes.

@@ -30,10 +30,13 @@ documented `richColors` prop is the correct trigger for typed success, error,
 warning, and info state selectors, but the shared wrapper must override the
 Sonner state CSS variables with Admin UI Theme variables. All normal, success,
 warning, info, and error toast surfaces must be driven by Admin UI Theme tokens
-and shared admin CSS variables. Those variables must remain dynamic: when an
-operator changes or creates an Admin UI Theme mode, the shared toaster must pick
-up the active mode parameters through CSS variables so every toast and
-token-backed UI surface changes together.
+and shared admin CSS variables. This includes the toast shell, background,
+foreground text, description text, border, focus/close affordance, and typed
+state surfaces; no visible part of the floating toast may rely on Sonner's
+bundled black/green/red/yellow/blue or gray palettes. Those variables must remain
+dynamic: when an operator changes or creates an Admin UI Theme template/profile,
+the shared toaster must pick up the active mode parameters through CSS variables
+so every toast and token-backed UI surface changes together.
 
 The behavioral source of truth must also be shared. Resource screens should not
 copy their own bulk result math, error normalization, or success/error message
@@ -56,7 +59,7 @@ contract is still uneven:
 | Menus | create dialog/list lifecycle actions use local or inline errors | no top-right toast for create/publish/unpublish/delete success or failure |
 | Engine content types | create, duplicate, and row delete already use `toast`; bulk publish/draft/delete mostly rely on inline feedback or error only | bulk state changes do not consistently toast; create errors remain local-only |
 | Entries | duplicate, bulk update, and delete already use `toast`; create success/error is not fully covered | create from list needs the same top-right success/error contract |
-| Shared toaster | `AdminApp` mounts one top-right `<Toaster richColors />`; `sonner.tsx` maps only normal toast colors | success/error/warning/info variables still fall back to Sonner defaults unless the wrapper overrides the documented rich-color state variables with Admin UI Theme tokens |
+| Shared toaster | `AdminApp` mounts one top-right `<Toaster richColors />`; `sonner.tsx` maps only normal toast colors | success/error/warning/info variables, description text, and close-button styling still fall back to Sonner defaults unless the wrapper/global scoped selectors override them with Admin UI Theme tokens |
 
 ## Scope
 
@@ -192,16 +195,22 @@ Shared toaster and token layer:
     selector path only after the shared wrapper makes the rich-color variables
     token-backed.
 - `core/admin/components/ui/sonner.tsx`
-  - own the token-backed style mapping for toast state surfaces.
+  - own the token-backed style mapping for toast state surfaces and every
+    Sonner CSS variable that can be set on the toaster host.
 - `core/admin/styles/globals.css`
-  - add Sonner state selectors only if component-level style variables are not
-    enough to override default Sonner state colors.
+  - add scoped Sonner selectors when component-level style variables are not
+    enough to override default Sonner state colors, description text, close
+    button, focus, or border styling.
 - `tests/vitest/admin/adminApp.test.tsx`
   - assert the shared toaster remains top-right, accessible, closeable, and
     intentionally rich-color enabled through the shared token-backed wrapper.
 - `tests/vitest/admin/sonner.test.tsx`
   - render the shared wrapper directly and assert token-backed dynamic style
     variables for normal, success, error, warning, and info states.
+  - include a rendered or CSS-selector contract proof that a custom Admin UI
+    Theme template/profile controls the visible floating toast shell, title,
+    description, border, and close button, not Sonner's bundled hard-coded
+    palette.
 
 Shared list-action feedback:
 
@@ -314,6 +323,9 @@ adjacent focused Vitest suite in the same validation run.
   - document that toast variables are dynamic Admin UI Theme variables, so
     custom modes update all token-backed toast states without per-component
     rewrites.
+  - document that the visible floating toast shell, description text, border,
+    focus/close affordance, and typed state colors inherit from the active Admin
+    UI Theme template/profile.
 - `_docs/_TASKS/README.md`
   - move this task through To Do/In Progress/Done and keep statistics synced.
 - `_docs/_CHANGELOG/{next}-2026-04-24-task-208-admin-list-action-toasts.md`
@@ -332,16 +344,20 @@ adjacent focused Vitest suite in the same validation run.
    `AdminApp` with top-right positioning, `richColors`, close button, duration,
    and accessible notification labeling.
 5. Normal, success, error, warning, and info toast visuals are controlled by
-   Admin UI Theme tokens through the shared Sonner CSS variable map. Light themes
-   must not render Sonner's default rich-color palette unless the active theme
-   tokens explicitly define that look.
-6. List action feedback is routed through a generic shared helper plus
+   Admin UI Theme tokens through the shared Sonner CSS variable map and any
+   required scoped Sonner selectors. Light themes must not render Sonner's
+   default rich-color palette unless the active theme tokens explicitly define
+   that look.
+6. The floating toast shell, title, description, border, focus/close affordance,
+   and typed state colors all inherit from the active Admin UI Theme
+   template/profile and are covered by focused regression tests.
+7. List action feedback is routed through a generic shared helper plus
    resource-specific adapter parameters; resource screens do not duplicate bulk
    result math or error normalization.
-7. Targeted list-action toasts are emitted through the shared helper/adapters,
+8. Targeted list-action toasts are emitted through the shared helper/adapters,
    not through new resource-local `toast.success` / `toast.error` branches.
-8. No resource-specific toaster, hard-coded Tailwind color family, or native
+9. No resource-specific toaster, hard-coded Tailwind color family, or native
    `window.confirm()` is introduced for the targeted list action feedback.
-9. Targeted Vitest suites plus `bun --cwd core lint` and
+10. Targeted Vitest suites plus `bun --cwd core lint` and
    `bun --cwd core lint:types` pass or any unrelated pre-existing failure is
    isolated and documented before closure.

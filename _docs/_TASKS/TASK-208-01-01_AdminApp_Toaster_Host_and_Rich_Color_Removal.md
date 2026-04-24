@@ -18,6 +18,9 @@ In this repo, "rich color removal" means removing Sonner's default bundled
 palette as the visual source of truth, not removing the `richColors` prop. Sonner
 uses `richColors` to activate typed success/error/warning/info selectors, and
 the shared wrapper must make those selectors read token-backed CSS variables.
+The single shared toaster must also be the only host that receives the active
+Admin UI Theme template/profile variables used by the floating toast shell,
+description, border, close button, and typed state colors.
 
 ## Sub-Tasks
 
@@ -35,6 +38,9 @@ No child task files.
 - Do not remove `richColors`; instead pair it with `TASK-208-01-02`, which
   proves that Sonner's rich-color variables are backed by Admin UI Theme tokens.
 - Do not add another toaster in any resource list.
+- Do not add resource-local styling for floating toasts. The shared toaster host
+  and wrapper must be the only owner for Admin UI Theme template/profile-driven
+  toast visuals.
 
 ## Pseudocode
 
@@ -79,3 +85,5 @@ style={{
 2. The toaster is still top-right, closeable, duration-bound, and accessible.
 3. `richColors` remains enabled, but Sonner's default bundled palette no longer
    controls admin toast state visuals.
+4. The shared toaster remains the single inheritance point for Admin UI Theme
+   template/profile-driven floating toast visuals.

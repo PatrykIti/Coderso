@@ -27,6 +27,13 @@ No child task files.
   token style map.
 - In the wrapper test, mock `sonner` and `next-themes`, render `Toaster`, and
   capture props passed to the underlying Sonner component.
+- Add a rendered or CSS-selector contract proof for the visible floating toast
+  surface. The proof must cover the shell, title/description text, border, close
+  button, and typed success/error/warning/info state colors with a custom Admin
+  UI Theme token fixture. If `happy-dom` cannot reliably resolve CSS variables
+  for Sonner's generated DOM, assert the wrapper host variables plus the scoped
+  `.toaster [data-sonner-toast]` selectors that override Sonner hard-coded
+  description and close-button styles.
 - Keep the direct wrapper test Bun-free and inside the Vitest admin/UI lane.
 
 ## Pseudocode
@@ -63,7 +70,20 @@ If the wrapper style is tested separately:
 expect(style["--success-text"]).toBe("var(--admin-state-success)");
 expect(style["--error-text"]).toBe("var(--admin-state-danger)");
 expect(style["--warning-text"]).toBe("var(--admin-state-warning)");
+expect(style["--normal-bg"]).toBe("var(--popover)");
+expect(style["--normal-text"]).toBe("var(--popover-foreground)");
+expect(style["--normal-border"]).toBe("var(--border)");
+expect(style["--gray12"]).toBe("var(--popover-foreground)");
 expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
+```
+
+CSS selector contract when `globals.css` is required:
+
+```ts
+expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"] [data-description]');
+expect(css).toContain("color: var(--popover-foreground)");
+expect(css).toContain('.toaster [data-sonner-toast][data-styled="true"] [data-close-button]');
+expect(css).toContain("border-color: var(--border)");
 ```
 
 ## Testing Requirements
@@ -72,6 +92,12 @@ expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
   - add or extend one test for shared toaster host props.
 - `tests/vitest/admin/sonner.test.tsx`
   - assert token-backed state style variables,
+  - assert normal toast shell variables and Sonner close-button gray variables
+    are remapped to Admin UI Theme variables,
+  - assert description and close-button selectors are token-backed if a scoped
+    CSS fallback is needed,
+  - use custom theme-token values that do not match Sonner defaults so the test
+    fails on a hard-coded bundled palette fallback,
   - assert the dynamic `useTheme()` value is forwarded,
   - assert state styling supports the shared `richColors` host and does not use
     Sonner's bundled HSL palette values.
@@ -86,5 +112,7 @@ expect(capturedProps.theme).toBe("dark"); // from mocked useTheme()
 1. Tests fail if `richColors` is removed from the shared admin toaster.
 2. Tests fail if the shared toaster stops being top-right/accessible/closeable.
 3. Tests cover the token variable names used for toast states.
-4. Tests fail if the wrapper hard-codes a theme instead of using the active
+4. Tests cover the visible toast shell, description, border, and close-button
+   token ownership.
+5. Tests fail if the wrapper hard-codes a theme instead of using the active
    Admin UI Theme mode.

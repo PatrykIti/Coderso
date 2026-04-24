@@ -37,6 +37,9 @@ No child task files.
   - Sonner rich/default hard-coded palettes are not allowed to remain the visual
     source of truth for admin toasts,
   - normal/success/error/warning/info states map through shared tokens,
+  - floating toast shell, title, description, border, focus/close affordance,
+    and typed state colors inherit from the active Admin UI Theme
+    template/profile,
   - custom Admin UI Theme modes update toast visuals dynamically through CSS
     variables.
 - Document the generic list-action toast helper:
@@ -73,6 +76,9 @@ Shared toasts:
 - The helper does not call list clients, mutate state, refresh caches, or
   navigate; those stay in the existing list components.
 - Success/error/warning states use `--admin-state-*` tokens.
+- The visible toast shell, description text, border, and close button also use
+  Admin UI Theme variables or shared `.toaster`-scoped CSS; they do not inherit
+  Sonner's bundled gray/HSL palette.
 ```
 
 ## Testing Requirements
@@ -89,3 +95,5 @@ implementation test suites for TASK-208-01 through TASK-208-05 pass.
    not confuse it with editor navigation.
 5. Docs state that custom Admin UI Theme modes propagate toast colors through
    dynamic CSS variables.
+6. Docs state that the whole floating toast window, including description and
+   close button, inherits from Admin UI Theme templates/profiles.
