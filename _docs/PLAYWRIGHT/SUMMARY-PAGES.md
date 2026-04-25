@@ -310,3 +310,88 @@ Dostępne w katalogu `screenshots/`:
 - `status-filter.png` — dropdown filtra statusu
 - `draft-filter.png` — wynik filtrowania po Draft (2 z 4 stron)
 - `bulk-select.png` — bug: Select all nie zaznacza wierszy
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-25)
+
+**Tester:** Claude (Playwright CLI)
+**Środowisko:** http://localhost:5173/admin/pages, frontend `localhost:3000` dostępny
+**Zalogowany jako:** patryk.ciechanski@patrykiti.pl
+
+### TL;DR
+
+- **W pełni naprawione (10 / 14):** BUG-1, BUG-2, BUG-3, BUG-4, BUG-5, UX-3, UX-4, UX-6, UX-7, UX-9.
+- **Częściowo / wciąż otwarte (3 / 14):** UX-1 (toast po Save/Publish), UX-2 (auto-scroll po insert), UX-5 (placeholder dla unreachable preview host).
+- **UX-8** — fix w stopce drawera potwierdzony, ale w **Page History dialogu** opis nadal używa słowa "autosave" (drobny dryf wordingowy do rozważenia).
+- **Nowe znalezisko (BUG-6 backend):** PATCH `/admin/api/pages/{id}` zwraca **403 Forbidden** dla strony utworzonej w tej samej sesji przez tego samego użytkownika. Save draft milczy — brak feedbacku błędu w UI.
+
+### Krok 1 — Lista stron `/admin/pages`
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-1 | Bulk select | ✓ FIXED | Klik "Select all pages" → header + wiersze `[checked]`, pojawia się toolbar "Selected 1 — Apply a bulk action to the selected pages." z combobox **Bulk actions** (opcje: Publish / Unpublish / Delete), przycisk "Apply" (disabled dopóki akcja nie wybrana), "Clear selection". |
+| BUG-2 | Autor nowej strony | ✓ FIXED | Strona "QA Retest 2026-04-25" utworzona w sesji → kolumna Author = "P Patryk" (avatar + imię), nie "N Unknown". |
+| BUG-5 | Radix `aria-describedby` (Create Page) | ✓ FIXED | Konsola: 0 errors, 0 warnings po otwarciu dialogu Create Page. Dialog ma description "Start with a template and publish when ready." |
+| UX-3 | Create Page disabled helper | ✓ FIXED | Pole Title puste → helper "Title is required before you can create the page." + paragraph pod disabled buttonem "Add a page title to generate a slug and enable Create Page." Po wpisaniu tytułu helper przełącza się dynamicznie na "The slug is generated from the title until you edit it." Slug auto-generowany: `/qa-retest-2026-04-25`. |
+
+**Regresja — wciąż działa:**
+
+- Wyszukiwarka po tytule — filtruje natychmiast (`QA Retest` → 1 wynik).
+- Filtr Status — opcje All / Published / Draft / Scheduled / Archived.
+- Filtr Author — combobox dostępny.
+- Menu akcji wiersza (...) — Edit / Preview / Duplicate / Publish / Unpublish (disabled gdy Draft) / Delete.
+- Paginacja — "Showing 1-2 of 2 pages", Rows = 10, Previous/Next disabled gdy 1 strona wyników.
+
+### Krok 2 — Edytor strony per item
+
+Testowane na `HomePage` (utworzonej wcześniej, save działa) oraz nowo utworzonej `QA Retest 2026-04-25` (gdzie ujawnił się BUG-6 backend).
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-4 | Widget toolbar a11y | ✓ FIXED | Hero ma cztery przyciski z aria-label: `Move Hero up` (disabled gdy jeden widget), `Move Hero down` (disabled), `Duplicate Hero`, `Delete Hero`. Drugi widget (Feature Grid) — analogicznie. |
+| BUG-5 | Radix description (Page Settings, History, Runtime preview) | ✓ FIXED | Page settings dialog ma description "Configure metadata, layout, and defaults for this page." Page history: "Restore published revisions or manage the latest settings autosave." Runtime preview: "Runtime preview (read-only, site theme)." Konsola po otwarciu dialogów — 0 warnings Radixowych. |
+| UX-4 | Widget picker kategoryzacja | ✓ FIXED | Lewy panel ma tablist `Widgets / Templates / Forms`, w środku zakładki Widgets — sekcje z licznikami: **Layout 10**, **Content 20**, **Forms 5**, **Navigation 2**. Każdy widget ma kartę z nazwą, opisem i `+`. |
+| UX-6 | Wizard handoff | ✓ FIXED | Po dodaniu Hero — prawy panel: badge "Wizard", heading "Hero", description "Top-of-page hero section with CTA.", footer copy "Next you can fine-tune layout, styling, and advanced settings." + przycisk **Continue to layout and styling**. Po kliknięciu — zmiana na sekcję z tabami `Wizard / Visual / Advanced` + handoff "Next: fine-tune layout, styling, and advanced settings for this widget." + sekcja Variant and Presets (Centered/Media Right/Media Left). |
+| UX-7 | Empty slot CTA | ✓ FIXED | Slot "Hero Content 0" pokazuje przycisk "Add widget to Hero Content / Drag from the library or choose a widget from the widgets tab." (zamiast "Empty slot"). |
+| UX-1 | Toast po Save draft / Publish | ⚠ NIE ZMIENIONE od 2026-04-23 | `[aria-live=polite]` w DOM, ale `textContent === ''` po kliknięciu Save draft i Publish. Backend reaguje (PATCH 200 OK, POST `/publish` 200 OK), badge w breadcrumb przełącza Draft→Published, "Unsaved changes" znika. Mimo to nie pojawia się żaden widoczny toast (nie ma `[data-sonner-toast]` w DOM, aria-live region pusty). User flow: kliknięcie Save → 1s niepewności bez wizualnej potwierdzającej etykiety. **Kierunek dopracowania:** podpiąć sonner toast `Page saved.` / `Page published.` do tej samej success ścieżki. |
+| UX-2 | Auto-scroll + highlight po insert | ⚠ CZĘŚCIOWE | Highlight ring obecny: ostatnio dodany blok ma klasy `border-primary/50 ring-2 ring-primary/10` (widoczna obwódka). **Auto-scroll natomiast nie ustawia bloku w pełni w viewport** — test scenariusza HomePage (Hero) → dodanie Feature Grid: nowy blok ma `top: -41.5px`, `bottom: 825.5px` (vh=720), czyli zarówno góra, jak i dół poza widocznym obszarem. Scrolltop kanwy nie zmienił się tak, by rozpocząć blok od `top >= 0`. Visual: użytkownik widzi środek nowego widgetu, ale musi scrollować w górę, by zobaczyć jego heading. **Kierunek dopracowania:** `scrollIntoView({block:'start'})` zamiast `'nearest'`, lub doliczyć offset toolbar canvasu. |
+| UX-5 | Runtime preview placeholder | ⚠ NIE ZMIENIONE od 2026-04-23 | Test 1 — frontend dostępny pod `localhost:3000`: dialog renderuje iframe z `Build faster with Nextless` + bannerem PREVIEW MODE (działa). Test 2 — Playwright `route` mockuje host na 503: iframe pozostaje **biały / pusty**, bez placeholder card, nawet po 23s. Brak detekcji opartej na `load`/timeout — placeholder dla "host unreachable" / "host returning error" nie pojawia się w real-time UI (tylko w Vitest mock z `runtime-preview-dialog.test.tsx`). **Kierunek dopracowania:** preflight HEAD do `runtime origin / health` przed `iframe.src` + `onerror`/timeout fallback w runtime, nie tylko w testach. |
+
+**Console errors podczas edycji nowej strony (BUG-6 backend):**
+
+- `[PATCH] /admin/api/pages/{newId}` → **403 Forbidden** (×2)
+- `[POST] /admin/api/pages/{newId}/publish` → **403 Forbidden**
+
+Strona została utworzona przez tę samą sesję user `patryk.ciechanski@patrykiti.pl`, jest widoczna na liście z autorem "Patryk", ale jakikolwiek save/publish na niej zwraca 403. Ten sam user zapisuje i publikuje `HomePage` bez problemu (PATCH/POST 200 OK). Brzmi jak ownership/policy mismatch po stronie API albo opóźnione propagowanie ownership w cache. UI **nie pokazuje błędu** — Save draft milczy mimo 403, "Unsaved changes" pozostaje. **Kierunek naprawy:** (a) backend — zweryfikować policy `pages.update` względem nowo utworzonej strony, (b) UI — dodać error toast "Nie udało się zapisać. [Spróbuj ponownie]" przy odpowiedziach !2xx z save/publish (powiązane z UX-1).
+
+### Krok 3 — Page Settings drawer
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-3 | "Loading template options..." | ✓ FIXED | Drawer otwiera się natychmiast z combobox Template = "Landing", brak wiszącego tekstu loading state pod dropdownem. |
+| BUG-5 | Radix description (Page Settings) | ✓ FIXED | Dialog ma "Configure metadata, layout, and defaults for this page." Konsola czysta. |
+| UX-8 | Wording "draft version in history" | ✓ FIXED w stopce drawera | Stopka: "Save settings now, or close the panel to keep one **draft version in history**." Zwrot "autosave snapshot" zniknął. **Drobny dryf:** Page History dialog (osobny, otwierany przyciskiem "History") wciąż używa "autosave" w description: "Restore published revisions or manage the latest settings **autosave**." oraz w label rewizji "Autosave". Niezgodność z duchem UX-8 — warto rozważyć ujednolicenie ("draft version" wszędzie, gdzie user-facing). |
+| UX-9 | "Max width" disabled helper | ✓ FIXED | Page width = `full` → Max width disabled, helper pod polem: "Available when Page width is not full." Po zmianie Page width na `default` — helper znika, Max width aktywne. Warunek odblokowania jasny. |
+
+### Krok 4 — Pozostałe weryfikacje
+
+- **beforeunload guard** — nawigacja w trakcie edycji nowej strony (przy `Unsaved changes`) wywołała natywny dialog browser-confirm. Dziala.
+- **Runtime preview device toggle** — w dialogu są przyciski Desktop / Tablet / Mobile, podaje device do iframe URL (`device=desktop`).
+- **Theme toggle** — przycisk "Light" / "Theme" w prawym górnym rogu, działa.
+
+### Podsumowanie statusu vs. status z 2026-04-22 / 2026-04-23
+
+- 2026-04-23 raport mówił "UX-1 ⚠, UX-2 ⚠ (nie zweryfikowane), UX-5 ⚠" — **żaden z tych trzech nie został domknięty od tamtego dnia**. UX-2 (highlight) pozytywne, ale auto-scroll wciąż nie sprowadza nowego bloku w viewport.
+- Wszystkie pozostałe pozycje z TASK-194 trzymają status fixed po manualnym Playwrightowym replay.
+- **Nowe** zgłoszenie BUG-6 (backend 403 + cichy fail w UI) wymaga osobnego ticketu — to nie jest regresja TASK-194, ale ujawniło się przy weryfikacji.
+
+### Screeny (2026-04-25)
+
+- `screenshots/2026-04-25/01-pages-list-baseline.png` — lista po loginie.
+- `screenshots/2026-04-25/02-pages-list-bulk-toolbar.png` — bulk select toolbar widoczny.
+- `screenshots/2026-04-25/03-editor-empty.png` — edytor nowej strony (pusty canvas, brak empty-state CTA na samym kanwie — empty state widoczny dopiero w slocie po dodaniu kontenera).
+- `screenshots/2026-04-25/04-after-insert-highlight.png` — Feature Grid dodany do HomePage, widoczny ring highlight + wizard prawego panelu.
+- `screenshots/2026-04-25/05-runtime-preview-dialog.png` — preview działa z dostępnym frontendem.
+- `screenshots/2026-04-25/06-runtime-preview-fail-503.png` — preview po zmokowaniu hosta na 503: iframe pusty, brak placeholdera.
+- `screenshots/2026-04-25/07-page-history.png` — Page history dialog (Autosave + Version 1 Published).

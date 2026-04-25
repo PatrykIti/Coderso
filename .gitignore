@@ -16,4 +16,15 @@ coverage/
 
 GENERATION_LIST.md
 .claude
+
+
+# Playwright cli
 .playwright-cli
+editor-snapshot.yaml
+editor-snapshot.yml
+wiz.yml
+wiz.yaml
+hp-*.yaml
+hp-*.yml
+hp*.yaml
+hp*.yml
