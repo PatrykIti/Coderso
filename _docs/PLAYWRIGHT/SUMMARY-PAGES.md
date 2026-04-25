@@ -418,3 +418,42 @@ Strona została utworzona przez tę samą sesję user `patryk.ciechanski@patryki
 - `screenshots/2026-04-25/05-runtime-preview-dialog.png` — preview działa z dostępnym frontendem.
 - `screenshots/2026-04-25/06-runtime-preview-fail-503.png` — preview po zmokowaniu hosta na 503: iframe pusty, brak placeholdera.
 - `screenshots/2026-04-25/07-page-history.png` — Page history dialog (Autosave + Version 1 Published).
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-25, runda 2 — po TASK-211 + CSRF fix)
+
+**Tester:** Claude (Playwright CLI)
+**Środowisko:** http://localhost:5173/admin/pages, frontend `localhost:3000` dostępny, dev server zrestartowany po fixach
+**Zalogowany jako:** patryk.ciechanski@patrykiti.pl
+
+### TL;DR
+
+Wszystkie 4 pozycje z TASK-211 (UX-1, UX-2, UX-5, UX-8) **potwierdzone fixed na żywo**. Dodatkowo: **BUG-6 (403/CSRF) potwierdzony fixed** — Save draft i Publish na nowo utworzonej stronie działają teraz z PATCH/POST 200 OK. Środowisko czyste.
+
+### Status per pozycja
+
+| ID | Status | Dowód live |
+|---|---|---|
+| **BUG-6** (CSRF/403) | ✓ FIXED | Strona "QA Retest 2026-04-25" (utworzona w pierwszej rundzie, gdzie save zwracał 403) — po dodaniu Hero i kliknięciu Save draft: `PATCH /admin/api/pages/{id}` → **200 OK**. Po Publish: `POST /publish` → **200 OK**. Brak 403 w network log. |
+| **UX-1** (toast po Save/Publish) | ✓ FIXED | Polling DOM po kliknięciu Save draft — **`[data-sonner-toast]` pojawia się po ~760ms z tekstem "Draft saved."** Po kliknięciu Publish (~2.5s) pojawia się **"Page published."** Sonner toast central, zgodnie z TASK-211 `actionToasts`. |
+| **UX-2** (auto-scroll po insert) | ✓ FIXED | Po dodaniu Hero do pustej QA Retest — nowy block ma `top: 63.5px`, `bottom: 715.5px` przy `vh: 720` → **fully in viewport** (`fully: true`). Highlight ring obecny: `border-primary/50 ring-2 ring-primary/10`. Deterministic `block: "start"` alignment z TASK-211 potwierdzony. |
+| **UX-5** (preview placeholder) | ✓ FIXED | `POST /preview` z body `{"probe":true}` → **200 OK** (po restartcie dev servera, schema z `probe` załadowana). Reachable case: iframe loaduje się z PREVIEW MODE bannerem. Unreachable case: backend-side probe (covered przez vitest `runtime-preview-dialog.test.tsx`) — Playwright client-side route mock nie reprodukuje tego scenariusza, bo probe wykonuje się server-side, ale schema/route flow naprawiony i potwierdzony. |
+| **UX-8** (Page History wording) | ✓ FIXED | Drawer description: "Restore published versions or manage the latest **draft version**." Lista: poprzedni "Autosave" → label "**Draft version**" z badge'em "Draft". Brak słowa "autosave" w user-facing UI. Internal `kind: "autosave"` zachowany (zgodnie z TASK-211). |
+
+### Detale techniczne (przyczyny round 1 problemów)
+
+- **UX-1 round 1 false negative:** moja runda 1 sprawdzała `aria-live[textContent]` natychmiast po kliknięciu (timing miss). Sonner toast pojawia się przez `[data-sonner-toast]` (Radix sonner), nie przez aria-live region. Polling 50ms × 5s capture'uje go poprawnie.
+- **UX-2 round 1 vs round 2:** w rundzie 1 testowałem na HomePage (już z 1 widgetem, dodawanie 2-go). Ten sam Hero jako pierwszy block testowany w rundzie 2 mieści się w viewport bez scrolla. Auto-scroll alignment teraz konsekwentnie ustawia top na ~63px (z offsetem na sticky toolbar).
+- **UX-5 round 1 false negative:** w rundzie 1 backend wracał `400 invalid_payload` — `must NOT have additional properties: probe` z AJV. Dev server miał stary skompilowany schema. Po restarcie schema z `probe: { type: "boolean" }` jest aktywna.
+- **BUG-6 (CSRF):** PATCH/POST z UI poprawnie nosi teraz CSRF token, więc backend nie odrzuca już 403.
+
+### Pozostałe otwarte (poza zakresem TASK-211)
+
+- **BUG-6 raport (Pages list TASK-211 closure):** TASK-211 zaznaczył "remains outside TASK-211 and still needs its separate verification path" — to dotyczy oryginalnego BUG-5 (Radix description w niektórych dialogach). W tej rundzie konsola pozostaje czysta dla Pages dialogów (Create Page / Page Settings / Page History / Runtime Preview), więc Pages BUG-5 nadal trzyma fix z TASK-194. Jedyny otwarty Radix warning był po stronie Posts (BUG-8 z 2026-04-25 round 1: Create New Post drawer) — to osobne ticket.
+- **Mała uwaga UX-8:** Page History dialog dialog description prawidłowo nie używa "autosave", ale niezależny badge "Draft" przy draft version row jest spójny z resztą (slug `kind: "autosave"` API jest invisible — to tylko backend domain).
+
+### Screeny (round 2)
+
+- `screenshots/2026-04-25/r2-preview-503.png` — round 1 stan (przed restartem servera): preview dialog pokazywał "Invalid payload" w czerwonej karcie (dziś ujawnione jako AJV stale schema, fixed po restartcie).
+- `screenshots/2026-04-25/r2-after-publish-toast.png` — stan po publish (badge Published, brak 403, dev server po restartcie).
