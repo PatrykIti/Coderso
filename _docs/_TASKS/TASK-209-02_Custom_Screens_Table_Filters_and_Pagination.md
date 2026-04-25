@@ -31,6 +31,9 @@ confirmations are owned by `TASK-209-03`.
 - new `core/admin/ui/custom-screens/CustomScreenBulkActionsBar.tsx`
 - new `core/admin/ui/custom-screens/CustomScreenCreateDrawer.tsx`
 - new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx`
+- `core/admin/services/userSettingsClient.ts` and
+  `core/services/settings/userSettingsService.ts` if the create drawer persists
+  `customScreens.openAfterCreate`.
 - `core/admin/ui/shared/useListPagination.ts`
 - `core/admin/ui/shared/ListPaginationFooter.tsx`
 - `tests/vitest/ui/custom-screens-page.test.tsx`
@@ -40,11 +43,14 @@ confirmations are owned by `TASK-209-03`.
 ## Security Contract
 
 - Visibility: internal admin UI only.
-- Auth/RBAC: `content:read` for list labels; create entry point writes are
-  specified in `TASK-209-03`.
-- CSRF: no mutation is required by filter/table/pagination rendering.
-- Rate-limit bucket: existing `admin_read`.
-- Reject-unknown validation: no new route payloads.
+- Auth/RBAC: `content:read` for list labels; `content:write` for the create
+  drawer submit owned by `TASK-209-02-01`.
+- CSRF: create continues through `createCustomScreen` with `withCsrf: true`;
+  filter/table/pagination rendering remains read-only.
+- Rate-limit bucket: existing `admin_read` for labels/list data and
+  `admin_write` for create.
+- Reject-unknown validation: create submits only fields accepted by
+  `customScreenCreateSchema`; filters add no route query parameters.
 - Anti-abuse: visible selection is local UI state and must be trimmed to the
   current filtered/paginated rows before later bulk actions consume it.
 

@@ -42,8 +42,13 @@ type CustomScreenListRow = {
   fall back to `screen.contentTypeId`.
 - Keep content-type fetching cached-first:
   - seed from `getCachedContentTypes()`;
-  - revalidate through `listContentTypesCached({ force, background })` pattern
-    where available;
+  - revalidate through `listContentTypesCached({ force })` only;
+  - do not extend `contentTypesClient` with a `background` option for this
+    task. Background is UI loading-state semantics in the existing Pages/cache
+    pattern, while cached service clients own cache reads, request de-dupe, and
+    writes;
+  - keep any label refresh spinner/error handling in the Custom Screens list
+    component or a list-local hook;
   - do not call `listContentTypesCached({ force: true })` unconditionally in
     foreground when cached labels exist.
 - Use `resolveCustomScreenCapabilities`/`screen.capabilities` for mode labels;

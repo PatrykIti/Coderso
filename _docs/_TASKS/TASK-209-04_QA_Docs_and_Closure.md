@@ -32,6 +32,11 @@ No child task files.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts` if `customScreens.openAfterCreate` is added.
+- Run the user-settings service test if the persisted preference key is added
+  and `DATABASE_URL` is reachable:
+  - `set -a && source .env && set +a`
+  - `bun test tests/unit/settings/userSettingsService.test.ts`
 - Run `bun test tests/integration/routes/customScreensRoutes.test.ts` if any
   route, validation, permission, or error-mapping contract changed.
 - If a local dev server is available, verify `/admin/coderso/custom-screens`
@@ -67,8 +72,10 @@ No child task files.
 - `_docs/ADMIN_CACHE_MAP.md`
   - Keep Custom Screens cached API and cache-bus owners aligned.
 - `_docs/CMS_API.md`
-  - Update only if API behavior changes; otherwise no route doc change is
-    needed.
+  - Add `customScreens.openAfterCreate` if the preference key is added.
+  - Keep the Custom Screens record summary aligned with the existing contract,
+    including `showInSidebar`, `sidebarLabel`, and derived `capabilities`, even
+    when endpoint paths do not change.
 - `_docs/_TASKS/README.md`
   - Move TASK-209 family to Done and update statistics.
 - `_docs/_CHANGELOG/*`

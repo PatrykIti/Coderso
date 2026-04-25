@@ -26,17 +26,15 @@ No child task files.
 
 ## Implementation Checklist
 
-- Add a helper equivalent to Pages:
+- Use the shared cache refresh helpers instead of adding another resource-only
+  copy. `core/admin/utils/cacheRefresh.ts` already exposes the mount policy:
 
 ```ts
-export function resolveCustomScreenListMountRefreshOptions(hasInitialCache: boolean) {
-  return {
-    force: !hasInitialCache,
-    background: hasInitialCache,
-  };
-}
+resolveListMountRefreshOptions(hasInitialCache)
 ```
 
+- A resource-local wrapper is acceptable only if the UI tests need a named
+  Custom Screens export; it should delegate to `resolveListMountRefreshOptions`.
 - Change `useCustomScreens.refresh` from `(force?: boolean)` to an options
   object compatible with the current admin cache pattern:
 
@@ -82,7 +80,8 @@ refresh({ force?: boolean; background?: boolean })
 
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
-- Focused test for `resolveCustomScreenListMountRefreshOptions`.
+- Focused test for the mount refresh policy through the shared helper or a
+  delegating Custom Screens wrapper.
 
 ## Documentation Updates Required
 

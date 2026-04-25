@@ -30,8 +30,11 @@ No child task files.
 - new `core/admin/ui/custom-screens/CustomScreenCreateDrawer.tsx`
 - `core/admin/services/customScreensClient.ts` only if a client helper is needed
   for create feedback typing.
-- `core/admin/services/userSettingsClient.ts` if adding the
-  `customScreens.openAfterCreate` setting needs registration or typing.
+- `core/admin/services/userSettingsClient.ts`
+- `core/services/settings/userSettingsService.ts`
+- `tests/vitest/admin/userSettingsClient.test.ts`
+- `tests/unit/settings/userSettingsService.test.ts`
+- `_docs/CMS_API.md` user-settings key list.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx`
 
@@ -47,7 +50,21 @@ No child task files.
   - content type select,
   - status defaulting to `draft`,
   - optional sidebar shortcut toggle and sidebar label,
-  - open-after-create checkbox/persistence using a dedicated user setting.
+  - open-after-create checkbox/persistence using a dedicated
+    `customScreens.openAfterCreate` user setting.
+- Add `customScreens.openAfterCreate` to both user-settings owners before the
+  drawer calls `setUserSetting`:
+  - `core/services/settings/userSettingsService.ts`
+  - `core/admin/services/userSettingsClient.ts`
+  - default value: `true`, matching Pages' open-after-create behavior.
+- Update user-settings service/client tests and `_docs/CMS_API.md` so the new
+  key is typed, validated as boolean, returned by `GET /user-settings`, and
+  writable through `PATCH /user-settings/customScreens.openAfterCreate`.
+- Handle no content types explicitly:
+  - render a disabled/empty content-type state,
+  - keep submit disabled until `contentTypeId` is selected,
+  - provide a canonical `AdminLink` to `/coderso/engine` for creating the first
+    content type.
 - Use existing `createCustomScreen` and existing schema fields only:
 
 ```tsx
@@ -73,11 +90,15 @@ await createCustomScreen({
 
 - Visibility: internal admin UI.
 - Auth/RBAC: `content:read` for content-type options; create itself requires
-  `content:write`.
-- CSRF: create continues through `createCustomScreen` with `withCsrf: true`.
-- Rate-limit bucket: `admin_read` for options and `admin_write` for create.
+  `content:write`; the user-settings preference uses authenticated
+  `GET/PATCH /user-settings/:key` with the existing `requireAuth` model.
+- CSRF: create continues through `createCustomScreen` with `withCsrf: true`;
+  preference updates continue through `setUserSetting` with `withCsrf: true`.
+- Rate-limit bucket: `admin_read` for options/settings reads and `admin_write`
+  for create/preference writes.
 - Reject-unknown validation: drawer submits only fields accepted by
-  `customScreenCreateSchema`.
+  `customScreenCreateSchema`; `customScreens.openAfterCreate` accepts only a
+  boolean value in the typed user-settings validator.
 - Anti-abuse: no public write path; drawer create remains bounded to a single
   user-selected content type and local validation before submit.
 
@@ -86,7 +107,12 @@ await createCustomScreen({
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - Mounted drawer test in `tests/vitest/ui/custom-screens-list-wave.test.tsx`
   covering open, submit success with navigation, submit success without
-  navigation, and rejected create mutation.
+  navigation, no-content-type disabled submit, preference toggle persistence,
+  and rejected create mutation.
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+- If `DATABASE_URL` is reachable:
+  - `set -a && source .env && set +a`
+  - `bun test tests/unit/settings/userSettingsService.test.ts`
 
 ## Documentation Updates Required
 
@@ -100,3 +126,5 @@ await createCustomScreen({
 2. The drawer creates a valid Custom Screen without adding new API fields.
 3. Direct `/admin/coderso/custom-screens/new` builder route still works.
 4. Open-after-create behavior is explicit and persisted separately from Pages.
+5. The drawer blocks submit until a valid content type is selected and guides
+   users to the canonical Engine route when no content types exist.

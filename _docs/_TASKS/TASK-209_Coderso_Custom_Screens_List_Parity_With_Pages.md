@@ -69,6 +69,10 @@ created first.
 - `core/admin/utils/adminPrefetch.ts` warms only `listCustomScreensCached` for
   `/coderso/custom-screens`; the list also needs content types to avoid a
   second foreground label load.
+- Pages persists `pages.openAfterCreate`, but the repo currently has no
+  `customScreens.openAfterCreate` user-setting key. If the Custom Screens list
+  adds a persisted open-after-create preference, the task must extend the shared
+  user-settings contract instead of writing an untyped browser-only preference.
 
 ### Custom Screens Contract Constraints
 
@@ -112,7 +116,9 @@ created first.
    Do not add Preview or Duplicate in this task.
 5. `New` opens a list-owned Custom Screen create drawer for the minimum
    resource contract: name, content type, status default, optional sidebar
-   shortcut, and open-after-create preference. On success it creates through
+   shortcut, and open-after-create preference. The drawer must handle the
+   no-content-type state by blocking submit with a clear internal admin path to
+   create a content type first. On success it creates through
    `createCustomScreen`, emits the shared toast, and navigates to the builder
    when the preference says to open the screen.
 6. Single and bulk lifecycle feedback goes through
@@ -161,12 +167,15 @@ created first.
   - `content:read` for list/detail reads and content-type labels;
   - `content:write` for create, status update, and delete mutations.
 - CSRF: all writes continue through existing admin client helpers with
-  `withCsrf: true`.
+  `withCsrf: true`; the persisted open-after-create preference, if added,
+  continues through `PATCH /user-settings/:key` with CSRF.
 - Rate-limit bucket: existing `admin_read` for reads and `admin_write` for
   mutations.
 - Reject-unknown validation: keep `customScreenCreateSchema` and
   `customScreenUpdateSchema` as the route validation source of truth; UI code
-  must submit only the existing schema fields.
+  must submit only the existing schema fields. If `customScreens.openAfterCreate`
+  is added, register it in the typed user-settings contract and validate it as a
+  boolean.
 - Anti-abuse: no public write path; destructive row and bulk delete require
   `ConfirmActionDialog`; bulk actions operate only on visible selected screen
   ids after filter/pagination trimming.
@@ -193,6 +202,11 @@ created first.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts` if any links or aliases change.
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts` if `customScreens.openAfterCreate` is added.
+- User-settings service test if the persisted preference key is added:
+  - `set -a && source .env && set +a`
+  - `bun test tests/unit/settings/userSettingsService.test.ts` when
+    `DATABASE_URL` is reachable.
 - Bun route tests only if the route family changes:
   - `bun test tests/integration/routes/customScreensRoutes.test.ts`
 - Existing records/editor smoke coverage should remain green:
@@ -203,8 +217,10 @@ created first.
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
-- `_docs/CMS_API.md` only if the API contract changes; otherwise note that the
-  UI parity work preserves the existing `custom-screens` endpoints.
+- `_docs/CMS_API.md` if the user-settings key is added or if the current
+  Custom Screens API docs still omit the existing `showInSidebar`,
+  `sidebarLabel`, or derived `capabilities` response fields. Do not treat this
+  as a route-shape change unless endpoints or schemas actually change.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` and `_docs/_CHANGELOG/README.md` on completion.
 
@@ -223,3 +239,6 @@ created first.
    toasts after the real mutation path completes.
 6. Existing builder, records, sidebar shortcut, assistant context, and API tests
    are not regressed.
+7. The create drawer cannot submit a Custom Screen without a valid
+   `contentTypeId`, and any persisted open-after-create preference is backed by
+   the typed user-settings service/client contract.

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 69 tasks
+- **To Do:** 84 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1130 tasks
 
@@ -46,12 +46,27 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-210-05 | Forms Create Drawer and Open After Create | High | Medium | Compact `New` flow, drawer reset, Forms create payload, and `forms.openAfterCreate` preference |
 | TASK-210-06 | Forms List Toasts and Error Mapping | High | Large | Shared list-action toasts plus Forms route status enum and known domain error mapping |
 | TASK-210-07 | QA, Docs, Changelog, and Closure | Medium | Medium | Targeted validation, Content List/Admin Cache/API docs, changelog, and board closure for TASK-210 |
+| TASK-210-01-01 | Forms Canonical Route and Prefetch Warmup | High | Small | Technical leaf: canonical `/admin/coderso/forms` active route, canonical editor links, legacy alias coverage, and prefetch warmup |
+| TASK-210-01-02 | Forms Cache Hydration Hook Parity | High | Medium | Technical leaf: cache-present/background and cache-missing/foreground Forms mount refresh behavior |
+| TASK-210-02-01 | Forms Filter Model and View Component | High | Medium | Technical leaf: search/status/submission-access filter model and Forms-specific filter strip |
+| TASK-210-02-02 | Forms Table Selection and Access Column | High | Medium | Technical leaf: Pages-style checkbox selection, selected-row styling, canonical links, and submission-access column |
+| TASK-210-02-03 | Forms Shared Pagination and Selection Trim | High | Medium | Technical leaf: shared pagination footer after filters plus visible-row select-all and hidden-selection trimming |
+| TASK-210-03-01 | Forms Row Lifecycle Menu Contract | High | Medium | Technical leaf: Edit/Publish/Move-to-draft/Archive/Delete row menu using existing `updateForm` status writes |
+| TASK-210-03-02 | Forms Row Delete Confirmation Contract | High | Medium | Technical leaf: row delete gated by `ConfirmActionDialog` with no direct dropdown mutation |
+| TASK-210-04-01 | Forms Bulk Action Bar and Visible Selection | High | Medium | Technical leaf: inline header bulk controls scoped to current visible selected forms |
+| TASK-210-04-02 | Forms Bulk Mutation Execution and Partial Failures | High | Medium | Technical leaf: `Promise.allSettled` lifecycle/delete execution, confirmed bulk delete, and truthful partial failures |
+| TASK-210-05-01 | Forms Create Drawer Reset and Payload Guard | High | Medium | Technical leaf: compact create drawer reset, `New` trigger, and no UI-only or builder-owned fields in list create payload |
+| TASK-210-05-02 | Forms Open After Create User Setting Contract | High | Medium | Technical leaf: typed `forms.openAfterCreate` client/server setting default, validation, and tests |
+| TASK-210-06-01 | Forms List Toast Adapter Wiring | High | Medium | Technical leaf: shared list toast adapter for create, lifecycle, delete, and bulk Forms actions |
+| TASK-210-06-02 | Forms Route Error Mapping and Strict Schemas | High | Medium | Technical leaf: centralized Forms API error mapping plus strict status enum validation |
+| TASK-210-07-01 | Forms Parity Test Matrix | Medium | Small | Technical leaf: targeted Vitest/Bun/lint/typecheck evidence for the completed TASK-210 family |
+| TASK-210-07-02 | Forms Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: Content List/Admin Cache/API docs, changelog, task statuses, and board statistics closure |
 | TASK-209 | Coderso Custom Screens List Parity With Pages | High | Very Large | Match `/admin/coderso/custom-screens` to the Pages list contract while preserving Custom Screens status/content-type/sidebar/builder/records behavior |
 | TASK-209-01 | Custom Screens List Data, Cache, and Enrichment | High | Large | Align cached hydration, background refresh, prefetch, and content-type label enrichment before UI parity work |
 | TASK-209-01-01 | Custom Screens Mount Refresh and Prefetch Parity | High | Medium | Technical leaf: cache-present/background and cache-missing/foreground refresh plus screens/content-types prefetch |
 | TASK-209-01-02 | Content Type Label Enrichment and List View Model | High | Medium | Technical leaf: list-local view model maps screen rows to content-type labels without changing API shape |
 | TASK-209-02 | Custom Screens Table, Filters, and Pagination | High | Large | Rebuild first-screen list shell, filters, table, pagination, and visible-row selection to match Pages |
-| TASK-209-02-01 | Custom Screen List Shell and Create Entry Point | High | Medium | Technical leaf: Pages-style header action area and list-owned create drawer using existing custom-screen create schema |
+| TASK-209-02-01 | Custom Screen List Shell and Create Entry Point | High | Medium | Technical leaf: Pages-style header action area, list-owned create drawer, typed open-after-create setting, and no-content-type guard using existing custom-screen create schema |
 | TASK-209-02-02 | Custom Screen Filters for Search, Status, and Content Type | High | Medium | Technical leaf: local search/status/content-type filters with pagination reset and selection trim |
 | TASK-209-02-03 | Custom Screen Table, Pagination, and Visible Selection | High | Medium | Technical leaf: extracted table, row metadata, shared pagination footer, and visible selected ids |
 | TASK-209-03 | Custom Screens Actions, Toasts, and Confirmations | High | Large | Add shared toasts, row status lifecycle actions, and confirmed single/bulk destructive flows |
