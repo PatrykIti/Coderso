@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 56 tasks
+- **To Do:** 69 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1130 tasks
 
@@ -46,6 +46,19 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-210-05 | Forms Create Drawer and Open After Create | High | Medium | Compact `New` flow, drawer reset, Forms create payload, and `forms.openAfterCreate` preference |
 | TASK-210-06 | Forms List Toasts and Error Mapping | High | Large | Shared list-action toasts plus Forms route status enum and known domain error mapping |
 | TASK-210-07 | QA, Docs, Changelog, and Closure | Medium | Medium | Targeted validation, Content List/Admin Cache/API docs, changelog, and board closure for TASK-210 |
+| TASK-209 | Coderso Custom Screens List Parity With Pages | High | Very Large | Match `/admin/coderso/custom-screens` to the Pages list contract while preserving Custom Screens status/content-type/sidebar/builder/records behavior |
+| TASK-209-01 | Custom Screens List Data, Cache, and Enrichment | High | Large | Align cached hydration, background refresh, prefetch, and content-type label enrichment before UI parity work |
+| TASK-209-01-01 | Custom Screens Mount Refresh and Prefetch Parity | High | Medium | Technical leaf: cache-present/background and cache-missing/foreground refresh plus screens/content-types prefetch |
+| TASK-209-01-02 | Content Type Label Enrichment and List View Model | High | Medium | Technical leaf: list-local view model maps screen rows to content-type labels without changing API shape |
+| TASK-209-02 | Custom Screens Table, Filters, and Pagination | High | Large | Rebuild first-screen list shell, filters, table, pagination, and visible-row selection to match Pages |
+| TASK-209-02-01 | Custom Screen List Shell and Create Entry Point | High | Medium | Technical leaf: Pages-style header action area and list-owned create drawer using existing custom-screen create schema |
+| TASK-209-02-02 | Custom Screen Filters for Search, Status, and Content Type | High | Medium | Technical leaf: local search/status/content-type filters with pagination reset and selection trim |
+| TASK-209-02-03 | Custom Screen Table, Pagination, and Visible Selection | High | Medium | Technical leaf: extracted table, row metadata, shared pagination footer, and visible selected ids |
+| TASK-209-03 | Custom Screens Actions, Toasts, and Confirmations | High | Large | Add shared toasts, row status lifecycle actions, and confirmed single/bulk destructive flows |
+| TASK-209-03-01 | Custom Screen List Action Toast Adapter | High | Small | Technical leaf: resource adapter for create/activate/deactivate/delete using shared list-action toasts |
+| TASK-209-03-02 | Custom Screen Row Lifecycle and Status Actions | High | Medium | Technical leaf: Records/Edit/Activate/Move-to-draft/Delete actions without adding preview or duplicate |
+| TASK-209-03-03 | Custom Screen Bulk Actions and Delete Confirmations | High | Medium | Technical leaf: inline bulk activate/draft/delete, partial-failure feedback, and ConfirmActionDialog gating |
+| TASK-209-04 | QA, Docs, and Closure | Medium | Medium | Validation, Content List UX/Admin Cache docs, changelog, and task board closure for TASK-209 family |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
