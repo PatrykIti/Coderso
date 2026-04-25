@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-211-01, TASK-211-02, TASK-211-03, TASK-211-04
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 

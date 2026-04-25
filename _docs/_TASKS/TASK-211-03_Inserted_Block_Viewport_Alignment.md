@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Builder UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-211, TASK-194-03-02
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 
@@ -22,7 +22,7 @@ that behavior with a stronger DOM geometry test.
 
 ## Sub-Tasks
 
-- [ ] TASK-211-03-01: Inserted Block Scroll Target and Test Proof
+- [x] TASK-211-03-01: Inserted Block Scroll Target and Test Proof
 
 ## Files to Change
 

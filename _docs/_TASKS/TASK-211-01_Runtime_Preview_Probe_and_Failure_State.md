@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Runtime Preview + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-211, TASK-194-03, TASK-191
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 
@@ -24,8 +24,8 @@ iframe behavior.
 
 ## Sub-Tasks
 
-- [ ] TASK-211-01-01: Preview Probe Security and Service Contract
-- [ ] TASK-211-01-02: Runtime Preview Dialog Error State
+- [x] TASK-211-01-01: Preview Probe Security and Service Contract
+- [x] TASK-211-01-02: Runtime Preview Dialog Error State
 
 ## Files to Change
 

@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Builder UX
 **Estimated Effort:** Small
 **Dependencies:** TASK-211-03
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 

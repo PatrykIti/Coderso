@@ -7,6 +7,29 @@
 
 ---
 
+## TASK-211 closure — 2026-04-25
+
+Zakres TASK-211 domyka pozostale follow-upy z Pages editor bez zamykania
+`BUG-6`.
+
+| ID | Status | Evidence |
+|---|---|---|
+| UX-1 | FIXED in code/tests | `PageEditor` save draft/publish success and failure paths emit central Sonner toasts through shared `actionToasts`; inline error/status context remains. Vitest: `page-editor-shell-wave.test.tsx`, `action-toasts.test.ts`, `adminApp.test.tsx`, `sonner.test.tsx`. |
+| UX-2 | FIXED in code/tests | Newly inserted blocks remain selected/highlighted/focused and now scroll with deterministic `block: "start"` alignment. Vitest: `page-editor-insert-scroll.test.tsx`. |
+| UX-5 | FIXED in code/tests | Pages preview generation accepts bounded `probe: true`; failed HTTP/unreachable/redirect/timeout probe metadata is token-redacted and `RuntimePreviewDialog` shows the Admin UI placeholder before rendering the iframe. Vitest: `runtime-preview-dialog.test.tsx`, `pagesClient.test.ts`; Bun DB-backed route/service tests: `pages.test.ts`, `previewService.test.ts`, `validation.test.ts`. |
+| UX-8 | FIXED in code/tests | Page History now uses user-facing `draft version` copy in the drawer, badges, restore dialog, and discard dialog while API/domain `kind: "autosave"` stays unchanged. Vitest: `page-revision-drawer.test.tsx`, `post-hooks-and-drawers-wave.test.tsx`, `entry-page-support-wave.test.tsx`. |
+
+Validation run for TASK-211:
+
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/action-toasts.test.ts tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/page-editor-insert-scroll.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/admin/pagesClient.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx`
+- `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun test tests/integration/routes/pages.test.ts tests/unit/pages/previewService.test.ts tests/unit/pages/validation.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+
+Manual Playwright replay with screenshots was not run in this code pass. `BUG-6`
+remains outside TASK-211 and still needs its separate verification path.
+
 ## Przetestowane przepływy
 
 - Tworzenie nowej strony (Homepage)

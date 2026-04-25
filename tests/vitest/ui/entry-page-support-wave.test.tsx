@@ -807,7 +807,7 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
 
   try {
     expect(view.container.textContent).toContain("Template and navigation");
-    expect(view.container.textContent).toContain("Autosave");
+    expect(view.container.textContent).toContain("Draft version");
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
@@ -825,7 +825,7 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
 
     act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Confirm Discard autosave")
+        .find((button) => button.textContent === "Confirm Discard draft version")
         ?.click();
     });
 

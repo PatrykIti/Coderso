@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + UX Copy
 **Estimated Effort:** Small
 **Dependencies:** TASK-211, TASK-194-02
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 
@@ -20,7 +20,7 @@ badges, and confirmation copy. The underlying API/domain value can remain
 
 ## Sub-Tasks
 
-- [ ] TASK-211-04-01: Page Revision Drawer User-Facing Copy
+- [x] TASK-211-04-01: Page Revision Drawer User-Facing Copy
 
 ## Files to Change
 

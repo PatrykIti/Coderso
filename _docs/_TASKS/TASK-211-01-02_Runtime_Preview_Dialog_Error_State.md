@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Runtime Preview
 **Estimated Effort:** Medium
 **Dependencies:** TASK-211-01-01
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 

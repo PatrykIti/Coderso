@@ -3,12 +3,14 @@ import Ajv from "ajv";
 
 import {
   pageCreateSchema,
+  pagePreviewSchema,
   pageUpdateSchema,
 } from "../../../core/server/validation/pageSchemas";
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 const validateCreate = ajv.compile(pageCreateSchema);
 const validateUpdate = ajv.compile(pageUpdateSchema);
+const validatePreview = ajv.compile(pagePreviewSchema);
 
 const validBlock = {
   id: "block-1",
@@ -124,4 +126,9 @@ test("pageCreateSchema rejects invalid page layout tokens", () => {
     },
   };
   expect(validateCreate(payload)).toBe(false);
+});
+
+test("pagePreviewSchema accepts bounded probe option and rejects unknown fields", () => {
+  expect(validatePreview({ ttlMinutes: 5, probe: true })).toBe(true);
+  expect(validatePreview({ ttlMinutes: 5, probe: true, url: "https://evil.test" })).toBe(false);
 });

@@ -23,10 +23,12 @@ import {
   restorePageRevision,
   updatePage,
   type PageDetail,
+  type PreviewProbeResult,
   type PageRevision,
   type PageTemplateOptionsResponse,
 } from "@/services/pagesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
 import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/RuntimePreviewDialog";
@@ -75,6 +77,19 @@ const defaultBlocks: Block[] = [
   }),
   createBlock("compare-timeline"),
 ];
+
+const pageEditorActionToasts = createAdminActionToastAdapter({
+  actions: {
+    saveDraft: {
+      success: "Draft saved.",
+      errorFallback: "Failed to save draft.",
+    },
+    publish: {
+      success: "Page published.",
+      errorFallback: "Failed to publish page.",
+    },
+  },
+});
 
 const resolvePageId = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
@@ -316,6 +331,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [discardingRevisionId, setDiscardingRevisionId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewProbe, setPreviewProbe] = useState<PreviewProbeResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<RuntimePreviewDeviceId>("desktop");
@@ -462,7 +478,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       `[data-block-id="${escapedId}"]`
     ) as HTMLElement | null;
     if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
     const focusTarget = target.querySelector<HTMLElement>("[data-block-select='true']");
     focusTarget?.focus({ preventScroll: true });
     setPendingScrollBlockId(null);
@@ -718,13 +734,11 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPage(updated);
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      pageEditorActionToasts.success("saveDraft");
       showStatusNotice("Draft saved.");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save draft.");
-      }
+      const message = pageEditorActionToasts.error("saveDraft", err);
+      setError(message);
     } finally {
       setIsSaving(false);
     }
@@ -744,13 +758,11 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         setUnsavedChanges(false);
         setRemoteUpdatePending(false);
       }
+      pageEditorActionToasts.success("publish");
       showStatusNotice("Page published.");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to publish page.");
-      }
+      const message = pageEditorActionToasts.error("publish", err);
+      setError(message);
     } finally {
       setIsPublishing(false);
     }
@@ -760,15 +772,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setPreviewOpen(true);
     if (!pageId) {
       setPreviewUrl(null);
+      setPreviewProbe(null);
       setPreviewError(null);
       setPreviewLoading(false);
       return;
     }
     setPreviewLoading(true);
     setPreviewError(null);
+    setPreviewProbe(null);
     try {
-      const { previewUrl } = await previewPage(pageId);
+      const { previewUrl, probe } = await previewPage(pageId, { probe: true });
       setPreviewUrl(previewUrl);
+      setPreviewProbe(probe ?? null);
     } catch (err) {
       if (isApiClientError(err)) {
         setPreviewError(err.message);
@@ -776,6 +791,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         setPreviewError("Failed to generate preview.");
       }
       setPreviewUrl(null);
+      setPreviewProbe(null);
     } finally {
       setPreviewLoading(false);
     }
@@ -1141,6 +1157,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         subtitle="Runtime preview (read-only, site theme)."
         canPreview={Boolean(pageId)}
         previewUrl={previewUrl}
+        probeResult={previewProbe}
         isLoading={previewLoading}
         error={previewError}
         cannotPreviewMessage="Save this page first to generate a runtime preview."

@@ -34,6 +34,11 @@ const pageEditorState = vi.hoisted(() => {
     listPageRevisions: vi.fn(async () => state.revisions),
     previewPage: vi.fn(async (pageId: string) => ({
       previewUrl: `https://preview.test/${pageId}`,
+      probe: {
+        ok: true,
+        status: 200,
+        targetLabel: `https://preview.test/${pageId}`,
+      },
     })),
     updatePage: vi.fn(
       async (id: string, payload: Partial<PageDetail> & { data?: Record<string, unknown> }) => {
@@ -116,6 +121,18 @@ const pageEditorState = vi.hoisted(() => {
 
   return state;
 });
+
+const pageEditorToastState = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: pageEditorToastState.success,
+    error: pageEditorToastState.error,
+  },
+}));
 
 vi.mock("@/components/ui/alert", () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -232,12 +249,14 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   RuntimePreviewDialog: ({
     open,
     previewUrl,
+    probeResult,
     isLoading,
     error,
     device,
   }: {
     open: boolean;
     previewUrl: string | null;
+    probeResult?: { ok: boolean; targetLabel?: string } | null;
     isLoading: boolean;
     error: string | null;
     device: string;
@@ -245,6 +264,7 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
     open ? (
       <div>
         <span>{`preview-url:${previewUrl ?? "none"}`}</span>
+        <span>{`preview-probe:${probeResult ? String(probeResult.ok) : "none"}`}</span>
         <span>{`preview-loading:${String(isLoading)}`}</span>
         <span>{`preview-error:${error ?? "none"}`}</span>
         <span>{`preview-device:${device}`}</span>
@@ -621,11 +641,16 @@ const clickButton = (
 
 const apiError = (message: string) => ({
   kind: "api" as const,
+  name: "ApiClientError",
+  code: "request_failed",
   message,
+  status: 400,
 });
 
 beforeEach(() => {
   pageEditorState.reset();
+  pageEditorToastState.success.mockClear();
+  pageEditorToastState.error.mockClear();
   pageEditorState.cachedPage = createPage();
   pageEditorState.currentPage = clonePage(pageEditorState.cachedPage);
   pageEditorState.revisions = [
@@ -697,8 +722,11 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     clickButton(view.container, "Runtime preview");
     await flush();
 
-    expect(pageEditorState.previewPage).toHaveBeenCalledWith("page-1");
+    expect(pageEditorState.previewPage).toHaveBeenCalledWith("page-1", {
+      probe: true,
+    });
     expect(view.container.textContent).toContain("preview-url:https://preview.test/page-1");
+    expect(view.container.textContent).toContain("preview-probe:true");
     expect(view.container.textContent).toContain("preview-device:tablet");
 
     clickButton(view.container, "Save draft");
@@ -710,6 +738,7 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     expect(draftPayload.data.blocks).toHaveLength(2);
     expect(view.container.textContent).toContain("Page updated");
     expect(view.container.textContent).toContain("Draft saved.");
+    expect(pageEditorToastState.success).toHaveBeenCalledWith("Draft saved.");
 
     clickButton(view.container, "Publish");
     await flush();
@@ -722,6 +751,7 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     );
     expect(view.container.textContent).toContain("Published");
     expect(view.container.textContent).toContain("Page published.");
+    expect(pageEditorToastState.success).toHaveBeenCalledWith("Page published.");
 
     clickButton(view.container, "Page settings");
     await flush();
@@ -786,6 +816,40 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
       "page-1",
       "rev-autosave"
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor emits save success toast only after the mutation resolves", async () => {
+  const initialPage = createPage();
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+  let resolveSave: ((value: PageDetail) => void) | null = null;
+  pageEditorState.updatePage.mockImplementationOnce(
+    async () =>
+      new Promise<PageDetail>((resolve) => {
+        resolveSave = resolve;
+      })
+  );
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    expect(pageEditorToastState.success).not.toHaveBeenCalledWith("Draft saved.");
+
+    await act(async () => {
+      resolveSave?.(clonePage(initialPage));
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(pageEditorToastState.success).toHaveBeenCalledWith("Draft saved.");
   } finally {
     view.cleanup();
   }
@@ -1184,11 +1248,13 @@ test("PageEditor surfaces API client error messages across page, settings, and r
     clickButton(view.container, "Save draft");
     await flush();
     expect(view.container.textContent).toContain("Draft denied");
+    expect(pageEditorToastState.error).toHaveBeenCalledWith("Draft denied");
 
     pageEditorState.publishPage.mockRejectedValueOnce(apiError("Publish denied"));
     clickButton(view.container, "Publish");
     await flush();
     expect(view.container.textContent).toContain("Publish denied");
+    expect(pageEditorToastState.error).toHaveBeenCalledWith("Publish denied");
 
     clickButton(view.container, "Page settings");
     await flush();

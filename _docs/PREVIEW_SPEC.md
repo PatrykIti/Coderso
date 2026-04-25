@@ -37,9 +37,11 @@ Dotyczy:
 1. Admin klika `Runtime preview`.
 2. API tworzy preview token (`preview_tokens`).
 3. API zwraca `previewUrl` i `expiresAt`.
-4. Admin laduje `previewUrl` w iframe.
-5. Runtime route `/preview` waliduje token i target type.
-6. Render korzysta z tego samego pipeline co public site.
+4. Pages editor moze poprosic o bounded probe (`probe: true`); serwer sprawdza
+   tylko wygenerowany preview URL, nie dowolny URL z przegladarki.
+5. Admin laduje `previewUrl` w iframe tylko gdy probe nie zwrocil bledu.
+6. Runtime route `/preview` waliduje token i target type.
+7. Render korzysta z tego samego pipeline co public site.
 
 ## Preview URL contract
 
@@ -66,6 +68,14 @@ Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhos
   the host or base URL only.
 - Pages runtime preview may expose a direct route back to Page Settings when the
   configured public URL looks wrong.
+- Pages `POST /pages/:id/preview` accepts optional `probe: true` and may return
+  `probe: { ok, status, reason, targetLabel }`. The probe:
+  - uses server-owned generated preview URLs only;
+  - allows only the generated/approved origin;
+  - follows bounded same-origin redirects and blocks external redirects;
+  - uses a short timeout and does not persist response bodies, headers, or
+    cookies;
+  - redacts `token` and `device` from UI-safe diagnostics.
 
 ## Admin API response contract
 
@@ -75,9 +85,19 @@ Preview endpoints zwracaja spojny shape:
 {
   "token": "preview-token",
   "previewUrl": "/preview?type=page&token=preview-token",
-  "expiresAt": "2026-02-07T12:00:00.000Z"
+  "expiresAt": "2026-02-07T12:00:00.000Z",
+  "probe": {
+    "ok": false,
+    "status": 503,
+    "reason": "http_error",
+    "targetLabel": "https://www.example.com/preview"
+  }
 }
 ```
+
+`probe` is optional and currently adopted by Pages editor runtime preview. Other
+runtime preview callers can keep the legacy no-probe timeout fallback until they
+adopt resource-specific probe metadata.
 
 Gdy resolver ma poprawny base URL, `previewUrl` jest absolutny, np.:
 

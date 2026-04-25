@@ -215,6 +215,53 @@ test("previewPage posts ttlMinutes with CSRF", async () => {
   }
 });
 
+test("previewPage posts probe flag and normalizes redacted probe metadata", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      token: "t",
+      previewUrl: "https://example.com/preview?type=page&token=secret-token",
+      expiresAt: "soon",
+      probe: {
+        ok: false,
+        status: 503,
+        reason: "http_error",
+        targetLabel:
+          "https://example.com/preview?type=page&token=secret-token&device=mobile",
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    const preview = await previewPage("page-123", {
+      ttlMinutes: 30,
+      probe: true,
+    });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/pages/page-123/preview");
+    const body = JSON.parse(calls[1]?.init?.body as string);
+    expect(body).toEqual({ ttlMinutes: 30, probe: true });
+    expect(preview.probe).toEqual({
+      ok: false,
+      status: 503,
+      reason: "http_error",
+      targetLabel: "https://example.com/preview",
+    });
+    expect(JSON.stringify(preview.probe)).not.toContain("secret-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("publishPage posts empty object payload when publishing from list", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];

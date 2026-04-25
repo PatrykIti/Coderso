@@ -419,6 +419,54 @@ testIfDb(
   15_000
 );
 
+testIfDb("page preview route returns sanitized probe metadata", async () => {
+  const { router, routes } = makeRouter();
+  const deps = makeValidatingDeps();
+  const page = await createPageDirectly("Probe Page");
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: string[] = [];
+
+  registerPageRoutes(router, deps);
+
+  try {
+    globalThis.fetch = async (input) => {
+      fetchCalls.push(String(input));
+      return new Response(null, { status: 503 });
+    };
+
+    const preview = (await runRoute(routes, "POST", "/pages/:id/preview", {
+      params: { id: page.id },
+      headers: {
+        host: "localhost:8787",
+        "x-forwarded-host": "cms.example.test",
+        "x-forwarded-proto": "https",
+      },
+      body: { ttlMinutes: 5, probe: true },
+    })) as {
+      token: string;
+      previewUrl: string;
+      probe: {
+        ok: false;
+        status: number;
+        reason: string;
+        targetLabel: string;
+      };
+    };
+
+    expect(fetchCalls).toHaveLength(1);
+    expect(preview.probe).toEqual({
+      ok: false,
+      status: 503,
+      reason: "http_error",
+      targetLabel: "https://cms.example.test/preview",
+    });
+    expect(preview.previewUrl).toContain("token=");
+    expect(JSON.stringify(preview.probe)).not.toContain(preview.token);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 testIfDb("page route handlers surface not-found and revision guard errors", async () => {
   const { router, routes } = makeRouter();
   const actor = await createRouteActor();

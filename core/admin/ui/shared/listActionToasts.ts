@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { resolveAdminActionErrorMessage } from "./actionToasts";
 
 export type ListActionToastVariant = "success" | "error";
 
@@ -51,26 +52,7 @@ const labelForCount = (labels: ResourceLabels, count: number) =>
 const formatTarget = (targetLabel?: string) =>
   targetLabel ? ` "${targetLabel}"` : "";
 
-export const resolveListActionErrorMessage = (
-  error: unknown,
-  fallback: string
-) => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string" &&
-    (error as { message: string }).message.trim() &&
-    (
-      (error as { name?: unknown }).name === "ApiClientError" ||
-      "status" in error ||
-      "code" in error
-    )
-  ) {
-    return (error as { message: string }).message;
-  }
-  return fallback;
-};
+export const resolveListActionErrorMessage = resolveAdminActionErrorMessage;
 
 export const createListActionToastAdapter = <TAction extends string>(
   config: ListActionToastConfig<TAction>

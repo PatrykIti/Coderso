@@ -4,7 +4,7 @@ import { renderToString } from "react-dom/server";
 
 import { PageRevisionDrawer } from "../../../core/admin/ui/pages/PageRevisionDrawer";
 
-test("PageRevisionDrawer renders autosave label and discard action", () => {
+test("PageRevisionDrawer renders draft-version label and discard action", () => {
   const html = renderToString(
     <PageRevisionDrawer
       open
@@ -30,9 +30,10 @@ test("PageRevisionDrawer renders autosave label and discard action", () => {
   );
 
   expect(html).toContain("Page history");
-  expect(html).toContain("Restore published revisions or manage the latest settings autosave.");
-  expect(html).toContain("Autosave");
-  expect(html).toContain("Not saved");
+  expect(html).toContain("Restore published versions or manage the latest draft version.");
+  expect(html).toContain("Draft version");
+  expect(html).toContain("Draft");
   expect(html).toContain("Discard");
   expect(html).toContain("Restore");
+  expect(html.toLowerCase()).not.toContain("autosave");
 });

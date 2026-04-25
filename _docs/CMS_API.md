@@ -557,15 +557,39 @@ Create/Update payload (summary):
 }
 ```
 
+`POST /pages/:id/preview` payload:
+
+```json
+{
+  "ttlMinutes": 60,
+  "probe": true
+}
+```
+
+- `ttlMinutes` is optional and remains clamped by the preview token policy.
+- `probe` is optional. When `true`, the server probes only the generated preview
+  URL/origin and returns UI-safe metadata; it never accepts an arbitrary URL from
+  the browser.
+
 `POST /pages/:id/preview` response:
 
 ```json
 {
   "token": "preview-token",
   "previewUrl": "/preview?type=page&token=preview-token",
-  "expiresAt": "2026-02-07T12:00:00.000Z"
+  "expiresAt": "2026-02-07T12:00:00.000Z",
+  "probe": {
+    "ok": false,
+    "status": 503,
+    "reason": "http_error",
+    "targetLabel": "https://www.example.com/preview"
+  }
 }
 ```
+
+`probe` is omitted when not requested or when the generated preview URL is
+relative and cannot be probed server-side. Probe diagnostics redact preview
+tokens and device query values.
 
 `GET /pages/template-options` response:
 

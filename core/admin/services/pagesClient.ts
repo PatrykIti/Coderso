@@ -51,6 +51,32 @@ export type PreviewResponse = {
   token: string;
   previewUrl: string;
   expiresAt: string;
+  probe?: PreviewProbeResult;
+};
+
+export type PreviewProbeFailureReason =
+  | "unreachable"
+  | "http_error"
+  | "redirect_blocked"
+  | "timeout"
+  | "invalid_target";
+
+export type PreviewProbeResult =
+  | {
+      ok: true;
+      status?: number;
+      targetLabel: string;
+    }
+  | {
+      ok: false;
+      status?: number;
+      reason: PreviewProbeFailureReason;
+      targetLabel: string;
+    };
+
+export type PreviewPageOptions = {
+  ttlMinutes?: number;
+  probe?: boolean;
 };
 
 export type PageRevisionKind = "publish" | "autosave";
@@ -171,6 +197,78 @@ const removeCachedPage = (id: string) => {
   clearLocalCache(cacheKeys.pageDetail(id));
   if (!current) return;
   primePagesCacheInternal(current.filter((item) => item.id !== id));
+};
+
+const previewProbeFailureReasons = new Set<PreviewProbeFailureReason>([
+  "unreachable",
+  "http_error",
+  "redirect_blocked",
+  "timeout",
+  "invalid_target",
+]);
+
+const sanitizePreviewTargetLabel = (value: unknown) => {
+  const fallback = "preview target";
+  if (typeof value !== "string") return fallback;
+  try {
+    const parsed = new URL(value, "http://localhost");
+    parsed.searchParams.delete("token");
+    parsed.searchParams.delete("device");
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value)) {
+      return `${parsed.origin}${parsed.pathname || "/"}`;
+    }
+    return `${parsed.pathname}${parsed.search}` || fallback;
+  } catch {
+    const redacted = value
+      .replace(/([?&]token=)[^&]+/gi, "$1<redacted>")
+      .replace(/([?&]device=)[^&]+/gi, "$1<redacted>")
+      .trim();
+    return redacted || fallback;
+  }
+};
+
+const normalizePreviewProbe = (value: unknown): PreviewProbeResult | undefined => {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const status =
+    typeof record.status === "number" && Number.isFinite(record.status)
+      ? record.status
+      : undefined;
+  const targetLabel = sanitizePreviewTargetLabel(record.targetLabel);
+
+  if (record.ok === true) {
+    return {
+      ok: true,
+      ...(status === undefined ? {} : { status }),
+      targetLabel,
+    };
+  }
+
+  if (
+    record.ok === false &&
+    previewProbeFailureReasons.has(record.reason as PreviewProbeFailureReason)
+  ) {
+    return {
+      ok: false,
+      ...(status === undefined ? {} : { status }),
+      reason: record.reason as PreviewProbeFailureReason,
+      targetLabel,
+    };
+  }
+
+  return undefined;
+};
+
+const normalizePreviewResponse = (value: unknown): PreviewResponse => {
+  const record =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const probe = normalizePreviewProbe(record.probe);
+  return {
+    token: typeof record.token === "string" ? record.token : "",
+    previewUrl: typeof record.previewUrl === "string" ? record.previewUrl : "",
+    expiresAt: typeof record.expiresAt === "string" ? record.expiresAt : "",
+    ...(probe ? { probe } : {}),
+  };
 };
 
 export const getCachedPages = () => readPagesCache();
@@ -294,16 +392,27 @@ export async function unpublishPage(id: string) {
   return result;
 }
 
-export async function previewPage(id: string, ttlMinutes?: number) {
-  return apiRequest<PreviewResponse>(
+export async function previewPage(
+  id: string,
+  ttlMinutesOrOptions?: number | PreviewPageOptions
+) {
+  const options =
+    typeof ttlMinutesOrOptions === "number"
+      ? { ttlMinutes: ttlMinutesOrOptions }
+      : ttlMinutesOrOptions ?? {};
+  const body: PreviewPageOptions = {};
+  if (options.ttlMinutes !== undefined) body.ttlMinutes = options.ttlMinutes;
+  if (options.probe !== undefined) body.probe = options.probe;
+  const response = await apiRequest<unknown>(
     `/pages/${id}/preview`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ttlMinutes }),
+      body: JSON.stringify(body),
     },
     { withCsrf: true }
   );
+  return normalizePreviewResponse(response);
 }
 
 export async function duplicatePage(id: string) {
