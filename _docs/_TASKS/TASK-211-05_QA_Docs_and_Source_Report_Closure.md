@@ -55,6 +55,8 @@ outside TASK-211.
 - If preview/probe route behavior changed:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/pages.test.ts tests/unit/pages/previewService.test.ts`
+  - verify route registration and centralized `map*Error` / `ApiError` coverage
+    for any new or changed preview/probe route.
 - Manual replay when a local admin server is available:
   - Save draft success/failure toast;
   - Publish success/failure toast;

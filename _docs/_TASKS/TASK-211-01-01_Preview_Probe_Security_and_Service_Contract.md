@@ -43,6 +43,15 @@ No child task files.
   - or add `POST /pages/:id/preview/probe` if separating token generation from
     probing is cleaner.
 - Do not add `POST /preview/probe { url }`.
+- Reuse the existing preview service, preview URL resolver, validation schema,
+  and admin client before adding new seams. A new internal admin route is valid
+  only when it keeps the route orchestration simpler or avoids mixing token
+  issuance with probe execution in a way that would weaken security or
+  testability.
+- If a route changes or a new route is added, keep the route module
+  orchestration-only: validate payload, enforce permission/CSRF/rate-limit,
+  delegate probing to service/helper code, and map known domain failures through
+  a centralized `map*Error` helper to `ApiError`.
 - Probe only the generated preview URL or a server-derived URL that matches the
   configured preview URL policy.
 - Use HEAD first when supported; fall back to a minimal GET only when necessary.
@@ -94,9 +103,14 @@ return json({
 ## Testing Requirements
 
 - Bun route tests:
+  - route registration proves the final `POST /pages/:id/preview` extension or
+    new `POST /pages/:id/preview/probe` route is mounted with the expected
+    method/path;
   - preview probe success returns `ok: true`;
   - preview probe 404/503 returns `ok: false` with sanitized status/reason;
   - unknown fields are rejected;
+  - known probe/service failures are mapped through centralized `map*Error` /
+    `ApiError` coverage instead of leaking raw thrown errors;
   - probe diagnostics do not include the token query value;
   - disallowed redirect/origin is rejected.
 - Unit tests for any probe helper:

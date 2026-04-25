@@ -99,6 +99,10 @@ Pages-editor-only notification system.
 - Do not add a second toaster host or a Pages-editor-only notification layer.
 - Do not replace the Page editor shell, block model, preview token model, or
   publish semantics.
+- Reuse the existing preview route/service/client seams first. Extend
+  `POST /pages/:id/preview` only when that is enough for the contract; create a
+  new internal admin route only when separation is required for correctness,
+  security, or testability.
 - Do not accept arbitrary preview URLs from the browser for server-side probing.
 - Do not rename persisted/API revision kind values such as `autosave`.
 
@@ -152,6 +156,10 @@ Pages-editor-only notification system.
 - If preview route/probe behavior changes:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/pages.test.ts tests/unit/pages/previewService.test.ts`
+  - include route registration coverage for any new or changed preview/probe
+    route;
+  - include centralized `map*Error` / `ApiError` coverage for known
+    preview/probe domain failures and keep route modules orchestration-only.
 - If the shared toast adapter is generalized:
   - keep `tests/vitest/ui/list-action-toasts.test.ts` green so existing list
     screens do not regress.

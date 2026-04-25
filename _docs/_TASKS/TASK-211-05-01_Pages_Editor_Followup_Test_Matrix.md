@@ -52,8 +52,12 @@ No child task files.
   - Page History draft-version copy;
   - existing list toast adapter stability.
 - Bun:
+  - route registration for the final preview/probe method/path if route behavior
+    changes;
   - preview/probe response shape;
   - token redaction;
+  - centralized `map*Error` / `ApiError` coverage for known preview/probe
+    domain failures;
   - route permission and CSRF behavior;
   - unknown field rejection.
 - Baseline commands:

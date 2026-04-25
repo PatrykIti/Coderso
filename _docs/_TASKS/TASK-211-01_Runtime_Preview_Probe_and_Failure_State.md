@@ -51,6 +51,10 @@ iframe behavior.
   probe metadata over adding a generic `POST /preview/probe` URL endpoint.
 - If a separate internal endpoint is necessary, it must be resource-bound, for
   example `POST /pages/:id/preview/probe`, not arbitrary URL-bound.
+- Reuse current page preview route, service, URL resolver, client, and
+  validation seams wherever possible. Add a new admin route only if the
+  implementation cannot keep token generation, probing, and security boundaries
+  correct inside the existing route.
 - The server must only probe URLs it generated or URLs derived from configured
   preview/public base URL policy.
 - The UI should treat a failed probe as a first-class load error before assigning
@@ -107,6 +111,8 @@ if (preview.probe && !preview.probe.ok) {
 ## Testing Requirements
 
 - `tests/integration/routes/pages.test.ts`
+  - route registration covers any new `POST /pages/:id/preview/probe` route or
+    the extended `POST /pages/:id/preview` contract;
   - preview response can include successful probe metadata;
   - probe failure returns sanitized status/reason/target label;
   - token is not leaked in probe diagnostics;
@@ -114,6 +120,9 @@ if (preview.probe && !preview.probe.ok) {
 - `tests/unit/pages/previewService.test.ts`
   - approved-origin and redirect rejection behavior if a service helper is
     introduced.
+  - known probe helper/domain failures map to machine-readable codes that the
+    route boundary can convert through centralized `map*Error` / `ApiError`
+    handling.
 - `tests/vitest/admin/pagesClient.test.ts`
   - client normalizes optional probe metadata without exposing token details.
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
