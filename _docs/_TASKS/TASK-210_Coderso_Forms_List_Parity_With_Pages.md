@@ -270,7 +270,7 @@ a backward-compatible alias through `adminPaths`.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
 - If route schema/error mapping changes:
   `set -a && source .env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts`
 - If `forms.openAfterCreate` is added:
@@ -321,3 +321,6 @@ a backward-compatible alias through `adminPaths`.
 12. Forms create tests prove both payload boundaries: the list passes no UI-only
     or builder-owned fields to `createForm`, while `formsClient.createForm`
     preserves its existing normalized default `settings` network payload.
+13. Existing Forms render smoke coverage is updated so
+    `tests/vitest/ui-integration/forms.test.tsx` reflects the canonical
+    `/admin/coderso/forms` route and compact `New` action.

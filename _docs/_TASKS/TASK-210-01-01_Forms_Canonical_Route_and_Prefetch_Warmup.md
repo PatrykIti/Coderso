@@ -50,6 +50,7 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 - `tests/vitest/admin/adminPaths.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui-integration/forms.test.tsx`
 
 ## Security Contract
 
@@ -64,7 +65,7 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 
 ## Testing Requirements
 
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

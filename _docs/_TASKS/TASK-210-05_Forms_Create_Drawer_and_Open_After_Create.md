@@ -53,6 +53,7 @@ and Forms-specific inline validation.
 - `core/admin/services/userSettingsClient.ts`
 - `core/services/settings/userSettingsService.ts`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui-integration/forms.test.tsx`
 - `tests/vitest/admin/formsClient.test.ts`
 - `tests/vitest/admin/userSettingsClient.test.ts`
 - `tests/unit/settings/userSettingsService.test.ts`
@@ -123,7 +124,7 @@ The actual payload sent to `createForm` must not include UI-only fields such as
   - open-after-create disabled refreshes the list and closes the drawer;
   - preference load/persist failures do not block create.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
   - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
