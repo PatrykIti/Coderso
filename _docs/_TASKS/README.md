@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 56 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1130 tasks
 
@@ -38,6 +38,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-210 | Coderso Forms List Parity With Pages | High | Very Large | Match `/admin/coderso/forms` to the Pages list contract while preserving Forms statuses, submission access, builder, action logs, and public submission hardening |
+| TASK-210-01 | Forms List Route, Shell, and Cache Hydration | High | Medium | Canonical `/admin/coderso/forms` active href plus cache-present/background and cache-missing/foreground refresh behavior |
+| TASK-210-02 | Forms Filters, Table, and Shared Pagination | High | Large | Forms search/status/access filters, Pages-style table selection, and shared pagination footer |
+| TASK-210-03 | Forms Row Lifecycle Actions and Confirmations | High | Medium | Row Edit/Publish/Draft/Archive/Delete actions using existing Forms status contract and ConfirmActionDialog for delete |
+| TASK-210-04 | Forms Bulk Selection and Action Parity | High | Medium | Visible-scope bulk publish/draft/archive/delete with partial-failure feedback and confirmed bulk delete |
+| TASK-210-05 | Forms Create Drawer and Open After Create | High | Medium | Compact `New` flow, drawer reset, Forms create payload, and `forms.openAfterCreate` preference |
+| TASK-210-06 | Forms List Toasts and Error Mapping | High | Large | Shared list-action toasts plus Forms route status enum and known domain error mapping |
+| TASK-210-07 | QA, Docs, Changelog, and Closure | Medium | Medium | Targeted validation, Content List/Admin Cache/API docs, changelog, and board closure for TASK-210 |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
