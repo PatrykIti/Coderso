@@ -25,6 +25,9 @@ export class ApiClientError extends Error {
 
 const getApiBase = () => `${resolveAdminBasePath()}/api`;
 let cachedCsrfToken: string | null = null;
+let csrfTokenPromise: Promise<string | null> | null = null;
+
+const csrfRefreshErrorCodes = new Set(["csrf_invalid", "csrf_expired"]);
 
 export function isApiClientError(error: unknown): error is ApiClientError {
   return error instanceof ApiClientError;
@@ -32,13 +35,16 @@ export function isApiClientError(error: unknown): error is ApiClientError {
 
 export function resetCsrfToken() {
   cachedCsrfToken = null;
+  csrfTokenPromise = null;
 }
 
 export async function getCsrfToken(options?: { force?: boolean }) {
   if (cachedCsrfToken && !options?.force) return cachedCsrfToken;
+  if (csrfTokenPromise) return csrfTokenPromise;
+  if (options?.force) cachedCsrfToken = null;
 
   const finishMetric = startRequestMetric({ path: "/auth/csrf", method: "GET" });
-  try {
+  csrfTokenPromise = (async () => {
     const response = await fetch(`${getApiBase()}/auth/csrf`, {
       method: "GET",
       credentials: "include",
@@ -51,10 +57,39 @@ export async function getCsrfToken(options?: { force?: boolean }) {
     cachedCsrfToken = payload.token ?? null;
     finishMetric({ status: response.status, ok: true });
     return cachedCsrfToken;
-  } catch {
-    finishMetric({ status: 0, ok: false, errorCode: "csrf_network_error" });
-    return null;
+  })()
+    .catch(() => {
+      finishMetric({ status: 0, ok: false, errorCode: "csrf_network_error" });
+      return null;
+    })
+    .finally(() => {
+      csrfTokenPromise = null;
+    });
+
+  return csrfTokenPromise;
+}
+
+const isRefreshableCsrfError = (error: ApiClientError) =>
+  error.status === 403 && csrfRefreshErrorCodes.has(error.code);
+
+async function sendApiRequest(
+  path: string,
+  init: RequestInit,
+  options: { withCsrf?: boolean } | undefined,
+  csrfOptions?: { force?: boolean }
+) {
+  const headers = new Headers(init.headers);
+
+  if (options?.withCsrf) {
+    const csrf = await getCsrfToken(csrfOptions);
+    if (csrf) headers.set("X-CSRF-Token", csrf);
   }
+
+  return fetch(`${getApiBase()}${path}`, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
 }
 
 async function parseError(response: Response) {
@@ -94,26 +129,29 @@ export async function apiRequest<T>(
   init: RequestInit = {},
   options?: { withCsrf?: boolean }
 ) {
-  const headers = new Headers(init.headers);
-
-  if (options?.withCsrf) {
-    const csrf = await getCsrfToken();
-    if (csrf) headers.set("X-CSRF-Token", csrf);
-  }
-
   const method = (init.method ?? "GET").toUpperCase();
   const finishMetric = startRequestMetric({ path, method });
 
   try {
-    const response = await fetch(`${getApiBase()}${path}`, {
-      ...init,
-      headers,
-      credentials: "include",
-    });
+    let response = await sendApiRequest(path, init, options);
 
     if (!response.ok) {
-      finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
-      throw await parseError(response);
+      const error = await parseError(response);
+      if (options?.withCsrf && isRefreshableCsrfError(error)) {
+        resetCsrfToken();
+        response = await sendApiRequest(path, init, options, { force: true });
+        if (!response.ok) {
+          const retryError = await parseError(response);
+          if (isRefreshableCsrfError(retryError)) {
+            resetCsrfToken();
+          }
+          finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
+          throw retryError;
+        }
+      } else {
+        finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
+        throw error;
+      }
     }
 
     const payload = await parseJson<T>(response);
