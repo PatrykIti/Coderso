@@ -21,9 +21,12 @@ settles.
 - [ ] Make row Delete open `ConfirmActionDialog` instead of calling
   `deleteForm` directly.
 - [ ] Use copy that names the form and clearly states that the operation is
-  irreversible and affects collected submissions/action diagnostics.
+  irreversible for deletion-safe forms, while retained submissions/action
+  diagnostics may block hard delete and should be preserved by archiving instead.
 - [ ] Call `deleteForm(id)` only from the dialog `onConfirm`.
 - [ ] Refresh Forms list/cache after successful delete.
+- [ ] If delete returns a retained-history conflict, keep the form in the list,
+  keep Archive available, and show stable inline copy instead of a false success.
 - [ ] Keep inline errors visible on delete failure.
 - [ ] Leave toast success/error wiring to TASK-210-06-01.
 
@@ -45,15 +48,17 @@ settles.
 - Anti-abuse:
   - no public write path is added;
   - destructive delete must be gated by `ConfirmActionDialog`;
-  - confirmation must not expose raw submission payloads.
+  - confirmation and conflict copy must not expose raw submission payloads.
 
 ## Testing Requirements
 
 - Clicking row Delete opens confirmation.
 - Confirmation copy includes the target form name when available and explains
-  the irreversible impact.
+  the irreversible impact plus retained-history conflict possibility.
 - Cancelling confirmation does not call `deleteForm`.
 - Confirming calls `deleteForm` exactly once for the target id.
+- A retained-history delete conflict keeps the row visible and suggests archive
+  or status change instead of retrying destructive delete blindly.
 - Delete failure keeps an inline error.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
@@ -69,4 +74,4 @@ settles.
 
 1. No row delete runs directly from a dropdown click.
 2. Delete mutation runs only after shared dialog confirmation.
-3. Delete failure remains recoverable and visible.
+3. Delete failure or retained-history conflict remains recoverable and visible.

@@ -55,6 +55,10 @@ a backward-compatible alias through `adminPaths`.
   delete, and inline alerts only.
 - `FormListPage` passes `activeHref="/admin/forms"`, even though docs and
   navigation declare `/admin/coderso/forms` as canonical.
+- `FormBuilderPage` and `FormActionLogsPage` still use legacy `/admin/forms`
+  active href/navigation literals in a few route-shell places. TASK-210 should
+  normalize those route-only seams when it wires canonical list/editor/action-log
+  links, without changing builder/runtime behavior.
 - `core/admin/ui/forms/hooks/useForms.ts` always calls `refresh(true)` on
   mount, even when `getCachedForms()` already has a valid list. Pages uses a
   cache-present/background and cache-missing/foreground refresh policy.
@@ -71,6 +75,11 @@ a backward-compatible alias through `adminPaths`.
   status enum validation and centralized mapping for known domain errors
   (`form_invalid`, `form_name_required`, `form_slug_exists`, `form_not_found`)
   need to be checked before the list relies on clean API copy.
+- Database constraints intentionally restrict hard deletion when retained
+  `form_submissions` or `form_action_runs` rows exist. The task family must not
+  imply that delete removes collected submissions or diagnostics; deletion-safe
+  forms may be hard-deleted, while retained-history forms must surface a stable
+  conflict and use Archive as the safe lifecycle path.
 
 ### Forms Contract Constraints
 
@@ -135,7 +144,10 @@ a backward-compatible alias through `adminPaths`.
    `createListActionToastAdapter` with Forms labels and actions:
    create, publish, draft, archive, delete.
 7. Delete and bulk delete use `ConfirmActionDialog`. No destructive Forms
-   delete should run directly from a dropdown click.
+   delete should run directly from a dropdown click. Hard delete remains
+   deletion-safe only: if retained submissions/action diagnostics block the
+   delete, the API returns a stable conflict and the UI keeps the row recoverable
+   with Archive still available.
 8. Cache behavior follows the shared admin cache contract:
    cache hydrate first, background revalidate when cache exists, foreground load
    when cache is absent, cache bus updates after mutations, and prefetch warmup
@@ -185,6 +197,7 @@ a backward-compatible alias through `adminPaths`.
 - No new table framework or Forms-only pagination system.
 - No server-side pagination for `GET /forms`.
 - No migration of Forms storage or status values.
+- No destructive deletion of retained submission/action-run history.
 
 ## Security Contract
 
@@ -210,6 +223,8 @@ a backward-compatible alias through `adminPaths`.
     duplicate enum strings or import `db/client` at module load;
   - status and submission access must be enum-validated instead of accepting
     arbitrary strings at the schema boundary.
+  - hard-delete conflicts for retained submissions/action runs must map to a
+    stable machine-readable 409 response instead of leaking raw database errors.
 - Anti-abuse:
   - no new public write path;
   - destructive row and bulk delete require `ConfirmActionDialog`;
@@ -252,9 +267,11 @@ a backward-compatible alias through `adminPaths`.
 - `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_NAVIGATION.md` only if canonical route/alias docs change.
 - `_docs/CMS_API.md` if route schemas or error mapping change.
+- `docs/coderso/forms-list-and-builder.md`
 - `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` list-scope closure notes for BUG-2,
-  BUG-5, and UX-1, plus explicit out-of-scope notes for editor/runtime findings
-  not handled by this family.
+  UX-1, and the Forms-contract subset of BUG-5. BUG-5 requests for Duplicate,
+  Runtime Preview, and Embed Code remain deferred/non-goals unless their own
+  service/API/UI contracts are added first.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
@@ -271,6 +288,7 @@ a backward-compatible alias through `adminPaths`.
 7. Row actions include a canonical `Action logs` shortcut without adding new
    Duplicate, Runtime Preview, or Embed Code behavior.
 8. Row and bulk delete are confirmed through `ConfirmActionDialog`.
+   Retained-history delete conflicts stay visible and do not emit false success.
 9. Create, lifecycle, delete, and bulk outcomes emit shared top-right toasts and
    keep truthful inline partial-failure alerts where needed.
 10. Public submission access, nonce/captcha hardening, builder routes, and action

@@ -21,8 +21,13 @@ machine-readable errors and strict status validation.
 - [ ] Map `form_name_required` to HTTP 400.
 - [ ] Map `form_slug_exists` to HTTP 409.
 - [ ] Map `form_not_found` to HTTP 404.
+- [ ] Map retained-history delete conflicts as `form_delete_restricted` to HTTP
+  409.
 - [ ] Use the mapper around create, detail, update, delete, field-write, and
   public submission form lookup paths.
+- [ ] Add a service-level delete precheck or mapper-safe domain error so
+  `form_submissions` / `form_action_runs` `onDelete: restrict` behavior does not
+  leak raw database errors when list delete is blocked.
 - [ ] Add or reuse a Bun-free Forms contract/helper owner for
   `draft | published | archived` status values so route schemas, service
   normalization, and admin/UI types consume one source without importing
@@ -67,6 +72,8 @@ machine-readable errors and strict status validation.
   - route/admin/service status validation shares one pure contract owner;
   - status rejects values outside `draft | published | archived`;
   - submission access rejects values outside `public | internal`.
+  - blocked hard deletes return a stable conflict code without exposing
+    submission or action-run payloads.
 - Anti-abuse:
   - no new public write path;
   - public submissions keep nonce plus optional reCAPTCHA behavior.
@@ -78,6 +85,7 @@ machine-readable errors and strict status validation.
 - Create/update reject unknown status values.
 - Public submission lookup maps missing forms without weakening nonce/captcha or
   access behavior.
+- Delete with retained submissions/action diagnostics maps to a stable 409.
 - Public submission schema still accepts the documented payload.
 - Commands:
   - `set -a && source .env && set +a && bun test tests/integration/routes/forms.test.ts`
@@ -94,4 +102,5 @@ machine-readable errors and strict status validation.
 
 1. Forms route errors are centralized and machine-readable.
 2. Status validation is strict at the route boundary.
-3. Public submission hardening remains unchanged.
+3. Retained-history hard-delete conflicts are stable 409 responses.
+4. Public submission hardening remains unchanged.

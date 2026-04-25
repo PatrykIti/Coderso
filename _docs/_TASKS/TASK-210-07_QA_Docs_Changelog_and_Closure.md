@@ -30,8 +30,13 @@ security/runtime contracts still hold.
   canonical admin routes (`/admin/coderso/forms`, `/admin/coderso/forms/:id`,
   `/admin/coderso/forms/:id/action-runs`) from backend API routes
   (`/forms/*`).
+- [ ] Update `docs/coderso/forms-list-and-builder.md` so the admin-facing Forms
+  guide reflects the final list filters, selection, bulk actions, confirmation,
+  and toast behavior.
 - [ ] Update `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` with dated closure notes for
-  list-scope findings covered by TASK-210: BUG-2, BUG-5, and UX-1; explicitly
+  list-scope findings covered by TASK-210: BUG-2 and UX-1, plus the
+  Forms-contract subset of BUG-5. Explicitly defer BUG-5 requests for Duplicate,
+  Runtime Preview, and Embed Code until those flows have their own contracts, and
   leave editor/runtime findings to separate task families.
 - [ ] Confirm every TASK-210 leaf is either Done or explicitly superseded by
   the final implementation notes before moving the umbrella to Done.
@@ -50,6 +55,7 @@ security/runtime contracts still hold.
 - `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_NAVIGATION.md` only if route/canonical wording changes.
 - `_docs/CMS_API.md` if route schema/error mapping changed.
+- `docs/coderso/forms-list-and-builder.md`
 - `_docs/PLAYWRIGHT/SUMMARY-FORMS.md`
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
@@ -89,6 +95,8 @@ security/runtime contracts still hold.
 - `_docs/ADMIN_NAVIGATION.md` must stay clear that `/admin/coderso/forms` is
   canonical and `/admin/forms` is an alias.
 - `_docs/CMS_API.md` must reflect any final route schema/error mapping changes.
+- `docs/coderso/forms-list-and-builder.md` must describe the final admin Forms
+  list workflow and not preserve outdated `New form` / status-only table copy.
 - `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` must record which list findings TASK-210
   closed and which editor/runtime findings remain outside scope.
 - `_docs/_CHANGELOG/*` and `_docs/_CHANGELOG/README.md` must include TASK-210.

@@ -25,6 +25,10 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 - [ ] Normalize touched row/editor navigation to `/coderso/forms/:id`.
 - [ ] Normalize touched action-log navigation to
   `/coderso/forms/:id/action-runs`.
+- [ ] Normalize `FormBuilderPage` and `FormActionLogsPage` route-shell literals
+  from legacy `/admin/forms` / `/forms/*` patterns to canonical
+  `/admin/coderso/forms` / `/coderso/forms/*` equivalents where they affect
+  active hrefs, back links, or action-log navigation.
 - [ ] Keep `/forms/:id` working through `adminPaths` alias tests, but do not
   add new alias literals in modified list code.
 - [ ] Assert `/admin/forms` and `/admin/coderso/forms` resolve to the same
@@ -36,10 +40,10 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormTable.tsx`
-- `core/admin/ui/forms/FormBuilderPage.tsx` only if action-log navigation is
-  touched.
-- `core/admin/ui/forms/FormActionLogsPage.tsx` only if back-to-form navigation
-  or active href is touched.
+- `core/admin/ui/forms/FormBuilderPage.tsx` for route-shell-only action-log
+  navigation and active href cleanup.
+- `core/admin/ui/forms/FormActionLogsPage.tsx` for route-shell-only back-to-form
+  navigation and active href cleanup.
 - `core/admin/utils/adminPaths.ts` only if an alias regression is found.
 - `core/admin/utils/adminPrefetch.ts` only if the current warmup entry is
   missing or wrong.
@@ -75,3 +79,5 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 2. `/admin/forms` remains accepted only through alias normalization.
 3. Row/editor/action-log links resolve to canonical Coderso Forms paths.
 4. Prefetch warms `forms:list` through `listFormsCached({ force: false })`.
+5. Builder/action-log route-shell cleanup does not change builder save, preview,
+   fields, automation, or runtime behavior.

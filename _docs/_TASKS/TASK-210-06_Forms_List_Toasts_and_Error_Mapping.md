@@ -34,7 +34,8 @@ dialog.
   - `form_invalid` -> 400;
   - `form_name_required` -> 400;
   - `form_slug_exists` -> 409;
-  - `form_not_found` -> 404.
+  - `form_not_found` -> 404;
+  - `form_delete_restricted` for retained-history delete conflicts -> 409.
 - [ ] Move or expose Forms status values from a Bun-free Forms contract/helper
   module, then consume the same values in route schemas, server normalization,
   and admin/UI types instead of duplicating string unions across DB-coupled and
@@ -43,6 +44,9 @@ dialog.
   `mapFormError(error): ApiError | null`, and reuse it consistently for
   create, detail, update, delete, field-write, and public submission form lookup
   paths.
+- [ ] Keep hard-delete semantics aligned with the database contract: submissions
+  and action-run history are retained, and a blocked delete returns a stable
+  conflict instead of leaking a raw foreign-key/database error.
 - [ ] Tighten `formCreateSchema` and `formUpdateSchema` status validation to
   enum values `draft | published | archived`.
 - [ ] Keep public submission validation and error behavior unchanged unless a
@@ -91,7 +95,9 @@ dialog.
 - Anti-abuse:
   - no new public write path;
   - public submissions keep nonce plus optional reCAPTCHA behavior;
-  - delete still requires UI confirmation in TASK-210-03/TASK-210-04.
+  - delete still requires UI confirmation in TASK-210-03/TASK-210-04;
+  - blocked delete conflict copy must not expose raw submission payloads or
+    action-run payloads.
 
 ## Pseudocode
 
@@ -132,6 +138,8 @@ export const mapFormError = (error: unknown) => {
   - known Forms domain errors map to stable API errors/statuses;
   - create/update reject unknown fields;
   - create/update reject unknown status values;
+  - delete with retained submissions/action diagnostics maps to a stable 409 and
+    does not remove cached rows as a success;
   - `form_not_found` from public submission lookup still maps to the stable
     Forms API error without changing nonce/captcha/access behavior;
   - public submission schema still accepts the documented payload.
@@ -155,4 +163,6 @@ export const mapFormError = (error: unknown) => {
 3. Partial bulk failures surface in both toast and inline copy.
 4. Known Forms domain errors map to machine-readable API errors.
 5. Status enum validation is strict at the route boundary.
-6. Public submission hardening remains unchanged.
+6. Retained-history delete conflicts are stable 409 responses, not raw database
+   errors or false UI successes.
+7. Public submission hardening remains unchanged.

@@ -28,9 +28,10 @@ when cache exists, matching the Pages mount policy.
   replace touched list links and navigation calls with `/coderso/forms/:id`
   literals or shared helpers so new code does not rely on the legacy
   `/forms` alias.
-- [ ] If this work touches Forms editor or action-log navigation, normalize
-  those links to `/coderso/forms/:id` and `/coderso/forms/:id/action-runs`
-  without changing editor/runtime behavior.
+- [ ] Normalize route-shell-only legacy literals in `FormBuilderPage` and
+  `FormActionLogsPage` where they currently use `/admin/forms`,
+  `/forms/:id`, or `/forms/:id/action-runs`; do not change builder/runtime
+  behavior beyond canonical navigation and active hrefs.
 - [ ] Replace `useForms` force-on-mount behavior with a cache-present/background
   and cache-missing/foreground refresh policy.
 - [ ] Keep `listFormsCached({ force: false })` as the prefetch warmup path.
@@ -43,8 +44,8 @@ when cache exists, matching the Pages mount policy.
 - `core/admin/ui/forms/FormTable.tsx` if editor links are normalized while this
   area is touched.
 - `core/admin/ui/forms/FormBuilderPage.tsx` and
-  `core/admin/ui/forms/FormActionLogsPage.tsx` only for canonical
-  active-href/navigation cleanup if this task touches those route seams.
+  `core/admin/ui/forms/FormActionLogsPage.tsx` for canonical
+  active-href/navigation cleanup only.
 - `core/admin/ui/forms/hooks/useForms.ts`
 - `core/admin/utils/adminPrefetch.ts` only if the current Forms warmup contract
   needs an assertion or code adjustment.
@@ -88,6 +89,8 @@ owner instead of creating a Forms-only cache policy module.
   - `/admin/forms` aliases to `/admin/coderso/forms`;
   - list active state and row editor links resolve to canonical
     `/admin/coderso/forms` routes;
+  - builder and action-log active hrefs/navigation resolve through canonical
+    `/admin/coderso/forms` routes without changing editor/runtime behavior;
   - prefetch for `/admin/coderso/forms` calls `listFormsCached({ force: false })`.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`

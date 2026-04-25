@@ -78,9 +78,10 @@ and Forms-specific inline validation.
 const [openAfterCreate, setOpenAfterCreate] = useState(true);
 
 const handleCreate = async (payload: FormCreateInput & { openAfterCreate: boolean }) => {
-  const created = await createForm(payload);
+  const { openAfterCreate, ...formInput } = payload;
+  const created = await createForm(formInput);
   formListToasts.success("create", { targetLabel: created.name });
-  if (payload.openAfterCreate) {
+  if (openAfterCreate) {
     navigate(`/coderso/forms/${encodeURIComponent(created.id)}`);
     return;
   }

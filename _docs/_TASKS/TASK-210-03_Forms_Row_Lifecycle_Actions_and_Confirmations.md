@@ -35,6 +35,9 @@ current Forms list/service/client contract does not expose those flows.
 - [ ] Wire lifecycle actions through `updateForm` and list refresh/cache patch
   behavior from `formsClient`.
 - [ ] Replace immediate row delete with `ConfirmActionDialog`.
+- [ ] Treat hard delete as deletion-safe only: if the route reports a retained
+  submission/action-diagnostic conflict, keep the row recoverable, show inline
+  conflict copy, and leave Archive available as the safe retained-history action.
 - [ ] Keep delete toast emission for TASK-210-06; this task only ensures the
   mutation is gated by confirmation and surfaces inline state.
 
@@ -57,7 +60,8 @@ current Forms list/service/client contract does not expose those flows.
 - Rate-limit bucket: existing admin write bucket.
 - Reject-unknown validation: unchanged in this task; schema hardening is owned
   by TASK-210-06 if needed.
-- Anti-abuse: delete requires `ConfirmActionDialog`; no public write path.
+- Anti-abuse: delete requires `ConfirmActionDialog`; retained submissions/action
+  diagnostics are not exposed or destroyed by list UI; no public write path.
 
 ## Pseudocode
 
@@ -87,6 +91,8 @@ const handleDelete = (id: string) => {
     `/coderso/forms/:id/action-runs`;
   - lifecycle actions call `updateForm` with the expected status;
   - delete does not call `deleteForm` until `ConfirmActionDialog` confirms;
+  - delete conflicts caused by retained submissions/action diagnostics keep a
+    visible inline error and do not remove the row locally;
   - API failures keep a visible inline error.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/admin/formsClient.test.ts`
@@ -104,5 +110,6 @@ const handleDelete = (id: string) => {
 2. Lifecycle mutations use existing `updateForm`.
 3. Existing Action logs route is reachable from the list row menu.
 4. Row delete is confirmed before mutation.
-5. Inline errors remain visible when lifecycle/delete fails.
+5. Inline errors remain visible when lifecycle/delete fails or is blocked by
+   retained-history constraints.
 6. Existing builder and action-log route behavior is not changed.

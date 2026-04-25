@@ -20,9 +20,14 @@ partial-failure handling.
 - [ ] Map publish/draft/archive to `updateForm(id, { status })`.
 - [ ] Confirm bulk delete before calling `deleteForm`.
 - [ ] Bulk delete confirmation copy includes selected count and explains that
-  deleting forms affects collected submissions/action diagnostics.
+  hard delete is irreversible for deletion-safe forms, while retained
+  submissions/action diagnostics may block delete and should be preserved by
+  archiving.
 - [ ] Refresh the list after bulk execution settles.
 - [ ] Keep inline partial-failure copy visible.
+- [ ] Count retained-history delete conflicts as per-row failures, keep affected
+  rows recoverable, and do not emit an all-success delete toast when any row is
+  blocked.
 - [ ] Either keep failed ids selected for recovery or document why selection is
   cleared in the completion notes.
 - [ ] Leave final toast adapter wiring to TASK-210-06-01.
@@ -44,7 +49,9 @@ partial-failure handling.
 - Anti-abuse:
   - no public write path is added;
   - bulk delete requires `ConfirmActionDialog`;
-  - execution ids must be the visible selected ids captured at apply time.
+  - execution ids must be the visible selected ids captured at apply time;
+  - retained submission/action-run payloads are not exposed by partial-failure
+    feedback.
 
 ## Pseudocode
 
@@ -65,6 +72,8 @@ const results = await Promise.allSettled(
 - Bulk delete confirmation copy includes selected count and irreversible-impact
   wording.
 - Partial failures surface inline copy.
+- Retained-history delete conflicts are reported as partial failures and keep the
+  affected forms visible.
 - Success and partial-failure paths refresh the Forms list.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
@@ -80,4 +89,5 @@ const results = await Promise.allSettled(
 
 1. Bulk mutations run against visible selected ids only.
 2. Bulk delete is confirmed before mutation.
-3. Partial failures are visible and not collapsed into a false success.
+3. Partial failures, including retained-history conflicts, are visible and not
+   collapsed into a false success.

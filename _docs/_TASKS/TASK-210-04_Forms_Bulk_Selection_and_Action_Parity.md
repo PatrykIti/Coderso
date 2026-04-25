@@ -33,7 +33,9 @@ state for the user to understand what happened.
 - [ ] Execute bulk actions through `Promise.allSettled`.
 - [ ] Confirm bulk delete before calling `deleteForm`.
 - [ ] Bulk delete confirmation copy must state the selected count and the
-  irreversible impact on collected submissions/action diagnostics.
+  irreversible impact for deletion-safe forms, plus that retained
+  submissions/action diagnostics may block hard delete and should be preserved
+  through Archive.
 - [ ] Keep selected ids scoped to current visible rows after filters and
   pagination changes.
 - [ ] Keep failed ids selected when that helps recovery; otherwise document the
@@ -58,7 +60,9 @@ state for the user to understand what happened.
 - Anti-abuse:
   - no public write path;
   - bulk delete requires `ConfirmActionDialog`;
-  - bulk execution uses visible selected ids only.
+  - bulk execution uses visible selected ids only;
+  - retained submission/action-run payloads are neither exposed nor destroyed by
+    list UI.
 
 ## Pseudocode
 
@@ -89,8 +93,11 @@ summary shape without emitting until that dependency lands.
   - selected count is visible;
   - publish/draft/archive call `updateForm` with expected status for visible ids;
   - bulk delete opens a confirmation dialog and waits for confirm;
-  - bulk delete confirmation includes count and irreversible-impact copy;
+  - bulk delete confirmation includes count, irreversible-impact copy, and
+    retained-history conflict expectations;
   - partial failures surface inline failure copy;
+  - retained-history delete conflicts are counted as failures and keep affected
+    rows recoverable;
   - selection is scoped to visible rows after pagination/filter changes.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
@@ -108,4 +115,5 @@ summary shape without emitting until that dependency lands.
 2. Bulk actions are Forms-specific and status-safe.
 3. Bulk delete is confirmed before mutation.
 4. Bulk execution never mutates hidden filtered-out rows.
-5. Partial failures are visible and truthful.
+5. Partial failures, including retained-history delete conflicts, are visible
+   and truthful.

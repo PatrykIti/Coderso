@@ -25,9 +25,14 @@ the task board.
 - [ ] Update `_docs/ADMIN_NAVIGATION.md` if route/canonical wording changed.
 - [ ] Update `_docs/CMS_API.md` if route schemas, user settings, or error
   response docs changed.
+- [ ] Update `docs/coderso/forms-list-and-builder.md` so the Forms guide reflects
+  the final list search/status/access filters, selected-row bulk actions,
+  confirmed delete behavior, and shared toast feedback.
 - [ ] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` for
-  TASK-210-owned list findings (BUG-2, BUG-5, UX-1) and note that editor/runtime
-  findings remain separate.
+  TASK-210-owned list findings (BUG-2, UX-1, and the Forms-contract subset of
+  BUG-5). Note that BUG-5 Duplicate, Runtime Preview, and Embed Code remain
+  deferred/non-goals until their own service/API/UI contracts exist, and that
+  editor/runtime findings remain separate.
 - [ ] Add one `_docs/_CHANGELOG/*` entry for TASK-210.
 - [ ] Update `_docs/_CHANGELOG/README.md`.
 - [ ] Mark TASK-210 umbrella, subtasks, and leaves Done with dated statuses and
@@ -43,6 +48,7 @@ the task board.
 - `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_NAVIGATION.md` if route docs changed.
 - `_docs/CMS_API.md` if API/settings docs changed.
+- `docs/coderso/forms-list-and-builder.md`
 - `_docs/PLAYWRIGHT/SUMMARY-FORMS.md`
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
@@ -71,7 +77,8 @@ the task board.
 ## Acceptance Criteria
 
 1. Docs match shipped Forms behavior.
-2. Source QA report list findings are closed or explicitly deferred with dates.
+2. Source QA report list findings are closed or explicitly deferred with dates,
+   including BUG-5 sub-items that remain outside the current Forms contract.
 3. Changelog entry and changelog index reference TASK-210.
 4. Task board rows and statistics are synchronized.
 5. Every TASK-210 file has final status and validation notes.
