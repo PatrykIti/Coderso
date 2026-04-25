@@ -256,11 +256,13 @@ a backward-compatible alias through `adminPaths`.
    list has the same navigation and request semantics as Pages.
 2. Add Forms filters, table selection, and shared pagination on top of the
    stable cached list.
-3. Add row lifecycle actions and delete confirmations through existing
-   `updateForm` / `deleteForm` client contracts.
-4. Land the Forms route/domain error mapping and strict schema hardening before
+3. Land the Forms route/domain error mapping and strict schema hardening before
    destructive row/bulk delete behavior claims retained-history conflict
    acceptance.
+4. Add row lifecycle actions and delete confirmations through existing
+   `updateForm` / `deleteForm` client contracts. Non-destructive row menu work
+   may be staged earlier, but retained-history delete acceptance depends on
+   `form_delete_restricted` from TASK-210-06-02.
 5. Add visible-scope bulk actions and partial-failure handling.
 6. Align create drawer behavior with Pages, including open-after-create.
 7. Wire shared list-action toasts on top of the settled mutation/error contract.
@@ -278,7 +280,9 @@ a backward-compatible alias through `adminPaths`.
   and
   `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts`
 - If public submission hardening changes or is touched:
-  `set -a && source .env && set +a && bun test tests/unit/forms/submissionService.test.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts`
+  `set -a && source .env && set +a && bun test tests/unit/forms/submissionService.test.ts`
+  and
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts`
 - If the create drawer payload boundary is touched:
   `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
 

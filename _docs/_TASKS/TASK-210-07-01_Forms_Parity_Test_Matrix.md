@@ -48,7 +48,8 @@ parity family.
 - Route/service if touched:
   - `set -a && source .env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/settings/userSettingsService.test.ts`
 - Public submission if touched:
-  - `set -a && source .env && set +a && bun test tests/unit/forms/submissionService.test.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts`
+  - `set -a && source .env && set +a && bun test tests/unit/forms/submissionService.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts`
 
 ## Documentation Updates Required
 
