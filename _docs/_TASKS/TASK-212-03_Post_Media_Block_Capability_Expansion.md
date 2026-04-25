@@ -32,6 +32,10 @@ real.
   inspector controls.
 - Add safe public runtime mapping/rendering.
 - Add tests across catalog, document, normalizer, editor, and runtime.
+- Treat new `POST_BLOCK_TYPES` entries as release-atomic with editor and runtime
+  support. The Posts API schema imports this enum directly, so no branch/PR may
+  expose a newly accepted block type before the matching editor, normalizer,
+  public runtime renderer, and regression tests are present.
 
 Out of scope:
 
@@ -81,6 +85,8 @@ Out of scope:
   - existing admin write/read and public read buckets.
 - Reject-unknown validation:
   - block type additions must be explicit in `POST_BLOCK_TYPES`;
+  - enum additions must land in the same closure slice as editor/runtime
+    support, because the route validation schema accepts the enum immediately;
   - attrs/content must be normalized with clamped values and unknown unsafe
     fields dropped or rejected by existing normalizer rules.
 - Anti-abuse:
@@ -103,6 +109,10 @@ Out of scope:
 - Runtime Vitest:
   - video/audio/file/gallery render safe deterministic markup;
   - unsafe URLs/providers are sanitized or omitted.
+- API/schema guard:
+  - when `POST_BLOCK_TYPES` changes, verify that persisted Posts payloads with
+    every newly accepted type have matching runtime mapping/rendering coverage
+    before closing this parent.
 - Manual Playwright:
   - Media tab shows supported blocks;
   - each block can be inserted and does not break publish/update.
@@ -123,3 +133,5 @@ Out of scope:
    normalizer, runtime, and tests.
 3. If the product defers any requested media type, the source report says so
    explicitly and no unsupported label is shown.
+4. No new block type is accepted by the Posts API without same-scope editor and
+   runtime rendering proof.

@@ -18,6 +18,10 @@ This leaf is where `Video`, `Gallery`, `Audio`, and `File` may become visible
 in the Media tab, but only after the domain contract from `TASK-212-03-01`
 exists.
 
+This leaf also finalizes acceptance of any `POST_BLOCK_TYPES` additions from
+`TASK-212-03-01`. If a type is not rendered here, it must remain absent from the
+visible catalog and must not be claimed as an accepted persisted Posts block.
+
 ## Sub-Tasks
 
 No child task files.
@@ -52,6 +56,11 @@ For each accepted type:
   - map media ids through the runtime media resolver;
   - omit unsafe or unresolved media with a non-breaking placeholder when needed;
   - never render raw active HTML.
+- Closure:
+  - verify every type accepted by `POST_BLOCK_TYPES` is covered by catalog,
+    canvas/inspector, normalizer, runtime mapper, runtime renderer, and tests;
+  - if any requested media type is deferred, keep it out of the enum/catalog and
+    name the deferral in the source report.
 
 ## Security Contract
 
@@ -63,7 +72,8 @@ For each accepted type:
   - public runtime keeps existing read constraints.
 - Reject-unknown validation:
   - UI cannot bypass the normalizer by injecting attrs outside the accepted
-    schema.
+    schema;
+  - no accepted enum value may be editor-only or runtime-only.
 - Anti-abuse:
   - video/audio embeds must use safe media URLs or existing provider allowlist;
   - file blocks render safe links with `rel` and no active execution;
@@ -97,3 +107,5 @@ For each accepted type:
 1. The Media tab reflects the implemented contract exactly.
 2. Public runtime rendering is safe and deterministic.
 3. No accepted media block is editor-only or runtime-only.
+4. Any deferred `Video`, `Gallery`, `Audio`, or `File` type remains absent from
+   `POST_BLOCK_TYPES` and the catalog until it has full support.
