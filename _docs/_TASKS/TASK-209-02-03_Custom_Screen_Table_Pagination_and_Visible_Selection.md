@@ -56,8 +56,14 @@ No child task files.
 - In this leaf the action cell must not execute status updates or deletes.
   `TASK-209-03-02` owns status actions and row delete confirmation wiring.
 - Use mobile row metadata treatment consistent with Pages.
-- Keep links through `AdminLink` and the existing `/custom-screens` ->
-  `/coderso/custom-screens` canonicalization. Do not add a local path helper.
+- Keep row links through `AdminLink` and the existing `adminPaths`
+  canonicalization for `/custom-screens` -> `/coderso/custom-screens`. Do not
+  add a local alias resolver or hard-code absolute `/admin/...` hrefs inside
+  row components.
+- If route aliases, active matching, or prefetch matching change while wiring
+  these links, update `tests/vitest/admin/adminPaths.test.ts` and
+  `tests/vitest/admin/adminPrefetch.test.ts`; otherwise keep the existing
+  shared navigation helpers unchanged.
 
 ## Security Contract
 
@@ -81,8 +87,10 @@ No child task files.
   - sidebar shortcut display,
   - mode label display,
   - visible row selection and select-all behavior,
-  - pagination footer range and page-size behavior.
+  - pagination footer range and page-size behavior,
   - no status/delete mutation runs from the table-only leaf.
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts`
+  only if route aliases or canonical href behavior changes.
 
 ## Documentation Updates Required
 

@@ -52,7 +52,10 @@ No child task files.
   - emit adapter error toast,
   - preserve a visible inline alert for screen-reader/discoverability parity.
 - Use `AdminLink` for Records/Edit and keep route canonicalization in the shared
-  admin navigation helpers.
+  `adminPaths` / `AdminLink` / `prefetchAdminRoute` helpers. Row actions may
+  build the resource-specific suffix with `encodeURIComponent(id)`, but must not
+  introduce local alias matching, local prefetch matching, or absolute
+  `/admin/...` hrefs.
 
 ## Security Contract
 
@@ -72,6 +75,8 @@ No child task files.
 - `bun --cwd core lint:types`
 - Mounted test covering:
   - Records and Edit links,
+  - links resolve through the shared admin navigation path instead of a
+    Custom Screens-local alias helper,
   - draft row shows Activate,
   - active row shows Move to draft,
   - status update success emits toast after refresh,

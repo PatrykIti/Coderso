@@ -45,6 +45,8 @@ confirmations are owned by `TASK-209-03`.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - new mounted list suite, for example
   `tests/vitest/ui/custom-screens-list-wave.test.tsx`
+- `tests/vitest/admin/userSettingsClient.test.ts`
+- `tests/integration/routes/userSettings.test.ts`
 
 ## Security Contract
 
@@ -68,6 +70,9 @@ confirmations are owned by `TASK-209-03`.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-list-wave.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+- `bun test tests/integration/routes/userSettings.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts` if route aliases or canonical link behavior changes.
 
 ## Documentation Updates Required
 

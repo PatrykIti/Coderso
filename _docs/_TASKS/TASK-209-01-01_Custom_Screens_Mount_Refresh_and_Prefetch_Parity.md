@@ -73,6 +73,9 @@ refresh({ force?: boolean; background?: boolean })
   `/admin/coderso/custom-screens`. Mirror the current entries prefetch test by
   mocking `listCustomScreensCached` and `listContentTypesCached`, then assert
   both receive `prefetchWarmupOptions`.
+- If the content-type cached client migration lands in this data round, keep the
+  Custom Screens prefetch test paired with `contentTypesClient` TTL coverage so
+  the warmed label data cannot come from stale module memory.
 
 ## Security Contract
 
@@ -89,6 +92,8 @@ refresh({ force?: boolean; background?: boolean })
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/contentTypesClient.test.ts`
+  if the shared content-type list cache is migrated in this round.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts` if the shared helper or a delegating wrapper changes.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`

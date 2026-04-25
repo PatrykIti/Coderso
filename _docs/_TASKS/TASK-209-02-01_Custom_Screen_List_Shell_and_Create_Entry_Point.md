@@ -35,8 +35,8 @@ No child task files.
 - `core/services/settings/userSettingsService.ts`
 - `tests/vitest/admin/userSettingsClient.test.ts`
 - `tests/unit/settings/userSettingsService.test.ts`
-- `tests/integration/routes/userSettings.test.ts` if route-level user-settings
-  key behavior is expanded beyond the existing generic route wiring.
+- `tests/integration/routes/userSettings.test.ts` with route-boundary coverage
+  for reading and writing `customScreens.openAfterCreate`.
 - `_docs/CMS_API.md` user-settings key list.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx`
@@ -63,6 +63,9 @@ No child task files.
 - Update user-settings service/client tests and `_docs/CMS_API.md` so the new
   key is typed, validated as boolean, returned by `GET /user-settings`, and
   writable through `PATCH /user-settings/customScreens.openAfterCreate`.
+- Extend the user-settings route test so the key is exercised through the
+  existing `GET /user-settings/:key` and `PATCH /user-settings/:key` handlers,
+  not only by direct service/client unit tests.
 - Handle no content types explicitly:
   - render a disabled/empty content-type state,
   - keep submit disabled until `contentTypeId` is selected,
@@ -123,6 +126,7 @@ await createCustomScreen({
   navigation, no-content-type disabled submit, preference toggle persistence,
   and rejected create mutation.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+- `bun test tests/integration/routes/userSettings.test.ts`
 - If `DATABASE_URL` is reachable:
   - `set -a && source .env && set +a`
   - `bun test tests/unit/settings/userSettingsService.test.ts`

@@ -45,9 +45,12 @@ type CustomScreenListRow = {
   - revalidate through `listContentTypesCached({ force })` only, using
     foreground loading only when no cached labels exist and background refresh
     when cached labels already hydrated the list;
+  - before relying on `getCachedContentTypes()` for the seed, migrate
+    `contentTypesClient` list memory to `createMemoryBackedLocalCache` so
+    module memory cannot outlive `cacheTtlMs.list`;
   - when cached labels exist, the background revalidation path must still bypass
-    stale module memory, either by forcing the cached client request or by
-    updating `contentTypesClient` to use the shared memory-backed TTL envelope;
+    stale module memory by using the TTL-backed shared content-type client and
+    a forced background revalidation when the cache-bus path requires it;
   - do not extend `contentTypesClient` with a `background` option for this
     task. Background is UI loading-state semantics in the existing Pages/cache
     pattern, while cached service clients own cache reads, request de-dupe, and
@@ -87,11 +90,15 @@ type CustomScreenListRow = {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/contentTypesClient.test.ts`
 - New focused view-model test if enrichment is extracted from the component.
 - Mounted list test proving a `contentTypes:list` cache-bus event refreshes the
   rendered content-type label without mutating `CustomScreenRecord`.
 - Test the missing-content-type fallback so rows with only `contentTypeId`
   remain searchable, filterable, and renderable.
+- Add or extend `contentTypesClient` coverage proving expired module memory is
+  cleared before storage/network fallback and storage updates are visible after
+  the shared list TTL expires.
 - Existing records/editor smoke:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
 

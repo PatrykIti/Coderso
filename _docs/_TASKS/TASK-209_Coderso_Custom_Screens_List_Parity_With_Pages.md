@@ -66,6 +66,13 @@ created first.
   shared `createMemoryBackedLocalCache` TTL envelope used by Pages/Posts/Menus,
   so expired or externally patched storage can be hidden by stale memory during
   long-lived admin sessions.
+- `contentTypesClient` also keeps module-level `cachedContentTypes` rows
+  without the shared TTL-backed memory envelope. Because Custom Screens list
+  parity depends on content-type labels for rows, filters, and the create drawer,
+  this family must either migrate that shared client to
+  `createMemoryBackedLocalCache` or prove the list never seeds labels from stale
+  module memory. The repo-native fix is the shared client migration plus focused
+  `contentTypesClient` tests.
 - The list fetches content types with `listContentTypesCached({ force: true })`
   only from the page component. The Custom Screens list needs the content-type
   labels for filtering/table/create, but this should be cached-first and
@@ -143,11 +150,11 @@ created first.
    Screen delete should run directly from a dropdown click.
 8. Cache behavior follows the shared admin cache contract:
    cache hydrate first, background revalidate when cache exists, foreground load
-   when cache is absent, TTL-backed module memory for list rows, cache bus
-   updates after mutations, content-type label refresh on `contentTypes:list`,
-   and prefetch warmup for custom screens plus content types. The label
-   projection must not trust stale module-level content-type memory beyond the
-   shared list TTL.
+   when cache is absent, TTL-backed module memory for Custom Screens and
+   content-type list rows, cache bus updates after mutations, content-type label
+   refresh on `contentTypes:list`, and prefetch warmup for custom screens plus
+   content types. The label projection must not trust stale module-level
+   content-type memory beyond the shared list TTL.
 9. The implementation must preserve builder, records workflow, sidebar shortcut
    nav, assistant active-surface context, and existing custom-screen API schemas.
 
@@ -222,6 +229,7 @@ created first.
     `tests/vitest/ui/custom-screens-list-wave.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/contentTypesClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts` if any links or aliases change.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
@@ -230,6 +238,8 @@ created first.
   - `set -a && source .env && set +a`
   - `bun test tests/unit/settings/userSettingsService.test.ts` when
     `DATABASE_URL` is reachable.
+- User-settings route test must cover the new key at the route boundary:
+  - `bun test tests/integration/routes/userSettings.test.ts`
 - Bun route tests only if the route family changes:
   - `bun test tests/integration/routes/customScreensRoutes.test.ts`
 - Existing records/editor smoke coverage should remain green:

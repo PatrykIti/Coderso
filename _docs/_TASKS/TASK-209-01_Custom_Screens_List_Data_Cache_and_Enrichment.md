@@ -29,6 +29,12 @@ the `contentTypes:list` refresh hook for the label projection. Content type
 records stay owned by `contentTypesClient`; Custom Screens should not duplicate
 or persist the labels.
 
+The current `contentTypesClient` also keeps module-level `cachedContentTypes`
+rows. Since the Custom Screens list seeds labels from that client, this round
+must make the content-type list cache TTL-respected as well, preferably by
+migrating the shared content-type list cache to `createMemoryBackedLocalCache`
+with focused regression coverage.
+
 ## Sub-Tasks
 
 - [ ] TASK-209-01-01: Custom Screens Mount Refresh and Prefetch Parity
@@ -38,12 +44,12 @@ or persist the labels.
 
 - `core/admin/ui/custom-screens/hooks/useCustomScreens.ts`
 - `core/admin/services/customScreensClient.ts`
-- `core/admin/services/contentTypesClient.ts` only if the label projection
-  cannot otherwise prove TTL-respected content-type reads from existing cached
-  helpers.
+- `core/admin/services/contentTypesClient.ts` for TTL-backed content-type list
+  memory used by the Custom Screens label projection.
 - `core/admin/utils/adminPrefetch.ts`
 - new `tests/vitest/admin/customScreensClient.test.ts` or equivalent focused
   cache-client suite.
+- `tests/vitest/admin/contentTypesClient.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - new mounted Custom Screens list suite if hook behavior cannot be proven by
@@ -67,6 +73,7 @@ or persist the labels.
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/contentTypesClient.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - New focused hook/list test if mount refresh options or content-type
   enrichment cannot be asserted in the existing suite.
@@ -88,6 +95,6 @@ or persist the labels.
    first screen without a second foreground content-type label load.
 4. Cache bus events still refresh sidebar shortcuts, list rows, and
    content-type label projections.
-5. Content-type labels used by the list do not come from stale module memory
-   that outlives `cacheTtlMs.list`.
+5. Content-type labels used by the list do not come from stale
+   `contentTypesClient` module memory that outlives `cacheTtlMs.list`.
 6. No API route or schema changes are introduced by this data preparation round.
