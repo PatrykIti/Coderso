@@ -28,6 +28,7 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { resolveAdminBasePath } from "@/utils/adminPaths";
@@ -37,6 +38,35 @@ import { ContentTypeTable, type ContentTypeRow } from "./ContentTypeTable";
 import { countSchemaFields } from "./schemaMapping";
 
 type ContentTypeBulkActionValue = "publish" | "draft" | "delete";
+
+const contentTypeListToasts = createListActionToastAdapter({
+  labels: { singular: "content type", plural: "content types" },
+  actions: {
+    create: {
+      pastTense: "created",
+      failureVerb: "create",
+      singleSuccessMessage: ({ targetLabel }) =>
+        targetLabel
+          ? `Collection "${targetLabel}" created.`
+          : "Collection created.",
+    },
+    publish: { pastTense: "published", failureVerb: "publish" },
+    draft: {
+      pastTense: "moved to draft",
+      failureVerb: "move",
+      errorFallback: "Failed to move content type to draft.",
+      bulkPartialMessage: ({ succeededCount, failedCount, labels }) =>
+        `Moved ${succeededCount} ${
+          succeededCount === 1 ? labels.singular : labels.plural
+        } to draft; failed ${failedCount}.`,
+      bulkFailureMessage: ({ failedCount, labels }) =>
+        `Failed to move ${failedCount} ${
+          failedCount === 1 ? labels.singular : labels.plural
+        } to draft.`,
+    },
+    delete: { pastTense: "deleted", failureVerb: "delete" },
+  },
+});
 
 function ContentTypeBulkActionsBar({
   selectedCount,
@@ -219,7 +249,7 @@ export function ContentTypeList() {
 
   const handleCreated = (created: ContentTypeSummary) => {
     setTypes((prev) => [created, ...prev]);
-    toast.success(`Collection "${created.name}" created.`);
+    contentTypeListToasts.success("create", { targetLabel: created.name });
     navigate(`/content-types/${encodeURIComponent(created.id)}`);
   };
 
@@ -254,14 +284,13 @@ export function ContentTypeList() {
     try {
       await deleteContentType(pendingDelete.id);
       setTypes((prev) => prev.filter((type) => type.id !== pendingDelete.id));
-      toast.success(`Deleted "${pendingDelete.name}".`);
+      contentTypeListToasts.success("delete", {
+        targetLabel: pendingDelete.name,
+      });
       setPendingDelete(null);
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Failed to delete content type.";
+      const message = contentTypeListToasts.error("delete", err);
       setError(message);
-      toast.error(message);
     } finally {
       setIsDeleting(false);
     }
@@ -299,31 +328,31 @@ export function ContentTypeList() {
         })
       );
       const failedIds = ids.filter((_, index) => results[index]?.status === "rejected");
-      const successCount = ids.length - failedIds.length;
+      const summary = contentTypeListToasts.summarizeBulkAction(
+        action,
+        ids,
+        results
+      );
       const nextTypes = await listContentTypesCached({ force: true });
       setTypes(nextTypes);
+      contentTypeListToasts.emitBulk(summary);
 
       if (failedIds.length > 0) {
-        setSelectedIds(failedIds);
-        setError(
-          failedIds.length === ids.length
-            ? `Bulk ${action} failed for ${failedIds.length} selected content type${failedIds.length === 1 ? "" : "s"}.`
-            : `Bulk ${action} finished with partial failures: ${successCount} succeeded, ${failedIds.length} failed.`
-        );
+        setSelectedIds(summary.failedTargets);
+        setError(summary.inlineMessage);
         return;
       }
 
       handleClearSelection();
       setBulkFeedback({
         title: "Bulk action completed",
-        message: `Successfully applied ${action} to ${successCount} content type${successCount === 1 ? "" : "s"}.`,
+        message: summary.inlineMessage,
       });
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Bulk action failed.";
+      const message = contentTypeListToasts.error("publish", err, {
+        fallbackMessage: "Bulk action failed.",
+      });
       setError(message);
-      toast.error(message);
     } finally {
       setIsBulkWorking(false);
       setPendingBulkDeleteIds([]);
@@ -442,6 +471,9 @@ export function ContentTypeList() {
         onOpenChange={setCreateOpen}
         existingTypes={types}
         onCreated={handleCreated}
+        onCreateError={(err) => {
+          contentTypeListToasts.error("create", err);
+        }}
       />
       <ConfirmActionDialog
         open={Boolean(pendingDelete)}

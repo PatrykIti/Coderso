@@ -75,6 +75,8 @@ const pagePostState = vi.hoisted(() => {
     unpublishPostCalls: [] as string[],
     duplicatePageCalls: [] as string[],
     duplicatePostCalls: [] as string[],
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
     getUserSettings: vi.fn(async () => ({ "pages.openAfterCreate": true })),
     reset() {
       this.pages = [{ ...page }];
@@ -114,6 +116,8 @@ const pagePostState = vi.hoisted(() => {
       this.unpublishPostCalls = [];
       this.duplicatePageCalls = [];
       this.duplicatePostCalls = [];
+      this.toastSuccess.mockClear();
+      this.toastError.mockClear();
       this.getUserSettings.mockReset();
       this.getUserSettings.mockImplementation(async () => ({ "pages.openAfterCreate": true }));
     },
@@ -281,6 +285,13 @@ vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
     pagesList: "pagesList",
     postsList: "postsList",
+  },
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: pagePostState.toastSuccess,
+    error: pagePostState.toastError,
   },
 }));
 
@@ -898,6 +909,9 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to create page.");
+    expect(pagePostState.toastError).toHaveBeenCalledWith(
+      "Failed to create page."
+    );
 
     pagePostState.createPageError = null;
     await act(async () => {
@@ -908,6 +922,9 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
     });
 
     expect(pagePostState.navigateCalls).toContain("/pages/created-page");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith(
+      'Page "Docs Home" created.'
+    );
 
     pagePostState.previewPageError = pagePostState.apiError("Preview page denied.");
     await act(async () => {
@@ -922,6 +939,9 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to publish page.");
+    expect(pagePostState.toastError).toHaveBeenCalledWith(
+      "Failed to publish page."
+    );
 
     pagePostState.unpublishPageError = pagePostState.apiError("Unpublish page denied.");
     await act(async () => {
@@ -945,6 +965,7 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Delete page denied.");
+    expect(pagePostState.toastError).toHaveBeenCalledWith("Delete page denied.");
   } finally {
     view.cleanup();
     Reflect.deleteProperty(window, "open");
@@ -1174,6 +1195,7 @@ test("PageListPage shows bulk actions for visible selection, trims hidden select
     });
 
     expect(pagePostState.publishPageCalls).toEqual(["page-2"]);
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("1 page published.");
     expect(view.container.textContent).not.toContain("Selected 1");
     expect(pagePostState.pageRefreshCalls).toEqual([
       { force: false, background: undefined },
@@ -1472,6 +1494,7 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
     });
 
     expect(pagePostState.publishPostCalls).toEqual(["post-1", "post-2"]);
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("2 posts published.");
     expect(view.container.textContent).toContain("Bulk action completed");
     expect(view.container.textContent).not.toContain("2 posts selected");
 
@@ -1509,6 +1532,7 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
     });
 
     expect(pagePostState.deletePostCalls).toEqual(["post-2"]);
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("1 post deleted.");
     expect(view.container.textContent).not.toContain("1 post selected");
   } finally {
     view.cleanup();
@@ -1623,6 +1647,9 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to create post.");
+    expect(pagePostState.toastError).toHaveBeenCalledWith(
+      "Failed to create post."
+    );
 
     pagePostState.createPostError = null;
     await act(async () => {
@@ -1633,6 +1660,9 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
     });
 
     expect(pagePostState.navigateCalls).toContain("/coderso/posts/created-post");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith(
+      'Post "Launch Memo" created.'
+    );
 
     pagePostState.previewPostError = pagePostState.apiError("Preview denied.");
     await act(async () => {
@@ -1647,6 +1677,9 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to publish post.");
+    expect(pagePostState.toastError).toHaveBeenCalledWith(
+      "Failed to publish post."
+    );
 
     pagePostState.unpublishPostError = pagePostState.apiError("Unpublish denied.");
     await act(async () => {
@@ -1670,6 +1703,7 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Delete denied.");
+    expect(pagePostState.toastError).toHaveBeenCalledWith("Delete denied.");
   } finally {
     view.cleanup();
     Reflect.deleteProperty(window, "open");
@@ -1752,6 +1786,12 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     expect(pagePostState.navigateCalls).toContain("/pages/duplicated-page");
     expect(pagePostState.navigateCalls).toContain("/coderso/posts/post-1");
     expect(pagePostState.navigateCalls).toContain("/coderso/posts/duplicated-post");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Page published.");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Page unpublished.");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Page deleted.");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Post published.");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Post unpublished.");
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Post deleted.");
     expect(pagePostState.getUserSettings).toHaveBeenCalled();
   } finally {
     view.cleanup();

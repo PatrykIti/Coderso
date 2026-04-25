@@ -43,10 +43,20 @@ const contentTypeListState = vi.hoisted(() => {
     types: makeTypes(),
     updateCalls: [] as Array<{ id: string; status?: "draft" | "published" }>,
     deleteCalls: [] as string[],
+    nextUpdateError: new Map<string, unknown>(),
+    nextDeleteError: new Map<string, unknown>(),
+    navigateCalls: [] as string[],
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
     reset() {
       this.types = makeTypes();
       this.updateCalls = [];
       this.deleteCalls = [];
+      this.nextUpdateError = new Map<string, unknown>();
+      this.nextDeleteError = new Map<string, unknown>();
+      this.navigateCalls = [];
+      this.toastSuccess.mockClear();
+      this.toastError.mockClear();
     },
   };
 });
@@ -241,11 +251,15 @@ vi.mock("@/services/contentTypesClient", () => ({
   duplicateContentType: vi.fn(),
   deleteContentType: vi.fn(async (id: string) => {
     contentTypeListState.deleteCalls.push(id);
+    const error = contentTypeListState.nextDeleteError.get(id);
+    if (error) throw error;
     contentTypeListState.types = contentTypeListState.types.filter((type) => type.id !== id);
     return { ok: true };
   }),
   updateContentType: vi.fn(async (id: string, payload: { status?: "draft" | "published" }) => {
     contentTypeListState.updateCalls.push({ id, status: payload.status });
+    const error = contentTypeListState.nextUpdateError.get(id);
+    if (error) throw error;
     contentTypeListState.types = contentTypeListState.types.map((type) =>
       type.id === id && payload.status ? { ...type, status: payload.status } : type
     );
@@ -255,7 +269,7 @@ vi.mock("@/services/contentTypesClient", () => ({
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({
-    navigate: vi.fn(),
+    navigate: (href: string) => contentTypeListState.navigateCalls.push(href),
   }),
 }));
 
@@ -310,13 +324,51 @@ vi.mock("@/utils/cacheBus", () => ({
 
 vi.mock("sonner", () => ({
   toast: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: contentTypeListState.toastError,
+    success: contentTypeListState.toastSuccess,
   },
 }));
 
 vi.mock("../../../core/admin/ui/content-types/ContentTypeCreateDrawer", () => ({
-  ContentTypeCreateDrawer: () => <div data-testid="content-type-create-drawer" />,
+  ContentTypeCreateDrawer: ({
+    open,
+    onCreated,
+    onCreateError,
+  }: {
+    open: boolean;
+    onCreated?: (type: TestContentType) => void;
+    onCreateError?: (error: unknown) => void;
+  }) =>
+    open ? (
+      <div data-testid="content-type-create-drawer">
+        <button
+          type="button"
+          onClick={() =>
+            onCreated?.({
+              id: "created-type",
+              name: "Created Type",
+              slug: "created-type",
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                properties: {},
+              },
+              status: "draft",
+              createdAt: "2026-04-24T00:00:00.000Z",
+              updatedAt: "2026-04-24T00:00:00.000Z",
+            })
+          }
+        >
+          mock create content type
+        </button>
+        <button
+          type="button"
+          onClick={() => onCreateError?.(new Error("create failed"))}
+        >
+          mock create content type error
+        </button>
+      </div>
+    ) : null,
 }));
 
 const { ContentTypeList } = await import(
@@ -425,8 +477,96 @@ test("ContentTypeList keeps selection page-visible and applies bulk actions thro
       { id: "type-11", status: "published" },
       { id: "type-12", status: "published" },
     ]);
+    expect(contentTypeListState.toastSuccess).toHaveBeenCalledWith(
+      "2 content types published."
+    );
     expect(view.host.textContent).toContain("Bulk action completed");
     expect(view.host.textContent).not.toContain("Selected 2");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentTypeList emits create and confirmed row delete toasts", async () => {
+  const view = mount();
+  try {
+    await flush();
+
+    act(() => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "New type")
+        ?.click();
+    });
+
+    act(() => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "mock create content type")
+        ?.click();
+    });
+
+    expect(contentTypeListState.toastSuccess).toHaveBeenCalledWith(
+      'Collection "Created Type" created.'
+    );
+    expect(contentTypeListState.navigateCalls).toContain(
+      "/content-types/created-type"
+    );
+
+    act(() => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Delete")
+        ?.click();
+    });
+    expect(view.host.textContent).toContain("Delete content type?");
+    expect(contentTypeListState.toastSuccess).not.toHaveBeenCalledWith(
+      'Content type "Created Type" deleted.'
+    );
+
+    await act(async () => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Delete type")
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(contentTypeListState.deleteCalls).toEqual(["created-type"]);
+    expect(contentTypeListState.toastSuccess).toHaveBeenCalledWith(
+      'Content type "Created Type" deleted.'
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentTypeList emits bulk partial-failure toasts and keeps failed ids selected", async () => {
+  contentTypeListState.nextUpdateError.set("type-02", new Error("draft failed"));
+  const view = mount();
+  try {
+    await flush();
+
+    const selectAll = view.host.querySelector(
+      'button[aria-label="Select all content types"]'
+    ) as HTMLButtonElement;
+    act(() => {
+      selectAll.click();
+    });
+    act(() => {
+      setSelectValue(findSelectWithOption(view.host, "draft"), "draft");
+    });
+
+    await act(async () => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Apply")
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(view.host.textContent).toContain(
+      "Moved 9 content types to draft; failed 1."
+    );
+    expect(contentTypeListState.toastError).toHaveBeenCalledWith(
+      "Moved 9 content types to draft; failed 1."
+    );
+    expect(view.host.textContent).toContain("Selected 1");
   } finally {
     view.cleanup();
   }

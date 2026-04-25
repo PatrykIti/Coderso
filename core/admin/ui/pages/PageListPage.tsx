@@ -23,6 +23,7 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -33,6 +34,16 @@ import { PageFilters } from "./PageFilters";
 import { PageBulkActionsBar, type PageBulkActionValue } from "./PageBulkActionsBar";
 import { PageTable } from "./PageTable";
 import { PageCreateDrawer } from "./PageCreateDrawer";
+
+const pageListToasts = createListActionToastAdapter({
+  labels: { singular: "page", plural: "pages" },
+  actions: {
+    create: { pastTense: "created", failureVerb: "create" },
+    publish: { pastTense: "published", failureVerb: "publish" },
+    unpublish: { pastTense: "unpublished", failureVerb: "unpublish" },
+    delete: { pastTense: "deleted", failureVerb: "delete" },
+  },
+});
 
 export function filterPages(
   pages: PageSummary[],
@@ -192,6 +203,7 @@ export function PageListPage() {
         template: payload.template,
         data: { blocks: [], settings: { template: payload.template } },
       });
+      pageListToasts.success("create", { targetLabel: page.title });
       if (payload.openAfterCreate) {
         navigate(`/pages/${encodeURIComponent(page.id)}`);
         return;
@@ -199,11 +211,7 @@ export function PageListPage() {
       await refresh({ force: true, background: true });
       setCreateOpen(false);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to create page.");
-      }
+      setError(pageListToasts.error("create", err));
     } finally {
       setIsSubmitting(false);
     }
@@ -234,12 +242,9 @@ export function PageListPage() {
     try {
       await publishPage(id);
       await refresh({ force: true, background: true });
+      pageListToasts.success("publish");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to publish page.");
-      }
+      setError(pageListToasts.error("publish", err));
     }
   };
 
@@ -248,12 +253,9 @@ export function PageListPage() {
     try {
       await unpublishPage(id);
       await refresh({ force: true, background: true });
+      pageListToasts.success("unpublish");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to unpublish page.");
-      }
+      setError(pageListToasts.error("unpublish", err));
     }
   };
 
@@ -277,13 +279,10 @@ export function PageListPage() {
     try {
       await deletePage(id);
       await refresh({ force: true, background: true });
+      pageListToasts.success("delete");
       setPendingDeleteId(null);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to delete page.");
-      }
+      setError(pageListToasts.error("delete", err));
     } finally {
       setDeletingId(null);
     }
@@ -323,20 +322,19 @@ export function PageListPage() {
           return deletePage(id);
         })
       );
-      const failed = results.filter((result) => result.status === "rejected");
-      if (failed.length > 0) {
-        setError(
-          `Failed to update ${failed.length} page${failed.length === 1 ? "" : "s"}.`
-        );
-      }
       await refresh({ force: true, background: true });
+      const summary = pageListToasts.summarizeBulkAction(action, ids, results);
+      pageListToasts.emitBulk(summary);
+      if (!summary.ok) {
+        setError(summary.inlineMessage);
+      }
       handleClearSelection();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Bulk action failed.");
-      }
+      setError(
+        pageListToasts.error("publish", err, {
+          fallbackMessage: "Bulk action failed.",
+        })
+      );
     } finally {
       setIsBulkWorking(false);
       setPendingBulkDeleteIds([]);

@@ -39,12 +39,22 @@ const menuListState = vi.hoisted(() => {
     draftCalls: [] as string[],
     deleteCalls: [] as string[],
     refreshCalls: [] as Array<{ force?: boolean }>,
+    nextPublishError: null as unknown,
+    nextDraftError: null as unknown,
+    nextDeleteError: new Map<string, unknown>(),
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
     reset() {
       this.menus = menus.map((menu) => ({ ...menu }));
       this.publishCalls = [];
       this.draftCalls = [];
       this.deleteCalls = [];
       this.refreshCalls = [];
+      this.nextPublishError = null;
+      this.nextDraftError = null;
+      this.nextDeleteError = new Map<string, unknown>();
+      this.toastSuccess.mockClear();
+      this.toastError.mockClear();
     },
   };
 });
@@ -238,6 +248,7 @@ vi.mock("@/services/menusClient", () => ({
   createMenu: vi.fn(),
   publishMenu: vi.fn(async (id: string) => {
     menuListState.publishCalls.push(id);
+    if (menuListState.nextPublishError) throw menuListState.nextPublishError;
     menuListState.menus = menuListState.menus.map((menu) =>
       menu.id === id
         ? { ...menu, status: "published", publishedAt: "2026-04-23T00:00:00.000Z" }
@@ -246,15 +257,25 @@ vi.mock("@/services/menusClient", () => ({
   }),
   moveMenuToDraft: vi.fn(async (id: string) => {
     menuListState.draftCalls.push(id);
+    if (menuListState.nextDraftError) throw menuListState.nextDraftError;
     menuListState.menus = menuListState.menus.map((menu) =>
       menu.id === id ? { ...menu, status: "draft", publishedAt: null } : menu
     );
   }),
   deleteMenu: vi.fn(async (id: string) => {
     menuListState.deleteCalls.push(id);
+    const error = menuListState.nextDeleteError.get(id);
+    if (error) throw error;
     menuListState.menus = menuListState.menus.filter((menu) => menu.id !== id);
     return { ok: true };
   }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: menuListState.toastSuccess,
+    error: menuListState.toastError,
+  },
 }));
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
@@ -385,6 +406,7 @@ test("MenuListPage filters rows and bulk publishes only selected visible menus",
 
     expect(menuListState.publishCalls).toEqual(["menu-2"]);
     expect(menuListState.publishCalls).not.toContain("menu-1");
+    expect(menuListState.toastSuccess).toHaveBeenCalledWith("1 menu published.");
   } finally {
     view.cleanup();
   }
@@ -463,6 +485,7 @@ test("MenuListPage requires confirmation before bulk delete", async () => {
     expect(view.host.textContent).toContain("Delete selected menus?");
     expect(view.host.textContent).toContain("Delete 2 menus? This cannot be undone.");
     expect(menuListState.deleteCalls).toEqual([]);
+    expect(menuListState.toastSuccess).not.toHaveBeenCalledWith("2 menus deleted.");
 
     const cancel = Array.from(view.host.querySelectorAll("button")).find(
       (button) => button.textContent === "Cancel"
@@ -472,6 +495,104 @@ test("MenuListPage requires confirmation before bulk delete", async () => {
     });
 
     expect(menuListState.deleteCalls).toEqual([]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MenuListPage emits row lifecycle and confirmed delete toasts", async () => {
+  const view = mount();
+  try {
+    await flush();
+
+    const buttons = () => Array.from(view.host.querySelectorAll("button"));
+
+    await act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Move to Draft" && !button.disabled)
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(menuListState.draftCalls).toEqual(["menu-1"]);
+    expect(menuListState.toastSuccess).toHaveBeenCalledWith(
+      "Menu moved to draft."
+    );
+
+    await act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Publish" && !button.disabled)
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(menuListState.publishCalls).toEqual(["menu-1"]);
+    expect(menuListState.toastSuccess).toHaveBeenCalledWith("Menu published.");
+
+    act(() => {
+      buttons().find((button) => button.textContent === "Delete")?.click();
+    });
+    expect(view.host.textContent).toContain("Delete menu?");
+    expect(menuListState.toastSuccess).not.toHaveBeenCalledWith("Menu deleted.");
+
+    await act(async () => {
+      buttons().find((button) => button.textContent === "Delete menu")?.click();
+      await Promise.resolve();
+    });
+
+    expect(menuListState.deleteCalls).toEqual(["menu-1"]);
+    expect(menuListState.toastSuccess).toHaveBeenCalledWith("Menu deleted.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MenuListPage emits row and bulk failure toasts while preserving inline feedback", async () => {
+  const view = mount();
+  try {
+    await flush();
+
+    menuListState.nextPublishError = new Error("publish failed");
+    const buttons = () => Array.from(view.host.querySelectorAll("button"));
+
+    await act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Publish" && !button.disabled)
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(view.host.textContent).toContain("Failed to publish menu.");
+    expect(menuListState.toastError).toHaveBeenCalledWith(
+      "Failed to publish menu."
+    );
+
+    const selectAll = view.host.querySelector(
+      'button[aria-label="Select all menus"]'
+    ) as HTMLButtonElement;
+    await act(async () => {
+      selectAll.click();
+      await Promise.resolve();
+    });
+
+    menuListState.nextDeleteError.set("menu-2", new Error("delete failed"));
+    const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
+    await act(async () => {
+      bulkSelect.value = "delete";
+      bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      buttons().find((button) => button.textContent === "Apply")?.click();
+      await Promise.resolve();
+      buttons().find((button) => button.textContent === "Delete selected")?.click();
+      await Promise.resolve();
+    });
+
+    expect(view.host.textContent).toContain("Deleted 1 menu; failed 1.");
+    expect(menuListState.toastError).toHaveBeenCalledWith(
+      "Deleted 1 menu; failed 1."
+    );
   } finally {
     view.cleanup();
   }

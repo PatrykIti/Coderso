@@ -5,7 +5,7 @@
 **Category:** CMS Pages + CMS Posts + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-208-01
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -25,9 +25,9 @@ logic.
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-02-01_Pages_List_Mutation_Toasts.md`
-- [ ] `TASK-208-02-02_Posts_List_Mutation_Toasts.md`
-- [ ] `TASK-208-02-03_Pages_Posts_Toast_Regression_Tests.md`
+- [x] `TASK-208-02-01_Pages_List_Mutation_Toasts.md`
+- [x] `TASK-208-02-02_Posts_List_Mutation_Toasts.md`
+- [x] `TASK-208-02-03_Pages_Posts_Toast_Regression_Tests.md`
 
 ## Implementation Round
 

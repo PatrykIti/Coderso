@@ -55,6 +55,7 @@ import { MenuCreateDialog } from "@/ui/menus/MenuCreateDialog";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -85,6 +86,28 @@ const statusLabels: Record<MenuSummary["status"], string> = {
 export type MenuStatusFilter = "all" | MenuSummary["status"];
 export type MenuLocationFilter = "all" | "unassigned" | `location:${string}`;
 type MenuBulkActionValue = "publish" | "unpublish" | "delete";
+
+const menuListToasts = createListActionToastAdapter({
+  labels: { singular: "menu", plural: "menus" },
+  actions: {
+    create: { pastTense: "created", failureVerb: "create" },
+    publish: { pastTense: "published", failureVerb: "publish" },
+    unpublish: {
+      pastTense: "moved to draft",
+      failureVerb: "move",
+      errorFallback: "Failed to move menu to draft.",
+      bulkPartialMessage: ({ succeededCount, failedCount, labels }) =>
+        `Moved ${succeededCount} ${
+          succeededCount === 1 ? labels.singular : labels.plural
+        } to draft; failed ${failedCount}.`,
+      bulkFailureMessage: ({ failedCount, labels }) =>
+        `Failed to move ${failedCount} ${
+          failedCount === 1 ? labels.singular : labels.plural
+        } to draft.`,
+    },
+    delete: { pastTense: "deleted", failureVerb: "delete" },
+  },
+});
 
 export function resolveMenuListMountRefreshOptions(hasInitialCache: boolean) {
   return {
@@ -503,6 +526,7 @@ export function MenuListPage() {
       const next = prev.filter((item) => item.id !== created.id);
       return [created, ...next];
     });
+    menuListToasts.success("create", { targetLabel: created.name });
   };
 
   const locationOptions = useMemo(() => {
@@ -559,12 +583,9 @@ export function MenuListPage() {
     try {
       await publishMenu(id);
       await refresh({ force: true, background: true });
+      menuListToasts.success("publish");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to publish menu.");
-      }
+      setError(menuListToasts.error("publish", err));
     }
   };
 
@@ -573,12 +594,9 @@ export function MenuListPage() {
     try {
       await moveMenuToDraft(id);
       await refresh({ force: true, background: true });
+      menuListToasts.success("unpublish");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to move menu to draft.");
-      }
+      setError(menuListToasts.error("unpublish", err));
     }
   };
 
@@ -588,13 +606,10 @@ export function MenuListPage() {
     try {
       await deleteMenu(id);
       await refresh({ force: true, background: true });
+      menuListToasts.success("delete");
       setPendingDeleteId(null);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to delete menu.");
-      }
+      setError(menuListToasts.error("delete", err));
     } finally {
       setDeletingId(null);
     }
@@ -631,19 +646,13 @@ export function MenuListPage() {
           return deleteMenu(id);
         })
       );
-      const failedCount = results.filter(
-        (result) => result.status === "rejected"
-      ).length;
-      const successCount = results.length - failedCount;
       await refresh({ force: true, background: true });
+      const summary = menuListToasts.summarizeBulkAction(action, ids, results);
+      menuListToasts.emitBulk(summary);
       handleClearSelection();
 
-      if (failedCount > 0) {
-        setError(
-          failedCount === results.length
-            ? `Bulk ${action} failed for ${failedCount} selected menu${failedCount === 1 ? "" : "s"}.`
-            : `Bulk ${action} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
-        );
+      if (!summary.ok) {
+        setError(summary.inlineMessage);
       }
     } finally {
       setIsBulkWorking(false);
@@ -748,6 +757,9 @@ export function MenuListPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={handleCreate}
+        onCreateError={(err) => {
+          menuListToasts.error("create", err);
+        }}
       />
       <ConfirmActionDialog
         open={Boolean(pendingDeleteId)}

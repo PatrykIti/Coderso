@@ -22,6 +22,7 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -40,6 +41,29 @@ export type SelectedEntryRef = {
   id: string;
   typeSlug: string;
 };
+
+const entryListToasts = createListActionToastAdapter({
+  labels: { singular: "entry", plural: "entries" },
+  actions: {
+    create: { pastTense: "created", failureVerb: "create" },
+    publish: { pastTense: "published", failureVerb: "publish" },
+    draft: {
+      pastTense: "moved to draft",
+      failureVerb: "move",
+      errorFallback: "Failed to move entry to draft.",
+      bulkPartialMessage: ({ succeededCount, failedCount, labels }) =>
+        `Moved ${succeededCount} ${
+          succeededCount === 1 ? labels.singular : labels.plural
+        } to draft; failed ${failedCount}.`,
+      bulkFailureMessage: ({ failedCount, labels }) =>
+        `Failed to move ${failedCount} ${
+          failedCount === 1 ? labels.singular : labels.plural
+        } to draft.`,
+    },
+    archive: { pastTense: "archived", failureVerb: "archive" },
+    delete: { pastTense: "deleted", failureVerb: "delete" },
+  },
+});
 
 type DeleteRequest = {
   refs: SelectedEntryRef[];
@@ -350,6 +374,7 @@ export function EntryList() {
     typeSlug: string,
     openAfterCreate: boolean
   ) => {
+    entryListToasts.success("create");
     void refreshEntries({ force: true, background: true });
     void refreshTypes({ force: true, background: true });
     if (openAfterCreate) {
@@ -395,16 +420,13 @@ export function EntryList() {
     const results = await Promise.allSettled(
       selectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
     );
-    const failed = results.filter((result) => result.status === "rejected").length;
-    if (failed > 0) {
-      const succeeded = results.length - failed;
-      const message = `Updated ${succeeded} entr${succeeded === 1 ? "y" : "ies"}; failed ${failed}.`;
-      toast.error(message);
-      return message;
-    } else {
-      toast.success("Entries updated.");
-    }
-    return null;
+    const summary = entryListToasts.summarizeBulkAction(
+      action,
+      selectedRefs,
+      results
+    );
+    entryListToasts.emitBulk(summary);
+    return summary.ok ? null : summary.inlineMessage;
   };
 
   const handleBulkApply = async () => {
@@ -430,13 +452,11 @@ export function EntryList() {
       if (feedback) setError(feedback);
       handleClearSelection();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-        toast.error(err.message);
-      } else {
-        setError("Bulk action failed.");
-        toast.error("Bulk action failed.");
-      }
+      setError(
+        entryListToasts.error("publish", err, {
+          fallbackMessage: "Bulk action failed.",
+        })
+      );
     } finally {
       setIsBulkWorking(false);
     }
@@ -450,29 +470,22 @@ export function EntryList() {
       const results = await Promise.allSettled(
         deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
       );
-      const failed = results.filter((result) => result.status === "rejected").length;
-      let feedback: string | null = null;
-      if (failed > 0) {
-        const succeeded = results.length - failed;
-        feedback = `Deleted ${succeeded} entr${succeeded === 1 ? "y" : "ies"}; failed ${failed}.`;
-        toast.error(feedback);
+      const summary = entryListToasts.summarizeBulkAction(
+        "delete",
+        deleteRequest.refs,
+        results
+      );
+      if (deleteRequest.mode === "single" && summary.ok) {
+        entryListToasts.success("delete");
       } else {
-        toast.success(
-          deleteRequest.refs.length === 1 ? "Entry deleted." : "Entries deleted."
-        );
+        entryListToasts.emitBulk(summary);
       }
       await refreshEntries({ force: true, background: true });
-      if (feedback) setError(feedback);
+      if (!summary.ok) setError(summary.inlineMessage);
       if (deleteRequest.mode === "bulk") handleClearSelection();
       setDeleteRequest(null);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-        toast.error(err.message);
-      } else {
-        setError("Failed to delete entry.");
-        toast.error("Failed to delete entry.");
-      }
+      setError(entryListToasts.error("delete", err));
     } finally {
       setIsDeleting(false);
     }
@@ -576,6 +589,9 @@ export function EntryList() {
         types={types}
         defaultTypeSlug={defaultCreateTypeSlug}
         onCreated={handleEntryCreated}
+        onCreateError={(err) => {
+          entryListToasts.error("create", err);
+        }}
       />
       <ConfirmActionDialog
         open={Boolean(deleteRequest)}

@@ -5,7 +5,7 @@
 **Category:** Docs/Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-208-01, TASK-208-02, TASK-208-03, TASK-208-04, TASK-208-05
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

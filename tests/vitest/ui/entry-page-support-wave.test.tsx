@@ -488,6 +488,85 @@ test("EntryCreateDrawer normalizes create payloads and open-after-create flow", 
   }
 });
 
+test("EntryCreateDrawer reports rejected create mutations through optional list callback", async () => {
+  const { EntryCreateDrawer } = await import(
+    "../../../core/admin/ui/entries/EntryCreateDrawer"
+  );
+
+  const apiError = {
+    name: "ApiClientError",
+    message: "Entry create denied.",
+    code: "request_failed",
+    status: 409,
+  };
+  entriesState.createEntry.mockRejectedValueOnce(apiError);
+  const onCreateError = vi.fn();
+
+  const view = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={vi.fn()}
+      types={[{ id: "type-1", slug: "articles", name: "Articles" }]}
+      defaultTypeSlug="articles"
+      onCreateError={onCreateError}
+    />
+  );
+
+  try {
+    await act(async () => {
+      setInputValue(
+        view.container.querySelector('input[placeholder="e.g. Launch announcement"]'),
+        "Blocked Entry"
+      );
+      setInputValue(
+        view.container.querySelector('input[placeholder="launch-announcement"]'),
+        "blocked-entry"
+      );
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Create Draft")
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Entry create denied.");
+    expect(onCreateError).toHaveBeenCalledWith(apiError);
+  } finally {
+    view.cleanup();
+  }
+
+  entriesState.createEntry.mockRejectedValueOnce(new Error("plain failure"));
+  const directView = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={vi.fn()}
+      types={[{ id: "type-1", slug: "articles", name: "Articles" }]}
+      defaultTypeSlug="articles"
+    />
+  );
+
+  try {
+    await act(async () => {
+      setInputValue(
+        directView.container.querySelector('input[placeholder="e.g. Launch announcement"]'),
+        "Local Only"
+      );
+      setInputValue(
+        directView.container.querySelector('input[placeholder="launch-announcement"]'),
+        "local-only"
+      );
+      Array.from(directView.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Create Draft")
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(directView.container.textContent).toContain("Failed to create entry.");
+    expect(onCreateError).toHaveBeenCalledTimes(1);
+  } finally {
+    directView.cleanup();
+  }
+});
+
 test("EntryTypeSidebar filters types and forwards select/create actions", async () => {
   const { EntryTypeSidebar } = await import(
     "../../../core/admin/ui/entries/EntryTypeSidebar"

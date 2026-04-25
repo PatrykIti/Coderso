@@ -26,16 +26,22 @@ vi.mock("@/components/ui/sonner", () => ({
     containerAriaLabel,
     closeButton,
     duration,
+    position,
+    richColors,
   }: {
     containerAriaLabel?: string;
     closeButton?: boolean;
     duration?: number;
+    position?: string;
+    richColors?: boolean;
   }) => (
     <div
       data-admin-toaster="true"
       data-container-aria-label={containerAriaLabel}
       data-close-button={String(Boolean(closeButton))}
       data-duration={String(duration)}
+      data-position={position}
+      data-rich-colors={String(Boolean(richColors))}
     >
       Admin toaster
     </div>
@@ -113,6 +119,8 @@ test("AdminApp resolves /menus to the menus list route", async () => {
     );
     expect(toasters[0]?.getAttribute("data-close-button")).toBe("true");
     expect(toasters[0]?.getAttribute("data-duration")).toBe("4000");
+    expect(toasters[0]?.getAttribute("data-position")).toBe("top-right");
+    expect(toasters[0]?.getAttribute("data-rich-colors")).toBe("true");
   } finally {
     view.cleanup();
   }

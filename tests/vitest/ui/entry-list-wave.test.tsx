@@ -98,6 +98,8 @@ const entryListState = vi.hoisted(() => {
       input: Record<string, unknown>;
     }>,
     navigateCalls: [] as string[],
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
     reset() {
       listeners.clear();
       state.cachedTypes = null;
@@ -114,6 +116,8 @@ const entryListState = vi.hoisted(() => {
       state.duplicateEntryCalls = [];
       state.updateMetadataCalls = [];
       state.navigateCalls = [];
+      state.toastSuccess.mockClear();
+      state.toastError.mockClear();
     },
     triggerCache(key: string) {
       for (const listener of listeners) {
@@ -133,8 +137,8 @@ const entryListState = vi.hoisted(() => {
 
 vi.mock("sonner", () => ({
   toast: {
-    success: vi.fn(),
-    error: vi.fn(),
+    success: entryListState.toastSuccess,
+    error: entryListState.toastError,
   },
 }));
 
@@ -542,6 +546,7 @@ test("EntryList hydrates all entries cache, filters rows, navigates, and creates
       )?.click();
     });
     expect(entryListState.navigateCalls).toContain("/entries/articles/created-entry");
+    expect(entryListState.toastSuccess).toHaveBeenCalledWith("Entry created.");
   } finally {
     view.cleanup();
   }
@@ -577,6 +582,9 @@ test("EntryList bulk updates selected row refs with their content type slugs", a
       { slug: "articles", id: "entry-1", input: { status: "archived" } },
       { slug: "products", id: "entry-2", input: { status: "archived" } },
     ]);
+    expect(entryListState.toastSuccess).toHaveBeenCalledWith(
+      "2 entries archived."
+    );
   } finally {
     view.cleanup();
   }
@@ -619,6 +627,9 @@ test("EntryList bulk delete uses shared confirmation and keeps partial failure f
       { slug: "products", id: "entry-2" },
     ]);
     expect(view.container.textContent).toContain("Deleted 1 entry; failed 1.");
+    expect(entryListState.toastError).toHaveBeenCalledWith(
+      "Deleted 1 entry; failed 1."
+    );
   } finally {
     view.cleanup();
   }

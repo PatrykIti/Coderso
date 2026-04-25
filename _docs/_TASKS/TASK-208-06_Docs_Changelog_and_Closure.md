@@ -5,7 +5,7 @@
 **Category:** Docs + QA + Task Governance
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208-01, TASK-208-02, TASK-208-03, TASK-208-04, TASK-208-05
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -19,8 +19,8 @@ targeted Vitest coverage and required lint/type checks.
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-06-01_Content_List_and_Design_Token_Docs.md`
-- [ ] `TASK-208-06-02_Validation_Changelog_and_Task_Board_Closure.md`
+- [x] `TASK-208-06-01_Content_List_and_Design_Token_Docs.md`
+- [x] `TASK-208-06-02_Validation_Changelog_and_Task_Board_Closure.md`
 
 ## Security Contract
 
@@ -58,6 +58,16 @@ and record the substitution in the validation notes.
 - `_docs/DESIGN_TOKENS.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Notes (2026-04-24)
+
+- Passed targeted Vitest for AdminApp/Sonner, shared list-action helper,
+  Pages/Posts, Menus, Content Types, ContentTypeCreateDrawer, Entries, and
+  EntryCreateDrawer create-error coverage.
+- Passed `bun --cwd core lint`.
+- Passed `bun --cwd core lint:types`.
+- Added changelog entry
+  `_docs/_CHANGELOG/738-2026-04-24-task-208-admin-list-action-toasts.md`.
 
 ## Acceptance Criteria
 

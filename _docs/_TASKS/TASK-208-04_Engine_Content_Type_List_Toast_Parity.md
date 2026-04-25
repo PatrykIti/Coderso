@@ -5,7 +5,7 @@
 **Category:** CMS Engine + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208-01, TASK-208-03
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -25,8 +25,8 @@ adapter instead of keeping Content-Type-only message and error logic.
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-04-01_Content_Type_Create_Error_Toasts.md`
-- [ ] `TASK-208-04-02_Content_Type_Bulk_Toasts_and_Regression_Tests.md`
+- [x] `TASK-208-04-01_Content_Type_Create_Error_Toasts.md`
+- [x] `TASK-208-04-02_Content_Type_Bulk_Toasts_and_Regression_Tests.md`
 
 ## Security Contract
 

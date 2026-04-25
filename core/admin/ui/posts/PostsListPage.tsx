@@ -33,12 +33,23 @@ import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageFilters } from "../pages/PageFilters";
 import { PostsCreateDrawer } from "./PostsCreateDrawer";
 import { PostsTable } from "./PostsTable";
+
+const postListToasts = createListActionToastAdapter({
+  labels: { singular: "post", plural: "posts" },
+  actions: {
+    create: { pastTense: "created", failureVerb: "create" },
+    publish: { pastTense: "published", failureVerb: "publish" },
+    unpublish: { pastTense: "unpublished", failureVerb: "unpublish" },
+    delete: { pastTense: "deleted", failureVerb: "delete" },
+  },
+});
 
 export function filterPosts(
   posts: PostSummary[],
@@ -236,6 +247,7 @@ export function PostsListPage() {
         slug: payload.slug,
         data: {},
       });
+      postListToasts.success("create", { targetLabel: post.title });
       if (payload.openAfterCreate) {
         navigate(`/coderso/posts/${encodeURIComponent(post.id)}`);
         return;
@@ -243,11 +255,7 @@ export function PostsListPage() {
       await refresh({ force: true, background: true });
       setCreateOpen(false);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to create post.");
-      }
+      setError(postListToasts.error("create", err));
     } finally {
       setIsSubmitting(false);
     }
@@ -279,12 +287,9 @@ export function PostsListPage() {
     try {
       await publishPost(id);
       await refresh({ force: true, background: true });
+      postListToasts.success("publish");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to publish post.");
-      }
+      setError(postListToasts.error("publish", err));
     }
   };
 
@@ -294,12 +299,9 @@ export function PostsListPage() {
     try {
       await unpublishPost(id);
       await refresh({ force: true, background: true });
+      postListToasts.success("unpublish");
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to unpublish post.");
-      }
+      setError(postListToasts.error("unpublish", err));
     }
   };
 
@@ -325,13 +327,10 @@ export function PostsListPage() {
     try {
       await deletePost(id);
       await refresh({ force: true, background: true });
+      postListToasts.success("delete");
       setPendingDeleteId(null);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to delete post.");
-      }
+      setError(postListToasts.error("delete", err));
     } finally {
       setDeletingId(null);
     }
@@ -359,24 +358,20 @@ export function PostsListPage() {
         })
       );
 
-      const failedCount = results.filter((result) => result.status === "rejected").length;
-      const successCount = results.length - failedCount;
+      const summary = postListToasts.summarizeBulkAction(action, ids, results);
 
       await refresh({ force: true, background: true });
       clearSelection();
+      postListToasts.emitBulk(summary);
 
-      if (failedCount > 0) {
-        setError(
-          failedCount === results.length
-            ? `Bulk ${action} failed for ${failedCount} selected post${failedCount === 1 ? "" : "s"}.`
-            : `Bulk ${action} finished with partial failures: ${successCount} succeeded, ${failedCount} failed.`
-        );
+      if (!summary.ok) {
+        setError(summary.inlineMessage);
         return;
       }
 
       setBulkFeedback({
         title: "Bulk action completed",
-        message: `Successfully applied ${action} to ${successCount} post${successCount === 1 ? "" : "s"}.`,
+        message: summary.inlineMessage,
       });
     } finally {
       setIsBulkWorking(false);

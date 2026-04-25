@@ -5,7 +5,7 @@
 **Category:** CMS Menus + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208-03, TASK-208-01
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

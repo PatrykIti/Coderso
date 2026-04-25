@@ -39,6 +39,7 @@ type EntryCreateDrawerProps = {
   types: Array<{ id: string; slug: string; name: string }>;
   defaultTypeSlug?: string | null;
   onCreated?: (entry: EntryDetail, typeSlug: string, openAfterCreate: boolean) => void;
+  onCreateError?: (error: unknown) => void;
 };
 
 export function EntryCreateDrawer({
@@ -47,6 +48,7 @@ export function EntryCreateDrawer({
   types,
   defaultTypeSlug,
   onCreated,
+  onCreateError,
 }: EntryCreateDrawerProps) {
   const [typeSlug, setTypeSlug] = useState<string>(defaultTypeSlug ?? "");
   const [title, setTitle] = useState("");
@@ -104,6 +106,7 @@ export function EntryCreateDrawer({
       } else {
         setError("Failed to create entry.");
       }
+      onCreateError?.(err);
     } finally {
       setIsSaving(false);
     }

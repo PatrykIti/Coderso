@@ -32,6 +32,7 @@ type ContentTypeCreateDrawerProps = {
   onOpenChange: (open: boolean) => void;
   existingTypes?: Array<{ name: string; slug: string }>;
   onCreated?: (type: ContentTypeSummary) => void;
+  onCreateError?: (error: unknown) => void;
 };
 
 export function ContentTypeCreateDrawer({
@@ -39,6 +40,7 @@ export function ContentTypeCreateDrawer({
   onOpenChange,
   existingTypes = [],
   onCreated,
+  onCreateError,
 }: ContentTypeCreateDrawerProps) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -91,6 +93,7 @@ export function ContentTypeCreateDrawer({
       } else {
         setError("Failed to create content type.");
       }
+      onCreateError?.(err);
     } finally {
       setIsSaving(false);
     }

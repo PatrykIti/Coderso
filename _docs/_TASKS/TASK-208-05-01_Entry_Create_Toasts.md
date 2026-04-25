@@ -5,7 +5,7 @@
 **Category:** CMS Entries + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-208-05, TASK-208-01
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

@@ -31,6 +31,28 @@ Gdy zaznaczysz wpisy na liscie:
   paginacji. Bulk execution przenosi `id` razem z `contentType.slug`, bez
   globalnego `activeSlug`.
 
+## Shared List Action Toasts
+
+- Pages, Posts, Menus, Content Types, and Entries emit the shared top-right
+  Admin UI toast after list-owned create, publish, unpublish/draft, archive,
+  and delete mutations complete.
+- Delete toasts are emitted only after the shared confirmation dialog is
+  confirmed and the delete mutation settles. Opening or cancelling the
+  confirmation dialog does not emit a floating toast.
+- List screens use `core/admin/ui/shared/listActionToasts.ts` for success,
+  error, and bulk result copy. Resource components pass labels/action copy and
+  keep owning mutations, cache refresh, selection cleanup, navigation, and
+  inline partial-failure alerts.
+- Reusable create drawers/dialogs keep local validation inline-only. Rejected
+  create mutations/API failures can emit a list-scoped toast only when the list
+  owner passes the adapter-backed error callback.
+- Bulk partial failures remain truthful inline and in the floating toast. Content
+  Types keep failed IDs selected; Pages, Posts, Menus, and Entries keep their
+  existing selection cleanup behavior.
+- Entries continue to use `GET /content-entries` through
+  `entriesClient.listAllEntries()` for the all-entries read model, while editor
+  navigation keeps the existing Entries route aliases.
+
 ## Shared Admin List Pagination
 
 - Content Types, Pages, Posts, and Menus use one shared client-side pagination

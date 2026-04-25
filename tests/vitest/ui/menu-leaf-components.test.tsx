@@ -228,6 +228,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 test("MenuCreateDialog validates, creates trimmed payloads, and reports async errors", async () => {
   const onOpenChange = vi.fn();
+  const onCreateError = vi.fn();
   const onCreate = vi
     .fn<(
       payload: { name: string; location?: string }
@@ -236,7 +237,12 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
     .mockRejectedValueOnce(new Error("Failed to create menu."));
 
   const view = mount(
-    <MenuCreateDialog open onOpenChange={onOpenChange} onCreate={onCreate} />
+    <MenuCreateDialog
+      open
+      onOpenChange={onOpenChange}
+      onCreate={onCreate}
+      onCreateError={onCreateError}
+    />
   );
 
   try {
@@ -251,6 +257,7 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
       buttons.find((button) => button.textContent?.includes("Create Menu"))?.click();
     });
     expect(view.container.textContent).toContain("Menu name is required.");
+    expect(onCreateError).not.toHaveBeenCalled();
 
     await act(async () => {
       setInputValue(inputs[0], "  Main Menu  ");
@@ -275,6 +282,9 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
       location: undefined,
     });
     expect(view.container.textContent).toContain("Failed to create menu.");
+    expect(onCreateError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Failed to create menu." })
+    );
 
     act(() => {
       buttons.find((button) => button.textContent === "Cancel")?.click();

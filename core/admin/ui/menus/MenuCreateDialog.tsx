@@ -16,12 +16,14 @@ export type MenuCreateDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (payload: { name: string; location?: string }) => Promise<void> | void;
+  onCreateError?: (error: unknown) => void;
 };
 
 export function MenuCreateDialog({
   open,
   onOpenChange,
   onCreate,
+  onCreateError,
 }: MenuCreateDialogProps) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -43,6 +45,7 @@ export function MenuCreateDialog({
       onOpenChange(false);
     } catch (err) {
       setError((err as Error).message || "Failed to create menu.");
+      onCreateError?.(err);
     } finally {
       setIsSubmitting(false);
     }

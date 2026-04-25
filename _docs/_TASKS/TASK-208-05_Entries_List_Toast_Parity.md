@@ -5,7 +5,7 @@
 **Category:** CMS Entries + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208-01, TASK-208-04
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -42,8 +42,8 @@ tests and docs.
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-05-01_Entry_Create_Toasts.md`
-- [ ] `TASK-208-05-02_Entry_Bulk_Delete_Toast_Audit_and_Tests.md`
+- [x] `TASK-208-05-01_Entry_Create_Toasts.md`
+- [x] `TASK-208-05-02_Entry_Bulk_Delete_Toast_Audit_and_Tests.md`
 
 ## Security Contract
 

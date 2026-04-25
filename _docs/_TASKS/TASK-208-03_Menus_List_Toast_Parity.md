@@ -5,7 +5,7 @@
 **Category:** CMS Menus + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208-01, TASK-208-02
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -24,8 +24,8 @@ Menus adapter/config for labels, action copy, and fallback errors.
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-03-01_Menus_Create_Row_Lifecycle_Toasts.md`
-- [ ] `TASK-208-03-02_Menus_Bulk_Toasts_and_Regression_Tests.md`
+- [x] `TASK-208-03-01_Menus_Create_Row_Lifecycle_Toasts.md`
+- [x] `TASK-208-03-02_Menus_Bulk_Toasts_and_Regression_Tests.md`
 
 ## Security Contract
 

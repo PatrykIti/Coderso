@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Design Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -37,9 +37,9 @@ with selectors scoped to the shared `.toaster` host.
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Token_Ownership.md`
-- [ ] `TASK-208-01-02_Sonner_State_Token_Style_Mapping.md`
-- [ ] `TASK-208-01-03_Shared_Toaster_Token_Regression_Tests.md`
+- [x] `TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Token_Ownership.md`
+- [x] `TASK-208-01-02_Sonner_State_Token_Style_Mapping.md`
+- [x] `TASK-208-01-03_Shared_Toaster_Token_Regression_Tests.md`
 
 ## Implementation Round
 

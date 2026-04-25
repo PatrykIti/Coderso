@@ -5,7 +5,7 @@
 **Category:** CMS Entries + QA/Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208-05-01
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 

@@ -127,6 +127,80 @@
 }
 
 @layer components {
+  .toaster [data-sonner-toast] {
+    background: var(--normal-bg);
+    color: var(--normal-text);
+    border-color: var(--normal-border);
+    box-shadow: var(--admin-toast-shadow);
+  }
+
+  .toaster [data-sonner-toast][data-type="success"] {
+    background: var(--success-bg);
+    color: var(--success-text);
+    border-color: var(--success-border);
+  }
+
+  .toaster [data-sonner-toast][data-type="error"] {
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-color: var(--error-border);
+  }
+
+  .toaster [data-sonner-toast][data-type="warning"] {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    border-color: var(--warning-border);
+  }
+
+  .toaster [data-sonner-toast][data-type="info"] {
+    background: var(--info-bg);
+    color: var(--info-text);
+    border-color: var(--info-border);
+  }
+
+  .toaster [data-sonner-toast] [data-title] {
+    color: inherit;
+  }
+
+  .toaster [data-sonner-toast] [data-description] {
+    color: var(--admin-toast-description);
+  }
+
+  .toaster [data-sonner-toast] [data-close-button] {
+    background: var(--admin-toast-close-bg);
+    color: var(--admin-toast-close-text);
+    border-color: var(--admin-toast-close-border);
+  }
+
+  .toaster [data-sonner-toast] [data-button],
+  .toaster [data-sonner-toast] [data-action] {
+    background: var(--admin-toast-action-bg);
+    color: var(--admin-toast-action-text);
+  }
+
+  .toaster [data-sonner-toast] [data-cancel] {
+    background: var(--admin-toast-cancel-bg);
+    color: var(--admin-toast-cancel-text);
+  }
+
+  .toaster [data-sonner-toast] [data-icon],
+  .toaster [data-sonner-toast] [data-loader] {
+    color: currentColor;
+  }
+
+  .toaster [data-sonner-toast]:hover {
+    background: var(--admin-toast-hover-bg);
+  }
+
+  .toaster [data-sonner-toast]:focus-visible,
+  .toaster [data-sonner-toast] [data-close-button]:focus-visible,
+  .toaster [data-sonner-toast] [data-button]:focus-visible,
+  .toaster [data-sonner-toast] [data-action]:focus-visible,
+  .toaster [data-sonner-toast] [data-cancel]:focus-visible {
+    outline: 2px solid var(--admin-toast-focus);
+    outline-offset: 2px;
+  }
+
   .post-editor-richtext::after {
     content: "";
     display: block;

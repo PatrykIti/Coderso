@@ -5,7 +5,7 @@
 **Category:** Admin/UI + CMS Lists + Design Tokens
 **Estimated Effort:** Large
 **Dependencies:** TASK-198, TASK-199, TASK-200, TASK-205, TASK-207
-**Status:** To Do
+**Status:** Done (2026-04-24)
 
 ---
 
@@ -130,26 +130,26 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] `TASK-208-01_Shared_Sonner_Token_Contract.md`
-  - [ ] `TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Token_Ownership.md`
-  - [ ] `TASK-208-01-02_Sonner_State_Token_Style_Mapping.md`
-  - [ ] `TASK-208-01-03_Shared_Toaster_Token_Regression_Tests.md`
-- [ ] `TASK-208-02_Pages_and_Posts_List_Toast_Parity.md`
-  - [ ] `TASK-208-02-01_Pages_List_Mutation_Toasts.md`
-  - [ ] `TASK-208-02-02_Posts_List_Mutation_Toasts.md`
-  - [ ] `TASK-208-02-03_Pages_Posts_Toast_Regression_Tests.md`
-- [ ] `TASK-208-03_Menus_List_Toast_Parity.md`
-  - [ ] `TASK-208-03-01_Menus_Create_Row_Lifecycle_Toasts.md`
-  - [ ] `TASK-208-03-02_Menus_Bulk_Toasts_and_Regression_Tests.md`
-- [ ] `TASK-208-04_Engine_Content_Type_List_Toast_Parity.md`
-  - [ ] `TASK-208-04-01_Content_Type_Create_Error_Toasts.md`
-  - [ ] `TASK-208-04-02_Content_Type_Bulk_Toasts_and_Regression_Tests.md`
-- [ ] `TASK-208-05_Entries_List_Toast_Parity.md`
-  - [ ] `TASK-208-05-01_Entry_Create_Toasts.md`
-  - [ ] `TASK-208-05-02_Entry_Bulk_Delete_Toast_Audit_and_Tests.md`
-- [ ] `TASK-208-06_Docs_Changelog_and_Closure.md`
-  - [ ] `TASK-208-06-01_Content_List_and_Design_Token_Docs.md`
-  - [ ] `TASK-208-06-02_Validation_Changelog_and_Task_Board_Closure.md`
+- [x] `TASK-208-01_Shared_Sonner_Token_Contract.md`
+  - [x] `TASK-208-01-01_AdminApp_Toaster_Host_and_Rich_Color_Token_Ownership.md`
+  - [x] `TASK-208-01-02_Sonner_State_Token_Style_Mapping.md`
+  - [x] `TASK-208-01-03_Shared_Toaster_Token_Regression_Tests.md`
+- [x] `TASK-208-02_Pages_and_Posts_List_Toast_Parity.md`
+  - [x] `TASK-208-02-01_Pages_List_Mutation_Toasts.md`
+  - [x] `TASK-208-02-02_Posts_List_Mutation_Toasts.md`
+  - [x] `TASK-208-02-03_Pages_Posts_Toast_Regression_Tests.md`
+- [x] `TASK-208-03_Menus_List_Toast_Parity.md`
+  - [x] `TASK-208-03-01_Menus_Create_Row_Lifecycle_Toasts.md`
+  - [x] `TASK-208-03-02_Menus_Bulk_Toasts_and_Regression_Tests.md`
+- [x] `TASK-208-04_Engine_Content_Type_List_Toast_Parity.md`
+  - [x] `TASK-208-04-01_Content_Type_Create_Error_Toasts.md`
+  - [x] `TASK-208-04-02_Content_Type_Bulk_Toasts_and_Regression_Tests.md`
+- [x] `TASK-208-05_Entries_List_Toast_Parity.md`
+  - [x] `TASK-208-05-01_Entry_Create_Toasts.md`
+  - [x] `TASK-208-05-02_Entry_Bulk_Delete_Toast_Audit_and_Tests.md`
+- [x] `TASK-208-06_Docs_Changelog_and_Closure.md`
+  - [x] `TASK-208-06-01_Content_List_and_Design_Token_Docs.md`
+  - [x] `TASK-208-06-02_Validation_Changelog_and_Task_Board_Closure.md`
 
 ## Implementation Leaf Matrix
 
@@ -356,6 +356,17 @@ bun --cwd core lint:types
 If create drawer/dialog tests are changed outside the listed suites, include the
 adjacent focused Vitest suite in the same validation run and name it in the task
 validation notes.
+
+## Validation Notes (2026-04-24)
+
+- Passed targeted Vitest:
+  `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/page-post-list-wave.test.tsx tests/vitest/ui/menu-list-page-actions.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/ui/content-type-list-parity.test.tsx tests/vitest/ui/content-type-create-drawer.test.tsx tests/vitest/ui/entry-list-wave.test.tsx tests/vitest/ui/entry-page-support-wave.test.tsx`.
+- Passed `bun --cwd core lint`.
+- Passed `bun --cwd core lint:types`.
+- New focused drawer coverage landed in
+  `tests/vitest/ui/content-type-create-drawer.test.tsx`; Entry drawer
+  create-error coverage landed in
+  `tests/vitest/ui/entry-page-support-wave.test.tsx`.
 
 ## Documentation Updates Required
 

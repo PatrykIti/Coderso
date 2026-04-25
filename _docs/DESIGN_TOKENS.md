@@ -81,6 +81,30 @@ state: { success, warning, danger }
   backgrounds, foreground text, borders, overlays, focus, validation copy,
   warning state, and destructive state should remain token-driven.
 
+### Admin Floating Toasts
+
+- The shared Admin UI toaster is mounted once from `AdminApp` and stays
+  top-right, closeable, duration-bound, and labelled as `Admin notifications`.
+- The toaster keeps Sonner `richColors` enabled so success, error, warning, and
+  info states use Sonner's typed state selectors, but the visible state colors
+  are owned by `core/admin/components/ui/sonner.tsx` and
+  `core/admin/styles/globals.css`.
+- Normal, success, error, warning, and neutral info toast variables resolve to
+  Admin UI Theme variables:
+  - normal/info surfaces use the popover and border token set,
+  - success borders use `--admin-state-success`,
+  - warning borders use `--admin-state-warning`,
+  - error borders use `--admin-state-danger`.
+- The toast shell, title, description text, border, close button,
+  action/cancel controls, loading indicator, shadow, hover state, and focus
+  ring must inherit from active Admin UI Theme variables or shared
+  `--admin-toast-*` variables. Resource screens must not style floating toasts
+  with Sonner's bundled black/green/red/yellow/blue palettes or local Tailwind
+  color families.
+- Custom Admin UI Theme templates/profiles update toast visuals dynamically
+  through CSS variables; resource-specific list code should only emit shared
+  toast messages, not visual overrides.
+
 ## Example usage
 
 ```css
