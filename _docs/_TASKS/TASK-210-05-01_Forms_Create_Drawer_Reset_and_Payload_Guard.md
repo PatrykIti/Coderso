@@ -19,6 +19,10 @@ preserving the current list-drawer payload boundary.
 - [ ] Rename the header trigger from `New form` to `New`.
 - [ ] Reset drawer internal state on each open, using the Pages drawer key
   pattern if needed.
+- [ ] Add a `SheetDescription` or equivalent `aria-describedby` path matching
+  `PageCreateDrawer` so this create drawer is accessible after the list parity
+  work. This leaf only covers the create drawer warning; runtime preview and
+  global dialog wrapper warnings stay outside TASK-210.
 - [ ] Add an open-after-create checkbox to the drawer UI.
 - [ ] Pass only `name`, optional `slug`, `status`, and `description` from the
   list drawer into `createForm`.
@@ -35,6 +39,7 @@ preserving the current list-drawer payload boundary.
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormCreateDrawer.tsx`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/admin/formsClient.test.ts`
 
 ## Security Contract
 
@@ -52,6 +57,8 @@ preserving the current list-drawer payload boundary.
 
 - Trigger label is `New`.
 - Drawer state resets between openings.
+- Drawer description/`aria-describedby` coverage matches the Pages create
+  drawer pattern.
 - List-to-client create payload excludes `openAfterCreate`.
 - List-to-client create payload excludes builder-owned fields unless they are
   already present in the drawer contract.
@@ -59,6 +66,7 @@ preserving the current list-drawer payload boundary.
   default `settings` on the network payload.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 
@@ -70,7 +78,9 @@ preserving the current list-drawer payload boundary.
 ## Acceptance Criteria
 
 1. The Forms drawer behaves like Pages on open/reset.
-2. The API payload stays schema-first and contains no UI-only preference fields.
-3. Builder/settings ownership of advanced Forms fields is preserved.
-4. Existing `formsClient.createForm` default `settings` normalization is not
+2. The create drawer has an accessible description and does not retain the
+   current missing-description warning.
+3. The API payload stays schema-first and contains no UI-only preference fields.
+4. Builder/settings ownership of advanced Forms fields is preserved.
+5. Existing `formsClient.createForm` default `settings` normalization is not
    removed to make the drawer test pass.

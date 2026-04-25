@@ -11,8 +11,9 @@
 
 ## Overview
 
-Add a typed `forms.openAfterCreate` preference if Forms needs a resource-specific
-open-after-create setting instead of reusing the existing Pages preference.
+Add a typed `forms.openAfterCreate` preference for the Forms list. Do not reuse
+`pages.openAfterCreate`; the setting is resource-specific so Forms can mirror the
+Pages UX without coupling two admin surfaces to one preference key.
 
 This is a settings contract change, not just a UI toggle. The key must be
 registered on both admin client and server settings contracts before the Forms

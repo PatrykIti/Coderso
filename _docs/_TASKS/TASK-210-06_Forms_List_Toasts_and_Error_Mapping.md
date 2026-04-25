@@ -56,6 +56,10 @@ dialog.
 - [ ] Keep hard-delete semantics aligned with the database contract: submissions
   and action-run history are retained, and a blocked delete returns a stable
   conflict instead of leaking a raw foreign-key/database error.
+- [ ] Prefer an explicit service precheck before hard delete: count retained
+  `form_submissions` and `form_action_runs` rows, throw
+  `form_delete_restricted` when either count is non-zero, and keep raw database
+  constraint errors as a last-resort mapper fallback only.
 - [ ] Tighten `formCreateSchema` and `formUpdateSchema` status validation to
   enum values `draft | published | archived`.
 - [ ] Keep public submission validation and error behavior unchanged unless a
@@ -152,6 +156,8 @@ export const mapFormError = (error: unknown) => {
     `PUT /forms/:id/fields`;
   - delete with retained submissions/action diagnostics maps to a stable 409 and
     does not remove cached rows as a success;
+  - both retained submissions and retained action runs independently block hard
+    delete with `form_delete_restricted`;
   - `form_not_found` from public submission lookup, and any payload validation
     errors handled by the mapper, still map to stable Forms API errors without
     changing nonce/captcha/access behavior;

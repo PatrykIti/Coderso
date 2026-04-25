@@ -68,6 +68,12 @@ a backward-compatible alias through `adminPaths`.
   delete success/failure.
 - Row delete runs immediately from the dropdown. It does not use
   `ConfirmActionDialog`.
+- `FormCreateDrawer` is touched by this parity family and should match the
+  Pages drawer accessibility contract while it is being updated: use the
+  existing sheet description / `aria-describedby` pattern for the create drawer
+  instead of leaving the current Radix missing-description warning in the list
+  create flow. This does not close the global dialog-warning class for runtime
+  preview or unrelated dialogs.
 - Forms client already owns enough API surface for list parity:
   `listFormsCached`, `getCachedForms`, `createForm`, `updateForm`, and
   `deleteForm`.
@@ -143,6 +149,9 @@ a backward-compatible alias through `adminPaths`.
    the network request when the UI did not provide settings, so tests must
    distinguish the list-to-client payload boundary from the client-to-API
    payload normalization.
+   The drawer must also carry a sheet description/`aria-describedby` equivalent
+   matching `PageCreateDrawer`; do not claim this as a global fix for other
+   Forms dialogs.
 6. Create, lifecycle, row delete, and bulk action feedback goes through
    `createListActionToastAdapter` with Forms labels and actions:
    create, publish, draft, archive, delete.
@@ -264,6 +273,8 @@ a backward-compatible alias through `adminPaths`.
   `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts`
 - If public submission hardening changes or is touched:
   `set -a && source .env && set +a && bun test tests/unit/forms/submissionService.test.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts`
+- If the create drawer payload boundary is touched:
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
 
 ## Documentation Updates Required
 

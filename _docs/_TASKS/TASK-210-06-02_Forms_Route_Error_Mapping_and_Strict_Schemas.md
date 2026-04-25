@@ -33,9 +33,12 @@ machine-readable errors and strict status validation.
   semantics while doing this.
 - [ ] Use the mapper around create, detail, update, delete, field-write, and
   public submission form lookup paths.
-- [ ] Add a service-level delete precheck or mapper-safe domain error so
-  `form_submissions` / `form_action_runs` `onDelete: restrict` behavior does not
-  leak raw database errors when list delete is blocked.
+- [ ] Add a service-level delete precheck before hard delete that counts both
+  retained `form_submissions` and retained `form_action_runs`. Throw
+  `form_delete_restricted` when either count is non-zero so list delete failures
+  are domain errors instead of raw foreign-key/database errors.
+- [ ] Keep mapper fallback coverage for unexpected database constraint errors,
+  but do not rely on the fallback as the normal retained-history path.
 - [ ] Add or reuse a Bun-free Forms contract/helper owner for
   `draft | published | archived` status values so route schemas, service
   normalization, and admin/UI types consume one source without importing
@@ -101,7 +104,11 @@ machine-readable errors and strict status validation.
   access behavior.
 - Submission payload validation errors map to stable 400 responses if the
   public-submission path is wrapped by `mapFormError`.
-- Delete with retained submissions/action diagnostics maps to a stable 409.
+- Delete with retained submissions maps to a stable 409.
+- Delete with retained action diagnostics maps to a stable 409 even when there
+  are no retained submissions.
+- Raw database constraint failures are covered as a fallback and do not leak
+  internal error strings.
 - Public submission schema still accepts the documented payload.
 - Commands:
   - `set -a && source .env && set +a && bun test tests/integration/routes/forms.test.ts`

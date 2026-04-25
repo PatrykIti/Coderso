@@ -26,6 +26,10 @@ and Forms-specific inline validation.
 - [ ] Rename the list trigger from `New form` to compact `New`.
 - [ ] Reset the drawer state each time it opens, matching the Pages drawer key
   pattern if the current internal state would otherwise leak.
+- [ ] Add the same sheet description / `aria-describedby` accessibility pattern
+  used by `PageCreateDrawer` so the Forms list create drawer does not retain the
+  current missing-description warning. Do not treat this as the global BUG-6
+  closure for runtime preview or unrelated dialogs.
 - [ ] Add `forms.openAfterCreate` user setting, mirroring
   `pages.openAfterCreate`.
 - [ ] On successful create:
@@ -49,6 +53,7 @@ and Forms-specific inline validation.
 - `core/admin/services/userSettingsClient.ts`
 - `core/services/settings/userSettingsService.ts`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/admin/formsClient.test.ts`
 - `tests/vitest/admin/userSettingsClient.test.ts`
 - `tests/unit/settings/userSettingsService.test.ts`
 - `tests/integration/routes/userSettings.test.ts` only if route behavior or
@@ -108,6 +113,8 @@ The actual payload sent to `createForm` must not include UI-only fields such as
 - Add or update Vitest coverage proving:
   - list trigger text is `New`;
   - drawer opens from the list header;
+  - create drawer exposes an accessible description matching the Pages sheet
+    pattern;
   - the list-to-client create call contains only Forms list drawer fields and no
     UI-only `openAfterCreate`;
   - `formsClient.createForm` still sends normalized default `settings` at the
@@ -117,6 +124,7 @@ The actual payload sent to `createForm` must not include UI-only fields such as
   - preference load/persist failures do not block create.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
   - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
   - `bun --cwd core lint`
