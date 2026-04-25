@@ -73,7 +73,7 @@ export function PageRevisionDrawer({
             <div className="space-y-1">
               <SheetTitle>Page history</SheetTitle>
               <SheetDescription className="text-xs text-muted-foreground">
-                Restore published revisions or manage the latest settings autosave.
+                Restore published versions or manage the latest draft version.
               </SheetDescription>
             </div>
             <SheetClose asChild>
@@ -104,7 +104,7 @@ export function PageRevisionDrawer({
                     : revision.createdBy?.email || "System";
                   const label =
                     revision.kind === "autosave"
-                      ? "Not saved"
+                      ? "Draft version"
                       : `Version ${revision.version}`;
 
                   return (
@@ -117,7 +117,7 @@ export function PageRevisionDrawer({
                               variant={revision.kind === "autosave" ? "secondary" : "outline"}
                               className="text-[10px] uppercase"
                             >
-                              {revision.kind === "autosave" ? "Autosave" : "Published"}
+                              {revision.kind === "autosave" ? "Draft" : "Published"}
                             </Badge>
                           </div>
                           <p className="text-xs text-muted-foreground">
@@ -173,12 +173,12 @@ export function PageRevisionDrawer({
         }}
         title={
           pendingRestore?.kind === "autosave"
-            ? "Restore autosave?"
+            ? "Restore draft version?"
             : "Restore revision?"
         }
         description={
           pendingRestore?.kind === "autosave"
-            ? "Restore this autosave? Current unsaved changes may be overwritten."
+            ? "Restore this draft version? Current unsaved changes may be overwritten."
             : "Restore this revision? Current unsaved changes may be overwritten."
         }
         confirmLabel="Restore"
@@ -197,9 +197,9 @@ export function PageRevisionDrawer({
         onOpenChange={(next) => {
           if (!next) setPendingDiscardId(null);
         }}
-        title="Discard autosave?"
-        description="Discard this autosave? It will be removed from history."
-        confirmLabel="Discard autosave"
+        title="Discard draft version?"
+        description="Discard this draft version? It will be removed from history."
+        confirmLabel="Discard draft version"
         confirmingLabel="Discarding..."
         isConfirming={discardingId === pendingDiscardId}
         onConfirm={() => {

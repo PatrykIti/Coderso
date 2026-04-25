@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Notifications
 **Estimated Effort:** Medium
 **Dependencies:** TASK-211-02-01
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 

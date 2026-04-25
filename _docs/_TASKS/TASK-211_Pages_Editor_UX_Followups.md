@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Runtime Preview + Notifications
 **Estimated Effort:** Large
 **Dependencies:** TASK-194, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 
@@ -80,22 +80,22 @@ Pages-editor-only notification system.
 
 ## Sub-Tasks
 
-- [ ] TASK-211-01: Runtime Preview Probe and Failure State
-- [ ] TASK-211-02: Page Editor Shared Toast Feedback
-- [ ] TASK-211-03: Inserted Block Viewport Alignment
-- [ ] TASK-211-04: Page History Draft Copy Cleanup
-- [ ] TASK-211-05: QA, Docs, and Source Report Closure
+- [x] TASK-211-01: Runtime Preview Probe and Failure State
+- [x] TASK-211-02: Page Editor Shared Toast Feedback
+- [x] TASK-211-03: Inserted Block Viewport Alignment
+- [x] TASK-211-04: Page History Draft Copy Cleanup
+- [x] TASK-211-05: QA, Docs, and Source Report Closure
 
 ## Leaf Breakdown
 
-- [ ] TASK-211-01-01: Preview Probe Security and Service Contract
-- [ ] TASK-211-01-02: Runtime Preview Dialog Error State
-- [ ] TASK-211-02-01: Admin Action Toast Adapter for Editor Mutations
-- [ ] TASK-211-02-02: Page Editor Save Publish Toast Wiring
-- [ ] TASK-211-03-01: Inserted Block Scroll Target and Test Proof
-- [ ] TASK-211-04-01: Page Revision Drawer User-Facing Copy
-- [ ] TASK-211-05-01: Pages Editor Followup Test Matrix
-- [ ] TASK-211-05-02: Docs, Changelog, and Playwright Report Closure
+- [x] TASK-211-01-01: Preview Probe Security and Service Contract
+- [x] TASK-211-01-02: Runtime Preview Dialog Error State
+- [x] TASK-211-02-01: Admin Action Toast Adapter for Editor Mutations
+- [x] TASK-211-02-02: Page Editor Save Publish Toast Wiring
+- [x] TASK-211-03-01: Inserted Block Scroll Target and Test Proof
+- [x] TASK-211-04-01: Page Revision Drawer User-Facing Copy
+- [x] TASK-211-05-01: Pages Editor Followup Test Matrix
+- [x] TASK-211-05-02: Docs, Changelog, and Playwright Report Closure
 
 ## Non-Goals
 

@@ -511,7 +511,7 @@ test("revision drawers render states and gate restore/discard with confirmation"
     expect(view.container.textContent).toContain("Version 3");
     expect(view.container.textContent).toContain("2 blocks");
     expect(view.container.textContent).toContain("Preview");
-    expect(view.container.textContent).toContain("Not saved");
+    expect(view.container.textContent).toContain("Draft version");
     expect(view.container.textContent).toContain("Title: Landing");
 
     act(() => {
@@ -539,10 +539,10 @@ test("revision drawers render states and gate restore/discard with confirmation"
         .find((button) => button.textContent === "Discard")
         ?.click();
     });
-    expect(view.container.textContent).toContain("Discard autosave?");
+    expect(view.container.textContent).toContain("Discard draft version?");
     act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Discard autosave")
+        .find((button) => button.textContent === "Discard draft version")
         ?.click();
     });
 
@@ -551,7 +551,7 @@ test("revision drawers render states and gate restore/discard with confirmation"
         .filter((button) => button.textContent === "Restore")[1]
         ?.click();
     });
-    expect(view.container.textContent).toContain("Restore autosave?");
+    expect(view.container.textContent).toContain("Restore draft version?");
     act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Cancel")

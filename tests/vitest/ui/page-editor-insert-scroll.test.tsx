@@ -55,6 +55,18 @@ const pageEditorState = vi.hoisted(() => {
   return state;
 });
 
+const toastState = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: toastState.success,
+    error: toastState.error,
+  },
+}));
+
 vi.mock("@/components/ui/alert", () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertTitle: ({ children }: { children: React.ReactNode }) => <strong>{children}</strong>,
@@ -332,10 +344,15 @@ test("PageEditor scrolls to and highlights a newly inserted block", async () => 
       document.querySelectorAll("[data-block-id]")
     ) as HTMLDivElement[];
     expect(rows).toHaveLength(2);
+    const insertedBlockId = rows[1]?.getAttribute("data-block-id");
+    expect(insertedBlockId).toBeTruthy();
     expect(rows[1]?.className).toContain("border-emerald-500/40");
-    expect(view.container.textContent).toContain("settings:");
+    expect(view.container.textContent).toContain(`settings:${insertedBlockId}`);
 
-    expect(scrollIntoViewSpy).toHaveBeenCalled();
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
 
     await act(async () => {
       vi.advanceTimersByTime(2000);

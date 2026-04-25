@@ -5,7 +5,7 @@
 **Category:** QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-211-01, TASK-211-02, TASK-211-03, TASK-211-04
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 
@@ -20,8 +20,8 @@ outside TASK-211.
 
 ## Sub-Tasks
 
-- [ ] TASK-211-05-01: Pages Editor Followup Test Matrix
-- [ ] TASK-211-05-02: Docs, Changelog, and Playwright Report Closure
+- [x] TASK-211-05-01: Pages Editor Followup Test Matrix
+- [x] TASK-211-05-02: Docs, Changelog, and Playwright Report Closure
 
 ## Files to Change
 

@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Notifications
 **Estimated Effort:** Medium
 **Dependencies:** TASK-211, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 
@@ -21,8 +21,8 @@ ad-hoc `toast.success` / `toast.error` calls scattered in the component.
 
 ## Sub-Tasks
 
-- [ ] TASK-211-02-01: Admin Action Toast Adapter for Editor Mutations
-- [ ] TASK-211-02-02: Page Editor Save Publish Toast Wiring
+- [x] TASK-211-02-01: Admin Action Toast Adapter for Editor Mutations
+- [x] TASK-211-02-02: Page Editor Save Publish Toast Wiring
 
 ## Files to Change
 

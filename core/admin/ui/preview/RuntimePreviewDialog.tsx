@@ -21,6 +21,32 @@ export type RuntimePreviewDeviceId = (typeof runtimePreviewDevices)[number]["id"
 
 type PreviewLoadError = "loopback_unreachable" | "timeout" | null;
 
+export type RuntimePreviewProbeFailureReason =
+  | "unreachable"
+  | "http_error"
+  | "redirect_blocked"
+  | "timeout"
+  | "invalid_target";
+
+export type RuntimePreviewProbeResult =
+  | {
+      ok: true;
+      status?: number;
+      targetLabel: string;
+    }
+  | {
+      ok: false;
+      status?: number;
+      reason: RuntimePreviewProbeFailureReason;
+      targetLabel: string;
+    };
+
+type PreviewLoadFailure = {
+  reason: RuntimePreviewProbeFailureReason | "loopback_unreachable";
+  status?: number;
+  targetLabel: string;
+};
+
 const isAbsoluteUrl = (value: string) => /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
 
 const withPreviewDevice = (previewUrl: string, device: RuntimePreviewDeviceId) => {
@@ -44,6 +70,52 @@ const getPreviewTargetLabel = (previewUrl: string) => {
   } catch {
     return previewUrl.replace(/([?&]token=)[^&]+/, "$1<redacted>");
   }
+};
+
+const sanitizePreviewProbeTargetLabel = (value: string) => {
+  try {
+    const resolved = new URL(value, "http://localhost");
+    resolved.searchParams.delete("token");
+    resolved.searchParams.delete("device");
+    return isAbsoluteUrl(value)
+      ? `${resolved.origin}${resolved.pathname || "/"}`
+      : `${resolved.pathname}${resolved.search}` || "/preview";
+  } catch {
+    return value
+      .replace(/([?&]token=)[^&]+/gi, "$1<redacted>")
+      .replace(/([?&]device=)[^&]+/gi, "$1<redacted>");
+  }
+};
+
+const resolveProbeFailure = (
+  probeResult: RuntimePreviewProbeResult | null | undefined
+): PreviewLoadFailure | null => {
+  if (!probeResult || probeResult.ok) return null;
+  return {
+    reason: probeResult.reason,
+    status: probeResult.status,
+    targetLabel: sanitizePreviewProbeTargetLabel(probeResult.targetLabel),
+  };
+};
+
+const resolveLoadFailureMessage = (failure: PreviewLoadFailure) => {
+  if (failure.reason === "loopback_unreachable") {
+    return `Frontend is not responding at ${failure.targetLabel}. Start the public frontend or update the configured public URL.`;
+  }
+  if (failure.reason === "http_error") {
+    const statusCopy = failure.status ? ` returned ${failure.status}` : " returned an error";
+    return `Preview target${statusCopy} at ${failure.targetLabel}. Check that the public frontend can render this preview route.`;
+  }
+  if (failure.reason === "redirect_blocked") {
+    return `Preview redirected outside the approved target from ${failure.targetLabel}. Check the configured public URL.`;
+  }
+  if (failure.reason === "invalid_target") {
+    return `Preview target is not configured correctly for ${failure.targetLabel}. Update the configured public URL.`;
+  }
+  if (failure.reason === "unreachable") {
+    return `Preview target is not responding at ${failure.targetLabel}. Check that the public frontend is reachable.`;
+  }
+  return `Preview could not load from ${failure.targetLabel}. Check that the public frontend is reachable and the configured public URL is correct.`;
 };
 
 const getPreviewOrigin = (previewUrl: string) => {
@@ -81,6 +153,7 @@ export type RuntimePreviewDialogProps = {
   iframeTitle?: string;
   device?: RuntimePreviewDeviceId;
   onDeviceChange?: (device: RuntimePreviewDeviceId) => void;
+  probeResult?: RuntimePreviewProbeResult | null;
   onFixPreviewTarget?: () => void;
   fixPreviewTargetLabel?: string;
 };
@@ -101,6 +174,7 @@ export function RuntimePreviewDialog({
   iframeTitle = "Runtime preview",
   device,
   onDeviceChange,
+  probeResult,
   onFixPreviewTarget,
   fixPreviewTargetLabel = "Open settings",
 }: RuntimePreviewDialogProps) {
@@ -142,6 +216,18 @@ export function RuntimePreviewDialog({
     () => (previewUrl ? isLoopbackHost(previewUrl) : false),
     [previewUrl]
   );
+  const probeFailure = useMemo(
+    () => resolveProbeFailure(probeResult),
+    [probeResult]
+  );
+  const loadFailure = useMemo<PreviewLoadFailure | null>(() => {
+    if (probeFailure) return probeFailure;
+    if (!loadError || !previewTargetLabel) return null;
+    return {
+      reason: loadError,
+      targetLabel: previewTargetLabel,
+    };
+  }, [loadError, previewTargetLabel, probeFailure]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -152,7 +238,7 @@ export function RuntimePreviewDialog({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [iframeKey, open]);
+  }, [iframeKey, open, probeResult]);
 
   useEffect(() => {
     if (
@@ -160,6 +246,7 @@ export function RuntimePreviewDialog({
       !open ||
       !previewUrl ||
       isLoading ||
+      probeFailure ||
       !previewUsesLoopback ||
       !previewOrigin
     ) {
@@ -190,7 +277,7 @@ export function RuntimePreviewDialog({
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [isLoading, open, previewOrigin, previewUrl, previewUsesLoopback]);
+  }, [isLoading, open, previewOrigin, previewUrl, previewUsesLoopback, probeFailure]);
 
   useEffect(() => {
     if (
@@ -198,6 +285,7 @@ export function RuntimePreviewDialog({
       !open ||
       !previewUrl ||
       isLoading ||
+      probeFailure ||
       loadError ||
       iframeReady
     ) {
@@ -211,7 +299,7 @@ export function RuntimePreviewDialog({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [iframeReady, isLoading, loadError, open, previewUrl]);
+  }, [iframeReady, isLoading, loadError, open, previewUrl, probeFailure]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -265,16 +353,14 @@ export function RuntimePreviewDialog({
             <div className="rounded-2xl border border-destructive/40 bg-background p-10 text-center text-sm text-destructive">
               {error}
             </div>
-          ) : loadError ? (
+          ) : loadFailure ? (
             <div className="rounded-2xl border border-amber-500/30 bg-background p-10 text-center shadow-sm">
               <div className="space-y-3">
                 <p className="text-base font-semibold text-foreground">
                   Live preview unavailable
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {loadError === "loopback_unreachable"
-                    ? `Frontend is not responding at ${previewTargetLabel}. Start the public frontend or update the configured public URL.`
-                    : `Preview could not load from ${previewTargetLabel}. Check that the public frontend is reachable and the configured public URL is correct.`}
+                  {resolveLoadFailureMessage(loadFailure)}
                 </p>
                 {onFixPreviewTarget ? (
                   <div className="flex justify-center">

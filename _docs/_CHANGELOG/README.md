@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 742 | 2026-04-25 | TASK-211 pages editor UX followups | CMS Pages/Admin UI |
 | 739 | 2026-04-25 | Pages CSRF token refresh | Security/Admin API |
 | 738 | 2026-04-24 | TASK-208 admin list action toasts | Admin UI/CMS Lists |
 | 737 | 2026-04-24 | TASK-207 entries list parity | CMS Entries/Admin UI |

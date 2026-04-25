@@ -97,6 +97,73 @@ test("RuntimePreviewDialog shows actionable loopback failure without leaking tok
   }
 });
 
+test("RuntimePreviewDialog renders probe failure placeholder before iframe load", () => {
+  const view = mount(
+    <RuntimePreviewDialog
+      open
+      onOpenChange={() => undefined}
+      title="Preview"
+      canPreview
+      previewUrl="https://preview.example.test/preview?type=page&token=secret-token"
+      probeResult={{
+        ok: false,
+        status: 503,
+        reason: "http_error",
+        targetLabel:
+          "https://preview.example.test/preview?type=page&token=secret-token&device=mobile",
+      }}
+      isLoading={false}
+      error={null}
+    />
+  );
+
+  try {
+    expect(document.body.textContent).toContain("Live preview unavailable");
+    expect(document.body.textContent).toContain(
+      "Preview target returned 503 at https://preview.example.test/preview."
+    );
+    expect(document.body.textContent).not.toContain("secret-token");
+    expect(document.body.querySelector("iframe")).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("RuntimePreviewDialog renders iframe for successful probe and load", () => {
+  const view = mount(
+    <RuntimePreviewDialog
+      open
+      onOpenChange={() => undefined}
+      title="Preview"
+      canPreview
+      previewUrl="https://preview.example.test/preview?type=page&token=secret-token"
+      probeResult={{
+        ok: true,
+        status: 200,
+        targetLabel: "https://preview.example.test/preview",
+      }}
+      isLoading={false}
+      error={null}
+      device="mobile"
+    />
+  );
+
+  try {
+    const iframe = document.body.querySelector("iframe");
+    expect(iframe).not.toBeNull();
+    expect(iframe?.getAttribute("data-preview-device")).toBe("mobile");
+
+    act(() => {
+      iframe?.dispatchEvent(new Event("load", { bubbles: true }));
+    });
+
+    expect(document.body.textContent).not.toContain("Live preview unavailable");
+    expect(document.body.querySelector("iframe")).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("RuntimePreviewDialog falls back after iframe timeout for non-loopback hosts", async () => {
   vi.useFakeTimers();
 

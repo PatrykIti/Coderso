@@ -11,7 +11,10 @@ import {
   type PageData,
 } from "../../services/pages/pageService";
 import { listPageTemplateOptions } from "../../services/pages/pageTemplateService";
-import { createPreviewToken } from "../../services/pages/previewService";
+import {
+  createPreviewToken,
+  probeGeneratedPreviewUrl,
+} from "../../services/pages/previewService";
 import {
   discardAutosaveRevision,
   listRevisions,
@@ -51,6 +54,15 @@ export type Router = {
 export type PageRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+};
+
+const canServerProbePreviewUrl = (value: string) => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 };
 
 export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
@@ -174,7 +186,7 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
       const page = await getPage(ctx.params.id);
       if (!page) throw new Error("page_not_found");
 
-      const body = ctx.body as { ttlMinutes?: number };
+      const body = ctx.body as { ttlMinutes?: number; probe?: boolean };
       const { token, expiresAt } = await createPreviewToken({
         targetType: "page",
         targetId: page.id,
@@ -187,7 +199,14 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
         token,
         path: slugPath,
       }, createPublicUrlContextFromHeaders(ctx.headers));
-      return { token, previewUrl, expiresAt };
+      const probe = body.probe && canServerProbePreviewUrl(previewUrl)
+        ? await probeGeneratedPreviewUrl(previewUrl, {
+            allowedOrigins: [previewUrl],
+          })
+        : undefined;
+      return probe
+        ? { token, previewUrl, expiresAt, probe }
+        : { token, previewUrl, expiresAt };
     }
   );
 

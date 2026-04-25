@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Runtime Preview + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-211-01
-**Status:** To Do
+**Status:** Done (2026-04-25)
 
 ---
 

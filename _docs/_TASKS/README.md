@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 98 tasks
+- **To Do:** 84 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1130 tasks
+- **Done:** 1144 tasks
 
 ---
 
@@ -38,20 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-211 | Pages Editor UX Followups | High | Large | Close remaining SUMMARY-PAGES UX follow-ups excluding BUG-6: preview failure placeholder, editor Sonner toasts, inserted-block viewport alignment, and Page History draft wording |
-| TASK-211-01 | Runtime Preview Probe and Failure State | High | Large | Detect preview 404/503/unreachable states without trusting iframe onLoad or exposing arbitrary URL probing |
-| TASK-211-01-01 | Preview Probe Security and Service Contract | High | Medium | Technical leaf: bounded preview probe metadata, token redaction, approved origins, timeout, and route/client coverage |
-| TASK-211-01-02 | Runtime Preview Dialog Error State | High | Medium | Technical leaf: RuntimePreviewDialog consumes probe failures and keeps timeout fallback without leaking preview tokens |
-| TASK-211-02 | Page Editor Shared Toast Feedback | High | Medium | Save/publish feedback uses the central AdminApp Sonner host and shared adapter semantics, not a Pages-editor-only alert system |
-| TASK-211-02-01 | Admin Action Toast Adapter for Editor Mutations | High | Small | Technical leaf: generic non-list action toast adapter or shared helper extraction while keeping list toasts compatible |
-| TASK-211-02-02 | Page Editor Save Publish Toast Wiring | High | Medium | Technical leaf: PageEditor save/publish success and failure emit central Sonner toasts and preserve inline context |
-| TASK-211-03 | Inserted Block Viewport Alignment | Medium | Medium | Bring newly inserted blocks into a viewport-safe position and prove alignment beyond raw scrollIntoView invocation |
-| TASK-211-03-01 | Inserted Block Scroll Target and Test Proof | Medium | Small | Technical leaf: deterministic scroll target/offset plus highlighted selected block regression proof |
-| TASK-211-04 | Page History Draft Copy Cleanup | Medium | Small | Replace user-facing autosave wording in Page History with draft-version copy while preserving API/domain kinds |
-| TASK-211-04-01 | Page Revision Drawer User-Facing Copy | Medium | Small | Technical leaf: PageRevisionDrawer description, badges, and confirm dialog copy use draft-version wording |
-| TASK-211-05 | QA, Docs, and Source Report Closure | Medium | Medium | Targeted validation, docs, changelog, board sync, and SUMMARY-PAGES closure while keeping BUG-6 separate |
-| TASK-211-05-01 | Pages Editor Followup Test Matrix | Medium | Small | Technical leaf: Vitest/Bun lane matrix for preview, toasts, scroll, history copy, and token redaction |
-| TASK-211-05-02 | Docs Changelog and Playwright Report Closure | Medium | Small | Technical leaf: update PREVIEW/CMS/docs if needed, changelog, board counts, and dated SUMMARY-PAGES status |
 | TASK-210 | Coderso Forms List Parity With Pages | High | Very Large | Match `/admin/coderso/forms` to the Pages list contract while preserving Forms statuses, submission access, builder, action logs, and public submission hardening |
 | TASK-210-01 | Forms List Route, Shell, and Cache Hydration | High | Medium | Canonical `/admin/coderso/forms` active href plus cache-present/background and cache-missing/foreground refresh behavior |
 | TASK-210-02 | Forms Filters, Table, and Shared Pagination | High | Large | Forms search/status/access filters, Pages-style table selection, and shared pagination footer |
@@ -155,6 +141,20 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-211 | Pages Editor UX Followups | High | Large | Done: preview probe metadata, shared editor Sonner toasts, viewport-safe inserted-block scroll, Page History draft-version copy, docs, changelog 742, and targeted validation shipped; BUG-6 remains separate |
+| TASK-211-05 | QA, Docs, and Source Report Closure | Medium | Medium | Done: targeted validation, preview/CMS docs, SUMMARY-PAGES closure, changelog, and board sync recorded |
+| TASK-211-05-02 | Docs Changelog and Playwright Report Closure | Medium | Small | Done: PREVIEW/CMS docs, changelog 742, task board counts, and source report status synced |
+| TASK-211-05-01 | Pages Editor Followup Test Matrix | Medium | Small | Done: Vitest UI/client matrix plus DB-backed Bun preview route/service/validation suites passed |
+| TASK-211-04 | Page History Draft Copy Cleanup | Medium | Small | Done: Page History user-facing autosave copy now reads draft version while API/domain kind stays `autosave` |
+| TASK-211-04-01 | Page Revision Drawer User-Facing Copy | Medium | Small | Done: drawer description, badge/label, restore dialog, and discard dialog use draft-version wording |
+| TASK-211-03 | Inserted Block Viewport Alignment | Medium | Medium | Done: inserted blocks scroll with start alignment and keep selection/highlight/focus proof |
+| TASK-211-03-01 | Inserted Block Scroll Target and Test Proof | Medium | Small | Done: regression proof asserts selected inserted block, highlight lifecycle, and `block: start` scroll alignment |
+| TASK-211-02 | Page Editor Shared Toast Feedback | High | Medium | Done: editor save/publish success and failure use the central Sonner host through a shared action-toast adapter |
+| TASK-211-02-02 | Page Editor Save Publish Toast Wiring | High | Medium | Done: PageEditor emits save/publish success/error toasts after awaited mutations while preserving inline context |
+| TASK-211-02-01 | Admin Action Toast Adapter for Editor Mutations | High | Small | Done: shared non-list action toast helper added and list toast error normalization delegates to it |
+| TASK-211-01 | Runtime Preview Probe and Failure State | High | Large | Done: Pages preview can request bounded probe metadata and RuntimePreviewDialog renders probe failures before iframe load |
+| TASK-211-01-02 | Runtime Preview Dialog Error State | High | Medium | Done: optional probe prop preserves legacy no-probe callers while failed probes win over iframe load |
+| TASK-211-01-01 | Preview Probe Security and Service Contract | High | Medium | Done: generated preview URL probe uses approved origins, timeout, redirect blocking, token redaction, and strict payload validation |
 | TASK-208 | Admin List Action Toasts and Theme Tokens | High | Large | Done: token-backed shared Admin UI toasts and list action feedback parity shipped across Pages, Posts, Menus, Engine, and Entries |
 | TASK-208-06 | Docs, Changelog, and Closure | Medium | Medium | Done: source docs, changelog 738, task board, and validation evidence synced |
 | TASK-208-06-02 | Validation Changelog and Task Board Closure | Medium | Small | Done: targeted Vitest, lint, typecheck, changelog, and board closure recorded |
