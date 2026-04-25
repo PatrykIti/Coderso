@@ -41,6 +41,8 @@ base acceptance on raw constraint strings.
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormBulkActionsBar.tsx` if extracted.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` or a focused new component
+  suite if bulk controls are extracted.
 
 ## Security Contract
 
@@ -80,7 +82,7 @@ const results = await Promise.allSettled(
   affected forms visible.
 - Success and partial-failure paths refresh the Forms list.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

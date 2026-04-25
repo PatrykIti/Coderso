@@ -29,6 +29,8 @@ rows visible after filters and pagination.
 - `core/admin/ui/forms/FormBulkActionsBar.tsx` if extracted.
 - `core/admin/ui/forms/FormTable.tsx`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` or a focused new component
+  suite if `FormBulkActionsBar` is extracted.
 
 ## Security Contract
 
@@ -49,7 +51,7 @@ rows visible after filters and pagination.
 - Bulk action options are Forms-specific.
 - Hidden selected ids are not included in pending bulk actions.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

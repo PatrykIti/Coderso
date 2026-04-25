@@ -50,6 +50,8 @@ when cache exists, matching the Pages mount policy.
 - `core/admin/utils/adminPrefetch.ts` only if the current Forms warmup contract
   needs an assertion or code adjustment.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` if canonical links are
+  normalized inside `FormTable`.
 - `tests/vitest/ui-integration/forms.test.tsx`
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/vitest/admin/adminPaths.test.ts`
@@ -94,7 +96,7 @@ owner instead of creating a Forms-only cache policy module.
     `/admin/coderso/forms` routes without changing editor/runtime behavior;
   - prefetch for `/admin/coderso/forms` calls `listFormsCached({ force: false })`.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

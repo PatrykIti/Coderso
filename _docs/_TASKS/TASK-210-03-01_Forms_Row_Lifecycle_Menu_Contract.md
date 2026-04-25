@@ -34,6 +34,8 @@ Action logs diagnostic route reachable from the row menu.
 - `core/admin/ui/forms/FormRowActions.tsx` if extracted.
 - `core/admin/ui/forms/FormListPage.tsx`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` for the real row-action menu
+  rendering contract.
 - `tests/vitest/admin/formsClient.test.ts` only if cache patch behavior changes.
 
 ## Security Contract
@@ -57,7 +59,7 @@ Action logs diagnostic route reachable from the row menu.
 - Lifecycle actions call `updateForm` with `published`, `draft`, or `archived`.
 - Page-only Preview/Duplicate/Embed Code actions are absent.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

@@ -29,6 +29,8 @@ Forms-specific columns and row metadata.
 - `core/admin/ui/forms/FormTable.tsx`
 - `core/admin/ui/forms/FormRowActions.tsx` if extracted by TASK-210-03-01.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` for the real `FormTable`
+  rendering and interaction contract.
 
 ## Security Contract
 
@@ -49,7 +51,7 @@ Forms-specific columns and row metadata.
 - Row links resolve to canonical Forms editor routes.
 - Row action-log links resolve to canonical Forms action-log routes.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

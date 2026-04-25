@@ -37,8 +37,11 @@ list depends on it.
 - `core/admin/ui/forms/FormCreateDrawer.tsx`
 - `tests/vitest/admin/userSettingsClient.test.ts`
 - `tests/unit/settings/userSettingsService.test.ts`
-- `tests/integration/routes/userSettings.test.ts` only if route behavior changes.
+- `tests/integration/routes/userSettings.test.ts` because the route-visible
+  settings catalog accepts a new key.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` if the drawer toggle is owned
+  inside `FormCreateDrawer`.
 
 ## Security Contract
 
@@ -60,8 +63,8 @@ list depends on it.
 - Server service rejects non-boolean values for the key.
 - Forms create flow still works when preference load or persist fails.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts tests/vitest/ui/forms-pages-wave.test.tsx`
-  - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx`
+  - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

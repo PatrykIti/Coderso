@@ -45,6 +45,8 @@ are owned by TASK-210-03 and TASK-210-04.
 - `core/admin/ui/shared/ListPaginationFooter.tsx` only if a generic capability
   is missing.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` for the non-mocked
+  `FormTable` selection/access-column contract.
 - `tests/vitest/ui/list-pagination.test.tsx` only if the generic pagination
   contract changes.
 
@@ -102,7 +104,7 @@ Table columns should remain Forms-specific:
   - select-all affects only current visible rows;
   - hidden selected ids are trimmed after filter/page changes.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/list-pagination.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/list-pagination.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

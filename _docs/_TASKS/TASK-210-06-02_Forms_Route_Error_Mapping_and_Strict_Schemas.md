@@ -104,7 +104,9 @@ constraint failures.
 ## Testing Requirements
 
 - Known domain errors map to stable API errors/statuses.
-- Existing Forms route registration remains covered.
+- Existing Forms route registration remains covered, and
+  `tests/integration/routes/forms.test.ts` must be extended beyond registration
+  to execute the affected handlers/mapping paths.
 - Create/update reject unknown fields.
 - Create/update reject unknown status values.
 - Field-write validation errors map to stable 400 responses if field-write is

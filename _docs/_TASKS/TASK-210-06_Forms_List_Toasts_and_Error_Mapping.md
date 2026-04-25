@@ -160,6 +160,8 @@ export const mapFormError = (error: unknown) => {
   - inline partial failure remains visible.
 - Add or update Bun route coverage proving:
   - existing Forms route registration remains intact;
+  - `tests/integration/routes/forms.test.ts` executes the affected
+    handler/error-mapping paths, not only endpoint registration;
   - known Forms domain errors map to stable API errors/statuses;
   - create/update reject unknown fields;
   - create/update reject unknown status values;

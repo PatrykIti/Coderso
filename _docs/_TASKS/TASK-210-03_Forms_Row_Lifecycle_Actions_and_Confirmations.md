@@ -54,6 +54,8 @@ constraint error.
 - `core/admin/services/formsClient.ts` only if status cache patching needs a
   focused helper.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` for the non-mocked
+  `FormTable` / `FormRowActions` menu contract.
 - `tests/vitest/admin/formsClient.test.ts`
 
 ## Security Contract
@@ -100,7 +102,7 @@ const handleDelete = (id: string) => {
     visible inline error and do not remove the row locally;
   - API failures keep a visible inline error.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/admin/formsClient.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/admin/formsClient.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

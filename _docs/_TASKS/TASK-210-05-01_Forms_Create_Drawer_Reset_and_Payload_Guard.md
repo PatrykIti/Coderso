@@ -39,6 +39,8 @@ preserving the current list-drawer payload boundary.
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormCreateDrawer.tsx`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` for the real drawer
+  rendering/reset/payload contract.
 - `tests/vitest/ui-integration/forms.test.tsx`
 - `tests/vitest/admin/formsClient.test.ts`
 
@@ -66,7 +68,7 @@ preserving the current list-drawer payload boundary.
 - Client-level tests keep proving that `formsClient.createForm` sends normalized
   default `settings` on the network payload.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

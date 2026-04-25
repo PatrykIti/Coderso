@@ -53,12 +53,14 @@ and Forms-specific inline validation.
 - `core/admin/services/userSettingsClient.ts`
 - `core/services/settings/userSettingsService.ts`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` for the real
+  `FormCreateDrawer` reset, description, and payload contract.
 - `tests/vitest/ui-integration/forms.test.tsx`
 - `tests/vitest/admin/formsClient.test.ts`
 - `tests/vitest/admin/userSettingsClient.test.ts`
 - `tests/unit/settings/userSettingsService.test.ts`
-- `tests/integration/routes/userSettings.test.ts` only if route behavior or
-  error mapping changes.
+- `tests/integration/routes/userSettings.test.ts` when `forms.openAfterCreate`
+  is added, because the route-visible settings catalog changes.
 
 ## Security Contract
 
@@ -124,10 +126,10 @@ The actual payload sent to `createForm` must not include UI-only fields such as
   - open-after-create disabled refreshes the list and closes the drawer;
   - preference load/persist failures do not block create.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
-  - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
+  - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

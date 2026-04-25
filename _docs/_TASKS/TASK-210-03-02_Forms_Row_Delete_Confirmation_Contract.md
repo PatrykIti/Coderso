@@ -40,6 +40,8 @@ foreign-key/database errors.
 - `core/admin/ui/forms/FormTable.tsx`
 - `core/admin/ui/forms/FormRowActions.tsx` if extracted.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` if delete menu rendering is
+  owned by `FormTable` / `FormRowActions`.
 
 ## Security Contract
 
@@ -65,7 +67,7 @@ foreign-key/database errors.
   or status change instead of retrying destructive delete blindly.
 - Delete failure keeps an inline error.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

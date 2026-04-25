@@ -30,6 +30,8 @@ keep selection scoped to the currently visible paginated rows.
 - `core/admin/ui/shared/useListPagination.ts` only if a generic bug is found.
 - `core/admin/ui/shared/ListPaginationFooter.tsx` only if a generic bug is found.
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/ui/forms-component-wave.test.tsx` if table props or checkbox
+  behavior changes.
 - `tests/vitest/ui/list-pagination.test.tsx` only if the shared helper changes.
 
 ## Security Contract
@@ -49,7 +51,7 @@ keep selection scoped to the currently visible paginated rows.
 - Select-all selects only the current visible page.
 - Hidden selections are trimmed after filtering and page changes.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/list-pagination.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/list-pagination.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

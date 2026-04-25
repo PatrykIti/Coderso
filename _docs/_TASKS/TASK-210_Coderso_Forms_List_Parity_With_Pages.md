@@ -77,6 +77,11 @@ a backward-compatible alias through `adminPaths`.
 - Forms client already owns enough API surface for list parity:
   `listFormsCached`, `getCachedForms`, `createForm`, `updateForm`, and
   `deleteForm`.
+- Current Forms UI tests split ownership: `tests/vitest/ui/forms-pages-wave.test.tsx`
+  mocks `FormTable` and `FormCreateDrawer`, so it can prove list orchestration
+  but not the real table, drawer, or row-action rendering contract. Real
+  component behavior must be asserted in `tests/vitest/ui/forms-component-wave.test.tsx`
+  or another focused non-mocked Forms component suite.
 - Forms routes currently validate unknown fields through JSON schemas, but
   status enum validation and centralized mapping for known domain errors
   (`form_invalid`, `form_name_required`, `form_slug_exists`, `form_not_found`)
@@ -272,7 +277,7 @@ a backward-compatible alias through `adminPaths`.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
 - If route schema/error mapping changes:
   `set -a && source .env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts`
 - If `forms.openAfterCreate` is added:
