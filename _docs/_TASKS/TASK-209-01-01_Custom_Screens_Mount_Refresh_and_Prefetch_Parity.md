@@ -77,7 +77,8 @@ refresh({ force?: boolean; background?: boolean })
 ## Security Contract
 
 - Visibility: internal admin list read path only.
-- Auth/RBAC: unchanged `content:read`.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: unchanged `content:read`.
 - CSRF: no write path.
 - Rate-limit bucket: existing `admin_read`.
 - Reject-unknown validation: no route query or body changes.

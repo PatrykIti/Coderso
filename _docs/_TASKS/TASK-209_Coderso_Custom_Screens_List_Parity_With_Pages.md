@@ -102,6 +102,10 @@ created first.
   keeps the existing `contentTypeId` value. The list must not rewrite screen
   records into a new denormalized API shape unless a later backend task
   explicitly changes the contract.
+- The current service/schema contract validates `contentTypeId` as a non-empty
+  string. The list create drawer must select that id from the fetched content
+  type options, but this family must not add a new server-side content type
+  existence check or couple `customScreenService` to Engine storage.
 
 ## Required Product Behavior
 
@@ -123,16 +127,16 @@ created first.
    - Delete.
    Do not add Preview or Duplicate in this task.
 5. `New` opens a list-owned Custom Screen create drawer for the minimum
-   resource contract: name, content type, status default, optional sidebar
-   shortcut, and typed persisted `customScreens.openAfterCreate` preference
-   defaulting to `true` like Pages. The drawer must handle the no-content-type
-   state by blocking submit with a clear internal admin path to create a content
-   type first. On success it creates through `createCustomScreen`, emits the
-   shared toast, and navigates to the builder when the preference says to open
-   the screen.
+   resource contract: name, content type selected from the fetched options,
+   status default, optional sidebar shortcut, and typed persisted
+   `customScreens.openAfterCreate` preference defaulting to `true` like Pages.
+   The drawer must handle the no-content-type state by blocking submit with a
+   clear internal admin path to create a content type first. On success it
+   creates through `createCustomScreen`, emits the shared toast, and navigates
+   to the builder when the preference says to open the screen.
 6. Single and bulk lifecycle feedback goes through
    `createListActionToastAdapter` with Custom Screens labels and actions:
-   create, activate, deactivate, delete.
+   create, activate, moveToDraft, delete.
 7. Delete and bulk delete use `ConfirmActionDialog`. No destructive Custom
    Screen delete should run directly from a dropdown click.
 8. Cache behavior follows the shared admin cache contract:
@@ -185,7 +189,10 @@ created first.
   `customScreenUpdateSchema` as the route validation source of truth; UI code
   must submit only the existing schema fields. Register
   `customScreens.openAfterCreate` in the typed user-settings contract and
-  validate it as a boolean before the drawer persists the preference.
+  validate it as a boolean before the drawer persists the preference. The
+  create drawer may require a selected content type option in UI, but the server
+  route remains the current strict schema contract and does not receive
+  denormalized content-type labels or UI-only fields.
 - Anti-abuse: no public write path; destructive row and bulk delete require
   `ConfirmActionDialog`; bulk actions operate only on visible selected screen
   ids after filter/pagination trimming.
@@ -252,8 +259,9 @@ created first.
    toasts after the real mutation path completes.
 6. Existing builder, records, sidebar shortcut, assistant context, and API tests
    are not regressed.
-7. The create drawer cannot submit a Custom Screen without a valid
-   `contentTypeId`, and any persisted open-after-create preference is backed by
-   the typed user-settings service/client contract.
+7. The create drawer cannot submit a Custom Screen without a selected
+   `contentTypeId` from the current content-type options, and any persisted
+   open-after-create preference is backed by the typed user-settings
+   service/client contract.
 8. Content-type label changes from Engine cache events are reflected in the
    Custom Screens list without requiring a full page reload.

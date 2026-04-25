@@ -53,7 +53,8 @@ No child task files.
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal admin API.
-- Auth/RBAC: `content:write` for bulk status/delete mutations.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: `content:write` for bulk status/delete mutations.
 - CSRF: `updateCustomScreen` and `deleteCustomScreen` use existing CSRF-backed
   client helpers.
 - Rate-limit bucket: existing `admin_write`; bulk actions call existing
@@ -86,5 +87,6 @@ No child task files.
 
 1. Bulk controls match the Pages inline header pattern.
 2. Bulk delete cannot execute before confirmation.
-3. Bulk summaries use the shared helper for counts and plural labels.
+3. Bulk summaries use the shared helper for counts, plural labels, and the
+   Custom Screens `moveToDraft` action key.
 4. Hidden selections are not executed.

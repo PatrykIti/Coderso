@@ -59,8 +59,14 @@ No child task files.
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal admin API.
-- Auth/RBAC/CSRF/rate-limit: verify they remained unchanged unless an
-  implementation task explicitly updated the contract.
+- Auth model: verify the existing authenticated admin session/admin API key
+  model remained unchanged unless an implementation task explicitly updated the
+  contract.
+- RBAC: verify `content:read`/`content:write` ownership stayed on the existing
+  route boundaries.
+- CSRF: verify all writes still go through CSRF-backed admin client helpers.
+- Rate-limit bucket: verify reads remain in `admin_read` and writes remain in
+  `admin_write`.
 - Reject-unknown validation: verify no UI code submits fields outside
   `customScreenCreateSchema` and `customScreenUpdateSchema`.
 - Anti-abuse: verify destructive actions require confirmation and no public

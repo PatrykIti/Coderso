@@ -68,7 +68,8 @@ type CustomScreenListRow = {
 ## Security Contract
 
 - Visibility: internal admin list read path only.
-- Auth/RBAC: `content:read` for custom screens and content types.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: `content:read` for custom screens and content types.
 - CSRF: no writes.
 - Rate-limit bucket: existing `admin_read`.
 - Reject-unknown validation: no new API payloads.

@@ -32,7 +32,7 @@ No child task files.
 - Actions:
   - `create`: created / create
   - `activate`: activated / activate
-  - `deactivate`: moved to draft / move to draft
+  - `moveToDraft`: moved to draft / move to draft
   - `delete`: deleted / delete
 - Use target labels for create success when available:
 
@@ -42,7 +42,7 @@ const customScreenListToasts = createListActionToastAdapter({
   actions: {
     create: { pastTense: "created", failureVerb: "create" },
     activate: { pastTense: "activated", failureVerb: "activate" },
-    deactivate: { pastTense: "moved to draft", failureVerb: "move to draft" },
+    moveToDraft: { pastTense: "moved to draft", failureVerb: "move to draft" },
     delete: { pastTense: "deleted", failureVerb: "delete" },
   },
 });
@@ -51,12 +51,18 @@ const customScreenListToasts = createListActionToastAdapter({
 - If `moved to draft` copy reads awkwardly through the generic helper, add a
   `singleSuccessMessage` override in the adapter config instead of branching in
   the component.
+- Keep the action key aligned with the Custom Screens status contract. Do not
+  introduce a user-facing or code-level `deactivate` lifecycle unless a later
+  service contract adds it.
 - Do not add new direct `toast.*` calls for this task's targeted actions.
 
 ## Security Contract
 
 - Visibility: internal admin UI feedback only.
-- Auth/RBAC/CSRF/rate-limit: unchanged; this leaf does not execute mutations.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: unchanged from the caller; this leaf does not execute mutations.
+- CSRF: no writes are introduced by the adapter leaf.
+- Rate-limit bucket: no new route calls.
 - Reject-unknown validation: no payload changes.
 - Anti-abuse: no destructive action changes in this leaf.
 
@@ -77,5 +83,5 @@ const customScreenListToasts = createListActionToastAdapter({
 ## Acceptance Criteria
 
 1. Custom Screens list feedback goes through `createListActionToastAdapter`.
-2. Adapter copy covers create, activate, deactivate, delete, and bulk results.
+2. Adapter copy covers create, activate, moveToDraft, delete, and bulk results.
 3. Error messages still preserve API/client error messages when available.

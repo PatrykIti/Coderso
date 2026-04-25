@@ -68,6 +68,10 @@ No child task files.
   - keep submit disabled until `contentTypeId` is selected,
   - provide a canonical `AdminLink` to `/coderso/engine` for creating the first
     content type.
+- Treat `contentTypeId` as a selected option from `contentTypesClient`, not as a
+  new Custom Screens service validation rule. The server create route continues
+  to validate the existing non-empty string schema and must not receive
+  denormalized content-type labels or UI-only drawer state.
 - Use existing `createCustomScreen` and existing schema fields only:
 
 ```tsx
@@ -92,16 +96,20 @@ await createCustomScreen({
 ## Security Contract
 
 - Visibility: internal admin UI.
-- Auth/RBAC: `content:read` for content-type options; create itself requires
-  `content:write`; the user-settings preference uses authenticated
-  `GET/PATCH /user-settings/:key` with the existing `requireAuth` model.
+- Auth model: existing authenticated admin session/admin API key model; the
+  user-settings preference uses authenticated `GET/PATCH /user-settings/:key`
+  with the existing `requireAuth` model.
+- RBAC: `content:read` for content-type options; create itself requires
+  `content:write`.
 - CSRF: create continues through `createCustomScreen` with `withCsrf: true`;
   preference updates continue through `setUserSetting` with `withCsrf: true`.
 - Rate-limit bucket: `admin_read` for options/settings reads and `admin_write`
   for create/preference writes.
 - Reject-unknown validation: drawer submits only fields accepted by
   `customScreenCreateSchema`; `customScreens.openAfterCreate` accepts only a
-  boolean value in the typed user-settings validator.
+  boolean value in the typed user-settings validator. Do not submit
+  `openAfterCreate`, content-type labels, or other UI-only fields to
+  `/custom-screens`.
 - Anti-abuse: no public write path; drawer create remains bounded to a single
   user-selected content type and local validation before submit.
 
@@ -132,7 +140,8 @@ await createCustomScreen({
 2. The drawer creates a valid Custom Screen without adding new API fields.
 3. Direct `/admin/coderso/custom-screens/new` builder route still works.
 4. Open-after-create behavior is explicit and persisted separately from Pages.
-5. The drawer blocks submit until a valid content type is selected and guides
-   users to the canonical Engine route when no content types exist.
+5. The drawer blocks submit until a content type from the fetched options is
+   selected and guides users to the canonical Engine route when no content
+   types exist.
 6. Bulk controls are not implemented in this leaf; the header slot is present
    for `TASK-209-03-03` to attach the actual bulk action bar.

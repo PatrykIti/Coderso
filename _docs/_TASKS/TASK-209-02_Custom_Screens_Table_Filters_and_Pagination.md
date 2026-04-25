@@ -49,8 +49,9 @@ confirmations are owned by `TASK-209-03`.
 ## Security Contract
 
 - Visibility: internal admin UI only.
-- Auth/RBAC: `content:read` for list labels; `content:write` for the create
-  drawer submit owned by `TASK-209-02-01`.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: `content:read` for list labels; `content:write` for the create drawer
+  submit owned by `TASK-209-02-01`.
 - CSRF: create continues through `createCustomScreen` with `withCsrf: true`;
   filter/table/pagination rendering remains read-only.
 - Rate-limit bucket: existing `admin_read` for labels/list data and

@@ -58,7 +58,9 @@ export function filterCustomScreenRows(
 ## Security Contract
 
 - Visibility: internal admin UI only.
-- Auth/RBAC: no additional permissions beyond list reads.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: no additional permissions beyond list reads; the underlying list data
+  remains `content:read`.
 - CSRF: no write path.
 - Rate-limit bucket: no new route calls.
 - Reject-unknown validation: no route query parameters; filters are local UI

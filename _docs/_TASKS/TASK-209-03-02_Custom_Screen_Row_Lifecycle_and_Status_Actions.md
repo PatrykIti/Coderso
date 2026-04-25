@@ -57,7 +57,8 @@ No child task files.
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal admin API.
-- Auth/RBAC: `content:write` for status updates; `content:read` for links.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: `content:write` for status updates; `content:read` for links.
 - CSRF: `updateCustomScreen` uses existing `withCsrf: true`.
 - Rate-limit bucket: existing `admin_write`.
 - Reject-unknown validation: submit only `{ status: "active" }` or

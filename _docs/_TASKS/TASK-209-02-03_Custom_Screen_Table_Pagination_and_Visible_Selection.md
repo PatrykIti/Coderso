@@ -62,7 +62,8 @@ No child task files.
 ## Security Contract
 
 - Visibility: internal admin UI only.
-- Auth/RBAC: read-only table rendering uses `content:read`.
+- Auth model: existing authenticated admin session/admin API key model.
+- RBAC: read-only table rendering uses `content:read`.
 - CSRF: no write path in this leaf.
 - Rate-limit bucket: no new route calls.
 - Reject-unknown validation: no new payloads.

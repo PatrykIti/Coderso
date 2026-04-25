@@ -69,8 +69,8 @@ branches in Custom Screens list code for the targeted list actions.
 
 ## Acceptance Criteria
 
-1. Create, activate, draft, delete, and bulk outcomes use the shared toast
-   helper.
+1. Create, activate, move-to-draft, delete, and bulk outcomes use the shared
+   toast helper.
 2. Row delete and bulk delete cannot run before confirmation.
 3. Status actions use the existing `PATCH /custom-screens/:id` contract.
 4. Inline partial-failure messages and top-right toasts agree on counts and
