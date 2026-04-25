@@ -23,6 +23,10 @@ machine-readable errors and strict status validation.
 - [ ] Map `form_not_found` to HTTP 404.
 - [ ] Use the mapper around create, detail, update, delete, field-write, and
   public submission form lookup paths.
+- [ ] Add or reuse a Bun-free Forms contract/helper owner for
+  `draft | published | archived` status values so route schemas, service
+  normalization, and admin/UI types consume one source without importing
+  `db/client`.
 - [ ] Tighten `formCreateSchema.status` and `formUpdateSchema.status` to
   `enum: ["draft", "published", "archived"]`.
 - [ ] Keep `submissionAccess` enum validation as `public | internal`.
@@ -32,6 +36,10 @@ machine-readable errors and strict status validation.
 
 - `core/server/routes/formsRoutes.ts`
 - `core/server/validation/formSchemas.ts`
+- `core/services/forms/formsService.ts`
+- `core/admin/services/formsClient.ts`
+- A pure Forms contract/helper module under `core/services/forms/*` if no
+  existing Bun-free owner fits the status constants.
 - `tests/integration/routes/forms.test.ts`
 - `tests/unit/forms/formsService.test.ts` only if service behavior changes.
 - `tests/unit/forms/submissionService.test.ts` only if submission behavior
@@ -56,6 +64,7 @@ machine-readable errors and strict status validation.
   bucket for submissions.
 - Reject-unknown validation:
   - create/update reject unknown fields;
+  - route/admin/service status validation shares one pure contract owner;
   - status rejects values outside `draft | published | archived`;
   - submission access rejects values outside `public | internal`.
 - Anti-abuse:

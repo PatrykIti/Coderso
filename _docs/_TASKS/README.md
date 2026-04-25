@@ -55,26 +55,26 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-210 | Coderso Forms List Parity With Pages | High | Very Large | Match `/admin/coderso/forms` to the Pages list contract while preserving Forms statuses, submission access, builder, action logs, and public submission hardening |
 | TASK-210-01 | Forms List Route, Shell, and Cache Hydration | High | Medium | Canonical `/admin/coderso/forms` active href plus cache-present/background and cache-missing/foreground refresh behavior |
 | TASK-210-02 | Forms Filters, Table, and Shared Pagination | High | Large | Forms search/status/access filters, Pages-style table selection, and shared pagination footer |
-| TASK-210-03 | Forms Row Lifecycle Actions and Confirmations | High | Medium | Row Edit/Publish/Draft/Archive/Delete actions using existing Forms status contract and ConfirmActionDialog for delete |
+| TASK-210-03 | Forms Row Lifecycle Actions and Confirmations | High | Medium | Row Edit/Action logs/Publish/Draft/Archive/Delete actions using existing Forms status contract and ConfirmActionDialog for delete |
 | TASK-210-04 | Forms Bulk Selection and Action Parity | High | Medium | Visible-scope bulk publish/draft/archive/delete with partial-failure feedback and confirmed bulk delete |
 | TASK-210-05 | Forms Create Drawer and Open After Create | High | Medium | Compact `New` flow, drawer reset, Forms create payload, and `forms.openAfterCreate` preference |
 | TASK-210-06 | Forms List Toasts and Error Mapping | High | Large | Shared list-action toasts plus Forms route status enum and known domain error mapping |
-| TASK-210-07 | QA, Docs, Changelog, and Closure | Medium | Medium | Targeted validation, Content List/Admin Cache/API docs, changelog, and board closure for TASK-210 |
+| TASK-210-07 | QA, Docs, Changelog, and Closure | Medium | Medium | Targeted validation, source report closure, Content List/Admin Cache/API docs, changelog, and board closure for TASK-210 |
 | TASK-210-01-01 | Forms Canonical Route and Prefetch Warmup | High | Small | Technical leaf: canonical `/admin/coderso/forms` active route, canonical editor links, legacy alias coverage, and prefetch warmup |
 | TASK-210-01-02 | Forms Cache Hydration Hook Parity | High | Medium | Technical leaf: cache-present/background and cache-missing/foreground Forms mount refresh behavior |
 | TASK-210-02-01 | Forms Filter Model and View Component | High | Medium | Technical leaf: search/status/submission-access filter model and Forms-specific filter strip |
 | TASK-210-02-02 | Forms Table Selection and Access Column | High | Medium | Technical leaf: Pages-style checkbox selection, selected-row styling, canonical links, and submission-access column |
 | TASK-210-02-03 | Forms Shared Pagination and Selection Trim | High | Medium | Technical leaf: shared pagination footer after filters plus visible-row select-all and hidden-selection trimming |
-| TASK-210-03-01 | Forms Row Lifecycle Menu Contract | High | Medium | Technical leaf: Edit/Publish/Move-to-draft/Archive/Delete row menu using existing `updateForm` status writes |
+| TASK-210-03-01 | Forms Row Lifecycle Menu Contract | High | Medium | Technical leaf: Edit/Action logs/Publish/Move-to-draft/Archive/Delete row menu using existing `updateForm` status writes |
 | TASK-210-03-02 | Forms Row Delete Confirmation Contract | High | Medium | Technical leaf: row delete gated by `ConfirmActionDialog` with no direct dropdown mutation |
 | TASK-210-04-01 | Forms Bulk Action Bar and Visible Selection | High | Medium | Technical leaf: inline header bulk controls scoped to current visible selected forms |
 | TASK-210-04-02 | Forms Bulk Mutation Execution and Partial Failures | High | Medium | Technical leaf: `Promise.allSettled` lifecycle/delete execution, confirmed bulk delete, and truthful partial failures |
 | TASK-210-05-01 | Forms Create Drawer Reset and Payload Guard | High | Medium | Technical leaf: compact create drawer reset, `New` trigger, and no UI-only or builder-owned fields in list create payload |
 | TASK-210-05-02 | Forms Open After Create User Setting Contract | High | Medium | Technical leaf: typed `forms.openAfterCreate` client/server setting default, validation, and tests |
 | TASK-210-06-01 | Forms List Toast Adapter Wiring | High | Medium | Technical leaf: shared list toast adapter for create, lifecycle, delete, and bulk Forms actions |
-| TASK-210-06-02 | Forms Route Error Mapping and Strict Schemas | High | Medium | Technical leaf: centralized Forms API error mapping plus strict status enum validation |
+| TASK-210-06-02 | Forms Route Error Mapping and Strict Schemas | High | Medium | Technical leaf: centralized Forms API error mapping plus strict shared status enum validation |
 | TASK-210-07-01 | Forms Parity Test Matrix | Medium | Small | Technical leaf: targeted Vitest/Bun/lint/typecheck evidence for the completed TASK-210 family |
-| TASK-210-07-02 | Forms Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: Content List/Admin Cache/API docs, changelog, task statuses, and board statistics closure |
+| TASK-210-07-02 | Forms Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: Content List/Admin Cache/API/Architecture docs, source report notes, changelog, task statuses, and board statistics closure |
 | TASK-209 | Coderso Custom Screens List Parity With Pages | High | Very Large | Match `/admin/coderso/custom-screens` to the Pages list contract while preserving Custom Screens status/content-type/sidebar/builder/records behavior |
 | TASK-209-01 | Custom Screens List Data, Cache, and Enrichment | High | Large | Align cached hydration, background refresh, prefetch, and content-type label enrichment before UI parity work |
 | TASK-209-01-01 | Custom Screens Mount Refresh and Prefetch Parity | High | Medium | Technical leaf: cache-present/background and cache-missing/foreground refresh plus screens/content-types prefetch |

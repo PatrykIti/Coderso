@@ -28,6 +28,9 @@ when cache exists, matching the Pages mount policy.
   replace touched list links and navigation calls with `/coderso/forms/:id`
   literals or shared helpers so new code does not rely on the legacy
   `/forms` alias.
+- [ ] If this work touches Forms editor or action-log navigation, normalize
+  those links to `/coderso/forms/:id` and `/coderso/forms/:id/action-runs`
+  without changing editor/runtime behavior.
 - [ ] Replace `useForms` force-on-mount behavior with a cache-present/background
   and cache-missing/foreground refresh policy.
 - [ ] Keep `listFormsCached({ force: false })` as the prefetch warmup path.
@@ -39,6 +42,9 @@ when cache exists, matching the Pages mount policy.
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormTable.tsx` if editor links are normalized while this
   area is touched.
+- `core/admin/ui/forms/FormBuilderPage.tsx` and
+  `core/admin/ui/forms/FormActionLogsPage.tsx` only for canonical
+  active-href/navigation cleanup if this task touches those route seams.
 - `core/admin/ui/forms/hooks/useForms.ts`
 - `core/admin/utils/adminPrefetch.ts` only if the current Forms warmup contract
   needs an assertion or code adjustment.

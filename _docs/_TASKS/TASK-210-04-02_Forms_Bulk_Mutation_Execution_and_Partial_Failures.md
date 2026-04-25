@@ -19,6 +19,8 @@ partial-failure handling.
 - [ ] Run bulk lifecycle actions through `Promise.allSettled`.
 - [ ] Map publish/draft/archive to `updateForm(id, { status })`.
 - [ ] Confirm bulk delete before calling `deleteForm`.
+- [ ] Bulk delete confirmation copy includes selected count and explains that
+  deleting forms affects collected submissions/action diagnostics.
 - [ ] Refresh the list after bulk execution settles.
 - [ ] Keep inline partial-failure copy visible.
 - [ ] Either keep failed ids selected for recovery or document why selection is
@@ -60,6 +62,8 @@ const results = await Promise.allSettled(
 
 - Bulk publish/draft/archive call `updateForm` for visible selected ids.
 - Bulk delete opens confirmation and waits for confirm.
+- Bulk delete confirmation copy includes selected count and irreversible-impact
+  wording.
 - Partial failures surface inline copy.
 - Success and partial-failure paths refresh the Forms list.
 - Commands:

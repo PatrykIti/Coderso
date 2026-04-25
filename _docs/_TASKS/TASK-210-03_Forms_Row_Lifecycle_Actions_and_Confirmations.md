@@ -16,8 +16,9 @@ the Pages-style Forms table.
 
 Row actions must match the Forms contract rather than copying Page-only actions.
 Use `updateForm(id, { status })` for lifecycle changes and `deleteForm(id)` for
-delete. Do not add Duplicate or Preview in this task because the current Forms
-service/client does not expose those contracts.
+delete. Add the existing Forms Action logs route as a row shortcut. Do not add
+Duplicate, Runtime Preview from the list, or Embed Code in this task because the
+current Forms list/service/client contract does not expose those flows.
 
 ## Sub-Tasks
 
@@ -25,10 +26,12 @@ service/client does not expose those contracts.
 - [ ] TASK-210-03-02: Forms Row Delete Confirmation Contract
 - [ ] Add or extract `FormRowActions` with:
   - Edit;
+  - Action logs;
   - Publish when `status !== "published"`;
   - Move to draft when `status !== "draft"`;
   - Archive when `status !== "archived"`;
   - Delete.
+- [ ] Navigate Action logs through canonical `/coderso/forms/:id/action-runs`.
 - [ ] Wire lifecycle actions through `updateForm` and list refresh/cache patch
   behavior from `formsClient`.
 - [ ] Replace immediate row delete with `ConfirmActionDialog`.
@@ -80,6 +83,8 @@ const handleDelete = (id: string) => {
   - draft rows expose Publish, Archive, Delete, and Edit;
   - published rows expose Move to draft, Archive, Delete, and Edit;
   - archived rows expose Publish, Move to draft, Delete, and Edit;
+  - every row exposes Action logs and navigates to canonical
+    `/coderso/forms/:id/action-runs`;
   - lifecycle actions call `updateForm` with the expected status;
   - delete does not call `deleteForm` until `ConfirmActionDialog` confirms;
   - API failures keep a visible inline error.
@@ -97,6 +102,7 @@ const handleDelete = (id: string) => {
 
 1. Row actions match Forms statuses and do not expose Page-only actions.
 2. Lifecycle mutations use existing `updateForm`.
-3. Row delete is confirmed before mutation.
-4. Inline errors remain visible when lifecycle/delete fails.
-5. Existing builder and action-log routes are not changed.
+3. Existing Action logs route is reachable from the list row menu.
+4. Row delete is confirmed before mutation.
+5. Inline errors remain visible when lifecycle/delete fails.
+6. Existing builder and action-log route behavior is not changed.

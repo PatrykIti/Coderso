@@ -20,6 +20,8 @@ settles.
 - [ ] Add `pendingDeleteId` and `deletingId` state in `FormListPage`.
 - [ ] Make row Delete open `ConfirmActionDialog` instead of calling
   `deleteForm` directly.
+- [ ] Use copy that names the form and clearly states that the operation is
+  irreversible and affects collected submissions/action diagnostics.
 - [ ] Call `deleteForm(id)` only from the dialog `onConfirm`.
 - [ ] Refresh Forms list/cache after successful delete.
 - [ ] Keep inline errors visible on delete failure.
@@ -48,6 +50,8 @@ settles.
 ## Testing Requirements
 
 - Clicking row Delete opens confirmation.
+- Confirmation copy includes the target form name when available and explains
+  the irreversible impact.
 - Cancelling confirmation does not call `deleteForm`.
 - Confirming calls `deleteForm` exactly once for the target id.
 - Delete failure keeps an inline error.

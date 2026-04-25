@@ -35,6 +35,10 @@ dialog.
   - `form_name_required` -> 400;
   - `form_slug_exists` -> 409;
   - `form_not_found` -> 404.
+- [ ] Move or expose Forms status values from a Bun-free Forms contract/helper
+  module, then consume the same values in route schemas, server normalization,
+  and admin/UI types instead of duplicating string unions across DB-coupled and
+  browser modules.
 - [ ] Keep mapping centralized at the Forms route boundary, for example as
   `mapFormError(error): ApiError | null`, and reuse it consistently for
   create, detail, update, delete, field-write, and public submission form lookup
@@ -49,8 +53,12 @@ dialog.
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/shared/listActionToasts.ts` only if the generic helper is
   missing a Forms-safe capability.
+- A pure Forms contract/helper module under `core/services/forms/*` if shared
+  status constants need an owner without importing `db/client`.
 - `core/server/routes/formsRoutes.ts`
 - `core/server/validation/formSchemas.ts`
+- `core/services/forms/formsService.ts`
+- `core/admin/services/formsClient.ts`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/integration/routes/forms.test.ts`
@@ -76,6 +84,8 @@ dialog.
   public-write protections for submissions.
 - Reject-unknown validation:
   - create/update schemas reject unknown fields;
+  - status enum values come from a pure Forms contract owner, not duplicated
+    literals in route/admin modules;
   - status must be enum-validated at the route boundary;
   - `submissionAccess` remains `public | internal`.
 - Anti-abuse:

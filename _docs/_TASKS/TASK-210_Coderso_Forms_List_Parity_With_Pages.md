@@ -93,12 +93,16 @@ a backward-compatible alias through `adminPaths`.
   - `core/admin/ui/forms/FormActionLogsPage.tsx`
 - Status transitions are regular form metadata updates through
   `updateForm(id, { status })`.
+- Action logs are an existing Forms contract at
+  `/admin/coderso/forms/:id/action-runs`. A list row shortcut to that route is
+  in scope because it uses the shipped Forms diagnostic surface and does not add
+  a new Forms API.
 - Public submissions stay on `POST /forms/:id/submissions` and keep nonce plus
   optional reCAPTCHA hardening. List parity must not weaken that runtime path or
   expose submission payloads in list cache/debug output.
 - There is no current duplicate or list-preview Forms API. Do not add Page-only
-  actions such as Duplicate or Preview unless a separate service/API contract is
-  created first.
+  actions such as Duplicate, Runtime Preview from the list, or Embed Code unless
+  a separate service/API/UI contract is created first.
 
 ## Required Product Behavior
 
@@ -114,11 +118,12 @@ a backward-compatible alias through `adminPaths`.
    checkbox, form, status, submission access, updated, actions.
 4. Row actions are contract-specific:
    - Edit,
+   - Action logs,
    - Publish when the form is not published,
    - Move to draft when the form is published or archived,
    - Archive when the form is not archived,
    - Delete.
-   Do not add Preview or Duplicate in this task.
+   Do not add Preview, Duplicate, or Embed Code in this task.
 5. `New` opens a list-owned Forms create drawer. It should support the existing
    list-drawer create fields (`name`, optional `slug`, `status`,
    `description`) and an open-after-create preference that mirrors the Pages
@@ -174,6 +179,7 @@ a backward-compatible alias through `adminPaths`.
   updates needed to prove it remains intact.
 - No new duplicate or list-preview action until the domain/service contract
   exists.
+- No list-level Embed Code modal until a separate embed-snippet contract exists.
 - No replacement of `FormBuilderPage`, `FormActionLogsPage`, form fields,
   automation actions, or runtime `form-embed`.
 - No new table framework or Forms-only pagination system.
@@ -198,8 +204,10 @@ a backward-compatible alias through `adminPaths`.
 - Rate-limit bucket: existing admin read/write buckets for list mutations;
   existing public-write bucket for public submissions.
 - Reject-unknown validation:
-  - `formCreateSchema` and `formUpdateSchema` stay the route validation source
-    of truth;
+  - `formCreateSchema` and `formUpdateSchema` stay the route validation boundary;
+  - Forms status values must be owned by a Bun-free Forms contract module or an
+    existing pure Forms helper so admin/UI, route schemas, and services do not
+    duplicate enum strings or import `db/client` at module load;
   - status and submission access must be enum-validated instead of accepting
     arbitrary strings at the schema boundary.
 - Anti-abuse:
@@ -241,8 +249,12 @@ a backward-compatible alias through `adminPaths`.
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_NAVIGATION.md` only if canonical route/alias docs change.
 - `_docs/CMS_API.md` if route schemas or error mapping change.
+- `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` list-scope closure notes for BUG-2,
+  BUG-5, and UX-1, plus explicit out-of-scope notes for editor/runtime findings
+  not handled by this family.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
@@ -256,10 +268,12 @@ a backward-compatible alias through `adminPaths`.
 4. Search/status/access filters run before shared pagination.
 5. Header checkbox selection applies only to current visible paginated rows.
 6. Row lifecycle actions use Forms statuses and existing `updateForm`.
-7. Row and bulk delete are confirmed through `ConfirmActionDialog`.
-8. Create, lifecycle, delete, and bulk outcomes emit shared top-right toasts and
+7. Row actions include a canonical `Action logs` shortcut without adding new
+   Duplicate, Runtime Preview, or Embed Code behavior.
+8. Row and bulk delete are confirmed through `ConfirmActionDialog`.
+9. Create, lifecycle, delete, and bulk outcomes emit shared top-right toasts and
    keep truthful inline partial-failure alerts where needed.
-9. Public submission access, nonce/captcha hardening, builder routes, and action
+10. Public submission access, nonce/captcha hardening, builder routes, and action
    logs remain unchanged.
-10. Any new user setting needed for Forms create behavior is typed and validated
+11. Any new user setting needed for Forms create behavior is typed and validated
     in both admin client and server settings contracts.

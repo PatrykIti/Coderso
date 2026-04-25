@@ -12,12 +12,15 @@
 ## Overview
 
 Add Forms row lifecycle actions that use the existing Forms status contract
-instead of copying Pages preview/duplicate behavior.
+instead of copying Pages preview/duplicate behavior. Keep the existing Forms
+Action logs diagnostic route reachable from the row menu.
 
 ## Sub-Tasks
 
 - [ ] Extract `FormRowActions` if it keeps `FormTable` readable.
 - [ ] Show Edit for every row.
+- [ ] Show Action logs for every row and link to
+  `/coderso/forms/:id/action-runs`.
 - [ ] Show Publish when `status !== "published"`.
 - [ ] Show Move to draft when `status !== "draft"`.
 - [ ] Show Archive when `status !== "archived"`.
@@ -49,8 +52,10 @@ instead of copying Pages preview/duplicate behavior.
 - Draft rows expose Publish, Archive, Delete, and Edit.
 - Published rows expose Move to draft, Archive, Delete, and Edit.
 - Archived rows expose Publish, Move to draft, Delete, and Edit.
+- Every row exposes Action logs and navigates to the canonical Forms action-log
+  route.
 - Lifecycle actions call `updateForm` with `published`, `draft`, or `archived`.
-- Page-only Preview/Duplicate actions are absent.
+- Page-only Preview/Duplicate/Embed Code actions are absent.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
   - `bun --cwd core lint`
@@ -63,6 +68,7 @@ instead of copying Pages preview/duplicate behavior.
 
 ## Acceptance Criteria
 
-1. Forms row menu reflects only Forms lifecycle actions.
+1. Forms row menu reflects only Forms lifecycle and diagnostic actions.
 2. Lifecycle writes use the existing `updateForm` API.
-3. Builder and action-log routes are untouched.
+3. Action logs navigates to the existing canonical route.
+4. Builder and action-log route behavior is untouched.

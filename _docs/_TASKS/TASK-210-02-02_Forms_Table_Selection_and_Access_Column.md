@@ -21,7 +21,8 @@ Forms-specific columns and row metadata.
 - [ ] Show Forms columns: form, status, submission access, updated, actions.
 - [ ] Keep responsive mobile metadata under the form name.
 - [ ] Keep row editor links on canonical `/coderso/forms/:id`.
-- [ ] Keep row actions Forms-specific; do not add Preview or Duplicate.
+- [ ] Keep row actions Forms-specific: include Edit and Action logs, but do not
+  add Preview, Duplicate, or Embed Code.
 
 ## Files to Change
 
@@ -46,6 +47,7 @@ Forms-specific columns and row metadata.
 - Selected rows get visible selected styling.
 - `submissionAccess` renders for `public` and `internal`.
 - Row links resolve to canonical Forms editor routes.
+- Row action-log links resolve to canonical Forms action-log routes.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
   - `bun --cwd core lint`
@@ -61,3 +63,4 @@ Forms-specific columns and row metadata.
 1. Forms table visually follows Pages table density and selection behavior.
 2. The access column reflects the Forms `submissionAccess` contract.
 3. Page-only actions are absent from the Forms table.
+4. Each row can navigate to the existing Forms action-log route.

@@ -19,9 +19,15 @@ the task board.
 - [ ] Update `_docs/CONTENT_LIST_UX.md` with final Forms list behavior.
 - [ ] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` with final
   Forms cache hydration and mutation invalidation behavior.
+- [ ] Update `_docs/ARCHITECTURE.md` so Forms admin UI wording uses canonical
+  `/admin/coderso/forms` routes and keeps `/forms/*` as backend API/runtime
+  route notation.
 - [ ] Update `_docs/ADMIN_NAVIGATION.md` if route/canonical wording changed.
 - [ ] Update `_docs/CMS_API.md` if route schemas, user settings, or error
   response docs changed.
+- [ ] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` for
+  TASK-210-owned list findings (BUG-2, BUG-5, UX-1) and note that editor/runtime
+  findings remain separate.
 - [ ] Add one `_docs/_CHANGELOG/*` entry for TASK-210.
 - [ ] Update `_docs/_CHANGELOG/README.md`.
 - [ ] Mark TASK-210 umbrella, subtasks, and leaves Done with dated statuses and
@@ -34,8 +40,10 @@ the task board.
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_NAVIGATION.md` if route docs changed.
 - `_docs/CMS_API.md` if API/settings docs changed.
+- `_docs/PLAYWRIGHT/SUMMARY-FORMS.md`
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/TASK-210*.md`
@@ -63,6 +71,7 @@ the task board.
 ## Acceptance Criteria
 
 1. Docs match shipped Forms behavior.
-2. Changelog entry and changelog index reference TASK-210.
-3. Task board rows and statistics are synchronized.
-4. Every TASK-210 file has final status and validation notes.
+2. Source QA report list findings are closed or explicitly deferred with dates.
+3. Changelog entry and changelog index reference TASK-210.
+4. Task board rows and statistics are synchronized.
+5. Every TASK-210 file has final status and validation notes.

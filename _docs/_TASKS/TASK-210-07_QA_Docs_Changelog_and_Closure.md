@@ -26,6 +26,13 @@ security/runtime contracts still hold.
 - [ ] Run Bun route/service tests for touched route or service contracts.
 - [ ] Update content-list/admin-cache/navigation/API docs touched by the final
   implementation.
+- [ ] Update `_docs/ARCHITECTURE.md` so Forms admin UI wording distinguishes
+  canonical admin routes (`/admin/coderso/forms`, `/admin/coderso/forms/:id`,
+  `/admin/coderso/forms/:id/action-runs`) from backend API routes
+  (`/forms/*`).
+- [ ] Update `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` with dated closure notes for
+  list-scope findings covered by TASK-210: BUG-2, BUG-5, and UX-1; explicitly
+  leave editor/runtime findings to separate task families.
 - [ ] Confirm every TASK-210 leaf is either Done or explicitly superseded by
   the final implementation notes before moving the umbrella to Done.
 - [ ] Add a `_docs/_CHANGELOG/*` entry following the changelog numbering rules.
@@ -40,8 +47,10 @@ security/runtime contracts still hold.
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_NAVIGATION.md` only if route/canonical wording changes.
 - `_docs/CMS_API.md` if route schema/error mapping changed.
+- `_docs/PLAYWRIGHT/SUMMARY-FORMS.md`
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/TASK-210*.md`
@@ -75,9 +84,13 @@ security/runtime contracts still hold.
   actions, and toast/confirmation behavior.
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` must describe final
   Forms list cache hydration and mutation invalidation behavior.
+- `_docs/ARCHITECTURE.md` must not describe the admin Forms UI as living at the
+  legacy `/forms` alias without the canonical `/admin/coderso/forms` context.
 - `_docs/ADMIN_NAVIGATION.md` must stay clear that `/admin/coderso/forms` is
   canonical and `/admin/forms` is an alias.
 - `_docs/CMS_API.md` must reflect any final route schema/error mapping changes.
+- `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` must record which list findings TASK-210
+  closed and which editor/runtime findings remain outside scope.
 - `_docs/_CHANGELOG/*` and `_docs/_CHANGELOG/README.md` must include TASK-210.
 
 ## Acceptance Criteria
@@ -87,6 +100,7 @@ security/runtime contracts still hold.
    to the implemented owner.
 3. The targeted test matrix is recorded in task completion notes.
 4. Docs match the shipped Forms list behavior.
-5. Changelog and changelog index are updated.
-6. `_docs/_TASKS/README.md` statistics and tables are synchronized.
-7. Any skipped tests or environment blockers are recorded explicitly.
+5. Source QA report status is synchronized for the list-scope findings.
+6. Changelog and changelog index are updated.
+7. `_docs/_TASKS/README.md` statistics and tables are synchronized.
+8. Any skipped tests or environment blockers are recorded explicitly.

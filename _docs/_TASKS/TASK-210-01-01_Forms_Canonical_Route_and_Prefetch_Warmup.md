@@ -23,6 +23,8 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 - [ ] Change `FormListPage` `AdminShell.activeHref` to
   `/admin/coderso/forms`.
 - [ ] Normalize touched row/editor navigation to `/coderso/forms/:id`.
+- [ ] Normalize touched action-log navigation to
+  `/coderso/forms/:id/action-runs`.
 - [ ] Keep `/forms/:id` working through `adminPaths` alias tests, but do not
   add new alias literals in modified list code.
 - [ ] Assert `/admin/forms` and `/admin/coderso/forms` resolve to the same
@@ -34,6 +36,10 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormTable.tsx`
+- `core/admin/ui/forms/FormBuilderPage.tsx` only if action-log navigation is
+  touched.
+- `core/admin/ui/forms/FormActionLogsPage.tsx` only if back-to-form navigation
+  or active href is touched.
 - `core/admin/utils/adminPaths.ts` only if an alias regression is found.
 - `core/admin/utils/adminPrefetch.ts` only if the current warmup entry is
   missing or wrong.
@@ -67,5 +73,5 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 
 1. `/admin/coderso/forms` is the active href used by the Forms list.
 2. `/admin/forms` remains accepted only through alias normalization.
-3. Row/editor links resolve to canonical Coderso Forms paths.
+3. Row/editor/action-log links resolve to canonical Coderso Forms paths.
 4. Prefetch warms `forms:list` through `listFormsCached({ force: false })`.
