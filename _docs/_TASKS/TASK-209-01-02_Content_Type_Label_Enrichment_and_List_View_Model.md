@@ -42,7 +42,9 @@ type CustomScreenListRow = {
   fall back to `screen.contentTypeId`.
 - Keep content-type fetching cached-first:
   - seed from `getCachedContentTypes()`;
-  - revalidate through `listContentTypesCached({ force })` only;
+  - revalidate through `listContentTypesCached({ force })` only, using
+    foreground loading only when no cached labels exist and background refresh
+    when cached labels already hydrated the list;
   - do not extend `contentTypesClient` with a `background` option for this
     task. Background is UI loading-state semantics in the existing Pages/cache
     pattern, while cached service clients own cache reads, request de-dupe, and
@@ -51,8 +53,15 @@ type CustomScreenListRow = {
     component or a list-local hook;
   - do not call `listContentTypesCached({ force: true })` unconditionally in
     foreground when cached labels exist.
+- Subscribe to `cacheKeys.contentTypesList` in the list or a list-local hook and
+  refresh labels in the background when Engine/content-type mutations broadcast
+  an update or invalidation.
 - Use `resolveCustomScreenCapabilities`/`screen.capabilities` for mode labels;
   do not duplicate capability logic in the list.
+- Keep mode copy deterministic:
+  - `collection-only` -> `Collection`
+  - `dashboard` -> `Dashboard`
+  - `editor` -> `Editor`
 - Keep `CustomScreenRecord` as the API/client owner. The view model is a UI
   projection only.
 
@@ -71,6 +80,8 @@ type CustomScreenListRow = {
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - New focused view-model test if enrichment is extracted from the component.
+- Mounted list test proving a `contentTypes:list` cache-bus event refreshes the
+  rendered content-type label without mutating `CustomScreenRecord`.
 - Existing records/editor smoke:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
 
@@ -90,3 +101,4 @@ type CustomScreenListRow = {
 3. Filtering/table code consumes a view model instead of mutating
    `CustomScreenRecord`.
 4. The API response and service contract remain unchanged.
+5. Content-type cache-bus updates refresh visible labels and filter options.

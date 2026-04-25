@@ -53,7 +53,8 @@ No child task files.
   - single delete confirm,
   - bulk action bar,
   - bulk delete confirm,
-  - toasts.
+  - toasts,
+  - content-type label refresh after an Engine/content-type cache update.
 
 ## Security Contract
 
@@ -73,7 +74,8 @@ No child task files.
 - `_docs/ADMIN_CACHE.md`
   - Document Custom Screens mount/prefetch behavior if changed.
 - `_docs/ADMIN_CACHE_MAP.md`
-  - Keep Custom Screens cached API and cache-bus owners aligned.
+  - Keep Custom Screens cached API and cache-bus owners aligned, including the
+    `contentTypes:list` label dependency.
 - `_docs/CMS_API.md`
   - Add `customScreens.openAfterCreate`.
   - Keep the Custom Screens record summary aligned with the existing contract,

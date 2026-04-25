@@ -24,6 +24,11 @@ The client cache also needs to match the current cache contract: because
 `createMemoryBackedLocalCache` envelope so the list TTL applies to both memory
 and localStorage.
 
+Because the list view model displays content-type names, this round also owns
+the `contentTypes:list` refresh hook for the label projection. Content type
+records stay owned by `contentTypesClient`; Custom Screens should not duplicate
+or persist the labels.
+
 ## Sub-Tasks
 
 - [ ] TASK-209-01-01: Custom Screens Mount Refresh and Prefetch Parity
@@ -80,5 +85,6 @@ and localStorage.
    is cleared before storage/network fallback.
 3. Prefetch for `/admin/coderso/custom-screens` warms the data needed by the
    first screen without a second foreground content-type label load.
-4. Cache bus events still refresh sidebar shortcuts and list rows.
+4. Cache bus events still refresh sidebar shortcuts, list rows, and
+   content-type label projections.
 5. No API route or schema changes are introduced by this data preparation round.

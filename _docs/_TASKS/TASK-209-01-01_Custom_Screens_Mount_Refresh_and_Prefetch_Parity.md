@@ -70,7 +70,9 @@ refresh({ force?: boolean; background?: boolean })
 ```
 
 - Add or update `adminPrefetch` tests proving both warmups run for
-  `/admin/coderso/custom-screens`.
+  `/admin/coderso/custom-screens`. Mirror the current entries prefetch test by
+  mocking `listCustomScreensCached` and `listContentTypesCached`, then assert
+  both receive `prefetchWarmupOptions`.
 
 ## Security Contract
 

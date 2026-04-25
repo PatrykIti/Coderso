@@ -32,7 +32,9 @@ confirmations are owned by `TASK-209-03`.
   `TASK-209-03-03`; this round should only reserve the header action slot that
   lets the later bulk bar sit to the left of `New`.
 - new `core/admin/ui/custom-screens/CustomScreenCreateDrawer.tsx`
-- new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx` only as a
+  presentational shell for the table action slot. Mutating lifecycle/delete
+  behavior remains owned by `TASK-209-03`.
 - `core/admin/services/userSettingsClient.ts` and
   `core/services/settings/userSettingsService.ts` for the required
   `customScreens.openAfterCreate` create preference.

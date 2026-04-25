@@ -39,6 +39,8 @@ No child task files.
   - Move to draft -> `updateCustomScreen(id, { status: "draft" })` when status
     is `active`
   - Delete -> opens `ConfirmActionDialog`
+- If `CustomScreenRowActions` was introduced by `TASK-209-02-03`, extend that
+  component instead of creating a parallel action menu.
 - Disable the active/draft action that does not apply to the current status or
   omit it in favor of a single context-specific action.
 - After a status mutation succeeds:
@@ -86,3 +88,5 @@ No child task files.
 2. Status updates are PATCH-based and schema-compatible.
 3. Records/Edit navigation remains canonical and prefetchable.
 4. No Preview/Duplicate UI appears in this task.
+5. Delete only sets the pending row for the shared confirmation dialog; the
+   mutation still runs from the confirmed parent flow.

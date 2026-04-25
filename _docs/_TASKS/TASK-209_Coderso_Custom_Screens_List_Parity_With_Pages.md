@@ -70,6 +70,10 @@ created first.
   only from the page component. The Custom Screens list needs the content-type
   labels for filtering/table/create, but this should be cached-first and
   background-refreshed like other admin lists.
+- The list currently listens only for `customScreens:list`. Once content-type
+  labels become part of the first-screen view model, it must also refresh the
+  label projection on `contentTypes:list` cache-bus updates so Engine edits do
+  not leave stale labels in the Custom Screens table or filters.
 - `core/admin/utils/adminPrefetch.ts` warms only `listCustomScreensCached` for
   `/coderso/custom-screens`; the list also needs content types to avoid a
   second foreground label load.
@@ -134,8 +138,8 @@ created first.
 8. Cache behavior follows the shared admin cache contract:
    cache hydrate first, background revalidate when cache exists, foreground load
    when cache is absent, TTL-backed module memory for list rows, cache bus
-   updates after mutations, and prefetch warmup for custom screens plus content
-   types.
+   updates after mutations, content-type label refresh on `contentTypes:list`,
+   and prefetch warmup for custom screens plus content types.
 9. The implementation must preserve builder, records workflow, sidebar shortcut
    nav, assistant active-surface context, and existing custom-screen API schemas.
 
@@ -251,3 +255,5 @@ created first.
 7. The create drawer cannot submit a Custom Screen without a valid
    `contentTypeId`, and any persisted open-after-create preference is backed by
    the typed user-settings service/client contract.
+8. Content-type label changes from Engine cache events are reflected in the
+   Custom Screens list without requiring a full page reload.

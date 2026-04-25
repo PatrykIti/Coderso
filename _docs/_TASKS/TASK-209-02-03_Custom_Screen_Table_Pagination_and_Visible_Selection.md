@@ -24,7 +24,9 @@ No child task files.
 ## Files to Change
 
 - new `core/admin/ui/custom-screens/CustomScreenTable.tsx`
-- new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx` if the action
+  cell is extracted in this leaf. Keep it non-mutating here: Records/Edit links
+  and callback slots only.
 - `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
 - `core/admin/ui/shared/useListPagination.ts` only if a shared pagination bug is
   found; otherwise consume the existing helper.
@@ -51,6 +53,8 @@ No child task files.
   - Sidebar: shortcut label or `Not shown`;
   - Updated;
   - Actions.
+- In this leaf the action cell must not execute status updates or deletes.
+  `TASK-209-03-02` owns status actions and row delete confirmation wiring.
 - Use mobile row metadata treatment consistent with Pages.
 - Keep links through `AdminLink` and the existing `/custom-screens` ->
   `/coderso/custom-screens` canonicalization. Do not add a local path helper.
@@ -77,6 +81,7 @@ No child task files.
   - mode label display,
   - visible row selection and select-all behavior,
   - pagination footer range and page-size behavior.
+  - no status/delete mutation runs from the table-only leaf.
 
 ## Documentation Updates Required
 
@@ -90,3 +95,4 @@ No child task files.
 2. Pagination and selection behavior matches Pages.
 3. Row links and actions preserve Custom Screens builder/records routes.
 4. Hidden rows cannot remain selected after filters or pagination changes.
+5. Lifecycle and destructive actions remain deferred to `TASK-209-03`.
