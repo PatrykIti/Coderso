@@ -21,10 +21,13 @@ when cache exists, matching the Pages mount policy.
 
 ## Sub-Tasks
 
+- [ ] TASK-210-01-01: Forms Canonical Route and Prefetch Warmup
+- [ ] TASK-210-01-02: Forms Cache Hydration Hook Parity
 - [ ] Update `FormListPage` to use `activeHref="/admin/coderso/forms"`.
 - [ ] Keep programmatic editor navigation through canonical admin routing:
-  `navigate("/forms/:id")` is acceptable only because `adminPaths` normalizes it
-  to `/coderso/forms/:id`; prefer canonical literals when touching this area.
+  replace touched list links and navigation calls with `/coderso/forms/:id`
+  literals or shared helpers so new code does not rely on the legacy
+  `/forms` alias.
 - [ ] Replace `useForms` force-on-mount behavior with a cache-present/background
   and cache-missing/foreground refresh policy.
 - [ ] Keep `listFormsCached({ force: false })` as the prefetch warmup path.
@@ -34,6 +37,8 @@ when cache exists, matching the Pages mount policy.
 ## Files to Change
 
 - `core/admin/ui/forms/FormListPage.tsx`
+- `core/admin/ui/forms/FormTable.tsx` if editor links are normalized while this
+  area is touched.
 - `core/admin/ui/forms/hooks/useForms.ts`
 - `core/admin/utils/adminPrefetch.ts` only if the current Forms warmup contract
   needs an assertion or code adjustment.
@@ -75,6 +80,8 @@ owner instead of creating a Forms-only cache policy module.
   - cache-missing mount uses foreground loading;
   - cache events refresh Forms in the background;
   - `/admin/forms` aliases to `/admin/coderso/forms`;
+  - list active state and row editor links resolve to canonical
+    `/admin/coderso/forms` routes;
   - prefetch for `/admin/coderso/forms` calls `listFormsCached({ force: false })`.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`

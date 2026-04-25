@@ -23,6 +23,8 @@ dialog.
 
 ## Sub-Tasks
 
+- [ ] TASK-210-06-01: Forms List Toast Adapter Wiring
+- [ ] TASK-210-06-02: Forms Route Error Mapping and Strict Schemas
 - [ ] Add a Forms `createListActionToastAdapter` configuration for:
   create, publish, draft, archive, delete.
 - [ ] Wire create, row lifecycle, row delete, bulk lifecycle, and bulk delete
@@ -33,6 +35,10 @@ dialog.
   - `form_name_required` -> 400;
   - `form_slug_exists` -> 409;
   - `form_not_found` -> 404.
+- [ ] Keep mapping centralized at the Forms route boundary, for example as
+  `mapFormError(error): ApiError | null`, and reuse it consistently for
+  create, detail, update, delete, field-write, and public submission form lookup
+  paths.
 - [ ] Tighten `formCreateSchema` and `formUpdateSchema` status validation to
   enum values `draft | published | archived`.
 - [ ] Keep public submission validation and error behavior unchanged unless a
@@ -116,6 +122,8 @@ export const mapFormError = (error: unknown) => {
   - known Forms domain errors map to stable API errors/statuses;
   - create/update reject unknown fields;
   - create/update reject unknown status values;
+  - `form_not_found` from public submission lookup still maps to the stable
+    Forms API error without changing nonce/captcha/access behavior;
   - public submission schema still accepts the documented payload.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/list-action-toasts.test.ts`

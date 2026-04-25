@@ -20,6 +20,9 @@ are owned by TASK-210-03 and TASK-210-04.
 
 ## Sub-Tasks
 
+- [ ] TASK-210-02-01: Forms Filter Model and View Component
+- [ ] TASK-210-02-02: Forms Table Selection and Access Column
+- [ ] TASK-210-02-03: Forms Shared Pagination and Selection Trim
 - [ ] Add a Forms-specific filter strip:
   - search by `name`, `slug`, and `description`;
   - status: all, published, draft, archived;

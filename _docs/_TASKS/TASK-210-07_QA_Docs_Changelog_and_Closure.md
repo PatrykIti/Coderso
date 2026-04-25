@@ -20,10 +20,14 @@ security/runtime contracts still hold.
 
 ## Sub-Tasks
 
+- [ ] TASK-210-07-01: Forms Parity Test Matrix
+- [ ] TASK-210-07-02: Forms Docs, Changelog, and Board Closure
 - [ ] Run the full targeted Vitest UI/admin matrix for Forms list parity.
 - [ ] Run Bun route/service tests for touched route or service contracts.
 - [ ] Update content-list/admin-cache/navigation/API docs touched by the final
   implementation.
+- [ ] Confirm every TASK-210 leaf is either Done or explicitly superseded by
+  the final implementation notes before moving the umbrella to Done.
 - [ ] Add a `_docs/_CHANGELOG/*` entry following the changelog numbering rules.
 - [ ] Update `_docs/_CHANGELOG/README.md`.
 - [ ] Mark TASK-210 family files complete with dated status and validation
@@ -79,8 +83,10 @@ security/runtime contracts still hold.
 ## Acceptance Criteria
 
 1. All TASK-210 implementation tasks are Done with dated statuses.
-2. The targeted test matrix is recorded in task completion notes.
-3. Docs match the shipped Forms list behavior.
-4. Changelog and changelog index are updated.
-5. `_docs/_TASKS/README.md` statistics and tables are synchronized.
-6. Any skipped tests or environment blockers are recorded explicitly.
+2. All TASK-210 leaf files are Done or have a dated superseded note that points
+   to the implemented owner.
+3. The targeted test matrix is recorded in task completion notes.
+4. Docs match the shipped Forms list behavior.
+5. Changelog and changelog index are updated.
+6. `_docs/_TASKS/README.md` statistics and tables are synchronized.
+7. Any skipped tests or environment blockers are recorded explicitly.

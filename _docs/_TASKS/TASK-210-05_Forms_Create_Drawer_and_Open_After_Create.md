@@ -21,6 +21,8 @@ and Forms-specific inline validation.
 
 ## Sub-Tasks
 
+- [ ] TASK-210-05-01: Forms Create Drawer Reset and Payload Guard
+- [ ] TASK-210-05-02: Forms Open After Create User Setting Contract
 - [ ] Rename the list trigger from `New form` to compact `New`.
 - [ ] Reset the drawer state each time it opens, matching the Pages drawer key
   pattern if the current internal state would otherwise leak.
@@ -30,25 +32,44 @@ and Forms-specific inline validation.
   - emit create feedback through TASK-210-06;
   - navigate to `/coderso/forms/:id` when open-after-create is enabled;
   - otherwise close the drawer and background-refresh the list.
-- [ ] Keep drawer payload schema limited to existing Forms create fields:
-  `name`, optional `slug`, `status`, `description`.
+- [ ] Keep the list drawer payload schema limited to its current fields:
+  `name`, optional `slug`, `status`, `description`. Do not send UI-only fields
+  or move builder-owned API fields (`successMessage`, `successRedirectUrl`,
+  `submissionAccess`, `settings`) into this task.
+- [ ] Register `forms.openAfterCreate` in both the admin client and server
+  user-settings contracts if this task adds a Forms-specific preference key.
 
 ## Files to Change
 
 - `core/admin/ui/forms/FormListPage.tsx`
 - `core/admin/ui/forms/FormCreateDrawer.tsx`
-- `core/admin/services/userSettingsClient.ts` only if the typed setting catalog
-  requires registration.
+- `core/admin/services/userSettingsClient.ts`
+- `core/services/settings/userSettingsService.ts`
 - `tests/vitest/ui/forms-pages-wave.test.tsx`
+- `tests/vitest/admin/userSettingsClient.test.ts`
+- `tests/unit/settings/userSettingsService.test.ts`
+- `tests/integration/routes/userSettings.test.ts` only if route behavior or
+  error mapping changes.
 
 ## Security Contract
 
 - Visibility: internal admin UI create flow.
-- Auth model: existing authenticated admin session/admin API key path.
-- RBAC: create requires `forms:write`.
-- CSRF: create continues through `createForm` with `withCsrf: true`.
-- Rate-limit bucket: existing admin write bucket.
-- Reject-unknown validation: UI submits only existing `formCreateSchema` fields.
+- Auth model:
+  - create uses the existing authenticated admin session/admin API key path;
+  - user preference reads/writes use the existing authenticated user-settings
+    route.
+- RBAC:
+  - create requires `forms:write`;
+  - preference writes stay user-scoped and must not grant Forms permissions.
+- CSRF:
+  - create continues through `createForm` with `withCsrf: true`;
+  - preference `PATCH /user-settings/:key` continues through
+    `setUserSetting` with `withCsrf: true`.
+- Rate-limit bucket: existing admin write bucket for create and user-setting
+  writes.
+- Reject-unknown validation:
+  - UI submits only the current list-drawer `formCreateSchema` fields;
+  - `forms.openAfterCreate` is boolean-only in the server settings normalizer.
 - Anti-abuse: no public write path.
 
 ## Pseudocode
@@ -82,12 +103,16 @@ The actual payload sent to `createForm` must not include UI-only fields such as
   - preference load/persist failures do not block create.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+  - `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
 - `_docs/CONTENT_LIST_UX.md`
+- `_docs/CMS_API.md` or the user-settings source docs if the persisted setting
+  catalog is documented there.
 - `_docs/_TASKS/README.md` on status changes.
 
 ## Acceptance Criteria
@@ -97,3 +122,5 @@ The actual payload sent to `createForm` must not include UI-only fields such as
 3. Users can create and either open the new form or stay on the list.
 4. UI-only preference fields are not sent to the API.
 5. Existing Forms builder route remains the edit target.
+6. `forms.openAfterCreate` has a server default, boolean validation, client
+   type coverage, and regression tests before the UI depends on it.

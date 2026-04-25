@@ -21,6 +21,8 @@ service/client does not expose those contracts.
 
 ## Sub-Tasks
 
+- [ ] TASK-210-03-01: Forms Row Lifecycle Menu Contract
+- [ ] TASK-210-03-02: Forms Row Delete Confirmation Contract
 - [ ] Add or extract `FormRowActions` with:
   - Edit;
   - Publish when `status !== "published"`;

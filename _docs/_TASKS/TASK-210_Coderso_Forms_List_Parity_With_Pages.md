@@ -120,8 +120,12 @@ a backward-compatible alias through `adminPaths`.
    - Delete.
    Do not add Preview or Duplicate in this task.
 5. `New` opens a list-owned Forms create drawer. It should support the existing
-   create payload (`name`, optional `slug`, `status`, `description`) and an
-   open-after-create preference that mirrors the Pages list behavior.
+   list-drawer create fields (`name`, optional `slug`, `status`,
+   `description`) and an open-after-create preference that mirrors the Pages
+   list behavior. The wider Forms API create contract
+   (`successMessage`, `successRedirectUrl`, `submissionAccess`, `settings`)
+   stays owned by the builder/settings flow unless a separate task explicitly
+   moves those controls into the list drawer.
 6. Create, lifecycle, row delete, and bulk action feedback goes through
    `createListActionToastAdapter` with Forms labels and actions:
    create, publish, draft, archive, delete.
@@ -144,6 +148,24 @@ a backward-compatible alias through `adminPaths`.
 - [ ] TASK-210-05: Forms Create Drawer and Open After Create
 - [ ] TASK-210-06: Forms List Toasts and Error Mapping
 - [ ] TASK-210-07: QA, Docs, Changelog, and Closure
+
+## Leaf Breakdown
+
+- [ ] TASK-210-01-01: Forms Canonical Route and Prefetch Warmup
+- [ ] TASK-210-01-02: Forms Cache Hydration Hook Parity
+- [ ] TASK-210-02-01: Forms Filter Model and View Component
+- [ ] TASK-210-02-02: Forms Table Selection and Access Column
+- [ ] TASK-210-02-03: Forms Shared Pagination and Selection Trim
+- [ ] TASK-210-03-01: Forms Row Lifecycle Menu Contract
+- [ ] TASK-210-03-02: Forms Row Delete Confirmation Contract
+- [ ] TASK-210-04-01: Forms Bulk Action Bar and Visible Selection
+- [ ] TASK-210-04-02: Forms Bulk Mutation Execution and Partial Failures
+- [ ] TASK-210-05-01: Forms Create Drawer Reset and Payload Guard
+- [ ] TASK-210-05-02: Forms Open After Create User Setting Contract
+- [ ] TASK-210-06-01: Forms List Toast Adapter Wiring
+- [ ] TASK-210-06-02: Forms Route Error Mapping and Strict Schemas
+- [ ] TASK-210-07-01: Forms Parity Test Matrix
+- [ ] TASK-210-07-02: Forms Docs, Changelog, and Board Closure
 
 ## Non-Goals
 
@@ -207,6 +229,10 @@ a backward-compatible alias through `adminPaths`.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts`
 - If route schema/error mapping changes:
   `set -a && source .env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts`
+- If `forms.openAfterCreate` is added:
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+  and
+  `set -a && source .env && set +a && bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts`
 - If public submission hardening changes or is touched:
   `set -a && source .env && set +a && bun test tests/unit/forms/submissionService.test.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts`
 
@@ -235,3 +261,5 @@ a backward-compatible alias through `adminPaths`.
    keep truthful inline partial-failure alerts where needed.
 9. Public submission access, nonce/captcha hardening, builder routes, and action
    logs remain unchanged.
+10. Any new user setting needed for Forms create behavior is typed and validated
+    in both admin client and server settings contracts.
