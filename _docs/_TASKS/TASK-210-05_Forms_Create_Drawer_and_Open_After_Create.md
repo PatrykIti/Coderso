@@ -32,10 +32,13 @@ and Forms-specific inline validation.
   - emit create feedback through TASK-210-06;
   - navigate to `/coderso/forms/:id` when open-after-create is enabled;
   - otherwise close the drawer and background-refresh the list.
-- [ ] Keep the list drawer payload schema limited to its current fields:
-  `name`, optional `slug`, `status`, `description`. Do not send UI-only fields
-  or move builder-owned API fields (`successMessage`, `successRedirectUrl`,
-  `submissionAccess`, `settings`) into this task.
+- [ ] Keep the list drawer payload passed into `createForm` limited to its
+  current UI fields: `name`, optional `slug`, `status`, `description`. Do not
+  pass UI-only fields or move builder-owned API fields (`successMessage`,
+  `successRedirectUrl`, `submissionAccess`, `settings`) into the drawer state.
+  Preserve the existing client-level default `settings` normalization in
+  `formsClient.createForm`, which means client tests may still see normalized
+  default settings on the network payload.
 - [ ] Register `forms.openAfterCreate` in both the admin client and server
   user-settings contracts if this task adds a Forms-specific preference key.
 
@@ -68,7 +71,9 @@ and Forms-specific inline validation.
 - Rate-limit bucket: existing admin write bucket for create and user-setting
   writes.
 - Reject-unknown validation:
-  - UI submits only the current list-drawer `formCreateSchema` fields;
+  - UI passes only the current list-drawer fields into `createForm`;
+  - `formsClient.createForm` may still normalize and attach default `settings`
+    before calling the API, matching the existing client contract;
   - `forms.openAfterCreate` is boolean-only in the server settings normalizer.
 - Anti-abuse: no public write path.
 
@@ -77,7 +82,12 @@ and Forms-specific inline validation.
 ```ts
 const [openAfterCreate, setOpenAfterCreate] = useState(true);
 
-const handleCreate = async (payload: FormCreateInput & { openAfterCreate: boolean }) => {
+type FormListCreateInput = Pick<
+  FormCreateInput,
+  "name" | "slug" | "status" | "description"
+> & { openAfterCreate: boolean };
+
+const handleCreate = async (payload: FormListCreateInput) => {
   const { openAfterCreate, ...formInput } = payload;
   const created = await createForm(formInput);
   formListToasts.success("create", { targetLabel: created.name });
@@ -98,7 +108,10 @@ The actual payload sent to `createForm` must not include UI-only fields such as
 - Add or update Vitest coverage proving:
   - list trigger text is `New`;
   - drawer opens from the list header;
-  - create sends only Forms create schema fields;
+  - the list-to-client create call contains only Forms list drawer fields and no
+    UI-only `openAfterCreate`;
+  - `formsClient.createForm` still sends normalized default `settings` at the
+    network boundary when the UI did not provide settings;
   - open-after-create enabled navigates to the form builder;
   - open-after-create disabled refreshes the list and closes the drawer;
   - preference load/persist failures do not block create.
@@ -121,7 +134,10 @@ The actual payload sent to `createForm` must not include UI-only fields such as
 1. Forms create entry point matches the Pages `New` action pattern.
 2. Drawer state does not leak between openings.
 3. Users can create and either open the new form or stay on the list.
-4. UI-only preference fields are not sent to the API.
+4. UI-only preference fields are never sent to `createForm` or the API.
 5. Existing Forms builder route remains the edit target.
 6. `forms.openAfterCreate` has a server default, boolean validation, client
    type coverage, and regression tests before the UI depends on it.
+7. The implementation preserves `formsClient.createForm` default `settings`
+   normalization instead of treating settings as forbidden at the network
+   boundary.

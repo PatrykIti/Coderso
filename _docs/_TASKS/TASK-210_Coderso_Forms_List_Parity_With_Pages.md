@@ -136,10 +136,13 @@ a backward-compatible alias through `adminPaths`.
 5. `New` opens a list-owned Forms create drawer. It should support the existing
    list-drawer create fields (`name`, optional `slug`, `status`,
    `description`) and an open-after-create preference that mirrors the Pages
-   list behavior. The wider Forms API create contract
-   (`successMessage`, `successRedirectUrl`, `submissionAccess`, `settings`)
-   stays owned by the builder/settings flow unless a separate task explicitly
-   moves those controls into the list drawer.
+   list behavior. The list UI must not expose or submit builder-owned advanced
+   fields (`successMessage`, `successRedirectUrl`, `submissionAccess`,
+   `settings`) as drawer state. Preserve the existing `formsClient.createForm`
+   contract: the client may still append normalized default `settings` before
+   the network request when the UI did not provide settings, so tests must
+   distinguish the list-to-client payload boundary from the client-to-API
+   payload normalization.
 6. Create, lifecycle, row delete, and bulk action feedback goes through
    `createListActionToastAdapter` with Forms labels and actions:
    create, publish, draft, archive, delete.
@@ -225,6 +228,9 @@ a backward-compatible alias through `adminPaths`.
     arbitrary strings at the schema boundary.
   - hard-delete conflicts for retained submissions/action runs must map to a
     stable machine-readable 409 response instead of leaking raw database errors.
+  - if TASK-210 wraps field-write or public-submission service errors in the
+    Forms mapper, existing field and payload validation errors must map to stable
+    400 responses instead of raw internal errors.
 - Anti-abuse:
   - no new public write path;
   - destructive row and bulk delete require `ConfirmActionDialog`;
@@ -295,3 +301,6 @@ a backward-compatible alias through `adminPaths`.
    logs remain unchanged.
 11. Any new user setting needed for Forms create behavior is typed and validated
     in both admin client and server settings contracts.
+12. Forms create tests prove both payload boundaries: the list passes no UI-only
+    or builder-owned fields to `createForm`, while `formsClient.createForm`
+    preserves its existing normalized default `settings` network payload.

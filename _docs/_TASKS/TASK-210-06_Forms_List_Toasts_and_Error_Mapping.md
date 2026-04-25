@@ -35,7 +35,16 @@ dialog.
   - `form_name_required` -> 400;
   - `form_slug_exists` -> 409;
   - `form_not_found` -> 404;
-  - `form_delete_restricted` for retained-history delete conflicts -> 409.
+  - `form_delete_restricted` for retained-history delete conflicts -> 409;
+  - field-write errors (`form_fields_invalid`, `form_field_invalid`,
+    `form_field_label_required`, `form_field_id_duplicate`,
+    `form_field_name_duplicate`) -> 400 when the mapper wraps
+    `/forms/:id/fields`;
+  - submission validation errors (`form_payload_invalid`,
+    `form_payload_unknown_field`, `form_payload_required`) -> 400 if the mapper
+    wraps the public submission path. This is route-boundary stability only;
+    runtime-preview/editor copy remains outside TASK-210 unless another task
+    owns it.
 - [ ] Move or expose Forms status values from a Bun-free Forms contract/helper
   module, then consume the same values in route schemas, server normalization,
   and admin/UI types instead of duplicating string unions across DB-coupled and
@@ -135,13 +144,17 @@ export const mapFormError = (error: unknown) => {
   - bulk full-success and partial-failure toasts;
   - inline partial failure remains visible.
 - Add or update Bun route coverage proving:
+  - existing Forms route registration remains intact;
   - known Forms domain errors map to stable API errors/statuses;
   - create/update reject unknown fields;
   - create/update reject unknown status values;
+  - field-write validation errors map to stable 400 responses if the mapper wraps
+    `PUT /forms/:id/fields`;
   - delete with retained submissions/action diagnostics maps to a stable 409 and
     does not remove cached rows as a success;
-  - `form_not_found` from public submission lookup still maps to the stable
-    Forms API error without changing nonce/captcha/access behavior;
+  - `form_not_found` from public submission lookup, and any payload validation
+    errors handled by the mapper, still map to stable Forms API errors without
+    changing nonce/captcha/access behavior;
   - public submission schema still accepts the documented payload.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/list-action-toasts.test.ts`
@@ -165,4 +178,6 @@ export const mapFormError = (error: unknown) => {
 5. Status enum validation is strict at the route boundary.
 6. Retained-history delete conflicts are stable 409 responses, not raw database
    errors or false UI successes.
-7. Public submission hardening remains unchanged.
+7. Field-write and public-submission errors touched by this route mapper do not
+   leak raw internal errors.
+8. Public submission hardening remains unchanged.

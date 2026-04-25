@@ -20,11 +20,15 @@ preserving the current list-drawer payload boundary.
 - [ ] Reset drawer internal state on each open, using the Pages drawer key
   pattern if needed.
 - [ ] Add an open-after-create checkbox to the drawer UI.
-- [ ] Submit only `name`, optional `slug`, `status`, and `description` to
-  `createForm`.
-- [ ] Do not include UI-only `openAfterCreate` in the API payload.
+- [ ] Pass only `name`, optional `slug`, `status`, and `description` from the
+  list drawer into `createForm`.
+- [ ] Do not include UI-only `openAfterCreate` in the `createForm` call or API
+  payload.
 - [ ] Keep builder-owned fields (`submissionAccess`, `successMessage`,
   `successRedirectUrl`, `settings`) in the builder/settings flow.
+- [ ] Preserve the existing `formsClient.createForm` behavior that attaches
+  normalized default `settings` before the API request when no settings are
+  provided.
 
 ## Files to Change
 
@@ -48,9 +52,11 @@ preserving the current list-drawer payload boundary.
 
 - Trigger label is `New`.
 - Drawer state resets between openings.
-- Create payload excludes `openAfterCreate`.
-- Create payload excludes builder-owned fields unless they are already present
-  in the drawer contract.
+- List-to-client create payload excludes `openAfterCreate`.
+- List-to-client create payload excludes builder-owned fields unless they are
+  already present in the drawer contract.
+- Client-level tests keep proving that `formsClient.createForm` sends normalized
+  default `settings` on the network payload.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx`
   - `bun --cwd core lint`
@@ -66,3 +72,5 @@ preserving the current list-drawer payload boundary.
 1. The Forms drawer behaves like Pages on open/reset.
 2. The API payload stays schema-first and contains no UI-only preference fields.
 3. Builder/settings ownership of advanced Forms fields is preserved.
+4. Existing `formsClient.createForm` default `settings` normalization is not
+   removed to make the drawer test pass.
