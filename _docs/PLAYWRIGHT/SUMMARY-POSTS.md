@@ -362,3 +362,103 @@ Follow-up 2026-04-24:
 - `taxonomyService` rozwiązuje teraz content type slug przez `content_types`
   przed query/mutacją taxonomy rows, więc `/admin/api/content-types/post/terms`
   nie porównuje już tekstowego `post` z UUID column.
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-25)
+
+**Tester:** Claude (Playwright CLI)
+**Środowisko:** http://localhost:5173/admin/coderso/posts
+**Zalogowany jako:** patryk.ciechanski@patrykiti.pl
+
+### TL;DR
+
+- **W pełni naprawione (12 / 13):** BUG-1, BUG-2, BUG-3, BUG-4, BUG-6, BUG-7, UX-1, UX-2, UX-3, UX-5, UX-6, UX-7.
+- **Częściowo:** UX-4 (Block Inserter Media nadal tylko Image + Embed — bez Video/Gallery/Audio).
+- **Wciąż otwarte:** BUG-5 (toast po Publish/Update — `[aria-live=polite]` w DOM, ale pozostaje pusty; sonner toast się nie pojawia mimo że POST `/publish` zwraca 200 OK).
+- **Nowy regres (BUG-8):** Create New Post dialog emituje Radix warning `Missing Description or aria-describedby={undefined} for {DialogContent}`. Dialog ma `aria-describedby="radix-_r_a_"`, ale id w DOM nie istnieje (description tekstowo widoczny, ale niepodłączony).
+
+### Krok 1 — Lista postów `/admin/coderso/posts`
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-1 | Bulk select | ✓ FIXED | "Select all posts" → header + wiersze checked, toolbar "1 post selected — Apply a bulk action to the visible selection." z combobox `Bulk actions` (opcje: **Publish / Move to Draft / Delete**), przycisk "Apply" (disabled bez akcji), "Clear". |
+| BUG-2 | Search placeholder | ✓ FIXED | Pole wyszukiwania ma placeholder "Search posts by title..." (nie "pages"). |
+
+**Regresja — wciąż działa:** filtr Status (combobox), filtr Author, menu (...) wiersza (Edit / Preview / Duplicate / Publish / Unpublish disabled / Delete), paginacja, autor "P Patryk" pokazany od razu po utworzeniu posta.
+
+### Krok 2 — Editor toolbar i Block Inserter
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-3 | "Details" otwiera prawy panel, nie Block Inserter | ✓ FIXED | Toolbar ma 5 osobnych przycisków, każdy z unikalnym `aria-label`: `Toggle block inserter` (Add block), `Hide document overview` (Outline), `Hide post details` (Details), `Toggle full width editor` (Focus), `Open revision history` (Revisions). Każdy działa na swój panel. |
+| BUG-6 | Radix description w Revisions dialog | ✓ FIXED | Dialog `Post revisions` ma `aria-describedby` poprawnie podłączony do "Restore an earlier snapshot of this post." Konsola — 0 Radix warnings po otwarciu Revisions. |
+| UX-4 | Block Inserter Media | ⚠ CZĘŚCIOWE | Zakładka Media: **Image + Embed** (poprawa od Image+Separator). Separator słusznie przeniesiony do Text. Ale **brak Video, Gallery, Audio, File** — nadal capability gap. Komentarz w TASK-204 to potwierdza ("UX-4 jawnie nadal otwarte jako capability gap"). Bez zmian od 2026-04-23. |
+| UX-6 | "Typography reads from block" | ✓ FIXED | Tekst zmieniony na "Typography follows the selected block style." + dodano przycisk "Info" (ikona ⓘ z tooltipem). Spójne z propozycją z raportu. |
+| UX-7 | Search per kategoria w Block Inserter | ✓ FIXED | Placeholder/aria-label search bar zmienia się dynamicznie wraz z aktywną zakładką: "All" → `Search blocks`, "Text" → `Search Text blocks`, "Media" → `Search Media blocks`, "Interactive" → analogicznie. Test funkcjonalny: w zakładce Media wpisanie "image" → tylko Image (Embed odfiltrowany). Filtr scope-aware. |
+
+### Krok 3 — Document Inspector (prawy panel Post tab)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-4 | Category ID / Featured Image — raw fields | ✓ FIXED | **Categories and tags:** "Current category: Not assigned", combobox "Category" z opcją "No category" (zamiast textboxa na ID). Tags textbox z placeholder `news, guide, release`. **Featured image:** sekcja z opisem "Select a single asset. Allowed: image/*", przycisk **Browse media** (ikona + label) i status "No media selected yet." (gdy nic nie wybrane). Picker zamiast Media ID textboxa. |
+| BUG-7 | 500 Internal Server Error / surowy SQL | ✓ FIXED | `GET /admin/api/content-types/post/terms` → **200 OK** (przedtem 500). UI nie pokazuje już raw query erroru. Brak fallbacka "Could not load categories. [Retry]" do zaobserwowania bo endpoint zwraca poprawnie pustą listę — ale z TASK-204 wiemy, że fallback istnieje gdy backend faktycznie wróci błąd. |
+| UX-3 | Sekcja Advanced ukrywa SEO | ✓ FIXED | Sekcja Advanced ma w nagłówku **badge "SEO 0/3"** widoczny już przy zwiniętym stanie. Po rozwinięciu — paragraph "SEO summary" + "SEO fields completed: 0/3" + cztery pola: SEO title, SEO description, Canonical URL, Robots (combobox "Index + follow (default)"). Badge motywuje do uzupełnienia bez konieczności rozwijania. |
+| UX-5 | Slug bez "/" — niespójny z Pages | ✓ FIXED | Tworzenie posta — pod polem Slug widać "Route hint: http://localhost:3000/post/:slug". W Advanced → Slug — pełny pre-fill: "Public URL: http://localhost:3000/post/test-post-2026-04-25". Kontekst URL widoczny, format slug-bez-prefixu już nie jest mylący. |
+
+### Krok 4 — Save / Publish / Revisions
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-5 | Toast po Publish / Update | ⚠ NIE ZMIENIONE od 2026-04-23 | Po wpisaniu treści — POST `/autosave` 200 OK, label "Autosaved at 02:57 PM" w headerze (działa). Po Publish — POST `/publish` 200 OK, badge Draft → Published, przycisk Publish → **Update** (działa). **Toast nadal się nie pojawia.** `[aria-live=polite]` w DOM ma `textContent === ''`, brak `[data-sonner-toast]` w DOM. Pośredni feedback (timestamp + button label change) działa, ale dedicated toast nie został podpięty. **Identyczny pain point jak Pages UX-1.** |
+| UX-1 | Preview w Revisions | ✓ FIXED | Po opublikowaniu — Revisions zawiera `Version 1 · Apr 25, 2026, 02:57 PM · Patryk · 1 blocks` + przyciski **Preview** i **Restore**. Klik Preview → expand panel z treścią rewizji ("Lorem ipsum dolor sit amet."), button toggluje na **Hide preview**. **NIE ma już** komunikatu "No preview available for this revision." dla niepustych rewizji — zgodnie z TASK-204 pokazuje treść/metadata. |
+
+### Nowe znalezisko — BUG-8
+
+#### [BUG-8] NISKI: Radix `aria-describedby` warning w Create New Post dialog
+
+**Gdzie:** Lista postów → przycisk **New** → otwarcie dialogu "Create New Post"
+
+**Co się dzieje:** Po otwarciu dialogu konsola loguje `Warning: Missing Description or aria-describedby={undefined} for {DialogContent}`. Inspekcja DOM:
+
+- `[role=dialog].aria-labelledby` → `radix-_r_9_` (poprawnie wskazuje na heading "Create New Post")
+- `[role=dialog].aria-describedby` → `radix-_r_a_`
+- `document.getElementById('radix-_r_a_')` → **null**
+
+Treść description "Start a new article and publish when ready." istnieje w UI jako zwykły `<p>`, ale bez `id={descId}` — Radix nie znajduje powiązanego elementu i loguje warning. Jest to symetryczna regresja do Pages BUG-5 / Posts BUG-6, ale specyficznie dla Create New Post drawer.
+
+**Kierunek naprawy UI:** Owinąć paragraph "Start a new article and publish when ready." w komponent `<DialogDescription>` (Radix) zamiast plain `<p>`. Powinien być prawdopodobnie ten sam wrapper który został użyty w Page Create / Page Settings / Page History (Pages BUG-5). Naprawa jest jednolinijkowa.
+
+### Krok 5 — UX feel po całym flow
+
+**Co działa świetnie:**
+- 5 oddzielnych przycisków w toolbarze z jasnymi aria-labels — top tier accessibility.
+- Browse media picker zamiast Media ID textboxa = WordPress-level UX.
+- Scoped Block Inserter search (placeholder zmienia się per zakładka) — bardzo dobry detal.
+- "Public URL: ..." pre-fill pod polem Slug — kontekst URL bez ujednolicania bazy.
+- "SEO 0/3" badge przy zwiniętej sekcji Advanced — discoverability bez nachalności.
+- Revisions z Preview rozwijającym treść — można sprawdzić co się przywraca przed restore.
+
+**Co nadal zostawia niedosyt:**
+- Brak widocznego toast po Publish/Update (BUG-5) — ten sam pain point co w Pages UX-1.
+- Block Inserter Media uboga (Image + Embed = 2 bloki) — UX-4 jawnie zostało jako capability gap.
+- Create New Post dialog generuje Radix warning (BUG-8) — drobna ale głośna regresja w konsoli.
+
+### Status vs. raport 2026-04-23 / TASK-204
+
+- BUG-3, BUG-4, BUG-6, BUG-7, UX-1, UX-2, UX-6, UX-7 — wszystkie utrzymują status fixed po manualnym replay.
+- UX-3, UX-5 — fix widoczny i działa na żywo (TASK-204 wymienia je jako "regression-smoke", manualnie potwierdzone).
+- UX-4 — częściowy fix utrzymany (Image + Embed, bez Video/Gallery/Audio); raport TASK-204 poprawnie nazywa to capability gap.
+- BUG-5 (toast) — bez zmian, pozostaje otwarte.
+- **Nowość:** BUG-8 (Create Post dialog Radix warning) — wymaga osobnego ticketu / hotfixa.
+
+### Walidacja środowiska
+
+- Frontend `localhost:3000` dostępny (preview iframe loaduje się z bannerem PREVIEW MODE — taki sam stan jak Pages 2026-04-25).
+- Backend Posts API: GET/POST /publish/autosave wszystko 200 OK (brak BUG-6-style 403 z Pages).
+- Konsola: poza BUG-8 brak innych Radix warnings; brak raw SQL errorów; brak `CONNECTION_CLOSED`.
+
+### Screeny (2026-04-25)
+
+- `screenshots/2026-04-25/posts-01-list-bulk.png` — bulk toolbar widoczny.
+- `screenshots/2026-04-25/posts-02-editor.png` — edytor po Publish (button → Update, badge Published).
