@@ -15,6 +15,8 @@ Add Pages-style inline bulk actions and shared confirmations for Custom Screens.
 
 Bulk actions must operate only on visible selected rows, use existing client
 helpers, and preserve partial-failure feedback through the shared toast adapter.
+Single-row delete confirmation is owned by `TASK-209-03-02`; this leaf owns the
+bulk action bar and bulk delete confirmation flow.
 
 ## Sub-Tasks
 

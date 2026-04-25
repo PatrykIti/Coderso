@@ -64,6 +64,9 @@ type CustomScreenListRow = {
 - Subscribe to `cacheKeys.contentTypesList` in the list or a list-local hook and
   refresh labels in the background when Engine/content-type mutations broadcast
   an update or invalidation.
+- The cache-bus label refresh must be proven through mounted React coverage
+  that runs effects. A static server render can prove fallback copy, but it
+  cannot prove the `contentTypes:list` subscription or background label update.
 - Use `resolveCustomScreenCapabilities`/`screen.capabilities` for mode labels;
   do not duplicate capability logic in the list.
 - Derive sidebar shortcut presentation from the existing admin nav contract:

@@ -44,6 +44,11 @@ No child task files.
   - indeterminate state when some visible rows are selected.
 - Use shared `useListPagination(filteredRows, { resetKey })`.
 - Render `ListPaginationFooter resourceLabel="custom screens"`.
+- Preserve the screen row order returned by the data/client layer through view
+  model mapping, filtering, and pagination. Do not add client-side sorting in
+  this parity task unless a separate sorting contract is created.
+- Apply the same selected-row visual treatment as `PageTable` for selected
+  rows, including the stable row height and background state.
 - Table columns:
   - Screen: `AdminLink` to `/coderso/custom-screens/:id`, sidebar label hint
     when present;
@@ -91,7 +96,9 @@ No child task files.
     of currently visible,
   - mode label display,
   - visible row selection and select-all behavior,
+  - selected row background/treatment matches the Pages table pattern,
   - pagination footer range and page-size behavior,
+  - filtering/pagination preserve the input order for visible rows,
   - no status/delete mutation runs from the table-only leaf.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts`
   only if route aliases or canonical href behavior changes.

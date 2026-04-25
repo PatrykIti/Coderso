@@ -55,6 +55,10 @@ refresh({ force?: boolean; background?: boolean })
   - expired module memory is cleared before storage/network fallback;
   - storage changes from another cache owner are visible after the in-memory
     envelope expires or after the cache-bus path forces a refresh.
+- Keep the exported `getCachedCustomScreens`, `listCustomScreensCached`, and
+  `clearCustomScreensCache` API shape stable because `AdminShell` and sidebar
+  shortcut rendering consume the same client. If the migration changes shortcut
+  projection behavior, add or update `tests/vitest/admin/coderso-modules.test.ts`.
 - Update `core/admin/utils/adminPrefetch.ts` so the Custom Screens route warms
   the first-screen data:
 
@@ -101,8 +105,9 @@ refresh({ force?: boolean; background?: boolean })
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts` if the shared helper or a delegating wrapper changes.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
-- Focused test for the mount refresh policy through the shared helper or a
-  delegating Custom Screens wrapper.
+- Effect-running hook/list test for the mount refresh policy and cache-bus
+  background refresh path. Helper-only assertions can supplement this, but they
+  do not replace mounted proof for `useCustomScreens`.
 
 ## Documentation Updates Required
 

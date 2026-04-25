@@ -37,6 +37,9 @@ No child task files.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/entry-list-wave.test.tsx` if `contentTypesClient` cache semantics changed.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/coderso-modules.test.ts`
+    if sidebar shortcut projection, Custom Screens cache semantics, or shortcut
+    nav data flow changed.
 - Run the user-settings service test for `customScreens.openAfterCreate` when
   `DATABASE_URL` is reachable:
   - `set -a && source .env && set +a`
@@ -62,6 +65,9 @@ No child task files.
   - content-type label refresh after an Engine/content-type cache update.
   - sidebar shortcut presentation for active shortcut-enabled, draft
     shortcut-enabled, and non-shortcut screens.
+  - no Preview/Duplicate row actions are exposed.
+  - direct `/admin/coderso/custom-screens/new` still opens the builder create
+    route.
 
 ## Security Contract
 

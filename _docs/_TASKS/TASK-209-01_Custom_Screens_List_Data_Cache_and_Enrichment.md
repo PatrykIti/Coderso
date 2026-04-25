@@ -52,8 +52,10 @@ with focused regression coverage.
 - `tests/vitest/admin/contentTypesClient.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/vitest/ui/custom-screens-page.test.tsx`
-- new mounted Custom Screens list suite if hook behavior cannot be proven by
-  static render tests.
+- new mounted Custom Screens list suite for effect-running proof of mount
+  refresh, cache-bus refresh, and content-type label refresh behavior. Static
+  render tests are useful smoke coverage, but they do not prove the effect
+  contract for this round.
 - Shared consumer smoke tests when `contentTypesClient` cache semantics change:
   - `tests/vitest/ui/content-type-list-parity.test.tsx`
   - `tests/vitest/ui/entry-list-wave.test.tsx`
@@ -80,6 +82,9 @@ with focused regression coverage.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - New focused hook/list test if mount refresh options or content-type
   enrichment cannot be asserted in the existing suite.
+- Mounted effect-running coverage is required when asserting cache-bus refresh
+  behavior or content-type label refresh; do not close this round from
+  `renderAdminUi()` output alone.
 - If `contentTypesClient` is migrated to the shared TTL-backed memory cache,
   also run targeted shared-consumer smoke tests:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-list-parity.test.tsx`

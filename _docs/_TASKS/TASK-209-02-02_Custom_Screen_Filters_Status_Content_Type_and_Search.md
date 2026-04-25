@@ -47,6 +47,10 @@ export function filterCustomScreenRows(
   - status select: all, active, draft,
   - content type select: all plus available content types and any row-derived
     missing `contentTypeId` fallback options.
+- Mirror the current Pages filter-shell treatment, including spacing,
+  responsive wrapping, and the trailing view/columns icon affordance when it is
+  still present in `PageFilters`. Keep that affordance non-mutating unless a
+  separate column-preference contract is introduced.
 - Reset pagination through the `useListPagination` `resetKey` when any filter
   changes.
 - Trim hidden selected rows after filters change.

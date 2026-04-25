@@ -54,6 +54,10 @@ No child task files.
 - On status mutation failure:
   - emit adapter error toast,
   - preserve a visible inline alert for screen-reader/discoverability parity.
+- Row delete is a pending-state action only. The dropdown click must set the
+  pending row and open the shared `ConfirmActionDialog`; `deleteCustomScreen`
+  must run only from the dialog confirm handler, then refresh the list in the
+  background and emit the shared delete toast after the mutation completes.
 - Use `AdminLink` for Records/Edit and keep route canonicalization in the shared
   `adminPaths` / `AdminLink` / `prefetchAdminRoute` helpers. Row actions may
   build the resource-specific suffix with `encodeURIComponent(id)`, but must not
@@ -85,6 +89,10 @@ No child task files.
   - status update success emits toast after refresh,
   - status update updates the sidebar shortcut state for shortcut-enabled rows,
   - status update failure emits error toast and inline alert.
+  - row Delete opens `ConfirmActionDialog`,
+  - `deleteCustomScreen` and the delete toast do not run before confirmation,
+  - confirmed row delete refreshes in the background and emits the adapter
+    delete success/error feedback.
 
 ## Documentation Updates Required
 

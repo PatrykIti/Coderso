@@ -130,12 +130,19 @@ created first.
    - content-type filter when content types are available, with stable
      `contentTypeId` fallback options for rows whose content type label cannot
      be resolved.
+   The filter strip should mirror the compact Pages filter shell. If the
+   current Pages strip still exposes the trailing view/columns icon, Custom
+   Screens should keep the same non-mutating affordance for visual parity, but
+   must not add column preferences or persisted filter state in this task.
 3. The table uses the Pages table behavior but Custom Screens columns:
    checkbox, screen, status, content type, mode/capabilities, sidebar shortcut,
    updated, actions.
    The sidebar shortcut column must reflect the derived nav visibility state:
    shown for active shortcut-enabled screens, configured after activation for
    draft shortcut-enabled screens, and not shown otherwise.
+   Selected rows should use the same selected-row treatment as Pages, and the
+   view model/filtering/pagination layer must preserve the API/client row order
+   unless a separate sorting contract is introduced.
 4. Row actions are contract-specific:
    - Records,
    - Edit,
@@ -240,6 +247,12 @@ created first.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts` if any links or aliases change.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/coderso-modules.test.ts`
+    if sidebar shortcut projection or nav shortcut data flow changes.
+- The mounted list suite must execute React effects for cache-bus label
+  refresh, create-drawer user settings, confirmation dialogs, and Sonner toast
+  assertions. Static `renderAdminUi()` coverage may remain as a smoke test, but
+  it is not enough to close those contracts.
 - User-settings service test for the persisted `customScreens.openAfterCreate`
   key:
   - `set -a && source .env && set +a`
