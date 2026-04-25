@@ -49,6 +49,10 @@ Pages-editor-only notification system.
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx` marks the iframe ready in
   `onLoad`. A browser iframe can fire `load` for an error document, so iframe
   `onLoad` alone cannot prove the preview route returned usable content.
+- `RuntimePreviewDialog` is shared by Pages, Posts, Entries, and Widget
+  Template previews. Any new probe/load diagnostic prop must stay optional so
+  non-Pages callers keep the current timeout fallback until their own preview
+  endpoints adopt probe metadata.
 - `core/admin/ui/pages/PageEditor.tsx` currently scrolls inserted blocks with
   `scrollIntoView({ behavior: "smooth", block: "center" })`. The manual report
   needs the new block's top/header to land inside the visible canvas viewport.
@@ -105,6 +109,9 @@ Pages-editor-only notification system.
   security, or testability.
 - Do not accept arbitrary preview URLs from the browser for server-side probing.
 - Do not rename persisted/API revision kind values such as `autosave`.
+- Do not force Entries, Posts, or Widget Template preview endpoints into the
+  Pages probe contract as part of TASK-211. Preserve their existing
+  `RuntimePreviewDialog` behavior through optional props and fallback tests.
 
 ## Security Contract
 
@@ -153,6 +160,9 @@ Pages-editor-only notification system.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/runtime-preview-dialog.test.tsx tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/page-editor-insert-scroll.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx`
+- `bun --cwd core lint:types` must prove existing non-Pages
+  `RuntimePreviewDialog` callers still type-check when probe metadata is
+  introduced as optional.
 - If preview route/probe behavior changes:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/pages.test.ts tests/unit/pages/previewService.test.ts`

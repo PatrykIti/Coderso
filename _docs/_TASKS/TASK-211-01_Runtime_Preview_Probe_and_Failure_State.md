@@ -57,6 +57,9 @@ iframe behavior.
   correct inside the existing route.
 - The server must only probe URLs it generated or URLs derived from configured
   preview/public base URL policy.
+- Keep probe metadata optional at the shared dialog boundary. Entries, Posts,
+  and Widget Template previews can keep their existing no-probe timeout
+  fallback in this family.
 - The UI should treat a failed probe as a first-class load error before assigning
   the iframe source.
 - Keep browser-side timeout as a fallback for cases the server cannot prove.
@@ -128,6 +131,8 @@ if (preview.probe && !preview.probe.ok) {
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
   - probe failure shows placeholder immediately;
   - timeout fallback still works when no probe metadata exists.
+  - existing no-probe callers still render successful iframes and retain the
+    timeout fallback path.
 
 ## Documentation Updates Required
 

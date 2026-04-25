@@ -47,6 +47,8 @@ No child task files.
 
 - Vitest:
   - runtime preview probe failure and timeout fallback;
+  - shared `RuntimePreviewDialog` no-probe fallback so Entries, Posts, and
+    Widget Template callers are not forced into the Pages probe contract;
   - Page editor save/publish success and error toasts;
   - inserted-block scroll alignment/offset proof;
   - Page History draft-version copy;

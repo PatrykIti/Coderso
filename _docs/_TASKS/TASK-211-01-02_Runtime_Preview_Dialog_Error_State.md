@@ -27,6 +27,9 @@ No child task files.
 
 - `core/admin/ui/preview/RuntimePreviewDialog.tsx`
 - `core/admin/ui/pages/PageEditor.tsx`
+- `core/admin/ui/entries/EntryEditor.tsx`, `core/admin/ui/posts/**`, and
+  `core/admin/ui/widgets/WidgetTemplatePreviewDialog.tsx` only if a prop change
+  cannot stay optional; prefer avoiding caller churn.
 - `tests/vitest/ui/runtime-preview-dialog.test.tsx`
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx` if Page editor passes new
   probe metadata.
@@ -35,6 +38,8 @@ No child task files.
 
 - Add a typed `probeResult` or `loadDiagnostic` prop to
   `RuntimePreviewDialog`.
+- The new prop must be optional and backward compatible with all existing
+  RuntimePreviewDialog callers.
 - Reset load state on `open`, `previewUrl`, `device`, and `probeResult`
   changes.
 - If `probeResult.ok === false`, render the failure placeholder before the
@@ -80,6 +85,8 @@ if (loadFailure) {
   - probe failure does not render iframe;
   - token is redacted from visible text;
   - successful probe plus iframe load renders iframe;
+  - no-probe callers still use the existing timeout fallback and can still show
+    a successful iframe after `onLoad`;
   - legacy timeout fallback still renders the placeholder;
   - device switching updates iframe URL when no failure is active.
 - `tests/vitest/ui/page-editor-shell-wave.test.tsx`

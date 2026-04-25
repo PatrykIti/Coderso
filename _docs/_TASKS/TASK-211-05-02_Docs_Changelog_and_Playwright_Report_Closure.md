@@ -30,7 +30,7 @@ No child task files.
 - `_docs/CONTENT_LIST_UX.md` if shared notification adapter docs change.
 - `_docs/_TASKS/TASK-211*.md`
 - `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/<next>-2026-04-25-task-211-pages-editor-ux-followups.md`
+- `_docs/_CHANGELOG/<next>-<YYYY-MM-DD>-task-211-pages-editor-ux-followups.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Security Contract
