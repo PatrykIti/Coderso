@@ -28,14 +28,18 @@ confirmations are owned by `TASK-209-03`.
 - `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
 - new `core/admin/ui/custom-screens/CustomScreenTable.tsx`
 - new `core/admin/ui/custom-screens/CustomScreenFilters.tsx`
-- new `core/admin/ui/custom-screens/CustomScreenBulkActionsBar.tsx`
+- `core/admin/ui/custom-screens/CustomScreenBulkActionsBar.tsx` is owned by
+  `TASK-209-03-03`; this round should only reserve the header action slot that
+  lets the later bulk bar sit to the left of `New`.
 - new `core/admin/ui/custom-screens/CustomScreenCreateDrawer.tsx`
 - new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx`
 - `core/admin/services/userSettingsClient.ts` and
-  `core/services/settings/userSettingsService.ts` if the create drawer persists
-  `customScreens.openAfterCreate`.
-- `core/admin/ui/shared/useListPagination.ts`
-- `core/admin/ui/shared/ListPaginationFooter.tsx`
+  `core/services/settings/userSettingsService.ts` for the required
+  `customScreens.openAfterCreate` create preference.
+- `core/admin/ui/shared/useListPagination.ts` only if a shared pagination bug is
+  found; otherwise consume the existing helper.
+- `core/admin/ui/shared/ListPaginationFooter.tsx` only if a shared footer bug is
+  found; otherwise consume the existing footer.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - new mounted list suite, for example
   `tests/vitest/ui/custom-screens-list-wave.test.tsx`
@@ -56,6 +60,8 @@ confirmations are owned by `TASK-209-03`.
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-list-wave.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
@@ -74,3 +80,5 @@ confirmations are owned by `TASK-209-03`.
 3. Selection is scoped to visible rows and does not survive hidden filter/page
    changes.
 4. Existing builder and records links keep using canonical admin navigation.
+5. Bulk action execution and the concrete bulk bar component remain owned by
+   `TASK-209-03-03`, so this round does not run lifecycle/delete mutations.

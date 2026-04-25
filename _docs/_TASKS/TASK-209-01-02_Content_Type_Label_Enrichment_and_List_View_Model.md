@@ -67,6 +67,8 @@ type CustomScreenListRow = {
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - New focused view-model test if enrichment is extracted from the component.
 - Existing records/editor smoke:

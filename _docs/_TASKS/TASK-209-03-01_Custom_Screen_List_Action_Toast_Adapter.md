@@ -62,6 +62,8 @@ const customScreenListToasts = createListActionToastAdapter({
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
 - Custom Screens list mounted tests should assert emitted messages through a
   hoisted `sonner` mock.

@@ -57,6 +57,8 @@ and localStorage.
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`

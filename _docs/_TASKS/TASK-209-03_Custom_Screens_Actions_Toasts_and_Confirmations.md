@@ -53,6 +53,8 @@ branches in Custom Screens list code for the targeted list actions.
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-list-wave.test.tsx`
 - `bun test tests/integration/routes/customScreensRoutes.test.ts` only if route

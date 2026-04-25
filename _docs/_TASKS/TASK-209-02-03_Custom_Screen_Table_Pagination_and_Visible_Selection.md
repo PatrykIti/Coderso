@@ -26,8 +26,10 @@ No child task files.
 - new `core/admin/ui/custom-screens/CustomScreenTable.tsx`
 - new `core/admin/ui/custom-screens/CustomScreenRowActions.tsx`
 - `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
-- `core/admin/ui/shared/useListPagination.ts`
-- `core/admin/ui/shared/ListPaginationFooter.tsx`
+- `core/admin/ui/shared/useListPagination.ts` only if a shared pagination bug is
+  found; otherwise consume the existing helper.
+- `core/admin/ui/shared/ListPaginationFooter.tsx` only if a shared footer bug is
+  found; otherwise consume the existing footer.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx`
 
@@ -65,6 +67,8 @@ No child task files.
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - Table render tests for:
   - empty state,
   - missing content type fallback,

@@ -12,9 +12,10 @@
 ## Overview
 
 Keep the existing `AdminShell`/`PageHeader` route shape, but make the Custom
-Screens list header action match Pages: inline selected-row bulk controls render
-to the left of a compact `New` button, and `New` opens a list-owned create
-drawer instead of forcing users through a full blank builder page first.
+Screens list header action layout match Pages: the header must have the same
+inline slot where selected-row bulk controls will render in `TASK-209-03-03`,
+to the left of a compact `New` button. `New` opens a list-owned create drawer
+instead of forcing users through a full blank builder page first.
 
 The builder route remains the full editing surface. The create drawer only owns
 the minimum Custom Screen creation contract and then navigates to the builder
@@ -34,6 +35,8 @@ No child task files.
 - `core/services/settings/userSettingsService.ts`
 - `tests/vitest/admin/userSettingsClient.test.ts`
 - `tests/unit/settings/userSettingsService.test.ts`
+- `tests/integration/routes/userSettings.test.ts` if route-level user-settings
+  key behavior is expanded beyond the existing generic route wiring.
 - `_docs/CMS_API.md` user-settings key list.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx`
@@ -104,6 +107,8 @@ await createCustomScreen({
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - Mounted drawer test in `tests/vitest/ui/custom-screens-list-wave.test.tsx`
   covering open, submit success with navigation, submit success without
@@ -117,6 +122,7 @@ await createCustomScreen({
 ## Documentation Updates Required
 
 - `_docs/CONTENT_LIST_UX.md`
+- `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
@@ -128,3 +134,5 @@ await createCustomScreen({
 4. Open-after-create behavior is explicit and persisted separately from Pages.
 5. The drawer blocks submit until a valid content type is selected and guides
    users to the canonical Engine route when no content types exist.
+6. Bulk controls are not implemented in this leaf; the header slot is present
+   for `TASK-209-03-03` to attach the actual bulk action bar.

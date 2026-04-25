@@ -67,6 +67,8 @@ export function filterCustomScreenRows(
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - Unit test for `filterCustomScreenRows`.
 - Mounted list test covering search, status filter, content type filter, reset
   behavior, and filtered empty state.

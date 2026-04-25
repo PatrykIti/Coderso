@@ -33,11 +33,13 @@ No child task files.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts` if `customScreens.openAfterCreate` is added.
-- Run the user-settings service test if the persisted preference key is added
-  and `DATABASE_URL` is reachable:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
+- Run the user-settings service test for `customScreens.openAfterCreate` when
+  `DATABASE_URL` is reachable:
   - `set -a && source .env && set +a`
   - `bun test tests/unit/settings/userSettingsService.test.ts`
+- Run `bun test tests/integration/routes/userSettings.test.ts` if the
+  user-settings route test is expanded during the implementation.
 - Run `bun test tests/integration/routes/customScreensRoutes.test.ts` if any
   route, validation, permission, or error-mapping contract changed.
 - If a local dev server is available, verify `/admin/coderso/custom-screens`
@@ -73,7 +75,7 @@ No child task files.
 - `_docs/ADMIN_CACHE_MAP.md`
   - Keep Custom Screens cached API and cache-bus owners aligned.
 - `_docs/CMS_API.md`
-  - Add `customScreens.openAfterCreate` if the preference key is added.
+  - Add `customScreens.openAfterCreate`.
   - Keep the Custom Screens record summary aligned with the existing contract,
     including `showInSidebar`, `sidebarLabel`, and derived `capabilities`, even
     when endpoint paths do not change.

@@ -65,6 +65,8 @@ No child task files.
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - Mounted test covering:
   - Records and Edit links,
   - draft row shows Activate,

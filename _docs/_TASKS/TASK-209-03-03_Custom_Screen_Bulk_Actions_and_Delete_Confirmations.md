@@ -25,7 +25,8 @@ No child task files.
 - new `core/admin/ui/custom-screens/CustomScreenBulkActionsBar.tsx`
 - `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
 - `core/admin/ui/custom-screens/CustomScreenTable.tsx`
-- `core/admin/ui/shared/ConfirmActionDialog.tsx`
+- `core/admin/ui/shared/ConfirmActionDialog.tsx` only if a shared dialog bug is
+  found; otherwise consume the existing dialog.
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx`
 
 ## Implementation Checklist
@@ -64,6 +65,8 @@ No child task files.
 
 ## Testing Requirements
 
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - Mounted tests for:
   - selecting rows shows inline bulk bar,
   - visible select-all/indeterminate state,
