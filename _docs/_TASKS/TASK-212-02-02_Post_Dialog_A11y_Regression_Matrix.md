@@ -24,14 +24,32 @@ No child task files.
 
 ## Files to Change
 
-- `tests/vitest/ui/posts-create-drawer-a11y.test.tsx` if a focused suite is
-  clearer
-- `tests/vitest/ui/page-post-list-wave.test.tsx` if existing Posts list drawer
-  coverage already owns Create New Post
+- `tests/vitest/ui/posts-create-drawer-a11y.test.tsx` as the preferred focused
+  suite for real Create New Post sheet wiring
+- `tests/vitest/ui/page-post-list-wave.test.tsx` only if its existing sheet
+  mock is upgraded to model `role="dialog"`, `aria-labelledby`, and
+  `aria-describedby` the same way the shared Radix sheet primitives do
 - `tests/vitest/ui/post-hooks-and-drawers-wave.test.tsx` only for revision
-  regression smoke
+  regression smoke, and only with the same faithful sheet harness if asserting
+  ARIA id wiring
 
 ## Implementation Direction
+
+Use a fidelity harness for this regression. Prefer importing the real
+`@/components/ui/sheet` primitives in a focused happy-dom suite. If a mock is
+required to keep the test isolated, the mock must fail for the original bug:
+
+- `SheetContent` must render a `role="dialog"` node with `aria-labelledby` and
+  `aria-describedby`;
+- `SheetTitle` and `SheetDescription` must create real elements with the ids
+  referenced by the dialog;
+- rendering the description as a plain sibling paragraph must leave
+  `aria-describedby` missing or pointing at no element.
+
+Do not rely on the existing shallow sheet mocks from `page-post-list-wave` or
+`post-hooks-and-drawers-wave` unless they are upgraded first; those mocks render
+`SheetContent` as a plain `<div>` and cannot catch the missing-id regression
+from the Playwright replay.
 
 Create a focused helper assertion:
 
@@ -58,6 +76,8 @@ has its description from `TASK-204`.
   - `aria-describedby` is missing;
   - the id does not exist;
   - the description text is rendered only as an unbound paragraph.
+- Capture `console.warn`/`console.error` for this focused render and assert that
+  no Radix missing-description warning is emitted.
 - Optional smoke:
   - Revisions drawer description remains wired.
 

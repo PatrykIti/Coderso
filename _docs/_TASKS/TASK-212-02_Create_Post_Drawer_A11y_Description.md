@@ -27,9 +27,9 @@ primitive instead of a plain paragraph.
 ## Files to Change
 
 - `core/admin/ui/posts/PostsCreateDrawer.tsx`
-- `tests/vitest/ui/page-post-list-wave.test.tsx` if it already owns Posts list
-  drawer coverage
-- or new `tests/vitest/ui/posts-create-drawer-a11y.test.tsx`
+- new focused `tests/vitest/ui/posts-create-drawer-a11y.test.tsx`, or
+  `tests/vitest/ui/page-post-list-wave.test.tsx` only if its sheet mock is
+  upgraded to faithfully expose the Radix title/description relationship
 
 ## Implementation Direction
 
@@ -58,6 +58,14 @@ cover the contract.
 
 ## Testing Requirements
 
+- The a11y regression test must exercise the real `SheetContent` /
+  `SheetDescription` wiring, or a faithful test double that behaves like the
+  shared Radix sheet primitives:
+  - `SheetContent` renders a `role="dialog"` node;
+  - `SheetDescription` creates the element referenced by `aria-describedby`;
+  - a plain paragraph under `SheetTitle` does not satisfy the assertion.
+- Do not close this task from the current shallow sheet mocks that render
+  `SheetContent` as a plain `<div>` and `SheetDescription` as an unbound node.
 - Render Create New Post drawer open and assert:
   - `role="dialog"` has `aria-describedby`;
   - the referenced id exists in the DOM;
