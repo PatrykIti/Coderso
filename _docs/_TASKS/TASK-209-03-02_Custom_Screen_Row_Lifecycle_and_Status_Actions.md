@@ -46,6 +46,9 @@ No child task files.
 - After a status mutation succeeds:
   - refresh list in the background,
   - emit the adapter success toast,
+  - keep sidebar shortcut projection truthful: activating a shortcut-enabled
+    screen can make it visible in the admin nav, while moving it to draft must
+    make the list/nav treat the shortcut as configured but not visible,
   - keep selected rows stable unless the row becomes hidden by active filters,
     in which case selection trimming handles it.
 - On status mutation failure:
@@ -80,6 +83,7 @@ No child task files.
   - draft row shows Activate,
   - active row shows Move to draft,
   - status update success emits toast after refresh,
+  - status update updates the sidebar shortcut state for shortcut-enabled rows,
   - status update failure emits error toast and inline alert.
 
 ## Documentation Updates Required

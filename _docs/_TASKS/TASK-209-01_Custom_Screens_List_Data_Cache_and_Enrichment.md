@@ -54,6 +54,9 @@ with focused regression coverage.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - new mounted Custom Screens list suite if hook behavior cannot be proven by
   static render tests.
+- Shared consumer smoke tests when `contentTypesClient` cache semantics change:
+  - `tests/vitest/ui/content-type-list-parity.test.tsx`
+  - `tests/vitest/ui/entry-list-wave.test.tsx`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 
@@ -77,6 +80,10 @@ with focused regression coverage.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - New focused hook/list test if mount refresh options or content-type
   enrichment cannot be asserted in the existing suite.
+- If `contentTypesClient` is migrated to the shared TTL-backed memory cache,
+  also run targeted shared-consumer smoke tests:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-list-parity.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/entry-list-wave.test.tsx`
 
 ## Documentation Updates Required
 

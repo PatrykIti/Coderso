@@ -33,6 +33,8 @@ No child task files.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/contentTypesClient.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/content-type-list-parity.test.tsx` if `contentTypesClient` cache semantics changed.
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/entry-list-wave.test.tsx` if `contentTypesClient` cache semantics changed.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
 - Run the user-settings service test for `customScreens.openAfterCreate` when
@@ -40,7 +42,9 @@ No child task files.
   - `set -a && source .env && set +a`
   - `bun test tests/unit/settings/userSettingsService.test.ts`
 - Run `bun test tests/integration/routes/userSettings.test.ts` after adding the
-  `customScreens.openAfterCreate` route-boundary coverage.
+  `customScreens.openAfterCreate` route-boundary coverage. If that coverage
+  executes settings service reads/writes instead of registration-only assertions,
+  first load repo env vars with `set -a && source .env && set +a`.
 - Run `bun test tests/integration/routes/customScreensRoutes.test.ts` if any
   route, validation, permission, or error-mapping contract changed.
 - If a local dev server is available, verify `/admin/coderso/custom-screens`
@@ -56,6 +60,8 @@ No child task files.
   - bulk delete confirm,
   - toasts,
   - content-type label refresh after an Engine/content-type cache update.
+  - sidebar shortcut presentation for active shortcut-enabled, draft
+    shortcut-enabled, and non-shortcut screens.
 
 ## Security Contract
 

@@ -50,7 +50,9 @@ No child task files.
   - Status: token-backed badge for `active`/`draft`;
   - Content type: human-readable label with id fallback;
   - Mode: derived capability mode label;
-  - Sidebar: shortcut label or `Not shown`;
+  - Sidebar: `Visible`, `Configured after activation`, or `Not shown`, with
+    `screen.sidebarLabel ?? screen.name` shown only as label copy when a shortcut
+    is configured;
   - Updated;
   - Actions.
 - In this leaf the action cell must not execute status updates or deletes.
@@ -85,6 +87,8 @@ No child task files.
   - missing content type fallback,
   - active/draft badge labels,
   - sidebar shortcut display,
+  - draft shortcut-enabled rows display as configured after activation instead
+    of currently visible,
   - mode label display,
   - visible row selection and select-all behavior,
   - pagination footer range and page-size behavior,

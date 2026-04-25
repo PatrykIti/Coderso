@@ -46,6 +46,9 @@ No child task files.
   - refresh after mutations settle;
   - emit the adapter bulk summary;
   - set inline alert to the summary when any selected action fails.
+- Bulk activate/draft must preserve the shortcut contract for every affected
+  row: shortcut-enabled rows become nav-visible only after successful activation
+  and become configured-but-hidden after a successful draft transition.
 - Clear selection after bulk action completion using the same behavior chosen for
   Pages unless a Custom Screens-specific reason is documented in this task.
 - Trim selection when filters/pagination hide rows.
@@ -72,6 +75,8 @@ No child task files.
   - selecting rows shows inline bulk bar,
   - visible select-all/indeterminate state,
   - bulk activate success toast,
+  - bulk activate/draft updates shortcut-visible vs configured-after-activation
+    presentation for selected rows,
   - bulk draft partial failure toast plus inline message,
   - delete selection opens confirm dialog,
   - delete toast does not fire before confirmation,

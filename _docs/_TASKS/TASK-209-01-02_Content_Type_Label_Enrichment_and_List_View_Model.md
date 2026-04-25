@@ -34,6 +34,8 @@ type CustomScreenListRow = {
   contentTypeLabel: string;
   contentTypeSlug?: string;
   modeLabel: string;
+  sidebarShortcutLabel: string | null;
+  sidebarShortcutState: "visible" | "configured_after_activation" | "hidden";
   updatedAt: string;
 };
 ```
@@ -64,6 +66,13 @@ type CustomScreenListRow = {
   an update or invalidation.
 - Use `resolveCustomScreenCapabilities`/`screen.capabilities` for mode labels;
   do not duplicate capability logic in the list.
+- Derive sidebar shortcut presentation from the existing admin nav contract:
+  - `visible` when `screen.status === "active" && screen.showInSidebar`;
+  - `configured_after_activation` when `screen.status === "draft" &&
+    screen.showInSidebar`;
+  - `hidden` otherwise.
+  Use `screen.sidebarLabel ?? screen.name` only as display copy; do not persist
+  any derived shortcut state back to the record.
 - Keep mode copy deterministic:
   - `collection-only` -> `Collection`
   - `dashboard` -> `Dashboard`
@@ -96,6 +105,8 @@ type CustomScreenListRow = {
   rendered content-type label without mutating `CustomScreenRecord`.
 - Test the missing-content-type fallback so rows with only `contentTypeId`
   remain searchable, filterable, and renderable.
+- Test sidebar shortcut projection for active shortcut-enabled, draft
+  shortcut-enabled, and non-shortcut rows.
 - Add or extend `contentTypesClient` coverage proving expired module memory is
   cleared before storage/network fallback and storage updates are visible after
   the shared list TTL expires.

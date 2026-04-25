@@ -105,6 +105,10 @@ created first.
 - Row routes remain:
   - builder: `/admin/coderso/custom-screens/:id`
   - records: `/admin/coderso/custom-screens/:id/entries`
+- Sidebar shortcut visibility is derived from the existing contract:
+  `status === "active" && showInSidebar === true`. Draft screens with
+  `showInSidebar=true` are configured for the sidebar but must not be presented
+  as currently visible in the admin nav.
 - Content-type labels come from `contentTypesClient`, but screen persistence
   keeps the existing `contentTypeId` value. The list must not rewrite screen
   records into a new denormalized API shape unless a later backend task
@@ -129,6 +133,9 @@ created first.
 3. The table uses the Pages table behavior but Custom Screens columns:
    checkbox, screen, status, content type, mode/capabilities, sidebar shortcut,
    updated, actions.
+   The sidebar shortcut column must reflect the derived nav visibility state:
+   shown for active shortcut-enabled screens, configured after activation for
+   draft shortcut-enabled screens, and not shown otherwise.
 4. Row actions are contract-specific:
    - Records,
    - Edit,
@@ -279,3 +286,5 @@ created first.
    service/client contract.
 8. Content-type label changes from Engine cache events are reflected in the
    Custom Screens list without requiring a full page reload.
+9. Status transitions and bulk status actions keep the sidebar shortcut
+   projection truthful for the existing `active && showInSidebar` nav rule.

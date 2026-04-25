@@ -55,11 +55,20 @@ No child task files.
   - optional sidebar shortcut toggle and sidebar label,
   - open-after-create checkbox/persistence using a dedicated
     `customScreens.openAfterCreate` user setting.
+- The content-type select mirrors the existing builder contract: use the fetched
+  `contentTypesClient` options as-is and do not filter out draft content types
+  unless a separate Engine/content-type contract explicitly changes that rule.
+- When a draft screen has the sidebar shortcut enabled, the drawer/list copy must
+  make clear that the shortcut is configured but appears in the admin nav only
+  after the screen is active.
 - Add `customScreens.openAfterCreate` to both user-settings owners before the
   drawer calls `setUserSetting`:
   - `core/services/settings/userSettingsService.ts`
   - `core/admin/services/userSettingsClient.ts`
   - default value: `true`, matching Pages' open-after-create behavior.
+- Update typed `UserSettings` mocks/fixtures across affected Vitest suites so
+  they include `customScreens.openAfterCreate`; do not loosen the type or return
+  partial settings only to satisfy tests.
 - Update user-settings service/client tests and `_docs/CMS_API.md` so the new
   key is typed, validated as boolean, returned by `GET /user-settings`, and
   writable through `PATCH /user-settings/customScreens.openAfterCreate`.
@@ -126,7 +135,10 @@ await createCustomScreen({
   navigation, no-content-type disabled submit, preference toggle persistence,
   and rejected create mutation.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts`
-- `bun test tests/integration/routes/userSettings.test.ts`
+- If the route test executes user-settings service reads/writes for the new key:
+  - `set -a && source .env && set +a`
+  - `bun test tests/integration/routes/userSettings.test.ts`
+  If it remains registration-only, note that it does not prove key validation.
 - If `DATABASE_URL` is reachable:
   - `set -a && source .env && set +a`
   - `bun test tests/unit/settings/userSettingsService.test.ts`
