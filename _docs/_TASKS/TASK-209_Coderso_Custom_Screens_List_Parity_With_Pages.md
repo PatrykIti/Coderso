@@ -116,7 +116,9 @@ created first.
 2. The list has Custom Screens-specific filters:
    - search by screen name, sidebar label, and content-type label/id;
    - status filter: all, active, draft;
-   - content-type filter when content types are available.
+   - content-type filter when content types are available, with stable
+     `contentTypeId` fallback options for rows whose content type label cannot
+     be resolved.
 3. The table uses the Pages table behavior but Custom Screens columns:
    checkbox, screen, status, content type, mode/capabilities, sidebar shortcut,
    updated, actions.
@@ -143,7 +145,9 @@ created first.
    cache hydrate first, background revalidate when cache exists, foreground load
    when cache is absent, TTL-backed module memory for list rows, cache bus
    updates after mutations, content-type label refresh on `contentTypes:list`,
-   and prefetch warmup for custom screens plus content types.
+   and prefetch warmup for custom screens plus content types. The label
+   projection must not trust stale module-level content-type memory beyond the
+   shared list TTL.
 9. The implementation must preserve builder, records workflow, sidebar shortcut
    nav, assistant active-surface context, and existing custom-screen API schemas.
 

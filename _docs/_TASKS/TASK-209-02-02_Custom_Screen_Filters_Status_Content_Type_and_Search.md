@@ -45,7 +45,8 @@ export function filterCustomScreenRows(
 - Filter controls:
   - search input with icon and aria label,
   - status select: all, active, draft,
-  - content type select: all plus available content types.
+  - content type select: all plus available content types and any row-derived
+    missing `contentTypeId` fallback options.
 - Reset pagination through the `useListPagination` `resetKey` when any filter
   changes.
 - Trim hidden selected rows after filters change.
@@ -74,6 +75,8 @@ export function filterCustomScreenRows(
 - Unit test for `filterCustomScreenRows`.
 - Mounted list test covering search, status filter, content type filter, reset
   behavior, and filtered empty state.
+- Include a fallback content-type filter case for a row whose label is missing
+  but whose stable `contentTypeId` is still present.
 
 ## Documentation Updates Required
 
@@ -88,3 +91,5 @@ export function filterCustomScreenRows(
 2. Status and content-type filters combine deterministically with search.
 3. Filter changes reset pagination and trim hidden selections.
 4. Empty states distinguish true empty data from filtered-empty data.
+5. Missing content-type labels do not remove rows from the content-type filter
+   model.

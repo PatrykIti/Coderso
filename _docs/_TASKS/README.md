@@ -84,7 +84,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-209-02-02 | Custom Screen Filters for Search, Status, and Content Type | High | Medium | Technical leaf: local search/status/content-type filters with pagination reset and selection trim |
 | TASK-209-02-03 | Custom Screen Table, Pagination, and Visible Selection | High | Medium | Technical leaf: extracted table, row metadata, shared pagination footer, and visible selected ids |
 | TASK-209-03 | Custom Screens Actions, Toasts, and Confirmations | High | Large | Add shared toasts, row status lifecycle actions, and confirmed single/bulk destructive flows |
-| TASK-209-03-01 | Custom Screen List Action Toast Adapter | High | Small | Technical leaf: resource adapter for create/activate/deactivate/delete using shared list-action toasts |
+| TASK-209-03-01 | Custom Screen List Action Toast Adapter | High | Small | Technical leaf: resource adapter for create/activate/move-to-draft/delete using shared list-action toasts |
 | TASK-209-03-02 | Custom Screen Row Lifecycle and Status Actions | High | Medium | Technical leaf: Records/Edit/Activate/Move-to-draft/Delete actions without adding preview or duplicate |
 | TASK-209-03-03 | Custom Screen Bulk Actions and Delete Confirmations | High | Medium | Technical leaf: inline bulk activate/draft/delete, partial-failure feedback, and ConfirmActionDialog gating |
 | TASK-209-04 | QA, Docs, and Closure | Medium | Medium | Validation, Content List UX/Admin Cache docs, changelog, and task board closure for TASK-209 family |

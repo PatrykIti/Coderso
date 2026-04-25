@@ -45,6 +45,9 @@ type CustomScreenListRow = {
   - revalidate through `listContentTypesCached({ force })` only, using
     foreground loading only when no cached labels exist and background refresh
     when cached labels already hydrated the list;
+  - when cached labels exist, the background revalidation path must still bypass
+    stale module memory, either by forcing the cached client request or by
+    updating `contentTypesClient` to use the shared memory-backed TTL envelope;
   - do not extend `contentTypesClient` with a `background` option for this
     task. Background is UI loading-state semantics in the existing Pages/cache
     pattern, while cached service clients own cache reads, request de-dupe, and
@@ -62,6 +65,10 @@ type CustomScreenListRow = {
   - `collection-only` -> `Collection`
   - `dashboard` -> `Dashboard`
   - `editor` -> `Editor`
+- Build content-type filter options from the enriched rows plus fetched content
+  types. If a screen references a missing content type, expose its stable
+  `contentTypeId` as the option label/value instead of hiding the row from the
+  filter model.
 - Keep `CustomScreenRecord` as the API/client owner. The view model is a UI
   projection only.
 
@@ -83,6 +90,8 @@ type CustomScreenListRow = {
 - New focused view-model test if enrichment is extracted from the component.
 - Mounted list test proving a `contentTypes:list` cache-bus event refreshes the
   rendered content-type label without mutating `CustomScreenRecord`.
+- Test the missing-content-type fallback so rows with only `contentTypeId`
+  remain searchable, filterable, and renderable.
 - Existing records/editor smoke:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
 
@@ -103,3 +112,5 @@ type CustomScreenListRow = {
    `CustomScreenRecord`.
 4. The API response and service contract remain unchanged.
 5. Content-type cache-bus updates refresh visible labels and filter options.
+6. Background label refresh cannot keep serving a module-memory content-type
+   list after `cacheTtlMs.list` has expired.

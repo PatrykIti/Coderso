@@ -38,8 +38,9 @@ or persist the labels.
 
 - `core/admin/ui/custom-screens/hooks/useCustomScreens.ts`
 - `core/admin/services/customScreensClient.ts`
-- `core/admin/services/contentTypesClient.ts` only if a missing cached helper is
-  discovered.
+- `core/admin/services/contentTypesClient.ts` only if the label projection
+  cannot otherwise prove TTL-respected content-type reads from existing cached
+  helpers.
 - `core/admin/utils/adminPrefetch.ts`
 - new `tests/vitest/admin/customScreensClient.test.ts` or equivalent focused
   cache-client suite.
@@ -87,4 +88,6 @@ or persist the labels.
    first screen without a second foreground content-type label load.
 4. Cache bus events still refresh sidebar shortcuts, list rows, and
    content-type label projections.
-5. No API route or schema changes are introduced by this data preparation round.
+5. Content-type labels used by the list do not come from stale module memory
+   that outlives `cacheTtlMs.list`.
+6. No API route or schema changes are introduced by this data preparation round.
