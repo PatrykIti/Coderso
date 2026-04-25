@@ -46,10 +46,15 @@ refresh({ force?: boolean; background?: boolean })
   list back into the foreground loading placeholder after cached rows are shown.
 - Keep `cacheKeys.customScreensList` subscription, but refresh with
   `{ force: true, background: true }` on cache-bus events.
-- Audit `customScreensClient` memory caching. If module memory can outlive the
-  shared TTL, migrate the list cache to `createMemoryBackedLocalCache` like
-  Pages or add explicit test proof that the existing cache cannot hide stale
-  localStorage data.
+- Migrate `customScreensClient` list caching to `createMemoryBackedLocalCache`
+  like Pages/Posts/Menus. The current module-level `cachedScreens` value can
+  outlive the shared TTL and hide expired or externally patched localStorage
+  data, so this is part of the fix rather than an optional audit.
+- Add cache tests proving:
+  - fresh module memory still hydrates the list immediately;
+  - expired module memory is cleared before storage/network fallback;
+  - storage changes from another cache owner are visible after the in-memory
+    envelope expires or after the cache-bus path forces a refresh.
 - Update `core/admin/utils/adminPrefetch.ts` so the Custom Screens route warms
   the first-screen data:
 
@@ -78,6 +83,7 @@ refresh({ force?: boolean; background?: boolean })
 
 ## Testing Requirements
 
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - Focused test for the mount refresh policy through the shared helper or a
@@ -96,3 +102,5 @@ refresh({ force?: boolean; background?: boolean })
 2. Mount without cache still performs a foreground list load.
 3. Cache-bus invalidation refreshes in the background after hydration.
 4. Custom Screens prefetch warms both screens and content types.
+5. Expired module-level Custom Screens list memory cannot bypass
+   `cacheTtlMs.list`.

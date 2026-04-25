@@ -62,6 +62,10 @@ created first.
 - `useCustomScreens` always calls `refresh(true)` on mount, even when cache is
   present, while Pages uses cache-present/background and cache-missing/foreground
   refresh semantics.
+- `customScreensClient` keeps module-level `cachedScreens` rows without the
+  shared `createMemoryBackedLocalCache` TTL envelope used by Pages/Posts/Menus,
+  so expired or externally patched storage can be hidden by stale memory during
+  long-lived admin sessions.
 - The list fetches content types with `listContentTypesCached({ force: true })`
   only from the page component. The Custom Screens list needs the content-type
   labels for filtering/table/create, but this should be cached-first and
@@ -128,8 +132,9 @@ created first.
    Screen delete should run directly from a dropdown click.
 8. Cache behavior follows the shared admin cache contract:
    cache hydrate first, background revalidate when cache exists, foreground load
-   when cache is absent, cache bus updates after mutations, and prefetch warmup
-   for custom screens plus content types.
+   when cache is absent, TTL-backed module memory for list rows, cache bus
+   updates after mutations, and prefetch warmup for custom screens plus content
+   types.
 9. The implementation must preserve builder, records workflow, sidebar shortcut
    nav, assistant active-surface context, and existing custom-screen API schemas.
 
@@ -200,6 +205,7 @@ created first.
   - new or expanded mounted list suite, for example
     `tests/vitest/ui/custom-screens-list-wave.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPaths.test.ts` if any links or aliases change.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/userSettingsClient.test.ts` if `customScreens.openAfterCreate` is added.
@@ -231,7 +237,7 @@ created first.
    actions.
 2. Cache-present navigation renders cached screens immediately and refreshes in
    the background; cache-missing navigation shows a bounded foreground loading
-   state.
+   state; expired module memory cannot keep serving stale Custom Screens rows.
 3. Search/status/content-type filters reset pagination and trim hidden
    selections.
 4. Row delete and bulk delete cannot run without the shared confirmation dialog.

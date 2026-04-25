@@ -19,6 +19,11 @@ That is not the shared admin cache behavior used by Pages. This round aligns
 Custom Screens cache hydration, cache-bus refreshes, prefetch warmup, and
 content-type label enrichment before the table/actions work lands.
 
+The client cache also needs to match the current cache contract: because
+`customScreensClient` keeps module-level list memory, it must use the shared
+`createMemoryBackedLocalCache` envelope so the list TTL applies to both memory
+and localStorage.
+
 ## Sub-Tasks
 
 - [ ] TASK-209-01-01: Custom Screens Mount Refresh and Prefetch Parity
@@ -31,6 +36,8 @@ content-type label enrichment before the table/actions work lands.
 - `core/admin/services/contentTypesClient.ts` only if a missing cached helper is
   discovered.
 - `core/admin/utils/adminPrefetch.ts`
+- new `tests/vitest/admin/customScreensClient.test.ts` or equivalent focused
+  cache-client suite.
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - new mounted Custom Screens list suite if hook behavior cannot be proven by
@@ -51,6 +58,7 @@ content-type label enrichment before the table/actions work lands.
 ## Testing Requirements
 
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/customScreensClient.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - New focused hook/list test if mount refresh options or content-type
   enrichment cannot be asserted in the existing suite.
@@ -66,7 +74,9 @@ content-type label enrichment before the table/actions work lands.
 
 1. Custom Screens cache hydrate/background-refresh behavior matches the Pages
    list contract.
-2. Prefetch for `/admin/coderso/custom-screens` warms the data needed by the
+2. Custom Screens list memory cannot outlive `cacheTtlMs.list`; expired memory
+   is cleared before storage/network fallback.
+3. Prefetch for `/admin/coderso/custom-screens` warms the data needed by the
    first screen without a second foreground content-type label load.
-3. Cache bus events still refresh sidebar shortcuts and list rows.
-4. No API route or schema changes are introduced by this data preparation round.
+4. Cache bus events still refresh sidebar shortcuts and list rows.
+5. No API route or schema changes are introduced by this data preparation round.
