@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Eye, History, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -448,7 +448,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     };
   }, [highlightedBlockId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
       typeof document === "undefined" ||
       typeof window === "undefined" ||
@@ -457,11 +457,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       return;
     }
 
-    const escapedId =
-      typeof CSS !== "undefined" && typeof CSS.escape === "function"
-        ? CSS.escape(pendingScrollBlockId)
-        : pendingScrollBlockId.replace(/["\\]/g, "\\$&");
-
+    const escapedId = pendingScrollBlockId.replace(/["\\]/g, "\\$&");
     const target = document.querySelector(
       `[data-block-id="${escapedId}"]`
     ) as HTMLElement | null;

@@ -215,6 +215,23 @@ vi.mock("@/ui/assistant/activeSurfaceContext", () => ({
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
+let elementScrollIntoViewDescriptor: PropertyDescriptor | undefined;
+let htmlElementScrollIntoViewDescriptor: PropertyDescriptor | undefined;
+
+const asRandomUuid = (value: `${string}-${string}-${string}-${string}-${string}`) =>
+  value;
+
+const restoreScrollIntoView = (
+  prototype: Element | HTMLElement,
+  descriptor: PropertyDescriptor | undefined
+) => {
+  if (descriptor) {
+    Object.defineProperty(prototype, "scrollIntoView", descriptor);
+    return;
+  }
+
+  delete (prototype as { scrollIntoView?: Element["scrollIntoView"] }).scrollIntoView;
+};
 
 const createPage = (overrides: Partial<PageDetail> = {}): PageDetail => ({
   id: "page-1",
@@ -255,36 +272,44 @@ const flush = async () => {
 
 beforeEach(() => {
   pageEditorState.reset();
+  const stableUuids = [
+    asRandomUuid("aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa"),
+    asRandomUuid("bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbbbb"),
+    asRandomUuid("1ccccccc-cccc-4ccc-accc-cccccccccccc"),
+  ];
+  let randomUuidIndex = 0;
+  vi.spyOn(crypto, "randomUUID").mockImplementation(
+    () =>
+      stableUuids[randomUuidIndex++] ??
+      asRandomUuid("dddddddd-dddd-4ddd-addd-dddddddddddd")
+  );
   pageEditorState.cachedPage = createPage();
   pageEditorState.currentPage = createPage();
   vi.useFakeTimers();
   scrollIntoViewSpy = vi.fn();
+  elementScrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    "scrollIntoView"
+  );
+  htmlElementScrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "scrollIntoView"
+  );
   Object.defineProperty(Element.prototype, "scrollIntoView", {
     configurable: true,
     writable: true,
     value: scrollIntoViewSpy,
   });
-  Object.defineProperty(window, "requestAnimationFrame", {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
     configurable: true,
     writable: true,
-    value: (callback: FrameRequestCallback) => {
-      callback(0);
-      return 1;
-    },
+    value: scrollIntoViewSpy,
   });
-  Object.defineProperty(window, "cancelAnimationFrame", {
-    configurable: true,
-    writable: true,
-    value: () => undefined,
-  });
-  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-    callback(0);
-    return 1;
-  });
-  vi.stubGlobal("cancelAnimationFrame", () => undefined);
 });
 
 afterEach(() => {
+  restoreScrollIntoView(Element.prototype, elementScrollIntoViewDescriptor);
+  restoreScrollIntoView(HTMLElement.prototype, htmlElementScrollIntoViewDescriptor);
   vi.restoreAllMocks();
   vi.useRealTimers();
   document.body.innerHTML = "";
