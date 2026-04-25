@@ -457,3 +457,122 @@ Wszystkie 4 pozycje z TASK-211 (UX-1, UX-2, UX-5, UX-8) **potwierdzone fixed na 
 
 - `screenshots/2026-04-25/r2-preview-503.png` — round 1 stan (przed restartem servera): preview dialog pokazywał "Invalid payload" w czerwonej karcie (dziś ujawnione jako AJV stale schema, fixed po restartcie).
 - `screenshots/2026-04-25/r2-after-publish-toast.png` — stan po publish (badge Published, brak 403, dev server po restartcie).
+
+---
+
+## Deep editor test — pełny flow widget → konfiguracja → preview (2026-04-25)
+
+**Tester:** Claude (Playwright CLI)
+**Strona testowa:** "Deep Editor Test Page" (`/deep-editor-test-page`), świeżo utworzona przez Create dialog
+**Cel:** zweryfikować end-to-end flow: dodanie kilku różnych widgetów, konfiguracja przez wizard, reorder/duplicate/delete, save+publish, weryfikacja że dane wprowadzone w admin renderują się poprawnie w runtime preview.
+
+### Przebieg testu
+
+#### 1. Dodanie i konfiguracja Hero
+
+| Pole | Wartość testowa |
+|---|---|
+| Headline | `QA Hero Headline 2026` |
+| Subhead | `QA subhead testowy ze znakami specjalnymi: ąęłóżźć / & < > '` (8 znaków diakrytycznych + 4 znaki HTML-special) |
+| Primary CTA Label | `QA Primary CTA` |
+| Primary CTA URL | `/qa-primary-link` |
+| Secondary CTA Label | `QA Secondary CTA` |
+| Secondary CTA URL | `/qa-secondary-link` |
+
+**Live canvas preview**: headline natychmiast pojawia się w canvas po kliknięciu poza pole tekstowe (bez submit / save). Pełna responsywność edytora.
+
+#### 2. Dodanie Feature Grid
+
+| Pole | Wartość |
+|---|---|
+| Section title | `QA Features Section` |
+| Section description | `QA opis sekcji feature grid - test renderowania` |
+| Card 1 / 2 / 3 | `QA Card Alpha` / `QA Card Beta` / `QA Card Gamma` |
+| Cards count | 3 (default) |
+
+#### 3. Dodanie Stats KPI
+
+| Pole | Wartość |
+|---|---|
+| Metric 1 value | `777` |
+| Metric 2 value | `42%` |
+| Metric 3 value | `9001` |
+| Metric count | 4 (default) — Metric 4 nie jest exposed w wizard, zostaje default `45%` |
+
+**Note:** Metric count = 4 ale wizard pokazuje tylko 3 textboxy → 4. metric pozostaje z presetem. To prawdopodobnie zamierzone (zaawansowana konfiguracja w osobnej sekcji), ale **drobny UX hint:** wizard mógłby zsynchronizować liczbę textboxów z `Metric count` (lub zmienić domyślny count na 3 jeśli wizard exponuje 3).
+
+#### 4. Dodanie CTA Banner
+
+| Pole | Wartość |
+|---|---|
+| Headline | `QA CTA: Wypróbuj nasz system!` |
+| Primary CTA label | `Zaczynamy QA` |
+| Secondary CTA | (default `Contact sales` — nie exposed w wizard) |
+
+#### 5. Reorder / duplicate / delete
+
+| Akcja | Wynik |
+|---|---|
+| Move CTA Banner up | Order: Hero / Feature Grid / **CTA** / Stats — działa ✓ |
+| Move CTA Banner down | Order przywrócony do Hero / Feature Grid / Stats / CTA ✓ |
+| Duplicate Hero | Lista: 2× Hero, łącznie 5 bloków ✓ |
+| Delete (zduplikowany Hero) | Lista wraca do 4 bloków, oryginalny Hero zachowany z custom data ✓ |
+| `Move X up` na pierwszym bloku | `[disabled]` ✓ |
+| `Move X down` na ostatnim bloku | `[disabled]` ✓ |
+
+#### 6. Save + Publish
+
+| Akcja | Sonner toast (czas pojawienia) | API |
+|---|---|---|
+| Save draft | `Draft saved.` (~734 ms) | `PATCH /pages/{id}` → 200 OK |
+| Publish | `Page published.` (~2498 ms) | `POST /pages/{id}/publish` → 200 OK |
+
+#### 7. Runtime preview — weryfikacja renderowania
+
+Preview otwarty w nowej karcie (`http://localhost:3000/preview?type=page&token=…&path=/deep-editor-test-page&device=desktop`).
+
+**Hero (✓):**
+- `<h1>QA Hero Headline 2026</h1>`
+- Subhead literal: `QA subhead testowy ze znakami specjalnymi: ąęłóżźć / & < > '` — wszystkie 8 polskich znaków diakrytycznych obecne, znaki HTML-special (`<`, `>`, `&`) escape'owane jako tekst (nie sparsowane jako tagi) → **brak XSS**.
+- Buttons: `QA Primary CTA` (primary blue), `QA Secondary CTA` (outline)
+
+**Feature Grid (✓):**
+- Eyebrow: `FEATURE HIGHLIGHTS`
+- Heading: `QA Features Section`
+- Description: `QA opis sekcji feature grid - test renderowania`
+- 3 cards z customowymi labelami (`QA Card Alpha/Beta/Gamma`) + default subtitle/CTA per card
+
+**Stats KPI (✓):**
+- Heading: `Proof in numbers` (default — nie zmieniany)
+- 4 metriki: **777** / **42%** / **9001** / `45%` (ostatnia default — Metric 4 nie exposed w wizard)
+- Każda metryka ma label (Projects launched / Platform uptime / Faster iteration / Higher engagement) i opis (default presetowy)
+
+**CTA Banner (✓):**
+- Eyebrow: `LIMITED OFFER`
+- Heading: `QA CTA: Wypróbuj nasz system!`
+- Body: `Use reusable sections and publish faster with consistent design.` (default)
+- Primary CTA: `Zaczynamy QA`
+- Secondary CTA: `Contact sales` (default)
+
+### Wnioski
+
+**Co działa świetnie:**
+- ✓ End-to-end flow (create page → add widgets → wizard → save → publish → preview) bez tarcia.
+- ✓ Live preview w canvas reaguje natychmiast na każdą edycję pola wizard.
+- ✓ Polskie znaki diakrytyczne oraz znaki HTML-special (`<`, `>`, `&`) renderują się poprawnie i bezpiecznie (escape'owane).
+- ✓ Reorder, duplicate, delete działają deterministycznie z poprawnymi stanami `disabled` na granicach.
+- ✓ Sonner toasty po Save (`Draft saved.`) i Publish (`Page published.`) — TASK-211 actionToasts integracja.
+- ✓ Runtime preview pokazuje finalny rendering dokładnie taki, jak skonfigurowany — **żadnych rozbieżności między admin canvas a runtime preview** dla testowanych pól.
+- ✓ Bezpieczeństwo: HTML w subhead nie jest re-parsowany jako kod, escape default.
+
+**Drobne sugestie UX (nie buggi):**
+- Stats KPI wizard exposeuje 3 textboxes ale Metric count default = 4 → 4. wartość zostaje "Higher engagement: 45%" z presetu. Sync między `Metric count` a liczbą exposed textboxes byłby spójniejszy.
+- CTA Banner wizard exposeuje tylko Primary CTA label — Secondary CTA pozostaje preset "Contact sales". Może warto exposnąć też Secondary w wizard albo dodać hint że jest zarządzany w Visual/Advanced.
+
+**Buggi:** żadnych nowych. Pages editor po TASK-211 + CSRF fix jest production-ready dla tego flow.
+
+### Screeny (deep editor test)
+
+- `screenshots/2026-04-25/deep-01-canvas-4-widgets.png` — admin canvas z 4 skonfigurowanymi widgetami.
+- `screenshots/2026-04-25/deep-02-preview.png` — Runtime preview dialog (iframe) — Hero z custom data + początek Feature Grid.
+- `screenshots/2026-04-25/deep-03-preview-full.png` — pełna strona w nowej karcie (1280×1800), wszystkie 4 widgety widoczne z custom data: QA Hero, QA Features Section, Proof in numbers (777/42%/9001/45%), QA CTA: Wypróbuj nasz system! / Zaczynamy QA.
