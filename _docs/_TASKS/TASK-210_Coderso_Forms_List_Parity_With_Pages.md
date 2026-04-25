@@ -237,6 +237,9 @@ a backward-compatible alias through `adminPaths`.
     arbitrary strings at the schema boundary.
   - hard-delete conflicts for retained submissions/action runs must map to a
     stable machine-readable 409 response instead of leaking raw database errors.
+  - if TASK-210 wraps `PUT /forms/:id/fields`, field-write payloads must reject
+    unknown top-level field input keys; flexible per-field extension data stays
+    inside `settings`.
   - if TASK-210 wraps field-write or public-submission service errors in the
     Forms mapper, existing field and payload validation errors must map to stable
     400 responses instead of raw internal errors.
@@ -255,10 +258,13 @@ a backward-compatible alias through `adminPaths`.
    stable cached list.
 3. Add row lifecycle actions and delete confirmations through existing
    `updateForm` / `deleteForm` client contracts.
-4. Add visible-scope bulk actions and partial-failure handling.
-5. Align create drawer behavior with Pages, including open-after-create.
-6. Wire shared list-action toasts and route/domain error mapping.
-7. Close with targeted Vitest/Bun tests, docs, changelog, and board updates.
+4. Land the Forms route/domain error mapping and strict schema hardening before
+   destructive row/bulk delete behavior claims retained-history conflict
+   acceptance.
+5. Add visible-scope bulk actions and partial-failure handling.
+6. Align create drawer behavior with Pages, including open-after-create.
+7. Wire shared list-action toasts on top of the settled mutation/error contract.
+8. Close with targeted Vitest/Bun tests, docs, changelog, and board updates.
 
 ## Testing Requirements
 

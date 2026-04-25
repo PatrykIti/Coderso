@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + Admin/UI + Toasts
 **Estimated Effort:** Medium
-**Dependencies:** TASK-210-03-02, TASK-210-04-02, TASK-210-05-01, TASK-208
+**Dependencies:** TASK-210-03-02, TASK-210-04-02, TASK-210-05-01, TASK-210-06-02, TASK-208
 **Status:** To Do
 
 ---

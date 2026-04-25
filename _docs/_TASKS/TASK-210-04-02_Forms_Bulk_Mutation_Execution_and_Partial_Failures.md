@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-210-04-01, TASK-210-03-02
+**Dependencies:** TASK-210-04-01, TASK-210-03-02, TASK-210-06-02
 **Status:** To Do
 
 ---
@@ -13,6 +13,10 @@
 
 Execute Forms bulk lifecycle/delete actions with truthful full-success and
 partial-failure handling.
+
+This leaf consumes the stable retained-history conflict from TASK-210-06-02.
+Treat `form_delete_restricted` 409 responses as per-row failures and do not
+base acceptance on raw constraint strings.
 
 ## Sub-Tasks
 

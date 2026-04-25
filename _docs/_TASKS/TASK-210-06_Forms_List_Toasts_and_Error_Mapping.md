@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + Admin/UI + API Contract
 **Estimated Effort:** Large
-**Dependencies:** TASK-210-03, TASK-210-04, TASK-210-05, TASK-208
+**Dependencies:** TASK-210-01, TASK-208
 **Status:** To Do
 
 ---
@@ -20,6 +20,11 @@ Forms-specific actions. The list should keep inline errors for context, but
 floating top-right toast timing must match Pages: emit after the mutation
 settles, and emit delete feedback only after the user confirms the destructive
 dialog.
+
+The route/error-mapping leaf is an early prerequisite for row and bulk delete
+conflict acceptance. Toast wiring still depends on the UI mutation leaves, but
+`form_delete_restricted` and strict schema hardening should land before those
+UI leaves claim retained-history delete behavior.
 
 ## Sub-Tasks
 
@@ -62,6 +67,9 @@ dialog.
   constraint errors as a last-resort mapper fallback only.
 - [ ] Tighten `formCreateSchema` and `formUpdateSchema` status validation to
   enum values `draft | published | archived`.
+- [ ] Tighten field-write validation when the mapper wraps
+  `PUT /forms/:id/fields`: reject unknown top-level field input keys while
+  keeping flexible per-field data inside `settings`.
 - [ ] Keep public submission validation and error behavior unchanged unless a
   test proves it needs a route-boundary mapping fix.
 
@@ -105,6 +113,9 @@ dialog.
     literals in route/admin modules;
   - status must be enum-validated at the route boundary;
   - `submissionAccess` remains `public | internal`.
+  - field-write payloads reject unknown top-level field input keys if the
+    mapper wraps `PUT /forms/:id/fields`; arbitrary per-field config remains
+    inside `settings`.
 - Anti-abuse:
   - no new public write path;
   - public submissions keep nonce plus optional reCAPTCHA behavior;
@@ -152,6 +163,9 @@ export const mapFormError = (error: unknown) => {
   - known Forms domain errors map to stable API errors/statuses;
   - create/update reject unknown fields;
   - create/update reject unknown status values;
+  - field-write rejects unknown top-level field input keys while preserving
+    `settings` as the flexible extension object when the mapper wraps
+    `PUT /forms/:id/fields`;
   - field-write validation errors map to stable 400 responses if the mapper wraps
     `PUT /forms/:id/fields`;
   - delete with retained submissions/action diagnostics maps to a stable 409 and

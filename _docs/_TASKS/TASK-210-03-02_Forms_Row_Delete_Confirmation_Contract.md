@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + Admin/UI + Destructive UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-210-03-01, TASK-205, TASK-208
+**Dependencies:** TASK-210-03-01, TASK-210-06-02, TASK-205, TASK-208
 **Status:** To Do
 
 ---
@@ -14,6 +14,10 @@
 Replace immediate Forms row deletion with the shared `ConfirmActionDialog`.
 Delete feedback must happen only after the user confirms and the mutation
 settles.
+
+This leaf depends on the backend retained-history error contract from
+TASK-210-06-02. Do not close the conflict-copy assertions against raw
+foreign-key/database errors.
 
 ## Sub-Tasks
 

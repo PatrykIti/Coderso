@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + API Contract + Security
 **Estimated Effort:** Medium
-**Dependencies:** TASK-210-06, TASK-038, TASK-056
+**Dependencies:** TASK-210-01, TASK-038, TASK-056
 **Status:** To Do
 
 ---
@@ -13,6 +13,11 @@
 
 Tighten the Forms API route boundary so list mutations can rely on stable,
 machine-readable errors and strict status validation.
+
+This leaf is intentionally an early backend prerequisite for TASK-210 row and
+bulk delete work. Land it before UI tasks claim retained-history conflict
+handling, otherwise those UI tasks can only test against unstable database
+constraint failures.
 
 ## Sub-Tasks
 
@@ -45,6 +50,10 @@ machine-readable errors and strict status validation.
   `db/client`.
 - [ ] Tighten `formCreateSchema.status` and `formUpdateSchema.status` to
   `enum: ["draft", "published", "archived"]`.
+- [ ] Tighten `formFieldsSchema` item validation when the mapper wraps
+  `PUT /forms/:id/fields`: set unknown top-level field input keys to reject,
+  keep `settings` as the flexible object for field-specific extension data, and
+  preserve existing documented field keys.
 - [ ] Keep `submissionAccess` enum validation as `public | internal`.
 - [ ] Do not change public submission nonce/captcha/access behavior.
 
@@ -85,9 +94,9 @@ machine-readable errors and strict status validation.
   - submission access rejects values outside `public | internal`.
   - blocked hard deletes return a stable conflict code without exposing
     submission or action-run payloads.
-  - if field-write schemas are tightened while this route family is touched, keep
-    flexible per-field `settings` inside `settings` only; do not allow unknown
-    top-level field input keys silently.
+  - field-write schemas reject unknown top-level field input keys when
+    `PUT /forms/:id/fields` is wrapped by `mapFormError`; flexible per-field
+    data stays inside `settings` only.
 - Anti-abuse:
   - no new public write path;
   - public submissions keep nonce plus optional reCAPTCHA behavior.
@@ -100,6 +109,8 @@ machine-readable errors and strict status validation.
 - Create/update reject unknown status values.
 - Field-write validation errors map to stable 400 responses if field-write is
   wrapped by `mapFormError`.
+- Field-write rejects unknown top-level field input keys while preserving
+  arbitrary per-field config inside `settings`.
 - Public submission lookup maps missing forms without weakening nonce/captcha or
   access behavior.
 - Submission payload validation errors map to stable 400 responses if the

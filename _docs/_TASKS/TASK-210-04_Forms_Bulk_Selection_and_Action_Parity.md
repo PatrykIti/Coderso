@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-210-02, TASK-210-03
+**Dependencies:** TASK-210-02, TASK-210-03, TASK-210-06-02
 **Status:** To Do
 
 ---
@@ -18,6 +18,10 @@ Bulk actions must operate only on selected rows visible after current filters
 and pagination. Destructive bulk delete must be confirmed through
 `ConfirmActionDialog`. Partial failures must stay truthful and leave enough
 state for the user to understand what happened.
+
+Retained-history delete conflict handling depends on TASK-210-06-02. Bulk
+delete cannot be considered complete while blocked deletes still surface as raw
+database errors or false successes.
 
 ## Sub-Tasks
 

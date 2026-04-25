@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-210-02
+**Dependencies:** TASK-210-02, TASK-210-06-02
 **Status:** To Do
 
 ---
@@ -19,6 +19,11 @@ Use `updateForm(id, { status })` for lifecycle changes and `deleteForm(id)` for
 delete. Add the existing Forms Action logs route as a row shortcut. Do not add
 Duplicate, Runtime Preview from the list, or Embed Code in this task because the
 current Forms list/service/client contract does not expose those flows.
+
+TASK-210-06-02 must land before this task claims retained-history delete
+conflict acceptance. The UI can only keep blocked rows recoverable when the
+route returns a stable `form_delete_restricted` 409 instead of a raw database
+constraint error.
 
 ## Sub-Tasks
 
