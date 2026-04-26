@@ -968,6 +968,14 @@ Templates:
 - `PATCH /listings/templates/:id`
 - `DELETE /listings/templates/:id`
 
+Route error mapping keeps domain `ApiError` responses unchanged and maps raw
+Listings sentinels at the route boundary. Stable query/template codes include
+`listing_query_invalid`, `listing_query_invalid_name`,
+`listing_query_invalid_source_config`, `listing_query_invalid_filter_value`,
+`listing_query_update_empty`, `listing_query_not_found`,
+`listing_template_invalid`, `listing_template_config_invalid`,
+`listing_template_slug_exists`, and `listing_template_not_found`.
+
 ### Listing query payload (summary)
 
 ```json

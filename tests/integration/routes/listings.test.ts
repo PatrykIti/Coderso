@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { registerListingsRoutes } from "../../../core/server/routes/listingsRoutes";
+import {
+  mapListingError,
+  registerListingsRoutes,
+} from "../../../core/server/routes/listingsRoutes";
 
 type Route = { method: string; path: string };
 
@@ -42,4 +45,28 @@ test("registerListingsRoutes wires query and template endpoints", () => {
       "DELETE /listings/templates/:id",
     ])
   );
+});
+
+test("mapListingError keeps listings query and template sentinels stable", () => {
+  const cases = [
+    ["listing_query_invalid", 400],
+    ["listing_query_invalid_source_config", 400],
+    ["listing_query_invalid_filter_value", 400],
+    ["listing_query_invalid_name", 400],
+    ["listing_query_update_empty", 400],
+    ["listing_query_not_found", 404],
+    ["listing_template_invalid", 400],
+    ["listing_template_config_invalid", 400],
+    ["listing_template_slug_exists", 409],
+    ["listing_template_not_found", 404],
+  ] as const;
+
+  for (const [code, status] of cases) {
+    const mapped = mapListingError(new Error(code));
+    expect(mapped?.code).toBe(code);
+    expect(mapped?.status).toBe(status);
+  }
+
+  expect(mapListingError(new Error("unmapped"))).toBeNull();
+  expect(mapListingError("listing_query_invalid")).toBeNull();
 });

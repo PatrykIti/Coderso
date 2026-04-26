@@ -35,6 +35,7 @@ import {
   listingSourceOptions,
 } from "./defaults";
 import { useListingTemplates } from "./hooks/useListingTemplates";
+import { listingQueryToasts } from "./listingActionToasts";
 
 type QueryDraftSnapshot = {
   name: string;
@@ -269,6 +270,7 @@ export function ListingEditorPage() {
       };
       if (isCreateMode) {
         const created = await createListingQuery(payload);
+        listingQueryToasts.success("create", { targetLabel: created.name });
         applySnapshot({
           name: created.name,
           description: created.description ?? "",
@@ -278,6 +280,7 @@ export function ListingEditorPage() {
         navigate(`/coderso/listings/${encodeURIComponent(created.id)}`);
       } else if (listingId) {
         const updated = await updateListingQuery(listingId, payload);
+        listingQueryToasts.success("update", { targetLabel: updated.name });
         applySnapshot({
           name: updated.name,
           description: updated.description ?? "",
@@ -286,11 +289,11 @@ export function ListingEditorPage() {
         });
       }
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save listing query.");
-      }
+      setError(
+        listingQueryToasts.error(isCreateMode ? "create" : "update", err, {
+          fallbackMessage: "Failed to save listing query.",
+        })
+      );
     } finally {
       setIsSaving(false);
     }

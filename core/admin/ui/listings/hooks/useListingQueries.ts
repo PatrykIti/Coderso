@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -8,6 +8,10 @@ import {
   type ListingQueryRecord,
 } from "@/services/listingsClient";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import {
+  resolveCacheRefreshBackground,
+  resolveListMountRefreshOptions,
+} from "@/utils/cacheRefresh";
 
 const resolveListingsError = (error: unknown) => {
   if (isApiClientError(error)) return error.message;
@@ -16,40 +20,56 @@ const resolveListingsError = (error: unknown) => {
 };
 
 export function useListingQueries(options?: { skip?: boolean }) {
+  const initialCached = useMemo(() => getCachedListingQueries(), []);
+  const hasInitialCache = initialCached != null;
   const [items, setItems] = useState<ListingQueryRecord[]>(
-    () => getCachedListingQueries() ?? []
+    () => initialCached ?? []
   );
-  const [isLoading, setIsLoading] = useState(() => !getCachedListingQueries());
+  const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [error, setError] = useState<string | null>(null);
+  const hasHydratedRef = useRef(hasInitialCache);
 
-  const refresh = useCallback(async (force?: boolean) => {
+  const refresh = useCallback(async (
+    options?: boolean | { force?: boolean; background?: boolean }
+  ) => {
+    const force =
+      typeof options === "boolean" ? options : options?.force ?? false;
+    const background = resolveCacheRefreshBackground({
+      explicitBackground:
+        typeof options === "object" ? options.background : undefined,
+      hasHydrated: hasHydratedRef.current,
+    });
+    if (!background) {
+      setIsLoading(true);
+    }
+    setError(null);
     try {
       const nextItems = await listListingQueriesCached({ force });
       setItems(nextItems);
+      hasHydratedRef.current = true;
       setError(null);
     } catch (err) {
       setError(resolveListingsError(err));
     } finally {
-      setIsLoading(false);
+      if (!background) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    const cached = getCachedListingQueries();
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-    }
-    refresh(true).catch(() => undefined);
+    refresh(resolveListMountRefreshOptions(hasInitialCache)).catch(
+      () => undefined
+    );
     return undefined;
-  }, [options?.skip, refresh]);
+  }, [hasInitialCache, options?.skip, refresh]);
 
   useEffect(() => {
     if (options?.skip) return undefined;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.listingQueriesList) return;
-      refresh(true).catch(() => undefined);
+      refresh({ force: true, background: true }).catch(() => undefined);
     });
   }, [options?.skip, refresh]);
 

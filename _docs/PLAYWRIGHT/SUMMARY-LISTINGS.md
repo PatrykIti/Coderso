@@ -5,6 +5,24 @@
 **Środowisko:** http://localhost:5173/admin/coderso/listings
 **Zalogowany jako:** patryk.ciechanski@patrykiti.pl
 
+## TASK-214 closure update (2026-04-26)
+
+TASK-214 closes the list-first parity slice only:
+
+- addressed: BUG-2 query delete now uses confirmation and shared feedback;
+- addressed: BUG-4 query/template save feedback now uses shared Listings
+  action toasts;
+- addressed: UX-1 list search/filter/pagination/selection gaps for Queries and
+  Templates;
+- addressed: active-tab `New`, tab-local row/bulk delete, visible-row
+  selection trimming, cache hydrate/background refresh, and route error mapping
+  coverage for list-visible actions.
+
+Still open for follow-up tasks: BUG-1, BUG-3, BUG-5, BUG-6, UX-2, UX-3, UX-4,
+UX-5, UX-6, UX-7, and UX-8. TASK-214 intentionally did not add duplicate,
+preview, copy/view-usages, editor field-pickers, rendered preview, beta
+messaging, data cleanup, or template-binding education.
+
 ---
 
 ## Co to jest i co przetestowano

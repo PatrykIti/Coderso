@@ -2,6 +2,7 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,8 @@ import {
 import type { ListingQueryRecord } from "@/services/listingsClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
 
+import { listingSourceOptions } from "./defaults";
+
 const formatDate = (value: string) => {
   try {
     return new Date(value).toLocaleDateString("en-US", {
@@ -31,15 +34,28 @@ const formatDate = (value: string) => {
   }
 };
 
+const sourceLabel = (value: string) =>
+  listingSourceOptions.find((option) => option.value === value)?.label ?? value;
+
 type ListingQueryTableProps = {
   items: ListingQueryRecord[];
   emptyMessage?: string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onToggleItem?: (id: string) => void;
   onDelete: (id: string) => void;
 };
 
 export function ListingQueryTable({
   items,
   emptyMessage,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onToggleItem,
   onDelete,
 }: ListingQueryTableProps) {
   return (
@@ -47,7 +63,14 @@ export function ListingQueryTable({
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
-            <TableHead className="min-w-[16rem] pl-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <TableHead className="w-10 pl-4">
+              <Checkbox
+                aria-label="Select all listing queries"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
+            </TableHead>
+            <TableHead className="min-w-[16rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Query
             </TableHead>
             <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
@@ -56,7 +79,7 @@ export function ListingQueryTable({
             <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
               Updated
             </TableHead>
-            <TableHead className="w-12 pr-6 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Actions
             </TableHead>
           </TableRow>
@@ -65,16 +88,28 @@ export function ListingQueryTable({
           {items.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={4}
-                className="px-6 py-12 text-center text-sm text-muted-foreground"
+                colSpan={5}
+                className="py-10 text-center text-sm text-muted-foreground"
               >
                 {emptyMessage ?? "No listing queries yet."}
               </TableCell>
             </TableRow>
           ) : null}
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="py-6 pl-6">
+          {items.map((item) => {
+            const isSelected = selectedIds.includes(item.id);
+            return (
+            <TableRow
+              key={item.id}
+              className={isSelected ? "bg-muted/30" : undefined}
+            >
+              <TableCell className="pl-4">
+                <Checkbox
+                  aria-label={`Select ${item.name}`}
+                  checked={isSelected}
+                  onCheckedChange={() => onToggleItem?.(item.id)}
+                />
+              </TableCell>
+              <TableCell>
                 <div className="flex flex-col gap-1">
                   <AdminLink
                     href={`/coderso/listings/${encodeURIComponent(item.id)}`}
@@ -89,7 +124,7 @@ export function ListingQueryTable({
                   </span>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs md:hidden">
                     <Badge variant="outline" className="capitalize">
-                      {item.query.source}
+                      {sourceLabel(item.query.source)}
                     </Badge>
                     <span className="text-muted-foreground/60">•</span>
                     <span className="text-muted-foreground">
@@ -99,14 +134,12 @@ export function ListingQueryTable({
                 </div>
               </TableCell>
               <TableCell className="hidden px-4 py-6 md:table-cell">
-                <Badge variant="outline" className="capitalize">
-                  {item.query.source}
-                </Badge>
+                <Badge variant="outline">{sourceLabel(item.query.source)}</Badge>
               </TableCell>
               <TableCell className="hidden px-4 py-6 text-sm text-muted-foreground lg:table-cell">
                 {formatDate(item.updatedAt)}
               </TableCell>
-              <TableCell className="w-12 py-6 pr-6 text-right">
+              <TableCell className="w-12 py-6 pr-4 text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon-sm">
@@ -135,7 +168,8 @@ export function ListingQueryTable({
                 </DropdownMenu>
               </TableCell>
             </TableRow>
-          ))}
+          );
+          })}
         </TableBody>
       </Table>
     </div>

@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,11 +16,11 @@ pattern while using Listings-specific fields.
 
 ## Sub-Tasks
 
-- [ ] Add `filterListingQueries` as a pure exported helper.
-- [ ] Support search by query `name` and `description`.
-- [ ] Support source filter: all, entries, posts, users, taxonomies.
-- [ ] Reset pagination and trim selection when filter state changes.
-- [ ] Reuse `listingSourceOptions` from `core/admin/ui/listings/defaults.ts`
+- [x] Add `filterListingQueries` as a pure exported helper.
+- [x] Support search by query `name` and `description`.
+- [x] Support source filter: all, entries, posts, users, taxonomies.
+- [x] Reset pagination and trim selection when filter state changes.
+- [x] Reuse `listingSourceOptions` from `core/admin/ui/listings/defaults.ts`
   for filter labels; do not duplicate the source-label map in the filter
   component.
 

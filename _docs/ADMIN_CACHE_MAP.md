@@ -39,6 +39,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Listings list + templates tab
   - UI: `core/admin/ui/listings/ListingListPage.tsx`
   - Cached APIs: `listListingQueriesCached`, `getCachedListingQueries`, `listListingTemplatesCached`, `getCachedListingTemplates`
+  - Hydration: query and template caches hydrate independently on mount; cache
+    hits revalidate in the background, cache misses show foreground loading, and
+    cache-bus events refresh in the background.
 - Listings editor
   - UI: `core/admin/ui/listings/ListingEditorPage.tsx`
   - Cached APIs: `getListingQueryCached`, `listListingTemplatesCached`, `listContentTypesCached`

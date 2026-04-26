@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-02-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,11 +16,11 @@ selected-row styling, responsive row metadata, and resource-specific columns.
 
 ## Sub-Tasks
 
-- [ ] Add header checkbox with all/indeterminate state.
-- [ ] Add row checkbox and selected-row visual state.
-- [ ] Keep columns: Query, Source, Updated, Actions.
-- [ ] Keep row actions: Edit and Delete.
-- [ ] Use `AdminLink` for editor navigation, preserve `prefetch`, and keep the
+- [x] Add header checkbox with all/indeterminate state.
+- [x] Add row checkbox and selected-row visual state.
+- [x] Keep columns: Query, Source, Updated, Actions.
+- [x] Keep row actions: Edit and Delete.
+- [x] Use `AdminLink` for editor navigation, preserve `prefetch`, and keep the
   canonical `/coderso/listings/:id` route flowing through shared admin path
   resolution instead of hand-built anchors.
 

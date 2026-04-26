@@ -183,6 +183,11 @@ const listingsState = vi.hoisted(() => {
   };
 });
 
+const tabsMockState = vi.hoisted(() => ({
+  currentValue: "queries",
+  onValueChange: undefined as undefined | ((value: string) => void),
+}));
+
 vi.mock("@/components/ui/alert", () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -216,6 +221,27 @@ vi.mock("@/components/ui/button", () => ({
     ),
 }));
 
+vi.mock("@/components/ui/checkbox", () => ({
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+    "aria-label": ariaLabel,
+  }: {
+    checked?: boolean | "indeterminate";
+    onCheckedChange?: (checked: boolean) => void;
+    "aria-label"?: string;
+  }) => (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-pressed={checked === true}
+      onClick={() => onCheckedChange?.(checked !== true)}
+    >
+      {checked === "indeterminate" ? "mixed" : checked ? "checked" : "unchecked"}
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/card", () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -225,7 +251,13 @@ vi.mock("@/components/ui/card", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Dialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+  }) => (open ? <div>{children}</div> : null),
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -345,10 +377,38 @@ vi.mock("@/components/ui/table", () => ({
 }));
 
 vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Tabs: ({
+    children,
+    value,
+    onValueChange,
+  }: {
+    children: React.ReactNode;
+    value?: string;
+    onValueChange?: (value: string) => void;
+  }) => {
+    tabsMockState.currentValue = value ?? "queries";
+    tabsMockState.onValueChange = onValueChange;
+    return <div>{children}</div>;
+  },
+  TabsContent: ({
+    children,
+    value,
+  }: {
+    children: React.ReactNode;
+    value: string;
+  }) => (tabsMockState.currentValue === value ? <div>{children}</div> : null),
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({
+    children,
+    value,
+  }: {
+    children: React.ReactNode;
+    value: string;
+  }) => (
+    <button type="button" onClick={() => tabsMockState.onValueChange?.(value)}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -669,30 +729,47 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", async () => {
-  const { ListingTemplateManager } = await import(
-    "../../../core/admin/ui/listings/ListingTemplateManager"
+test("ListingListPage controls template create, edit, delete, and save errors", async () => {
+  const { ListingListPage } = await import(
+    "../../../core/admin/ui/listings/ListingListPage"
   );
-  const view = mount(<ListingTemplateManager />);
+  const view = mount(<ListingListPage />);
 
   try {
-    expect(view.container.textContent).toContain("Listing Templates");
-    expect(view.container.textContent).toContain("Cards");
-
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
-    const inputs = () => Array.from(view.container.querySelectorAll("input"));
-    const selects = () => Array.from(view.container.querySelectorAll("select"));
-    const textareas = () => Array.from(view.container.querySelectorAll("textarea"));
 
     act(() => {
-      buttons().find((button) => button.textContent?.includes("New template"))?.click();
+      buttons().find((button) => button.textContent?.includes("Templates"))?.click();
+    });
+    expect(view.container.textContent).toContain("Cards");
+
+    act(() => {
+      buttons().find((button) => button.textContent?.includes("New"))?.click();
     });
     expect(view.container.textContent).toContain("New listing template");
     act(() => {
-      setInputValue(inputs()[0], "Homepage cards");
-      setInputValue(inputs()[1], "homepage-cards");
-      setSelectValue(selects()[0], "list");
-      setTextareaValue(textareas()[0], "Homepage template");
+      setInputValue(
+        findInputByPlaceholder(view.container, "Homepage cards"),
+        "Homepage cards"
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "homepage-cards"),
+        "homepage-cards"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, [
+          "grid",
+          "list",
+          "table",
+          "calendar",
+          "map",
+        ]).at(-1),
+        "list"
+      );
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional description for your team"),
+        "Homepage template"
+      );
     });
     act(() => {
       buttons().find((button) => button.textContent === "add-binding")?.click();
@@ -719,10 +796,28 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
       buttons().find((button) => button.textContent === "Edit")?.click();
     });
     act(() => {
-      setInputValue(inputs()[0], "Cards updated");
-      setInputValue(inputs()[1], "cards-updated");
-      setSelectValue(selects()[0], "grid");
-      setTextareaValue(textareas()[0], "Updated template");
+      setInputValue(
+        findInputByPlaceholder(view.container, "Homepage cards"),
+        "Cards updated"
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "homepage-cards"),
+        "cards-updated"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, [
+          "grid",
+          "list",
+          "table",
+          "calendar",
+          "map",
+        ]).at(-1),
+        "grid"
+      );
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional description for your team"),
+        "Updated template"
+      );
     });
     act(() => {
       buttons().find((button) => button.textContent?.includes("Save template"))?.click();
@@ -741,10 +836,13 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
 
     listingsState.saveTemplateError = listingsState.apiError("Template save failed");
     act(() => {
-      buttons().find((button) => button.textContent?.includes("New template"))?.click();
+      buttons().find((button) => button.textContent?.includes("New"))?.click();
     });
     act(() => {
-      setInputValue(inputs()[0], "Broken template");
+      setInputValue(
+        findInputByPlaceholder(view.container, "Homepage cards"),
+        "Broken template"
+      );
       buttons().find((button) => button.textContent?.includes("Save template"))?.click();
     });
     await flush();
@@ -756,6 +854,10 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
     act(() => {
       buttons().find((button) => button.textContent === "Delete")?.click();
     });
+    expect(listingsState.deleteTemplateCalls).not.toContain("template-1");
+    act(() => {
+      buttons().find((button) => button.textContent?.includes("Delete template"))?.click();
+    });
     await flush();
 
     expect(listingsState.deleteTemplateCalls).toContain("template-1");
@@ -765,17 +867,18 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
   }
 });
 
-test("ListingTemplateManager shows loading, empty, and load-error states", async () => {
-  const { ListingTemplateManager } = await import(
-    "../../../core/admin/ui/listings/ListingTemplateManager"
+test("ListingListPage shows template loading, empty, and load-error states", async () => {
+  const { ListingListPage } = await import(
+    "../../../core/admin/ui/listings/ListingListPage"
   );
 
   listingsState.cachedTemplateItems = undefined;
   listingsState.templateItems = [];
-  const emptyView = mount(<ListingTemplateManager />);
+  const emptyView = mount(<ListingListPage />);
 
   try {
-    expect(emptyView.container.textContent).toContain("Loading templates...");
+    clickButtonByText(emptyView.container, "Templates");
+    expect(emptyView.container.textContent).toContain("Loading listing templates...");
     await flush();
     expect(emptyView.container.textContent).toContain("No listing templates yet.");
   } finally {
@@ -787,11 +890,14 @@ test("ListingTemplateManager shows loading, empty, and load-error states", async
   listingsState.templateItems = [];
   listingsState.templateError = listingsState.apiError("Templates load failed");
 
-  const errorView = mount(<ListingTemplateManager />);
+  const errorView = mount(<ListingListPage />);
 
   try {
+    clickButtonByText(errorView.container, "Templates");
     await flush();
-    expect(errorView.container.textContent).toContain("Unable to load templates");
+    expect(errorView.container.textContent).toContain(
+      "Unable to load listing templates"
+    );
     expect(errorView.container.textContent).toContain("Templates load failed");
   } finally {
     errorView.cleanup();
@@ -905,6 +1011,13 @@ test("ListingListPage deletes queries and shows action errors", async () => {
     act(() => {
       buttons().find((button) => button.textContent === "Delete")?.click();
     });
+    expect(listingsState.deleteQueryCalls).not.toContain(
+      "11111111-1111-4111-8111-111111111111"
+    );
+    act(() => {
+      buttons().find((button) => button.textContent?.includes("Delete query"))?.click();
+    });
+    await flush();
     expect(listingsState.deleteQueryCalls).toContain("11111111-1111-4111-8111-111111111111");
   } finally {
     view.cleanup();

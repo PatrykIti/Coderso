@@ -14,6 +14,10 @@ vi.mock("sonner", () => ({
 
 import { createListActionToastAdapter } from "../../../core/admin/ui/shared/listActionToasts";
 import { customScreenListToasts } from "../../../core/admin/ui/custom-screens/customScreenListToasts";
+import {
+  listingQueryToasts,
+  listingTemplateToasts,
+} from "../../../core/admin/ui/listings/listingActionToasts";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -206,4 +210,34 @@ test("forms list toasts cover create, lifecycle, delete, and bulk failures", () 
   expect(partial.failedTargets).toEqual(["form-2"]);
   adapter.emitBulk(partial);
   expect(toastState.error).toHaveBeenCalledWith("Archived 1 form; failed 1.");
+});
+
+test("listings list toasts provide query and template resource copy", () => {
+  expect(
+    listingQueryToasts.success("create", { targetLabel: "Homepage query" })
+  ).toBe('Listing query "Homepage query" created.');
+  expect(listingQueryToasts.error("delete", undefined)).toBe(
+    "Failed to delete listing query."
+  );
+
+  expect(
+    listingTemplateToasts.success("update", { targetLabel: "Cards" })
+  ).toBe('Listing template "Cards" updated.');
+  expect(listingTemplateToasts.error("create", undefined)).toBe(
+    "Failed to create listing template."
+  );
+
+  const partial = listingTemplateToasts.summarizeBulkAction(
+    "delete",
+    ["template-1", "template-2"],
+    [
+      { status: "fulfilled", value: undefined },
+      { status: "rejected", reason: new Error("blocked") },
+    ]
+  );
+
+  expect(partial.toastMessage).toBe(
+    "Deleted 1 listing template; failed 1."
+  );
+  expect(partial.failedTargets).toEqual(["template-2"]);
 });

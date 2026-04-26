@@ -216,6 +216,34 @@ Gdy zaznaczysz wpisy na liscie:
   `form_delete_restricted` conflict on hard delete; the list keeps the row
   recoverable and Archive remains the safe retained-history lifecycle action.
 
+## Listings parity
+
+- Listings list follows the Pages first-screen pattern at
+  `/admin/coderso/listings` while preserving two tab-scoped resources:
+  `Queries` and `Templates`.
+- The header `New` action is active-tab scoped:
+  - Queries navigates to `/admin/coderso/listings/new` through the shared admin
+    router.
+  - Templates opens the controlled listing-template create dialog.
+- Filters are Listings-specific:
+  - Queries search by name/description and filter by source.
+  - Templates search by name/slug/description and filter by layout.
+- Query and template tables use checkbox selection, selected-row styling,
+  row-owned Edit/Delete actions, and shared pagination. Selection is trimmed to
+  the current visible page, so hidden rows from inactive tabs, filters, or other
+  pages are never submitted to bulk actions.
+- Bulk actions render inline in the header actions beside `New` and support
+  confirmed Delete only. Listings has no lifecycle statuses, so Publish,
+  Archive, Preview, Duplicate, and View Usages remain follow-up work.
+- Row and bulk delete require `ConfirmActionDialog`; delete mutations do not run
+  from row menus or bulk controls directly.
+- Query create/update, template create/update, row delete, and bulk delete use
+  shared list-action toast adapters with resource-specific copy for `listing
+  query` / `listing queries` and `listing template` / `listing templates`.
+- Template create/edit form draft state stays inside the controlled dialog, but
+  template list rows, selection, delete confirmations, and bulk metadata are
+  owned by the list shell.
+
 ## Menus parity
 
 - Menus list follows the Pages/Posts list layout: header action area, filter

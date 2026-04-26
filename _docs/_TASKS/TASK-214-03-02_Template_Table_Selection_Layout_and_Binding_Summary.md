@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-03-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,13 +17,13 @@ date.
 
 ## Sub-Tasks
 
-- [ ] Add header checkbox with all/indeterminate state.
-- [ ] Add row checkbox and selected-row visual state.
-- [ ] Use columns: Template, Layout, Bindings, Updated, Actions.
-- [ ] Show `/{slug}` and optional description under the template name.
-- [ ] Keep row actions: Edit and Delete.
-- [ ] Keep `BindingEditor` inside the create/edit dialog, not in the list row.
-- [ ] Keep selected ids, all/indeterminate checkbox state, and row action
+- [x] Add header checkbox with all/indeterminate state.
+- [x] Add row checkbox and selected-row visual state.
+- [x] Use columns: Template, Layout, Bindings, Updated, Actions.
+- [x] Show `/{slug}` and optional description under the template name.
+- [x] Keep row actions: Edit and Delete.
+- [x] Keep `BindingEditor` inside the create/edit dialog, not in the list row.
+- [x] Keep selected ids, all/indeterminate checkbox state, and row action
   callbacks shell-owned in `ListingListPage`; the template table or manager
   receives them through controlled props instead of deriving private selection
   state.

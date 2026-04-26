@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-01-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -19,23 +19,23 @@ behavior and accessible label must be resource-specific.
 
 ## Sub-Tasks
 
-- [ ] Add `activeTab` state in `ListingListPage`.
-- [ ] Replace `New query` header copy with compact `New`.
-- [ ] On `Queries`, `New` navigates to `/coderso/listings/new` through
+- [x] Add `activeTab` state in `ListingListPage`.
+- [x] Replace `New query` header copy with compact `New`.
+- [x] On `Queries`, `New` navigates to `/coderso/listings/new` through
   `useAdminRouter().navigate`.
-- [ ] Keep navigation canonicalized through `useAdminRouter().navigate` and
+- [x] Keep navigation canonicalized through `useAdminRouter().navigate` and
   `AdminLink`/`prefetch`; do not add raw anchors, `window.location`, or local
   route alias logic for Listings.
-- [ ] On `Templates`, `New` opens the template create dialog/drawer owned by
+- [x] On `Templates`, `New` opens the template create dialog/drawer owned by
   the templates tab through parent-controlled state.
-- [ ] Remove the nested `New template` primary button from
+- [x] Remove the nested `New template` primary button from
   `ListingTemplateManager` or demote it only if a separate empty-state CTA is
   still needed.
-- [ ] Lift `templateCreateOpen` and `editingTemplateId` or an equivalent
+- [x] Lift `templateCreateOpen` and `editingTemplateId` or an equivalent
   controlled template dialog object into `ListingListPage`.
-- [ ] Pass template dialog state and row action callbacks into
+- [x] Pass template dialog state and row action callbacks into
   `ListingTemplateManager`; do not call child methods through an imperative ref.
-- [ ] Verify existing `/coderso/listings` prefetch still warms both resource
+- [x] Verify existing `/coderso/listings` prefetch still warms both resource
   caches and does not refetch the active route from active-link hover.
 
 ## Files to Change

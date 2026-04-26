@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-01-02, TASK-214-04-04, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -19,18 +19,18 @@ keeps that route and adds feedback after save mutations settle.
 
 ## Sub-Tasks
 
-- [ ] `Queries` tab header `New` navigates to `/coderso/listings/new` through
+- [x] `Queries` tab header `New` navigates to `/coderso/listings/new` through
   `useAdminRouter().navigate`, preserving shared admin path canonicalization.
-- [ ] Query create success emits a shared action toast after
+- [x] Query create success emits a shared action toast after
   `createListingQuery` resolves.
-- [ ] Query update success emits a shared action toast after
+- [x] Query update success emits a shared action toast after
   `updateListingQuery` resolves.
-- [ ] Query create/update failures emit a shared failure toast after the rejected
+- [x] Query create/update failures emit a shared failure toast after the rejected
   mutation settles and keep the existing inline error state for editor context.
-- [ ] Import `listingQueryToasts` from
+- [x] Import `listingQueryToasts` from
   `core/admin/ui/listings/listingActionToasts.ts`; do not create editor-local
   query toast copy.
-- [ ] Preserve dirty-state, preview, discard, and template-selection behavior in
+- [x] Preserve dirty-state, preview, discard, and template-selection behavior in
   `ListingEditorPage`.
 
 ## Files to Change

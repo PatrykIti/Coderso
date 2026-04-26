@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-214-01, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,13 +17,13 @@ and visible-row selection trimming.
 
 ## Sub-Tasks
 
-- [ ] TASK-214-02-01: Query Filter Model and View Component
-- [ ] TASK-214-02-02: Query Table Selection, Source, and Updated Columns
-- [ ] TASK-214-02-03: Query Pagination and Visible Selection
-- [ ] Reuse `listingSourceOptions` from `core/admin/ui/listings/defaults.ts`
+- [x] TASK-214-02-01: Query Filter Model and View Component
+- [x] TASK-214-02-02: Query Table Selection, Source, and Updated Columns
+- [x] TASK-214-02-03: Query Pagination and Visible Selection
+- [x] Reuse `listingSourceOptions` from `core/admin/ui/listings/defaults.ts`
   for source filter labels.
-- [ ] Keep query row actions limited to Edit and Delete.
-- [ ] Keep editor links on `AdminLink` with `/coderso/listings/:id`.
+- [x] Keep query row actions limited to Edit and Delete.
+- [x] Keep editor links on `AdminLink` with `/coderso/listings/:id`.
 
 ## Files to Change
 

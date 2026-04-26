@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + UX + Admin Cache
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-054-07, TASK-205, TASK-206, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -235,28 +235,28 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
 
 ## Sub-Tasks
 
-- [ ] TASK-214-01: Listings Route, Tab Shell, and Cache Hydration
-- [ ] TASK-214-02: Listings Queries Tab Table, Filters, and Pagination
-- [ ] TASK-214-03: Listings Templates Tab Table, Filters, and Pagination
-- [ ] TASK-214-04: Tab-Scoped Actions, Confirmations, and Toasts
-- [ ] TASK-214-05: QA, Docs, Changelog, and Closure
+- [x] TASK-214-01: Listings Route, Tab Shell, and Cache Hydration
+- [x] TASK-214-02: Listings Queries Tab Table, Filters, and Pagination
+- [x] TASK-214-03: Listings Templates Tab Table, Filters, and Pagination
+- [x] TASK-214-04: Tab-Scoped Actions, Confirmations, and Toasts
+- [x] TASK-214-05: QA, Docs, Changelog, and Closure
 
 ## Leaf Breakdown
 
-- [ ] TASK-214-01-01: Query and Template Cache Hydration
-- [ ] TASK-214-01-02: Tab State, Header New Action, and Prefetch
-- [ ] TASK-214-02-01: Query Filter Model and View Component
-- [ ] TASK-214-02-02: Query Table Selection, Source, and Updated Columns
-- [ ] TASK-214-02-03: Query Pagination and Visible Selection
-- [ ] TASK-214-03-01: Template Filter Model and View Component
-- [ ] TASK-214-03-02: Template Table Selection, Layout, and Binding Summary
-- [ ] TASK-214-03-03: Template Pagination and Visible Selection
-- [ ] TASK-214-04-01: Active Tab New Flow and Query Save Toasts
-- [ ] TASK-214-04-02: Query Row and Bulk Delete Confirmations
-- [ ] TASK-214-04-03: Template Create, Edit, and Delete Confirmations
-- [ ] TASK-214-04-04: Listings Error Mapping and Toast Adapter
-- [ ] TASK-214-05-01: Listings Parity Test Matrix
-- [ ] TASK-214-05-02: Docs, Changelog, and Board Closure
+- [x] TASK-214-01-01: Query and Template Cache Hydration
+- [x] TASK-214-01-02: Tab State, Header New Action, and Prefetch
+- [x] TASK-214-02-01: Query Filter Model and View Component
+- [x] TASK-214-02-02: Query Table Selection, Source, and Updated Columns
+- [x] TASK-214-02-03: Query Pagination and Visible Selection
+- [x] TASK-214-03-01: Template Filter Model and View Component
+- [x] TASK-214-03-02: Template Table Selection, Layout, and Binding Summary
+- [x] TASK-214-03-03: Template Pagination and Visible Selection
+- [x] TASK-214-04-01: Active Tab New Flow and Query Save Toasts
+- [x] TASK-214-04-02: Query Row and Bulk Delete Confirmations
+- [x] TASK-214-04-03: Template Create, Edit, and Delete Confirmations
+- [x] TASK-214-04-04: Listings Error Mapping and Toast Adapter
+- [x] TASK-214-05-01: Listings Parity Test Matrix
+- [x] TASK-214-05-02: Docs, Changelog, and Board Closure
 
 ## Non-Goals
 

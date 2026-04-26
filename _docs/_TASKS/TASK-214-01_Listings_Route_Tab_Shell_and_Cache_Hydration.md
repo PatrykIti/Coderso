@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-214
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -21,23 +21,23 @@ must stop treating `Queries` as the only resource.
 
 ## Sub-Tasks
 
-- [ ] TASK-214-01-01: Query and Template Cache Hydration
-- [ ] TASK-214-01-02: Tab State, Header New Action, and Prefetch
-- [ ] Keep `AdminShell activeHref="/admin/coderso/listings"` and current
+- [x] TASK-214-01-01: Query and Template Cache Hydration
+- [x] TASK-214-01-02: Tab State, Header New Action, and Prefetch
+- [x] Keep `AdminShell activeHref="/admin/coderso/listings"` and current
   breadcrumbs.
-- [ ] Convert `Tabs defaultValue="queries"` to controlled active-tab state.
-- [ ] Define parent-level active resource metadata for labels, selected count,
+- [x] Convert `Tabs defaultValue="queries"` to controlled active-tab state.
+- [x] Define parent-level active resource metadata for labels, selected count,
   header `New`, bulk bar, and error titles.
-- [ ] Lift query/template selection and bulk metadata high enough for
+- [x] Lift query/template selection and bulk metadata high enough for
   `PageHeader.actions` to render the active tab's bulk bar without querying
   child component internals.
-- [ ] Convert `ListingTemplateManager` to a controlled child boundary for
+- [x] Convert `ListingTemplateManager` to a controlled child boundary for
   create/edit open requests and template row action callbacks.
-- [ ] Move template list rows, loading/error state, visible ids, selection, and
+- [x] Move template list rows, loading/error state, visible ids, selection, and
   table action requests to `ListingListPage` or a shell-called hook. The final
   list tab must not depend on `ListingTemplateManager` owning
   `useListingTemplates`.
-- [ ] Keep template form draft/config editing local only inside the controlled
+- [x] Keep template form draft/config editing local only inside the controlled
   dialog; do not leave header, selection, or bulk state local-only in
   `ListingTemplateManager`.
 
