@@ -25,9 +25,10 @@ audit:
   count control.
 - Rich Text Section should not force routine content editing through raw
   `Body HTML` when structured/rich text editor seams exist elsewhere.
-- Posts Feed, CTA Banner, Split Layout, Stack, Toggle Block, Footer social links,
-  and related widgets need bounded quick-setup upgrades where the QA report
-  found underpowered or overly fixed wizard controls.
+- Posts Feed, Content List, Entry Teaser, CTA Banner, Compare Timeline, Split
+  Layout, Stack, Toggle Block, Footer social links, and related widgets need
+  bounded quick-setup verification/upgrades where the QA report found
+  underpowered or overly fixed wizard controls.
 
 The business outcome is a consistent widget-editor experience where normal
 content choices are made through typed controls and pickers, while Advanced
@@ -58,7 +59,10 @@ remains reserved for technical/raw payload work.
   - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx`
   - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx`
   - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx`
+  - `core/admin/ui/widgets/editors/ContentListEditors.tsx`
+  - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx`
   - `core/admin/ui/widgets/editors/CtaBannerEditors.tsx`
+  - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
   - `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx`
   - `core/admin/ui/widgets/editors/StackEditors.tsx`
   - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
@@ -160,13 +164,28 @@ documents.
   - add a focused Vitest Posts Feed editor/widget suite only if the changed
     production module stays Bun-free and the suite can run without runtime
     coupling
+  - `tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+  - `tests/vitest/ui/content-list-editor-wave.test.tsx`
+  - `tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
   - `tests/vitest/widgets/ctaBanner.test.tsx`
+  - `tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+  - `tests/vitest/widgets/compareTimeline.test.tsx`
+  - `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
+  - `tests/vitest/widgets/splitLayout.test.tsx`
+  - `tests/vitest/ui/split-layout-editor-wave.test.tsx`
+  - `tests/vitest/widgets/stack.test.tsx`
+  - `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - `tests/vitest/widgets/toggleBlock.test.tsx`
+  - `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
   - `tests/vitest/widgets/footer.test.tsx`
+  - `tests/vitest/ui/footer-editor-wave.test.tsx`
 - Manual Playwright:
   - product widgets use shared select styling and keyboard behavior;
   - Listing Filters/Search Box are verified as current-state Radix controls
     while their empty-state behavior is covered by `TASK-213-01-02`;
   - collection/media pickers do not require raw ID/CSV typing for common flows;
+  - dynamic-content quick setup makes source/count/layout limits explicit or
+    records current-state deferral with owner and reason;
   - Rich Text Section routine editing is not raw HTML-only.
 
 ## Documentation Updates Required

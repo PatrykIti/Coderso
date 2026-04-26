@@ -18,9 +18,15 @@ The report calls out:
 
 - Gallery Mosaic exposes only count/layout, not media selection;
 - Rich Text Section exposes raw `Body HTML` in Wizard;
-- Posts Feed has only source/sort in Wizard and lacks common title/count/layout
-  quick controls;
+- Posts Feed has improved source/display controls in the current checkout, but
+  still needs explicit verification for title/layout quick setup before closing
+  the source-report note;
+- Content List and Entry Teaser are mostly source selectors; verify whether
+  routine source/count/layout choices are clear enough or add bounded helper
+  controls through existing schema fields;
 - CTA Banner hides secondary CTA/description/eyebrow from quick setup;
+- Compare Timeline exposes axis count without enough quick context for track
+  labels/steps;
 - Split Layout/Stack lack slot labels or helper copy in Wizard;
 - Toggle Block lacks default active pane control;
 - Footer social quick setup is fixed to two social links.
@@ -48,7 +54,10 @@ No child task files.
 - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx`
 - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx`
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx`
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx`
+- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx`
 - `core/admin/ui/widgets/editors/CtaBannerEditors.tsx`
+- `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
 - `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx`
 - `core/admin/ui/widgets/editors/StackEditors.tsx`
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
@@ -107,6 +116,22 @@ Posts Feed:
 <Select label="Layout" ... />
 ```
 
+Dynamic content widgets:
+
+```tsx
+<SourcePicker label="Listing query" ... />
+<Select label="Layout" ... />
+<Input label="Visible items" type="number" min={1} max={24} ... />
+```
+
+Compare Timeline:
+
+```tsx
+<Input label="Track 1 label" ... />
+<Input label="Track 2 label" ... />
+<Select label="Axis step count" ... />
+```
+
 For Gallery Mosaic, first choose the storage contract:
 
 1. Add schema-owned `mediaId` fields and a safe runtime/public URL resolver; or
@@ -145,12 +170,17 @@ stays Bun-free and its output is normalized back into `RichTextSectionData`
   - Rich Text Section structured quick editor and raw HTML sanitizer path;
   - Posts Feed title/count/layout quick fields through the existing Bun-owned
     widget suite and any added Bun-free Vitest editor suite;
+  - Content List and Entry Teaser current-state verification or explicit
+    source/count/layout helper upgrades;
   - CTA secondary/description/eyebrow quick fields if added;
+  - Compare Timeline track labels plus axis count context;
   - Toggle default active pane;
   - Footer social add/remove within max bounds.
 - Manual Playwright:
   - add Gallery Mosaic and pick media without raw IDs;
   - edit Rich Text without raw HTML for routine content;
+  - verify Content List, Entry Teaser, Posts Feed, and Compare Timeline either
+    expose clear quick setup or are explicitly deferred in the source report;
   - verify upgraded quick controls do not duplicate Advanced-only controls.
 
 ## Documentation Updates Required

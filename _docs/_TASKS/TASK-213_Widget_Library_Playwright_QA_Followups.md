@@ -159,7 +159,9 @@ owner or a verification owner:
 | `GLOBAL-4` Visual equals Advanced false negative | `TASK-213-07-01` | No implementation; verify and document that Visual and Advanced remain distinct after TASK-213 editor changes. |
 | `BUG-9` Form Embed crash | `TASK-213-01-01` | UI-only sentinel; no sentinel persistence; no blank-editor crash. |
 | `BUG-10` Listing query loading state | `TASK-213-01-02` | Loading, empty, ready, and error states are truthful after fetch completion. |
-| Layout/content/forms/navigation audit notes | `TASK-213-05-*`, `TASK-213-06-*` | Scoped quick-setup upgrades through existing widget schemas, normalizers, editors, and runtime renderers. |
+| Pricing display-price and FAQ quick rows | `TASK-213-05-02`, `TASK-213-05-01` | Distinct field names plus explicit handling for display price and FAQ answers so public preset content is not hidden from Wizard users. |
+| Dynamic content quick-setup notes | `TASK-213-06-02`, `TASK-213-07-01` | Posts Feed, Content List, Entry Teaser, and Compare Timeline are either upgraded through existing schema fields or current-state/deferred with owner and reason. |
+| Layout/forms/navigation helper notes | `TASK-213-05-02`, `TASK-213-06-02` | Flow key, links source, slot labels, toggle default state, and footer social controls get bounded helper/control upgrades. |
 
 `TASK-213-07` must copy this map into the final source-report closure state with
 actual test/manual evidence, not just planned ownership.
