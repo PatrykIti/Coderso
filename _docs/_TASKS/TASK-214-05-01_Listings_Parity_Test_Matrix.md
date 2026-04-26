@@ -30,6 +30,10 @@ add real component suites where the mocked wave cannot prove behavior.
   `core/admin/ui/listings/listingActionToasts.ts`, not duplicated local
   adapters in the list shell, template manager, or query editor.
 - [ ] Cover cache hydration and prefetch warmup.
+- [ ] Extend `tests/vitest/admin/listingsClient.test.ts` beyond its current
+  public-search smoke coverage when client wrappers change, including query and
+  template mutation `withCsrf: true`, cache priming, detail-cache writes, and
+  cache-bus broadcasts.
 - [ ] Cover the controlled template boundary: header `New`, row Edit, dialog
   close, row Delete, and bulk Delete all update shell-owned state.
 - [ ] Cover the route error split required by TASK-214-04-04: query-domain
@@ -63,6 +67,8 @@ add real component suites where the mocked wave cannot prove behavior.
 - RBAC: route tests should assert `content:read` / `content:write` ownership
   where route behavior is touched.
 - CSRF: client tests should preserve mutation helpers using `withCsrf: true`.
+- Admin cache: client tests should prove query/template mutations keep the
+  existing list/detail cache and cache-bus contracts.
 - Rate-limit bucket: unchanged unless route infrastructure is touched.
 - Reject-unknown validation: route tests should prove strict create/update
   payload rejection and representative query/template domain error codes when

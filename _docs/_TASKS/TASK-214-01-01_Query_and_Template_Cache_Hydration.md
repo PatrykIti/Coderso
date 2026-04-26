@@ -28,15 +28,27 @@ from cache-bus events without mount-force refetch loops.
   immediate hydration sources.
 - [ ] Keep `listListingQueriesCached({ force })` and
   `listListingTemplatesCached({ force })` as the only network/cache wrappers.
+- [ ] If `refresh` changes from the current boolean force argument to an
+  options object, preserve backwards compatibility or update every caller in
+  the same leaf. No caller should pass `{ force, background }` into a
+  boolean-only hook.
 - [ ] Ensure cache-bus updates refresh in the background.
+- [ ] Preserve `useListingTemplates` behavior for both current consumers:
+  `ListingTemplateManager` and `ListingEditorPage`.
 
 ## Files to Change
 
 - `core/admin/ui/listings/hooks/useListingQueries.ts`
 - `core/admin/ui/listings/hooks/useListingTemplates.ts`
 - `core/admin/ui/listings/ListingListPage.tsx` if call signatures change.
+- `core/admin/ui/listings/ListingTemplateManager.tsx` if template hook
+  signatures or refresh semantics change.
+- `core/admin/ui/listings/ListingEditorPage.tsx` if template hook signatures
+  or refresh semantics change.
 - `tests/vitest/ui/listings-page.test.tsx`
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
+- `tests/vitest/ui/listings-cluster-wave.test.tsx` when editor/template
+  manager hook consumers are affected.
 - `tests/vitest/admin/listingsClient.test.ts` if cache helper behavior changes.
 
 ## Security Contract
@@ -70,8 +82,10 @@ const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
 - Cached empty query list renders a true empty state, not a loading state.
 - Cached template list renders without `Loading templates...`.
 - Cache-bus event triggers background refresh for the matching key only.
+- `ListingEditorPage` still renders its template selector after
+  `useListingTemplates` changes.
 - Commands:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-page.test.tsx tests/vitest/ui/listing-list-page-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-page.test.tsx tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

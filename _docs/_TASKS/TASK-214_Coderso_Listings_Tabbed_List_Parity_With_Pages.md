@@ -106,6 +106,26 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
   template contracts. This task must not add a public write endpoint or weaken
   `includeDrafts=false` runtime behavior outside preview.
 
+### Review Notes (2026-04-26)
+
+- The family is intentionally scoped as a reuse-first list parity wave:
+  `PageListPage`, `PageTable`, `PageFilters`, `PageBulkActionsBar`,
+  `useListPagination`, `ListPaginationFooter`, `ConfirmActionDialog`, and
+  `createListActionToastAdapter` remain the reference seams.
+- Listings-specific code should extend the existing contracts in
+  `ListingListPage`, `ListingQueryTable`, `ListingTemplateManager`,
+  `useListingQueries`, `useListingTemplates`, `listingsClient`,
+  `listingsRoutes`, and `listingSchemas`; do not introduce a new admin route
+  family, a new template editor route, or a Listings-only list framework.
+- Hook/API changes must account for all current consumers. In particular,
+  `useListingTemplates` is used by both `ListingTemplateManager` and
+  `ListingEditorPage`; any refresh signature change must be compatible with
+  those callers or update and test them in the same leaf.
+- Existing `listingsClient` helpers already own CSRF, cached wrappers, local
+  cache priming, and cache-bus broadcasts for query/template mutations. Bulk
+  delete should compose those helpers with `Promise.allSettled`; do not add a
+  batch endpoint only for UI parity.
+
 ## Required Product Behavior
 
 1. `/admin/coderso/listings` visually matches Pages list density and behavior:
@@ -255,6 +275,10 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
 - Add focused component suites if the current mocked list tests cannot prove
   the real query table, template table, active-tab header `New`, or dialog
   behavior.
+- Extend `tests/vitest/admin/listingsClient.test.ts` when mutation/client
+  wrappers change so it proves `withCsrf: true`, cache priming, and cache-bus
+  invalidation for query and template mutations instead of relying on the
+  current public-search smoke coverage.
 - Bun route coverage when route/error mapping changes:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/listings.test.ts`
