@@ -20,12 +20,16 @@ pattern while using Listings-specific fields.
 - [ ] Support search by query `name` and `description`.
 - [ ] Support source filter: all, entries, posts, users, taxonomies.
 - [ ] Reset pagination and trim selection when filter state changes.
-- [ ] Keep source labels consistent with `listingSources`.
+- [ ] Reuse `listingSourceOptions` from `core/admin/ui/listings/defaults.ts`
+  for filter labels; do not duplicate the source-label map in the filter
+  component.
 
 ## Files to Change
 
 - `core/admin/ui/listings/ListingListPage.tsx`
 - `core/admin/ui/listings/ListingQueryFilters.tsx` if extracted.
+- `core/admin/ui/listings/defaults.ts` only if existing `listingSourceOptions`
+  needs a backward-compatible label extension.
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
 
@@ -46,6 +50,7 @@ pattern while using Listings-specific fields.
 <ListingQueryFilters
   search={querySearch}
   source={querySource}
+  sourceOptions={[{ value: "all", label: "Source: All" }, ...listingSourceOptions]}
   onSearchChange={setQuerySearch}
   onSourceChange={setQuerySource}
 />

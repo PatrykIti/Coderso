@@ -26,6 +26,9 @@ add real component suites where the mocked wave cannot prove behavior.
 - [ ] Cover query and template filter helpers.
 - [ ] Cover row and bulk delete confirmation timing.
 - [ ] Cover query/template toast copy and partial failure summaries.
+- [ ] Cover that query/template toast copy comes from
+  `core/admin/ui/listings/listingActionToasts.ts`, not duplicated local
+  adapters in the list shell, template manager, or query editor.
 - [ ] Cover cache hydration and prefetch warmup.
 - [ ] Cover the controlled template boundary: header `New`, row Edit, dialog
   close, row Delete, and bulk Delete all update shell-owned state.
@@ -37,6 +40,7 @@ add real component suites where the mocked wave cannot prove behavior.
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-page.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
+- `core/admin/ui/listings/listingActionToasts.ts`
 - New focused Listings component suites if needed.
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/vitest/ui/list-pagination.test.tsx`

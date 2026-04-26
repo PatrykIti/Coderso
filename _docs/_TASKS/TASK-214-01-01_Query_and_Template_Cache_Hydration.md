@@ -18,8 +18,11 @@ from cache-bus events without mount-force refetch loops.
 
 ## Sub-Tasks
 
-- [ ] Add a shared or parallel `resolveListingsListMountRefreshOptions`
-  contract for queries and templates.
+- [ ] Reuse `resolveListMountRefreshOptions` from
+  `core/admin/utils/cacheRefresh.ts` for both query and template mount
+  refresh policy. If a Listings-specific exported helper is useful for tests,
+  keep it as a thin wrapper that delegates to the shared helper; do not
+  duplicate the policy inline.
 - [ ] Track `hasHydratedRef` like Pages/Forms list hooks.
 - [ ] Keep `getCachedListingQueries` and `getCachedListingTemplates` as the
   immediate hydration sources.
@@ -49,8 +52,10 @@ from cache-bus events without mount-force refetch loops.
 ## Pseudocode
 
 ```ts
+import { resolveListMountRefreshOptions } from "@/utils/cacheRefresh";
+
 export function resolveListingsMountRefreshOptions(hasInitialCache: boolean) {
-  return { force: !hasInitialCache, background: hasInitialCache };
+  return resolveListMountRefreshOptions(hasInitialCache);
 }
 
 const initialCached = useMemo(() => getCachedListingQueries(), []);

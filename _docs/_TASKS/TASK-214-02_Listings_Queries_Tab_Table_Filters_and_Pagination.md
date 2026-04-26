@@ -20,6 +20,8 @@ and visible-row selection trimming.
 - [ ] TASK-214-02-01: Query Filter Model and View Component
 - [ ] TASK-214-02-02: Query Table Selection, Source, and Updated Columns
 - [ ] TASK-214-02-03: Query Pagination and Visible Selection
+- [ ] Reuse `listingSourceOptions` from `core/admin/ui/listings/defaults.ts`
+  for source filter labels.
 - [ ] Keep query row actions limited to Edit and Delete.
 - [ ] Keep editor links on `AdminLink` with `/coderso/listings/:id`.
 
@@ -29,6 +31,8 @@ and visible-row selection trimming.
 - `core/admin/ui/listings/ListingQueryTable.tsx`
 - `core/admin/ui/listings/ListingQueryFilters.tsx` if extracted.
 - `core/admin/ui/listings/ListingQueryBulkActionsBar.tsx` if extracted.
+- `core/admin/ui/listings/defaults.ts` only if source labels need a
+  backward-compatible extension.
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-page.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`

@@ -21,8 +21,12 @@ list uses shared toast normalization instead of ad hoc strings.
 
 ## Sub-Tasks
 
-- [ ] Add Listings-specific toast adapters for query and template resources.
+- [ ] Add Listings-specific toast adapters for query and template resources in
+  `core/admin/ui/listings/listingActionToasts.ts`.
 - [ ] Reuse `createListActionToastAdapter`; do not create a local toast system.
+- [ ] Export one `listingQueryToasts` adapter and one `listingTemplateToasts`
+  adapter for reuse by `ListingListPage`, `ListingTemplateManager`, and
+  `ListingEditorPage`.
 - [ ] Preserve inline alerts for contextual load or partial bulk failure copy.
 - [ ] Add route tests for known mapped errors that the UI depends on.
 - [ ] Confirm schemas reject unknown top-level query/template create/update
@@ -35,6 +39,7 @@ list uses shared toast normalization instead of ad hoc strings.
 - `core/admin/ui/listings/ListingListPage.tsx`
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
 - `core/admin/ui/listings/ListingEditorPage.tsx`
+- `core/admin/ui/listings/listingActionToasts.ts`
 - `core/admin/ui/shared/listActionToasts.ts` only if the generic helper needs a
   target-safe extension.
 - `core/server/routes/listingsRoutes.ts` only if mapping gaps are found.

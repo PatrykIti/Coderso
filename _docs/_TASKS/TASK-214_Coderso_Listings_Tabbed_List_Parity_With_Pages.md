@@ -136,6 +136,9 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
 8. Create, save/update, row delete, and bulk delete feedback uses shared action
    toast helpers with `listing query` / `listing queries` and
    `listing template` / `listing templates` labels.
+   The query/template toast adapters have one owner module,
+   `core/admin/ui/listings/listingActionToasts.ts`, so the list shell, template
+   manager, and query editor do not duplicate resource copy.
 9. Cache behavior follows the shared admin cache contract:
    cache hydrate first, background revalidate when cache exists, foreground load
    when cache is absent, cache-bus refresh after mutations, and prefetch warmup

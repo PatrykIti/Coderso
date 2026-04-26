@@ -26,6 +26,9 @@ keeps that route and adds feedback after save mutations settle.
   `updateListingQuery` resolves.
 - [ ] Query create/update failures emit a shared failure toast after the rejected
   mutation settles and keep the existing inline error state for editor context.
+- [ ] Import `listingQueryToasts` from
+  `core/admin/ui/listings/listingActionToasts.ts`; do not create editor-local
+  query toast copy.
 - [ ] Preserve dirty-state, preview, discard, and template-selection behavior in
   `ListingEditorPage`.
 
@@ -33,6 +36,7 @@ keeps that route and adds feedback after save mutations settle.
 
 - `core/admin/ui/listings/ListingListPage.tsx`
 - `core/admin/ui/listings/ListingEditorPage.tsx`
+- `core/admin/ui/listings/listingActionToasts.ts`
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
 - `tests/vitest/ui/list-action-toasts.test.ts` if helper coverage expands.

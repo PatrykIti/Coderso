@@ -44,9 +44,11 @@ ids or mutation copy between queries and templates.
   state path. They should call shell-owned `onRequestTemplateDelete` /
   `onRequestTemplateBulkDelete`, then use `ConfirmActionDialog` from the shared
   list action flow.
-- Query and template toast adapters may live in a shared Listings toast module
-  or near the components, but each list action must use the same
-  `createListActionToastAdapter` contract and resource-specific labels.
+- Query and template toast adapters must have one Listings owner module,
+  `core/admin/ui/listings/listingActionToasts.ts`, so list actions and
+  `ListingEditorPage` share the same copy. That module should export
+  `listingQueryToasts` and `listingTemplateToasts` built from
+  `createListActionToastAdapter` with resource-specific labels.
 
 ## Files to Change
 
@@ -54,6 +56,7 @@ ids or mutation copy between queries and templates.
 - `core/admin/ui/listings/ListingQueryTable.tsx`
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
 - `core/admin/ui/listings/ListingEditorPage.tsx`
+- `core/admin/ui/listings/listingActionToasts.ts`
 - `core/admin/ui/shared/listActionToasts.ts` only if the generic helper lacks a
   resource-safe capability.
 - `core/server/routes/listingsRoutes.ts` if route mapping needs tightening.
@@ -77,6 +80,9 @@ ids or mutation copy between queries and templates.
 ## Pseudocode
 
 ```ts
+// core/admin/ui/listings/listingActionToasts.ts
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
+
 const listingQueryToasts = createListActionToastAdapter({
   labels: { singular: "listing query", plural: "listing queries" },
   actions: {
@@ -94,6 +100,8 @@ const listingTemplateToasts = createListActionToastAdapter({
     delete: { pastTense: "deleted", failureVerb: "delete" },
   },
 });
+
+export { listingQueryToasts, listingTemplateToasts };
 
 const activeResource =
   activeTab === "queries" ? queryActionState : templateActionState;
