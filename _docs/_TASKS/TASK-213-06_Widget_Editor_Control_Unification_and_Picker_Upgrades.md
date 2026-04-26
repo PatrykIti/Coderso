@@ -37,7 +37,11 @@ remains reserved for technical/raw payload work.
 ## Sub-Tasks
 
 - `TASK-213-06-01_Commerce_Product_Radix_Select_and_Collection_Picker.md`
-- `TASK-213-06-02_Content_Media_and_Rich_Text_Quick_Setup_Upgrades.md`
+- `TASK-213-06-02_Gallery_Mosaic_Media_Picker_Quick_Setup.md`
+- `TASK-213-06-03_Rich_Text_Section_Quick_Editor.md`
+- `TASK-213-06-04_Dynamic_Content_Source_Quick_Setup.md`
+- `TASK-213-06-05_CTA_and_Compare_Timeline_Quick_Fields.md`
+- `TASK-213-06-06_Layout_Navigation_Helper_Controls.md`
 
 ## Files to Change
 
@@ -55,7 +59,7 @@ remains reserved for technical/raw payload work.
   - `core/widgets/core/productGallery.tsx`
   - `core/widgets/core/productCompare.tsx`
   - `core/widgets/core/productTable.tsx`
-- Content/media/rich-text editors:
+- Media/rich-text/dynamic-content/layout editors:
   - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx`
   - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx`
   - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx`
@@ -121,6 +125,11 @@ rich-text adapter is reused, keep it Bun-free at import time and adapt its outpu
 through the Rich Text Section normalizer instead of persisting post-editor block
 documents.
 
+For dynamic-content, CTA/Compare, and layout/navigation helper work, keep each
+leaf bounded to its named widget set. Current-state verification is acceptable
+only when `TASK-213-07-01` records exact code references and the source report
+keeps any remaining valid work under an implementation owner.
+
 ## Security Contract
 
 - Visibility:
@@ -154,7 +163,7 @@ documents.
   - `tests/vitest/widgets/productCompare.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
   - equivalent UI wave tests if added for compare/table.
-- Content/media/rich-text widgets:
+- Media/rich-text/dynamic-content/layout widgets:
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
   - `tests/vitest/ui/media-picker.test.tsx` only if shared picker/cache
     behavior changes

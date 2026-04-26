@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 91 tasks
+- **To Do:** 97 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1193 tasks
 
@@ -70,14 +70,20 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-213-03-02 | Advanced Mode Module Readiness and Tab Counts | Medium | Medium | Technical leaf: user-facing module readiness display plus filter-basis counts for Recommended and All widgets |
 | TASK-213-03-03 | Widget Filter Hierarchy and Favorites Rail Simplification | Medium | Medium | Technical leaf: remove duplicate Favorites rail signals and clarify sidebar/toolbar filter ownership |
 | TASK-213-04 | Widget Template Lifecycle and Category Management | Medium | Large | Save toasts, primary New Template CTA, row/bulk actions, delete/duplicate/name guards, and clearer inline category edit/delete states |
-| TASK-213-04-01 | Template Save Toasts Row Actions and Name Guards | Medium | Large | Technical leaf: shared template save feedback, primary New Template CTA, Edit/Duplicate/Delete row and bulk cleanup actions, and duplicate-name handling |
+| TASK-213-04-01 | Template Save Toasts and Primary CTA | Medium | Medium | Technical leaf: shared template create/update feedback plus a clear primary `New Template` action in the Templates tab |
 | TASK-213-04-02 | Template Category Inline Mode Visual Contract | Medium | Small | Technical leaf: visually distinct edit/delete modes with exact category context and accessible actions |
+| TASK-213-04-03 | Template Row and Bulk Cleanup Actions | Medium | Medium | Technical leaf: Edit/Duplicate/Delete row actions, confirmed visible-scope bulk delete, partial-failure feedback, and cache invalidation |
+| TASK-213-04-04 | Template Duplicate and Name Guard Contract | Medium | Medium | Technical leaf: service-owned duplicate behavior, explicit name-conflict policy, strict route mapping, and migration artifacts if DB uniqueness is added |
 | TASK-213-05 | Widget Wizard Consistency and Repeatable Fields | Medium | Large | Align wizard count selectors, visible repeatable rows, paired input labels, and beginner helper copy across audited widgets |
 | TASK-213-05-01 | Repeatable Count Field Sync Matrix | Medium | Medium | Technical leaf: repair count-to-visible-row mismatches for Stats KPI, Logo Cloud, FAQ, Grid, Gallery, Compare Timeline, and current-state verify Pricing/Testimonials/Team/Timeline peers |
 | TASK-213-05-02 | Paired Input Labels and Beginner Helper Text | Medium | Medium | Technical leaf: add per-field labels/aria-labels for link, CTA, pricing, FAQ, and social pairs plus helper copy for Flow key, Links source, and similar technical fields |
 | TASK-213-06 | Widget Editor Control Unification and Picker Upgrades | Medium | Large | Radix control unification, collection/media picker upgrades, and non-raw rich text/content quick setup where supported |
 | TASK-213-06-01 | Commerce Product Radix Select and Collection Picker | Medium | Large | Technical leaf: replace native selects in product widgets and add or explicitly defer typed collection picking |
-| TASK-213-06-02 | Content Media and Rich Text Quick Setup Upgrades | Medium | Large | Technical leaf: improve or verify Gallery Mosaic, Rich Text Section, Posts Feed, Content List, Entry Teaser, CTA, Compare Timeline, layout helpers, Toggle, and Footer social quick setup |
+| TASK-213-06-02 | Gallery Mosaic Media Picker Quick Setup | Medium | Medium | Technical leaf: reuse shared MediaPicker/media cache and persist only schema-owned public-runtime-safe gallery media data |
+| TASK-213-06-03 | Rich Text Section Quick Editor | Medium | Medium | Technical leaf: make routine rich text editing structured/sanitized without raw HTML-first Wizard UX |
+| TASK-213-06-04 | Dynamic Content Source Quick Setup | Medium | Medium | Technical leaf: verify or add source/count/layout controls for Posts Feed, Content List, and Entry Teaser through existing owners |
+| TASK-213-06-05 | CTA and Compare Timeline Quick Fields | Medium | Medium | Technical leaf: expose rendered CTA/Compare public copy/context or clearly route full editing to Visual without hidden preset surprises |
+| TASK-213-06-06 | Layout Navigation Helper Controls | Medium | Medium | Technical leaf: add bounded slot/default-pane/link-source/social helper controls with schema-owned runtime fields where needed |
 | TASK-213-07 | QA Docs and Widget Source Report Closure | Medium | Medium | Final validation matrix, Playwright source report closure, docs, changelog, and board synchronization for TASK-213 |
 | TASK-213-07-01 | Widget Playwright and Vitest Regression Matrix | Medium | Small | Technical leaf: map every SUMMARY-WIDGETS finding to exact automated/manual proof and record unrelated failures separately |
 | TASK-213-07-02 | Widgets Docs Changelog and Board Closure | Medium | Small | Technical leaf: update widgets docs, changelog/index, TASK-213 statuses, README counts, and source-report fixed/open states |

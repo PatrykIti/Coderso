@@ -30,8 +30,10 @@ templates confidently, and manage categories without ambiguity.
 
 ## Sub-Tasks
 
-- `TASK-213-04-01_Template_Save_Toasts_Row_Actions_and_Name_Guards.md`
+- `TASK-213-04-01_Template_Save_Toasts_and_Primary_CTA.md`
 - `TASK-213-04-02_Template_Category_Inline_Mode_Visual_Contract.md`
+- `TASK-213-04-03_Template_Row_and_Bulk_Cleanup_Actions.md`
+- `TASK-213-04-04_Template_Duplicate_and_Name_Guard_Contract.md`
 
 ## Files to Change
 
@@ -56,8 +58,11 @@ templates confidently, and manage categories without ambiguity.
 
 ## Implementation Direction
 
-Prefer existing template route/service seams. Add list row actions in the
-library layer; keep route modules orchestration-only.
+Prefer existing template route/service seams. Implementation is split by owner:
+`TASK-213-04-01` owns save feedback and primary creation entry, `TASK-213-04-03`
+owns list row/bulk cleanup UX, `TASK-213-04-04` owns duplicate/name service and
+route contracts, and `TASK-213-04-02` owns category row visual states. Keep route
+modules orchestration-only.
 
 Bulk selection/delete should follow the current admin-list pattern from Forms,
 Entries, Content Types, Pages, and Posts: local visible-row selection, a focused

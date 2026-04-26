@@ -141,7 +141,7 @@ owner or a verification owner:
 | `BUG-1` Insert Widget silent outcome | `TASK-213-02-01` | Await insert mutation, emit shared toast, and expose canonical editor link. |
 | `BUG-2` Favorite button a11y/state | `TASK-213-03-01` | Dynamic label/title, pressed state, visual state, and bounded persistence feedback. |
 | `BUG-3` Template save/create feedback | `TASK-213-04-01` | Shared create/update success/error toasts after awaited saves. |
-| `BUG-4` Template list cleanup actions | `TASK-213-04-01` | Row Edit/Duplicate/Delete plus confirmed visible-scope bulk delete. |
+| `BUG-4` Template list cleanup actions | `TASK-213-04-03`, `TASK-213-04-04` | Row Edit/Duplicate/Delete plus confirmed visible-scope bulk delete and service-owned duplicate contract. |
 | `BUG-5` Duplicate card/drawer insert entry | `TASK-213-02-02` | One configuration-first insert path; no mutation before placement submit. |
 | `BUG-6` Weak New Template CTA | `TASK-213-04-01` | Primary Templates-tab create action in the list header/action area. |
 | `BUG-7` Global tab counts under filters | `TASK-213-03-02` | Recommended/All counts computed from the active filter basis. |
@@ -150,7 +150,7 @@ owner or a verification owner:
 | `UX-3` Advanced mode helper | `TASK-213-03-02` | Accessible helper/tooltip describing complexity filtering. |
 | `UX-4` Unlabeled view toggle | `TASK-213-03-01` | Named grid/list controls with selected state and visible layout effect. |
 | `UX-5` Filter hierarchy overload | `TASK-213-03-03` | Clarify sidebar vs toolbar ownership without creating a second library surface. |
-| `UX-6` Test/duplicate templates cleanup | `TASK-213-04-01` | Delete/duplicate/name-guard cleanup from the Templates list. |
+| `UX-6` Test/duplicate templates cleanup | `TASK-213-04-03`, `TASK-213-04-04` | Delete/bulk cleanup in the Templates list plus explicit duplicate/name-guard policy. |
 | `UX-7` Category inline edit/delete confusion | `TASK-213-04-02` | Visually distinct edit and delete states that preserve category context. |
 | `UX-8` Duplicate Favorites rail signals | `TASK-213-03-03` | One Favorites representation per rail state. |
 | `GLOBAL-1` Count vs exposed rows | `TASK-213-05-01` | Repair or current-state verify every named repeatable widget. |
@@ -160,8 +160,11 @@ owner or a verification owner:
 | `BUG-9` Form Embed crash | `TASK-213-01-01` | UI-only sentinel; no sentinel persistence; no blank-editor crash. |
 | `BUG-10` Listing query loading state | `TASK-213-01-02` | Loading, empty, ready, and error states are truthful after fetch completion. |
 | Pricing display-price and FAQ quick rows | `TASK-213-05-02`, `TASK-213-05-01` | Distinct field names plus explicit handling for display price and FAQ answers so public preset content is not hidden from Wizard users. |
-| Dynamic content quick-setup notes | `TASK-213-06-02`, `TASK-213-07-01` | Posts Feed, Content List, Entry Teaser, and Compare Timeline are either upgraded through existing schema fields or current-state/deferred with owner and reason. |
-| Layout/forms/navigation helper notes | `TASK-213-05-02`, `TASK-213-06-02` | Flow key, links source, slot labels, toggle default state, and footer social controls get bounded helper/control upgrades. |
+| Gallery Mosaic media quick setup | `TASK-213-06-02` | Routine media selection uses the shared media picker/cache and persists only schema-owned public-runtime-safe data. |
+| Rich Text Section raw HTML quick setup | `TASK-213-06-03` | Routine rich-text editing uses structured/sanitized owner fields instead of raw HTML-first Wizard UX. |
+| Dynamic content quick-setup notes | `TASK-213-06-04`, `TASK-213-07-01` | Posts Feed, Content List, and Entry Teaser are either upgraded through existing schema fields or current-state/deferred with owner and reason. |
+| CTA/Compare quick-field notes | `TASK-213-06-05` | CTA Banner and Compare Timeline expose rendered public copy/context or explicitly route it to Visual. |
+| Layout/forms/navigation helper notes | `TASK-213-05-02`, `TASK-213-06-06` | Flow key, links source, slot labels, toggle default state, and footer social controls get bounded helper/control upgrades. |
 
 `TASK-213-07` must copy this map into the final source-report closure state with
 actual test/manual evidence, not just planned ownership.
@@ -201,12 +204,18 @@ actual test/manual evidence, not just planned ownership.
 - `TASK-213-03-01_Favorites_and_View_Toggle_A11y_Feedback.md`
 - `TASK-213-03-02_Advanced_Mode_Module_Readiness_and_Tab_Counts.md`
 - `TASK-213-03-03_Widget_Filter_Hierarchy_and_Favorites_Rail_Simplification.md`
-- `TASK-213-04-01_Template_Save_Toasts_Row_Actions_and_Name_Guards.md`
+- `TASK-213-04-01_Template_Save_Toasts_and_Primary_CTA.md`
 - `TASK-213-04-02_Template_Category_Inline_Mode_Visual_Contract.md`
+- `TASK-213-04-03_Template_Row_and_Bulk_Cleanup_Actions.md`
+- `TASK-213-04-04_Template_Duplicate_and_Name_Guard_Contract.md`
 - `TASK-213-05-01_Repeatable_Count_Field_Sync_Matrix.md`
 - `TASK-213-05-02_Paired_Input_Labels_and_Beginner_Helper_Text.md`
 - `TASK-213-06-01_Commerce_Product_Radix_Select_and_Collection_Picker.md`
-- `TASK-213-06-02_Content_Media_and_Rich_Text_Quick_Setup_Upgrades.md`
+- `TASK-213-06-02_Gallery_Mosaic_Media_Picker_Quick_Setup.md`
+- `TASK-213-06-03_Rich_Text_Section_Quick_Editor.md`
+- `TASK-213-06-04_Dynamic_Content_Source_Quick_Setup.md`
+- `TASK-213-06-05_CTA_and_Compare_Timeline_Quick_Fields.md`
+- `TASK-213-06-06_Layout_Navigation_Helper_Controls.md`
 - `TASK-213-07-01_Widget_Playwright_and_Vitest_Regression_Matrix.md`
 - `TASK-213-07-02_Widgets_Docs_Changelog_and_Board_Closure.md`
 
