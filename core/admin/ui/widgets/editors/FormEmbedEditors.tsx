@@ -59,6 +59,8 @@ const inputSizeOptions = [
   { id: "lg", label: "Large" },
 ] as const;
 
+const NO_FORM_VALUE = "__no_form__";
+
 type AlignmentValue = NonNullable<FormEmbedLayout["alignment"]>;
 type WidthValue = NonNullable<FormEmbedLayout["width"]>;
 type SpacingValue = NonNullable<FormEmbedLayout["spacing"]>;
@@ -214,17 +216,19 @@ function FormSelection({
 }) {
   const { items: forms, isLoading } = useForms();
   const normalized = normalizeValue(value);
-  const selectedForm = forms.find((form) => form.id === normalized.formId) ?? null;
+  const normalizedFormId = normalized.formId?.trim() ?? "";
+  const selectedForm = forms.find((form) => form.id === normalizedFormId) ?? null;
+  const selectedValue = selectedForm ? selectedForm.id : NO_FORM_VALUE;
   const isInternal = selectedForm?.submissionAccess === "internal";
 
   return (
     <EditorSection title="Form selection" description="Pick the saved form to embed.">
       <Select
-        value={normalized.formId ?? ""}
+        value={selectedValue}
         onValueChange={(formId) =>
           updateValue(value, onChange, (current) => ({
             ...current,
-            formId,
+            formId: formId === NO_FORM_VALUE ? "" : formId,
           }))
         }
       >
@@ -232,9 +236,13 @@ function FormSelection({
           <SelectValue placeholder={isLoading ? "Loading forms..." : "Select form"} />
         </SelectTrigger>
         <SelectContent>
-          {forms.length === 0 ? (
-            <SelectItem value="" disabled>
-              No forms found
+          {selectedValue === NO_FORM_VALUE ? (
+            <SelectItem value={NO_FORM_VALUE} disabled>
+              {forms.length === 0
+                ? isLoading
+                  ? "Loading forms..."
+                  : "No forms found"
+                : "Select form"}
             </SelectItem>
           ) : null}
           {forms.map((form) => (

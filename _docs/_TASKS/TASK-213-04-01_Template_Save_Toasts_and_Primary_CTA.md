@@ -5,7 +5,7 @@
 **Category:** Widget Templates + Admin/UI + Notifications
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-04, TASK-174-03-03, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

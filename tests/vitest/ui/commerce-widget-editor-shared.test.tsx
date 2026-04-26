@@ -58,6 +58,36 @@ vi.mock("@/components/ui/textarea", () => ({
   }) => <textarea value={value} onChange={onChange} rows={rows} />,
 }));
 
+vi.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    onValueChange,
+    children,
+  }: {
+    value?: string;
+    onValueChange?: (value: string) => void;
+    children?: React.ReactNode;
+  }) => (
+    <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+      {children}
+    </select>
+  ),
+  SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  SelectValue: () => null,
+  SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({
+    value,
+    children,
+  }: {
+    value: string;
+    children?: React.ReactNode;
+  }) => <option value={value}>{children}</option>,
+}));
+
+vi.mock("@/services/commerceClient", () => ({
+  listCommerceCollectionsCached: vi.fn(async () => []),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -273,7 +303,7 @@ test("source fields update limit, filters, sorting, and status toggles", () => {
   setInputValue(findInputByLabel(container, "Limit"), "0");
   setInputValue(findInputByLabel(container, "Search"), "camera");
   setInputValue(
-    findInputByLabel(container, "Collection IDs (comma separated)"),
+    findInputByLabel(container, "Collection IDs fallback"),
     "featured, sale, featured, clearance"
   );
   setSelectValue(findSelectByLabel(container, "Sort field"), "publishedAt");

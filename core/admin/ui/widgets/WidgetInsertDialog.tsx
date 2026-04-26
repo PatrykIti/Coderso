@@ -33,7 +33,8 @@ export type WidgetInsertDialogProps = {
     targetId?: string | null;
     blockId?: string | null;
     slotId?: string | null;
-  }) => void;
+  }) => Promise<void> | void;
+  error?: string | null;
 };
 
 type PlacementOption = "new" | "inside";
@@ -52,6 +53,7 @@ export function WidgetInsertDialog({
   pages,
   templates,
   onInsert,
+  error,
 }: WidgetInsertDialogProps) {
   const pageOptions = useMemo(() => pages ?? [], [pages]);
   const templateOptions = useMemo(() => templates ?? [], [templates]);
@@ -81,6 +83,8 @@ export function WidgetInsertDialog({
   const [blockTree, setBlockTree] = useState<Block[]>([]);
   const [blocksError, setBlocksError] = useState<string | null>(null);
   const [blocksLoading, setBlocksLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const resolvedPageId = pageId || pageOptions[0]?.id || "";
   const selectedBlock = blocks.find((block) => block.id === blockId) ?? null;
   const selectedBlockData = useMemo(
@@ -97,6 +101,7 @@ export function WidgetInsertDialog({
   const selectedSlot = slotOptions.find((slot) => slot.id === slotId) ?? null;
   const supportsLegacyChildren = selectedBlockMeta?.canHaveChildren ?? false;
   const handleOpenChange = (nextOpen: boolean) => {
+    if (isSubmitting && !nextOpen) return;
     if (nextOpen) {
       setPageId(pageOptions[0]?.id ?? "");
       setPlacement("new");
@@ -107,6 +112,7 @@ export function WidgetInsertDialog({
       setBlocks([]);
       setBlockTree([]);
       setBlocksError(null);
+      setSubmitError(null);
     }
     onOpenChange(nextOpen);
   };
@@ -191,6 +197,34 @@ export function WidgetInsertDialog({
     setSlotId(firstAvailable?.id ?? slotOptions[0]?.id ?? "");
   }, [slotOptions, selectedSlot]);
 
+  const handleSubmit = async () => {
+    if (!canSubmit || isSubmitting) return;
+    const payload: WidgetInsertPayload =
+      placement === "new"
+        ? {
+            placement: "new",
+            targetType: "page",
+            targetId: resolvedPageId,
+          }
+        : {
+            placement: "inside",
+            targetType,
+            targetId,
+            blockId,
+            slotId: slotOptions.length > 0 ? slotId : undefined,
+          };
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      await onInsert?.(payload);
+      onOpenChange(false);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to insert widget.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] gap-0 p-0 sm:max-w-lg">
@@ -204,8 +238,9 @@ export function WidgetInsertDialog({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             aria-label="Close insert widget dialog"
+            disabled={isSubmitting}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -456,32 +491,26 @@ export function WidgetInsertDialog({
             </div>
           ) : null}
         </div>
+        {error || submitError ? (
+          <div className="border-t border-destructive/20 bg-destructive/10 px-6 py-3 text-sm text-destructive">
+            {submitError ?? error}
+          </div>
+        ) : null}
         <div className="flex flex-col gap-3 border-t bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button
-            disabled={!canSubmit}
+            disabled={!canSubmit || isSubmitting}
             onClick={() => {
-              const payload: WidgetInsertPayload =
-                placement === "new"
-                  ? {
-                      placement: "new",
-                      targetType: "page",
-                      targetId: resolvedPageId,
-                    }
-                  : {
-                      placement: "inside",
-                      targetType,
-                      targetId,
-                      blockId,
-                      slotId: slotOptions.length > 0 ? slotId : undefined,
-                    };
-              onInsert?.(payload);
-              handleOpenChange(false);
+              void handleSubmit();
             }}
           >
-            Insert Widget
+            {isSubmitting ? "Inserting..." : "Insert Widget"}
           </Button>
         </div>
       </DialogContent>

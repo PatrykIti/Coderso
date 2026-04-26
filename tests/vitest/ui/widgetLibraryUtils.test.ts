@@ -210,6 +210,6 @@ test("buildWidgetModuleOptions sorts strict ready modules first", () => {
     "search",
     "custom-module",
   ]);
-  expect(options[0]?.label).toContain("Ready");
-  expect(options[2]?.label).toContain("Needs coverage");
+  expect(options[0]?.label).toContain("Ready to use");
+  expect(options[2]?.label).toContain("In preparation");
 });

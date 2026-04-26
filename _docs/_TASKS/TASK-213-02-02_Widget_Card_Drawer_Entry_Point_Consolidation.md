@@ -5,7 +5,7 @@
 **Category:** Widget Library + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

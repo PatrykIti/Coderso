@@ -3,6 +3,7 @@ import { ApiError } from "../errorHandler";
 import {
   createWidgetTemplate,
   deleteWidgetTemplate,
+  duplicateWidgetTemplate,
   getWidgetTemplate,
   listWidgetTemplates,
   updateWidgetTemplate,
@@ -22,6 +23,7 @@ import {
 } from "../utils/previewUrls";
 import {
   widgetTemplateCreateSchema,
+  widgetTemplateDuplicateSchema,
   widgetTemplatePreviewSchema,
   widgetTemplateUpdateSchema,
 } from "../validation/widgetSchemas";
@@ -40,7 +42,7 @@ export type Router = {
   delete: (path: string, ...handlers: WidgetTemplateRouteHandler[]) => void;
 };
 
-const mapWidgetTemplateError = (error: unknown) => {
+export const mapWidgetTemplateError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "widget_template_not_found":
@@ -58,6 +60,12 @@ const mapWidgetTemplateError = (error: unknown) => {
         "widget_template_status_invalid",
         "Template status is invalid",
         400
+      );
+    case "widget_template_name_conflict":
+      return new ApiError(
+        "widget_template_name_conflict",
+        "Template name already exists",
+        409
       );
     case "widget_template_revision_not_found":
       return new ApiError(
@@ -166,6 +174,28 @@ export function registerWidgetTemplateRoutes(
             metadata: { revisionId: revision.id },
           });
           return { ok: true };
+        });
+      }
+    );
+
+    router.post(
+      `${basePath}/:id/duplicate`,
+      requirePermission("widgets:write"),
+      async (ctx) => {
+        return withWidgetTemplateErrors(async () => {
+          validate(widgetTemplateDuplicateSchema, ctx.body ?? {});
+          const duplicated = await duplicateWidgetTemplate(
+            ctx.params.id,
+            ctx.user?.id ?? null
+          );
+          await logAudit({
+            actorId: ctx.user?.id ?? null,
+            action: "widgets.template.duplicate",
+            targetType: "widget_template",
+            targetId: duplicated.id,
+            metadata: { sourceId: ctx.params.id, name: duplicated.name },
+          });
+          return duplicated;
         });
       }
     );

@@ -19,7 +19,9 @@ Metrics section for proof/trust numbers with clear value-label hierarchy.
 ### Wizard (minimal onboarding)
 - KPI layout variant
 - Metric count
-- Quick values for first metrics
+- Quick values for all visible metrics in the selected wizard count
+
+The wizard count selector and rendered metric inputs must stay synchronized.
 
 ### Visual (primary editing mode)
 Sections:

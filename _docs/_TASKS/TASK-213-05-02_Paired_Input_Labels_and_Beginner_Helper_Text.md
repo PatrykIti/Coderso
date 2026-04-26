@@ -5,7 +5,7 @@
 **Category:** Widget Editors + Accessibility + UX Copy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-05
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

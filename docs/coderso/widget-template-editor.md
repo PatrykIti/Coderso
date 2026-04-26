@@ -28,6 +28,11 @@ In the current UI, the editor includes:
 - side tabs `Settings` and `Details`,
 - template metadata and layout controls.
 
+Template creation and saving use shared admin notifications. Creating a new
+template confirms the created template name, while later saves confirm that the
+template was saved. Save errors are shown through the same bounded notification
+path used by other admin editors.
+
 # Medium
 
 Use Template Editor when you need a reusable composition that can be applied to
@@ -120,6 +125,12 @@ Use this safe authoring order when you want fewer reuse mistakes:
   configuration beyond global template settings.
 - A template should feel more reusable after editing, not more specialized. If
   it becomes too specific, it probably belongs on a one-off page instead.
+- Template names are guarded case-insensitively. Creating or renaming a template
+  to an existing name returns a conflict instead of silently creating an
+  indistinguishable duplicate.
+- Duplicating a template is a server-owned copy operation. The server loads the
+  source template, clones allowed blocks/settings, creates a draft, and assigns
+  an intentional `Copy of ...` style name.
 
 # Troubleshooting
 
@@ -139,6 +150,9 @@ Use this safe authoring order when you want fewer reuse mistakes:
   block.
 - The template is hard to find later:
   review its name and category, not just the widget composition.
+- A duplicate template name is rejected:
+  choose a clear unique name, or use the list-level duplicate action so the
+  system creates an intentional draft copy name.
 
 # Decision Guide
 

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { listMediaCached } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
   galleryMosaicDefaults,
@@ -327,6 +329,46 @@ export function GalleryMosaicWizardEditor({
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const items = normalizeGalleryMosaicItems(normalized.items);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+  const [mediaPickerError, setMediaPickerError] = useState<string | null>(null);
+
+  const handleMediaSelection = async (nextValue: unknown) => {
+    const ids = Array.isArray(nextValue) ? nextValue.map(String) : [];
+    setSelectedMediaIds(ids);
+    setMediaPickerError(null);
+    if (ids.length === 0) return;
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const mediaById = new Map(mediaItems.map((item) => [item.id, item]));
+      updateValue(value, onChange, (current) => {
+        const currentItems = normalizeGalleryMosaicItems(
+          current.items,
+          Math.max(ids.length, items.length)
+        );
+        const nextItems = [...currentItems];
+        ids.forEach((id, index) => {
+          const media = mediaById.get(id);
+          if (!media?.url) return;
+          nextItems[index] = {
+            ...nextItems[index],
+            image: media.url,
+            caption:
+              media.title?.trim() ||
+              media.caption?.trim() ||
+              media.originalName?.trim() ||
+              nextItems[index]?.caption ||
+              `Media ${index + 1}`,
+          };
+        });
+        return {
+          ...current,
+          items: normalizeGalleryMosaicItems(nextItems, nextItems.length),
+        };
+      });
+    } catch {
+      setMediaPickerError("Failed to resolve selected media.");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -375,6 +417,25 @@ export function GalleryMosaicWizardEditor({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Media library</p>
+        <MediaPicker
+          value={selectedMediaIds}
+          onChange={(next) => {
+            void handleMediaSelection(next);
+          }}
+          multiple
+          accept={["image/*"]}
+          maxItems={galleryMosaicItemMax}
+        />
+        <p className="text-xs text-muted-foreground">
+          Selected media is saved as public image URLs in gallery items.
+        </p>
+        {mediaPickerError ? (
+          <p className="text-xs text-destructive">{mediaPickerError}</p>
+        ) : null}
       </div>
     </div>
   );

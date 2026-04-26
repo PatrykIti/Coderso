@@ -46,6 +46,36 @@ vi.mock("@/components/ui/textarea", () => ({
   }) => <textarea value={value} onChange={onChange} rows={rows} {...props} />,
 }));
 
+vi.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    onValueChange,
+    children,
+  }: {
+    value?: string;
+    onValueChange?: (value: string) => void;
+    children?: React.ReactNode;
+  }) => (
+    <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+      {children}
+    </select>
+  ),
+  SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  SelectValue: () => null,
+  SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({
+    value,
+    children,
+  }: {
+    value: string;
+    children?: React.ReactNode;
+  }) => <option value={value}>{children}</option>,
+}));
+
+vi.mock("@/services/commerceClient", () => ({
+  listCommerceCollectionsCached: vi.fn(async () => []),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -207,7 +237,7 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
     setInputValue(findInputByLabel(view.container, "Limit"), "4");
     setInputValue(findInputByLabel(view.container, "Search"), "bike");
     setInputValue(
-      findInputByLabel(view.container, "Collection IDs (comma separated)"),
+      findInputByLabel(view.container, "Collection IDs fallback"),
       "featured, sale, featured"
     );
     setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");

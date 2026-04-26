@@ -325,14 +325,23 @@ test("RichTextSection wizard editor normalizes the variant and updates copy fiel
       findInputByPlaceholder(view.container, "Long-form content section"),
       "Quarterly narrative"
     );
+    setInputValue(
+      findInputByPlaceholder(view.container, "Heading 1"),
+      "Inside the release"
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
     setTextareaValue(
-      findTextareaByPlaceholder(view.container, "<p>Start writing your content...</p>"),
-      "<h2>Inside the release</h2><p>Structured update</p>"
+      findTextareaByPlaceholder(view.container, "Paragraph 1"),
+      "Structured update"
     );
 
     expect(latestValue.titleBlock?.eyebrow).toBe("Analysis");
     expect(latestValue.titleBlock?.title).toBe("Quarterly narrative");
-    expect(latestValue.body?.html).toBe("<h2>Inside the release</h2><p>Structured update</p>");
+    expect(latestValue.body?.blocks?.[0]?.heading).toBe("Inside the release");
+    expect(latestValue.body?.blocks?.[0]?.content).toBe("Structured update");
+    expect(latestValue.options?.outputMode).toBe("blocks");
   } finally {
     view.cleanup();
   }
@@ -576,7 +585,7 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
     expect((wizardSelect as HTMLSelectElement | null)?.value).toBe("single-column");
     expect(findInputByPlaceholder(view.container, "Editorial", 0)?.value).toBe("");
     expect(findInputByPlaceholder(view.container, "Long-form content section", 0)?.value).toBe("");
-    expect(findTextareaByPlaceholder(view.container, "<p>Start writing your content...</p>")?.value).toBe(
+    expect(findTextareaByPlaceholder(view.container, "Paragraph 1")?.value).toBe(
       ""
     );
 

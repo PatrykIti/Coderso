@@ -94,6 +94,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Templates list hook
   - UI: `core/admin/ui/widgets/hooks/useWidgetTemplates.ts`
   - Cached APIs: `listWidgetTemplatesCached`, `getCachedWidgetTemplates`
+  - Mutations: `deleteWidgetTemplate`, `duplicateWidgetTemplate`
+  - Cache bus: `widgetTemplates:list`, `widgetCatalog:list`,
+    `widgetTemplates:detail:<id>`
 - Widget insert dialog
   - UI: `core/admin/ui/widgets/WidgetInsertDialog.tsx`
   - Cached APIs: `getWidgetTemplateCached`, `getPageCached`

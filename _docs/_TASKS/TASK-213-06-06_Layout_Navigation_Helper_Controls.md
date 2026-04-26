@@ -5,7 +5,7 @@
 **Category:** Layout/Navigation Widgets + Admin/UI + Wizard UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-06, TASK-213-05-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

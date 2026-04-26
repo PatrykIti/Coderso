@@ -187,7 +187,9 @@ export function buildWidgetModuleOptions(
 
       if (status.valid) {
         const readySuffix =
-          status.enforcement === "strict" ? "Ready" : "Ready (Beta)";
+          status.enforcement === "strict"
+            ? "Ready to use"
+            : "Ready to use (Beta)";
         return {
           value: module,
           label: `${toDisplayLabel(module)} - ${readySuffix}`,
@@ -198,7 +200,7 @@ export function buildWidgetModuleOptions(
 
       return {
         value: module,
-        label: `${toDisplayLabel(module)} - Needs coverage`,
+        label: `${toDisplayLabel(module)} - In preparation`,
         readiness: "needs-coverage" as const,
         enforcement: status.enforcement,
       };

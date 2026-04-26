@@ -138,7 +138,8 @@ test("faq accordion wizard renders onboarding fields", () => {
 
   expect(html).toContain("FAQ layout");
   expect(html).toContain("Section title");
-  expect(html).toContain("Initial questions");
+  expect(html).toContain("Questions count");
+  expect(html).toContain("Questions and answers");
 });
 
 test("faq accordion visual renders section-based IA", () => {

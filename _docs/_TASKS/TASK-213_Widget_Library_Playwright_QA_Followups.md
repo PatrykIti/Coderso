@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Admin/UI + Widget Editors + Templates
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-049, TASK-054-25, TASK-054-26, TASK-127, TASK-208, TASK-211
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

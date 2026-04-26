@@ -5,7 +5,7 @@
 **Category:** Widget Editors + Commerce + Content + Media
 **Estimated Effort:** Large
 **Dependencies:** TASK-213, TASK-206, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

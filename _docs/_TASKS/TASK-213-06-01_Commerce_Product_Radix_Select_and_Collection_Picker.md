@@ -5,7 +5,7 @@
 **Category:** Commerce Widgets + Admin/UI + Widget Editors
 **Estimated Effort:** Large
 **Dependencies:** TASK-213-06
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

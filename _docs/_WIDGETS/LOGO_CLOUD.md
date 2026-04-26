@@ -20,7 +20,9 @@ Trust-focused section that displays partner/client logos with optional links.
 - Logo cloud layout variant
 - Section title
 - Logo count
-- Basic names for first logos
+- Basic names for all visible logos in the selected wizard count
+
+The wizard count selector and rendered logo-name inputs must stay synchronized.
 
 ### Visual (primary editing mode)
 Sections:

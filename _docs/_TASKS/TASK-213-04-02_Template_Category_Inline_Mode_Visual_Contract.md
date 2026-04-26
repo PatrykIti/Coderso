@@ -5,7 +5,7 @@
 **Category:** Widget Templates + Categories + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-213-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** Widget Editors + Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-01, TASK-194
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

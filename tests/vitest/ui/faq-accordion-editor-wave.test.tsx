@@ -385,7 +385,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FaqAccordion wizard editor updates variant, title, and onboarding questions while keeping the wizard scope to two questions", async () => {
+test("FaqAccordion wizard editor updates variant, title, and onboarding questions across the full wizard scope", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialValue: faqAccordionDefaults,
@@ -403,7 +403,7 @@ test("FaqAccordion wizard editor updates variant, title, and onboarding question
     expect((variantSelect as HTMLSelectElement).value).toBe("single-column");
 
     const questionInputs = findInputsByPlaceholderPrefix(view.container, "Question ");
-    expect(questionInputs).toHaveLength(2);
+    expect(questionInputs).toHaveLength(faqAccordionDefaults.items.length);
 
     setSelectValue(variantSelect, "compact");
     setInputValue(

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Eye, History, Save, Settings2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ import {
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { resolveAdminActionErrorMessage } from "@/ui/shared/actionToasts";
 import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
@@ -655,6 +657,7 @@ export function WidgetTemplateEditorPage() {
           blocks,
           settings: templateSettings,
         });
+        toast.success(`Template ${created.name} created.`);
         navigate(resolveAdminHref(adminBasePath, `/admin/widgets/templates/${created.id}`));
         return;
       }
@@ -668,11 +671,14 @@ export function WidgetTemplateEditorPage() {
         settings: templateSettings,
       });
       setRemoteUpdatePending(false);
+      toast.success("Template saved.");
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Failed to save template.";
+      const message = resolveAdminActionErrorMessage(
+        err,
+        "Failed to save template."
+      );
       setError(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

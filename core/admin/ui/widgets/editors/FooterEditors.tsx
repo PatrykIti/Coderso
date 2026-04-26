@@ -258,34 +258,49 @@ function ColumnsQuickSetup({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Column {index + 1}
             </p>
-            <Input
-              value={column.title}
-              onChange={(event) =>
-                updateColumn(value, onChange, variant, index, {
-                  title: event.target.value,
-                })
-              }
-              placeholder={`Column ${index + 1} title`}
-            />
+            <label className="space-y-1 text-sm">
+              <span className="font-medium text-foreground">
+                Column {index + 1} title
+              </span>
+              <Input
+                value={column.title}
+                onChange={(event) =>
+                  updateColumn(value, onChange, variant, index, {
+                    title: event.target.value,
+                  })
+                }
+                placeholder={`Column ${index + 1} title`}
+              />
+            </label>
             <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                value={firstLink.label}
-                onChange={(event) =>
-                  updateColumnLink(value, onChange, variant, index, 0, {
-                    label: event.target.value,
-                  })
-                }
-                placeholder="First link label"
-              />
-              <Input
-                value={firstLink.href}
-                onChange={(event) =>
-                  updateColumnLink(value, onChange, variant, index, 0, {
-                    href: event.target.value,
-                  })
-                }
-                placeholder="First link URL"
-              />
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-foreground">
+                  Column {index + 1} first link label
+                </span>
+                <Input
+                  value={firstLink.label}
+                  onChange={(event) =>
+                    updateColumnLink(value, onChange, variant, index, 0, {
+                      label: event.target.value,
+                    })
+                  }
+                  placeholder="First link label"
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-foreground">
+                  Column {index + 1} first link URL
+                </span>
+                <Input
+                  value={firstLink.href}
+                  onChange={(event) =>
+                    updateColumnLink(value, onChange, variant, index, 0, {
+                      href: event.target.value,
+                    })
+                  }
+                  placeholder="First link URL"
+                />
+              </label>
             </div>
           </div>
         );
@@ -338,26 +353,36 @@ function SocialLinksEditor({
       ) : null}
       {visibleItems.map((item, index) => (
         <div key={`${item.type}-${index}`} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
-          <Select
-            value={item.type}
-            onValueChange={(next) => updateSocial(index, { type: next })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {socialTypeOptions.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={item.href}
-            onChange={(event) => updateSocial(index, { href: event.target.value })}
-            placeholder="Social URL"
-          />
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-foreground">
+              Social {index + 1} platform
+            </span>
+            <Select
+              value={item.type}
+              onValueChange={(next) => updateSocial(index, { type: next })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {socialTypeOptions.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-foreground">
+              Social {index + 1} URL
+            </span>
+            <Input
+              value={item.href}
+              onChange={(event) => updateSocial(index, { href: event.target.value })}
+              placeholder="Social URL"
+            />
+          </label>
           <Button
             type="button"
             size="sm"
@@ -442,7 +467,7 @@ export function FooterWizardEditor({
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Social basics</p>
-        <SocialLinksEditor value={value} onChange={onChange} limit={2} />
+        <SocialLinksEditor value={value} onChange={onChange} limit={8} />
       </div>
     </div>
   );

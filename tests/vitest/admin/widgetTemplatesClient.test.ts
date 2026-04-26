@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   clearWidgetTemplatesCache,
   createWidgetTemplate,
+  duplicateWidgetTemplate,
   getWidgetTemplateCached,
   listWidgetTemplates,
   listWidgetTemplatesCached,
@@ -100,6 +101,31 @@ test("updateWidgetTemplate patches payload", async () => {
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/widget-templates/t1");
     expect(calls[1]?.init?.method).toBe("PATCH");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("duplicateWidgetTemplate posts duplicate action", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ id: "copy-1", name: "Copy of Template" });
+  };
+
+  try {
+    resetCsrfToken();
+    await duplicateWidgetTemplate("t1");
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/widget-templates/t1/duplicate");
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.body).toBe("{}");
   } finally {
     globalThis.fetch = originalFetch;
   }
