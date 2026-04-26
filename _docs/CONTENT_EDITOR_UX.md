@@ -87,12 +87,18 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   odpowiedzialnosci z inserterem.
 - Publish / Update daje jawny success feedback przez shared admin toast z
   dostepnym `Admin notifications` live region.
+- Publish / Update success i bounded error copy przechodza przez shared
+  `createAdminActionToastAdapter`; editor shell nie wywoluje Sonnera ad hoc i
+  nie ukrywa odrzuconych publish/update promises.
 - Gdy autosave nie powiedzie sie, editor pokazuje `Autosave paused` z akcja
   `Retry now`; route boundary zwraca bounded `post_autosave_failed` copy, a
   draft pozostaje dirty do skutecznego zapisu.
 - Revisions drawer ma opis a11y i bounded read-only preview przed restore; dla
   pustych/krotkich rewizji pokazuje metadata snapshotu zamiast negatywnego
   empty state.
+- Create New Post drawer uzywa `SheetDescription`, wiec widoczny opis
+  `Start a new article and publish when ready.` jest powiazany z dialogiem przez
+  `aria-describedby`.
 
 ## Post inspector
 
@@ -118,6 +124,9 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   `Search Interactive blocks...`.
 - W inserterze:
   - `Embed` nalezy do kategorii `Media`,
+  - `Video`, `Gallery`, `Audio`, i `File` sa widoczne tylko dlatego, ze maja
+    pelny kontrakt: defaults, normalizer, canvas, inspector, media picker oraz
+    runtime rendering,
   - `Separator` nalezy do kategorii `Text`,
   - search pozostaje ograniczony do aktywnej kategorii.
 

@@ -29,6 +29,7 @@ import {
   CALLOUT_TONE_OPTIONS,
   EMBED_ASPECT_OPTIONS,
   EMBED_PROVIDER_OPTIONS,
+  GALLERY_COLUMN_OPTIONS,
   IMAGE_MARGIN_OPTIONS,
   IMAGE_WIDTH_OPTIONS,
   IMAGE_WRAP_OPTIONS,
@@ -342,6 +343,125 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
                 onChange={(event) => onChangeAttrs({ caption: event.target.value })}
               />
             </div>
+          </>
+        ) : null}
+
+        {block.type === "video" ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Media ID</label>
+              <Input
+                value={readString(attrs.mediaId)}
+                onChange={(event) => onChangeAttrs({ mediaId: event.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Video URL fallback</label>
+              <Input
+                value={readString(attrs.url)}
+                onChange={(event) => onChangeAttrs({ url: event.target.value })}
+                placeholder="https://cdn.example.com/video.mp4"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Caption</label>
+              <Input
+                value={readString(attrs.caption)}
+                onChange={(event) => onChangeAttrs({ caption: event.target.value })}
+              />
+            </div>
+            <ToggleField
+              label="Show controls"
+              checked={readBoolean(attrs.controls, true)}
+              onCheckedChange={(checked) => onChangeAttrs({ controls: checked })}
+            />
+          </>
+        ) : null}
+
+        {block.type === "gallery" ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Media IDs</label>
+              <Input
+                value={Array.isArray(attrs.mediaIds) ? attrs.mediaIds.join(", ") : ""}
+                onChange={(event) =>
+                  onChangeAttrs({
+                    mediaIds: event.target.value
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="media-1, media-2"
+              />
+            </div>
+            <SelectField
+              label="Columns"
+              value={String(readNumber(attrs.columns, 3))}
+              onChange={(value) => onChangeAttrs({ columns: Number(value) })}
+              options={GALLERY_COLUMN_OPTIONS}
+            />
+            <ToggleField
+              label="Show captions"
+              checked={readBoolean(attrs.captions, true)}
+              onCheckedChange={(checked) => onChangeAttrs({ captions: checked })}
+            />
+          </>
+        ) : null}
+
+        {block.type === "audio" ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Media ID</label>
+              <Input
+                value={readString(attrs.mediaId)}
+                onChange={(event) => onChangeAttrs({ mediaId: event.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Audio URL fallback</label>
+              <Input
+                value={readString(attrs.url)}
+                onChange={(event) => onChangeAttrs({ url: event.target.value })}
+                placeholder="https://cdn.example.com/audio.mp3"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Caption</label>
+              <Input
+                value={readString(attrs.caption)}
+                onChange={(event) => onChangeAttrs({ caption: event.target.value })}
+              />
+            </div>
+          </>
+        ) : null}
+
+        {block.type === "file" ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Media ID</label>
+              <Input
+                value={readString(attrs.mediaId)}
+                onChange={(event) => onChangeAttrs({ mediaId: event.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Download label</label>
+              <Input
+                value={readString(attrs.label, "Download file")}
+                onChange={(event) => onChangeAttrs({ label: event.target.value })}
+              />
+            </div>
+            <ToggleField
+              label="Show file size"
+              checked={readBoolean(attrs.showSize, true)}
+              onCheckedChange={(checked) => onChangeAttrs({ showSize: checked })}
+            />
+            <ToggleField
+              label="Open in new tab"
+              checked={readBoolean(attrs.newTab, false)}
+              onCheckedChange={(checked) => onChangeAttrs({ newTab: checked })}
+            />
           </>
         ) : null}
 

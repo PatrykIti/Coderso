@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Admin/UI + Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-212-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

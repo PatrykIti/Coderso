@@ -71,6 +71,20 @@ const embedAspectPaddingTop = {
   "1:1": "100%",
 } as const;
 
+const galleryColumnClass = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-2 sm:grid-cols-4",
+} as const;
+
+const formatBytes = (bytes: number | undefined) => {
+  if (!bytes || !Number.isFinite(bytes)) return null;
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+};
+
 type PostBlockRuntimeRendererProps = {
   document: PostRuntimeMappedDocument;
   className?: string;
@@ -373,6 +387,87 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
           <figcaption className="text-sm text-muted-foreground">{image.caption}</figcaption>
         ) : null}
       </figure>
+    );
+  }
+
+  if (block.type === "video") {
+    const video = block.content.video;
+    if (!video?.src) return null;
+    return (
+      <figure className="space-y-2 rounded-lg border bg-black/5 p-2">
+        <video
+          src={video.src}
+          controls={video.controls}
+          autoPlay={video.autoplay}
+          muted={video.autoplay ? true : undefined}
+          preload="metadata"
+          className="aspect-video w-full rounded-md bg-black"
+        />
+        {video.caption ? (
+          <figcaption className="text-sm text-muted-foreground">{video.caption}</figcaption>
+        ) : null}
+      </figure>
+    );
+  }
+
+  if (block.type === "gallery") {
+    const gallery = block.content.gallery;
+    const items = gallery?.items.filter((item) => Boolean(item.src)) ?? [];
+    if (items.length === 0) return null;
+    const columns = gallery?.columns ?? 3;
+    return (
+      <div
+        className={cx("grid gap-3", galleryColumnClass[columns])}
+        data-post-runtime-gallery="true"
+      >
+        {items.map((item) => (
+          <figure key={item.id} className="space-y-1">
+            <img
+              src={item.src ?? ""}
+              alt={item.alt}
+              loading="lazy"
+              className="aspect-square w-full rounded-lg border object-cover"
+            />
+            {gallery?.captions !== false && item.caption ? (
+              <figcaption className="text-sm text-muted-foreground">
+                {item.caption}
+              </figcaption>
+            ) : null}
+          </figure>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "audio") {
+    const audio = block.content.audio;
+    if (!audio?.src) return null;
+    return (
+      <figure className="space-y-2 rounded-lg border bg-[var(--color-surface)] p-3">
+        <audio src={audio.src} controls={audio.controls} preload="metadata" className="w-full" />
+        {audio.caption ? (
+          <figcaption className="text-sm text-muted-foreground">{audio.caption}</figcaption>
+        ) : null}
+      </figure>
+    );
+  }
+
+  if (block.type === "file") {
+    const file = block.content.file;
+    if (!file?.href) return null;
+    const sizeLabel = formatBytes(file.sizeBytes);
+    return (
+      <a
+        href={file.href}
+        target={file.newTab ? "_blank" : undefined}
+        rel={file.newTab ? "noopener noreferrer" : undefined}
+        className="flex items-center justify-between gap-3 rounded-lg border bg-[var(--color-surface)] px-4 py-3 text-sm font-medium"
+      >
+        <span>{file.label}</span>
+        {file.showSize && sizeLabel ? (
+          <span className="text-xs text-muted-foreground">{sizeLabel}</span>
+        ) : null}
+      </a>
     );
   }
 

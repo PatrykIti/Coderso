@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Admin/UI + Accessibility + Editor Wrapper + Post Blocks
 **Estimated Effort:** Large
 **Dependencies:** TASK-204, TASK-208, TASK-211
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -251,6 +251,27 @@ proves a regression.
 - `_docs/UI/POST_EDITOR_NEXTLESS_CURRENT_STATE.md` if editor/media UX changes
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion
+
+## Closure Notes (2026-04-26)
+
+- `BUG-5` remains live-fixed and the Posts editor shell now routes Publish and
+  Update success/error feedback through `createAdminActionToastAdapter` instead
+  of direct Sonner calls.
+- `BUG-8` is fixed by binding the Create New Post drawer subtitle through
+  `SheetDescription`; focused a11y coverage asserts `aria-describedby` points
+  at the visible copy and catches future Radix missing-description warnings.
+- `UX-4` is implemented rather than deferred: `Video`, `Gallery`, `Audio`, and
+  `File` are accepted block types with defaults, normalization, inserter/canvas
+  support, inspector controls, media-library selection, runtime mapping, runtime
+  rendering, and focused Vitest coverage.
+- Automated validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/action-toasts.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/posts-create-drawer-a11y.test.tsx tests/vitest/posts/post-block-document-writing-canvas.test.ts tests/vitest/posts/postEditorStore.test.ts tests/vitest/posts/post-block-normalizer-writing-canvas.test.ts tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/posts/post-block-runtime-renderer.test.tsx tests/vitest/ui/post-block-inspector-wave.test.tsx tests/vitest/ui/post-editor-canvas-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/block-inserter-wave.test.tsx`
+- Manual Playwright replay was not rerun in this code pass; the source report
+  records the previous 2026-04-26 live BUG-5 proof and marks BUG-8/UX-4 closed
+  from code plus targeted automated coverage.
 
 ## Acceptance Criteria
 

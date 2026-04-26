@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { isApiClientError } from "@/services/apiClient";
 import { getTaxonomyOverview } from "@/services/taxonomyClient";
 import {
@@ -39,6 +39,19 @@ import { useFocusReturn } from "./hooks/useFocusReturn";
 const FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
 const LAYOUT_STORAGE_KEY = "nextless.posts.editor.layout.v1";
 const TAXONOMY_LOAD_ERROR_COPY = "Could not load categories.";
+
+const postEditorActionToasts = createAdminActionToastAdapter({
+  actions: {
+    publish: {
+      success: "Post published",
+      errorFallback: "Failed to publish post.",
+    },
+    update: {
+      success: "Changes saved",
+      errorFallback: "Failed to save changes.",
+    },
+  },
+});
 
 type StoredPostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
@@ -566,12 +579,15 @@ export function PostBlockEditorShell() {
             }}
             onPublish={() => {
               const wasPublished = editor.status === "published";
+              const action = wasPublished ? "update" : "publish";
               editor
                 .publish()
                 .then(() => {
-                  toast.success(wasPublished ? "Changes saved" : "Post published");
+                  postEditorActionToasts.success(action);
                 })
-                .catch(() => undefined);
+                .catch((error) => {
+                  postEditorActionToasts.error(action, error);
+                });
             }}
             onToggleInserter={handleToggleInserter}
             inserterVisible={layout.showInserter}

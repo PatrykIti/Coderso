@@ -78,6 +78,12 @@ export const EMBED_ASPECT_OPTIONS: SelectOption[] = [
   { value: "1:1", label: "1:1 (square)" },
 ];
 
+export const GALLERY_COLUMN_OPTIONS: SelectOption[] = [
+  { value: "2", label: "2 columns" },
+  { value: "3", label: "3 columns" },
+  { value: "4", label: "4 columns" },
+];
+
 export const IMAGE_WRAP_OPTIONS: SelectOption[] = POST_IMAGE_WRAP_VALUES.map((value) => ({
   value,
   label:
@@ -112,6 +118,10 @@ export const BLOCK_STYLE_SCOPE: Record<PostBlockType, readonly string[]> = {
   quote: ["alignment", "width", "spacing", "textScale"],
   code: ["width", "spacing"],
   image: ["alignment", "width", "spacing"],
+  video: ["alignment", "width", "spacing"],
+  gallery: ["alignment", "width", "spacing"],
+  audio: ["alignment", "width", "spacing"],
+  file: ["alignment", "width", "spacing"],
   separator: ["width", "spacing"],
   callout: ["alignment", "width", "spacing", "textScale"],
   button: ["alignment", "width", "spacing"],

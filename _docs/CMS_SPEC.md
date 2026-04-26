@@ -137,6 +137,8 @@ Storage:
   publish/update i autosave failures. Unexpected autosave failures map to
   bounded browser-facing copy (`post_autosave_failed`) and do not expose raw
   driver messages.
+- Publish/update feedback przechodzi przez shared admin action-toast adapter;
+  shell nie wywoluje Sonnera bezposrednio i nie ukrywa odrzuconych mutacji.
 - Post inspector:
   - wybiera kategorie z taxonomy overview,
   - pokazuje retryable friendly fallback, gdy taxonomy overview/settings read
@@ -146,8 +148,14 @@ Storage:
     semantics.
 - Revisions drawer ma accessible description i pokazuje bounded fallback
   metadata dla rewizji bez extractable preview text.
+- Create New Post drawer ma realny `SheetDescription` powiazany przez
+  `aria-describedby`.
 - Block inserter search jest category-scoped; copy i aria-label odzwierciedlaja
   aktywna kategorie zamiast sugerowac globalne wyniki.
+- Media block capability dla posts jest release-atomic: `Image`, `Embed`,
+  `Video`, `Gallery`, `Audio`, i `File` sa widoczne tylko wtedy, gdy block type,
+  defaults, normalizer, editor canvas/inspector, media picker, runtime mapper,
+  runtime renderer i testy sa obecne w tym samym zakresie.
 
 ---
 

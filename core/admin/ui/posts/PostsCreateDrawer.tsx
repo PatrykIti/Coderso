@@ -13,6 +13,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -80,9 +81,9 @@ export function PostsCreateDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Create New Post</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Start a new article and publish when ready.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close create post drawer">

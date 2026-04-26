@@ -260,6 +260,107 @@ test("normalizePostBlockDocument normalizes expanded block attrs and typography 
   });
 });
 
+test("normalizePostBlockDocument normalizes media block attrs safely", () => {
+  const normalized = normalizePostBlockDocument({
+    version: 1,
+    blocks: [
+      {
+        id: "video-1",
+        type: "video",
+        attrs: {
+          mediaId: " video-media ",
+          url: "javascript:alert(1)",
+          caption: "x".repeat(400),
+          controls: false,
+          autoplay: true,
+        },
+      },
+      {
+        id: "gallery-1",
+        type: "gallery",
+        attrs: {
+          mediaIds: [
+            "image-1",
+            "image-1",
+            "image-2",
+            "image-3",
+            "image-4",
+            "image-5",
+            "image-6",
+            "image-7",
+            "image-8",
+            "image-9",
+            "image-10",
+            "image-11",
+            "image-12",
+            "image-13",
+          ],
+          columns: 9,
+          captions: false,
+        },
+      },
+      {
+        id: "audio-1",
+        type: "audio",
+        attrs: {
+          mediaId: " audio-media ",
+          url: "/media/audio.mp3",
+          caption: "Audio caption",
+          controls: false,
+        },
+      },
+      {
+        id: "file-1",
+        type: "file",
+        attrs: {
+          mediaId: " file-media ",
+          label: " Report.pdf ",
+          showSize: false,
+          newTab: true,
+        },
+      },
+    ],
+  });
+
+  expect(normalized.blocks[0]?.attrs).toMatchObject({
+    mediaId: "video-media",
+    url: "",
+    controls: false,
+    autoplay: false,
+  });
+  expect((normalized.blocks[0]?.attrs.caption as string).length).toBe(320);
+  expect(normalized.blocks[1]?.attrs).toMatchObject({
+    mediaIds: [
+      "image-1",
+      "image-2",
+      "image-3",
+      "image-4",
+      "image-5",
+      "image-6",
+      "image-7",
+      "image-8",
+      "image-9",
+      "image-10",
+      "image-11",
+      "image-12",
+    ],
+    columns: 3,
+    captions: false,
+  });
+  expect(normalized.blocks[2]?.attrs).toMatchObject({
+    mediaId: "audio-media",
+    url: "/media/audio.mp3",
+    caption: "Audio caption",
+    controls: true,
+  });
+  expect(normalized.blocks[3]?.attrs).toMatchObject({
+    mediaId: "file-media",
+    label: "Report.pdf",
+    showSize: false,
+    newTab: true,
+  });
+});
+
 test("createEmptyPostBlockDocument seeds default typography for editor inheritance", () => {
   const empty = createEmptyPostBlockDocument();
 

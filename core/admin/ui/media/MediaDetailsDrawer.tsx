@@ -12,6 +12,7 @@ import {
   Link2,
   Trash2,
   UploadCloud,
+  Video,
   X,
   ZoomIn,
 } from "lucide-react";
@@ -54,6 +55,7 @@ const previewIconMap = {
   image: ImageIcon,
   document: FileText,
   audio: FileAudio,
+  video: Video,
 };
 
 const usageIconMap = {

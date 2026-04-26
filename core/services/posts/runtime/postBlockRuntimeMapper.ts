@@ -265,6 +265,10 @@ type RuntimeBlockContent = {
   separatorThickness?: number;
   button?: RuntimeButtonConfig;
   embed?: RuntimeEmbedConfig;
+  video?: RuntimeMediaPlaybackConfig;
+  gallery?: RuntimeGalleryConfig;
+  audio?: RuntimeMediaPlaybackConfig;
+  file?: RuntimeFileConfig;
   language?: string;
   showLineNumbers?: boolean;
   writingCanvas?: {
@@ -278,6 +282,45 @@ type RuntimeBlockContent = {
     hideIfEmpty: boolean;
     items: RuntimeTocItem[];
   };
+};
+
+type RuntimeResolvedMedia = {
+  src: string | null;
+  label: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  alt?: string;
+  caption?: string;
+};
+
+type RuntimeMediaPlaybackConfig = {
+  src: string | null;
+  caption?: string;
+  controls: boolean;
+  autoplay?: boolean;
+  mimeType?: string;
+};
+
+type RuntimeGalleryItem = {
+  id: string;
+  src: string | null;
+  alt: string;
+  caption?: string;
+};
+
+type RuntimeGalleryConfig = {
+  items: RuntimeGalleryItem[];
+  columns: 2 | 3 | 4;
+  captions: boolean;
+};
+
+type RuntimeFileConfig = {
+  href: string | null;
+  label: string;
+  sizeBytes?: number;
+  mimeType?: string;
+  newTab: boolean;
+  showSize: boolean;
 };
 
 export type PostRuntimeMappedBlock = {
@@ -358,6 +401,101 @@ const resolveImageSrc = async (
     mediaCache.set(mediaId, null);
     return null;
   }
+};
+
+const sanitizeMediaUrl = (value: unknown) => {
+  const trimmed = toTrimmedOptional(value);
+  if (!trimmed) return null;
+  if (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
+    return trimmed;
+  }
+  return null;
+};
+
+const resolveMediaAsset = async (
+  mediaId: string | null,
+  mediaCache: Map<string, RuntimeResolvedMedia | null>,
+  readMedia: ReadMediaById
+): Promise<RuntimeResolvedMedia | null> => {
+  if (!mediaId) return null;
+  if (mediaId.startsWith("/") || mediaId.startsWith("http://") || mediaId.startsWith("https://")) {
+    return {
+      src: mediaId,
+      label: mediaId.split("/").filter(Boolean).at(-1) ?? "media asset",
+    };
+  }
+
+  if (mediaCache.has(mediaId)) {
+    return mediaCache.get(mediaId) ?? null;
+  }
+
+  try {
+    const media = await readMedia(mediaId);
+    const src = typeof media?.url === "string" ? sanitizeMediaUrl(media.url) : null;
+    if (!src) {
+      mediaCache.set(mediaId, null);
+      return null;
+    }
+    const label =
+      toTrimmedOptional(media?.title) ??
+      toTrimmedOptional(media?.originalName) ??
+      toTrimmedOptional(media?.key?.split("/").filter(Boolean).at(-1)) ??
+      toTrimmedOptional(media?.url?.split("/").filter(Boolean).at(-1)) ??
+      "media asset";
+    const resolved: RuntimeResolvedMedia = {
+      src,
+      label,
+      mimeType: toTrimmedOptional(media?.mimeType),
+      sizeBytes:
+        typeof media?.size === "number" && Number.isFinite(media.size)
+          ? media.size
+          : undefined,
+      alt: toTrimmedOptional(media?.alt),
+      caption: toTrimmedOptional(media?.caption),
+    };
+    mediaCache.set(mediaId, resolved);
+    return resolved;
+  } catch {
+    mediaCache.set(mediaId, null);
+    return null;
+  }
+};
+
+const resolveMediaPlayback = async (
+  attrs: Record<string, unknown>,
+  mediaCache: Map<string, RuntimeResolvedMedia | null>,
+  readMedia: ReadMediaById
+) => {
+  const mediaId = toTrimmedOptional(attrs.mediaId) ?? null;
+  const asset = await resolveMediaAsset(mediaId, mediaCache, readMedia);
+  return {
+    asset,
+    src: asset?.src ?? sanitizeMediaUrl(attrs.url),
+  };
+};
+
+const normalizeGalleryColumns = (value: unknown): 2 | 3 | 4 => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 3;
+  const rounded = Math.round(value);
+  return rounded === 2 || rounded === 4 ? rounded : 3;
+};
+
+const readRuntimeGalleryMediaIds = (value: unknown) => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const mediaIds: string[] = [];
+  for (const item of value) {
+    const mediaId = toTrimmedOptional(item);
+    if (!mediaId || seen.has(mediaId)) continue;
+    seen.add(mediaId);
+    mediaIds.push(mediaId);
+    if (mediaIds.length >= 12) break;
+  }
+  return mediaIds;
 };
 
 const getDefaultMediaReader = async (): Promise<ReadMediaById> => {
@@ -658,6 +796,7 @@ export async function mapPostDocumentForRuntime(
     return resolver(mediaId);
   };
   const mediaCache = new Map<string, string | null>();
+  const mediaAssetCache = new Map<string, RuntimeResolvedMedia | null>();
   const warnings = [...runtimeLegacy.warnings];
 
   const blocks = await Promise.all(
@@ -723,6 +862,60 @@ export async function mapPostDocumentForRuntime(
             wrap: imageLayout.wrap,
             widthPercent: imageLayout.widthPercent,
             marginPreset: imageLayout.marginPreset,
+          },
+        };
+      } else if (block.type === "video") {
+        const { asset, src } = await resolveMediaPlayback(attrs, mediaAssetCache, readMedia);
+        mapped.content = {
+          video: {
+            src,
+            caption: toTrimmedOptional(attrs.caption) ?? asset?.caption,
+            controls: attrs.controls !== false,
+            autoplay: false,
+            mimeType: asset?.mimeType,
+          },
+        };
+      } else if (block.type === "gallery") {
+        const mediaIds = readRuntimeGalleryMediaIds(attrs.mediaIds);
+        const items = await Promise.all(
+          mediaIds.map(async (mediaId) => {
+            const asset = await resolveMediaAsset(mediaId, mediaAssetCache, readMedia);
+            return {
+              id: mediaId,
+              src: asset?.src ?? null,
+              alt: asset?.alt ?? asset?.label ?? "",
+              caption: asset?.caption,
+            };
+          })
+        );
+        mapped.content = {
+          gallery: {
+            items,
+            columns: normalizeGalleryColumns(attrs.columns),
+            captions: attrs.captions !== false,
+          },
+        };
+      } else if (block.type === "audio") {
+        const { asset, src } = await resolveMediaPlayback(attrs, mediaAssetCache, readMedia);
+        mapped.content = {
+          audio: {
+            src,
+            caption: toTrimmedOptional(attrs.caption) ?? asset?.caption,
+            controls: true,
+            mimeType: asset?.mimeType,
+          },
+        };
+      } else if (block.type === "file") {
+        const mediaId = toTrimmedOptional(attrs.mediaId) ?? null;
+        const asset = await resolveMediaAsset(mediaId, mediaAssetCache, readMedia);
+        mapped.content = {
+          file: {
+            href: asset?.src ?? null,
+            label: toTrimmedOptional(attrs.label) ?? asset?.label ?? "Download file",
+            sizeBytes: asset?.sizeBytes,
+            mimeType: asset?.mimeType,
+            newTab: attrs.newTab === true,
+            showSize: attrs.showSize !== false,
           },
         };
       } else if (block.type === "separator") {

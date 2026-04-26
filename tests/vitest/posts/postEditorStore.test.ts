@@ -46,6 +46,53 @@ test("postEditorStore update_meta normalizes typography contract", () => {
   expect(next.dirty).toBe(true);
 });
 
+test("createPostBlock returns deterministic defaults for media blocks", () => {
+  expect(createPostBlock("video", "video-1")).toMatchObject({
+    id: "video-1",
+    type: "video",
+    attrs: {
+      mediaId: null,
+      url: "",
+      caption: "",
+      controls: true,
+      autoplay: false,
+    },
+    content: null,
+  });
+  expect(createPostBlock("gallery", "gallery-1")).toMatchObject({
+    id: "gallery-1",
+    type: "gallery",
+    attrs: {
+      mediaIds: [],
+      columns: 3,
+      captions: true,
+    },
+    content: null,
+  });
+  expect(createPostBlock("audio", "audio-1")).toMatchObject({
+    id: "audio-1",
+    type: "audio",
+    attrs: {
+      mediaId: null,
+      url: "",
+      caption: "",
+      controls: true,
+    },
+    content: null,
+  });
+  expect(createPostBlock("file", "file-1")).toMatchObject({
+    id: "file-1",
+    type: "file",
+    attrs: {
+      mediaId: null,
+      label: "Download file",
+      showSize: true,
+      newTab: false,
+    },
+    content: null,
+  });
+});
+
 test("postEditorStore insert/delete keeps selection and minimum one block", () => {
   const initial = createInitialPostEditorState();
   const inserted = postEditorReducer(initial, {

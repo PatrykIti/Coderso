@@ -45,9 +45,9 @@ Mapa obecnej implementacji posts editora w Nextless jako baseline do migracji `T
 2. Writing-first flow i smart paste pipeline juz istnieja.
 3. Autosave i preview sa ustabilizowane (silent sync, bez resetu edytora).
 4. Runtime parity dla blokow jest utrzymane mapperem i rendererem.
-5. Editor daje jawny success feedback dla publish/update przez shared admin
-   toaster i actionable autosave pause state z retry; unexpected autosave
-   failures sa mapowane do bounded browser-facing copy.
+5. Editor daje jawny success/error feedback dla publish/update przez shared
+   admin action-toast adapter i actionable autosave pause state z retry;
+   unexpected autosave failures sa mapowane do bounded browser-facing copy.
 6. Inspector ma picker-based category / featured-image UX, SEO badge na
    zwiniętym `Advanced`, display-only slug route context oraz retryable,
    friendly category-load fallback.
@@ -55,6 +55,11 @@ Mapa obecnej implementacji posts editora w Nextless jako baseline do migracji `T
    snapshot przed restore.
 8. Block inserter utrzymuje category-scoped search z placeholderem i aria-label
    dopasowanym do aktywnej zakladki.
+9. Media tab ma realne bloki `Image`, `Embed`, `Video`, `Gallery`, `Audio`, i
+   `File`; nowe media bloki przechodza przez defaults, normalizer, canvas,
+   inspector, media-library selection, runtime mapper i renderer.
+10. Create New Post drawer ma visible `SheetDescription` powiazany z dialogiem
+   przez `aria-describedby`.
 
 ## Coupling / Gap Hotspots
 1. Inserter/list/details korzysta juz ze wspolnego layout hooka, ale shell nadal

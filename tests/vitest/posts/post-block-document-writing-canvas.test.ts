@@ -11,6 +11,13 @@ test("post block types include writing-canvas", () => {
   expect(isPostBlockType("writing-canvas")).toBe(true);
   expect(POST_BLOCK_TYPES).toContain("toc");
   expect(isPostBlockType("toc")).toBe(true);
+  expect(POST_BLOCK_TYPES).toEqual(
+    expect.arrayContaining(["video", "gallery", "audio", "file"])
+  );
+  expect(isPostBlockType("video")).toBe(true);
+  expect(isPostBlockType("gallery")).toBe(true);
+  expect(isPostBlockType("audio")).toBe(true);
+  expect(isPostBlockType("file")).toBe(true);
 });
 
 test("createEmptyWritingCanvasContent returns deterministic initial node", () => {

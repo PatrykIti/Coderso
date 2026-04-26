@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Docs + Changelog
 **Estimated Effort:** Small
 **Dependencies:** TASK-212-04-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
