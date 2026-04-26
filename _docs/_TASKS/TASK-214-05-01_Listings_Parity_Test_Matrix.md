@@ -32,6 +32,10 @@ add real component suites where the mocked wave cannot prove behavior.
 - [ ] Cover cache hydration and prefetch warmup.
 - [ ] Cover the controlled template boundary: header `New`, row Edit, dialog
   close, row Delete, and bulk Delete all update shell-owned state.
+- [ ] Cover the route error split required by TASK-214-04-04: query-domain
+  validation errors emitted as `ApiError` pass through unchanged, while
+  non-ApiError missing-resource/template sentinels map to stable `ApiError`
+  responses at the route boundary.
 - [ ] Assert no private `ListingTemplateManager` direct-delete or nested primary
   `New template` flow remains after the active-tab header implementation.
 
@@ -48,7 +52,9 @@ add real component suites where the mocked wave cannot prove behavior.
   controlled dialog/table boundary is extracted.
 - `tests/vitest/admin/listingsClient.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts`
-- `tests/integration/routes/listings.test.ts` if route mapping changes.
+- `tests/integration/routes/listings.test.ts` for route mapping, query-domain
+  validation, and strict unknown-field assertions when TASK-214-04-04 is
+  implemented.
 
 ## Security Contract
 
@@ -59,7 +65,8 @@ add real component suites where the mocked wave cannot prove behavior.
 - CSRF: client tests should preserve mutation helpers using `withCsrf: true`.
 - Rate-limit bucket: unchanged unless route infrastructure is touched.
 - Reject-unknown validation: route tests should prove strict create/update
-  payload rejection when mapping changes.
+  payload rejection and representative query/template domain error codes when
+  mapping or UI-visible save/delete feedback is touched.
 - Anti-abuse: tests must prove destructive actions require confirmation and
   bulk ids are active-tab visible ids.
 - Template manager tests must prove template row actions emit controlled

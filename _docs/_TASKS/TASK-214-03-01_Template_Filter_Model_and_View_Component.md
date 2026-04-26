@@ -22,9 +22,15 @@ pattern while using template-specific fields.
 - [ ] Reset pagination and trim selected template ids when filter state
   changes.
 - [ ] Keep layout labels sourced from `listingLayoutOptions`.
+- [ ] Keep template filter state, pagination reset keys, visible ids, and
+  `selectedTemplateIds` owned by `ListingListPage` or by a shell-owned hook
+  called from `ListingListPage`. `ListingTemplateManager` may render the filter
+  component, but it must not become the hidden owner of selection trimming or
+  active-tab bulk metadata.
 
 ## Files to Change
 
+- `core/admin/ui/listings/ListingListPage.tsx`
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
 - `core/admin/ui/listings/ListingTemplateFilters.tsx` if extracted.
 - `core/admin/ui/listings/defaults.ts` only if labels need central reuse.
@@ -44,6 +50,15 @@ pattern while using template-specific fields.
 ## Pseudocode
 
 ```tsx
+const [templateSearch, setTemplateSearch] = useState("");
+const [templateLayout, setTemplateLayout] = useState("all");
+
+const filteredTemplates = filterListingTemplates(
+  templateItems,
+  templateSearch,
+  templateLayout
+);
+
 <ListingTemplateFilters
   search={templateSearch}
   layout={templateLayout}
@@ -58,8 +73,14 @@ pattern while using template-specific fields.
 - Search matches template slug.
 - Search matches template description.
 - Layout filter narrows to the selected layout.
+- Changing template filters resets template pagination and trims hidden
+  `selectedTemplateIds` through the shell-owned state path.
+- `ListingListPage` can still render the Templates tab selected count and bulk
+  bar in `PageHeader.actions` after filter changes without reading private
+  `ListingTemplateManager` state.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 
@@ -72,3 +93,5 @@ pattern while using template-specific fields.
 
 1. Template filters are small, resource-specific, and client-side.
 2. Filter changes cannot leave hidden templates selected.
+3. Template filter, pagination, and selection metadata remains visible to the
+   active-tab shell owner.

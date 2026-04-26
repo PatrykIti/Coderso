@@ -29,6 +29,12 @@ list uses shared toast normalization instead of ad hoc strings.
   `ListingEditorPage`.
 - [ ] Preserve inline alerts for contextual load or partial bulk failure copy.
 - [ ] Add route tests for known mapped errors that the UI depends on.
+- [ ] Add route tests for query create/update validation errors that are already
+  emitted as `ApiError` by the query contract, including representative
+  `listing_query_invalid`, `listing_query_invalid_source_config`,
+  `listing_query_invalid_filter_value`, `listing_query_invalid_name`, and
+  `listing_query_update_empty` paths. These should pass through
+  `withListingErrors` unchanged rather than being remapped as raw exceptions.
 - [ ] Confirm schemas reject unknown top-level query/template create/update
   fields.
 - [ ] Add missing stable mapping only if a real domain error currently leaks as
@@ -71,6 +77,8 @@ const queryError = listingQueryToasts.error("delete", err, {
 
 export const mapListingError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
+  // ApiError instances from queryBuilderService should pass through before this
+  // mapper. This mapper is only for non-ApiError domain sentinels.
   if (error.message === "listing_query_not_found") {
     return new ApiError("listing_query_not_found", "Listing query not found", 404);
   }
@@ -84,6 +92,10 @@ export const mapListingError = (error: unknown) => {
 - UI tests prove failed query/template mutations show stable inline copy.
 - Route tests prove:
   - missing query maps to `listing_query_not_found`;
+  - invalid query create/update payloads preserve stable query errors such as
+    `listing_query_invalid`, `listing_query_invalid_source_config`,
+    `listing_query_invalid_filter_value`, `listing_query_invalid_name`, and
+    `listing_query_update_empty`;
   - missing template maps to `listing_template_not_found`;
   - duplicate template slug maps to `listing_template_slug_exists`;
   - invalid template layout/config map to stable 400 errors;
