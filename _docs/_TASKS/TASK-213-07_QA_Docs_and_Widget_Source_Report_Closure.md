@@ -48,13 +48,18 @@ Pseudocode for the source report closure table:
 ```md
 | Finding | Owner task | Status | Evidence |
 |---|---|---|---|
-| BUG-9 Form Embed crash | TASK-213-01-01 | Fixed | test + Playwright replay |
-| BUG-10 listing loading | TASK-213-01-02 | Fixed | test + empty-state replay |
+| BUG-9 Form Embed crash | TASK-213-01-01 | Fixed after proof | test + Playwright replay |
+| BUG-10 listing loading | TASK-213-01-02 | Fixed after proof | test + empty-state replay |
+| GLOBAL-2 Listing/Search native select | TASK-213-07-01 | Current-state verified | code refs + source-report note |
 ```
 
 Validation notes must list exact commands, dates, and outcomes. If DB-backed
 lanes cannot run, record the concrete blocker and do not mark the relevant
 finding closed until rerun.
+
+If a Playwright finding is stale against the current code, close it explicitly
+as `current-state verified`, cite the checked files, and keep the still-valid
+part of the finding under its implementation owner.
 
 ## Security Contract
 

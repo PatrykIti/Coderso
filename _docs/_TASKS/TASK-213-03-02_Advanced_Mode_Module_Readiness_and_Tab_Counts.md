@@ -11,12 +11,15 @@
 
 ## Overview
 
-Fix filter hierarchy findings `BUG-7`, `UX-2`, `UX-3`, and the filter overload
-issue from `UX-5`.
+Fix filter-control findings `BUG-7`, `UX-2`, and `UX-3`.
 
 The library should keep pack-aware filtering, but editors should not see
 developer-centric `Needs coverage` copy or global tab counts that contradict the
 active category.
+
+This leaf owns the filter copy/count mechanics. `TASK-213-03-03` owns the
+broader sidebar/toolbar hierarchy and duplicate Favorites rail behavior from
+`UX-5`/`UX-8`.
 
 ## Sub-Tasks
 
@@ -32,7 +35,7 @@ No child task files.
   metadata is the right owner
 - `tests/vitest/ui/widgetLibraryUtils.test.ts`
 - `tests/vitest/ui/widget-library.test.tsx`
-- `tests/vitest/ui/widgetsClient.test.ts` only if catalog payload changes
+- `tests/vitest/admin/widgetsClient.test.ts` only if catalog payload changes
 
 ## Implementation Direction
 

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 106 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1157 tasks
 
@@ -45,11 +45,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-213-02 | Widget Insert Flow and User Feedback | High | Large | Shared success/error toasts, canonical target editor links, and one coherent configured insert path for core widget cards |
 | TASK-213-02-01 | Insert Widget Toasts and Editor Deep Links | High | Medium | Technical leaf: await insert mutations, emit shared Admin UI feedback, and link to the edited page/template |
 | TASK-213-02-02 | Widget Card Drawer Entry Point Consolidation | Medium | Medium | Technical leaf: remove parallel direct insert/card details ambiguity by making cards configuration-first and drawer-owned for insert |
-| TASK-213-03 | Widget Library A11y and Filter IA | High | Large | Favorite/view-toggle semantics, advanced mode helper, module readiness copy, and category-aware tab count behavior |
+| TASK-213-03 | Widget Library A11y and Filter IA | High | Large | Favorite/view-toggle semantics, advanced mode helper, module readiness copy, category-aware tab counts, and rail/filter hierarchy cleanup |
 | TASK-213-03-01 | Favorites and View Toggle A11y Feedback | High | Small | Technical leaf: dynamic labels, pressed states, visual state, and bounded favorite persistence feedback |
 | TASK-213-03-02 | Advanced Mode Module Readiness and Tab Counts | Medium | Medium | Technical leaf: user-facing module readiness display plus filter-basis counts for Recommended and All widgets |
-| TASK-213-04 | Widget Template Lifecycle and Category Management | Medium | Large | Save toasts, primary New Template CTA, row actions, delete/duplicate/name guards, and clearer inline category edit/delete states |
-| TASK-213-04-01 | Template Save Toasts Row Actions and Name Guards | Medium | Large | Technical leaf: shared template save feedback, primary New Template CTA, Edit/Duplicate/Delete list actions, and duplicate-name handling |
+| TASK-213-03-03 | Widget Filter Hierarchy and Favorites Rail Simplification | Medium | Medium | Technical leaf: remove duplicate Favorites rail signals and clarify sidebar/toolbar filter ownership |
+| TASK-213-04 | Widget Template Lifecycle and Category Management | Medium | Large | Save toasts, primary New Template CTA, row/bulk actions, delete/duplicate/name guards, and clearer inline category edit/delete states |
+| TASK-213-04-01 | Template Save Toasts Row Actions and Name Guards | Medium | Large | Technical leaf: shared template save feedback, primary New Template CTA, Edit/Duplicate/Delete row and bulk cleanup actions, and duplicate-name handling |
 | TASK-213-04-02 | Template Category Inline Mode Visual Contract | Medium | Small | Technical leaf: visually distinct edit/delete modes with exact category context and accessible actions |
 | TASK-213-05 | Widget Wizard Consistency and Repeatable Fields | Medium | Large | Align wizard count selectors, visible repeatable rows, paired input labels, and beginner helper copy across audited widgets |
 | TASK-213-05-01 | Repeatable Count Field Sync Matrix | Medium | Medium | Technical leaf: repair count-to-visible-row mismatches for Stats KPI, Logo Cloud, FAQ, Grid, Gallery, Compare Timeline, and verified peers |

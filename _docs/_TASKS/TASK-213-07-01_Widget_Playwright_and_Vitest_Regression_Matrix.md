@@ -37,12 +37,18 @@ Pseudocode:
 ```md
 | Finding | Automated proof | Manual proof | Status |
 |---|---|---|---|
-| BUG-9 Form Embed crash | form-embed-editor-wave | Playwright add/open | Fixed |
+| BUG-9 Form Embed crash | form-embed-editor-wave | Playwright add/open | Fixed after proof |
+| GLOBAL-2 Listing/Search native select | code refs + UI suite | inspect controls | Current-state verified |
 ```
 
 Use command output, not assumptions. If a suite fails for unrelated legacy
 reasons, isolate it with a smaller targeted suite and document the unrelated
 failure separately.
+
+For findings that no longer reproduce in the current checkout, record exact file
+references and the remaining valid owner. Example: `ListingFiltersEditors.tsx`
+and `SearchBoxEditors.tsx` already use shared Radix Select primitives, while
+their loading/empty-state issue remains under `TASK-213-01-02`.
 
 ## Security Contract
 
@@ -67,6 +73,8 @@ failure separately.
   - insert page/template flow success and failure;
   - Form Embed no-crash;
   - Listing Filters/Search Box loading/empty states;
+  - Listing Filters/Search Box current Select primitive verification for
+    `GLOBAL-2`;
   - repeatable count widgets;
   - product/media/rich-text quick setup upgrades.
 

@@ -14,9 +14,11 @@
 Repair the broader editor consistency and picker gaps from the Widget Library
 audit:
 
-- Product Gallery, Product Compare, Product Table, Listing Filters, and Search
-  Box should use the same Radix Select/combobox primitives as the rest of widget
-  wizards.
+- Product Gallery, Product Compare, and Product Table should use the same Radix
+  Select/combobox primitives as the rest of widget wizards.
+- Current code review shows Listing Filters and Search Box already use the
+  shared Radix Select primitives; their remaining report-owned issue is the
+  loading/empty state covered by `TASK-213-01-02`.
 - Commerce widgets should not ask editors to type raw collection IDs as CSV when
   a picker can use existing commerce/listing data.
 - Gallery Mosaic should provide a media-selection quick path instead of only a
@@ -146,6 +148,8 @@ hatch.
   - `tests/vitest/widgets/footer.test.tsx`
 - Manual Playwright:
   - product widgets use shared select styling and keyboard behavior;
+  - Listing Filters/Search Box are verified as current-state Radix controls
+    while their empty-state behavior is covered by `TASK-213-01-02`;
   - collection/media pickers do not require raw ID/CSV typing for common flows;
   - Rich Text Section routine editing is not raw HTML-only.
 
@@ -160,7 +164,7 @@ hatch.
 
 ## Acceptance Criteria
 
-1. Product/listing widget wizards use the shared Radix control pattern.
+1. Commerce/product widget wizards use the shared Radix control pattern.
 2. Normal editors can pick collections/media/content without raw CSV/ID typing
    for common flows.
 3. Raw HTML/technical payload editing is moved or kept in Advanced, not forced

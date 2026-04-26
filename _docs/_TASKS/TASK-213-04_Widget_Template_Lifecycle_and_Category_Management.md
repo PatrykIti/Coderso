@@ -19,6 +19,8 @@ Repair the template lifecycle and category-management UX findings from
   link hidden beside filters;
 - template rows need lifecycle actions such as Edit, Duplicate, and Delete
   without requiring editors to open each template one by one;
+- template cleanup needs a visible bulk-select/delete path for test templates
+  so `UX-6` is not silently reduced to row-only cleanup;
 - duplicate template names should be rejected or made visibly unique before save;
 - category inline edit and delete states need distinct visual treatment so
   users do not confuse editing with deletion.
@@ -124,6 +126,7 @@ if (await nameExists(input.name, { excludingId })) {
   - `New Template` is rendered as the Templates-tab primary CTA and remains
     reachable beside category filters;
   - template row/card exposes Edit/Duplicate/Delete actions;
+  - bulk selection exposes confirmed Delete selected for selected templates;
   - delete confirmation is required before destructive mutation.
 - Client tests:
   - duplicate/delete/category updates patch or invalidate caches correctly.
@@ -148,6 +151,7 @@ if (await nameExists(input.name, { excludingId })) {
 
 1. Template create/update has visible shared success and bounded error feedback.
 2. `New Template` is a clear primary action in the Templates tab.
-3. Template list supports cleanup actions without opening each editor first.
+3. Template list supports row and bulk cleanup actions without opening each
+   editor first.
 4. Duplicate names are handled intentionally.
 5. Category edit/delete states are visually and accessibly distinct.

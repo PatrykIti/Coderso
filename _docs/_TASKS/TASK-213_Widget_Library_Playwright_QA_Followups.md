@@ -61,11 +61,17 @@ stay in the existing Widget Library/editor seams.
   `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` own listing-query loading
   states and need a completed-empty state instead of an indefinite loading
   impression.
+- Code review confirms `ListingFiltersEditors.tsx` and `SearchBoxEditors.tsx`
+  already use the shared Radix Select primitives in the current checkout. The
+  `GLOBAL-2` native-select finding should therefore be closed as
+  current-state-verified for those two widgets during `TASK-213-07`, while
+  `BUG-10` remains owned by `TASK-213-01-02`.
 - Repeatable widget editors already own deterministic count helpers locally, but
   several wizard surfaces expose only a partial subset of the rows controlled by
   the count selector.
-- Product widget editors still use native `<select>` controls in several places
-  while most widget wizards use the shared Radix Select contract.
+- Product widget editors still use native `<select>` controls in shared
+  commerce source fields and gallery layout fields while most widget wizards use
+  the shared Radix Select contract.
 
 ## Required Product Behavior
 
@@ -82,6 +88,8 @@ stay in the existing Widget Library/editor seams.
    - favorite buttons and view toggles have labels, pressed state, and feedback;
    - advanced filters explain what they unlock;
    - module readiness copy is user-facing while preserving pack status data.
+   - the rail/filter hierarchy has one clear owner for Favorites, categories,
+     recommended/all state, module, and complexity filters.
 4. Widget wizard fields are deterministic:
    - visible repeatable rows match the count selectors or the selector is scoped
      to the exposed quick-setup rows;
@@ -90,7 +98,8 @@ stay in the existing Widget Library/editor seams.
      modes.
 5. Template cleanup is possible from the list:
    - `New Template` is a clear primary CTA in the Templates tab;
-   - templates can be edited, duplicated, and deleted from a row action surface;
+   - templates can be edited, duplicated, selected in bulk, and deleted from the
+     list surface without opening every editor;
    - destructive actions use shared confirmation primitives and shared toasts;
    - duplicate/template-name collisions are rejected or resolved explicitly.
 6. Source-report closure is precise:
@@ -116,6 +125,7 @@ stay in the existing Widget Library/editor seams.
 - `TASK-213-02-02_Widget_Card_Drawer_Entry_Point_Consolidation.md`
 - `TASK-213-03-01_Favorites_and_View_Toggle_A11y_Feedback.md`
 - `TASK-213-03-02_Advanced_Mode_Module_Readiness_and_Tab_Counts.md`
+- `TASK-213-03-03_Widget_Filter_Hierarchy_and_Favorites_Rail_Simplification.md`
 - `TASK-213-04-01_Template_Save_Toasts_Row_Actions_and_Name_Guards.md`
 - `TASK-213-04-02_Template_Category_Inline_Mode_Visual_Contract.md`
 - `TASK-213-05-01_Repeatable_Count_Field_Sync_Matrix.md`
@@ -124,6 +134,54 @@ stay in the existing Widget Library/editor seams.
 - `TASK-213-06-02_Content_Media_and_Rich_Text_Quick_Setup_Upgrades.md`
 - `TASK-213-07-01_Widget_Playwright_and_Vitest_Regression_Matrix.md`
 - `TASK-213-07-02_Widgets_Docs_Changelog_and_Board_Closure.md`
+
+## Files to Change (High-Level)
+
+- Widget Library shell:
+  - `core/admin/ui/widgets/WidgetLibraryPage.tsx`
+  - `core/admin/ui/widgets/WidgetCard.tsx`
+  - `core/admin/ui/widgets/WidgetCatalogFilters.tsx`
+  - `core/admin/ui/widgets/WidgetDetailsDrawer.tsx`
+  - `core/admin/ui/widgets/WidgetInsertDialog.tsx`
+  - `core/admin/ui/widgets/WidgetTemplateCategoryDrawer.tsx`
+  - `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`
+- Widget editor owners:
+  - `core/admin/ui/widgets/editors/*Editors.tsx` for the widgets named in the
+    leaf tasks
+  - `core/widgets/core/*` only when schema/default/normalizer contracts change
+- Clients/services/routes:
+  - `core/admin/services/widgetTemplatesClient.ts`
+  - `core/admin/services/widgetTemplateCategoriesClient.ts`
+  - `core/services/widgets/*`
+  - `core/server/routes/widgetTemplateRoutes.ts`
+  - `core/server/routes/widgetTemplateCategoryRoutes.ts`
+- Validation and docs:
+  - targeted `tests/vitest/widgets/*`
+  - targeted `tests/vitest/ui/*`
+  - targeted `tests/vitest/admin/*`
+  - Bun route suites when route contracts change
+  - `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md`, widget docs, cache/API docs,
+    changelog, and this task board
+
+## High-Level Implementation Sketch
+
+```ts
+for (const finding of summaryWidgetsFindings) {
+  const owner = resolveTaskOwner(finding);
+  const currentCodeState = inspectOwnerFiles(owner.files);
+
+  if (currentCodeState.provesFindingIsStale) {
+    recordSourceClosure(finding, "current-state verified", currentCodeState.refs);
+    continue;
+  }
+
+  implementThroughExistingSeam(owner);
+  addTargetedTests(owner.correctLane);
+  recordManualReplay(owner.playwrightPath);
+}
+
+syncDocsChangelogAndBoard("TASK-213");
+```
 
 ## Non-Goals
 
@@ -224,6 +282,7 @@ stay in the existing Widget Library/editor seams.
   - Listing Filters/Search Box finish loading into empty/ready/error copy;
   - insert/template save toasts are visible and accessible;
   - favorites/view toggle/advanced controls expose labels and states;
+  - rail/filter hierarchy does not show duplicate Favorites signals;
   - template row delete/duplicate and category inline states are understandable;
   - count-driven widgets show deterministic quick-setup rows.
 
@@ -249,8 +308,8 @@ stay in the existing Widget Library/editor seams.
    success and error feedback.
 3. Form Embed, Listing Filters, and Search Box pass crash/loading regression
    coverage and manual replay.
-4. Favorite, view toggle, advanced filter, module readiness, and tab counts are
-   accessible and no longer misleading.
+4. Favorite, view toggle, advanced filter, module readiness, tab counts, and
+   rail/filter hierarchy are accessible and no longer misleading.
 5. Repeatable-count widgets expose deterministic quick-setup rows or clearly
    scope the count selector to the visible quick fields.
 6. Docs, changelog, board statistics, and Playwright source report closure agree

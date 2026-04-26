@@ -14,10 +14,11 @@
 Fix `BUG-3`, `BUG-4`, `BUG-6`, and `UX-6` from the Widget Library report.
 
 Template save/create needs visible feedback. Template lists need row actions for
-Edit, Duplicate, and Delete so editors can clean duplicated/test templates
-without opening each editor. The Templates tab also needs `New Template` to read
-as the primary creation CTA rather than a weak link beside filters. Duplicate
-names should not silently create multiple indistinguishable rows.
+Edit, Duplicate, and Delete plus a selected-row bulk delete path so editors can
+clean duplicated/test templates without opening each editor. The Templates tab
+also needs `New Template` to read as the primary creation CTA rather than a weak
+link beside filters. Duplicate names should not silently create multiple
+indistinguishable rows.
 
 ## Sub-Tasks
 
@@ -87,6 +88,23 @@ Delete action:
 />
 ```
 
+Bulk cleanup:
+
+```tsx
+const selectedIds = getVisibleSelectedTemplateIds();
+
+<BulkActionBar count={selectedIds.length}>
+  <ConfirmActionDialog
+    title={`Delete ${selectedIds.length} templates?`}
+    onConfirm={() => deleteTemplates(selectedIds)}
+  />
+</BulkActionBar>
+```
+
+Bulk delete should use the same route/client contract as row delete, execute
+bounded concurrent deletes with truthful partial-failure feedback, and trim
+selection when filters hide rows.
+
 ## Security Contract
 
 - Visibility: internal admin widget templates.
@@ -110,13 +128,16 @@ Delete action:
 - `tests/vitest/ui/widget-library.test.tsx`
   - `New Template` appears as the primary Templates-tab action;
   - row actions are present and delete is confirmed.
+  - bulk select/delete is visible for selected template rows and requires
+    confirmation.
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
   - duplicate/delete cache invalidation or update behavior.
 - `tests/integration/routes/widgetTemplates.test.ts`
   - duplicate/name conflict route behavior;
   - delete auth/RBAC/CSRF behavior.
 - Manual Playwright:
-  - save template, duplicate template, delete template from list.
+  - save template, duplicate template, delete one template from the list, and
+    bulk delete selected test templates.
 
 ## Documentation Updates Required
 
@@ -130,5 +151,6 @@ Delete action:
 1. Template create/update emits visible shared feedback.
 2. `New Template` is exposed as the clear primary creation action.
 3. Template list exposes Edit/Duplicate/Delete row actions.
-4. Delete is confirmed and bounded.
-5. Duplicate names are handled intentionally and tested.
+4. Template list exposes confirmed bulk delete for selected rows.
+5. Delete is confirmed and bounded with truthful partial-failure feedback.
+6. Duplicate names are handled intentionally and tested.

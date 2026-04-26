@@ -21,7 +21,10 @@ Repair the Widget Library accessibility and filter hierarchy findings:
 - `Recommended` and `All widgets` tab counts should reflect active category and
   filter context, or clearly document that they are global counts;
 - the left rail should stop duplicating the same Favorites signal in two nearby
-  locations.
+  locations;
+- the sidebar and toolbar should have a clear hierarchy so categories, modules,
+  Recommended/All, Advanced mode, and complexity filters do not compete as
+  unrelated controls.
 
 The business outcome is a scannable library that remains accessible for keyboard
 and screen-reader users and does not make editors reason about implementation
@@ -31,6 +34,7 @@ terms.
 
 - `TASK-213-03-01_Favorites_and_View_Toggle_A11y_Feedback.md`
 - `TASK-213-03-02_Advanced_Mode_Module_Readiness_and_Tab_Counts.md`
+- `TASK-213-03-03_Widget_Filter_Hierarchy_and_Favorites_Rail_Simplification.md`
 
 ## Files to Change
 
@@ -113,6 +117,8 @@ Favorite state:
 - `tests/vitest/ui/widget-library.test.tsx`
   - view toggles have labels and selected state;
   - favorites rail does not duplicate confusing information;
+  - sidebar scope, widget categories, and toolbar filters remain predictable
+    after switching between Widgets, Templates, and Favorites;
   - advanced mode helper is rendered/accessibly described.
 - `tests/vitest/ui/widgetLibraryUtils.test.ts`
   - module options preserve readiness metadata while UI labels are user-facing;
@@ -135,3 +141,5 @@ Favorite state:
 2. Advanced mode explains what changes when enabled.
 3. Module readiness copy is user-facing while retaining pack status metadata.
 4. Tab counts no longer conflict with the active category/filter context.
+5. Favorites and filter hierarchy are not duplicated across nearby rail/toolbar
+   controls.

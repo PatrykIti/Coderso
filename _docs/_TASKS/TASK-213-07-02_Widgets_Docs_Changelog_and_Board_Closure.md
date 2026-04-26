@@ -54,6 +54,21 @@ Do not close a leaf whose implementation was intentionally deferred. Mark the
 finding open in the source report and keep the corresponding task To Do or split
 a new follow-up.
 
+Pseudocode:
+
+```ts
+for (const task of task213Family) {
+  if (task.findings.every((finding) => finding.status === "fixed" || finding.status === "verified")) {
+    markDone(task.id, completionDate);
+  } else {
+    keepOpen(task.id, listOpenFindings(task.findings));
+  }
+}
+
+updateBoardStatistics();
+appendChangelogEntry({ taskId: "TASK-213", validationEvidence });
+```
+
 ## Security Contract
 
 - Visibility: documentation-only.
