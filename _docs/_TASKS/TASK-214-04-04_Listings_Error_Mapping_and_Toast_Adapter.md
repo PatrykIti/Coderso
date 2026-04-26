@@ -33,12 +33,18 @@ list uses shared toast normalization instead of ad hoc strings.
   direct route-boundary coverage, matching the existing media/forms route test
   pattern. Export only the mapper; do not change behavior unless a real mapping
   gap is found.
-- [ ] Add route tests for query create/update validation errors that are already
-  emitted as `ApiError` by the query contract, including representative
-  `listing_query_invalid`, `listing_query_invalid_source_config`,
-  `listing_query_invalid_filter_value`, `listing_query_invalid_name`, and
-  `listing_query_update_empty` paths. These should pass through
-  `withListingErrors` unchanged rather than being remapped as raw exceptions.
+- [ ] Add route tests for the current query error split:
+  malformed/unknown top-level create/update payloads are rejected by
+  `listingQueryCreateSchema` / `listingQueryUpdateSchema` as route-boundary
+  validation errors, while semantic query normalizer errors that pass JSON
+  schema validation, such as `listing_query_invalid_source_config`,
+  `listing_query_invalid_filter_value`, and `listing_query_invalid_name`, pass
+  through `withListingErrors` unchanged as `ApiError` instances.
+- [ ] Do not require a public `listing_query_update_empty` response in TASK-214:
+  the current route schema rejects empty update payloads before
+  `parseListingQueryUpdateInput` can emit that internal sentinel. Only expose
+  or test that code if the implementation intentionally changes the API
+  contract and updates `_docs/CMS_API.md` in the same leaf.
 - [ ] Add explicit mapping coverage for raw non-`ApiError` query sentinels that
   can leak through service code, especially the insert-failure
   `listing_query_invalid` from `listingQueriesService.createListingQuery`.
@@ -108,10 +114,13 @@ export const mapListingError = (error: unknown) => {
     directly through an exported mapper;
   - missing query maps to `listing_query_not_found`;
   - raw non-`ApiError` `listing_query_invalid` maps to a stable 400 response;
-  - invalid query create/update payloads preserve stable query errors such as
-    `listing_query_invalid`, `listing_query_invalid_source_config`,
-    `listing_query_invalid_filter_value`, `listing_query_invalid_name`, and
-    `listing_query_update_empty`;
+  - malformed or unknown query create/update payloads are rejected at the route
+    schema boundary with `validation_error`;
+  - semantic query normalizer errors that pass JSON schema validation preserve
+    stable query errors such as `listing_query_invalid_source_config`,
+    `listing_query_invalid_filter_value`, and `listing_query_invalid_name`;
+  - empty query update payloads keep the current route-boundary behavior unless
+    a deliberate API contract change is made with docs and tests;
   - missing template maps to `listing_template_not_found`;
   - duplicate template slug maps to `listing_template_slug_exists`;
   - invalid template layout/config map to stable 400 errors;

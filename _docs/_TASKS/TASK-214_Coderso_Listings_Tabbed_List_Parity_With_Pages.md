@@ -141,6 +141,13 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
   The raw `listing_query_invalid` insertion failure from
   `listingQueriesService.createListingQuery` should be mapped explicitly if it
   becomes UI-visible through list/editor save feedback.
+- Empty query update payloads are currently rejected by the route/schema
+  boundary before the query normalizer can emit its internal
+  `listing_query_update_empty` sentinel. TASK-214 should preserve that current
+  public behavior (`validation_error` or the existing wrapped query invalid
+  code, depending on the exercised layer) unless the implementer deliberately
+  changes the API contract and updates `_docs/CMS_API.md` plus route tests in
+  the same leaf.
 
 ## Required Product Behavior
 
@@ -286,6 +293,7 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-pagination.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/listingsClient.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - Add focused component suites if the current mocked list tests cannot prove

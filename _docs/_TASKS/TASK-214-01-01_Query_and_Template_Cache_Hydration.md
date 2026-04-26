@@ -38,9 +38,9 @@ from cache-bus events without mount-force refetch loops.
   boolean-only hook.
 - [ ] Ensure cache-bus updates refresh in the background.
 - [ ] Preserve `useListingTemplates` behavior for current consumers while this
-  leaf lands. After TASK-214-01-02/03 moves template list ownership to the
-  shell, `ListingEditorPage` remains the separate editor consumer and the
-  template tab receives rows/loading/error through controlled props.
+  leaf lands. After TASK-214-01-02 and TASK-214-03 move template list ownership
+  to the shell, `ListingEditorPage` remains the separate editor consumer and
+  the template tab receives rows/loading/error through controlled props.
 
 ## Files to Change
 
@@ -113,6 +113,7 @@ const refresh = async (
   `useListingTemplates` changes.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-page.test.tsx tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

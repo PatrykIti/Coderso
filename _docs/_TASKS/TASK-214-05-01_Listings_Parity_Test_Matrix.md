@@ -40,7 +40,9 @@ add real component suites where the mocked wave cannot prove behavior.
   state, selected ids, or bulk metadata from private `ListingTemplateManager`
   state after the shell refactor.
 - [ ] Cover the route error split required by TASK-214-04-04: query-domain
-  validation errors emitted as `ApiError` pass through unchanged, while
+  semantic validation errors emitted as `ApiError` pass through unchanged,
+  malformed/unknown top-level payloads stay route-boundary validation errors,
+  empty query updates keep the current route-boundary behavior, and
   non-ApiError missing-resource, raw `listing_query_invalid`, and template
   sentinels map to stable `ApiError` responses at the route boundary.
 - [ ] Assert no private `ListingTemplateManager` direct-delete or nested primary
@@ -86,6 +88,7 @@ add real component suites where the mocked wave cannot prove behavior.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-page.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/listingsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `set -a && source .env && set +a && bun test tests/integration/routes/listings.test.ts` if route mapping changes.
   - `bun --cwd core lint`
