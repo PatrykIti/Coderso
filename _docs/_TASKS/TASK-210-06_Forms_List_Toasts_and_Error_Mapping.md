@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + API Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-210-01, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -28,14 +28,14 @@ UI leaves claim retained-history delete behavior.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-06-01: Forms List Toast Adapter Wiring
-- [ ] TASK-210-06-02: Forms Route Error Mapping and Strict Schemas
-- [ ] Add a Forms `createListActionToastAdapter` configuration for:
+- [x] TASK-210-06-01: Forms List Toast Adapter Wiring
+- [x] TASK-210-06-02: Forms Route Error Mapping and Strict Schemas
+- [x] Add a Forms `createListActionToastAdapter` configuration for:
   create, publish, draft, archive, delete.
-- [ ] Wire create, row lifecycle, row delete, bulk lifecycle, and bulk delete
+- [x] Wire create, row lifecycle, row delete, bulk lifecycle, and bulk delete
   success/error toasts.
-- [ ] Preserve inline alerts for load errors and partial bulk failures.
-- [ ] Add route/domain error mapping for known Forms errors if missing:
+- [x] Preserve inline alerts for load errors and partial bulk failures.
+- [x] Add route/domain error mapping for known Forms errors if missing:
   - `form_invalid` -> 400;
   - `form_name_required` -> 400;
   - `form_slug_exists` -> 409;
@@ -50,27 +50,27 @@ UI leaves claim retained-history delete behavior.
     wraps the public submission path. This is route-boundary stability only;
     runtime-preview/editor copy remains outside TASK-210 unless another task
     owns it.
-- [ ] Move or expose Forms status values from a Bun-free Forms contract/helper
+- [x] Move or expose Forms status values from a Bun-free Forms contract/helper
   module, then consume the same values in route schemas, server normalization,
   and admin/UI types instead of duplicating string unions across DB-coupled and
   browser modules.
-- [ ] Keep mapping centralized at the Forms route boundary, for example as
+- [x] Keep mapping centralized at the Forms route boundary, for example as
   `mapFormError(error): ApiError | null`, and reuse it consistently for
   create, detail, update, delete, field-write, and public submission form lookup
   paths.
-- [ ] Keep hard-delete semantics aligned with the database contract: submissions
+- [x] Keep hard-delete semantics aligned with the database contract: submissions
   and action-run history are retained, and a blocked delete returns a stable
   conflict instead of leaking a raw foreign-key/database error.
-- [ ] Prefer an explicit service precheck before hard delete: count retained
+- [x] Prefer an explicit service precheck before hard delete: count retained
   `form_submissions` and `form_action_runs` rows, throw
   `form_delete_restricted` when either count is non-zero, and keep raw database
   constraint errors as a last-resort mapper fallback only.
-- [ ] Tighten `formCreateSchema` and `formUpdateSchema` status validation to
+- [x] Tighten `formCreateSchema` and `formUpdateSchema` status validation to
   enum values `draft | published | archived`.
-- [ ] Tighten field-write validation when the mapper wraps
+- [x] Tighten field-write validation when the mapper wraps
   `PUT /forms/:id/fields`: reject unknown top-level field input keys while
   keeping flexible per-field data inside `settings`.
-- [ ] Keep public submission validation and error behavior unchanged unless a
+- [x] Keep public submission validation and error behavior unchanged unless a
   test proves it needs a route-boundary mapping fix.
 
 ## Files to Change
@@ -203,3 +203,15 @@ export const mapFormError = (error: unknown) => {
 7. Field-write and public-submission errors touched by this route mapper do not
    leak raw internal errors.
 8. Public submission hardening remains unchanged.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

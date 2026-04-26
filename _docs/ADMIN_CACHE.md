@@ -286,6 +286,26 @@ Clients update caches and broadcast events on:
   broadcast cache events for the list, sidebar shortcuts, builder, and records
   workflow.
 
+### Forms list/detail cache note
+
+- Forms list cache (`forms:list`) is owned by
+  `core/admin/services/formsClient.ts`.
+- `useForms()` follows the shared list mount policy:
+  - cache present -> `{ force: false, background: true }`,
+  - cache missing -> `{ force: true, background: false }`,
+  - cache-bus list events -> hydrate patched cache when available, then
+    `{ force: true, background: true }`.
+- `/admin/coderso/forms` prefetch warms `forms:list` with
+  `listFormsCached({ force: false })`; `/admin/forms` is only a legacy alias
+  normalized through admin path helpers.
+- `createForm()` and `updateForm()` upsert returned Forms rows into
+  `forms:list`, keep touched detail cache warm when available, and broadcast
+  list/detail update events.
+- `deleteForm()` removes only deletion-safe Forms rows from list/detail/action
+  caches and broadcasts invalidation. Retained submissions or action-run
+  diagnostics block hard delete through `form_delete_restricted`, so failed
+  deletes must not remove rows from browser cache as success.
+
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.

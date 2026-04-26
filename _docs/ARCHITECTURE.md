@@ -620,8 +620,13 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Submissions trafiaja do `form_submissions` (payload JSONB, ip, userAgent).
 - Automatyzacje formularza sa trzymane w `form_actions` (ordered pipeline per form).
 - Historia wykonania akcji jest trzymana w `form_action_runs` (success/failed/skipped + retry link).
-- Admin UI buduje formularze w `/forms` i zapisuje pola przez `/forms/:id/fields`.
-- Admin UI zarzadza pipeline przez `/forms/:id/actions` i logami przez `/forms/:id/action-runs`.
+- Admin UI zarzadza formularzami w kanonicznych trasach
+  `/admin/coderso/forms`, `/admin/coderso/forms/:id` i
+  `/admin/coderso/forms/:id/action-runs`; `/admin/forms` jest tylko aliasem
+  kompatybilnosci admina.
+- Backend API pozostaje pod `/forms/*`: edytor zapisuje pola przez
+  `PUT /forms/:id/fields`, pipeline przez `/forms/:id/actions`, a logi przez
+  `/forms/:id/action-runs`.
 - Publiczny submit odbywa sie przez `POST /forms/:id/submissions` (nonce + opcjonalna reCAPTCHA, zaleznie od Security Settings).
 - Runner `formAutomationRunner` wykonuje akcje po zapisie submission:
   - `email`, `webhook`, `entry_sync`, `redirect`, `success_message`,

@@ -180,6 +180,42 @@ Gdy zaznaczysz wpisy na liscie:
   - Move to draft,
   - Delete.
 
+## Forms parity
+
+- Forms list follows the Pages first-screen pattern at canonical route
+  `/admin/coderso/forms`: `AdminShell`, `PageHeader`, compact `New`, filter
+  strip, table card, inline selected-row bulk controls, shared pagination
+  footer, token-backed confirmations, and shared list-action toasts.
+- `/admin/forms` remains a legacy alias through shared admin path helpers; new
+  list/editor/action-log links use `/admin/coderso/forms`.
+- Filters are Forms-specific:
+  - search by form name, slug, or description,
+  - status: `All`, `Published`, `Draft`, `Archived`,
+  - access: `All`, `Public`, `Internal`.
+- Rows keep Forms domain columns and routes:
+  - `Form` links to `/admin/coderso/forms/:id`,
+  - `Action logs` opens `/admin/coderso/forms/:id/action-runs`,
+  - columns show status, submission access, and updated date.
+- Row actions are limited to `Edit`, `Action logs`, `Publish`,
+  `Move to draft`, `Archive`, and `Delete`. Duplicate, Runtime Preview, and
+  Embed Code remain absent until separate Forms service/API/UI contracts exist.
+- `New` opens the list-owned create drawer for the list fields only: name,
+  optional slug, status, and description. Builder-owned fields such as
+  `submissionAccess`, success behavior, and settings stay in the builder/client
+  contract rather than drawer UI state.
+- `forms.openAfterCreate` persists the drawer preference separately from Pages
+  and Custom Screens while defaulting to opening the builder after create.
+- Row delete and bulk delete require `ConfirmActionDialog`; delete mutations do
+  not run from a dropdown or bulk select directly.
+- Bulk actions operate only on currently visible selected rows and support:
+  - Publish,
+  - Move to draft,
+  - Archive,
+  - Delete.
+- Forms with retained submissions or action diagnostics return a stable
+  `form_delete_restricted` conflict on hard delete; the list keeps the row
+  recoverable and Archive remains the safe retained-history lifecycle action.
+
 ## Menus parity
 
 - Menus list follows the Pages/Posts list layout: header action area, filter

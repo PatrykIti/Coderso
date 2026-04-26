@@ -49,6 +49,11 @@ testIfDb("set/get/list user settings", async () => {
     "customScreens.openAfterCreate"
   );
   expect(defaultCustomScreensOpenAfterCreate).toBe(true);
+  const defaultFormsOpenAfterCreate = await getUserSetting(
+    userId,
+    "forms.openAfterCreate"
+  );
+  expect(defaultFormsOpenAfterCreate).toBe(true);
   const defaultMedia = await getUserSetting(userId, "media.openAfterUpload");
   expect(defaultMedia).toBe(false);
   const defaultFavorites = await getUserSetting(userId, "widgets.favorites");
@@ -86,6 +91,7 @@ testIfDb("set/get/list user settings", async () => {
 
   await setUserSetting(userId, "pages.openAfterCreate", false);
   await setUserSetting(userId, "customScreens.openAfterCreate", false);
+  await setUserSetting(userId, "forms.openAfterCreate", false);
   await setUserSetting(userId, "media.openAfterUpload", true);
   await setUserSetting(userId, "widgets.favorites", ["hero", "footer"]);
   await setUserSetting(userId, "widgets.hero.presets", [
@@ -116,6 +122,11 @@ testIfDb("set/get/list user settings", async () => {
     "customScreens.openAfterCreate"
   );
   expect(updatedCustomScreensOpenAfterCreate).toBe(false);
+  const updatedFormsOpenAfterCreate = await getUserSetting(
+    userId,
+    "forms.openAfterCreate"
+  );
+  expect(updatedFormsOpenAfterCreate).toBe(false);
   const updatedMedia = await getUserSetting(userId, "media.openAfterUpload");
   expect(updatedMedia).toBe(true);
   const updatedFavorites = await getUserSetting(userId, "widgets.favorites");
@@ -161,6 +172,7 @@ testIfDb("set/get/list user settings", async () => {
   const list = await listUserSettings(userId);
   expect(list["pages.openAfterCreate"]).toBe(false);
   expect(list["customScreens.openAfterCreate"]).toBe(false);
+  expect(list["forms.openAfterCreate"]).toBe(false);
   expect(list["media.openAfterUpload"]).toBe(true);
   expect(list["widgets.favorites"]).toEqual(["hero", "footer"]);
   expect(list["widgets.hero.presets"]).toEqual([
@@ -328,8 +340,12 @@ testIfDb("rejects invalid post editor preferences payload", async () => {
 
 test("validateUserSettingValue validates assistant and post editor settings", () => {
   expect(validateUserSettingValue("customScreens.openAfterCreate", true)).toBe(true);
+  expect(validateUserSettingValue("forms.openAfterCreate", true)).toBe(true);
   expect(() =>
     validateUserSettingValue("customScreens.openAfterCreate", "yes")
+  ).toThrow("user_settings_value_invalid");
+  expect(() =>
+    validateUserSettingValue("forms.openAfterCreate", "yes")
   ).toThrow("user_settings_value_invalid");
   expect(validateUserSettingValue("assistant.mode", "llm-guide")).toBe("llm-guide");
   expect(validateUserSettingValue("assistant.mode", "llm-rag")).toBe("llm-guide");

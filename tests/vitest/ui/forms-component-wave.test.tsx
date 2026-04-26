@@ -373,11 +373,14 @@ test("FormCreateDrawer auto-generates slugs and submits normalized payloads", as
 
   const onOpenChange = vi.fn();
   const onCreate = vi.fn();
+  const onOpenAfterCreateChange = vi.fn();
   const view = mount(
     <FormCreateDrawer
       open
       onOpenChange={onOpenChange}
       onCreate={onCreate}
+      openAfterCreate
+      onOpenAfterCreateChange={onOpenAfterCreateChange}
       isSubmitting={false}
       error="Creation failed"
     />
@@ -407,8 +410,10 @@ test("FormCreateDrawer auto-generates slugs and submits normalized payloads", as
       slug: "contact-form",
       status: "published",
       description: "Lead form",
+      openAfterCreate: true,
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(view.container.textContent).toContain("Collect responses with a custom form layout.");
   } finally {
     view.cleanup();
   }
@@ -421,13 +426,25 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
   );
 
   const onEdit = vi.fn();
+  const onActionLogs = vi.fn();
+  const onPublish = vi.fn();
+  const onMoveToDraft = vi.fn();
+  const onArchive = vi.fn();
   const onDelete = vi.fn();
   const onSelect = vi.fn();
   const onAdd = vi.fn();
 
   const html = renderToString(
     <>
-      <FormTable items={[]} onEdit={onEdit} onDelete={onDelete} />
+      <FormTable
+        items={[]}
+        onEdit={onEdit}
+        onActionLogs={onActionLogs}
+        onPublish={onPublish}
+        onMoveToDraft={onMoveToDraft}
+        onArchive={onArchive}
+        onDelete={onDelete}
+      />
       <FieldListPanel
         fields={[]}
         selectedId={null}
@@ -470,6 +487,10 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
           },
         ]}
         onEdit={onEdit}
+        onActionLogs={onActionLogs}
+        onPublish={onPublish}
+        onMoveToDraft={onMoveToDraft}
+        onArchive={onArchive}
         onDelete={onDelete}
       />
       <FieldListPanel
@@ -498,6 +519,8 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
 
   try {
     expect(view.container.textContent).toContain("Contact");
+    expect(view.container.innerHTML).toContain("/coderso/forms/form-1");
+    expect(view.container.textContent).toContain("Public");
     expect(view.container.textContent).toContain("Required");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
@@ -507,12 +530,18 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
 
     act(() => {
       buttons.find((button) => button.textContent === "Edit")?.click();
+      buttons.find((button) => button.textContent === "Action logs")?.click();
+      buttons.find((button) => button.textContent === "Move to draft")?.click();
+      buttons.find((button) => button.textContent === "Archive")?.click();
       buttons.find((button) => button.textContent === "Delete")?.click();
       buttons.find((button) => !button.textContent && button.getAttribute("type") === "button")?.click();
       setInputValue(searchInput, "message");
     });
 
     expect(onEdit).toHaveBeenCalledWith("form-1");
+    expect(onActionLogs).toHaveBeenCalledWith("form-1");
+    expect(onMoveToDraft).toHaveBeenCalledWith("form-1");
+    expect(onArchive).toHaveBeenCalledWith("form-1");
     expect(onDelete).toHaveBeenCalledWith("form-1");
     expect(view.container.textContent).toContain("Message");
     expect(view.container.textContent).not.toContain("Email");

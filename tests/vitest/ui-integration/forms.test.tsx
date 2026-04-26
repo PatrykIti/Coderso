@@ -10,12 +10,12 @@ import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouter
 
 test("FormListPage renders list skeleton", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/forms">
+    <AdminRouterProvider initialPath="/admin/coderso/forms">
       <FormListPage />
     </AdminRouterProvider>
   );
   expect(html).toContain("Forms");
-  expect(html).toContain("New form");
+  expect(html).toContain("New");
 });
 
 test("FieldSettingsPanel renders logic and style controls", () => {

@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + API Contract + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-01, TASK-038, TASK-056
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -21,41 +21,41 @@ constraint failures.
 
 ## Sub-Tasks
 
-- [ ] Add or reuse centralized `mapFormError(error): ApiError | null`.
-- [ ] Map `form_invalid` to HTTP 400.
-- [ ] Map `form_name_required` to HTTP 400.
-- [ ] Map `form_slug_exists` to HTTP 409.
-- [ ] Map `form_not_found` to HTTP 404.
-- [ ] Map retained-history delete conflicts as `form_delete_restricted` to HTTP
+- [x] Add or reuse centralized `mapFormError(error): ApiError | null`.
+- [x] Map `form_invalid` to HTTP 400.
+- [x] Map `form_name_required` to HTTP 400.
+- [x] Map `form_slug_exists` to HTTP 409.
+- [x] Map `form_not_found` to HTTP 404.
+- [x] Map retained-history delete conflicts as `form_delete_restricted` to HTTP
   409.
-- [ ] Map field-write validation errors (`form_fields_invalid`,
+- [x] Map field-write validation errors (`form_fields_invalid`,
   `form_field_invalid`, `form_field_label_required`,
   `form_field_id_duplicate`, `form_field_name_duplicate`) to HTTP 400 if this
   mapper wraps `/forms/:id/fields`.
-- [ ] Map submission validation errors (`form_payload_invalid`,
+- [x] Map submission validation errors (`form_payload_invalid`,
   `form_payload_unknown_field`, `form_payload_required`) to HTTP 400 if this
   mapper wraps the public submission path. Do not change nonce/captcha/access
   semantics while doing this.
-- [ ] Use the mapper around create, detail, update, delete, field-write, and
+- [x] Use the mapper around create, detail, update, delete, field-write, and
   public submission form lookup paths.
-- [ ] Add a service-level delete precheck before hard delete that counts both
+- [x] Add a service-level delete precheck before hard delete that counts both
   retained `form_submissions` and retained `form_action_runs`. Throw
   `form_delete_restricted` when either count is non-zero so list delete failures
   are domain errors instead of raw foreign-key/database errors.
-- [ ] Keep mapper fallback coverage for unexpected database constraint errors,
+- [x] Keep mapper fallback coverage for unexpected database constraint errors,
   but do not rely on the fallback as the normal retained-history path.
-- [ ] Add or reuse a Bun-free Forms contract/helper owner for
+- [x] Add or reuse a Bun-free Forms contract/helper owner for
   `draft | published | archived` status values so route schemas, service
   normalization, and admin/UI types consume one source without importing
   `db/client`.
-- [ ] Tighten `formCreateSchema.status` and `formUpdateSchema.status` to
+- [x] Tighten `formCreateSchema.status` and `formUpdateSchema.status` to
   `enum: ["draft", "published", "archived"]`.
-- [ ] Tighten `formFieldsSchema` item validation when the mapper wraps
+- [x] Tighten `formFieldsSchema` item validation when the mapper wraps
   `PUT /forms/:id/fields`: set unknown top-level field input keys to reject,
   keep `settings` as the flexible object for field-specific extension data, and
   preserve existing documented field keys.
-- [ ] Keep `submissionAccess` enum validation as `public | internal`.
-- [ ] Do not change public submission nonce/captcha/access behavior.
+- [x] Keep `submissionAccess` enum validation as `public | internal`.
+- [x] Do not change public submission nonce/captcha/access behavior.
 
 ## Files to Change
 
@@ -142,3 +142,15 @@ constraint failures.
 4. Field-write and public-submission validation errors touched by this mapper do
    not leak raw internal errors.
 5. Public submission hardening remains unchanged.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

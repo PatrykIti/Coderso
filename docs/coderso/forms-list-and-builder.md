@@ -18,11 +18,18 @@ forms. The list route helps you find or create forms; the builder route is
 where you design fields, define settings, configure automation, and preview the
 submission experience.
 
-In the current UI, the list route includes:
+In the current UI, the canonical list route is `/admin/coderso/forms`.
+`/admin/forms` is kept only as a legacy admin alias. The list route includes:
 - `Forms` header,
-- `New form`,
-- forms table with status and updated date,
-- create drawer for name, slug, description, and initial status.
+- compact `New`,
+- search, status, and submission-access filters,
+- Forms table with selection, status, submission access, updated date, and row
+  actions,
+- shared pagination footer,
+- inline bulk actions for selected visible rows,
+- confirmed row and bulk delete,
+- create drawer for name, slug, description, initial status, and
+  open-after-create preference.
 
 The builder route includes:
 - `Fields` and `Library` rails,
@@ -52,22 +59,32 @@ submission access, success behavior, and retries also matter.
 
 1. Open `Coderso > Forms`.
 2. On the list route, review existing forms before creating a new one.
-3. Click `New form` when you need a new form shell.
-4. In `Create New Form`, fill the fields in this order:
+3. Use search/status/access filters to narrow the visible list when needed.
+4. Select visible rows when you need bulk lifecycle actions:
+   - `Publish`
+   - `Move to draft`
+   - `Archive`
+   - `Delete`
+5. Confirm delete actions before they run. Forms with retained submissions or
+   action diagnostics cannot be hard-deleted and should be archived instead.
+6. Click `New` when you need a new form shell.
+7. In `Create New Form`, fill the fields in this order:
    - `Form name`
    - `Slug`
    - `Description`
    - `Status`
-5. Click `Create form`.
-6. Open the form in the builder.
-7. Start with the left rail:
+8. Choose whether to open the form in the builder after create.
+9. Click `Create form`.
+10. Open the form in the builder when you are ready to configure fields,
+    settings, and automation.
+11. Start with the left rail:
    - `Fields`
    - `Library`
-8. Add fields into the form canvas.
+12. Add fields into the form canvas.
    The builder explicitly shows an empty drop target when the form has no fields
    yet.
-9. Move to the `Settings` tab after basic field structure exists.
-10. In `Form Settings`, work top to bottom:
+13. Move to the `Settings` tab after basic field structure exists.
+14. In `Form Settings`, work top to bottom:
     - basics:
       name, description, status
     - experience:
@@ -78,9 +95,9 @@ submission access, success behavior, and retries also matter.
       success message and redirect URL
     - automation reliability:
       retry settings
-11. Use `Runtime preview` before considering the form ready.
-12. Use `Save form` to persist structure and settings.
-13. Open `Action logs` when you need operational visibility after submission
+15. Use `Runtime preview` before considering the form ready.
+16. Use `Save form` to persist structure and settings.
+17. Open `Action logs` when you need operational visibility after submission
     activity starts.
 
 Use this safe authoring order when you want fewer mistakes:
@@ -104,6 +121,12 @@ Use this safe authoring order when you want fewer mistakes:
   users will experience inconsistency.
 - The builder currently separates `Settings` and `Automation`, but in practice
   both shape the post-submit contract and should be reviewed together.
+- List row actions intentionally do not include Duplicate, Runtime Preview, or
+  Embed Code. Those flows require their own service/API/UI contracts before they
+  can appear in the Forms list.
+- The list create drawer passes only name, slug, status, and description to the
+  create client. Builder-owned fields such as submission access, success
+  behavior, and settings remain in the builder/client contract.
 
 # Troubleshooting
 
@@ -117,6 +140,9 @@ Use this safe authoring order when you want fewer mistakes:
   review the `Save progress` setting.
 - The form builder feels empty:
   add fields from the left rail before debugging deeper settings.
+- Delete is blocked:
+  if the API returns `form_delete_restricted`, the form has retained
+  submissions or action diagnostics. Archive it to preserve history.
 
 # Decision Guide
 
@@ -135,12 +161,13 @@ Use this safe authoring order when you want fewer mistakes:
 # Checklist
 
 1. Confirm form name, slug, and status.
-2. Confirm the necessary fields exist.
-3. Confirm submission access mode is intentional.
-4. Confirm success message or redirect behavior is correct.
-5. Confirm retry settings are acceptable.
-6. Run runtime preview.
-7. Save form before rollout.
+2. Confirm list filters and bulk actions target only visible selected rows.
+3. Confirm the necessary fields exist.
+4. Confirm submission access mode is intentional.
+5. Confirm success message or redirect behavior is correct.
+6. Confirm retry settings are acceptable.
+7. Run runtime preview.
+8. Save form before rollout.
 
 # Security
 
@@ -150,3 +177,5 @@ Use this safe authoring order when you want fewer mistakes:
   remain behind authenticated/session or API-key constraints.
 - Do not put secrets, provider keys, or privileged operational values into form
   definitions or visible success messages.
+- Hard delete is deletion-safe only. Retained submission payloads and action-run
+  diagnostics are not exposed or destroyed by the list UI.

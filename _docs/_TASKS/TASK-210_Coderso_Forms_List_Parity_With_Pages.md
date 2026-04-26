@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX + Admin Cache
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-038, TASK-056, TASK-205, TASK-206, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -175,31 +175,31 @@ a backward-compatible alias through `adminPaths`.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-01: Forms List Route, Shell, and Cache Hydration
-- [ ] TASK-210-02: Forms Filters, Table, and Shared Pagination
-- [ ] TASK-210-03: Forms Row Lifecycle Actions and Confirmations
-- [ ] TASK-210-04: Forms Bulk Selection and Action Parity
-- [ ] TASK-210-05: Forms Create Drawer and Open After Create
-- [ ] TASK-210-06: Forms List Toasts and Error Mapping
-- [ ] TASK-210-07: QA, Docs, Changelog, and Closure
+- [x] TASK-210-01: Forms List Route, Shell, and Cache Hydration
+- [x] TASK-210-02: Forms Filters, Table, and Shared Pagination
+- [x] TASK-210-03: Forms Row Lifecycle Actions and Confirmations
+- [x] TASK-210-04: Forms Bulk Selection and Action Parity
+- [x] TASK-210-05: Forms Create Drawer and Open After Create
+- [x] TASK-210-06: Forms List Toasts and Error Mapping
+- [x] TASK-210-07: QA, Docs, Changelog, and Closure
 
 ## Leaf Breakdown
 
-- [ ] TASK-210-01-01: Forms Canonical Route and Prefetch Warmup
-- [ ] TASK-210-01-02: Forms Cache Hydration Hook Parity
-- [ ] TASK-210-02-01: Forms Filter Model and View Component
-- [ ] TASK-210-02-02: Forms Table Selection and Access Column
-- [ ] TASK-210-02-03: Forms Shared Pagination and Selection Trim
-- [ ] TASK-210-03-01: Forms Row Lifecycle Menu Contract
-- [ ] TASK-210-03-02: Forms Row Delete Confirmation Contract
-- [ ] TASK-210-04-01: Forms Bulk Action Bar and Visible Selection
-- [ ] TASK-210-04-02: Forms Bulk Mutation Execution and Partial Failures
-- [ ] TASK-210-05-01: Forms Create Drawer Reset and Payload Guard
-- [ ] TASK-210-05-02: Forms Open After Create User Setting Contract
-- [ ] TASK-210-06-01: Forms List Toast Adapter Wiring
-- [ ] TASK-210-06-02: Forms Route Error Mapping and Strict Schemas
-- [ ] TASK-210-07-01: Forms Parity Test Matrix
-- [ ] TASK-210-07-02: Forms Docs, Changelog, and Board Closure
+- [x] TASK-210-01-01: Forms Canonical Route and Prefetch Warmup
+- [x] TASK-210-01-02: Forms Cache Hydration Hook Parity
+- [x] TASK-210-02-01: Forms Filter Model and View Component
+- [x] TASK-210-02-02: Forms Table Selection and Access Column
+- [x] TASK-210-02-03: Forms Shared Pagination and Selection Trim
+- [x] TASK-210-03-01: Forms Row Lifecycle Menu Contract
+- [x] TASK-210-03-02: Forms Row Delete Confirmation Contract
+- [x] TASK-210-04-01: Forms Bulk Action Bar and Visible Selection
+- [x] TASK-210-04-02: Forms Bulk Mutation Execution and Partial Failures
+- [x] TASK-210-05-01: Forms Create Drawer Reset and Payload Guard
+- [x] TASK-210-05-02: Forms Open After Create User Setting Contract
+- [x] TASK-210-06-01: Forms List Toast Adapter Wiring
+- [x] TASK-210-06-02: Forms Route Error Mapping and Strict Schemas
+- [x] TASK-210-07-01: Forms Parity Test Matrix
+- [x] TASK-210-07-02: Forms Docs, Changelog, and Board Closure
 
 ## Non-Goals
 
@@ -335,3 +335,15 @@ a backward-compatible alias through `adminPaths`.
 13. Existing Forms render smoke coverage is updated so
     `tests/vitest/ui-integration/forms.test.tsx` reflects the canonical
     `/admin/coderso/forms` route and compact `New` action.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

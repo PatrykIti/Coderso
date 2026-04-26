@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-02-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,12 +16,12 @@ Forms-specific columns and row metadata.
 
 ## Sub-Tasks
 
-- [ ] Add a checkbox header and row checkbox column.
-- [ ] Add selected-row styling consistent with `PageTable`.
-- [ ] Show Forms columns: form, status, submission access, updated, actions.
-- [ ] Keep responsive mobile metadata under the form name.
-- [ ] Keep row editor links on canonical `/coderso/forms/:id`.
-- [ ] Keep row actions Forms-specific: include Edit and Action logs, but do not
+- [x] Add a checkbox header and row checkbox column.
+- [x] Add selected-row styling consistent with `PageTable`.
+- [x] Show Forms columns: form, status, submission access, updated, actions.
+- [x] Keep responsive mobile metadata under the form name.
+- [x] Keep row editor links on canonical `/coderso/forms/:id`.
+- [x] Keep row actions Forms-specific: include Edit and Action logs, but do not
   add Preview, Duplicate, or Embed Code.
 
 ## Files to Change
@@ -66,3 +66,15 @@ Forms-specific columns and row metadata.
 2. The access column reflects the Forms `submissionAccess` contract.
 3. Page-only actions are absent from the Forms table.
 4. Each row can navigate to the existing Forms action-log route.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

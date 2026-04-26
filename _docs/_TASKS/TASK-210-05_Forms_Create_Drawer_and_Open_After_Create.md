@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-01, TASK-210-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -21,33 +21,33 @@ and Forms-specific inline validation.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-05-01: Forms Create Drawer Reset and Payload Guard
-- [ ] TASK-210-05-02: Forms Open After Create User Setting Contract
-- [ ] Rename the list trigger from `New form` to compact `New`.
-- [ ] Reset the drawer state each time it opens, matching the Pages drawer key
+- [x] TASK-210-05-01: Forms Create Drawer Reset and Payload Guard
+- [x] TASK-210-05-02: Forms Open After Create User Setting Contract
+- [x] Rename the list trigger from `New form` to compact `New`.
+- [x] Reset the drawer state each time it opens, matching the Pages drawer key
   pattern if the current internal state would otherwise leak.
-- [ ] Add the same sheet description / `aria-describedby` accessibility pattern
+- [x] Add the same sheet description / `aria-describedby` accessibility pattern
   used by `PageCreateDrawer` so the Forms list create drawer does not retain the
   current missing-description warning. Do not treat this as the global BUG-6
   closure for runtime preview or unrelated dialogs.
-- [ ] Add `forms.openAfterCreate` user setting, mirroring
+- [x] Add `forms.openAfterCreate` user setting, mirroring
   `pages.openAfterCreate`.
-- [ ] On successful create:
+- [x] On successful create:
   - emit create feedback through TASK-210-06;
   - navigate to `/coderso/forms/:id` when open-after-create is enabled;
   - otherwise close the drawer and background-refresh the list.
-- [ ] Preserve the existing null-create fallback: if `createForm` resolves
+- [x] Preserve the existing null-create fallback: if `createForm` resolves
   without a created row, do not dereference the missing row or navigate; close
   the drawer after a forced background list refresh and leave a completion note
   describing the fallback path.
-- [ ] Keep the list drawer payload passed into `createForm` limited to its
+- [x] Keep the list drawer payload passed into `createForm` limited to its
   current UI fields: `name`, optional `slug`, `status`, `description`. Do not
   pass UI-only fields or move builder-owned API fields (`successMessage`,
   `successRedirectUrl`, `submissionAccess`, `settings`) into the drawer state.
   Preserve the existing client-level default `settings` normalization in
   `formsClient.createForm`, which means client tests may still see normalized
   default settings on the network payload.
-- [ ] Register `forms.openAfterCreate` in both the admin client and server
+- [x] Register `forms.openAfterCreate` in both the admin client and server
   user-settings contracts if this task adds a Forms-specific preference key.
 
 ## Files to Change
@@ -163,3 +163,15 @@ The actual payload sent to `createForm` must not include UI-only fields such as
 7. The implementation preserves `formsClient.createForm` default `settings`
    normalization instead of treating settings as forbidden at the network
    boundary.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

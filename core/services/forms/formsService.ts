@@ -1,7 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { formFields, forms, formSubmissions } from "../../db/schema";
+import { formActionRuns, formFields, forms, formSubmissions } from "../../db/schema";
 import {
   normalizeSubmissionAccess,
   type SubmissionAccessMode,
@@ -13,8 +13,10 @@ import {
   type NormalizedFormField,
 } from "./validation";
 import { normalizeFormSettings } from "./formSettings";
-
-export type FormStatus = "draft" | "published" | "archived";
+import {
+  normalizeFormStatus,
+  type FormStatus,
+} from "./formStatus";
 
 export type FormCreateInput = {
   name: string;
@@ -37,8 +39,6 @@ export type FormUpdateInput = {
   submissionAccess?: SubmissionAccessMode;
   settings?: unknown;
 };
-
-const allowedStatuses = new Set<FormStatus>(["draft", "published", "archived"]);
 
 const normalizeName = (value: unknown) => {
   if (typeof value !== "string") return null;
@@ -67,14 +67,6 @@ const normalizeSuccessRedirectUrl = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const normalizeStatus = (value: unknown, fallback: FormStatus) => {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value === "string" && allowedStatuses.has(value as FormStatus)) {
-    return value as FormStatus;
-  }
-  throw new Error("form_invalid");
-};
-
 export async function listForms() {
   return db.select().from(forms).orderBy(desc(forms.updatedAt));
 }
@@ -92,11 +84,19 @@ export async function countFormSubmissions(formId: string) {
   return Number(row?.count ?? 0);
 }
 
+export async function countFormActionRuns(formId: string) {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(formActionRuns)
+    .where(eq(formActionRuns.formId, formId));
+  return Number(row?.count ?? 0);
+}
+
 export async function createForm(input: FormCreateInput) {
   const name = normalizeName(input.name);
   if (!name) throw new Error("form_name_required");
   const slug = deriveFormSlug(name, input.slug ?? null);
-  const status = normalizeStatus(input.status, "draft");
+  const status = normalizeFormStatus(input.status, "draft");
   const description = normalizeDescription(input.description);
   const successMessage = normalizeSuccessMessage(input.successMessage);
   const successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
@@ -152,7 +152,7 @@ export async function updateForm(id: string, input: FormUpdateInput) {
   }
 
   if (input.status !== undefined) {
-    update.status = normalizeStatus(input.status, "draft");
+    update.status = normalizeFormStatus(input.status, "draft");
   }
 
   if (input.description !== undefined) {
@@ -185,6 +185,15 @@ export async function updateForm(id: string, input: FormUpdateInput) {
 }
 
 export async function deleteForm(id: string) {
+  const existing = await getForm(id);
+  if (!existing) return null;
+  const [submissionCount, actionRunCount] = await Promise.all([
+    countFormSubmissions(id),
+    countFormActionRuns(id),
+  ]);
+  if (submissionCount > 0 || actionRunCount > 0) {
+    throw new Error("form_delete_restricted");
+  }
   const [row] = await db.delete(forms).where(eq(forms.id, id)).returning();
   return row ?? null;
 }

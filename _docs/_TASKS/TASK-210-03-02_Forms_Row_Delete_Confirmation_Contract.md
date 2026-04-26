@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + Destructive UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-03-01, TASK-210-06-02, TASK-205, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -21,18 +21,18 @@ foreign-key/database errors.
 
 ## Sub-Tasks
 
-- [ ] Add `pendingDeleteId` and `deletingId` state in `FormListPage`.
-- [ ] Make row Delete open `ConfirmActionDialog` instead of calling
+- [x] Add `pendingDeleteId` and `deletingId` state in `FormListPage`.
+- [x] Make row Delete open `ConfirmActionDialog` instead of calling
   `deleteForm` directly.
-- [ ] Use copy that names the form and clearly states that the operation is
+- [x] Use copy that names the form and clearly states that the operation is
   irreversible for deletion-safe forms, while retained submissions/action
   diagnostics may block hard delete and should be preserved by archiving instead.
-- [ ] Call `deleteForm(id)` only from the dialog `onConfirm`.
-- [ ] Refresh Forms list/cache after successful delete.
-- [ ] If delete returns a retained-history conflict, keep the form in the list,
+- [x] Call `deleteForm(id)` only from the dialog `onConfirm`.
+- [x] Refresh Forms list/cache after successful delete.
+- [x] If delete returns a retained-history conflict, keep the form in the list,
   keep Archive available, and show stable inline copy instead of a false success.
-- [ ] Keep inline errors visible on delete failure.
-- [ ] Leave toast success/error wiring to TASK-210-06-01.
+- [x] Keep inline errors visible on delete failure.
+- [x] Leave toast success/error wiring to TASK-210-06-01.
 
 ## Files to Change
 
@@ -81,3 +81,15 @@ foreign-key/database errors.
 1. No row delete runs directly from a dropdown click.
 2. Delete mutation runs only after shared dialog confirmation.
 3. Delete failure or retained-history conflict remains recoverable and visible.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

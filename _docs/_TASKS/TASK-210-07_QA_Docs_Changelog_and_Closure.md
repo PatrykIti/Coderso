@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-01, TASK-210-02, TASK-210-03, TASK-210-04, TASK-210-05, TASK-210-06
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,33 +20,33 @@ security/runtime contracts still hold.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-07-01: Forms Parity Test Matrix
-- [ ] TASK-210-07-02: Forms Docs, Changelog, and Board Closure
-- [ ] Run the full targeted Vitest UI/admin matrix for Forms list parity.
-- [ ] Run Bun route/service tests for touched route or service contracts.
-- [ ] Update content-list/admin-cache/navigation/API docs touched by the final
+- [x] TASK-210-07-01: Forms Parity Test Matrix
+- [x] TASK-210-07-02: Forms Docs, Changelog, and Board Closure
+- [x] Run the full targeted Vitest UI/admin matrix for Forms list parity.
+- [x] Run Bun route/service tests for touched route or service contracts.
+- [x] Update content-list/admin-cache/navigation/API docs touched by the final
   implementation.
-- [ ] Update `_docs/ARCHITECTURE.md` so Forms admin UI wording distinguishes
+- [x] Update `_docs/ARCHITECTURE.md` so Forms admin UI wording distinguishes
   canonical admin routes (`/admin/coderso/forms`, `/admin/coderso/forms/:id`,
   `/admin/coderso/forms/:id/action-runs`) from backend API routes
   (`/forms/*`).
-- [ ] Update `docs/coderso/forms-list-and-builder.md` so the admin-facing Forms
+- [x] Update `docs/coderso/forms-list-and-builder.md` so the admin-facing Forms
   guide reflects the final list filters, selection, bulk actions, confirmation,
   and toast behavior.
-- [ ] Update `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` with dated closure notes for
+- [x] Update `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` with dated closure notes for
   list-scope findings covered by TASK-210: BUG-2 and UX-1, plus the
   Forms-contract subset of BUG-5 and the Create New Form subset of BUG-6.
   Explicitly defer BUG-5 requests for Duplicate, Runtime Preview, and Embed Code
   until those flows have their own contracts; explicitly defer BUG-6 runtime
   preview/global dialog warnings to a separate dialog-wrapper task; and leave
   editor/runtime findings to separate task families.
-- [ ] Confirm every TASK-210 leaf is either Done or explicitly superseded by
+- [x] Confirm every TASK-210 leaf is either Done or explicitly superseded by
   the final implementation notes before moving the umbrella to Done.
-- [ ] Add a `_docs/_CHANGELOG/*` entry following the changelog numbering rules.
-- [ ] Update `_docs/_CHANGELOG/README.md`.
-- [ ] Mark TASK-210 family files complete with dated status and validation
+- [x] Add a `_docs/_CHANGELOG/*` entry following the changelog numbering rules.
+- [x] Update `_docs/_CHANGELOG/README.md`.
+- [x] Mark TASK-210 family files complete with dated status and validation
   evidence.
-- [ ] Move TASK-210 rows from To Do to Done in `_docs/_TASKS/README.md` and
+- [x] Move TASK-210 rows from To Do to Done in `_docs/_TASKS/README.md` and
   update statistics.
 
 ## Files to Change
@@ -116,3 +116,15 @@ security/runtime contracts still hold.
 6. Changelog and changelog index are updated.
 7. `_docs/_TASKS/README.md` statistics and tables are synchronized.
 8. Any skipped tests or environment blockers are recorded explicitly.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

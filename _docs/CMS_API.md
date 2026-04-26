@@ -3188,6 +3188,8 @@ Permissions: `forms:read`, `forms:write`
 ```
 
 Opcjonalne pola:
+- `status`: `draft`, `published` albo `archived`; inne wartosci sa odrzucane
+  na granicy route schema.
 - `successMessage`: fallback dla sukcesu submission (uzywane, gdy widget nie ma override).
 - `successRedirectUrl`: po sukcesie przekierowuje na podany URL.
 - `submissionAccess`: `public` (default) lub `internal` (wymaga sesji admina lub API key).
@@ -3215,6 +3217,23 @@ Opcjonalne pola:
   }
 ]
 ```
+
+Top-level keys in each field input are strict (`id`, `type`, `label`, `name`,
+`required`, `orderIndex`, `settings`). Flexible per-field extension data must
+stay inside `settings`.
+
+Known Forms errors are returned as machine-readable API errors:
+- `form_invalid` -> 400,
+- `form_name_required` -> 400,
+- `form_slug_exists` -> 409,
+- `form_not_found` -> 404,
+- `form_delete_restricted` -> 409 when retained submissions or action-run
+  diagnostics block hard delete,
+- field validation errors such as `form_fields_invalid`,
+  `form_field_invalid`, `form_field_label_required`,
+  `form_field_id_duplicate`, and `form_field_name_duplicate` -> 400,
+- submission payload errors such as `form_payload_invalid`,
+  `form_payload_unknown_field`, and `form_payload_required` -> 400.
 
 `POST /forms/:id/submissions`
 

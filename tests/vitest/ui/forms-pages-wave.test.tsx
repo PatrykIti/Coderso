@@ -100,11 +100,15 @@ const formsPageState = vi.hoisted(() => {
     deleteError: null as unknown,
     detailError: null as unknown,
     updateError: null as unknown,
+    settingsError: null as unknown,
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
     subscribers: new Set<(event: { key: string; action?: string }) => void>(),
     listCalls: [] as Array<boolean | undefined>,
     refreshCalls: [] as Array<boolean | undefined>,
     createCalls: [] as Array<Record<string, unknown>>,
     deleteCalls: [] as string[],
+    settingsSetCalls: [] as Array<{ key: string; value: unknown }>,
     detailCalls: [] as Array<{ id: string; force?: boolean }>,
     actionsCalls: [] as Array<{ id: string; force?: boolean }>,
     updateFormCalls: [] as Array<{ id: string; input: Record<string, unknown> }>,
@@ -146,11 +150,15 @@ const formsPageState = vi.hoisted(() => {
       this.deleteError = null;
       this.detailError = null;
       this.updateError = null;
+      this.settingsError = null;
+      this.toastSuccess.mockClear();
+      this.toastError.mockClear();
       this.subscribers.clear();
       this.listCalls = [];
       this.refreshCalls = [];
       this.createCalls = [];
       this.deleteCalls = [];
+      this.settingsSetCalls = [];
       this.detailCalls = [];
       this.actionsCalls = [];
       this.updateFormCalls = [];
@@ -185,6 +193,22 @@ vi.mock("@/components/ui/button", () => ({
       {children}
     </button>
   ),
+}));
+
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => <div data-dialog-open={String(Boolean(open))}>{children}</div>,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
@@ -300,6 +324,46 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   }),
 }));
 
+vi.mock("@/services/userSettingsClient", () => ({
+  getUserSettings: vi.fn(async () => {
+    if (formsPageState.settingsError) throw formsPageState.settingsError;
+    return {
+      "pages.openAfterCreate": true,
+      "customScreens.openAfterCreate": true,
+      "forms.openAfterCreate": true,
+      "media.openAfterUpload": false,
+      "widgets.favorites": [],
+      "widgets.hero.presets": [],
+      "posts.editor.preferences": {
+        version: 2,
+        focusModeOnOpen: false,
+        compactSidePanels: false,
+        showOutlineHints: true,
+        editorDensity: "comfortable",
+        showKeyboardHints: true,
+        defaultInspectorTab: "post",
+        restoreLastSidebarsState: true,
+      },
+      "assistant.mode": null,
+      "assistant.ui.enabled": true,
+      "assistant.ui.avatarEnabled": false,
+      "assistant.ui.avatarAsset": null,
+    };
+  }),
+  setUserSetting: vi.fn(async (key: string, value: unknown) => {
+    formsPageState.settingsSetCalls.push({ key, value });
+    if (formsPageState.settingsError) throw formsPageState.settingsError;
+    return { key, value };
+  }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: formsPageState.toastSuccess,
+    error: formsPageState.toastError,
+  },
+}));
+
 vi.mock("@/ui/layouts/AdminShell", () => ({
   AdminShell: ({
     children,
@@ -356,6 +420,24 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ListPaginationFooter", () => ({
+  ListPaginationFooter: ({
+    resourceLabel,
+    pagination,
+    isLoading,
+  }: {
+    resourceLabel: string;
+    pagination: { totalItems: number; visibleRows: unknown[] };
+    isLoading?: boolean;
+  }) => (
+    <div>
+      {isLoading
+        ? `Loading ${resourceLabel}...`
+        : `pagination:${resourceLabel}:${pagination.visibleRows.length}/${pagination.totalItems}`}
+    </div>
+  ),
+}));
+
 vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: (handler: (event: { key: string }) => void) => {
     formsPageState.subscribers.add(handler);
@@ -367,6 +449,8 @@ vi.mock("../../../core/admin/ui/forms/FormCreateDrawer", () => ({
   FormCreateDrawer: ({
     open,
     onCreate,
+    openAfterCreate,
+    onOpenAfterCreateChange,
   }: {
     open: boolean;
     onCreate: (payload: {
@@ -374,10 +458,17 @@ vi.mock("../../../core/admin/ui/forms/FormCreateDrawer", () => ({
       slug?: string | null;
       status: "draft" | "published" | "archived";
       description?: string | null;
+      openAfterCreate: boolean;
     }) => Promise<void> | void;
+    openAfterCreate: boolean;
+    onOpenAfterCreateChange: (value: boolean) => void;
   }) => (
     <div>
       <span>{open ? "drawer-open" : "drawer-closed"}</span>
+      <span>{`open-after:${String(openAfterCreate)}`}</span>
+      <button type="button" onClick={() => onOpenAfterCreateChange(false)}>
+        disable-open-after-create
+      </button>
       <button
         type="button"
         onClick={() =>
@@ -386,6 +477,7 @@ vi.mock("../../../core/admin/ui/forms/FormCreateDrawer", () => ({
             slug: "created-form",
             status: "draft",
             description: "Created from drawer",
+            openAfterCreate,
           })
         }
       >
@@ -399,11 +491,19 @@ vi.mock("../../../core/admin/ui/forms/FormTable", () => ({
   FormTable: ({
     items,
     onEdit,
+    onActionLogs,
+    onPublish,
+    onMoveToDraft,
+    onArchive,
     onDelete,
     emptyMessage,
   }: {
     items: Array<{ id: string; name: string }>;
     onEdit: (id: string) => void;
+    onActionLogs: (id: string) => void;
+    onPublish: (id: string) => void;
+    onMoveToDraft: (id: string) => void;
+    onArchive: (id: string) => void;
     onDelete?: (id: string) => void;
     emptyMessage?: string;
   }) => (
@@ -417,11 +517,77 @@ vi.mock("../../../core/admin/ui/forms/FormTable", () => ({
           <button type="button" onClick={() => onEdit(items[0]!.id)}>
             edit-form-row
           </button>
+          <button type="button" onClick={() => onActionLogs(items[0]!.id)}>
+            action-logs-form-row
+          </button>
+          <button type="button" onClick={() => onPublish(items[0]!.id)}>
+            publish-form-row
+          </button>
+          <button type="button" onClick={() => onMoveToDraft(items[0]!.id)}>
+            draft-form-row
+          </button>
+          <button type="button" onClick={() => onArchive(items[0]!.id)}>
+            archive-form-row
+          </button>
           <button type="button" onClick={() => onDelete?.(items[0]!.id)}>
             delete-form-row
           </button>
         </>
       ) : null}
+    </div>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/forms/FormFilters", () => ({
+  FormFilters: ({
+    onSearchChange,
+    onStatusChange,
+    onAccessChange,
+  }: {
+    onSearchChange: (value: string) => void;
+    onStatusChange: (value: string) => void;
+    onAccessChange: (value: string) => void;
+  }) => (
+    <div>
+      <button type="button" onClick={() => onSearchChange("contact")}>
+        filter-search-contact
+      </button>
+      <button type="button" onClick={() => onStatusChange("published")}>
+        filter-status-published
+      </button>
+      <button type="button" onClick={() => onAccessChange("internal")}>
+        filter-access-internal
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/forms/FormBulkActionsBar", () => ({
+  FormBulkActionsBar: ({
+    selectedCount,
+    onActionChange,
+    onApply,
+    onClear,
+  }: {
+    selectedCount: number;
+    onActionChange: (value: string) => void;
+    onApply: () => void;
+    onClear: () => void;
+  }) => (
+    <div>
+      <span>{`bulk-selected:${selectedCount}`}</span>
+      <button type="button" onClick={() => onActionChange("publish")}>
+        bulk-action-publish
+      </button>
+      <button type="button" onClick={() => onActionChange("delete")}>
+        bulk-action-delete
+      </button>
+      <button type="button" onClick={onApply}>
+        bulk-action-apply
+      </button>
+      <button type="button" onClick={onClear}>
+        bulk-action-clear
+      </button>
     </div>
   ),
 }));
@@ -667,7 +833,7 @@ test("useForms consumes cache, refreshes, and reacts to cache bus events", async
     });
 
     expect(view.container.textContent).toContain("count:1");
-    expect(formsPageState.listCalls).toContain(true);
+    expect(formsPageState.listCalls).toContain(false);
 
     await act(async () => {
       for (const subscriber of formsPageState.subscribers) {
@@ -692,7 +858,7 @@ test("useForms consumes cache, refreshes, and reacts to cache bus events", async
   }
 });
 
-test("FormListPage creates, refreshes fallback, deletes, and reports form errors", async () => {
+test("FormListPage creates, refreshes fallback, confirms row actions, and reports form errors", async () => {
   const { FormListPage } = await import(
     "../../../core/admin/ui/forms/FormListPage"
   );
@@ -702,11 +868,14 @@ test("FormListPage creates, refreshes fallback, deletes, and reports form errors
   try {
     expect(view.container.textContent).toContain("Forms");
     expect(view.container.textContent).toContain("Contact");
+    expect(view.container.querySelector("[data-active-href]")?.getAttribute("data-active-href")).toBe(
+      "/admin/coderso/forms"
+    );
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
     act(() => {
-      buttons().find((button) => button.textContent?.includes("New form"))?.click();
+      buttons().find((button) => button.textContent?.includes("New"))?.click();
       buttons().find((button) => button.textContent === "create-form-drawer")?.click();
     });
     await flush();
@@ -717,7 +886,10 @@ test("FormListPage creates, refreshes fallback, deletes, and reports form errors
       status: "draft",
       description: "Created from drawer",
     });
-    expect(formsPageState.navigateCalls).toContain("/forms/created-form");
+    expect(formsPageState.navigateCalls).toContain("/coderso/forms/created-form");
+    expect(formsPageState.toastSuccess).toHaveBeenCalledWith(
+      'Form "Created form" created.'
+    );
 
     formsPageState.createReturnsNull = true;
     act(() => {
@@ -727,10 +899,31 @@ test("FormListPage creates, refreshes fallback, deletes, and reports form errors
     expect(formsPageState.listCalls.at(-1)).toBe(true);
 
     act(() => {
-      buttons().find((button) => button.textContent === "delete-form-row")?.click();
+      buttons().find((button) => button.textContent === "edit-form-row")?.click();
+      buttons().find((button) => button.textContent === "action-logs-form-row")?.click();
+      buttons().find((button) => button.textContent === "publish-form-row")?.click();
+    });
+    await flush();
+    expect(formsPageState.navigateCalls).toContain("/coderso/forms/form-1");
+    expect(formsPageState.navigateCalls).toContain(
+      "/coderso/forms/form-1/action-runs"
+    );
+    expect(formsPageState.updateFormCalls).toContainEqual({
+      id: "form-1",
+      input: { status: "published" },
     });
 
+    act(() => {
+      buttons().find((button) => button.textContent === "delete-form-row")?.click();
+    });
+    expect(formsPageState.deleteCalls).toHaveLength(0);
+
+    act(() => {
+      buttons().find((button) => button.textContent === "Delete form")?.click();
+    });
+    await flush();
     expect(formsPageState.deleteCalls).toContain("form-1");
+    expect(formsPageState.toastSuccess).toHaveBeenCalledWith("Form deleted.");
 
     formsPageState.createError = formsPageState.apiError("Create failed");
     act(() => {
@@ -744,6 +937,10 @@ test("FormListPage creates, refreshes fallback, deletes, and reports form errors
     formsPageState.deleteError = new Error("boom");
     act(() => {
       buttons().find((button) => button.textContent === "delete-form-row")?.click();
+    });
+    await flush();
+    act(() => {
+      buttons().find((button) => button.textContent === "Delete form")?.click();
     });
     await flush();
     expect(view.container.textContent).toContain("Failed to delete form.");
@@ -882,7 +1079,9 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     expect(view.container.textContent).toContain("runtime-preview:open:clean");
 
     clickByText(view.container, "Action logs");
-    expect(formsPageState.navigateCalls).toContain("/forms/form-1/action-runs");
+    expect(formsPageState.navigateCalls).toContain(
+      "/coderso/forms/form-1/action-runs"
+    );
   } finally {
     Object.defineProperty(window, "confirm", {
       value: originalConfirm,

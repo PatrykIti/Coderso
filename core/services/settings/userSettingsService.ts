@@ -32,6 +32,7 @@ type PostEditorPreferencesSettingValue = {
 export type UserSettingValueMap = {
   "pages.openAfterCreate": boolean;
   "customScreens.openAfterCreate": boolean;
+  "forms.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSettingValue[];
@@ -70,6 +71,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
   "pages.openAfterCreate": true,
   "customScreens.openAfterCreate": true,
+  "forms.openAfterCreate": true,
   "media.openAfterUpload": false,
   "widgets.favorites": [],
   "widgets.hero.presets": [],
@@ -103,7 +105,11 @@ export function validateUserSettingValue<K extends UserSettingKey>(
   key: K,
   value: unknown
 ): UserSettingValueMap[K] {
-  if (key === "pages.openAfterCreate" || key === "customScreens.openAfterCreate") {
+  if (
+    key === "pages.openAfterCreate" ||
+    key === "customScreens.openAfterCreate" ||
+    key === "forms.openAfterCreate"
+  ) {
     if (typeof value !== "boolean") {
       throw new Error("user_settings_value_invalid");
     }

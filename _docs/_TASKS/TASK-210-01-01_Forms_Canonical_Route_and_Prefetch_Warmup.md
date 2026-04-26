@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + Admin Navigation
 **Estimated Effort:** Small
 **Dependencies:** TASK-210-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,20 +20,20 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 
 ## Sub-Tasks
 
-- [ ] Change `FormListPage` `AdminShell.activeHref` to
+- [x] Change `FormListPage` `AdminShell.activeHref` to
   `/admin/coderso/forms`.
-- [ ] Normalize touched row/editor navigation to `/coderso/forms/:id`.
-- [ ] Normalize touched action-log navigation to
+- [x] Normalize touched row/editor navigation to `/coderso/forms/:id`.
+- [x] Normalize touched action-log navigation to
   `/coderso/forms/:id/action-runs`.
-- [ ] Normalize `FormBuilderPage` and `FormActionLogsPage` route-shell literals
+- [x] Normalize `FormBuilderPage` and `FormActionLogsPage` route-shell literals
   from legacy `/admin/forms` / `/forms/*` patterns to canonical
   `/admin/coderso/forms` / `/coderso/forms/*` equivalents where they affect
   active hrefs, back links, or action-log navigation.
-- [ ] Keep `/forms/:id` working through `adminPaths` alias tests, but do not
+- [x] Keep `/forms/:id` working through `adminPaths` alias tests, but do not
   add new alias literals in modified list code.
-- [ ] Assert `/admin/forms` and `/admin/coderso/forms` resolve to the same
+- [x] Assert `/admin/forms` and `/admin/coderso/forms` resolve to the same
   active nav item.
-- [ ] Assert Forms prefetch matches `/coderso/forms` and calls
+- [x] Assert Forms prefetch matches `/coderso/forms` and calls
   `listFormsCached({ force: false })`.
 
 ## Files to Change
@@ -84,3 +84,15 @@ The goal is not to add another routing layer. Use the existing `adminPaths`,
 4. Prefetch warms `forms:list` through `listFormsCached({ force: false })`.
 5. Builder/action-log route-shell cleanup does not change builder save, preview,
    fields, automation, or runtime behavior.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.
