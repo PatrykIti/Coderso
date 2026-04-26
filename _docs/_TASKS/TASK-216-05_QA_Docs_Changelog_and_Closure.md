@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + QA + Docs + Task Board
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-01, TASK-216-02, TASK-216-03, TASK-216-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,8 +17,8 @@ state.
 
 ## Sub-Tasks
 
-- [ ] TASK-216-05-01: Commerce Parity Test Matrix
-- [ ] TASK-216-05-02: Commerce Docs, Changelog, and Board Closure
+- [x] TASK-216-05-01: Commerce Parity Test Matrix
+- [x] TASK-216-05-02: Commerce Docs, Changelog, and Board Closure
 
 ## Security Contract
 
@@ -58,3 +58,9 @@ state.
 2. Docs match the shipped Commerce catalog behavior.
 3. Changelog and task-board rows are synchronized on completion.
 4. Validation evidence is recorded in the task files.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

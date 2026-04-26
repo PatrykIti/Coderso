@@ -287,3 +287,34 @@ test("default forms prefetch warms canonical forms list with cached options", as
     }
   });
 });
+
+test("default commerce prefetch warms products and collections with cached options", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listCommerceProductsCached = vi.fn().mockResolvedValue([]);
+    const listCommerceCollectionsCached = vi.fn().mockResolvedValue([]);
+
+    vi.doMock("@/services/commerceClient", () => ({
+      listCommerceProductsCached,
+      listCommerceCollectionsCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      module.prefetchAdminRoute("/admin/coderso/commerce", "/admin", {
+        activeHref: "/admin/pages",
+      });
+      await flushAsync();
+
+      expect(listCommerceProductsCached).toHaveBeenCalledWith(
+        module.prefetchWarmupOptions
+      );
+      expect(listCommerceCollectionsCached).toHaveBeenCalledWith(
+        module.prefetchWarmupOptions
+      );
+    } finally {
+      vi.doUnmock("@/services/commerceClient");
+      vi.resetModules();
+    }
+  });
+});

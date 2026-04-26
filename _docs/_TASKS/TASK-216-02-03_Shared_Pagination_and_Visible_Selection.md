@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Pagination
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-02-02, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,12 +16,12 @@ catalog, and make selection visible-page scoped like Pages.
 
 ## Sub-Tasks
 
-- [ ] Use `useListPagination(filteredProducts, { resetKey })`.
-- [ ] Render `pagination.visibleRows` in `CommerceTable`.
-- [ ] Render `ListPaginationFooter` with `resourceLabel="products"`.
-- [ ] Derive `visibleIds` from `pagination.visibleRows`.
-- [ ] Trim `selectedIds` when filters, page, page size, or product cache change.
-- [ ] Keep bulk actions limited to visible selected ids.
+- [x] Use `useListPagination(filteredProducts, { resetKey })`.
+- [x] Render `pagination.visibleRows` in `CommerceTable`.
+- [x] Render `ListPaginationFooter` with `resourceLabel="products"`.
+- [x] Derive `visibleIds` from `pagination.visibleRows`.
+- [x] Trim `selectedIds` when filters, page, page size, or product cache change.
+- [x] Keep bulk actions limited to visible selected ids.
 
 ## Files to Change
 
@@ -85,3 +85,9 @@ useEffect(() => {
 1. Commerce uses the shared pagination footer.
 2. Hidden products cannot remain selected after filter/page changes.
 3. Bulk action inputs are limited to visible selected ids.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

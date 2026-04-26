@@ -18,6 +18,7 @@ import {
   listingQueryToasts,
   listingTemplateToasts,
 } from "../../../core/admin/ui/listings/listingActionToasts";
+import { commerceListToasts } from "../../../core/admin/ui/commerce/commerceActionToasts";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -240,4 +241,29 @@ test("listings list toasts provide query and template resource copy", () => {
     "Deleted 1 listing template; failed 1."
   );
   expect(partial.failedTargets).toEqual(["template-2"]);
+});
+
+test("commerce list toasts cover product lifecycle and bulk failures", () => {
+  expect(commerceListToasts.success("create", { targetLabel: "Oak Desk" })).toBe(
+    'Product "Oak Desk" created.'
+  );
+  expect(commerceListToasts.error("delete", undefined)).toBe(
+    "Failed to delete product."
+  );
+
+  const partial = commerceListToasts.summarizeBulkAction(
+    "draft",
+    ["product-1", "product-2"],
+    [
+      { status: "fulfilled", value: undefined },
+      { status: "rejected", reason: new Error("blocked") },
+    ]
+  );
+
+  expect(partial.toastMessage).toBe("Moved to draft 1 product; failed 1.");
+  expect(partial.failedTargets).toEqual(["product-2"]);
+  commerceListToasts.emitBulk(partial);
+  expect(toastState.error).toHaveBeenCalledWith(
+    "Moved to draft 1 product; failed 1."
+  );
 });

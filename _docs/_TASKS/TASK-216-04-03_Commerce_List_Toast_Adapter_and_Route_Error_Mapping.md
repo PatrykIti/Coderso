@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Error Handling + API Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-04, TASK-208, TASK-054-11-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,18 +16,18 @@ mapping coverage for UI-visible Commerce product errors.
 
 ## Sub-Tasks
 
-- [ ] Reuse or add `core/admin/ui/commerce/commerceActionToasts.ts` or another
+- [x] Reuse or add `core/admin/ui/commerce/commerceActionToasts.ts` or another
   Commerce-owned adapter module. If TASK-216-03 already introduced the base
   row lifecycle/delete adapter, extend it here instead of creating a second
   feedback owner.
-- [ ] Build on `createListActionToastAdapter`.
-- [ ] Cover actions: create if list feedback touches create, publish,
+- [x] Build on `createListActionToastAdapter`.
+- [x] Cover actions: create if list feedback touches create, publish,
   move-to-draft, archive, delete, and bulk delete/lifecycle summaries.
-- [ ] Use bounded fallback messages for unknown failures.
-- [ ] Keep raw API errors out of UI copy when they expose internals.
-- [ ] Extend `mapCommerceError` tests for list-visible product errors if
+- [x] Use bounded fallback messages for unknown failures.
+- [x] Keep raw API errors out of UI copy when they expose internals.
+- [x] Extend `mapCommerceError` tests for list-visible product errors if
   existing coverage is too shallow.
-- [ ] Do not weaken `commerceSchemas.ts` strict schemas.
+- [x] Do not weaken `commerceSchemas.ts` strict schemas.
 
 ## Files to Change
 
@@ -97,3 +97,9 @@ export const commerceProductToasts = createListActionToastAdapter({
 1. Commerce list action feedback has one owner.
 2. UI-visible known Commerce errors are stable and covered.
 3. Strict Commerce route schemas remain intact.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

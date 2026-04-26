@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-216-01, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,9 +17,9 @@ product fields and collection enrichment.
 
 ## Sub-Tasks
 
-- [ ] TASK-216-02-01: Commerce Filter Model and Collection Enrichment
-- [ ] TASK-216-02-02: Product Table Selection and Commerce Columns
-- [ ] TASK-216-02-03: Shared Pagination and Visible Selection
+- [x] TASK-216-02-01: Commerce Filter Model and Collection Enrichment
+- [x] TASK-216-02-02: Product Table Selection and Commerce Columns
+- [x] TASK-216-02-03: Shared Pagination and Visible Selection
 
 ## Security Contract
 
@@ -57,3 +57,9 @@ product fields and collection enrichment.
 1. Commerce filters and product table match Pages list ergonomics.
 2. Selection is derived from visible paginated products only.
 3. Product records are not mutated while building filter/enriched view models.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

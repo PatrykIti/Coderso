@@ -46,6 +46,21 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/listings/ListingEditorPage.tsx`
   - Cached APIs: `getListingQueryCached`, `listListingTemplatesCached`, `listContentTypesCached`
 
+## Commerce
+- Commerce product catalog list
+  - UI: `core/admin/ui/commerce/CommerceListPage.tsx`
+  - Cached APIs: `listCommerceProductsCached`, `getCachedCommerceProducts`,
+    `listCommerceCollectionsCached`, `getCachedCommerceCollections`
+  - Mutations: `updateCommerceProduct`, `deleteCommerceProduct`
+  - Cache bus: `commerce:products:list`, `commerce:collections:list`
+  - Hydration: product and collection caches hydrate independently on mount;
+    cache misses show foreground loading, and cache-bus events refresh in the
+    background while preserving visible rows.
+- Commerce product editor
+  - UI: `core/admin/ui/commerce/CommerceEditorPage.tsx`
+  - Cached APIs: `getCommerceProductCached`, `getCachedCommerceProduct`,
+    `listCommerceCollectionsCached`
+
 ## Engagement
 - Popups list
   - UI: `core/admin/ui/popups/PopupsListPage.tsx`

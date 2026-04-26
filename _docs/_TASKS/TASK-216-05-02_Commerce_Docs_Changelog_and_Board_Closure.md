@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Docs + Task Board
 **Estimated Effort:** Small
 **Dependencies:** TASK-216-05-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,23 +16,23 @@ source QA report, changelog, task statuses, and the task board.
 
 ## Sub-Tasks
 
-- [ ] Update `docs/coderso/commerce-catalog.md` with final list behavior:
+- [x] Update `docs/coderso/commerce-catalog.md` with final list behavior:
   compact `New`, filters, selection, pagination, lifecycle row actions,
   confirmed deletes, bulk actions, and shared toast feedback.
-- [ ] Update `_docs/CONTENT_LIST_UX.md` with Commerce catalog parity behavior.
-- [ ] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` with final
+- [x] Update `_docs/CONTENT_LIST_UX.md` with Commerce catalog parity behavior.
+- [x] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` with final
   Commerce cache hydration and mutation invalidation behavior.
-- [ ] Update `_docs/CMS_API.md` if route errors, schemas, or endpoint examples
+- [x] Update `_docs/CMS_API.md` if route errors, schemas, or endpoint examples
   changed.
-- [ ] Update `_docs/ARCHITECTURE.md` if the Commerce admin contract changed.
-- [ ] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-COMMERCE.md` for
+- [x] Update `_docs/ARCHITECTURE.md` if the Commerce admin contract changed.
+- [x] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-COMMERCE.md` for
   TASK-216-owned list findings. Explicitly defer editor/product-model findings
   that remain outside this task.
-- [ ] Add one `_docs/_CHANGELOG/*` entry for TASK-216 on completion.
-- [ ] Update `_docs/_CHANGELOG/README.md`.
-- [ ] Mark TASK-216 umbrella, subtasks, and leaves Done with dated statuses and
+- [x] Add one `_docs/_CHANGELOG/*` entry for TASK-216 on completion.
+- [x] Update `_docs/_CHANGELOG/README.md`.
+- [x] Mark TASK-216 umbrella, subtasks, and leaves Done with dated statuses and
   validation evidence.
-- [ ] Move all TASK-216 rows to Done in `_docs/_TASKS/README.md` and update
+- [x] Move all TASK-216 rows to Done in `_docs/_TASKS/README.md` and update
   statistics.
 
 ## Files to Change
@@ -79,3 +79,9 @@ source QA report, changelog, task statuses, and the task board.
 3. Changelog entry and index reference TASK-216.
 4. Task board rows and statistics are synchronized.
 5. Every TASK-216 file has final status and validation notes on completion.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

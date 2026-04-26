@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-02, TASK-216-01-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,14 +17,14 @@ duplicating API schema or persistence normalization in UI code.
 
 ## Sub-Tasks
 
-- [ ] Filter by search text across product title, slug, and excerpt.
-- [ ] Filter by status `all | published | draft | archived`.
-- [ ] Filter by collection id using `collections` from `useCommerceCatalog`.
-- [ ] Filter by stock state `all | in_stock | out_of_stock | backorder`.
-- [ ] Build a collection label map from cached collections.
-- [ ] Render bounded missing-collection fallback labels without mutating
+- [x] Filter by search text across product title, slug, and excerpt.
+- [x] Filter by status `all | published | draft | archived`.
+- [x] Filter by collection id using `collections` from `useCommerceCatalog`.
+- [x] Filter by stock state `all | in_stock | out_of_stock | backorder`.
+- [x] Build a collection label map from cached collections.
+- [x] Render bounded missing-collection fallback labels without mutating
   product records.
-- [ ] Export pure filter/view-model helpers when that makes unit tests cheaper
+- [x] Export pure filter/view-model helpers when that makes unit tests cheaper
   than full component rendering.
 
 ## Files to Change
@@ -97,3 +97,9 @@ export function filterCommerceProducts(input: {
 1. Commerce filters are deterministic and Commerce-specific.
 2. Collection enrichment comes from the existing collection cache.
 3. No route, schema, or product persistence behavior changes in this leaf.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

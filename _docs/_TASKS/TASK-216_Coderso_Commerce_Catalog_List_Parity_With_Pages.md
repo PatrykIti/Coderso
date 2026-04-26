@@ -7,7 +7,7 @@
 **Dependencies:** TASK-054-11, TASK-205, TASK-206, TASK-208
 **Reference Tasks:** TASK-210 and TASK-214 are implementation references for
 Pages-style list parity with target-resource contracts.
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -181,26 +181,26 @@ the existing `/coderso/commerce` prefetch entry.
 
 ## Sub-Tasks
 
-- [ ] TASK-216-01: Commerce Catalog Route Shell and Cache Hydration
-- [ ] TASK-216-02: Commerce Filters, Table, Selection, and Pagination
-- [ ] TASK-216-03: Commerce Row Lifecycle Actions and Confirmations
-- [ ] TASK-216-04: Commerce Bulk Actions, Toasts, and Error Mapping
-- [ ] TASK-216-05: QA, Docs, Changelog, and Closure
+- [x] TASK-216-01: Commerce Catalog Route Shell and Cache Hydration
+- [x] TASK-216-02: Commerce Filters, Table, Selection, and Pagination
+- [x] TASK-216-03: Commerce Row Lifecycle Actions and Confirmations
+- [x] TASK-216-04: Commerce Bulk Actions, Toasts, and Error Mapping
+- [x] TASK-216-05: QA, Docs, Changelog, and Closure
 
 ## Leaf Breakdown
 
-- [ ] TASK-216-01-01: Product and Collection Cache Hydration
-- [ ] TASK-216-01-02: Commerce Shell, Header New, and Prefetch Contract
-- [ ] TASK-216-02-01: Commerce Filter Model and Collection Enrichment
-- [ ] TASK-216-02-02: Product Table Selection and Commerce Columns
-- [ ] TASK-216-02-03: Shared Pagination and Visible Selection
-- [ ] TASK-216-03-01: Product Row Lifecycle Menu Contract
-- [ ] TASK-216-03-02: Product Delete Confirmation Contract
-- [ ] TASK-216-04-01: Product Bulk Action Bar and Visible Selection
-- [ ] TASK-216-04-02: Bulk Mutation Execution and Partial Failures
-- [ ] TASK-216-04-03: Commerce List Toast Adapter and Route Error Mapping
-- [ ] TASK-216-05-01: Commerce Parity Test Matrix
-- [ ] TASK-216-05-02: Commerce Docs, Changelog, and Board Closure
+- [x] TASK-216-01-01: Product and Collection Cache Hydration
+- [x] TASK-216-01-02: Commerce Shell, Header New, and Prefetch Contract
+- [x] TASK-216-02-01: Commerce Filter Model and Collection Enrichment
+- [x] TASK-216-02-02: Product Table Selection and Commerce Columns
+- [x] TASK-216-02-03: Shared Pagination and Visible Selection
+- [x] TASK-216-03-01: Product Row Lifecycle Menu Contract
+- [x] TASK-216-03-02: Product Delete Confirmation Contract
+- [x] TASK-216-04-01: Product Bulk Action Bar and Visible Selection
+- [x] TASK-216-04-02: Bulk Mutation Execution and Partial Failures
+- [x] TASK-216-04-03: Commerce List Toast Adapter and Route Error Mapping
+- [x] TASK-216-05-01: Commerce Parity Test Matrix
+- [x] TASK-216-05-02: Commerce Docs, Changelog, and Board Closure
 
 ## Non-Goals
 
@@ -305,3 +305,9 @@ the existing `/coderso/commerce` prefetch entry.
 5. Shared cache hydrate/background refresh and prefetch semantics are proven.
 6. Existing Commerce editor, collections panel, API, schemas, widgets, assistant
    catalog, and public runtime contracts remain backward compatible.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

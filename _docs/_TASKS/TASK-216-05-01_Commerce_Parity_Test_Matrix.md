@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-216-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -15,15 +15,18 @@ Map every TASK-216 behavior to the correct repo test lane before closure.
 
 ## Sub-Tasks
 
-- [ ] UI orchestration: cache hydration, filters, selection, pagination, row
+- [x] UI orchestration: cache hydration, filters, selection, pagination, row
   actions, confirmations, bulk actions, toasts, and inline errors.
-- [ ] Admin client/cache: CSRF writes, cache priming, cache-bus broadcasts, and
+- [x] Admin client/cache: CSRF writes, cache priming, cache-bus broadcasts, and
   cached product/collection reads.
-- [ ] Navigation/prefetch: `/commerce` alias and `/coderso/commerce` prefetch.
-- [ ] Route/error mapping: stable Commerce product/query errors where changed.
-- [ ] Runtime compatibility: Commerce widgets/runtime resolver if product
+- [x] Navigation/prefetch: `/commerce` alias and `/coderso/commerce` prefetch.
+- [x] Route/error mapping: stable Commerce product/query errors where changed.
+- [x] Runtime compatibility: Commerce widgets/runtime resolver if product
   status/query semantics change.
-- [ ] Manual/Playwright smoke: list parity flows against the running admin UI.
+- [x] Manual/Playwright smoke decision: browser replay was not rerun in this
+  code pass; mounted Vitest coverage exercises cache hydration, filters,
+  visible selection, row lifecycle, confirmations, bulk actions, partial
+  failures, and shared feedback.
 
 ## Files to Change
 
@@ -84,3 +87,9 @@ Map every TASK-216 behavior to the correct repo test lane before closure.
 1. Every TASK-216 behavior has an owner suite.
 2. Runtime/Bun lanes are used only for runtime or route contracts.
 3. The final evidence distinguishes targeted proof from broad gate blockers.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

@@ -56,6 +56,13 @@ Commerce to katalog produktów — manager produktów z polami Identity (title/s
 
 **Kierunek naprawy UI:** Radix AlertDialog: "Usuń produkt [nazwa]?" + "Ta operacja jest nieodwracalna. Produkt zostanie usunięty z katalogu; widgety używające go przestaną go renderować." + przyciski "Usuń" (czerwony) / "Anuluj". Toast sukcesu po usunięciu. Dodatkowo: walidacja referencji (czy produkt jest w jakiejś kolekcji/zamówieniu) — jeśli tak, warning "Produkt jest w X kolekcjach i Y zamówieniach. Usunięcie może mieć efekt uboczny." Wspólny komponent AlertDialog dla Commerce, Forms, Listings, Custom Screens.
 
+**TASK-216 status:** List-owned delete is closed for the current Commerce v1
+contract. Row and bulk delete now go through `ConfirmActionDialog`, execute only
+after explicit confirmation, refresh the product list in the background, and use
+the shared Commerce list toast adapter. Deeper reference warnings for orders or
+future checkout records remain a separate service-contract follow-up because
+Commerce v1 does not expose those reference counts.
+
 ---
 
 ### [BUG-3] ŚREDNI: "Amount (minor units)" — surowy tech term w UI klienta
@@ -95,6 +102,14 @@ Commerce to katalog produktów — manager produktów z polami Identity (title/s
 **Co się dzieje:** Menu oferuje wyłącznie Edit i Delete. Brak: Duplicate (tworzenie wariantu — w komercji bardzo częste), Publish/Unpublish (bez wchodzenia do edytora), Archive (separate od Delete), "View in storefront" (otwarcie frontend preview), "Copy SKU/ID", bulk actions. Trzecia sekcja z ubogim menu (po Forms, Listings).
 
 **Kierunek naprawy UI:** Rozszerzyć menu o Duplicate, Publish/Unpublish (zależnie od aktualnego statusu), Archive (miękkie usunięcie — schowaj z All, zostaw w Archived), View in storefront (link z tokenem preview), Copy Product ID (dla integracji widgetów). Dodatkowo: bulk select na tabeli (checkbox per row + header) + bulk actions (Publish all selected / Archive / Delete). Wzorzec Pages/Posts — ten sam komponent row actions menu.
+
+**TASK-216 status:** The list-owned subset is closed. The row menu now supports
+Edit, Publish, Move to draft, Archive, and confirmed Delete; the table supports
+checkbox selection, visible-row bulk Publish/Move to draft/Archive/Delete,
+shared pagination, and partial-failure feedback. Duplicate, storefront preview,
+Copy Product ID, SKU/tax/variant, and collection-management behavior remain
+outside TASK-216 and should stay in dedicated Commerce editor/product-model
+follow-ups.
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-01-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,16 +17,16 @@ product-scoped and routes to the existing product editor create mode.
 
 ## Sub-Tasks
 
-- [ ] Keep canonical active href `/admin/coderso/commerce`.
-- [ ] Keep header `New` action scoped to products and navigate through
+- [x] Keep canonical active href `/admin/coderso/commerce`.
+- [x] Keep header `New` action scoped to products and navigate through
   `useAdminRouter().navigate("/coderso/commerce/new")`.
-- [ ] Use Pages-style list density and max width (`max-w-6xl`) unless a proven
+- [x] Use Pages-style list density and max width (`max-w-6xl`) unless a proven
   Commerce column overflow requires a documented exception.
-- [ ] Preserve breadcrumbs and Coderso navigation through existing shared
+- [x] Preserve breadcrumbs and Coderso navigation through existing shared
   helpers.
-- [ ] Preserve `/commerce -> /coderso/commerce` alias handling through
+- [x] Preserve `/commerce -> /coderso/commerce` alias handling through
   `adminPaths`.
-- [ ] Preserve `prefetchAdminRoute` warmup for products and collections with
+- [x] Preserve `prefetchAdminRoute` warmup for products and collections with
   `prefetchWarmupOptions`.
 
 ## Files to Change
@@ -92,3 +92,9 @@ product-scoped and routes to the existing product editor create mode.
 1. Commerce uses the shared admin navigation and prefetch contract.
 2. `New` remains product create navigation, not a new list drawer.
 3. No raw route or alias logic is duplicated in the screen.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

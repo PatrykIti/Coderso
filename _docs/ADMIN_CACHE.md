@@ -88,6 +88,11 @@ Defined in `core/admin/services/cachePolicy.ts`:
   `{ force: false }`: saved queries and templates. The list shell hydrates both
   caches immediately, revalidates in the background when cache exists, and uses
   a foreground load only when no cache is present.
+- `/coderso/commerce` prefetch warms both Commerce list caches with
+  `{ force: false }`: products and collections. The Commerce list shell
+  hydrates both caches immediately, refreshes product/collection cache-bus
+  events in the background, and uses foreground loading only when a required
+  cache is missing.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:

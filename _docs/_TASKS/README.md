@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 92 tasks
+- **To Do:** 74 tasks
 - **In Progress:** 11 tasks
-- **Done:** 1245 tasks
+- **Done:** 1263 tasks
 
 ---
 
@@ -38,24 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-216 | Coderso Commerce Catalog List Parity With Pages | High | Very Large | Normalize `/admin/coderso/commerce` to the Pages list contract while preserving the Commerce product-catalog contract |
-| TASK-216-01 | Commerce Catalog Route Shell and Cache Hydration | High | Large | Repair product/collection cache hydrate/background refresh, shell width, header New, and existing prefetch warmup |
-| TASK-216-01-01 | Product and Collection Cache Hydration | High | Medium | Technical leaf: `useCommerceCatalog` hydrates products/collections from cache and refreshes each family in the background |
-| TASK-216-01-02 | Commerce Shell, Header New, and Prefetch Contract | High | Medium | Technical leaf: compact product-scoped New routes to `/coderso/commerce/new` and `/coderso/commerce` prefetch remains cached-list-only |
-| TASK-216-02 | Commerce Filters, Table, Selection, and Pagination | High | Large | Pages-style filter strip, collection enrichment, checkbox table, shared pagination, and visible-product selection |
-| TASK-216-02-01 | Commerce Filter Model and Collection Enrichment | High | Medium | Technical leaf: search/status/collection/stock filters plus cached collection label projection |
-| TASK-216-02-02 | Product Table Selection and Commerce Columns | High | Medium | Technical leaf: controlled checkbox table with Product/Status/Price/Stock/Collections/Updated/Actions columns |
-| TASK-216-02-03 | Shared Pagination and Visible Selection | High | Medium | Technical leaf: `useListPagination`, `ListPaginationFooter`, and selection trimming to visible products |
-| TASK-216-03 | Commerce Row Lifecycle Actions and Confirmations | High | Large | Status-aware row actions for Edit/Publish/Draft/Archive/Delete plus confirmed destructive delete |
-| TASK-216-03-01 | Product Row Lifecycle Menu Contract | High | Medium | Technical leaf: Commerce-specific row action menu without unsupported duplicate/preview/copy actions |
-| TASK-216-03-02 | Product Delete Confirmation Contract | High | Medium | Technical leaf: row delete is gated by `ConfirmActionDialog` and shared feedback |
-| TASK-216-04 | Commerce Bulk Actions, Toasts, and Error Mapping | High | Large | Product bulk publish/draft/archive/delete, partial failures, shared list toasts, and stable route-error coverage |
-| TASK-216-04-01 | Product Bulk Action Bar and Visible Selection | High | Medium | Technical leaf: inline header bulk bar operates only on visible selected products |
-| TASK-216-04-02 | Bulk Mutation Execution and Partial Failures | High | Medium | Technical leaf: `Promise.allSettled` lifecycle/delete execution with confirmed bulk delete and recoverable failures |
-| TASK-216-04-03 | Commerce List Toast Adapter and Route Error Mapping | High | Medium | Technical leaf: one Commerce list action-toast owner and route mapper coverage for UI-visible product errors |
-| TASK-216-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final validation matrix, Commerce catalog/cache/docs, source report split, changelog, task statuses, and board sync |
-| TASK-216-05-01 | Commerce Parity Test Matrix | Medium | Small | Technical leaf: map Commerce list behavior to UI/admin/cache/prefetch/route/runtime suites |
-| TASK-216-05-02 | Commerce Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: update Commerce docs, SUMMARY-COMMERCE, changelog, TASK-216 statuses, and board statistics |
 | TASK-215 | Coderso Widgets Pages-Style Library Parity | High | Very Large | Replace the Widgets left rail with a filter-bar section dropdown, default table view, grid mode with selectable cards, and Pages-style three-dot actions for all items, favorites, widgets, categories, and templates |
 | TASK-215-01 | Widget Library Shell, Section Selector, and Cache Hydration | High | Large | Pages-style shell, section dropdown replacing the rail, canonical `/coderso/widgets` routing, and shared cache hydration/prefetch ownership |
 | TASK-215-01-01 | Pages-Style Shell and Section Dropdown | High | Medium | Technical leaf: move All Items/Favorites/Templates/All Widgets/category choices into one filter-bar dropdown |
@@ -143,6 +125,24 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-216 | Coderso Commerce Catalog List Parity With Pages | High | Very Large | Done: `/admin/coderso/commerce` now follows the Pages list contract with product filters, collection enrichment, checkbox table, visible selection, shared pagination, row/bulk lifecycle actions, confirmations, shared toasts, cache hydration, docs, changelog 748, and validation |
+| TASK-216-01 | Commerce Catalog Route Shell and Cache Hydration | High | Large | Done: product and collection caches hydrate independently, cache-bus events refresh in the background, shell width/header New/prefetch stay aligned with Pages |
+| TASK-216-01-01 | Product and Collection Cache Hydration | High | Medium | Done: `useCommerceCatalog` uses shared mount refresh options, separate hydration refs, and background cache-event refresh |
+| TASK-216-01-02 | Commerce Shell, Header New, and Prefetch Contract | High | Medium | Done: compact `New` routes through `/coderso/commerce/new`, max width is Pages-style, and `/coderso/commerce` prefetch remains cached-list-only |
+| TASK-216-02 | Commerce Filters, Table, Selection, and Pagination | High | Large | Done: search/status/collection/stock filters, collection enrichment, checkbox table, shared pagination, and visible selection shipped |
+| TASK-216-02-01 | Commerce Filter Model and Collection Enrichment | High | Medium | Done: pure filter/enrichment helpers cover title/slug/excerpt, status, collection, stock, and missing collection labels |
+| TASK-216-02-02 | Product Table Selection and Commerce Columns | High | Medium | Done: table renders select-all/per-row checkboxes, selected rows, product/status/price/stock/collections/updated/actions columns |
+| TASK-216-02-03 | Shared Pagination and Visible Selection | High | Medium | Done: `useListPagination`, `ListPaginationFooter`, visible ids, and selection trimming scope bulk actions to visible products |
+| TASK-216-03 | Commerce Row Lifecycle Actions and Confirmations | High | Large | Done: row Edit/Publish/Move to draft/Archive/Delete actions use existing Commerce product writes and confirmed destructive delete |
+| TASK-216-03-01 | Product Row Lifecycle Menu Contract | High | Medium | Done: Commerce row menu excludes unsupported duplicate/preview/copy flows and keeps lifecycle actions status-aware |
+| TASK-216-03-02 | Product Delete Confirmation Contract | High | Medium | Done: row delete opens `ConfirmActionDialog`; mutation runs only after confirmation and emits shared feedback |
+| TASK-216-04 | Commerce Bulk Actions, Toasts, and Error Mapping | High | Large | Done: visible-scope bulk publish/draft/archive/delete, partial failure recovery, Commerce toasts, and mapper coverage landed |
+| TASK-216-04-01 | Product Bulk Action Bar and Visible Selection | High | Medium | Done: inline Commerce bulk bar appears beside `New` and operates only on visible selected products |
+| TASK-216-04-02 | Bulk Mutation Execution and Partial Failures | High | Medium | Done: `Promise.allSettled` lifecycle/delete execution keeps failed products selected and recoverable |
+| TASK-216-04-03 | Commerce List Toast Adapter and Route Error Mapping | High | Medium | Done: `commerceActionToasts` covers product lifecycle/delete/bulk copy and route mapper tests cover list-visible errors |
+| TASK-216-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: validation matrix, Commerce catalog/cache/docs, source report split, changelog, task statuses, and board sync are complete |
+| TASK-216-05-01 | Commerce Parity Test Matrix | Medium | Small | Done: Commerce UI/admin/cache/prefetch/toast/pagination/route coverage is mapped and validated |
+| TASK-216-05-02 | Commerce Docs, Changelog, and Board Closure | Medium | Small | Done: Commerce docs, Content List UX, Admin Cache docs, SUMMARY-COMMERCE notes, changelog 748, and board stats are synchronized |
 | TASK-214 | Coderso Listings Tabbed List Parity With Pages | High | Very Large | Done: `/admin/coderso/listings` now follows Pages list behavior while preserving tab-scoped Queries/Templates resources, active-tab New, visible selection, confirmations, toasts, cache hydration, docs, changelog 746, and validation |
 | TASK-214-01 | Listings Route, Tab Shell, and Cache Hydration | High | Large | Done: shell owns active tab state, header New routing, query/template cache hydration, and shared prefetch compatibility |
 | TASK-214-01-01 | Query and Template Cache Hydration | High | Medium | Done: query/template hooks hydrate cache immediately and refresh in the background when cache exists |

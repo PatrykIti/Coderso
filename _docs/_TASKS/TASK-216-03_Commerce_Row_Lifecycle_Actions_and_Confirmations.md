@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-216-02, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,8 +16,8 @@ row lifecycle actions and confirmed destructive flow.
 
 ## Sub-Tasks
 
-- [ ] TASK-216-03-01: Product Row Lifecycle Menu Contract
-- [ ] TASK-216-03-02: Product Delete Confirmation Contract
+- [x] TASK-216-03-01: Product Row Lifecycle Menu Contract
+- [x] TASK-216-03-02: Product Delete Confirmation Contract
 
 ## Security Contract
 
@@ -58,3 +58,9 @@ row lifecycle actions and confirmed destructive flow.
 1. Row lifecycle actions are status-aware and Commerce-specific.
 2. Row delete cannot execute without confirmation.
 3. Product editor, API, and cache contracts remain backward compatible.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

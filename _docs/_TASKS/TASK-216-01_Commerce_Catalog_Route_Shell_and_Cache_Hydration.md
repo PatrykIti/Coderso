@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin Cache + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-216, TASK-054-11-05-01, TASK-206
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -18,8 +18,8 @@ only when cache is absent, and preserve the existing prefetch warmup path.
 
 ## Sub-Tasks
 
-- [ ] TASK-216-01-01: Product and Collection Cache Hydration
-- [ ] TASK-216-01-02: Commerce Shell, Header New, and Prefetch Contract
+- [x] TASK-216-01-01: Product and Collection Cache Hydration
+- [x] TASK-216-01-02: Commerce Shell, Header New, and Prefetch Contract
 
 ## Security Contract
 
@@ -57,3 +57,9 @@ only when cache is absent, and preserve the existing prefetch warmup path.
 2. Product and collection cache owners remain in `commerceClient` /
    `useCommerceCatalog`.
 3. Shell changes do not alter product editor or runtime Commerce behavior.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

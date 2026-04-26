@@ -25,7 +25,7 @@ test("CommerceListPage renders shell and loading state", () => {
   });
 
   expect(html).toContain("Commerce");
-  expect(html).toContain("New product");
+  expect(html).toContain("New");
   expect(html).toContain("Loading products");
 });
 
@@ -48,7 +48,7 @@ test("CommerceListPage renders cached products without loading placeholder", () 
             description: null,
             pricing: { amount: 1000, currency: "USD", compareAtAmount: null },
             stock: { state: "in_stock", quantity: 1 },
-            collectionIds: [],
+            collectionIds: ["collection-1"],
             mediaIds: [],
             variants: [],
             metadata: {},
@@ -61,12 +61,30 @@ test("CommerceListPage renders cached products without loading placeholder", () 
         savedAt: Date.now(),
       })
     );
+    storage.setItem(
+      cacheKeys.commerceCollectionsList,
+      JSON.stringify({
+        value: [
+          {
+            id: "collection-1",
+            name: "Premium",
+            slug: "premium",
+            description: null,
+            createdAt: "2026-02-19T00:00:00.000Z",
+            updatedAt: "2026-02-19T00:00:00.000Z",
+          },
+        ],
+        savedAt: Date.now(),
+      })
+    );
 
     const html = renderAdminUi(<CommerceListPage />, {
       path: "/admin/coderso/commerce",
     });
 
     expect(html).toContain("Cached product");
+    expect(html).toContain("Premium");
+    expect(html).toContain("Select all products");
     expect(html).not.toContain("Loading products");
   } finally {
     if (originalLocal === undefined) {

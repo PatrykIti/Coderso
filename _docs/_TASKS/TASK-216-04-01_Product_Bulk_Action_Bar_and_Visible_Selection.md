@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-02-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,13 +16,13 @@ when products are selected and limits operations to visible selected products.
 
 ## Sub-Tasks
 
-- [ ] Add `CommerceBulkActionsBar` or a resource wrapper over the Pages bulk
+- [x] Add `CommerceBulkActionsBar` or a resource wrapper over the Pages bulk
   action pattern.
-- [ ] Supported actions: Publish, Move to draft, Archive, Delete.
-- [ ] Render inline beside compact `New` when `selectedIds.length > 0`.
-- [ ] Clear selection and bulk action from the bar.
-- [ ] Keep selected ids derived from visible rows only.
-- [ ] Do not add bulk duplicate, bulk collection assignment, bulk media, or
+- [x] Supported actions: Publish, Move to draft, Archive, Delete.
+- [x] Render inline beside compact `New` when `selectedIds.length > 0`.
+- [x] Clear selection and bulk action from the bar.
+- [x] Keep selected ids derived from visible rows only.
+- [x] Do not add bulk duplicate, bulk collection assignment, bulk media, or
   checkout/storefront operations.
 
 ## Files to Change
@@ -77,3 +77,9 @@ export type CommerceBulkActionValue =
 1. Commerce has a Pages-style inline bulk action bar.
 2. Bulk action choices match Commerce lifecycle only.
 3. Selection remains visible-scope bounded.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Error Handling
 **Estimated Effort:** Large
 **Dependencies:** TASK-216-02, TASK-216-03, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,9 +16,9 @@ route-error coverage for list-visible product lifecycle/delete failures.
 
 ## Sub-Tasks
 
-- [ ] TASK-216-04-01: Product Bulk Action Bar and Visible Selection
-- [ ] TASK-216-04-02: Bulk Mutation Execution and Partial Failures
-- [ ] TASK-216-04-03: Commerce List Toast Adapter and Route Error Mapping
+- [x] TASK-216-04-01: Product Bulk Action Bar and Visible Selection
+- [x] TASK-216-04-02: Bulk Mutation Execution and Partial Failures
+- [x] TASK-216-04-03: Commerce List Toast Adapter and Route Error Mapping
 
 ## Security Contract
 
@@ -63,3 +63,9 @@ route-error coverage for list-visible product lifecycle/delete failures.
    lifecycle semantics.
 2. Toast and inline feedback has one owner.
 3. Known UI-visible Commerce errors are machine-readable and covered.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

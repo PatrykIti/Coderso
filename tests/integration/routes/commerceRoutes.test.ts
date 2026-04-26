@@ -63,12 +63,24 @@ test("registerCommerceRoutes wires commerce endpoints", () => {
 
 test("mapCommerceError maps domain errors to API errors", () => {
   const notFound = mapCommerceError(new Error("commerce_product_not_found"));
+  const collectionNotFound = mapCommerceError(
+    new Error("commerce_collection_not_found")
+  );
   const conflict = mapCommerceError(new Error("commerce_product_slug_exists"));
+  const collectionConflict = mapCommerceError(
+    new Error("commerce_collection_slug_exists")
+  );
+  const statusInvalid = mapCommerceError(new Error("commerce_status_invalid"));
   const invalid = mapCommerceError(new Error("commerce_query_invalid_field"));
   const unknown = mapCommerceError(new Error("some_other_error"));
 
   expect(notFound?.status).toBe(404);
+  expect(collectionNotFound?.status).toBe(404);
   expect(conflict?.status).toBe(409);
+  expect(collectionConflict?.status).toBe(409);
+  expect(statusInvalid?.status).toBe(400);
+  expect(statusInvalid?.code).toBe("commerce_status_invalid");
   expect(invalid?.status).toBe(400);
+  expect(invalid?.code).toBe("commerce_query_invalid_field");
   expect(unknown).toBeNull();
 });

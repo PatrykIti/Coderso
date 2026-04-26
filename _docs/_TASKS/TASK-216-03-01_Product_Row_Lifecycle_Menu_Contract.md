@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,20 +16,20 @@ lifecycle actions without adding unsupported Commerce features.
 
 ## Sub-Tasks
 
-- [ ] Keep Edit as the first action and route through the admin router or
+- [x] Keep Edit as the first action and route through the admin router or
   `AdminLink`.
-- [ ] Show Publish when `status !== "published"`.
-- [ ] Show Move to draft when `status === "published" || status === "archived"`.
-- [ ] Show Archive when `status !== "archived"`.
-- [ ] Show Delete as destructive and delegate confirmation to the shell.
-- [ ] Map shell-owned Publish, Move to draft, and Archive callbacks to
+- [x] Show Publish when `status !== "published"`.
+- [x] Show Move to draft when `status === "published" || status === "archived"`.
+- [x] Show Archive when `status !== "archived"`.
+- [x] Show Delete as destructive and delegate confirmation to the shell.
+- [x] Map shell-owned Publish, Move to draft, and Archive callbacks to
   `updateCommerceProduct(id, { status })`.
-- [ ] Refresh products with `{ force: true, background: true }` after
+- [x] Refresh products with `{ force: true, background: true }` after
   successful lifecycle mutations.
-- [ ] Create or reuse the base Commerce list toast adapter for row lifecycle
+- [x] Create or reuse the base Commerce list toast adapter for row lifecycle
   success/error feedback; TASK-216-04-03 can extend the same owner for bulk
   summaries and route-error coverage.
-- [ ] Do not add Duplicate, storefront preview, copy ID, checkout, or collection
+- [x] Do not add Duplicate, storefront preview, copy ID, checkout, or collection
   actions in this task.
 
 ## Files to Change
@@ -96,3 +96,9 @@ lifecycle actions without adding unsupported Commerce features.
 1. Product row actions match the current Commerce lifecycle.
 2. Unsupported actions remain explicit non-goals.
 3. Mutation execution stays in the list shell.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

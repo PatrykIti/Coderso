@@ -244,6 +244,34 @@ Gdy zaznaczysz wpisy na liscie:
   template list rows, selection, delete confirmations, and bulk metadata are
   owned by the list shell.
 
+## Commerce parity
+
+- Commerce list follows the Pages first-screen pattern at
+  `/admin/coderso/commerce` while preserving the product-first catalog
+  contract.
+- Header `New` opens the existing product editor route
+  `/admin/coderso/commerce/new`; TASK-216 does not add a collection manager or
+  replace the product editor with a drawer.
+- Filters are Commerce-specific:
+  - search by product title, slug, or excerpt,
+  - status: `All`, `Published`, `Draft`, `Archived`,
+  - collection labels from the cached collection list,
+  - stock state: `All`, `In stock`, `Out of stock`, `Backorder`.
+- Product rows use checkbox selection, selected-row styling, shared
+  pagination, and collection label enrichment. Missing collection ids render a
+  bounded `Missing collection` fallback instead of mutating product records.
+- Row actions are limited to `Edit`, `Publish`, `Move to draft`, `Archive`, and
+  `Delete`. Duplicate, preview, checkout, media picker, SKU/tax/variant, and
+  collection-management flows remain separate Commerce follow-ups.
+- Row and bulk delete require `ConfirmActionDialog`; delete mutations do not
+  run from row menus or bulk controls directly.
+- Bulk actions operate only on currently visible selected product rows and
+  support `Publish`, `Move to draft`, `Archive`, and confirmed `Delete`.
+- Lifecycle and delete actions reuse the existing Commerce product client
+  helpers (`PATCH /commerce/products/:id` and `DELETE /commerce/products/:id`)
+  with CSRF, shared list-action toasts, inline partial-failure feedback, and
+  failed rows kept selected for recovery.
+
 ## Menus parity
 
 - Menus list follows the Pages/Posts list layout: header action area, filter

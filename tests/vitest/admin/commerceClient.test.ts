@@ -5,10 +5,13 @@ import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import {
   clearCommerceCache,
   createCommerceProduct,
+  deleteCommerceProduct,
+  getCachedCommerceProducts,
   listCommerceCollectionsCached,
   listCommerceProducts,
   listCommerceProductsCached,
   previewCommerceProductsQuery,
+  updateCommerceProduct,
 } from "../../../core/admin/services/commerceClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -97,6 +100,121 @@ test("createCommerceProduct uses CSRF and posts payload", async () => {
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
   } finally {
     globalThis.fetch = originalFetch;
+    clearCommerceCache();
+  }
+});
+
+test("updateCommerceProduct uses CSRF and patches lifecycle payload", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  clearCommerceCache();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      id: "product-1",
+      title: "Oak Residence",
+      slug: "oak-residence",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 450000, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 1 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-02-19T00:00:00.000Z",
+      updatedAt: "2026-02-20T00:00:00.000Z",
+      publishedAt: "2026-02-20T00:00:00.000Z",
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    const updated = await updateCommerceProduct("product-1", {
+      status: "published",
+    });
+
+    expect(updated.status).toBe("published");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/commerce/products/product-1");
+    expect(calls[1]?.init?.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
+      status: "published",
+    });
+    const headers = new Headers(calls[1]?.init?.headers);
+    expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearCommerceCache();
+  }
+});
+
+test("deleteCommerceProduct uses CSRF and evicts product list cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  clearCommerceCache();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    storage.setItem(
+      cacheKeys.commerceProductsList,
+      JSON.stringify({
+        value: [
+          {
+            id: "product-1",
+            title: "Cached Product",
+            slug: "cached-product",
+            status: "draft",
+            excerpt: null,
+            description: null,
+            pricing: { amount: 1000, currency: "USD", compareAtAmount: null },
+            stock: { state: "in_stock", quantity: 1 },
+            collectionIds: [],
+            mediaIds: [],
+            variants: [],
+            metadata: {},
+            data: {},
+            createdAt: "2026-02-19T00:00:00.000Z",
+            updatedAt: "2026-02-19T00:00:00.000Z",
+            publishedAt: null,
+          },
+        ],
+        savedAt: Date.now(),
+      })
+    );
+
+    resetCsrfToken();
+    await deleteCommerceProduct("product-1");
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/commerce/products/product-1");
+    expect(calls[1]?.init?.method).toBe("DELETE");
+    expect(getCachedCommerceProducts()).toEqual([]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
     clearCommerceCache();
   }
 });

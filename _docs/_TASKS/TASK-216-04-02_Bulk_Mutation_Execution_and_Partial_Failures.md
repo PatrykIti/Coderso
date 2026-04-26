@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-04-01, TASK-216-03-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,17 +16,17 @@ confirmed destructive flow, background refresh, and partial-failure feedback.
 
 ## Sub-Tasks
 
-- [ ] Map bulk publish to `updateCommerceProduct(id, { status: "published" })`.
-- [ ] Map bulk move-to-draft to
+- [x] Map bulk publish to `updateCommerceProduct(id, { status: "published" })`.
+- [x] Map bulk move-to-draft to
   `updateCommerceProduct(id, { status: "draft" })`.
-- [ ] Map bulk archive to `updateCommerceProduct(id, { status: "archived" })`.
-- [ ] Map bulk delete to `deleteCommerceProduct(id)` after
+- [x] Map bulk archive to `updateCommerceProduct(id, { status: "archived" })`.
+- [x] Map bulk delete to `deleteCommerceProduct(id)` after
   `ConfirmActionDialog` confirmation.
-- [ ] Use `Promise.allSettled` for all bulk actions.
-- [ ] Refresh products with `{ force: true, background: true }` after
+- [x] Use `Promise.allSettled` for all bulk actions.
+- [x] Refresh products with `{ force: true, background: true }` after
   mutations settle.
-- [ ] Emit shared bulk summaries and keep failed products recoverable.
-- [ ] Do not add a batch endpoint only for UI parity.
+- [x] Emit shared bulk summaries and keep failed products recoverable.
+- [x] Do not add a batch endpoint only for UI parity.
 
 ## Files to Change
 
@@ -93,3 +93,9 @@ const runBulkAction = async (action: CommerceBulkActionValue, ids: string[]) => 
 1. Bulk lifecycle actions use existing product client helpers.
 2. Bulk delete is confirmed.
 3. Partial failures are visible and recoverable.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -18,19 +18,19 @@ events without mount-force refetch loops.
 
 ## Sub-Tasks
 
-- [ ] Reuse `resolveListMountRefreshOptions` for product and collection mount
+- [x] Reuse `resolveListMountRefreshOptions` for product and collection mount
   refresh decisions.
-- [ ] Reuse `resolveCacheRefreshBackground` inside product and collection
+- [x] Reuse `resolveCacheRefreshBackground` inside product and collection
   refresh functions.
-- [ ] Track hydration separately for products and collections.
-- [ ] Preserve `getCachedCommerceProducts` and `getCachedCommerceCollections`
+- [x] Track hydration separately for products and collections.
+- [x] Preserve `getCachedCommerceProducts` and `getCachedCommerceCollections`
   as the immediate hydration sources.
-- [ ] Preserve `listCommerceProductsCached({ force })` and
+- [x] Preserve `listCommerceProductsCached({ force })` and
   `listCommerceCollectionsCached({ force })` as the only network/cache
   wrappers.
-- [ ] Keep refresh call signatures compatible with current list/editor/widget
+- [x] Keep refresh call signatures compatible with current list/editor/widget
   callers or update every caller in the same leaf.
-- [ ] Refresh product cache events and collection cache events independently in
+- [x] Refresh product cache events and collection cache events independently in
   the background.
 
 ## Files to Change
@@ -105,3 +105,9 @@ const refreshProducts = async (
    valid cache exists.
 2. Background refresh preserves visible cached rows.
 3. Existing Commerce editor and collection picker consumers remain compatible.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-02-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,15 +17,15 @@ actions.
 
 ## Sub-Tasks
 
-- [ ] Add select-all checkbox for visible products.
-- [ ] Add per-row checkbox with accessible `Select <title>` labels.
-- [ ] Apply selected-row styling consistent with Pages.
-- [ ] Preserve product title `AdminLink` to
+- [x] Add select-all checkbox for visible products.
+- [x] Add per-row checkbox with accessible `Select <title>` labels.
+- [x] Apply selected-row styling consistent with Pages.
+- [x] Preserve product title `AdminLink` to
   `/coderso/commerce/:id` with `prefetch`.
-- [ ] Preserve status, price, stock, and updated columns.
-- [ ] Add collection summary column using the view-model labels from
+- [x] Preserve status, price, stock, and updated columns.
+- [x] Add collection summary column using the view-model labels from
   TASK-216-02-01.
-- [ ] Move row action execution out of the table. The table should call
+- [x] Move row action execution out of the table. The table should call
   callbacks; the shell owns mutations and feedback.
 
 ## Files to Change
@@ -96,3 +96,9 @@ actions.
 1. The product table is controlled and selection-aware.
 2. Product summary columns remain Commerce-specific.
 3. Row action callbacks are owned by the shell, not by the table.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.

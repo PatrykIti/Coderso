@@ -5,7 +5,7 @@
 **Category:** Coderso Commerce + Admin/UI + Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-216-03-01, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,13 +16,13 @@ Commerce products.
 
 ## Sub-Tasks
 
-- [ ] Track `pendingDeleteId` and `deletingId` in `CommerceListPage`.
-- [ ] Open `ConfirmActionDialog` from row Delete.
-- [ ] Show product-specific title and bounded description.
-- [ ] Run `deleteCommerceProduct` only from `onConfirm`.
-- [ ] Refresh products in the background after successful delete.
-- [ ] Keep failed products visible and recoverable on delete failure.
-- [ ] Route success/error copy through the base Commerce list toast adapter
+- [x] Track `pendingDeleteId` and `deletingId` in `CommerceListPage`.
+- [x] Open `ConfirmActionDialog` from row Delete.
+- [x] Show product-specific title and bounded description.
+- [x] Run `deleteCommerceProduct` only from `onConfirm`.
+- [x] Refresh products in the background after successful delete.
+- [x] Keep failed products visible and recoverable on delete failure.
+- [x] Route success/error copy through the base Commerce list toast adapter
   created or reused by the row lifecycle leaf. TASK-216-04-03 can extend that
   same owner for bulk summaries and route-error coverage.
 
@@ -92,3 +92,9 @@ Commerce products.
 1. Row delete is impossible without confirmation.
 2. Delete success and failure feedback uses the shared Commerce list copy.
 3. Failed deletes remain recoverable.
+
+## Closure Evidence
+
+- Completed on 2026-04-26 as part of TASK-216 Commerce catalog list parity.
+- Validation: `bun --cwd core lint`, `bun --cwd core lint:types`, targeted Vitest Commerce UI/admin/pagination/toast/prefetch suites, `bun test tests/integration/routes/commerceRoutes.test.ts` outside sandbox with repo env, and Commerce runtime smoke tests outside sandbox with repo env.
+- Gate note: `bun run gates:coderso` was attempted and remains blocked by the pre-existing stale Functional UI smoke paths under `tests/unit/ui/*`; current matching UI suites live under `tests/vitest/ui/*`.
