@@ -23,6 +23,9 @@ behavior and accessible label must be resource-specific.
 - [ ] Replace `New query` header copy with compact `New`.
 - [ ] On `Queries`, `New` navigates to `/coderso/listings/new` through
   `useAdminRouter().navigate`.
+- [ ] Keep navigation canonicalized through `useAdminRouter().navigate` and
+  `AdminLink`/`prefetch`; do not add raw anchors, `window.location`, or local
+  route alias logic for Listings.
 - [ ] On `Templates`, `New` opens the template create dialog/drawer owned by
   the templates tab through parent-controlled state.
 - [ ] Remove the nested `New template` primary button from
@@ -85,6 +88,8 @@ const handleNew = () => {
 - Template create state is parent-controlled; closing the dialog updates the
   shell state and reopening from the header starts a fresh create form.
 - Prefetch tests still prove `/coderso/listings` warms queries and templates.
+- Navigation tests keep route assertions at the canonical admin path level and
+  do not bypass `resolveAdminHref` / `prefetchAdminRoute` behavior.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`

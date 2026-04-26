@@ -69,9 +69,12 @@ active tab, while query/template contracts remain separate.
 - Run DB-backed route tests when route/error mapping changes:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/listings.test.ts`
+- Run schema coverage when `listingSchemas.ts` changes:
+  - `bun test tests/unit/content/listingSchemas.test.ts`
 - If runtime widgets or listing preview contracts changed, also run:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/listingFilters.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/search/listingRuntimeService.test.ts`
+  - `bun test tests/unit/content/listingRuntimeResolver.test.ts`
   - `bun test tests/perf/codersoPerformanceGate.test.ts` if query execution or
     runtime listing behavior changed.
 

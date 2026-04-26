@@ -29,6 +29,8 @@ add real component suites where the mocked wave cannot prove behavior.
 - [ ] Cover that query/template toast copy comes from
   `core/admin/ui/listings/listingActionToasts.ts`, not duplicated local
   adapters in the list shell, template manager, or query editor.
+- [ ] Treat `core/admin/ui/listings/listingActionToasts.ts` as source under
+  test from TASK-214-04-04, not as QA-leaf implementation ownership.
 - [ ] Cover cache hydration and prefetch warmup.
 - [ ] Extend `tests/vitest/admin/listingsClient.test.ts` beyond its current
   public-search smoke coverage when client wrappers change, including query and
@@ -53,7 +55,6 @@ add real component suites where the mocked wave cannot prove behavior.
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-page.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
-- `core/admin/ui/listings/listingActionToasts.ts`
 - New focused Listings component suites if needed.
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/vitest/ui/list-pagination.test.tsx`
@@ -64,6 +65,7 @@ add real component suites where the mocked wave cannot prove behavior.
 - `tests/integration/routes/listings.test.ts` for route mapping, query-domain
   validation, and strict unknown-field assertions when TASK-214-04-04 is
   implemented.
+- `tests/unit/content/listingSchemas.test.ts` if `listingSchemas.ts` changes.
 
 ## Security Contract
 
@@ -91,6 +93,10 @@ add real component suites where the mocked wave cannot prove behavior.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/listingsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
   - `set -a && source .env && set +a && bun test tests/integration/routes/listings.test.ts` if route mapping changes.
+  - `bun test tests/unit/content/listingSchemas.test.ts` if schema ownership or
+    reject-unknown behavior changes.
+  - `bun test tests/unit/content/listingRuntimeResolver.test.ts` if runtime
+    listing/template compatibility is touched or suspected.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

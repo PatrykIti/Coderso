@@ -20,7 +20,9 @@ selected-row styling, responsive row metadata, and resource-specific columns.
 - [ ] Add row checkbox and selected-row visual state.
 - [ ] Keep columns: Query, Source, Updated, Actions.
 - [ ] Keep row actions: Edit and Delete.
-- [ ] Use `AdminLink` for editor navigation and preserve prefetch.
+- [ ] Use `AdminLink` for editor navigation, preserve `prefetch`, and keep the
+  canonical `/coderso/listings/:id` route flowing through shared admin path
+  resolution instead of hand-built anchors.
 
 ## Files to Change
 
@@ -58,7 +60,8 @@ selected-row styling, responsive row metadata, and resource-specific columns.
 - Header checkbox selects visible query rows.
 - Row checkbox toggles one query row.
 - Selected row gets a visible selected state.
-- Edit links still point to `/coderso/listings/:id`.
+- Edit links still point to `/coderso/listings/:id` through `AdminLink` and
+  preserve prefetch behavior.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx tests/vitest/ui/listing-list-page-wave.test.tsx`
   - `bun --cwd core lint`

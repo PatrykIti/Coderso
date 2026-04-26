@@ -131,6 +131,11 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
   cache priming, and cache-bus broadcasts for query/template mutations. Bulk
   delete should compose those helpers with `Promise.allSettled`; do not add a
   batch endpoint only for UI parity.
+- Admin navigation must keep using the shared SPA/canonical helpers:
+  `useAdminRouter().navigate` for imperative flows, `AdminLink` with `prefetch`
+  for row links, and the existing `prefetchAdminRoute` entry for
+  `/coderso/listings`. Do not add raw anchors, `window.location` redirects, or
+  route-matching aliases outside `adminPaths`.
 - Cache hook changes should follow the current shared list pattern exactly:
   `resolveListMountRefreshOptions(hasInitialCache)` for mount and
   `resolveCacheRefreshBackground(...)` for later refresh calls. If the hooks
@@ -306,10 +311,13 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
 - Bun route coverage when route/error mapping changes:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/listings.test.ts`
+- If `listingSchemas.ts` changes, keep strict schema coverage in the Bun lane:
+  - `bun test tests/unit/content/listingSchemas.test.ts`
 - If runtime widget compatibility is touched or suspected, run the relevant
   listing widget/runtime suites:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/listingFilters.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/search/listingRuntimeService.test.ts`
+  - `bun test tests/unit/content/listingRuntimeResolver.test.ts`
 
 ## Documentation Updates Required
 

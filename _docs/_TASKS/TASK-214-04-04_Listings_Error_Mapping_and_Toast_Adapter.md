@@ -66,6 +66,8 @@ list uses shared toast normalization instead of ad hoc strings.
 - `core/server/routes/listingsRoutes.ts` to export `mapListingError`; add mapped
   cases only if mapping gaps are found.
 - `core/server/validation/listingSchemas.ts` only if schema gaps are found.
+- `tests/unit/content/listingSchemas.test.ts` if schema ownership or
+  reject-unknown behavior changes.
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
@@ -128,6 +130,8 @@ export const mapListingError = (error: unknown) => {
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`
   - `set -a && source .env && set +a && bun test tests/integration/routes/listings.test.ts`
+  - `bun test tests/unit/content/listingSchemas.test.ts` if schema ownership or
+    reject-unknown behavior changes.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

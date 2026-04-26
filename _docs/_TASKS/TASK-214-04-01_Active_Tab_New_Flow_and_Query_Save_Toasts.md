@@ -19,7 +19,8 @@ keeps that route and adds feedback after save mutations settle.
 
 ## Sub-Tasks
 
-- [ ] `Queries` tab header `New` navigates to `/coderso/listings/new`.
+- [ ] `Queries` tab header `New` navigates to `/coderso/listings/new` through
+  `useAdminRouter().navigate`, preserving shared admin path canonicalization.
 - [ ] Query create success emits a shared action toast after
   `createListingQuery` resolves.
 - [ ] Query update success emits a shared action toast after
@@ -70,6 +71,7 @@ if (isCreateMode) {
 ## Testing Requirements
 
 - `Queries` tab `New` still navigates to query create.
+- Query create navigation does not use `window.location` or a raw anchor.
 - Create save emits listing query create feedback and navigates to detail.
 - Update save emits listing query update feedback and stays on detail.
 - Failed save preserves inline error copy.
