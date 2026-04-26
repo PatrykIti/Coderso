@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 68 tasks
+- **To Do:** 86 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1242 tasks
 
@@ -38,6 +38,24 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-216 | Coderso Commerce Catalog List Parity With Pages | High | Very Large | Normalize `/admin/coderso/commerce` to the Pages list contract while preserving the Commerce product-catalog contract |
+| TASK-216-01 | Commerce Catalog Route Shell and Cache Hydration | High | Large | Repair product/collection cache hydrate/background refresh, shell width, header New, and existing prefetch warmup |
+| TASK-216-01-01 | Product and Collection Cache Hydration | High | Medium | Technical leaf: `useCommerceCatalog` hydrates products/collections from cache and refreshes each family in the background |
+| TASK-216-01-02 | Commerce Shell, Header New, and Prefetch Contract | High | Medium | Technical leaf: compact product-scoped New routes to `/coderso/commerce/new` and `/coderso/commerce` prefetch remains cached-list-only |
+| TASK-216-02 | Commerce Filters, Table, Selection, and Pagination | High | Large | Pages-style filter strip, collection enrichment, checkbox table, shared pagination, and visible-product selection |
+| TASK-216-02-01 | Commerce Filter Model and Collection Enrichment | High | Medium | Technical leaf: search/status/collection/stock filters plus cached collection label projection |
+| TASK-216-02-02 | Product Table Selection and Commerce Columns | High | Medium | Technical leaf: controlled checkbox table with Product/Status/Price/Stock/Collections/Updated/Actions columns |
+| TASK-216-02-03 | Shared Pagination and Visible Selection | High | Medium | Technical leaf: `useListPagination`, `ListPaginationFooter`, and selection trimming to visible products |
+| TASK-216-03 | Commerce Row Lifecycle Actions and Confirmations | High | Large | Status-aware row actions for Edit/Publish/Draft/Archive/Delete plus confirmed destructive delete |
+| TASK-216-03-01 | Product Row Lifecycle Menu Contract | High | Medium | Technical leaf: Commerce-specific row action menu without unsupported duplicate/preview/copy actions |
+| TASK-216-03-02 | Product Delete Confirmation Contract | High | Medium | Technical leaf: row delete is gated by `ConfirmActionDialog` and shared feedback |
+| TASK-216-04 | Commerce Bulk Actions, Toasts, and Error Mapping | High | Large | Product bulk publish/draft/archive/delete, partial failures, shared list toasts, and stable route-error coverage |
+| TASK-216-04-01 | Product Bulk Action Bar and Visible Selection | High | Medium | Technical leaf: inline header bulk bar operates only on visible selected products |
+| TASK-216-04-02 | Bulk Mutation Execution and Partial Failures | High | Medium | Technical leaf: `Promise.allSettled` lifecycle/delete execution with confirmed bulk delete and recoverable failures |
+| TASK-216-04-03 | Commerce List Toast Adapter and Route Error Mapping | High | Medium | Technical leaf: one Commerce list action-toast owner and route mapper coverage for UI-visible product errors |
+| TASK-216-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final validation matrix, Commerce catalog/cache/docs, source report split, changelog, task statuses, and board sync |
+| TASK-216-05-01 | Commerce Parity Test Matrix | Medium | Small | Technical leaf: map Commerce list behavior to UI/admin/cache/prefetch/route/runtime suites |
+| TASK-216-05-02 | Commerce Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: update Commerce docs, SUMMARY-COMMERCE, changelog, TASK-216 statuses, and board statistics |
 | TASK-215 | Coderso Widgets Pages-Style Library Parity | High | Very Large | Replace the Widgets left rail with a filter-bar section dropdown, default table view, grid mode with selectable cards, and Pages-style three-dot actions for all items, favorites, widgets, categories, and templates |
 | TASK-215-01 | Widget Library Shell, Section Selector, and Cache Hydration | High | Large | Pages-style shell, section dropdown replacing the rail, canonical `/coderso/widgets` routing, and shared cache hydration/prefetch ownership |
 | TASK-215-01-01 | Pages-Style Shell and Section Dropdown | High | Medium | Technical leaf: move All Items/Favorites/Templates/All Widgets/category choices into one filter-bar dropdown |
