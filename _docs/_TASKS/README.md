@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 84 tasks
+- **To Do:** 104 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1180 tasks
 
@@ -38,6 +38,26 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-214 | Coderso Listings Tabbed List Parity With Pages | High | Very Large | Keep Queries/Templates tabs while making `/admin/coderso/listings` match Pages list behavior with active-tab New, tab-local bulk actions, confirmations, toasts, filters, pagination, and cache hydration |
+| TASK-214-01 | Listings Route, Tab Shell, and Cache Hydration | High | Large | Parent shell owns active tab state, header New routing, query/template cache hydration, and shared prefetch compatibility |
+| TASK-214-01-01 | Query and Template Cache Hydration | High | Medium | Technical leaf: hydrate both Listings caches immediately, background refresh when cache exists, and foreground load only when absent |
+| TASK-214-01-02 | Tab State, Header New Action, and Prefetch | High | Medium | Technical leaf: controlled Queries/Templates tabs, compact active-tab New behavior, and shared `/coderso/listings` prefetch proof |
+| TASK-214-02 | Listings Queries Tab Table, Filters, and Pagination | High | Large | Query tab parity: resource-specific filters, checkbox table, shared pagination, visible-row selection, and query-only row actions |
+| TASK-214-02-01 | Query Filter Model and View Component | High | Medium | Technical leaf: query search and source filters with pagination reset and selection trimming |
+| TASK-214-02-02 | Query Table Selection, Source, and Updated Columns | High | Medium | Technical leaf: Pages-style query table selection while preserving Query/Source/Updated/Actions columns and editor links |
+| TASK-214-02-03 | Query Pagination and Visible Selection | High | Medium | Technical leaf: shared `ListPaginationFooter` and visible selected query ids only |
+| TASK-214-03 | Listings Templates Tab Table, Filters, and Pagination | High | Large | Template tab parity: resource-specific filters, checkbox table, shared pagination, visible-row selection, and template-only row actions |
+| TASK-214-03-01 | Template Filter Model and View Component | High | Medium | Technical leaf: template search and layout filters with pagination reset and selection trimming |
+| TASK-214-03-02 | Template Table Selection, Layout, and Binding Summary | High | Medium | Technical leaf: Pages-style template table selection with layout, slug, binding count, updated date, and row actions |
+| TASK-214-03-03 | Template Pagination and Visible Selection | High | Medium | Technical leaf: shared `ListPaginationFooter` and visible selected template ids only |
+| TASK-214-04 | Tab-Scoped Actions, Confirmations, and Toasts | High | Large | Active tab owns New, row actions, bulk delete, shared toasts, inline errors, and confirmed destructive flows |
+| TASK-214-04-01 | Active Tab New Flow and Query Save Toasts | High | Medium | Technical leaf: Queries New navigates to query create, query save/update emits shared feedback, and editor behavior stays intact |
+| TASK-214-04-02 | Query Row and Bulk Delete Confirmations | High | Medium | Technical leaf: query row/bulk delete uses `ConfirmActionDialog`, visible ids, partial-failure feedback, and query-specific toasts |
+| TASK-214-04-03 | Template Create, Edit, and Delete Confirmations | High | Medium | Technical leaf: Templates New opens create flow, save/delete emits shared feedback, and bulk delete is confirmed and tab-local |
+| TASK-214-04-04 | Listings Error Mapping and Toast Adapter | High | Medium | Technical leaf: shared query/template toast adapters plus stable route error mapping and strict schema proof |
+| TASK-214-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final validation matrix, docs, changelog, task statuses, and board sync for TASK-214 |
+| TASK-214-05-01 | Listings Parity Test Matrix | Medium | Small | Technical leaf: map active-tab New, filters, table, bulk, confirmation, toast, cache, prefetch, and route coverage to exact suites |
+| TASK-214-05-02 | Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: update Content List UX/Admin Cache/API docs as needed, add changelog, and sync board statistics |
 | TASK-213 | Widget Library Playwright QA Follow-ups | High | Very Large | Close SUMMARY-WIDGETS findings across Widget Library insert feedback, Form Embed crash, listing-query loading states, accessibility/filter IA, template cleanup, wizard consistency, picker upgrades, and source-report closure |
 | TASK-213-01 | Widget Editor Stability and Data Loading | High | Large | Repair Form Embed crash plus Listing Filters/Search Box completed-empty loading states before broader UX polish |
 | TASK-213-01-01 | Form Embed Select Sentinel and Crash Regression | High | Small | Technical leaf: replace empty Radix Select item values with UI-only sentinels and prove Form Embed cannot blank the editor |
