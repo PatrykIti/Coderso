@@ -50,6 +50,34 @@ No child task files.
 - Anti-abuse: toast/error copy must be bounded, must not include stack traces,
   raw payloads, secrets, preview tokens, or privileged settings.
 
+## Pseudocode
+
+```ts
+type WidgetLibraryToastAction =
+  | "insert"
+  | "favorite-add"
+  | "favorite-remove"
+  | "template-duplicate"
+  | "template-delete"
+  | "template-bulk-delete";
+
+export const widgetLibraryToasts = createListActionToastAdapter({
+  resourceLabel: "Widget",
+  messages: {
+    insert: { success: "Widget inserted.", error: "Failed to insert widget." },
+    "favorite-add": { success: "Added to favorites.", error: "Failed to save favorites." },
+    "favorite-remove": { success: "Removed from favorites.", error: "Failed to save favorites." },
+    "template-duplicate": { success: "Template duplicated.", error: "Failed to duplicate template." },
+    "template-delete": { success: "Template deleted.", error: "Failed to delete template." },
+    "template-bulk-delete": { success: "Templates deleted.", error: "Failed to delete templates." },
+  },
+});
+
+function toWidgetLibraryError(error: unknown, fallback: string) {
+  return resolveAdminActionErrorMessage(error, fallback);
+}
+```
+
 ## Testing Requirements
 
 - Core insert, favorite, template duplicate, template delete, and bulk delete

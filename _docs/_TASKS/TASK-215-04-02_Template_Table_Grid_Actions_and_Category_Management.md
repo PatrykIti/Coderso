@@ -47,6 +47,41 @@ No child task files.
 - Anti-abuse: category actions keep explicit row/category context and do not
   delete templates.
 
+## Pseudocode
+
+```tsx
+const templateRows = viewRows.filter((row) => row.source === "template");
+
+function getTemplateActions(row: WidgetLibraryRow): WidgetLibraryAction[] {
+  return ["preview-placeholder", "edit-template", "duplicate", "delete"];
+}
+
+const handleTemplateAction = async (
+  row: WidgetLibraryRow,
+  action: WidgetLibraryAction
+) => {
+  if (row.source !== "template") return;
+
+  if (action === "edit-template") {
+    navigate(resolveAdminHref(adminBasePath, `/admin/widgets/templates/${row.id}`));
+    return;
+  }
+
+  if (action === "duplicate") {
+    await duplicateWidgetTemplate(row.id);
+    await refreshCatalogFromCacheBusOwner();
+    return;
+  }
+
+  if (action === "delete") {
+    setTemplateDeleteTarget({ ids: [row.id], label: row.name });
+  }
+};
+
+const headerAction =
+  activeSection === "templates" ? <AdminLink href={templateCreateHref}>New Template</AdminLink> : null;
+```
+
 ## Testing Requirements
 
 - Templates section table and grid show template-safe actions.

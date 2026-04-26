@@ -40,6 +40,42 @@ No child task files.
 - Anti-abuse: card selection must not select rows hidden by the active section,
   filter, or page.
 
+## Pseudocode
+
+```tsx
+type WidgetLibraryGridProps = {
+  rows: WidgetLibraryRow[];
+  selectedIds: Set<string>;
+  onToggleRow: (id: string, checked: boolean) => void;
+  onPrimaryClick: (row: WidgetLibraryRow) => void;
+  onAction: (row: WidgetLibraryRow, action: WidgetLibraryAction) => void;
+};
+
+function WidgetLibraryGrid(props: WidgetLibraryGridProps) {
+  return props.rows.map((row) => (
+    <WidgetLibraryGridCard
+      key={row.id}
+      row={row}
+      selected={props.selectedIds.has(row.id)}
+      onCheckboxClick={(event) => {
+        event.stopPropagation();
+        props.onToggleRow(row.id, !props.selectedIds.has(row.id));
+      }}
+      onClick={() => props.onPrimaryClick(row)}
+      onAction={(action) => props.onAction(row, action)}
+    />
+  ));
+}
+
+const handleGridPrimaryClick = (row: WidgetLibraryRow) => {
+  if (row.source === "core") {
+    openWidgetDetails(row.widget);
+    return;
+  }
+  openTemplateEditor(row.id);
+};
+```
+
 ## Testing Requirements
 
 - Switching to grid keeps the section dropdown and filters visible.

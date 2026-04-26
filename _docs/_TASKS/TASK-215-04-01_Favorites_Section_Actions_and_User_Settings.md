@@ -45,6 +45,33 @@ No child task files.
 - Anti-abuse: preserve max-50 favorites and remove only ids present in the
   active authorized catalog/template rows.
 
+## Pseudocode
+
+```ts
+function buildFavoritesRows(rows: WidgetLibraryRow[], favoriteIds: Set<string>) {
+  return rows.filter((row) => favoriteIds.has(row.id));
+}
+
+function getFavoriteActions(row: WidgetLibraryRow): WidgetLibraryAction[] {
+  const sourceActions =
+    row.source === "core"
+      ? ["preview-placeholder", "edit", "insert"]
+      : ["preview-placeholder", "edit-template", "duplicate", "delete"];
+
+  return [...sourceActions, "remove-favorite"];
+}
+
+async function removeVisibleFavorites(ids: string[]) {
+  const visibleIds = new Set(visibleRows.map((row) => row.id));
+  const next = new Set(favoriteIds);
+  for (const id of ids) {
+    if (visibleIds.has(id)) next.delete(id);
+  }
+  await setUserSetting("widgets.favorites", Array.from(next));
+  trimSelectionToVisibleRows();
+}
+```
+
 ## Testing Requirements
 
 - Favorites section includes favorite core widgets and favorite templates.

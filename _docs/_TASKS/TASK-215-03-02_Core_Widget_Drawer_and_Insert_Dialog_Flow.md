@@ -44,6 +44,41 @@ No child task files.
 - Anti-abuse: target ids must come from loaded page/template options; dialog
   errors remain bounded and cannot include stack traces or raw payloads.
 
+## Pseudocode
+
+```tsx
+const handleWidgetAction = (row: WidgetLibraryRow, action: WidgetLibraryAction) => {
+  if (row.source !== "core") return;
+
+  if (action === "edit" || action === "configure") {
+    setSelectedWidget(row.widget);
+    setDetailsOpen(true);
+    return;
+  }
+
+  if (action === "insert") {
+    setInsertWidget(row.widget);
+    setInsertOpen(true);
+  }
+};
+
+<WidgetDetailsDrawer
+  widget={selectedWidget}
+  open={detailsOpen}
+  onInsert={() => selectedWidget?.source === "core" && openInsert(selectedWidget)}
+/>
+
+<WidgetInsertDialog
+  widget={insertWidget}
+  pages={pageOptionsFromCache}
+  templates={templateOptionsFromCatalog}
+  onInsert={async (payload) => {
+    // Keep the current updatePage/updateWidgetTemplate placement behavior.
+    await insertWidgetIntoExplicitTarget(insertWidget, payload);
+  }}
+/>
+```
+
 ## Testing Requirements
 
 - Configure/Edit opens `WidgetDetailsDrawer` from table row and grid card.

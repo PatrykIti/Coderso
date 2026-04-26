@@ -45,6 +45,36 @@ No child task files.
 - Anti-abuse: preserve the max-50 favorites limit and do not persist ids that
   are not present in the current authorized catalog result.
 
+## Pseudocode
+
+```ts
+const visibleCoreIds = visibleRows
+  .filter((row) => row.source === "core")
+  .map((row) => row.id);
+
+const selectedVisibleCoreIds = selectedIds.filter((id) =>
+  visibleCoreIds.includes(id)
+);
+
+async function bulkAddFavorites() {
+  const next = new Set(currentFavoriteIds);
+  for (const id of selectedVisibleCoreIds) next.add(id);
+  if (next.size > 50) {
+    showFavoriteLimitError();
+    return;
+  }
+  await setUserSetting("widgets.favorites", Array.from(next));
+  trimSelectionToVisibleRows();
+}
+
+async function bulkRemoveFavorites() {
+  const next = new Set(currentFavoriteIds);
+  for (const id of selectedVisibleCoreIds) next.delete(id);
+  await setUserSetting("widgets.favorites", Array.from(next));
+  trimSelectionToVisibleRows();
+}
+```
+
 ## Testing Requirements
 
 - Bulk add to favorites updates only selected visible core widget ids.

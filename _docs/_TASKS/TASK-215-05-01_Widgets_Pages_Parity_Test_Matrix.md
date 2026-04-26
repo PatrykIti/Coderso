@@ -62,6 +62,43 @@ No child task files.
 | Settings | user settings client/unit/route coverage runs if `widgets.favorites` typing, validation, or route behavior changes |
 | Routes | Bun route coverage only when route/schema/error mapping changes |
 
+## Pseudocode
+
+```ts
+const task215Matrix = [
+  {
+    area: "shell/dropdown",
+    suites: ["tests/vitest/ui/widget-library.test.tsx"],
+    proves: ["old rail options in dropdown", "no duplicate rail"],
+  },
+  {
+    area: "table/grid/selection",
+    suites: [
+      "tests/vitest/ui/widget-library.test.tsx",
+      "tests/vitest/ui/widget-card.test.tsx",
+      "tests/vitest/ui/widgetLibraryUtils.test.ts",
+      "tests/vitest/ui/list-pagination.test.tsx",
+    ],
+    proves: ["same visible ids", "hidden ids trimmed", "card checkbox isolation"],
+  },
+  {
+    area: "actions/cache/routes",
+    suites: [
+      "tests/vitest/pageBuilder/widgetLibrary.test.tsx",
+      "tests/vitest/admin/widgetsClient.test.ts",
+      "tests/vitest/admin/widgetTemplatesClient.test.ts",
+      "tests/vitest/admin/widgetTemplateCategoriesClient.test.ts",
+      "tests/vitest/admin/adminPrefetch.test.ts",
+    ],
+    bunOnlyWhenTouched: [
+      "tests/integration/routes/widgets.test.ts",
+      "tests/integration/routes/widgetTemplates.test.ts",
+      "tests/integration/routes/widgetTemplateCategories.test.ts",
+    ],
+  },
+];
+```
+
 ## Testing Requirements
 
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/pageBuilder/widgetLibrary.test.tsx tests/vitest/ui/widget-card.test.tsx tests/vitest/ui/widgetLibraryUtils.test.ts tests/vitest/ui/widgetInsertUtils.test.ts`

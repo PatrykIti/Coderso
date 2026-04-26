@@ -46,6 +46,19 @@ No child task files.
 - Anti-abuse: changelog/test notes must not expose private payloads, tokens,
   stack traces, or secrets.
 
+## Pseudocode
+
+```md
+Closure checklist:
+
+1. Move TASK-215 family files from To Do to Done with dated status lines.
+2. Recalculate `_docs/_TASKS/README.md` statistics after every moved row.
+3. Add `_docs/_CHANGELOG/NNN_*.md` with implementation summary and validation.
+4. Add the changelog entry to `_docs/_CHANGELOG/README.md`.
+5. Update product/cache docs only for behavior that actually shipped.
+6. Record skipped checks with reason and owner follow-up.
+```
+
 ## Testing Requirements
 
 - Verify task files have required headers, required sections, status dates, and
