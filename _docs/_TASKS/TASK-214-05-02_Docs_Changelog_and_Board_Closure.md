@@ -5,7 +5,7 @@
 **Category:** Documentation
 **Estimated Effort:** Small
 **Dependencies:** TASK-214-05-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,16 +16,16 @@ implementation is validated.
 
 ## Sub-Tasks
 
-- [ ] Update Content List UX docs with Listings active-tab behavior.
-- [ ] Update Admin Cache docs and cache map if hydration/prefetch wording
+- [x] Update Content List UX docs with Listings active-tab behavior.
+- [x] Update Admin Cache docs and cache map if hydration/prefetch wording
   changes.
-- [ ] Update CMS API docs only if route errors/examples change.
-- [ ] Update `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` or linked manual QA notes
+- [x] Update CMS API docs only if route errors/examples change.
+- [x] Update `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` or linked manual QA notes
   with a covered/deferred finding split if the source report is part of closure.
-- [ ] Add a changelog entry for TASK-214.
-- [ ] Index the changelog entry in `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-214 files to Done with completion dates.
-- [ ] Move TASK-214 board rows from To Do to Done and update statistics.
+- [x] Add a changelog entry for TASK-214.
+- [x] Index the changelog entry in `_docs/_CHANGELOG/README.md`.
+- [x] Move TASK-214 files to Done with completion dates.
+- [x] Move TASK-214 board rows from To Do to Done and update statistics.
 
 ## Files to Change
 

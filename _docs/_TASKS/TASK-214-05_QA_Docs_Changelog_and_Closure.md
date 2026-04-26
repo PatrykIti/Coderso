@@ -5,7 +5,7 @@
 **Category:** QA + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-01, TASK-214-02, TASK-214-03, TASK-214-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,12 +20,12 @@ active tab, while query/template contracts remain separate.
 
 ## Sub-Tasks
 
-- [ ] TASK-214-05-01: Listings Parity Test Matrix
-- [ ] TASK-214-05-02: Docs, Changelog, and Board Closure
-- [ ] Record unrelated failures separately with exact failure strings.
-- [ ] Preserve active `Queries` / `Templates` tab behavior in the source report
+- [x] TASK-214-05-01: Listings Parity Test Matrix
+- [x] TASK-214-05-02: Docs, Changelog, and Board Closure
+- [x] Record unrelated failures separately with exact failure strings.
+- [x] Preserve active `Queries` / `Templates` tab behavior in the source report
   or manual QA notes if a Playwright report is updated.
-- [ ] Classify `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` findings explicitly:
+- [x] Classify `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` findings explicitly:
   mark the TASK-214-covered list findings as addressed and leave editor,
   duplicate/preview/copy, data hygiene, beta messaging, and template education
   findings open or assigned to follow-up tasks.
@@ -113,3 +113,24 @@ active tab, while query/template contracts remain separate.
 2. Docs describe final Listings tabbed list behavior and cache contract.
 3. Task statuses, board statistics, and changelog index are synchronized.
 4. Remaining Listings gaps are explicit and not hidden as completed parity work.
+
+## Completion Notes (2026-04-26)
+
+- Implemented Listings tabbed list parity with active-tab `New`, query/template
+  filters, checkbox tables, shared pagination, visible-row selection trimming,
+  shell-owned template dialog state, confirmed row/bulk delete, shared
+  query/template action toasts, cache hydrate/background refresh, and route
+  error mapping coverage.
+- Updated `_docs/CONTENT_LIST_UX.md`, `_docs/ADMIN_CACHE.md`,
+  `_docs/ADMIN_CACHE_MAP.md`, `_docs/CMS_API.md`,
+  `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md`, task statuses, task board stats, and
+  changelog 746.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-page.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/cacheRefresh.test.ts tests/vitest/admin/listingsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
+  - `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun test tests/integration/routes/listings.test.ts` outside sandbox.

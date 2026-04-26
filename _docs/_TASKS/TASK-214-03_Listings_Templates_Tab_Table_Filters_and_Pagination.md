@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-214-01, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -18,15 +18,15 @@ editor contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-214-03-01: Template Filter Model and View Component
-- [ ] TASK-214-03-02: Template Table Selection, Layout, and Binding Summary
-- [ ] TASK-214-03-03: Template Pagination and Visible Selection
-- [ ] Remove nested card-in-card treatment from the tab content.
-- [ ] Keep template row actions limited to Edit and Delete.
-- [ ] Keep template filters, pagination, visible ids, and selected template ids
+- [x] TASK-214-03-01: Template Filter Model and View Component
+- [x] TASK-214-03-02: Template Table Selection, Layout, and Binding Summary
+- [x] TASK-214-03-03: Template Pagination and Visible Selection
+- [x] Remove nested card-in-card treatment from the tab content.
+- [x] Keep template row actions limited to Edit and Delete.
+- [x] Keep template filters, pagination, visible ids, and selected template ids
   shell-owned or exposed through controlled props so `ListingListPage` can render
   the active-tab bulk bar in `PageHeader.actions`.
-- [ ] Keep `ListingTemplateManager` as the template dialog/form owner only after
+- [x] Keep `ListingTemplateManager` as the template dialog/form owner only after
   it receives controlled open/edit state from the shell.
 
 ## Files to Change

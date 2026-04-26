@@ -37,9 +37,51 @@ export type Router = {
   delete: (path: string, ...handlers: ListingsRouteHandler[]) => void;
 };
 
-const mapListingError = (error: unknown) => {
+export const mapListingError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
+    case "listing_query_invalid":
+      return new ApiError(
+        "listing_query_invalid",
+        "Listing query payload is invalid",
+        400
+      );
+    case "listing_query_invalid_field":
+      return new ApiError(
+        "listing_query_invalid_field",
+        "Listing query field is invalid",
+        400
+      );
+    case "listing_query_invalid_filter_value":
+      return new ApiError(
+        "listing_query_invalid_filter_value",
+        "Listing query filter value is invalid",
+        400
+      );
+    case "listing_query_invalid_name":
+      return new ApiError(
+        "listing_query_invalid_name",
+        "Listing query name must not be empty",
+        400
+      );
+    case "listing_query_invalid_source_config":
+      return new ApiError(
+        "listing_query_invalid_source_config",
+        "Listing query source config is invalid",
+        400
+      );
+    case "listing_query_field_not_allowed":
+      return new ApiError(
+        "listing_query_field_not_allowed",
+        "Listing query field is not allowed",
+        400
+      );
+    case "listing_query_update_empty":
+      return new ApiError(
+        "listing_query_update_empty",
+        "Listing query update payload is empty",
+        400
+      );
     case "listing_query_not_found":
       return new ApiError("listing_query_not_found", "Listing query not found", 404);
     case "listing_template_invalid":

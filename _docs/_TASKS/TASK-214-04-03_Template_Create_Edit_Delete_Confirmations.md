@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + API Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-03-03, TASK-214-04-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,24 +16,24 @@ while preserving the existing template config and `BindingEditor` behavior.
 
 ## Sub-Tasks
 
-- [ ] Move template create open state behind the active-tab header `New`.
-- [ ] Keep edit opened from template row action.
-- [ ] Make create/edit open state controlled by `ListingListPage`, using
+- [x] Move template create open state behind the active-tab header `New`.
+- [x] Keep edit opened from template row action.
+- [x] Make create/edit open state controlled by `ListingListPage`, using
   `templateCreateOpen`, `editingTemplateId`, or an equivalent dialog controller.
-- [ ] Keep `ListingTemplateManager` local state limited to the form draft,
+- [x] Keep `ListingTemplateManager` local state limited to the form draft,
   cloned `BindingEditor` config, save progress, and dialog-local validation
   messages.
-- [ ] Import and use `listingTemplateToasts` from
+- [x] Import and use `listingTemplateToasts` from
   `core/admin/ui/listings/listingActionToasts.ts`; do not add template
   create/update/delete strings local to `ListingTemplateManager`.
-- [ ] Emit shared create/update toasts after `createListingTemplate` and
+- [x] Emit shared create/update toasts after `createListingTemplate` and
   `updateListingTemplate` resolve.
-- [ ] Replace direct row delete with `ConfirmActionDialog`.
-- [ ] Add active-tab bulk delete with `Promise.allSettled`.
-- [ ] Full bulk success clears selected template ids.
-- [ ] Partial bulk failure keeps failed template ids selected and shows inline
+- [x] Replace direct row delete with `ConfirmActionDialog`.
+- [x] Add active-tab bulk delete with `Promise.allSettled`.
+- [x] Full bulk success clears selected template ids.
+- [x] Partial bulk failure keeps failed template ids selected and shows inline
   plus toast feedback.
-- [ ] Keep `BindingEditor` value cloning and config normalization intact.
+- [x] Keep `BindingEditor` value cloning and config normalization intact.
 
 ## Files to Change
 

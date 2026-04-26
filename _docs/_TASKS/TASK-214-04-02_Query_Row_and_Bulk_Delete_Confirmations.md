@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + API Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-02-03, TASK-214-04-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,15 +16,15 @@ that use shared toasts and visible-scope selection.
 
 ## Sub-Tasks
 
-- [ ] Row delete opens `ConfirmActionDialog`.
-- [ ] Confirmed row delete calls `deleteListingQuery`.
-- [ ] Import and use `listingQueryToasts` from
+- [x] Row delete opens `ConfirmActionDialog`.
+- [x] Confirmed row delete calls `deleteListingQuery`.
+- [x] Import and use `listingQueryToasts` from
   `core/admin/ui/listings/listingActionToasts.ts`; do not add query delete
   strings local to the table or shell.
-- [ ] Bulk delete opens `ConfirmActionDialog` with selected query count.
-- [ ] Bulk delete executes `Promise.allSettled` over visible selected query ids.
-- [ ] Full success clears selected query ids.
-- [ ] Partial failure keeps failed query ids selected and shows inline plus toast
+- [x] Bulk delete opens `ConfirmActionDialog` with selected query count.
+- [x] Bulk delete executes `Promise.allSettled` over visible selected query ids.
+- [x] Full success clears selected query ids.
+- [x] Partial failure keeps failed query ids selected and shows inline plus toast
   feedback.
 
 ## Files to Change

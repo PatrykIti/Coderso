@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-02-02, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,11 +16,11 @@ ids are trimmed to the current visible page after filters or page changes.
 
 ## Sub-Tasks
 
-- [ ] Use `useListPagination(filteredQueryRows, { resetKey })`.
-- [ ] Render `ListPaginationFooter` with `resourceLabel="listing queries"`.
-- [ ] Compute visible query ids from `pagination.visibleRows`.
-- [ ] Trim `selectedQueryIds` whenever visible ids change.
-- [ ] Keep empty-state copy truthful for loading, no data, and no filter match.
+- [x] Use `useListPagination(filteredQueryRows, { resetKey })`.
+- [x] Render `ListPaginationFooter` with `resourceLabel="listing queries"`.
+- [x] Compute visible query ids from `pagination.visibleRows`.
+- [x] Trim `selectedQueryIds` whenever visible ids change.
+- [x] Keep empty-state copy truthful for loading, no data, and no filter match.
 
 ## Files to Change
 

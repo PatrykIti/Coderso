@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -18,26 +18,26 @@ from cache-bus events without mount-force refetch loops.
 
 ## Sub-Tasks
 
-- [ ] Reuse `resolveListMountRefreshOptions` from
+- [x] Reuse `resolveListMountRefreshOptions` from
   `core/admin/utils/cacheRefresh.ts` for both query and template mount
   refresh policy. If a Listings-specific exported helper is useful for tests,
   keep it as a thin wrapper that delegates to the shared helper; do not
   duplicate the policy inline.
-- [ ] Reuse `resolveCacheRefreshBackground` inside each hook refresh function so
+- [x] Reuse `resolveCacheRefreshBackground` inside each hook refresh function so
   explicit `{ background: true }` refreshes and cache-event refreshes preserve
   visible cached rows without toggling foreground loading.
-- [ ] Track `hasHydratedRef` like Pages/Forms list hooks.
-- [ ] Keep `getCachedListingQueries` and `getCachedListingTemplates` as the
+- [x] Track `hasHydratedRef` like Pages/Forms list hooks.
+- [x] Keep `getCachedListingQueries` and `getCachedListingTemplates` as the
   immediate hydration sources.
-- [ ] Keep `listListingQueriesCached({ force })` and
+- [x] Keep `listListingQueriesCached({ force })` and
   `listListingTemplatesCached({ force })` as the only network/cache wrappers.
-- [ ] If `refresh` changes from the current boolean force argument to an
+- [x] If `refresh` changes from the current boolean force argument to an
   options object, use a backwards-compatible signature such as
   `boolean | { force?: boolean; background?: boolean }` or update every caller
   in the same leaf. No caller should pass `{ force, background }` into a
   boolean-only hook.
-- [ ] Ensure cache-bus updates refresh in the background.
-- [ ] Preserve `useListingTemplates` behavior for current consumers while this
+- [x] Ensure cache-bus updates refresh in the background.
+- [x] Preserve `useListingTemplates` behavior for current consumers while this
   leaf lands. After TASK-214-01-02 and TASK-214-03 move template list ownership
   to the shell, `ListingEditorPage` remains the separate editor consumer and
   the template tab receives rows/loading/error through controlled props.

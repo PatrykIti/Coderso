@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-03-02, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,11 +17,11 @@ changes.
 
 ## Sub-Tasks
 
-- [ ] Use `useListPagination(filteredTemplateRows, { resetKey })`.
-- [ ] Render `ListPaginationFooter` with `resourceLabel="listing templates"`.
-- [ ] Compute visible template ids from `pagination.visibleRows`.
-- [ ] Trim `selectedTemplateIds` whenever visible ids change.
-- [ ] Keep empty-state copy truthful for loading, no templates, and no filter
+- [x] Use `useListPagination(filteredTemplateRows, { resetKey })`.
+- [x] Render `ListPaginationFooter` with `resourceLabel="listing templates"`.
+- [x] Compute visible template ids from `pagination.visibleRows`.
+- [x] Trim `selectedTemplateIds` whenever visible ids change.
+- [x] Keep empty-state copy truthful for loading, no templates, and no filter
   match.
 
 ## Files to Change

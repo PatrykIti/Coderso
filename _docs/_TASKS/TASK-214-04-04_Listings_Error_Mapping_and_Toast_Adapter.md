@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + API Contract + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -21,38 +21,38 @@ list uses shared toast normalization instead of ad hoc strings.
 
 ## Sub-Tasks
 
-- [ ] Add Listings-specific toast adapters for query and template resources in
+- [x] Add Listings-specific toast adapters for query and template resources in
   `core/admin/ui/listings/listingActionToasts.ts`.
-- [ ] Reuse `createListActionToastAdapter`; do not create a local toast system.
-- [ ] Export one `listingQueryToasts` adapter and one `listingTemplateToasts`
+- [x] Reuse `createListActionToastAdapter`; do not create a local toast system.
+- [x] Export one `listingQueryToasts` adapter and one `listingTemplateToasts`
   adapter for reuse by `ListingListPage`, `ListingTemplateManager`, and
   `ListingEditorPage`.
-- [ ] Preserve inline alerts for contextual load or partial bulk failure copy.
-- [ ] Add route tests for known mapped errors that the UI depends on.
-- [ ] Export `mapListingError` from `core/server/routes/listingsRoutes.ts` for
+- [x] Preserve inline alerts for contextual load or partial bulk failure copy.
+- [x] Add route tests for known mapped errors that the UI depends on.
+- [x] Export `mapListingError` from `core/server/routes/listingsRoutes.ts` for
   direct route-boundary coverage, matching the existing media/forms route test
   pattern. Export only the mapper; do not change behavior unless a real mapping
   gap is found.
-- [ ] Add route tests for the current query error split:
+- [x] Add route tests for the current query error split:
   malformed/unknown top-level create/update payloads are rejected by
   `listingQueryCreateSchema` / `listingQueryUpdateSchema` as route-boundary
   validation errors, while semantic query normalizer errors that pass JSON
   schema validation, such as `listing_query_invalid_source_config`,
   `listing_query_invalid_filter_value`, and `listing_query_invalid_name`, pass
   through `withListingErrors` unchanged as `ApiError` instances.
-- [ ] Do not require a public `listing_query_update_empty` response in TASK-214:
+- [x] Do not require a public `listing_query_update_empty` response in TASK-214:
   the current route schema rejects empty update payloads before
   `parseListingQueryUpdateInput` can emit that internal sentinel. Only expose
   or test that code if the implementation intentionally changes the API
   contract and updates `_docs/CMS_API.md` in the same leaf.
-- [ ] Add explicit mapping coverage for raw non-`ApiError` query sentinels that
+- [x] Add explicit mapping coverage for raw non-`ApiError` query sentinels that
   can leak through service code, especially the insert-failure
   `listing_query_invalid` from `listingQueriesService.createListingQuery`.
   This mapping should be separate from the query-builder `ApiError` pass-through
   cases.
-- [ ] Confirm schemas reject unknown top-level query/template create/update
+- [x] Confirm schemas reject unknown top-level query/template create/update
   fields.
-- [ ] Add missing stable mapping only if a real domain error currently leaks as
+- [x] Add missing stable mapping only if a real domain error currently leaks as
   a raw exception.
 
 ## Files to Change

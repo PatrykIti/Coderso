@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI + API Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-214-02, TASK-214-03, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -19,15 +19,15 @@ ids or mutation copy between queries and templates.
 
 ## Sub-Tasks
 
-- [ ] TASK-214-04-04: Listings Error Mapping and Toast Adapter
-- [ ] TASK-214-04-01: Active Tab New Flow and Query Save Toasts
-- [ ] TASK-214-04-02: Query Row and Bulk Delete Confirmations
-- [ ] TASK-214-04-03: Template Create, Edit, and Delete Confirmations
-- [ ] Add active-tab bulk delete bar placement in `PageHeader.actions`.
-- [ ] Keep inline alerts for contextual load/action errors.
-- [ ] Keep row/bulk delete pending state in `ListingListPage` for both queries
+- [x] TASK-214-04-04: Listings Error Mapping and Toast Adapter
+- [x] TASK-214-04-01: Active Tab New Flow and Query Save Toasts
+- [x] TASK-214-04-02: Query Row and Bulk Delete Confirmations
+- [x] TASK-214-04-03: Template Create, Edit, and Delete Confirmations
+- [x] Add active-tab bulk delete bar placement in `PageHeader.actions`.
+- [x] Keep inline alerts for contextual load/action errors.
+- [x] Keep row/bulk delete pending state in `ListingListPage` for both queries
   and templates.
-- [ ] Keep template create/edit form draft state in the controlled template
+- [x] Keep template create/edit form draft state in the controlled template
   dialog, but route open/close/save completion back through shell-owned state.
 
 ## Action Ownership Contract

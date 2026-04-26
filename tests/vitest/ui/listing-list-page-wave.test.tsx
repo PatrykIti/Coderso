@@ -6,26 +6,69 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 const listingPageState = vi.hoisted(() => ({
   navigate: vi.fn(),
-  refresh: vi.fn(async () => undefined),
+  refreshQueries: vi.fn(async () => undefined),
+  refreshTemplates: vi.fn(async () => undefined),
   deleteListingQuery: vi.fn(async () => undefined),
-  items: [
+  deleteListingTemplate: vi.fn(async () => undefined),
+  queryItems: [
     {
       id: "listing-query-1",
       name: "Services query",
+      description: "Service listings",
+      query: {
+        source: "entries",
+        sourceConfig: { contentTypeId: "services", includeDrafts: false },
+        filters: [],
+        sort: [{ field: "updatedAt", dir: "desc" }],
+        pagination: { limit: 12, offset: 0 },
+        fields: ["id", "title"],
+      },
+      createdAt: "2026-03-01T00:00:00.000Z",
+      updatedAt: "2026-03-01T00:00:00.000Z",
     },
   ],
-  isLoading: false,
-  error: null as string | null,
+  templateItems: [
+    {
+      id: "listing-template-1",
+      name: "Cards template",
+      slug: "cards",
+      description: "Cards",
+      layout: "grid",
+      config: {
+        fields: [],
+        itemActions: [],
+        emptyState: {
+          title: "No items found",
+          description: null,
+          ctaLabel: null,
+          ctaHref: null,
+        },
+        style: { columns: 3, gap: "md", cardVariant: "default" },
+      },
+      createdAt: "2026-03-01T00:00:00.000Z",
+      updatedAt: "2026-03-01T00:00:00.000Z",
+    },
+  ],
+  queryError: null as string | null,
+  templateError: null as string | null,
   reset() {
     this.navigate.mockReset();
-    this.refresh.mockReset();
-    this.refresh.mockResolvedValue(undefined);
+    this.refreshQueries.mockReset();
+    this.refreshQueries.mockResolvedValue(undefined);
+    this.refreshTemplates.mockReset();
+    this.refreshTemplates.mockResolvedValue(undefined);
     this.deleteListingQuery.mockReset();
     this.deleteListingQuery.mockResolvedValue(undefined);
-    this.items = [{ id: "listing-query-1", name: "Services query" }];
-    this.isLoading = false;
-    this.error = null;
+    this.deleteListingTemplate.mockReset();
+    this.deleteListingTemplate.mockResolvedValue(undefined);
+    this.queryError = null;
+    this.templateError = null;
   },
+}));
+
+const tabsMockState = vi.hoisted(() => ({
+  currentValue: "queries",
+  onValueChange: undefined as undefined | ((value: string) => void),
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -52,23 +95,53 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
-  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@/services/apiClient", () => ({
-  isApiClientError: (error: unknown) =>
-    typeof error === "object"
-    && error !== null
-    && "kind" in error
-    && (error as { kind?: string }).kind === "api",
-}));
+vi.mock("@/components/ui/tabs", () => {
+  return {
+    Tabs: ({
+      children,
+      value,
+      onValueChange,
+    }: {
+      children: React.ReactNode;
+      value?: string;
+      onValueChange?: (value: string) => void;
+    }) => {
+      tabsMockState.currentValue = value ?? "queries";
+      tabsMockState.onValueChange = onValueChange;
+      return <div>{children}</div>;
+    },
+    TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    TabsTrigger: ({
+      children,
+      value,
+    }: {
+      children: React.ReactNode;
+      value: string;
+    }) => {
+      return (
+        <button
+          type="button"
+          onClick={() => tabsMockState.onValueChange?.(value)}
+        >
+          {children}
+        </button>
+      );
+    },
+    TabsContent: ({
+      children,
+      value,
+    }: {
+      children: React.ReactNode;
+      value: string;
+    }) => {
+      return tabsMockState.currentValue === value ? <div>{children}</div> : null;
+    },
+  };
+});
 
 vi.mock("@/services/listingsClient", () => ({
   deleteListingQuery: listingPageState.deleteListingQuery,
+  deleteListingTemplate: listingPageState.deleteListingTemplate,
 }));
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
@@ -104,42 +177,195 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    confirmLabel,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div>
+        <p>{title}</p>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("@/ui/shared/ListPaginationFooter", () => ({
+  ListPaginationFooter: ({ resourceLabel }: { resourceLabel: string }) => (
+    <div>{`pagination:${resourceLabel}`}</div>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/listings/ListingBulkActionsBar", () => ({
+  ListingBulkActionsBar: ({
+    selectedCount,
+    resourceLabel,
+    onActionChange,
+    onApply,
+  }: {
+    selectedCount: number;
+    resourceLabel: string;
+    onActionChange: (value: "delete") => void;
+    onApply: () => void;
+  }) => (
+    <div>
+      <span>{`bulk:${resourceLabel}:${selectedCount}`}</span>
+      <button type="button" onClick={() => onActionChange("delete")}>
+        choose-delete
+      </button>
+      <button type="button" onClick={onApply}>
+        apply-bulk
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/listings/ListingQueryFilters", () => ({
+  ListingQueryFilters: () => <div>query-filters</div>,
+}));
+
+vi.mock("../../../core/admin/ui/listings/ListingTemplateFilters", () => ({
+  ListingTemplateFilters: () => <div>template-filters</div>,
+}));
+
 vi.mock("../../../core/admin/ui/listings/ListingQueryTable", () => ({
   ListingQueryTable: ({
     items,
-    emptyMessage,
     onDelete,
+    onToggleItem,
   }: {
     items: Array<{ id: string; name: string }>;
-    emptyMessage?: string;
-    onDelete: (id: string) => Promise<void>;
+    onDelete: (id: string) => void;
+    onToggleItem: (id: string) => void;
   }) => (
     <div>
       <span>{`query-count:${items.length}`}</span>
-      <span>{`empty-message:${emptyMessage ?? "none"}`}</span>
       {items.map((item) => (
-        <button key={item.id} type="button" onClick={() => void onDelete(item.id)}>
-          {`delete:${item.name}`}
-        </button>
+        <div key={item.id}>
+          <button type="button" onClick={() => onToggleItem(item.id)}>
+            {`select-query:${item.name}`}
+          </button>
+          <button type="button" onClick={() => onDelete(item.id)}>
+            {`delete-query:${item.name}`}
+          </button>
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/listings/ListingTemplateTable", () => ({
+  ListingTemplateTable: ({
+    items,
+    onDelete,
+    onToggleItem,
+  }: {
+    items: Array<{ id: string; name: string }>;
+    onDelete: (id: string) => void;
+    onToggleItem: (id: string) => void;
+  }) => (
+    <div>
+      <span>{`template-count:${items.length}`}</span>
+      {items.map((item) => (
+        <div key={item.id}>
+          <button type="button" onClick={() => onToggleItem(item.id)}>
+            {`select-template:${item.name}`}
+          </button>
+          <button type="button" onClick={() => onDelete(item.id)}>
+            {`delete-template:${item.name}`}
+          </button>
+        </div>
       ))}
     </div>
   ),
 }));
 
 vi.mock("../../../core/admin/ui/listings/ListingTemplateManager", () => ({
-  ListingTemplateManager: () => <div>template-manager</div>,
+  ListingTemplateManager: ({
+    createOpen,
+    editingTemplateId,
+  }: {
+    createOpen: boolean;
+    editingTemplateId: string | null;
+  }) => (
+    <div>
+      {createOpen ? <span>template-create-dialog</span> : null}
+      {editingTemplateId ? <span>{`template-edit:${editingTemplateId}`}</span> : null}
+    </div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/listings/hooks/useListingQueries", () => ({
   useListingQueries: () => ({
-    items: listingPageState.items,
-    isLoading: listingPageState.isLoading,
-    error: listingPageState.error,
-    refresh: listingPageState.refresh,
+    items: listingPageState.queryItems,
+    isLoading: false,
+    error: listingPageState.queryError,
+    refresh: listingPageState.refreshQueries,
   }),
 }));
 
-import { ListingListPage } from "../../../core/admin/ui/listings/ListingListPage";
+vi.mock("../../../core/admin/ui/listings/hooks/useListingTemplates", () => ({
+  useListingTemplates: () => ({
+    items: listingPageState.templateItems,
+    isLoading: false,
+    error: listingPageState.templateError,
+    refresh: listingPageState.refreshTemplates,
+  }),
+}));
+
+vi.mock("../../../core/admin/ui/listings/listingActionToasts", () => ({
+  listingQueryToasts: {
+    success: vi.fn(),
+    error: vi.fn((_action: string, error: unknown) =>
+      error instanceof Error ? error.message : "Query action failed."
+    ),
+    summarizeBulkAction: vi.fn((_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
+      const failedTargets = ids.filter((_, index) => results[index]?.status === "rejected");
+      return {
+        ok: failedTargets.length === 0,
+        toastMessage: "bulk query result",
+        inlineMessage: "bulk query result",
+        succeededCount: ids.length - failedTargets.length,
+        failedCount: failedTargets.length,
+        failedTargets,
+      };
+    }),
+    emitBulk: vi.fn(),
+  },
+  listingTemplateToasts: {
+    success: vi.fn(),
+    error: vi.fn((_action: string, error: unknown) =>
+      error instanceof Error ? error.message : "Template action failed."
+    ),
+    summarizeBulkAction: vi.fn((_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
+      const failedTargets = ids.filter((_, index) => results[index]?.status === "rejected");
+      return {
+        ok: failedTargets.length === 0,
+        toastMessage: "bulk template result",
+        inlineMessage: "bulk template result",
+        succeededCount: ids.length - failedTargets.length,
+        failedCount: failedTargets.length,
+        failedTargets,
+      };
+    }),
+    emitBulk: vi.fn(),
+  },
+}));
+
+import {
+  filterListingQueries,
+  filterListingTemplates,
+  ListingListPage,
+} from "../../../core/admin/ui/listings/ListingListPage";
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -185,81 +411,120 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
-test("ListingListPage navigates to create flow and renders loading placeholder through the query table", () => {
-  listingPageState.items = [];
-  listingPageState.isLoading = true;
-
+test("ListingListPage routes active-tab New through the shell", () => {
   const view = mount(<ListingListPage />);
 
   try {
-    expect(view.container.textContent).toContain("Listings");
-    expect(view.container.textContent).toContain("query-count:0");
-    expect(view.container.textContent).toContain("empty-message:Loading listing queries...");
-    expect(view.container.textContent).toContain("template-manager");
-
-    clickByText(view.container, "New query");
+    clickByText(view.container, "New");
     expect(listingPageState.navigate).toHaveBeenCalledWith("/coderso/listings/new");
+
+    clickByText(view.container, "Templates");
+    clickByText(view.container, "New");
+    expect(view.container.textContent).toContain("template-create-dialog");
+    expect(listingPageState.navigate).toHaveBeenCalledTimes(1);
   } finally {
     view.cleanup();
   }
 });
 
-test("ListingListPage renders load errors from the listing queries hook", () => {
-  listingPageState.error = "Load failed.";
+test("ListingListPage gates query row delete behind confirmation", async () => {
+  const view = mount(<ListingListPage />);
+
+  try {
+    clickByText(view.container, "delete-query:Services query");
+    expect(listingPageState.deleteListingQuery).not.toHaveBeenCalled();
+
+    clickByText(view.container, "Delete query");
+    await flush();
+
+    expect(listingPageState.deleteListingQuery).toHaveBeenCalledWith("listing-query-1");
+    expect(listingPageState.refreshQueries).toHaveBeenCalledWith({
+      force: true,
+      background: true,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingListPage scopes bulk delete to the active tab", async () => {
+  const view = mount(<ListingListPage />);
+
+  try {
+    clickByText(view.container, "select-query:Services query");
+    expect(view.container.textContent).toContain("bulk:listing queries:1");
+    clickByText(view.container, "choose-delete");
+    clickByText(view.container, "apply-bulk");
+    clickByText(view.container, "Delete selected");
+    await flush();
+
+    expect(listingPageState.deleteListingQuery).toHaveBeenCalledWith("listing-query-1");
+    expect(listingPageState.deleteListingTemplate).not.toHaveBeenCalled();
+
+    clickByText(view.container, "Templates");
+    clickByText(view.container, "select-template:Cards template");
+    expect(view.container.textContent).toContain("bulk:listing templates:1");
+    clickByText(view.container, "choose-delete");
+    clickByText(view.container, "apply-bulk");
+    clickByText(view.container, "Delete selected");
+    await flush();
+
+    expect(listingPageState.deleteListingTemplate).toHaveBeenCalledWith(
+      "listing-template-1"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingListPage renders load errors from both listing hooks", () => {
+  listingPageState.queryError = "Queries failed.";
+  listingPageState.templateError = "Templates failed.";
 
   const view = mount(<ListingListPage />);
 
   try {
     expect(view.container.textContent).toContain("Unable to load listing queries");
-    expect(view.container.textContent).toContain("Load failed.");
-    expect(view.container.textContent).not.toContain("Listing action failed");
+    expect(view.container.textContent).toContain("Queries failed.");
+    expect(view.container.textContent).toContain("Unable to load listing templates");
+    expect(view.container.textContent).toContain("Templates failed.");
   } finally {
     view.cleanup();
   }
 });
 
-test("ListingListPage deletes queries, refreshes the list, and clears prior action errors on success", async () => {
-  const view = mount(<ListingListPage />);
+test("Listings filter helpers narrow query and template resources", () => {
+  expect(
+    filterListingQueries(listingPageState.queryItems, "service", "all").map(
+      (item) => item.id
+    )
+  ).toEqual(["listing-query-1"]);
+  expect(
+    filterListingQueries(listingPageState.queryItems, "missing", "all")
+  ).toEqual([]);
+  expect(
+    filterListingQueries(listingPageState.queryItems, "", "entries").map(
+      (item) => item.id
+    )
+  ).toEqual(["listing-query-1"]);
+  expect(filterListingQueries(listingPageState.queryItems, "", "posts")).toEqual(
+    []
+  );
 
-  try {
-    listingPageState.deleteListingQuery.mockRejectedValueOnce({
-      kind: "api",
-      message: "Delete denied",
-    });
-    clickByText(view.container, "delete:Services query");
-    await flush();
-
-    expect(view.container.textContent).toContain("Listing action failed");
-    expect(view.container.textContent).toContain("Delete denied");
-
-    listingPageState.deleteListingQuery.mockResolvedValueOnce(undefined);
-    clickByText(view.container, "delete:Services query");
-    await flush();
-
-    expect(listingPageState.deleteListingQuery).toHaveBeenNthCalledWith(1, "listing-query-1");
-    expect(listingPageState.deleteListingQuery).toHaveBeenNthCalledWith(2, "listing-query-1");
-    expect(listingPageState.refresh).toHaveBeenCalledWith(true);
-    expect(view.container.textContent).not.toContain("Listing action failed");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("ListingListPage falls back to a generic action error when delete throws a non-api error", async () => {
-  listingPageState.deleteListingQuery.mockRejectedValueOnce(new Error("boom"));
-
-  const view = mount(<ListingListPage />);
-
-  try {
-    clickByText(view.container, "delete:Services query");
-    await flush();
-
-    expect(view.container.textContent).toContain("Listing action failed");
-    expect(view.container.textContent).toContain("Failed to delete listing query.");
-  } finally {
-    view.cleanup();
-  }
+  expect(
+    filterListingTemplates(listingPageState.templateItems, "cards", "all").map(
+      (item) => item.id
+    )
+  ).toEqual(["listing-template-1"]);
+  expect(
+    filterListingTemplates(listingPageState.templateItems, "cards", "list")
+  ).toEqual([]);
+  expect(
+    filterListingTemplates(listingPageState.templateItems, "card", "grid").map(
+      (item) => item.id
+    )
+  ).toEqual(["listing-template-1"]);
 });

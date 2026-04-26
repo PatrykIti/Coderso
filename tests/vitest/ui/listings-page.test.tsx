@@ -27,7 +27,7 @@ test("ListingListPage renders listings shell and loading state", () => {
   });
 
   expect(html).toContain("Listings");
-  expect(html).toContain("New query");
+  expect(html).toContain("New");
   expect(html).toContain("Loading listing queries");
   expect(html).toContain("Queries");
   expect(html).toContain("Templates");

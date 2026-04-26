@@ -5,7 +5,7 @@
 **Category:** QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-214-01, TASK-214-02, TASK-214-03, TASK-214-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,34 +20,34 @@ add real component suites where the mocked wave cannot prove behavior.
 
 ## Sub-Tasks
 
-- [ ] Map each TASK-214 behavior to an owning test file.
-- [ ] Separate parent orchestration tests from real table/dialog tests.
-- [ ] Cover active-tab `New` behavior for both tabs.
-- [ ] Cover query and template filter helpers.
-- [ ] Cover row and bulk delete confirmation timing.
-- [ ] Cover query/template toast copy and partial failure summaries.
-- [ ] Cover that query/template toast copy comes from
+- [x] Map each TASK-214 behavior to an owning test file.
+- [x] Separate parent orchestration tests from real table/dialog tests.
+- [x] Cover active-tab `New` behavior for both tabs.
+- [x] Cover query and template filter helpers.
+- [x] Cover row and bulk delete confirmation timing.
+- [x] Cover query/template toast copy and partial failure summaries.
+- [x] Cover that query/template toast copy comes from
   `core/admin/ui/listings/listingActionToasts.ts`, not duplicated local
   adapters in the list shell, template manager, or query editor.
-- [ ] Treat `core/admin/ui/listings/listingActionToasts.ts` as source under
+- [x] Treat `core/admin/ui/listings/listingActionToasts.ts` as source under
   test from TASK-214-04-04, not as QA-leaf implementation ownership.
-- [ ] Cover cache hydration and prefetch warmup.
-- [ ] Extend `tests/vitest/admin/listingsClient.test.ts` beyond its current
+- [x] Cover cache hydration and prefetch warmup.
+- [x] Extend `tests/vitest/admin/listingsClient.test.ts` beyond its current
   public-search smoke coverage when client wrappers change, including query and
   template mutation `withCsrf: true`, cache priming, detail-cache writes, and
   cache-bus broadcasts.
-- [ ] Cover the controlled template boundary: header `New`, row Edit, dialog
+- [x] Cover the controlled template boundary: header `New`, row Edit, dialog
   close, row Delete, and bulk Delete all update shell-owned state.
-- [ ] Cover that the template tab no longer gets its list rows, loading/error
+- [x] Cover that the template tab no longer gets its list rows, loading/error
   state, selected ids, or bulk metadata from private `ListingTemplateManager`
   state after the shell refactor.
-- [ ] Cover the route error split required by TASK-214-04-04: query-domain
+- [x] Cover the route error split required by TASK-214-04-04: query-domain
   semantic validation errors emitted as `ApiError` pass through unchanged,
   malformed/unknown top-level payloads stay route-boundary validation errors,
   empty query updates keep the current route-boundary behavior, and
   non-ApiError missing-resource, raw `listing_query_invalid`, and template
   sentinels map to stable `ApiError` responses at the route boundary.
-- [ ] Assert no private `ListingTemplateManager` direct-delete or nested primary
+- [x] Assert no private `ListingTemplateManager` direct-delete or nested primary
   `New template` flow remains after the active-tab header implementation.
 
 ## Files to Change
@@ -111,3 +111,21 @@ add real component suites where the mocked wave cannot prove behavior.
 1. The test matrix proves tab-scoped behavior, not only static rendering.
 2. Mocked suites and real component suites have clear ownership.
 3. Unrelated failures are recorded separately with exact failure strings.
+
+## Completion Notes (2026-04-26)
+
+- `tests/vitest/ui/listing-list-page-wave.test.tsx` owns shell orchestration:
+  active-tab `New`, confirmation-gated query delete, active-tab bulk delete,
+  load errors, and pure query/template filter helpers.
+- `tests/vitest/ui/listings-cluster-wave.test.tsx` owns real component flow:
+  controlled template create/edit/delete, save errors, template loading/empty
+  states, query delete confirmation, and existing editor/search/filter flows.
+- `tests/vitest/ui/listings-page.test.tsx` owns server-render smoke and cache
+  hydration for the Listings shell/editor routes.
+- `tests/vitest/ui/list-action-toasts.test.ts` owns shared query/template toast
+  copy and partial-failure summaries.
+- `tests/integration/routes/listings.test.ts` owns Listings route registration
+  and raw sentinel-to-`ApiError` mapping coverage. It was run outside sandbox
+  with the repo `.env` because importing the route module loads DB env.
+- `tests/vitest/admin/listingsClient.test.ts` remained the existing client
+  smoke because TASK-214 did not change client wrapper semantics.

@@ -5,7 +5,7 @@
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-214-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,13 +16,13 @@ pattern while using template-specific fields.
 
 ## Sub-Tasks
 
-- [ ] Add `filterListingTemplates` as a pure exported helper.
-- [ ] Support search by template `name`, `slug`, and `description`.
-- [ ] Support layout filter: all, grid, list, table, calendar, map.
-- [ ] Reset pagination and trim selected template ids when filter state
+- [x] Add `filterListingTemplates` as a pure exported helper.
+- [x] Support search by template `name`, `slug`, and `description`.
+- [x] Support layout filter: all, grid, list, table, calendar, map.
+- [x] Reset pagination and trim selected template ids when filter state
   changes.
-- [ ] Keep layout labels sourced from `listingLayoutOptions`.
-- [ ] Keep template filter state, pagination reset keys, visible ids, and
+- [x] Keep layout labels sourced from `listingLayoutOptions`.
+- [x] Keep template filter state, pagination reset keys, visible ids, and
   `selectedTemplateIds` owned by `ListingListPage` or by a shell-owned hook
   called from `ListingListPage`. `ListingTemplateManager` may render the filter
   component, but it must not become the hidden owner of selection trimming or

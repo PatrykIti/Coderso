@@ -84,6 +84,10 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - Prefetch skips entries considered fresh (`freshMs`) and applies cooldown throttling.
 - Prefetch uses a low-priority queue with max parallelism to avoid request bursts.
 - Implemented via `AdminLink` + `prefetchAdminRoute`.
+- `/coderso/listings` prefetch warms both Listings list caches with
+  `{ force: false }`: saved queries and templates. The list shell hydrates both
+  caches immediately, revalidates in the background when cache exists, and uses
+  a foreground load only when no cache is present.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
