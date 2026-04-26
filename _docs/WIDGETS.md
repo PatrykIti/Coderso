@@ -321,6 +321,12 @@ Admin UI pobiera katalog widgetow z API:
 - `GET /widgets` zwraca liste core widgetow + templatek (source: `core` / `template`).
 - Templateki sa zarzadzane przez `GET/POST/PATCH/DELETE /widgets/templates`
   (alias: `/widget-templates`).
+- Templateki mozna duplikowac przez `POST /widgets/templates/:id/duplicate`
+  (alias: `/widget-templates/:id/duplicate`). Duplicate jest service-owned:
+  serwer laduje source template, klonuje dozwolone `blocks/settings`, tworzy
+  draft i nadaje jawna nazwe typu `Copy of ...`.
+- Create/update odrzucaja case-insensitive duplicate names kodem
+  `widget_template_name_conflict`.
 
 Katalog zawiera podstawowe metadata:
 `id`, `name`, `description`, `category`, `variants`, `status`.
@@ -331,16 +337,22 @@ Katalog zawiera podstawowe metadata:
 
 - Drawer szczegolow widgetu pokazuje ten sam zestaw paneli (Wizard/Visual/Advanced),
   ktory jest uzywany po wstawieniu widgetu.
-- Zmiany wykonane w podgladzie NIE zapisuja sie automatycznie — zapis nastepuje
+- Core widget cards sa configuration-first: karta otwiera konfiguracje, a
+  wlasciwa mutacja insertu idzie przez dialog placement/target.
+- Udany insert pokazuje shared admin toast z akcja otwarcia edytora targetu;
+  blad insertu zostawia dialog otwarty i pokazuje bounded error.
+- Zmiany wykonane w podgladzie NIE zapisuja sie automatycznie; zapis nastepuje
+  dopiero po wstawieniu widgetu do strony lub template.
 
 ### Favorites
 
 - Ulubione widgety sa zapisywane per uzytkownik w `user_settings` pod kluczem
   `widgets.favorites`.
 - Limit: max 50 pozycji.
+- Favorite button ma dynamiczne `aria-label`, `title` i `aria-pressed`; zmiana
+  stanu daje bounded feedback przez Admin UI.
 - Hero variant presets sa zapisywane per uzytkownik w `user_settings` pod kluczem
   `widgets.hero.presets` (limit: 24).
-  dopiero po wstawieniu widgetu do strony lub template.
 
 ---
 
@@ -365,6 +377,23 @@ Katalog zawiera podstawowe metadata:
 - Kategorie template sa zarzadzane przez ustawienia `widgets.templateCategories`.
 - Template zapisuje nazwe kategorii (match case-insensitive na UI).
 - Biblioteka templates filtruje po nazwie kategorii.
+- Edit/delete kategorii zachowuje kontekst wiersza i pokazuje osobny tryb
+  edycji/usuwania zamiast cicho zastepowac kategorie niejednoznacznym stanem.
+
+## Wizard QA contracts
+
+- Radix Select nie moze uzywac `value=""`; puste/none stany musza byc
+  UI-only sentinelami mapowanymi na `undefined`/brak wartosci przed zapisem.
+- Listing-query-backed widgets musza rozroznic `loading`, `empty`, `ready` i
+  `error`; po zakonczonym fetchu nie wolno zostawiac copy `Loading...`.
+- Count selectors w Wizard musza odpowiadac liczbie widocznych repeatable rows
+  albo jawnie ograniczac zakres quick setup.
+- Routine rich text setup uzywa structured `body.blocks` i sanitizer-owned
+  output mode; raw HTML pozostaje sciezka Visual/Advanced.
+- Product widget collection selection korzysta z cached collection picker, z
+  fallbackiem na jawne collection IDs tylko dla technicznej kompatybilnosci.
+- Media picker w Gallery Mosaic zapisuje tylko schema-owned, public-runtime-safe
+  dane, a nie prywatne rekordy admin cache.
 
 ---
 

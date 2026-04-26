@@ -150,7 +150,7 @@ test("rich text section wizard renders onboarding fields", () => {
 
   expect(html).toContain("Rich text layout");
   expect(html).toContain("Eyebrow");
-  expect(html).toContain("Body HTML");
+  expect(html).toContain("Body blocks");
 });
 
 test("rich text section visual renders section-based IA", () => {

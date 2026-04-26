@@ -5,7 +5,7 @@
 **Category:** Widget Editors + Admin/UI + Reliability
 **Estimated Effort:** Large
 **Dependencies:** TASK-213, TASK-194, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

@@ -1,7 +1,18 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  listCommerceCollectionsCached,
+  type CommerceCollectionRecord,
+} from "@/services/commerceClient";
 
 import {
   commerceSortFieldLabelMap,
@@ -161,6 +172,36 @@ export function normalizeSourceForEditor(
   return normalizeCommerceWidgetSource(source, defaults);
 }
 
+function CommerceSelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
 export function CommerceSourceFields({
   source,
   onChange,
@@ -168,6 +209,32 @@ export function CommerceSourceFields({
   source: NormalizedCommerceWidgetSource;
   onChange: (next: NormalizedCommerceWidgetSource) => void;
 }) {
+  const [collections, setCollections] = useState<CommerceCollectionRecord[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(true);
+  const [collectionsError, setCollectionsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    listCommerceCollectionsCached({ force: false })
+      .then((items) => {
+        if (!active) return;
+        setCollections(items);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCollectionsError("Failed to load commerce collections.");
+      })
+      .finally(() => {
+        if (!active) return;
+        setCollectionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selectedCollectionIds = new Set(source.collectionIds);
+
   return (
     <>
       <CommerceNumberField
@@ -185,56 +252,96 @@ export function CommerceSourceFields({
         onChange={(next) => onChange({ ...source, search: next })}
       />
 
-      <CommerceTextField
-        label="Collection IDs (comma separated)"
-        value={toCollectionCsv(source.collectionIds)}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-foreground">Collections</p>
+        {collectionsLoading ? (
+          <p className="text-xs text-muted-foreground">Loading collections...</p>
+        ) : null}
+        {collectionsError ? (
+          <p className="text-xs text-destructive">{collectionsError}</p>
+        ) : null}
+        {!collectionsLoading && !collectionsError && collections.length === 0 ? (
+          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            No commerce collections are available yet.
+          </p>
+        ) : null}
+        {collections.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            {collections.map((collection) => {
+              const checked = selectedCollectionIds.has(collection.id);
+              return (
+                <label
+                  key={collection.id}
+                  className="flex items-start gap-2 rounded-md border border-border/70 px-3 py-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4"
+                    checked={checked}
+                    onChange={(event) => {
+                      const next = new Set(selectedCollectionIds);
+                      if (event.target.checked) {
+                        next.add(collection.id);
+                      } else {
+                        next.delete(collection.id);
+                      }
+                      onChange({ ...source, collectionIds: Array.from(next) });
+                    }}
+                  />
+                  <span className="space-y-0.5">
+                    <span className="block font-medium text-foreground">
+                      {collection.name}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {collection.slug}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        ) : null}
+        <CommerceTextField
+          label="Collection IDs fallback"
+          value={toCollectionCsv(source.collectionIds)}
+          onChange={(next) =>
+            onChange({
+              ...source,
+              collectionIds: fromCollectionCsv(next),
+            })
+          }
+        />
+      </div>
+
+      <CommerceSelectField
+        label="Sort field"
+        value={source.sortField}
+        options={commerceWidgetSortFieldValues.map((value) => ({
+          value,
+          label: commerceSortFieldLabelMap[value],
+        }))}
         onChange={(next) =>
           onChange({
             ...source,
-            collectionIds: fromCollectionCsv(next),
+            sortField: next as NormalizedCommerceWidgetSource["sortField"],
           })
         }
       />
 
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-foreground">Sort field</span>
-        <select
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-          value={source.sortField}
-          onChange={(event) =>
-            onChange({
-              ...source,
-              sortField: event.target.value as NormalizedCommerceWidgetSource["sortField"],
-            })
-          }
-        >
-          {commerceWidgetSortFieldValues.map((value) => (
-            <option key={value} value={value}>
-              {commerceSortFieldLabelMap[value]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-foreground">Sort direction</span>
-        <select
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-          value={source.sortDir}
-          onChange={(event) =>
-            onChange({
-              ...source,
-              sortDir: event.target.value as NormalizedCommerceWidgetSource["sortDir"],
-            })
-          }
-        >
-          {commerceWidgetSortDirectionValues.map((value) => (
-            <option key={value} value={value}>
-              {value === "asc" ? "Ascending" : "Descending"}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CommerceSelectField
+        label="Sort direction"
+        value={source.sortDir}
+        options={commerceWidgetSortDirectionValues.map((value) => ({
+          value,
+          label: value === "asc" ? "Ascending" : "Descending",
+        }))}
+        onChange={(next) =>
+          onChange({
+            ...source,
+            sortDir: next as NormalizedCommerceWidgetSource["sortDir"],
+          })
+        }
+      />
 
       <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">Status filter</p>

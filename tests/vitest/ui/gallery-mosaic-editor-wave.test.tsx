@@ -149,6 +149,31 @@ vi.mock("@/lib/utils", () => ({
     values.filter(Boolean).join(" "),
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => [
+    {
+      id: "media-1",
+      key: "media/hero.jpg",
+      url: "/media/hero.jpg",
+      originalName: "hero.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
+      size: 1024,
+      title: "Hero media",
+      caption: null,
+      createdAt: "2026-04-26T00:00:00.000Z",
+    },
+  ]),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ onChange }: { onChange: (value: unknown) => void }) => (
+    <button type="button" onClick={() => onChange(["media-1"])}>
+      Pick media
+    </button>
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -324,6 +349,13 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
       "Visual detail",
       "Story frame",
     ]);
+
+    await act(async () => {
+      findButtonByText(view.container, "Pick media")?.click();
+      await Promise.resolve();
+    });
+    expect(latestValue.items[0]?.image).toBe("/media/hero.jpg");
+    expect(latestValue.items[0]?.caption).toBe("Hero media");
   } finally {
     view.cleanup();
   }

@@ -333,7 +333,7 @@ export function LogoCloudWizardEditor({
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Basic logo names</p>
-        {logos.slice(0, 3).map((logo, index) => (
+        {logos.map((logo, index) => (
           <Input
             key={logo.id}
             value={logo.name}

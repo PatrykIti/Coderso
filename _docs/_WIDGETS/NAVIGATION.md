@@ -27,6 +27,8 @@ CTA jest renderowane dla wariantow:
   - links source (`manual` / `menu` / `pages`)
   - logo type + basic logo value
   - CTA on/off
+- visible labels for each quick-link label and URL pair
+- helper copy for the links source selector
 - safe defaults for non-technical users.
 
 ### Visual

@@ -5,7 +5,7 @@
 **Category:** Widget Library + Accessibility + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-213-03, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

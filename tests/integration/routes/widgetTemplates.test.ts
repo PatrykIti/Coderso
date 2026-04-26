@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { registerWidgetTemplateRoutes } from "../../../core/server/routes/widgetTemplateRoutes";
+import {
+  mapWidgetTemplateError,
+  registerWidgetTemplateRoutes,
+} from "../../../core/server/routes/widgetTemplateRoutes";
 
 type Route = { method: string; path: string };
 
@@ -30,14 +33,23 @@ test("registerWidgetTemplateRoutes wires endpoints", () => {
     expect.arrayContaining([
       "GET /widget-templates",
       "GET /widget-templates/:id",
+      "POST /widget-templates/:id/duplicate",
       "POST /widget-templates",
       "PATCH /widget-templates/:id",
       "DELETE /widget-templates/:id",
       "GET /widgets/templates",
       "GET /widgets/templates/:id",
+      "POST /widgets/templates/:id/duplicate",
       "POST /widgets/templates",
       "PATCH /widgets/templates/:id",
       "DELETE /widgets/templates/:id",
     ])
   );
+});
+
+test("mapWidgetTemplateError maps name conflicts", () => {
+  const error = mapWidgetTemplateError(new Error("widget_template_name_conflict"));
+
+  expect(error?.code).toBe("widget_template_name_conflict");
+  expect(error?.status).toBe(409);
 });

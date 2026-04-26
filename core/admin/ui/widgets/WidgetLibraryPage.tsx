@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Columns,
+  Copy,
   FileText,
   GalleryVerticalEnd,
   Grid2X2,
@@ -12,7 +13,9 @@ import {
   Plus,
   Search,
   Star,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,8 @@ import { getCachedPages, getPageCached, listPagesCached, updatePage, type PageSu
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { getCachedWidgetCatalog, listWidgetCatalogCached, type WidgetCatalogItem } from "@/services/widgetsClient";
 import {
+  deleteWidgetTemplate,
+  duplicateWidgetTemplate,
   getWidgetTemplateCached,
   updateWidgetTemplate,
 } from "@/services/widgetTemplatesClient";
@@ -40,8 +45,10 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { resolveAdminActionErrorMessage } from "@/ui/shared/actionToasts";
 import { listRegisteredWidgetLibraryWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -294,6 +301,15 @@ export function WidgetLibraryPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [insertError, setInsertError] = useState<string | null>(null);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [templateDeleteTarget, setTemplateDeleteTarget] = useState<{
+    ids: string[];
+    label: string;
+  } | null>(null);
+  const [templateActionError, setTemplateActionError] = useState<string | null>(null);
+  const [isTemplateActionWorking, setIsTemplateActionWorking] = useState(false);
   const adminBasePath = useAdminBasePath();
   const { navigate } = useAdminRouter();
   const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
@@ -510,15 +526,27 @@ export function WidgetLibraryPage() {
   );
 
   const widgetTabCounts = useMemo(() => {
-    const coreItems = widgets.filter((widget) => widget.source === "core");
-    const recommended = coreItems.filter(
-      (widget) => widget.complexity === "composite"
-    );
     return {
-      recommended: recommended.length,
-      all: coreItems.length,
+      recommended: filterWidgetLibraryItems(widgets, {
+        query,
+        activeScope: "widgets",
+        templateCategory: "all",
+        widgetCategory,
+        widgetTab: "recommended",
+        widgetModule,
+        widgetComplexity,
+      }).length,
+      all: filterWidgetLibraryItems(widgets, {
+        query,
+        activeScope: "widgets",
+        templateCategory: "all",
+        widgetCategory,
+        widgetTab: "all",
+        widgetModule,
+        widgetComplexity,
+      }).length,
     };
-  }, [widgets]);
+  }, [widgets, query, widgetCategory, widgetComplexity, widgetModule]);
 
   const widgetModuleOptions = useMemo(() => {
     const modules = new Set<string>();
@@ -556,6 +584,29 @@ export function WidgetLibraryPage() {
     ]
   );
 
+  const visibleTemplateWidgets = useMemo(
+    () => filteredWidgets.filter((widget) => widget.source === "template"),
+    [filteredWidgets]
+  );
+  const visibleTemplateIds = useMemo(
+    () => visibleTemplateWidgets.map((widget) => widget.id),
+    [visibleTemplateWidgets]
+  );
+  const allVisibleTemplatesSelected =
+    visibleTemplateIds.length > 0 &&
+    visibleTemplateIds.every((id) => selectedTemplateIds.has(id));
+
+  useEffect(() => {
+    setSelectedTemplateIds((previous) => {
+      const visible = new Set(visibleTemplateIds);
+      const next = new Set([...previous].filter((id) => visible.has(id)));
+      const same =
+        next.size === previous.size &&
+        [...next].every((id) => previous.has(id));
+      return same ? previous : next;
+    });
+  }, [visibleTemplateIds]);
+
   const templateCategoryOptions = useMemo(
     () => [
       { id: "all", value: "all", label: "All categories" },
@@ -581,6 +632,7 @@ export function WidgetLibraryPage() {
     } else {
       if (next.size >= 50) {
         setFavoritesError("Favorites limit reached.");
+        toast.error("Favorites limit reached.");
         return;
       }
       next.add(id);
@@ -589,9 +641,11 @@ export function WidgetLibraryPage() {
     setFavoriteIds(next);
     try {
       await setUserSetting("widgets.favorites", Array.from(next));
+      toast.success(next.has(id) ? "Added to favorites." : "Removed from favorites.");
     } catch {
       setFavoriteIds(previous);
       setFavoritesError("Failed to save favorites.");
+      toast.error("Failed to save favorites.");
     }
   };
 
@@ -623,6 +677,7 @@ export function WidgetLibraryPage() {
 
   const handleInsertWidget = (widget: WidgetWithPreview | null) => {
     if (!widget) return;
+    setInsertError(null);
     setInsertWidget(widget);
     setInsertOpen(true);
   };
@@ -634,10 +689,23 @@ export function WidgetLibraryPage() {
     blockId?: string | null;
     slotId?: string | null;
   }) => {
-    if (!insertWidget || insertWidget.source !== "core") return;
+    if (!insertWidget || insertWidget.source !== "core") {
+      throw new Error("Select a widget before inserting.");
+    }
     const targetType = payload.targetType ?? "page";
-    if (!payload.targetId) return;
+    if (!payload.targetId) {
+      throw new Error("Select a target before inserting.");
+    }
     setInsertError(null);
+
+    const notifyInserted = (targetLabel: string, href: string) => {
+      toast.success(`${insertWidget.name} inserted into ${targetLabel}.`, {
+        action: {
+          label: "Open editor",
+          onClick: () => navigate(href),
+        },
+      });
+    };
 
     const getSlotBlocks = (block: Block, slot: string) => {
       const slots = block.slots;
@@ -712,6 +780,7 @@ export function WidgetLibraryPage() {
         await updatePage(payload.targetId, {
           data: { ...currentData, blocks: nextBlocks },
         });
+        notifyInserted(page.title, `/pages/${encodeURIComponent(payload.targetId)}`);
         return;
       }
 
@@ -722,6 +791,10 @@ export function WidgetLibraryPage() {
           : [];
         const nextBlocks = insertBlock(blocks, payload.blockId, payload.slotId);
         await updateWidgetTemplate(payload.targetId, { blocks: nextBlocks });
+        notifyInserted(
+          template.name,
+          `/widgets/templates/${encodeURIComponent(payload.targetId)}`
+        );
         return;
       }
 
@@ -734,8 +807,15 @@ export function WidgetLibraryPage() {
       await updatePage(payload.targetId, {
         data: { ...currentData, blocks: nextBlocks },
       });
-    } catch {
-      setInsertError("Failed to insert widget.");
+      notifyInserted(page.title, `/pages/${encodeURIComponent(payload.targetId)}`);
+    } catch (err) {
+      const message = resolveAdminActionErrorMessage(
+        err,
+        "Failed to insert widget."
+      );
+      setInsertError(message);
+      toast.error(message);
+      throw new Error(message);
     }
   };
 
@@ -770,10 +850,83 @@ export function WidgetLibraryPage() {
     navigate(templateEditHref(widget.id));
   };
 
-  const favoriteWidgets = useMemo(
-    () => widgets.filter((widget) => widget.isFavorite).slice(0, 3),
-    [widgets]
-  );
+  const toggleTemplateSelection = (id: string, checked: boolean) => {
+    setSelectedTemplateIds((previous) => {
+      const next = new Set(previous);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllVisibleTemplates = (checked: boolean) => {
+    setSelectedTemplateIds(
+      checked ? new Set(visibleTemplateIds) : new Set()
+    );
+  };
+
+  const handleDuplicateTemplate = async (widget: WidgetWithPreview) => {
+    if (widget.source !== "template") return;
+    setTemplateActionError(null);
+    setIsTemplateActionWorking(true);
+    try {
+      const duplicated = await duplicateWidgetTemplate(widget.id);
+      toast.success(`Template ${duplicated.name} duplicated.`);
+      await reloadCatalog();
+    } catch (err) {
+      const message = resolveAdminActionErrorMessage(
+        err,
+        "Failed to duplicate template."
+      );
+      setTemplateActionError(message);
+      toast.error(message);
+    } finally {
+      setIsTemplateActionWorking(false);
+    }
+  };
+
+  const handleConfirmDeleteTemplates = async () => {
+    if (!templateDeleteTarget) return;
+    setTemplateActionError(null);
+    setIsTemplateActionWorking(true);
+    const failed: string[] = [];
+    for (const id of templateDeleteTarget.ids) {
+      try {
+        await deleteWidgetTemplate(id);
+      } catch {
+        failed.push(id);
+      }
+    }
+    const deletedCount = templateDeleteTarget.ids.length - failed.length;
+    if (deletedCount > 0) {
+      toast.success(
+        deletedCount === 1
+          ? "Template deleted."
+          : `${deletedCount} templates deleted.`
+      );
+    }
+    if (failed.length > 0) {
+      const message =
+        failed.length === 1
+          ? "Failed to delete 1 template."
+          : `Failed to delete ${failed.length} templates.`;
+      setTemplateActionError(message);
+      toast.error(message);
+    }
+    setSelectedTemplateIds((previous) => {
+      const deletedIds = new Set(templateDeleteTarget.ids.filter((id) => !failed.includes(id)));
+      return new Set([...previous].filter((id) => !deletedIds.has(id)));
+    });
+    setTemplateDeleteTarget(null);
+    try {
+      await reloadCatalog();
+    } finally {
+      setIsTemplateActionWorking(false);
+    }
+  };
 
   const templateList = useMemo(
     () =>
@@ -912,38 +1065,9 @@ export function WidgetLibraryPage() {
                         </button>
                       );
                     })}
-                  </div>
-                  <Separator />
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                      Favorites
-                    </p>
-                    <div className="mt-4 space-y-3">
-                      {favoriteWidgets.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          No favorites yet.
-                        </p>
-                      ) : (
-                        favoriteWidgets.map((widget) => (
-                          <button
-                            key={widget.id}
-                            type="button"
-                            onClick={() => handleSelectWidget(widget)}
-                            className="flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left text-sm text-muted-foreground transition hover:text-foreground"
-                          >
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/40 text-primary">
-                              <Star className="h-4 w-4" />
-                            </div>
-                            <span className="truncate">{widget.name}</span>
-                          </button>
-                        ))
-                      )}
-                      {favoritesError ? (
-                        <p className="text-xs text-destructive">
-                          {favoritesError}
-                        </p>
-                      ) : null}
-                    </div>
+                    {favoritesError ? (
+                      <p className="text-xs text-destructive">{favoritesError}</p>
+                    ) : null}
                   </div>
                 </div>
               </ScrollArea>
@@ -998,6 +1122,9 @@ export function WidgetLibraryPage() {
                     variant={view === "grid" ? "secondary" : "ghost"}
                     size="icon-sm"
                     onClick={() => setView("grid")}
+                    aria-label="Show widgets as grid"
+                    aria-pressed={view === "grid"}
+                    title="Grid view"
                   >
                     <Grid2X2 className="h-4 w-4" />
                   </Button>
@@ -1005,6 +1132,9 @@ export function WidgetLibraryPage() {
                     variant={view === "list" ? "secondary" : "ghost"}
                     size="icon-sm"
                     onClick={() => setView("list")}
+                    aria-label="Show widgets as list"
+                    aria-pressed={view === "list"}
+                    title="List view"
                   >
                     <List className="h-4 w-4" />
                   </Button>
@@ -1012,7 +1142,26 @@ export function WidgetLibraryPage() {
               </div>
               <div className="flex items-center gap-2">
                 {showTemplateAction ? (
-                  <Button size="sm" variant="outline" className="gap-2" asChild>
+                  selectedTemplateIds.size > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={() =>
+                        setTemplateDeleteTarget({
+                          ids: Array.from(selectedTemplateIds),
+                          label: `${selectedTemplateIds.size} selected templates`,
+                        })
+                      }
+                      disabled={isTemplateActionWorking}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete selected
+                    </Button>
+                  ) : null
+                ) : null}
+                {showTemplateAction ? (
+                  <Button size="sm" className="gap-2" asChild>
                     <AdminLink href={templateCreateHref}>
                       <Plus className="h-4 w-4" />
                       New Template
@@ -1022,49 +1171,161 @@ export function WidgetLibraryPage() {
               </div>
             </div>
             <ScrollArea className="flex-1 min-h-0 pr-2">
-              <div
-                className={cn(
-                  "grid gap-6",
-                  view === "grid"
-                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                    : "grid-cols-1"
-                )}
-              >
-                {filteredWidgets.length === 0 ? (
-                  <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-                    No items match your search.
-                  </div>
-                ) : (
-                  filteredWidgets.map((widget) => (
-                    <WidgetCard
-                      key={widget.id}
-                      name={widget.name}
-                      categoryLabel={widget.categoryLabel}
-                      preview={renderPreview(widget.preview)}
-                      badge={widget.badge}
-                      metaBadges={
-                        widget.source === "core"
-                          ? [widget.complexity, formatModuleBadgeLabel(widget.module)]
-                          : undefined
-                      }
-                      isFavorite={widget.isFavorite}
-                      onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
-                      onInsert={
-                        widget.source === "core"
-                          ? () => handleInsertWidget(widget)
-                          : undefined
-                      }
-                      onAction={
-                        widget.source === "template"
-                          ? () => handleEditTemplate(widget)
-                          : undefined
-                      }
-                      actionLabel={widget.source === "template" ? "Edit" : "Insert"}
-                      onSelect={() => handleSelectWidget(widget)}
-                    />
-                  ))
-                )}
-              </div>
+              {activeScope === "templates" ? (
+                <div className="space-y-3">
+                  {templateActionError ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                      {templateActionError}
+                    </div>
+                  ) : null}
+                  {visibleTemplateWidgets.length === 0 ? (
+                    <div className="rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+                      No templates match your search.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
+                      <div className="min-w-[760px]">
+                        <div className="grid grid-cols-[2.5rem_1.4fr_1fr_0.7fr_16rem] items-center gap-3 border-b bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          <label className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              aria-label="Select all visible templates"
+                              checked={allVisibleTemplatesSelected}
+                              onChange={(event) =>
+                                toggleAllVisibleTemplates(event.target.checked)
+                              }
+                            />
+                          </label>
+                          <span>Name</span>
+                          <span>Category</span>
+                          <span>Status</span>
+                          <span className="text-right">Actions</span>
+                        </div>
+                        {visibleTemplateWidgets.map((widget) => (
+                          <div
+                            key={widget.id}
+                            className="grid grid-cols-[2.5rem_1.4fr_1fr_0.7fr_16rem] items-center gap-3 border-b px-4 py-3 last:border-b-0"
+                          >
+                            <label className="flex items-center justify-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${widget.name}`}
+                                checked={selectedTemplateIds.has(widget.id)}
+                                onChange={(event) =>
+                                  toggleTemplateSelection(
+                                    widget.id,
+                                    event.target.checked
+                                  )
+                                }
+                              />
+                            </label>
+                            <div className="min-w-0">
+                              <button
+                                type="button"
+                                className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
+                                onClick={() => handleEditTemplate(widget)}
+                              >
+                                {widget.name}
+                              </button>
+                              {widget.description ? (
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {widget.description}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="truncate text-sm text-muted-foreground">
+                              {widget.categoryLabel}
+                            </span>
+                            <Badge
+                              variant={
+                                widget.status === "published" ? "default" : "outline"
+                              }
+                            >
+                              {widget.status ?? "draft"}
+                            </Badge>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                onClick={() => handleEditTemplate(widget)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="gap-1"
+                                onClick={() => void handleDuplicateTemplate(widget)}
+                                disabled={isTemplateActionWorking}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                                Duplicate
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="xs"
+                                className="gap-1"
+                                onClick={() =>
+                                  setTemplateDeleteTarget({
+                                    ids: [widget.id],
+                                    label: widget.name,
+                                  })
+                                }
+                                disabled={isTemplateActionWorking}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "grid gap-6",
+                    view === "grid"
+                      ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                      : "grid-cols-1"
+                  )}
+                >
+                  {filteredWidgets.length === 0 ? (
+                    <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+                      No items match your search.
+                    </div>
+                  ) : (
+                    filteredWidgets.map((widget) => (
+                      <WidgetCard
+                        key={widget.id}
+                        name={widget.name}
+                        categoryLabel={widget.categoryLabel}
+                        preview={renderPreview(widget.preview)}
+                        badge={widget.badge}
+                        metaBadges={
+                          widget.source === "core"
+                            ? [widget.complexity, formatModuleBadgeLabel(widget.module)]
+                            : undefined
+                        }
+                        isFavorite={widget.isFavorite}
+                        onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
+                        onAction={
+                          widget.source === "template"
+                            ? () => handleEditTemplate(widget)
+                            : () => handleSelectWidget(widget)
+                        }
+                        actionLabel={widget.source === "template" ? "Edit" : "Configure"}
+                        onSelect={() => handleSelectWidget(widget)}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
             </ScrollArea>
           </section>
         </div>
@@ -1103,7 +1364,24 @@ export function WidgetLibraryPage() {
         preview={insertWidget ? renderPreview(insertWidget.preview) : undefined}
         pages={pages.map((page) => ({ id: page.id, title: page.title }))}
         templates={templateList}
+        error={insertError}
         onInsert={(payload) => handleInsert(payload)}
+      />
+      <ConfirmActionDialog
+        open={Boolean(templateDeleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setTemplateDeleteTarget(null);
+        }}
+        title="Delete template"
+        description={
+          templateDeleteTarget
+            ? `Delete ${templateDeleteTarget.label}? This cannot be undone.`
+            : "Delete template?"
+        }
+        confirmLabel="Delete"
+        confirmingLabel="Deleting..."
+        isConfirming={isTemplateActionWorking}
+        onConfirm={handleConfirmDeleteTemplates}
       />
       {pagesError ? (
         <span className="sr-only" role="status">

@@ -2,6 +2,7 @@ import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -154,18 +155,32 @@ export function WidgetTemplateCategoryDrawer({
                   const isDeleting = pendingDeleteId === category.id;
                   return (
                     <div key={category.id} className="space-y-2">
-                      <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
-                        {isEditing ? (
-                          <Input
-                            value={editingName}
-                            onChange={(event) => setEditingName(event.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        ) : (
-                          <span className="text-sm font-medium text-foreground">
-                            {category.name}
-                          </span>
-                        )}
+                      <div
+                        className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
+                          isEditing
+                            ? "border-primary/40 bg-primary/5"
+                            : isDeleting
+                              ? "border-destructive/40 bg-destructive/5"
+                              : "border-border/60 bg-muted/20"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium text-foreground">
+                              {category.name}
+                            </span>
+                            {isEditing ? <Badge variant="outline">Editing</Badge> : null}
+                            {isDeleting ? <Badge variant="destructive">Deleting</Badge> : null}
+                          </div>
+                          {isEditing ? (
+                            <Input
+                              aria-label={`New name for ${category.name}`}
+                              value={editingName}
+                              onChange={(event) => setEditingName(event.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          ) : null}
+                        </div>
                         <div className="flex items-center gap-1">
                           {isEditing ? (
                             <>
@@ -174,6 +189,7 @@ export function WidgetTemplateCategoryDrawer({
                                 size="icon-sm"
                                 onClick={handleUpdate}
                                 disabled={isWorking}
+                                aria-label={`Save changes to ${category.name}`}
                               >
                                 <Check className="h-4 w-4" />
                               </Button>
@@ -185,6 +201,7 @@ export function WidgetTemplateCategoryDrawer({
                                   setEditingName("");
                                 }}
                                 disabled={isWorking}
+                                aria-label={`Cancel editing ${category.name}`}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -199,6 +216,7 @@ export function WidgetTemplateCategoryDrawer({
                                   setEditingName(category.name);
                                   setPendingDeleteId(null);
                                 }}
+                                aria-label={`Edit ${category.name}`}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -209,6 +227,7 @@ export function WidgetTemplateCategoryDrawer({
                                   setPendingDeleteId(category.id);
                                   setEditingId(null);
                                 }}
+                                aria-label={`Delete ${category.name}`}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
@@ -218,7 +237,9 @@ export function WidgetTemplateCategoryDrawer({
                       </div>
                       {isDeleting ? (
                         <div className="flex items-center justify-between rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs">
-                          <span>Delete this category?</span>
+                          <span>
+                            Delete category <span className="font-medium">{category.name}</span>?
+                          </span>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"

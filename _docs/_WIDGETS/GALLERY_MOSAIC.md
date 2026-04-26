@@ -20,6 +20,10 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 - Gallery layout variant
 - Section title
 - Initial media count
+- Shared MediaPicker-backed media selection
+
+Wizard media selection uses admin media cache and persists only schema-owned
+public runtime fields such as `image`, `video`, `caption`, and `href`.
 
 ### Visual (primary editing mode)
 Sections:

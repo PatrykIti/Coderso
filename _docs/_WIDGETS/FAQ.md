@@ -19,7 +19,11 @@ Expandable FAQ section for objection handling and support answers.
 ### Wizard (minimal onboarding)
 - FAQ layout (`single-column` / `two-column` / `compact`)
 - Section title
-- Initial question labels
+- Questions count
+- Question and answer fields for the current wizard scope
+
+The wizard count selector and visible question/answer rows must stay in sync so
+FAQ answers are not hidden behind preset-only content.
 
 ### Visual (primary editing mode)
 Sections:

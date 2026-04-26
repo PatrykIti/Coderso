@@ -7,6 +7,57 @@
 
 ---
 
+## Zamknięcie TASK-213 (2026-04-26)
+
+TASK-213 zamyka zgłoszone poniżej problemy przez istniejące szwy Widget
+Library, edytorów widgetów, usług templatek, walidacji tras i cache admina. Nie
+dodano osobnego renderera ani równoległego hosta toastów. Manualny replay
+Playwright CLI nie był ponownie uruchamiany w tym code-passie; repo nie ma
+utrzymywanego runnera Playwright. Zamknięcie opiera się na bieżącym kodzie,
+pełnym Vitest lane, DB-backed Bun route/service proof oraz lint/typecheck.
+
+| Finding | Status po TASK-213 | Dowód |
+|---|---|---|
+| `BUG-1` Insert Widget silent outcome | Fixed | `WidgetInsertDialog` czeka na async insert, pokazuje bounded errors i sukces przez shared toast z akcją `Open editor`; pokryte `tests/vitest/ui/widget-library.test.tsx`, `tests/vitest/ui/dialogs.test.tsx`, full `bun run test:vitest`. |
+| `BUG-2` favorite a11y/state | Fixed | `WidgetCard` ma dynamiczne `aria-label`, `title`, `aria-pressed`, keyboard activation i favorite feedback; pokryte `tests/vitest/ui/widget-card.test.tsx`, full Vitest. |
+| `BUG-3` template save/create feedback | Fixed | `WidgetTemplateEditorPage` emituje create/update success/error toasts po awaited save; pokryte full Vitest i lint/typecheck. |
+| `BUG-4` edit/delete/cleanup templates | Fixed | Templates tab ma row actions Edit/Duplicate/Delete, checkbox selection, confirmed bulk delete, partial-failure feedback; duplicate idzie przez service/client/route contract. |
+| `BUG-5` duplicate insert entry points | Fixed | Core cards są configuration-first (`Configure`), a mutacja insertu jest wykonywana z dialogu/drawer-owned flow. |
+| `BUG-6` weak New Template CTA | Fixed | Templates tab używa primary `New Template` CTA. |
+| `BUG-7` tab counts under filters | Fixed | Recommended/All counters liczą aktywną bazę filtrów przez `filterWidgetLibraryItems`. |
+| `UX-1` card click ambiguity | Fixed by chosen contract | Karta otwiera konfigurację; insert pozostaje jawny po konfiguracji i placement wyborze. |
+| `UX-2` module readiness copy | Fixed | User-facing labels: `Ready to use`, `Ready to use (Beta)`, `In preparation`; pokryte `tests/vitest/ui/widgetLibraryUtils.test.ts`. |
+| `UX-3` advanced mode helper | Fixed | Advanced mode ma accessible label i tooltip/title z informacją o filtrach. |
+| `UX-4` view toggle labels | Fixed | Grid/list controls mają labels, titles i pressed state. |
+| `UX-5` filter hierarchy overload | Fixed within current IA | Usunięto zdublowaną Favorites rail signalizację; toolbar/sidebar mają jeden zakres odpowiedzialności. |
+| `UX-6` duplicate/test templates cleanup | Fixed | Lista templatek obsługuje duplicate/delete/bulk cleanup i name guard. |
+| `UX-7` category inline confusion | Fixed | Edit/delete states zachowują kontekst kategorii i pokazują osobny tryb (`Editing`/`Deleting`) z akcjami aria-label. |
+| `UX-8` duplicate Favorites rail | Fixed | Zostaje jedna reprezentacja Favorites na rail state plus inline error. |
+| `GLOBAL-1` count vs exposed rows | Fixed/verified | Stats KPI, Logo Cloud i FAQ wizard pokazują pełny count scope; peer widgets verified przez focused/full Vitest. |
+| `GLOBAL-2` native select vs Radix | Fixed/current-state verified | Product Gallery/Compare/Table używają shared Radix Select; Listing Filters/Search Box były już Radix w bieżącym kodzie, a ich loading bug zamknięto osobno. |
+| `GLOBAL-3` paired input labels | Fixed for audited owners | Navigation/Footer quick setup pairs mają visible labels/aria names; FAQ pytania/odpowiedzi dostały pełny wizard scope. |
+| `GLOBAL-4` Visual equals Advanced | Verified false positive | Brak implementacji; pełne suite’y edytorów potwierdzają nadal oddzielne Wizard/Visual/Advanced ścieżki. |
+| `BUG-9` Form Embed crash | Fixed | Empty Radix value zastąpiony UI sentinelą bez persistence; pokryte `tests/vitest/ui/form-embed-editor-wave.test.tsx` i `tests/vitest/widgets/formEmbed.test.tsx`. |
+| `BUG-10` listing query loading | Fixed | Listing Filters/Search Box rozróżniają loading/error/empty/ready; pokryte `tests/vitest/ui/listing-filters-editor-wave.test.tsx`, `tests/vitest/ui/search-box-editor-wave.test.tsx`. |
+| Gallery Mosaic media quick setup | Fixed | Wizard używa shared `MediaPicker` + `listMediaCached` i zapisuje public-runtime-safe schema fields. |
+| Rich Text Section raw HTML quick setup | Fixed | Wizard edytuje structured `body.blocks` i ustawia `outputMode: "blocks"`; raw HTML zostaje w Visual/Advanced. |
+| Product collection CSV | Fixed with fallback | Product widgets mają collection picker z cache plus `Collection IDs fallback` dla jawnych ID. |
+| Dynamic content quick setup | Current-state verified | Posts Feed, Content List i Entry Teaser zachowują istniejące owner fields; TASK-213 nie dodaje nowych runtime kontraktów poza audytowanym zakresem. |
+| CTA/Compare quick fields | Current-state verified | Istniejące Visual/Wizard owners pozostają zgodne z obecnym kontraktem; brak nowych danych runtime. |
+| Layout/navigation helper notes | Fixed/verified | Navigation links source helper, visible quick-link labels, Footer social/link labels and extended wizard social count landed. |
+
+**Walidacja 2026-04-26:**
+
+- `bun --cwd core lint` — passed.
+- `bun --cwd core lint:types` — passed.
+- `bun run test:vitest` — passed, 535 files / 2232 tests.
+- Targeted widget/editor/admin Vitest matrix — passed for Widget Library,
+  WidgetCard, dialogs, widget utils, widget editors, widget runtime contracts
+  and widget template client.
+- DB-backed Bun lane outside sandbox with `.env`:
+  `bun test tests/integration/routes/widgetTemplates.test.ts tests/unit/widgets/widgetTemplateService.test.ts`
+  — passed, 4 tests.
+
 ## Co to jest i co przetestowano
 
 Widget Library to centralny katalog komponentów UI wielokrotnego użytku — 38 widgetów podzielonych na kategorie (Layout 11, Content 20, Forms 5, Navigation 2, Media 0) + 5 szablonów (Templates). Widgety można wstawiać do stron (Pages) albo do istniejących bloków, oraz komponować własne szablony z widgetów atomicznych.

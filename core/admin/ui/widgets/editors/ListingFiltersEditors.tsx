@@ -193,6 +193,13 @@ function ListingQuerySelect({
 }) {
   const normalized = normalizeListingFiltersData(value);
   const { items, loading, error } = useListingQueries();
+  const loadState = loading
+    ? "loading"
+    : error
+      ? "error"
+      : items.length === 0
+        ? "empty"
+        : "ready";
   const selectedValue = normalized.listingQueryId || NO_LISTING_QUERY_VALUE;
   const selectedLabel =
     selectedValue === NO_LISTING_QUERY_VALUE
@@ -225,10 +232,17 @@ function ListingQuerySelect({
           ))}
         </SelectContent>
       </Select>
-      {loading ? (
+      {loadState === "loading" ? (
         <p className="text-xs text-muted-foreground">Loading listing queries...</p>
       ) : null}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {loadState === "empty" ? (
+        <p className="text-xs text-muted-foreground">
+          No listing queries are available yet.
+        </p>
+      ) : null}
+      {loadState === "error" && error ? (
+        <p className="text-xs text-destructive">{error}</p>
+      ) : null}
     </EditorSection>
   );
 }

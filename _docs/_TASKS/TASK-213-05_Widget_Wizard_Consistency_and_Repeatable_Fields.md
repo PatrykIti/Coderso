@@ -5,7 +5,7 @@
 **Category:** Widget Editors + Data Contracts + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-213, TASK-050, TASK-105-06
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

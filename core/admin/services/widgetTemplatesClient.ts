@@ -205,6 +205,28 @@ export async function updateWidgetTemplate(
   return updated;
 }
 
+export async function duplicateWidgetTemplate(id: string) {
+  const duplicated = await apiRequest<WidgetTemplate>(
+    `/widget-templates/${encodeURIComponent(id)}/duplicate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+    { withCsrf: true }
+  );
+  if (duplicated) {
+    upsertCachedWidgetTemplate(duplicated);
+    broadcastCacheEvent({ key: cacheKeys.widgetTemplatesList, action: "update" });
+    broadcastCacheEvent({
+      key: cacheKeys.widgetTemplateDetail(duplicated.id),
+      action: "update",
+    });
+    notifyWidgetCatalogUpdate("update");
+  }
+  return duplicated;
+}
+
 export async function deleteWidgetTemplate(id: string) {
   const result = await apiRequest<{ ok: boolean }>(
     `/widget-templates/${encodeURIComponent(id)}`,

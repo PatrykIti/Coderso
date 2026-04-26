@@ -211,6 +211,17 @@ Clients update caches and broadcast events on:
   address is either not represented in the admin cache key contract or is
   handled by the existing site-kit execution surface.
 
+### Widget template cache note
+
+- Widget template duplicate/create/update/delete mutations keep
+  `widgetTemplates:list`, touched `widgetTemplates:detail:<id>`, and
+  `widgetCatalog:list` synchronized through the existing widget template client
+  cache/bus contract.
+- `duplicateWidgetTemplate(id)` inserts the returned draft into cached template
+  lists, warms the new detail cache, broadcasts template/catalog updates, and
+  treats the server response as source of truth.
+- Failed name-conflict or delete mutations must not patch browser cache state.
+
 ### Media cache note
 
 - Media list cache (`media:list`) is owned by

@@ -19,7 +19,11 @@ Long-form content block with safe HTML rendering and editorial layout options.
 ### Wizard (minimal onboarding)
 - Rich text layout variant
 - Eyebrow and title quick setup
-- Body HTML quick start
+- Structured body block quick setup
+
+Routine Wizard editing writes `body.blocks` and sets `options.outputMode` to
+`blocks`. Raw HTML remains available in Visual/Advanced for technical edits and
+legacy compatibility.
 
 ### Visual (primary editing mode)
 Sections:

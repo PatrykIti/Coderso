@@ -29,9 +29,11 @@ Site footer with structured columns, legal strip, and social links.
 
 ### Wizard
 - Layout variant selection.
-- Quick setup for visible columns (title + first link label/href).
+- Quick setup for visible columns (title + first link label/href with
+  per-field labels).
 - Legal basics (copyright/privacy/terms).
-- Basic social links setup.
+- Basic social links setup with labeled platform/URL fields and support for up
+  to 8 quick social entries.
 
 ### Visual
 - Primary editing mode (Footer owns variant selection in Visual).

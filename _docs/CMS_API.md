@@ -1372,6 +1372,7 @@ Permissions: `widgets:read`, `widgets:write`
 - `POST /widgets/templates` (alias: `POST /widget-templates`)
 - `PATCH /widgets/templates/:id` (alias: `PATCH /widget-templates/:id`)
 - `DELETE /widgets/templates/:id` (alias: `DELETE /widget-templates/:id`)
+- `POST /widgets/templates/:id/duplicate` (alias: `POST /widget-templates/:id/duplicate`)
 - `POST /widgets/templates/:id/preview` (alias: `POST /widget-templates/:id/preview`)
 - `GET /widgets/templates/:id/revisions` (alias: `GET /widget-templates/:id/revisions`)
 - `POST /widgets/templates/:id/revisions/:revisionId/restore`
@@ -1418,6 +1419,15 @@ Template create/update payload (summary):
   }
 }
 ```
+
+Template create/update rejects case-insensitive duplicate template names with
+`widget_template_name_conflict` (HTTP 409).
+
+`POST /widgets/templates/:id/duplicate` accepts an empty strict JSON payload and
+returns the created draft template. The server loads the source template and
+decides which fields are safe to copy; callers cannot supply replacement
+`blocks`, `settings`, revision ids, or preview tokens. Duplicate names are
+resolved intentionally with `Copy of ...` style suffixes.
 
 `POST /widgets/templates/:id/preview` response:
 

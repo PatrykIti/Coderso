@@ -5,7 +5,7 @@
 **Category:** Content Widgets + Admin/UI + Widget Contracts
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-06, TASK-213-01-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

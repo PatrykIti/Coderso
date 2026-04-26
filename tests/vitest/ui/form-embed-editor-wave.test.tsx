@@ -657,7 +657,7 @@ test("FormEmbed advanced editor covers loading and empty form states before sele
 
     expect(view.container.textContent).toContain("Loading forms...");
     expect(formSelect.options).toHaveLength(1);
-    expect(formSelect.options[0]?.textContent).toBe("No forms found");
+    expect(formSelect.options[0]?.textContent).toBe("Loading forms...");
     expect(formSelect.options[0]?.disabled).toBe(true);
 
     formsState.current = {

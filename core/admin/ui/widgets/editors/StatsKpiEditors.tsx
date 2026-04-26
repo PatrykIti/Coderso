@@ -359,7 +359,7 @@ export function StatsKpiWizardEditor({
 
       <div className="space-y-2">
         <p className="text-sm font-medium">Primary metric values</p>
-        {items.slice(0, 3).map((item, index) => (
+        {items.map((item, index) => (
           <Input
             key={item.id ?? `wizard-metric-${index + 1}`}
             value={item.value ?? ""}

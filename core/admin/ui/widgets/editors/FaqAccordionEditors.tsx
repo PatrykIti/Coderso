@@ -355,16 +355,45 @@ export function FaqAccordionWizardEditor({
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Initial questions</p>
-        {(items.length > 0 ? items.slice(0, 2) : []).map((item, index) => (
-          <Input
-            key={item.id ?? `wizard-question-${index + 1}`}
-            value={item.question ?? ""}
-            onChange={(event) =>
-              updateItem(value, onChange, index, { question: event.target.value })
-            }
-            placeholder={`Question ${index + 1}`}
-          />
+        <p className="text-sm font-medium">Questions count</p>
+        <Select
+          value={String(items.length)}
+          onValueChange={(next) => setItemCount(value, onChange, Number(next))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select count" />
+          </SelectTrigger>
+          <SelectContent>
+            {itemCountOptions.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Questions and answers</p>
+        {items.map((item, index) => (
+          <div key={item.id ?? `wizard-question-${index + 1}`} className="space-y-2">
+            <Input
+              aria-label={`Question ${index + 1}`}
+              value={item.question ?? ""}
+              onChange={(event) =>
+                updateItem(value, onChange, index, { question: event.target.value })
+              }
+              placeholder={`Question ${index + 1}`}
+            />
+            <Textarea
+              aria-label={`Answer ${index + 1}`}
+              value={item.answer ?? ""}
+              onChange={(event) =>
+                updateItem(value, onChange, index, { answer: event.target.value })
+              }
+              placeholder={`Answer ${index + 1}`}
+            />
+          </div>
         ))}
       </div>
     </div>

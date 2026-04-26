@@ -58,6 +58,14 @@ function normalizeBlocks(blocks?: WidgetBlock[] | null): WidgetBlock[] {
   return Array.isArray(blocks) ? blocks : [];
 }
 
+function cloneBlocks(blocks?: WidgetBlock[] | null): WidgetBlock[] {
+  return JSON.parse(JSON.stringify(normalizeBlocks(blocks))) as WidgetBlock[];
+}
+
+function normalizeName(value: string) {
+  return value.trim().toLowerCase();
+}
+
 const mapWidgetTemplateRow = (row: typeof widgetTemplates.$inferSelect) => ({
   ...row,
   blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
@@ -83,6 +91,30 @@ export async function getWidgetTemplate(id: string) {
   return mapWidgetTemplateRow(row);
 }
 
+async function assertTemplateNameAvailable(name: string, excludeId?: string) {
+  const normalizedName = normalizeName(name);
+  if (!normalizedName) throw new Error("widget_template_invalid");
+  const templates = await listWidgetTemplates();
+  const conflict = templates.find(
+    (template) =>
+      template.id !== excludeId && normalizeName(template.name) === normalizedName
+  );
+  if (conflict) throw new Error("widget_template_name_conflict");
+}
+
+async function resolveDuplicateTemplateName(name: string) {
+  const templates = await listWidgetTemplates();
+  const existingNames = new Set(templates.map((template) => normalizeName(template.name)));
+  const baseName = name.trim() || "Template";
+  const firstCandidate = `Copy of ${baseName}`;
+  if (!existingNames.has(normalizeName(firstCandidate))) return firstCandidate;
+  for (let index = 2; index <= 100; index += 1) {
+    const candidate = `${firstCandidate} ${index}`;
+    if (!existingNames.has(normalizeName(candidate))) return candidate;
+  }
+  throw new Error("widget_template_name_conflict");
+}
+
 export async function createWidgetTemplate(
   input: WidgetTemplateCreateInput,
   userId?: string | null
@@ -90,6 +122,7 @@ export async function createWidgetTemplate(
   if (!input.name?.trim()) {
     throw new Error("widget_template_invalid");
   }
+  await assertTemplateNameAvailable(input.name);
 
   const resolvedCategory = await resolveCategory(input.category);
   if (input.status) assertStatus(input.status);
@@ -143,6 +176,7 @@ export async function updateWidgetTemplate(
     if (!input.name.trim()) {
       throw new Error("widget_template_invalid");
     }
+    await assertTemplateNameAvailable(input.name, id);
     update.name = input.name.trim();
   }
 
@@ -192,6 +226,23 @@ export async function updateWidgetTemplate(
 
     return mapWidgetTemplateRow(row);
   });
+}
+
+export async function duplicateWidgetTemplate(id: string, userId?: string | null) {
+  const source = await getWidgetTemplate(id);
+  if (!source) throw new Error("widget_template_not_found");
+  const name = await resolveDuplicateTemplateName(source.name);
+  return createWidgetTemplate(
+    {
+      name,
+      description: source.description,
+      category: source.category,
+      status: "draft",
+      blocks: cloneBlocks(source.blocks),
+      settings: normalizeWidgetTemplateSettings(source.settings),
+    },
+    userId
+  );
 }
 
 export async function deleteWidgetTemplate(id: string) {

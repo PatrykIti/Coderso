@@ -21,7 +21,7 @@ assets are needed.
 In the current UI, the library includes:
 - left-side navigation for library scopes,
 - widget category shortcuts,
-- favorites area,
+- one favorites scope with accessible favorite controls,
 - search field,
 - widget/template filters,
 - grid/list result area,
@@ -51,6 +51,15 @@ The current workflow areas are:
 - results:
   grid or list of matching items
 
+Core widget cards are configuration-first. Open a card to review or adjust its
+wizard data, then use the insert dialog to choose the target page/template and
+placement. Successful inserts show an admin notification with an editor action;
+failed inserts keep the dialog open and show bounded error copy.
+
+Template rows can be edited, duplicated, selected, and deleted from the
+Templates scope. Destructive row and bulk actions require confirmation and use
+the shared admin notification pattern.
+
 # Instruction
 
 1. Open `Coderso > Widgets`.
@@ -69,9 +78,9 @@ The current workflow areas are:
    - complexity filter
 5. Switch between grid and list view if one layout is easier for the current
    discovery task.
-6. If the item is a template, use the route/action that opens template editing.
-7. If the item is a core widget, use library actions to inspect or insert it
-   into the target surface.
+6. If the item is a template, use row actions to edit, duplicate, or delete it.
+7. If the item is a core widget, configure it first, then insert it into the
+   target surface from the insert dialog.
 8. Use favorites for repeat-use items instead of relying only on search.
 9. Open `Categories` when you need to manage template categories for reusable
    organization.
@@ -87,9 +96,13 @@ Use this safe discovery flow when you want fewer reuse mistakes:
 - Treat the library as a reuse boundary. If the same visual pattern is being
   recreated repeatedly elsewhere, it probably belongs here as a reusable asset.
 - `Advanced mode` is useful when simple recommended discovery is not enough, but
-  it should not be the default for less experienced editors.
+  it should not be the default for less experienced editors. It unlocks
+  complexity-oriented filtering for users who intentionally need that axis.
 - Favorites are a workflow accelerator, not an information architecture system.
   Use them for personal speed, not as the canonical source of truth.
+- Module readiness labels are editor-facing. `Ready to use`, `Ready to use
+  (Beta)`, and `In preparation` describe product availability, not test
+  coverage language.
 - An empty result state is often a filtering problem, not proof that the item
   does not exist. Clear filters before concluding the library lacks the asset.
 - The local UI currently shows an empty catalog state. Documented behavior still
@@ -106,6 +119,9 @@ Use this safe discovery flow when you want fewer reuse mistakes:
 - You are unsure whether to choose widget or template:
   choose a widget for one reusable block; choose a template for a reusable
   composition of blocks.
+- Insert seems to do nothing:
+  check the admin notification area. Success includes an editor action, and
+  failure keeps the insert dialog open with the error.
 - The item exists but is hard to reuse consistently:
   it may need better categorization, naming, or promotion into a template.
 

@@ -41,7 +41,14 @@ export function WidgetCard({
   className,
 }: WidgetCardProps) {
   const resolvedAction = onAction ?? onInsert;
-  const resolvedLabel = actionLabel ?? "Insert";
+  const resolvedLabel = actionLabel ?? "Configure";
+  const favoriteLabel = isFavorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`;
+  const handleCardKeyDown = (event: React.KeyboardEvent) => {
+    if (!onSelect) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect();
+  };
   if (variant === "compact") {
     return (
       <Card
@@ -50,7 +57,9 @@ export function WidgetCard({
           className
         )}
         role={onSelect ? "button" : undefined}
+        tabIndex={onSelect ? 0 : undefined}
         onClick={onSelect}
+        onKeyDown={handleCardKeyDown}
         draggable={draggable}
         onDragStart={onDragStart}
       >
@@ -65,7 +74,9 @@ export function WidgetCard({
         className
       )}
       role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
       onClick={onSelect}
+      onKeyDown={handleCardKeyDown}
       draggable={draggable}
       onDragStart={onDragStart}
     >
@@ -81,7 +92,9 @@ export function WidgetCard({
               event.stopPropagation();
               onFavoriteToggle();
             }}
+            aria-label={favoriteLabel}
             aria-pressed={isFavorite}
+            title={favoriteLabel}
             className={cn(
               "absolute right-2 top-2 rounded-full bg-background/80 text-muted-foreground shadow-sm backdrop-blur",
               isFavorite && "text-yellow-500"

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 97 tasks
+- **To Do:** 68 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1193 tasks
+- **Done:** 1222 tasks
 
 ---
 
@@ -58,35 +58,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-214-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final validation matrix, docs, changelog, task statuses, and board sync for TASK-214 |
 | TASK-214-05-01 | Listings Parity Test Matrix | Medium | Small | Technical leaf: map active-tab New, filters, table, bulk, confirmation, toast, cache, prefetch, and route coverage to exact suites |
 | TASK-214-05-02 | Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: update Content List UX/Admin Cache/API docs as needed, add changelog, and sync board statistics |
-| TASK-213 | Widget Library Playwright QA Follow-ups | High | Very Large | Close SUMMARY-WIDGETS findings across Widget Library insert feedback, Form Embed crash, listing-query loading states, accessibility/filter IA, template cleanup, wizard consistency, picker upgrades, Visual/Advanced false-positive verification, and source-report closure |
-| TASK-213-01 | Widget Editor Stability and Data Loading | High | Large | Repair Form Embed crash plus Listing Filters/Search Box completed-empty loading states before broader UX polish |
-| TASK-213-01-01 | Form Embed Select Sentinel and Crash Regression | High | Small | Technical leaf: replace empty Radix Select item values with UI-only sentinels and prove Form Embed cannot blank the editor |
-| TASK-213-01-02 | Listing Query Empty State for Filter Widgets | High | Medium | Technical leaf: distinguish loading, empty, ready, and error states for Listing Filters and Search Box query selectors |
-| TASK-213-02 | Widget Insert Flow and User Feedback | High | Large | Shared success/error toasts, canonical target editor links, and one coherent configured insert path for core widget cards |
-| TASK-213-02-01 | Insert Widget Toasts and Editor Deep Links | High | Medium | Technical leaf: await insert mutations, emit shared Admin UI feedback, and link to the edited page/template |
-| TASK-213-02-02 | Widget Card Drawer Entry Point Consolidation | Medium | Medium | Technical leaf: remove parallel direct insert/card details ambiguity by making cards configuration-first and drawer-owned for insert |
-| TASK-213-03 | Widget Library A11y and Filter IA | High | Large | Favorite/view-toggle semantics, advanced mode helper, module readiness copy, category-aware tab counts, and rail/filter hierarchy cleanup |
-| TASK-213-03-01 | Favorites and View Toggle A11y Feedback | High | Small | Technical leaf: dynamic labels, pressed states, visual state, and bounded favorite persistence feedback |
-| TASK-213-03-02 | Advanced Mode Module Readiness and Tab Counts | Medium | Medium | Technical leaf: user-facing module readiness display plus filter-basis counts for Recommended and All widgets |
-| TASK-213-03-03 | Widget Filter Hierarchy and Favorites Rail Simplification | Medium | Medium | Technical leaf: remove duplicate Favorites rail signals and clarify sidebar/toolbar filter ownership |
-| TASK-213-04 | Widget Template Lifecycle and Category Management | Medium | Large | Save toasts, primary New Template CTA, row/bulk actions, delete/duplicate/name guards, and clearer inline category edit/delete states |
-| TASK-213-04-01 | Template Save Toasts and Primary CTA | Medium | Medium | Technical leaf: shared template create/update feedback plus a clear primary `New Template` action in the Templates tab |
-| TASK-213-04-02 | Template Category Inline Mode Visual Contract | Medium | Small | Technical leaf: visually distinct edit/delete modes with exact category context and accessible actions |
-| TASK-213-04-03 | Template Row and Bulk Cleanup Actions | Medium | Medium | Technical leaf: Edit/Duplicate/Delete row actions, confirmed visible-scope bulk delete, partial-failure feedback, and cache invalidation |
-| TASK-213-04-04 | Template Duplicate and Name Guard Contract | Medium | Medium | Technical leaf: service-owned duplicate behavior, explicit name-conflict policy, strict route mapping, and migration artifacts if DB uniqueness is added |
-| TASK-213-05 | Widget Wizard Consistency and Repeatable Fields | Medium | Large | Align wizard count selectors, visible repeatable rows, paired input labels, and beginner helper copy across audited widgets |
-| TASK-213-05-01 | Repeatable Count Field Sync Matrix | Medium | Medium | Technical leaf: repair count-to-visible-row mismatches for Stats KPI, Logo Cloud, FAQ, Grid, Gallery, Compare Timeline, and current-state verify Pricing/Testimonials/Team/Timeline peers |
-| TASK-213-05-02 | Paired Input Labels and Beginner Helper Text | Medium | Medium | Technical leaf: add per-field labels/aria-labels for link, CTA, pricing, FAQ, and social pairs plus helper copy for Flow key, Links source, and similar technical fields |
-| TASK-213-06 | Widget Editor Control Unification and Picker Upgrades | Medium | Large | Radix control unification, collection/media picker upgrades, and non-raw rich text/content quick setup where supported |
-| TASK-213-06-01 | Commerce Product Radix Select and Collection Picker | Medium | Large | Technical leaf: replace native selects in product widgets and add or explicitly defer typed collection picking |
-| TASK-213-06-02 | Gallery Mosaic Media Picker Quick Setup | Medium | Medium | Technical leaf: reuse shared MediaPicker/media cache and persist only schema-owned public-runtime-safe gallery media data |
-| TASK-213-06-03 | Rich Text Section Quick Editor | Medium | Medium | Technical leaf: make routine rich text editing structured/sanitized without raw HTML-first Wizard UX |
-| TASK-213-06-04 | Dynamic Content Source Quick Setup | Medium | Medium | Technical leaf: verify or add source/count/layout controls for Posts Feed, Content List, and Entry Teaser through existing owners |
-| TASK-213-06-05 | CTA and Compare Timeline Quick Fields | Medium | Medium | Technical leaf: expose rendered CTA/Compare public copy/context or clearly route full editing to Visual without hidden preset surprises |
-| TASK-213-06-06 | Layout Navigation Helper Controls | Medium | Medium | Technical leaf: add bounded slot/default-pane/link-source/social helper controls with schema-owned runtime fields where needed |
-| TASK-213-07 | QA Docs and Widget Source Report Closure | Medium | Medium | Final validation matrix, Playwright source report closure, docs, changelog, and board synchronization for TASK-213 |
-| TASK-213-07-01 | Widget Playwright and Vitest Regression Matrix | Medium | Small | Technical leaf: map every SUMMARY-WIDGETS finding to exact automated/manual proof and record unrelated failures separately |
-| TASK-213-07-02 | Widgets Docs Changelog and Board Closure | Medium | Small | Technical leaf: update widgets docs, changelog/index, TASK-213 statuses, README counts, and source-report fixed/open states |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -154,6 +125,35 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-213 | Widget Library Playwright QA Follow-ups | High | Very Large | Done: SUMMARY-WIDGETS findings closed across insert feedback, Form Embed crash, listing-query states, a11y/filter IA, template lifecycle, wizard consistency, picker upgrades, docs, changelog 745, and validation |
+| TASK-213-01 | Widget Editor Stability and Data Loading | High | Large | Done: Form Embed sentinel and Listing Filters/Search Box loading/empty/error/ready states are fixed |
+| TASK-213-01-01 | Form Embed Select Sentinel and Crash Regression | High | Small | Done: empty Radix Select value replaced with UI-only sentinel and covered by Form Embed Vitest/runtime suites |
+| TASK-213-01-02 | Listing Query Empty State for Filter Widgets | High | Medium | Done: Listing Filters and Search Box selectors show truthful loading, empty, ready, and error states |
+| TASK-213-02 | Widget Insert Flow and User Feedback | High | Large | Done: insert mutations are awaited, failures stay visible, and success toasts link to the target editor |
+| TASK-213-02-01 | Insert Widget Toasts and Editor Deep Links | High | Medium | Done: shared Admin UI insert feedback and editor deep-link action landed |
+| TASK-213-02-02 | Widget Card Drawer Entry Point Consolidation | Medium | Medium | Done: cards are configuration-first and insert mutation is owned by the drawer/dialog flow |
+| TASK-213-03 | Widget Library A11y and Filter IA | High | Large | Done: favorite/view controls, advanced helper, module copy, category-aware counts, and rail hierarchy are tightened |
+| TASK-213-03-01 | Favorites and View Toggle A11y Feedback | High | Small | Done: dynamic labels, pressed states, titles, keyboard activation, and bounded feedback landed |
+| TASK-213-03-02 | Advanced Mode Module Readiness and Tab Counts | Medium | Medium | Done: user-facing readiness copy and filtered Recommended/All counts are covered |
+| TASK-213-03-03 | Widget Filter Hierarchy and Favorites Rail Simplification | Medium | Medium | Done: duplicate Favorites signals were removed and filter ownership clarified |
+| TASK-213-04 | Widget Template Lifecycle and Category Management | Medium | Large | Done: template save toasts, primary CTA, row/bulk actions, duplicate/name guards, and category mode clarity shipped |
+| TASK-213-04-01 | Template Save Toasts and Primary CTA | Medium | Medium | Done: create/update toasts and primary `New Template` action are in place |
+| TASK-213-04-02 | Template Category Inline Mode Visual Contract | Medium | Small | Done: category edit/delete modes keep row context and accessible action labels |
+| TASK-213-04-03 | Template Row and Bulk Cleanup Actions | Medium | Medium | Done: Edit/Duplicate/Delete, confirmed visible-scope bulk delete, partial-failure feedback, and cache updates landed |
+| TASK-213-04-04 | Template Duplicate and Name Guard Contract | Medium | Medium | Done: service-owned duplicate, case-insensitive name conflict, strict route schema, and client cache proof landed |
+| TASK-213-05 | Widget Wizard Consistency and Repeatable Fields | Medium | Large | Done: wizard count rows, paired labels, and beginner helper copy were aligned across audited widgets |
+| TASK-213-05-01 | Repeatable Count Field Sync Matrix | Medium | Medium | Done: Stats KPI, Logo Cloud, FAQ, Rich Text and peer widget count behavior is fixed or current-state verified |
+| TASK-213-05-02 | Paired Input Labels and Beginner Helper Text | Medium | Medium | Done: Navigation/Footer/FAQ paired fields and technical helper copy have explicit labels/context |
+| TASK-213-06 | Widget Editor Control Unification and Picker Upgrades | Medium | Large | Done: product Radix controls, collection/media pickers, rich text blocks, and helper controls were upgraded |
+| TASK-213-06-01 | Commerce Product Radix Select and Collection Picker | Medium | Large | Done: product widgets use shared selects plus cached collection picker with ID fallback |
+| TASK-213-06-02 | Gallery Mosaic Media Picker Quick Setup | Medium | Medium | Done: Gallery Mosaic uses shared MediaPicker/media cache and persists public-runtime-safe schema data |
+| TASK-213-06-03 | Rich Text Section Quick Editor | Medium | Medium | Done: routine wizard editing uses structured blocks and `outputMode: "blocks"` |
+| TASK-213-06-04 | Dynamic Content Source Quick Setup | Medium | Medium | Done: dynamic source widgets were current-state verified against existing owner controls |
+| TASK-213-06-05 | CTA and Compare Timeline Quick Fields | Medium | Medium | Done: existing CTA/Compare public-copy controls were current-state verified without new runtime fields |
+| TASK-213-06-06 | Layout Navigation Helper Controls | Medium | Medium | Done: navigation source helper, quick-link labels, footer link/social labels, and social count handling landed |
+| TASK-213-07 | QA Docs and Widget Source Report Closure | Medium | Medium | Done: source report, product/API/cache docs, changelog, task statuses, and board counts are synchronized |
+| TASK-213-07-01 | Widget Playwright and Vitest Regression Matrix | Medium | Small | Done: every SUMMARY-WIDGETS finding has owner/status/evidence and full Vitest plus DB-backed Bun proof passed |
+| TASK-213-07-02 | Widgets Docs Changelog and Board Closure | Medium | Small | Done: widget docs, changelog 745/index, TASK-213 files, and README statistics are synchronized |
 | TASK-212 | Posts Playwright Retest Follow-ups | High | Large | Done: Posts publish/update feedback uses the shared action-toast adapter, Create New Post drawer has a bound SheetDescription, Video/Gallery/Audio/File blocks ship end-to-end, changelog 744, and targeted validation passed |
 | TASK-212-01 | Post Editor Mutation Wrapper Parity | High | Medium | Done: existing Publish/Update actions emit shared success/error toasts without direct Sonner calls or swallowed failures |
 | TASK-212-01-01 | Post Editor Action Toast Adapter Wiring | High | Small | Done: `PostBlockEditorShell` routes publish/update through `createAdminActionToastAdapter` |

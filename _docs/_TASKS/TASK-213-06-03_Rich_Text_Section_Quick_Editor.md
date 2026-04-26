@@ -5,7 +5,7 @@
 **Category:** Rich Text Widget + Admin/UI + Widget Contracts
 **Estimated Effort:** Medium
 **Dependencies:** TASK-213-06
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

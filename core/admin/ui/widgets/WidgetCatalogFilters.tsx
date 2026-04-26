@@ -49,7 +49,10 @@ export function WidgetCatalogFilters({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5">
+      <div
+        className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5"
+        title="Advanced mode unlocks module and complexity filters for detailed widget discovery."
+      >
         <span className="text-xs text-muted-foreground">
           Advanced mode
         </span>
@@ -57,7 +60,7 @@ export function WidgetCatalogFilters({
           id="widgets-advanced-mode"
           checked={advancedMode}
           onCheckedChange={onAdvancedModeChange}
-          aria-label="Toggle advanced mode"
+          aria-label="Toggle advanced widget filters"
         />
       </div>
       <Select value={moduleFilter} onValueChange={onModuleFilterChange}>

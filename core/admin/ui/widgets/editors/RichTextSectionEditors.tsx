@@ -87,6 +87,7 @@ const outputModeOptions: Array<{ id: RichTextSectionOutputMode; label: string }>
 const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) =>
   String(index)
 );
+const wizardBlockCount = Math.max(richTextSectionDefaults.body?.blocks?.length ?? 2, 2);
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
@@ -283,6 +284,39 @@ function updateBlock(
   });
 }
 
+function updateWizardBlock(
+  value: RichTextSectionData,
+  onChange: (next: RichTextSectionData) => void,
+  index: number,
+  patch: Partial<RichTextSectionBlock>
+) {
+  updateValue(value, onChange, (current) => {
+    const blocks = normalizeRichTextBlocks(
+      current.body?.blocks,
+      Math.max(wizardBlockCount, index + 1)
+    );
+    if (!blocks[index]) return current;
+
+    const nextBlocks = [...blocks];
+    nextBlocks[index] = {
+      ...nextBlocks[index],
+      ...patch,
+    };
+
+    return {
+      ...current,
+      body: {
+        ...current.body,
+        blocks: nextBlocks,
+      },
+      options: {
+        ...current.options,
+        outputMode: "blocks",
+      },
+    };
+  });
+}
+
 function setBlocksCount(
   value: RichTextSectionData,
   onChange: (next: RichTextSectionData) => void,
@@ -380,6 +414,7 @@ export function RichTextSectionWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
+  const blocks = normalizeRichTextBlocks(normalized.body?.blocks, wizardBlockCount);
 
   return (
     <div className="space-y-4">
@@ -424,14 +459,34 @@ export function RichTextSectionWizardEditor({
         />
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Body HTML</p>
-        <Textarea
-          value={normalized.body?.html ?? ""}
-          onChange={(event) => updateBody(value, onChange, { html: event.target.value })}
-          placeholder="<p>Start writing your content...</p>"
-          className="min-h-40"
-        />
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Body blocks</p>
+        <p className="text-xs text-muted-foreground">
+          Routine editing uses structured blocks. Raw HTML remains available in Visual and Advanced.
+        </p>
+        {blocks.slice(0, 2).map((block, index) => (
+          <div key={block.id ?? `wizard-block-${index + 1}`} className="space-y-2">
+            <Input
+              value={block.heading ?? ""}
+              onInput={(event) =>
+                updateWizardBlock(value, onChange, index, {
+                  heading: event.currentTarget.value,
+                })
+              }
+              placeholder={`Heading ${index + 1}`}
+            />
+            <Textarea
+              value={block.content ?? ""}
+              onInput={(event) =>
+                updateWizardBlock(value, onChange, index, {
+                  content: event.currentTarget.value,
+                })
+              }
+              placeholder={`Paragraph ${index + 1}`}
+              className="min-h-28"
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

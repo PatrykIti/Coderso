@@ -491,6 +491,9 @@ export function NavigationWizardEditor({
             ))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-muted-foreground">
+          Manual links use the rows below, Existing menu syncs from Menus, and Pages index reads published pages that are enabled for navigation.
+        </p>
       </div>
 
       {linksSource === "menu" ? (
@@ -514,16 +517,26 @@ export function NavigationWizardEditor({
           <div className="space-y-2">
             {items.slice(0, 3).map((item, index) => (
               <div key={`${item.href || item.label}-${index}`} className="grid gap-2 sm:grid-cols-2">
-                <Input
-                  value={item.label}
-                  onChange={(event) => updateItem(index, { label: event.target.value })}
-                  placeholder={`Item ${index + 1} label`}
-                />
-                <Input
-                  value={item.href}
-                  onChange={(event) => updateItem(index, { href: event.target.value })}
-                  placeholder="/path"
-                />
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium text-foreground">
+                    Link {index + 1} label
+                  </span>
+                  <Input
+                    value={item.label}
+                    onChange={(event) => updateItem(index, { label: event.target.value })}
+                    placeholder={`Item ${index + 1} label`}
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium text-foreground">
+                    Link {index + 1} URL
+                  </span>
+                  <Input
+                    value={item.href}
+                    onChange={(event) => updateItem(index, { href: event.target.value })}
+                    placeholder="/path"
+                  />
+                </label>
               </div>
             ))}
           </div>

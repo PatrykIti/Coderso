@@ -398,7 +398,7 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
 
   const variantSelect = getSelectByOptions(container, ["grid", "strip", "dense"]);
   expect(variantSelect.value).toBe("grid");
-  expect(getLogoNameInputs(container)).toHaveLength(3);
+  expect(getLogoNameInputs(container)).toHaveLength(initialValue.logos.length);
 
   setSelectValue(variantSelect, "strip");
   expect(getLatestVariant()).toBe("strip");

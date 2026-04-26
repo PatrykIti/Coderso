@@ -210,6 +210,12 @@ export const widgetTemplateUpdateSchema = {
   },
 };
 
+export const widgetTemplateDuplicateSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {},
+};
+
 export const widgetTemplateCategoryCreateSchema = {
   type: "object",
   required: ["name"],

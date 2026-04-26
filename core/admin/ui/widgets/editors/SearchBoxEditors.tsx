@@ -99,6 +99,13 @@ function SearchMode({
   const normalized = normalizeSearchBoxData(value);
   const { items, loading, error } = useListingQueries();
   const mode = normalized.mode ?? "listing";
+  const listingLoadState = loading
+    ? "loading"
+    : error
+      ? "error"
+      : items.length === 0
+        ? "empty"
+        : "ready";
   const selectedListingQuery = normalized.listingQueryId || NO_LISTING_QUERY_VALUE;
   const selectedLabel =
     selectedListingQuery === NO_LISTING_QUERY_VALUE
@@ -149,10 +156,17 @@ function SearchMode({
               ))}
             </SelectContent>
           </Select>
-          {loading ? (
+          {listingLoadState === "loading" ? (
             <p className="text-xs text-muted-foreground">Loading listing queries...</p>
           ) : null}
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          {listingLoadState === "empty" ? (
+            <p className="text-xs text-muted-foreground">
+              No listing queries are available yet.
+            </p>
+          ) : null}
+          {listingLoadState === "error" && error ? (
+            <p className="text-xs text-destructive">{error}</p>
+          ) : null}
         </div>
       ) : (
         <div className="space-y-2">
