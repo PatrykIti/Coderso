@@ -45,7 +45,8 @@ Minimum source matrix:
 
 - `BUG-1` through `BUG-7`
 - `UX-1` through `UX-8`
-- `GLOBAL-1` through `GLOBAL-3`
+- `GLOBAL-1` through `GLOBAL-4`, with `GLOBAL-4` recorded as a false-positive
+  verification rather than an implementation change
 - `BUG-9` and `BUG-10`
 - layout/content/forms/navigation per-widget notes that were intentionally
   routed into `TASK-213-05-*` and `TASK-213-06-*`
@@ -58,6 +59,9 @@ For findings that no longer reproduce in the current checkout, record exact file
 references and the remaining valid owner. Example: `ListingFiltersEditors.tsx`
 and `SearchBoxEditors.tsx` already use shared Radix Select primitives, while
 their loading/empty-state issue remains under `TASK-213-01-02`.
+For `GLOBAL-4`, verify the current Visual and Advanced tabs on representative
+widgets such as Section, Hero, and Feature Grid, then record the source finding
+as `false positive/current-state verified` without adding product work.
 
 ## Security Contract
 

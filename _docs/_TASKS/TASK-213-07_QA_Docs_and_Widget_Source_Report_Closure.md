@@ -51,6 +51,7 @@ Pseudocode for the source report closure table:
 | BUG-9 Form Embed crash | TASK-213-01-01 | Fixed after proof | test + Playwright replay |
 | BUG-10 listing loading | TASK-213-01-02 | Fixed after proof | test + empty-state replay |
 | GLOBAL-2 Listing/Search native select | TASK-213-07-01 | Current-state verified | code refs + source-report note |
+| GLOBAL-4 Visual/Advanced equality | TASK-213-07-01 | False positive/current-state verified | representative tab replay |
 ```
 
 Validation notes must list exact commands, dates, and outcomes. If DB-backed

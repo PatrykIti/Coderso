@@ -91,6 +91,11 @@ stay in the existing Widget Library/editor seams.
   `tests/unit/widgets/postsFeedWidget.test.tsx`; keep that current command
   surface green unless the pure widget contract is deliberately migrated to a
   Vitest-owned suite.
+- The report's `GLOBAL-4` Visual/Advanced equality finding is explicitly marked
+  as a false negative by the source report. Do not create implementation work
+  from that item; `TASK-213-07-01` must only verify the current
+  `Wizard -> Visual -> Advanced` split remains distinct after other editor
+  changes.
 
 ## Required Product Behavior
 
@@ -151,6 +156,7 @@ owner or a verification owner:
 | `GLOBAL-1` Count vs exposed rows | `TASK-213-05-01` | Repair or current-state verify every named repeatable widget. |
 | `GLOBAL-2` Native select vs Radix | `TASK-213-06-01`, `TASK-213-07-01` | Product widgets use shared selects; Listing/Search select finding is current-state verified while loading states stay under `TASK-213-01-02`. |
 | `GLOBAL-3` Paired inputs without labels | `TASK-213-05-02` | Per-field labels or accessible names plus helper copy for technical fields. |
+| `GLOBAL-4` Visual equals Advanced false negative | `TASK-213-07-01` | No implementation; verify and document that Visual and Advanced remain distinct after TASK-213 editor changes. |
 | `BUG-9` Form Embed crash | `TASK-213-01-01` | UI-only sentinel; no sentinel persistence; no blank-editor crash. |
 | `BUG-10` Listing query loading state | `TASK-213-01-02` | Loading, empty, ready, and error states are truthful after fetch completion. |
 | Layout/content/forms/navigation audit notes | `TASK-213-05-*`, `TASK-213-06-*` | Scoped quick-setup upgrades through existing widget schemas, normalizers, editors, and runtime renderers. |
