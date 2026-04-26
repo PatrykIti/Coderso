@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Widgets + Admin/UI + UX + Admin Cache
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-205, TASK-208, TASK-213
+**Dependencies:** TASK-205, TASK-206, TASK-208, TASK-213
 **Reference Tasks:** TASK-214 is a non-blocking Pages-style list parity
 reference for tab/resource-scoped action wording. Do not wait for TASK-214
 completion unless implementation chooses to reuse a helper introduced there.
@@ -72,6 +72,10 @@ drawer that exists today.
 - `WidgetInsertDialog.tsx` already supports inserting core widgets into pages
   or widget templates. TASK-215 should route Insert actions through that dialog
   rather than introducing a second placement popup.
+- `PageTable.tsx` / `PageRowActions.tsx` are the Pages reference for table
+  selection and the right-aligned three-dot actions menu. Widget table/grid
+  actions should follow that dropdown pattern; the current inline template
+  button cluster is not the target interaction model.
 - `widgetsClient.ts` owns cached catalog reads and `widgetCatalog:list` storage,
   but it does not currently emit cache-bus events itself. `widgetTemplatesClient.ts`
   and `widgetTemplateCategoriesClient.ts` own template/category cache updates and
@@ -103,13 +107,16 @@ drawer that exists today.
 4. Table mode is the default view for `All Items`.
 5. Grid mode shows cards for the same filtered rows, with selection checkboxes
    for bulk actions and row-equivalent action menus.
-6. Core widget card click and row Edit/Configure open `WidgetDetailsDrawer`.
-7. Insert actions for core widgets open `WidgetInsertDialog` and preserve the
+6. Table and grid item actions use a Pages-style right-aligned
+   `MoreHorizontal` / three-dot dropdown menu. Do not keep template actions as
+   inline button clusters once the row/card action owner exists.
+7. Core widget card click and row Edit/Configure open `WidgetDetailsDrawer`.
+8. Insert actions for core widgets open `WidgetInsertDialog` and preserve the
    current placement flow for page/template targets.
-8. Preview is a non-mutating placeholder action in this task. It may open a
+9. Preview is a non-mutating placeholder action in this task. It may open a
    small disabled/coming-soon state or emit bounded copy, but it must not add a
    new preview endpoint.
-9. Actions are section/resource specific:
+10. Actions are section/resource specific:
    - `All Items`: Preview placeholder, Edit/Configure, Insert for core
      widgets; template rows get template-safe actions only.
    - `Favorites`: source-specific Preview/Edit/Insert plus Remove from
@@ -118,17 +125,17 @@ drawer that exists today.
      management, and confirmed bulk delete.
    - widget category sections: same core-widget actions as `All Widgets`,
      scoped to the selected category.
-10. Bulk actions operate only on visible selected rows in the active section and
+11. Bulk actions operate only on visible selected rows in the active section and
     active view. Hidden rows from another section or page must never be mutated.
-11. Favorites stay per-user under `widgets.favorites` with the existing max-50
+12. Favorites stay per-user under `widgets.favorites` with the existing max-50
     behavior and bounded feedback.
-12. Template destructive actions keep `ConfirmActionDialog`,
+13. Template destructive actions keep `ConfirmActionDialog`,
     `Promise.allSettled`-style partial failure handling, shared toasts, and
     cache-bus refresh behavior.
-13. Cache behavior follows the shared admin list policy: hydrate from cache,
+14. Cache behavior follows the shared admin list policy: hydrate from cache,
     background revalidate when cache exists, foreground load when cache is
     absent, and refresh on relevant cache-bus events.
-14. Existing widget runtime contracts, widget templates, page builder insert
+15. Existing widget runtime contracts, widget templates, page builder insert
     contracts, assistant context, and public rendering stay backward
     compatible.
 

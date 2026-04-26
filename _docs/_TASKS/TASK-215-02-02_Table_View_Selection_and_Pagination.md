@@ -12,7 +12,8 @@
 ## Overview
 
 Add the default Pages-style table view for Widget Library rows with checkbox
-selection, section-aware row columns, row action menus, and shared pagination.
+selection, section-aware row columns, a right-aligned three-dot row action menu,
+and shared pagination.
 
 ## Sub-Tasks
 
@@ -58,6 +59,8 @@ No child task files.
 - Table is rendered for default `All Items`.
 - Header checkbox selects only visible rows.
 - Row checkbox toggles the row without opening drawer/actions.
+- The Actions column uses the Pages `MoreHorizontal` dropdown pattern, not an
+  inline row button cluster.
 - Pagination slices rows and trims selected ids.
 - Table columns use available catalog/template fields only.
 - Commands:
@@ -74,4 +77,4 @@ No child task files.
 
 1. Table view follows Pages list behavior without inventing unavailable data.
 2. Visible-row selection is reliable across pagination.
-3. Row actions are wired through a controlled action callback.
+3. Row actions are wired through a controlled dropdown action callback.

@@ -14,6 +14,8 @@
 Add row/card action menus for `All Items` with source-aware options. Core rows
 get Preview placeholder, Edit/Configure, Insert, and favorite actions. Template
 rows delegate to the template action contract from TASK-215-04.
+The menu uses the Pages `MoreHorizontal` / three-dot dropdown pattern for both
+table rows and grid cards.
 
 ## Sub-Tasks
 
@@ -49,6 +51,7 @@ const templateActions = ["preview-placeholder", "edit-template", "duplicate", "d
 ## Testing Requirements
 
 - Core `All Items` row menu includes Preview, Edit, and Insert.
+- Row/card actions are hidden behind one three-dot menu per item.
 - Preview action renders bounded placeholder feedback and does not call widget
   template preview or page/template update clients.
 - Template `All Items` rows do not show core Insert unless the row source is a

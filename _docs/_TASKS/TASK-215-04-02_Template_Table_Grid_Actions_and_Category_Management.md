@@ -13,7 +13,9 @@
 
 Bring template rows into the same table/grid model while preserving existing
 template management: Edit, Duplicate, Delete, status/category display, category
-filter, and category drawer.
+filter, and category drawer. Template row/card actions should move into the
+same three-dot dropdown pattern as Pages; do not keep the current inline
+Edit/Duplicate/Delete button group as the final table UI.
 
 ## Sub-Tasks
 
@@ -46,6 +48,8 @@ No child task files.
 ## Testing Requirements
 
 - Templates section table and grid show template-safe actions.
+- Template actions are exposed through the shared row/card action menu, not
+  inline action buttons.
 - Template category filter still works in the filter bar.
 - Category drawer remains reachable after the left rail is removed.
 - Edit navigation uses canonical admin helpers.

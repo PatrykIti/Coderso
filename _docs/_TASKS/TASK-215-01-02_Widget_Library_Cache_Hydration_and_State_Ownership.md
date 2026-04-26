@@ -47,8 +47,15 @@ No child task files.
 ## Pseudocode
 
 ```ts
-const mountOptions = resolveListMountRefreshOptions(Boolean(initialCatalog));
-await refreshCatalog(mountOptions);
+const catalogMountOptions = resolveListMountRefreshOptions(Boolean(initialCatalog));
+const categoryMountOptions = resolveListMountRefreshOptions(Boolean(initialCategories));
+const pagesMountOptions = resolveListMountRefreshOptions(Boolean(initialPages));
+
+await Promise.all([
+  refreshCatalog(catalogMountOptions),
+  refreshCategories(categoryMountOptions),
+  refreshPages(pagesMountOptions),
+]);
 ```
 
 State owner shape:
@@ -66,6 +73,9 @@ type WidgetLibraryShellState = {
 
 - Cached catalog/category/page data hydrates before background refresh.
 - Cache-missing mount uses foreground loading.
+- Later refresh calls use `resolveCacheRefreshBackground(...)` or an equivalent
+  shared helper so explicit `background` overrides and `hasHydrated` fallback
+  stay consistent with Pages/Forms/Media.
 - Cache-bus events refresh catalog, template categories, and pages without
   clearing current section/view state.
 - Catalog cache-bus proof must follow the real owners: template/category
