@@ -60,8 +60,12 @@ errors.
 
 ## Security Contract
 
-- Visibility: internal admin template categories.
-- Auth model: existing admin session/API-key path.
+- Endpoint visibility: internal admin template-category route only
+  (`/admin/api/widget-template-categories`) if route error handling changes;
+  this leaf must not add public write endpoints.
+- Auth model: existing admin session or internal API-key scope. Public
+  nonce/HMAC/reCAPTCHA hardening is not applicable because category management
+  remains an internal admin write flow.
 - RBAC: `widgets:write`.
 - CSRF: category writes keep CSRF.
 - Rate-limit bucket: existing admin write bucket.

@@ -31,9 +31,11 @@ No child task files.
 - `core/admin/services/widgetTemplatesClient.ts`
 - `core/services/widgets/widgetTemplateService.ts`
 - `core/server/routes/widgetTemplateRoutes.ts`
+- `core/server/validation/widgetSchemas.ts`
 - `tests/vitest/ui/widget-template-editor.test.tsx`
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
+- `tests/unit/widgets/widgetTemplateService.test.ts`
 - `tests/integration/routes/widgetTemplates.test.ts`
 
 ## Implementation Direction
@@ -93,27 +95,34 @@ Bulk cleanup:
 ```tsx
 const selectedIds = getVisibleSelectedTemplateIds();
 
-<BulkActionBar count={selectedIds.length}>
+<TemplateBulkActionsBar count={selectedIds.length}>
   <ConfirmActionDialog
     title={`Delete ${selectedIds.length} templates?`}
     onConfirm={() => deleteTemplates(selectedIds)}
   />
-</BulkActionBar>
+</TemplateBulkActionsBar>
 ```
 
-Bulk delete should use the same route/client contract as row delete, execute
-bounded concurrent deletes with truthful partial-failure feedback, and trim
-selection when filters hide rows.
+The bulk bar should be local to the widget-template list unless an existing
+shared list primitive already fits. Reuse the repo's Forms/Entries/Content Types
+selection pattern: visible-row ids only, trim selection when filters hide rows,
+execute row-route deletes with bounded `Promise.allSettled`, and emit truthful
+partial-failure feedback through the shared list/action toast helper.
 
 ## Security Contract
 
-- Visibility: internal admin widget templates.
-- Auth model: existing admin session/API-key path.
+- Endpoint visibility: internal admin routes only (`/admin/api/widget-templates`
+  and `/admin/api/widgets/templates` aliases); no public write endpoint is
+  introduced.
+- Auth model: existing admin session or internal API-key scope. Public
+  nonce/HMAC/reCAPTCHA hardening is not applicable because this remains an
+  internal admin write flow.
 - RBAC: `widgets:read` for list/edit, `widgets:write` for create/update/delete.
 - CSRF: all writes keep CSRF.
 - Rate-limit bucket: existing admin write bucket.
 - Reject-unknown validation:
-  - create/update/duplicate payloads use route schemas;
+  - create/update/duplicate payloads use strict route schemas in
+    `core/server/validation/widgetSchemas.ts`;
   - name conflicts map to `widget_template_conflict` or equivalent known code.
 - Anti-abuse:
   - delete/duplicate re-check current id/name/status/category;

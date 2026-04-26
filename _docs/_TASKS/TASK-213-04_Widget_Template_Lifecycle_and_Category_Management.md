@@ -44,9 +44,13 @@ templates confidently, and manage categories without ambiguity.
 - `core/services/widgets/widgetTemplateCategoryService.ts`
 - `core/server/routes/widgetTemplateRoutes.ts`
 - `core/server/routes/widgetTemplateCategoryRoutes.ts`
+- `core/server/validation/widgetSchemas.ts`
 - `tests/vitest/ui/widget-template-editor.test.tsx`
+- `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
 - `tests/vitest/admin/widgetTemplateCategoriesClient.test.ts`
+- `tests/unit/widgets/widgetTemplateService.test.ts`
+- `tests/unit/widgets/widgetTemplateCategoryService.test.ts`
 - `tests/integration/routes/widgetTemplates.test.ts`
 - `tests/integration/routes/widgetTemplateCategories.test.ts`
 
@@ -54,6 +58,12 @@ templates confidently, and manage categories without ambiguity.
 
 Prefer existing template route/service seams. Add list row actions in the
 library layer; keep route modules orchestration-only.
+
+Bulk selection/delete should follow the current admin-list pattern from Forms,
+Entries, Content Types, Pages, and Posts: local visible-row selection, a focused
+bulk action bar owned by the list surface, `Promise.allSettled` summaries for
+partial failures, and `ConfirmActionDialog` before destructive mutation. Do not
+introduce a second global bulk-action framework just for widget templates.
 
 Pseudocode for save feedback:
 
@@ -103,13 +113,17 @@ if (await nameExists(input.name, { excludingId })) {
 
 ## Security Contract
 
-- Visibility: internal admin widget template surfaces only.
-- Auth model: existing admin session/API-key path.
+- Endpoint visibility: internal admin routes only (`/admin/api/widget-templates`,
+  `/admin/api/widgets/templates`, and `/admin/api/widget-template-categories`);
+  this task must not add public write endpoints.
+- Auth model: existing admin session or internal API-key scope; no public
+  nonce/HMAC/reCAPTCHA flow is applicable because there is no public write mode.
 - RBAC: `widgets:read` for listing and `widgets:write` for create/update/delete.
 - CSRF: all template/category writes keep CSRF.
 - Rate-limit bucket: existing admin read/write buckets.
 - Reject-unknown validation:
-  - duplicate/create/update payloads must remain schema-first;
+  - duplicate/create/update payloads must remain schema-first in
+    `core/server/validation/widgetSchemas.ts`;
   - routes map known domain errors through centralized route error mapping.
 - Anti-abuse:
   - destructive delete uses shared confirmation;

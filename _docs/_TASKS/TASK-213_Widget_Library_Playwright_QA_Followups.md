@@ -159,10 +159,14 @@ stay in the existing Widget Library/editor seams.
   - `core/services/widgets/*`
   - `core/server/routes/widgetTemplateRoutes.ts`
   - `core/server/routes/widgetTemplateCategoryRoutes.ts`
+  - `core/server/validation/widgetSchemas.ts` when template/category payloads,
+    duplicate contracts, or strict name-conflict validation change
 - Validation and docs:
   - targeted `tests/vitest/widgets/*`
   - targeted `tests/vitest/ui/*`
   - targeted `tests/vitest/admin/*`
+  - targeted `tests/unit/widgets/*` service suites when template/category
+    domain behavior changes
   - Bun route suites when route contracts change
   - `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md`, widget docs, cache/API docs,
     changelog, and this task board
