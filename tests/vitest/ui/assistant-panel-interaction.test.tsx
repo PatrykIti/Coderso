@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import * as assistantClient from "../../../core/admin/services/assistantClient";
 import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";
+import type { UserSettings } from "../../../core/admin/services/userSettingsClient";
 import { AssistantPanel, clearAssistantRuntimeStateCache } from "../../../core/admin/ui/assistant/AssistantPanel";
 import { clearAssistantConversationState } from "../../../core/admin/ui/assistant/assistantConversationState";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
@@ -53,6 +54,41 @@ const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
   element.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+const makeUserSettings = (
+  overrides: Partial<UserSettings> = {}
+): UserSettings => {
+  const settings: UserSettings = {
+    "pages.openAfterCreate": true,
+    "customScreens.openAfterCreate": true,
+    "forms.openAfterCreate": true,
+    "media.openAfterUpload": false,
+    "widgets.favorites": [],
+    "widgets.hero.presets": [],
+    "posts.editor.preferences": {
+      version: 2,
+      focusModeOnOpen: false,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: true,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: true,
+    },
+    "assistant.mode": "llm-guide",
+    "assistant.ui.enabled": true,
+    "assistant.ui.avatarEnabled": false,
+    "assistant.ui.avatarAsset": null,
+  };
+
+  Object.assign(settings, overrides);
+  return settings;
+};
+
+const mockUserSettings = (overrides?: Partial<UserSettings>) =>
+  vi
+    .spyOn(userSettingsClient, "getUserSettings")
+    .mockResolvedValue(makeUserSettings(overrides));
+
 afterEach(() => {
   clearAssistantRuntimeStateCache();
   clearAssistantConversationState();
@@ -73,26 +109,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   vi.spyOn(userSettingsClient, "setUserSetting").mockResolvedValue({
     key: "assistant.mode",
     value: "llm-guide",
@@ -320,26 +337,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
     id: "plan-needs-input",
     status: "needs_input",
@@ -424,26 +422,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   const chatSpy = vi.spyOn(assistantClient, "sendAssistantMessage").mockResolvedValue({
     mode: "llm-guide",
     template: "missing_answer",
@@ -566,26 +545,7 @@ test("AssistantPanel keeps docs-only mode on assistant chat route", async () => 
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "docs-only",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings({ "assistant.mode": "docs-only" });
   const planSpy = vi.spyOn(assistantClient, "planAssistantActions");
   const chatSpy = vi.spyOn(assistantClient, "sendAssistantMessage").mockResolvedValue({
     mode: "docs-only",
@@ -665,26 +625,7 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   vi.spyOn(assistantClient, "sendAssistantMessage");
   vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
     id: "plan-docs-guidance",
@@ -767,26 +708,7 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   const planSpy = vi.spyOn(assistantClient, "planAssistantActions")
     .mockResolvedValueOnce({
       id: "plan-cms-custom-screen-inspect",
@@ -919,26 +841,7 @@ test("AssistantPanel starts a new empty conversation from footer action", async 
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
     id: "plan-docs-response",
     status: "ready",
@@ -1022,26 +925,7 @@ test("AssistantPanel restores conversation after close and SPA remount", async (
     docCount: 12,
     chunkCount: 44,
   });
-  vi.spyOn(userSettingsClient, "getUserSettings").mockResolvedValue({
-    "pages.openAfterCreate": true,
-    "media.openAfterUpload": false,
-    "widgets.favorites": [],
-    "widgets.hero.presets": [],
-    "posts.editor.preferences": {
-      version: 2,
-      focusModeOnOpen: false,
-      compactSidePanels: false,
-      showOutlineHints: true,
-      editorDensity: "comfortable",
-      showKeyboardHints: true,
-      defaultInspectorTab: "post",
-      restoreLastSidebarsState: true,
-    },
-    "assistant.mode": "llm-guide",
-    "assistant.ui.enabled": true,
-    "assistant.ui.avatarEnabled": false,
-    "assistant.ui.avatarAsset": null,
-  });
+  mockUserSettings();
   const planSpy = vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
     id: "plan-cms-custom-screen-inspect",
     status: "ready",

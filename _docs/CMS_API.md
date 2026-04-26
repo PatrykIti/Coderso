@@ -2605,6 +2605,7 @@ Auth: wymagane zalogowanie (session cookie). Dotyczy preferencji per użytkownik
 Przykładowe klucze:
 - `pages.openAfterCreate` (bool)
 - `customScreens.openAfterCreate` (bool)
+- `forms.openAfterCreate` (bool)
 - `media.openAfterUpload` (bool)
 - `widgets.favorites` (string[])
 - `widgets.hero.presets` (preset[])

@@ -45,7 +45,9 @@ afterEach(() => {
 });
 
 test("getCsrfToken deduplicates concurrent token requests", async () => {
-  let resolveCsrf: ((response: Response) => void) | null = null;
+  let resolveCsrf: (response: Response) => void = (_response) => {
+    throw new Error("csrf_resolver_not_initialized");
+  };
   const fetchMock = installFetch(async (input) => {
     expect(String(input)).toBe("/admin/api/auth/csrf");
     return new Promise<Response>((resolve) => {
@@ -58,7 +60,7 @@ test("getCsrfToken deduplicates concurrent token requests", async () => {
     const second = getCsrfToken();
 
     expect(fetchMock.calls).toHaveLength(1);
-    resolveCsrf?.(jsonResponse({ token: "shared-token" }));
+    resolveCsrf(jsonResponse({ token: "shared-token" }));
 
     await expect(Promise.all([first, second])).resolves.toEqual([
       "shared-token",
