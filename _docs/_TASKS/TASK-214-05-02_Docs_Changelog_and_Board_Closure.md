@@ -20,6 +20,8 @@ implementation is validated.
 - [ ] Update Admin Cache docs and cache map if hydration/prefetch wording
   changes.
 - [ ] Update CMS API docs only if route errors/examples change.
+- [ ] Update `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` or linked manual QA notes
+  with a covered/deferred finding split if the source report is part of closure.
 - [ ] Add a changelog entry for TASK-214.
 - [ ] Index the changelog entry in `_docs/_CHANGELOG/README.md`.
 - [ ] Move TASK-214 files to Done with completion dates.
@@ -30,6 +32,8 @@ implementation is validated.
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` or linked manual QA notes when source
+  report status is updated.
 - `_docs/CMS_API.md` if route contract changed.
 - `_docs/ARCHITECTURE.md` if admin contract changed materially.
 - `_docs/_TASKS/TASK-214*.md`
@@ -53,7 +57,7 @@ implementation is validated.
 ## Testing Requirements
 
 - Verify docs and task board references:
-  - `rg -n "TASK-214|Listings" _docs/_TASKS/README.md _docs/CONTENT_LIST_UX.md _docs/ADMIN_CACHE.md _docs/ADMIN_CACHE_MAP.md _docs/_CHANGELOG`
+  - `rg -n "TASK-214|Listings" _docs/_TASKS/README.md _docs/CONTENT_LIST_UX.md _docs/ADMIN_CACHE.md _docs/ADMIN_CACHE_MAP.md _docs/PLAYWRIGHT/SUMMARY-LISTINGS.md _docs/_CHANGELOG`
 - Run `git diff --check`.
 - Re-run any targeted validation required by TASK-214-05-01 if docs are updated
   after test evidence was recorded.

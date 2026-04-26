@@ -25,12 +25,18 @@ active tab, while query/template contracts remain separate.
 - [ ] Record unrelated failures separately with exact failure strings.
 - [ ] Preserve active `Queries` / `Templates` tab behavior in the source report
   or manual QA notes if a Playwright report is updated.
+- [ ] Classify `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` findings explicitly:
+  mark the TASK-214-covered list findings as addressed and leave editor,
+  duplicate/preview/copy, data hygiene, beta messaging, and template education
+  findings open or assigned to follow-up tasks.
 
 ## Files to Change
 
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` or linked manual QA notes when source
+  report status is updated.
 - `_docs/CMS_API.md` if route errors/examples changed.
 - `_docs/ARCHITECTURE.md` if Listings admin behavior changed materially.
 - `_docs/_TASKS/README.md`
@@ -88,6 +94,9 @@ active tab, while query/template contracts remain separate.
     caches if changed.
 - `_docs/ADMIN_CACHE_MAP.md`
   - Keep Listings cached APIs and prefetch owner map aligned.
+- `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md`
+  - Record exactly which source-report findings TASK-214 fixed and which
+    remain separate follow-up work.
 - `_docs/CMS_API.md`
   - Update only if route errors/request examples changed.
 - `_docs/_TASKS/README.md`

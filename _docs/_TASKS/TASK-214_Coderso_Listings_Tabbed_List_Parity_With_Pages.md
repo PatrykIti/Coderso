@@ -154,6 +154,21 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
   changes the API contract and updates `_docs/CMS_API.md` plus route tests in
   the same leaf.
 
+### Source Report Coverage
+
+- `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` is the source QA report for this
+  family. TASK-214 covers the list-first findings only: query delete
+  confirmation/toast from BUG-2, query/template save toasts from BUG-4, and
+  list search/filter/pagination/selection gaps from UX-1.
+- Findings that require editor redesign, query-builder field pickers, rendered
+  preview, duplicate/copy/view-usages actions, data cleanup, beta messaging, or
+  template-binding education remain explicit follow-up work unless a separate
+  task adds those contracts. Do not silently close BUG-1, BUG-3, BUG-5, BUG-6,
+  UX-2, UX-3, UX-4, UX-5, UX-6, UX-7, or UX-8 as part of TASK-214.
+- When TASK-214 closes, update the source report or manual QA notes with the
+  exact covered/deferred split so the Listings report does not imply that all
+  2026-04-22 findings were fixed by the list parity wave.
+
 ## Required Product Behavior
 
 1. `/admin/coderso/listings` visually matches Pages list density and behavior:
@@ -324,6 +339,8 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/PLAYWRIGHT/SUMMARY-LISTINGS.md` or linked manual QA notes when source
+  report status is updated.
 - `_docs/CMS_API.md` if route errors or request/response examples change.
 - `_docs/ARCHITECTURE.md` if the Listings admin contract changes.
 - `_docs/_TASKS/README.md`
