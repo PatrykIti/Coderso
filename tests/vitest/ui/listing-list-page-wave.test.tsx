@@ -4,6 +4,11 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import type {
+  ListingQueryRecord,
+  ListingTemplateRecord,
+} from "../../../core/admin/services/listingsClient";
+
 const listingPageState = vi.hoisted(() => ({
   navigate: vi.fn(),
   refreshQueries: vi.fn(async () => undefined),
@@ -26,7 +31,7 @@ const listingPageState = vi.hoisted(() => ({
       createdAt: "2026-03-01T00:00:00.000Z",
       updatedAt: "2026-03-01T00:00:00.000Z",
     },
-  ],
+  ] satisfies ListingQueryRecord[],
   templateItems: [
     {
       id: "listing-template-1",
@@ -48,7 +53,7 @@ const listingPageState = vi.hoisted(() => ({
       createdAt: "2026-03-01T00:00:00.000Z",
       updatedAt: "2026-03-01T00:00:00.000Z",
     },
-  ],
+  ] satisfies ListingTemplateRecord[],
   queryError: null as string | null,
   templateError: null as string | null,
   reset() {
