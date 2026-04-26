@@ -11,13 +11,15 @@
 
 ## Overview
 
-Create one Commerce list action feedback owner and tighten route mapping
-coverage for UI-visible Commerce product errors.
+Create or extend one Commerce list action feedback owner and tighten route
+mapping coverage for UI-visible Commerce product errors.
 
 ## Sub-Tasks
 
-- [ ] Add `core/admin/ui/commerce/commerceActionToasts.ts` or another
-  Commerce-owned adapter module.
+- [ ] Reuse or add `core/admin/ui/commerce/commerceActionToasts.ts` or another
+  Commerce-owned adapter module. If TASK-216-03 already introduced the base
+  row lifecycle/delete adapter, extend it here instead of creating a second
+  feedback owner.
 - [ ] Build on `createListActionToastAdapter`.
 - [ ] Cover actions: create if list feedback touches create, publish,
   move-to-draft, archive, delete, and bulk delete/lifecycle summaries.

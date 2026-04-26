@@ -244,9 +244,10 @@ the existing `/coderso/commerce` prefetch entry.
 4. Upgrade `CommerceTable` to controlled checkbox selection and Commerce
    summary columns.
 5. Add shared pagination and visible-row selection trimming.
-6. Wire row lifecycle actions and confirmed row delete.
+6. Introduce the base Commerce list toast adapter, then wire row lifecycle
+   actions and confirmed row delete through shell-owned handlers.
 7. Wire bulk actions with confirmed bulk delete, partial-failure summaries,
-   shared toasts, and cache refresh.
+   shared toast extensions, and cache refresh.
 8. Tighten route mapper/test coverage only where UI-visible errors depend on
    stable API codes.
 9. Update product docs, admin cache docs, source report, changelog, task files,

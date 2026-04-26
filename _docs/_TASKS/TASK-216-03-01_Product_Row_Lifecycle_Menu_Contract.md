@@ -22,6 +22,13 @@ lifecycle actions without adding unsupported Commerce features.
 - [ ] Show Move to draft when `status === "published" || status === "archived"`.
 - [ ] Show Archive when `status !== "archived"`.
 - [ ] Show Delete as destructive and delegate confirmation to the shell.
+- [ ] Map shell-owned Publish, Move to draft, and Archive callbacks to
+  `updateCommerceProduct(id, { status })`.
+- [ ] Refresh products with `{ force: true, background: true }` after
+  successful lifecycle mutations.
+- [ ] Create or reuse the base Commerce list toast adapter for row lifecycle
+  success/error feedback; TASK-216-04-03 can extend the same owner for bulk
+  summaries and route-error coverage.
 - [ ] Do not add Duplicate, storefront preview, copy ID, checkout, or collection
   actions in this task.
 
@@ -30,6 +37,7 @@ lifecycle actions without adding unsupported Commerce features.
 - `core/admin/ui/commerce/CommerceTable.tsx`
 - `core/admin/ui/commerce/CommerceRowActions.tsx` if extracted.
 - `core/admin/ui/commerce/CommerceListPage.tsx`
+- `core/admin/ui/commerce/commerceActionToasts.ts` if extracted.
 - `tests/vitest/ui/commerce-page.test.tsx`
 - `tests/vitest/ui/commerce-list-page-wave.test.tsx` if added.
 
@@ -67,11 +75,14 @@ lifecycle actions without adding unsupported Commerce features.
 - Draft products show Publish, Archive, Delete, and Edit.
 - Published products show Move to draft, Archive, Delete, and Edit.
 - Archived products show Publish, Move to draft, Delete, and Edit.
-- Lifecycle callbacks pass the product id to the shell.
+- Lifecycle callbacks pass the product id to the shell and the shell sends only
+  the expected `status` patch.
+- Lifecycle success/error feedback comes from the Commerce list toast owner.
 - No unsupported duplicate/preview/copy actions appear.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/commerce-page.test.tsx`
   - Add or extend `tests/vitest/ui/commerce-list-page-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

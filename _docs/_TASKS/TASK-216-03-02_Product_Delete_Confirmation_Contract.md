@@ -22,14 +22,15 @@ Commerce products.
 - [ ] Run `deleteCommerceProduct` only from `onConfirm`.
 - [ ] Refresh products in the background after successful delete.
 - [ ] Keep failed products visible and recoverable on delete failure.
-- [ ] Route success/error copy through the Commerce list toast adapter added in
-  TASK-216-04-03.
+- [ ] Route success/error copy through the base Commerce list toast adapter
+  created or reused by the row lifecycle leaf. TASK-216-04-03 can extend that
+  same owner for bulk summaries and route-error coverage.
 
 ## Files to Change
 
 - `core/admin/ui/commerce/CommerceListPage.tsx`
 - `core/admin/ui/commerce/CommerceTable.tsx`
-- `core/admin/ui/commerce/commerceActionToasts.ts` after TASK-216-04-03.
+- `core/admin/ui/commerce/commerceActionToasts.ts` if not already present.
 - `tests/vitest/ui/commerce-page.test.tsx`
 - `tests/vitest/ui/commerce-list-page-wave.test.tsx` if added.
 - `tests/vitest/admin/commerceClient.test.ts`
@@ -74,6 +75,7 @@ Commerce products.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/commerce-page.test.tsx`
   - Add or extend `tests/vitest/ui/commerce-list-page-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/commerceClient.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

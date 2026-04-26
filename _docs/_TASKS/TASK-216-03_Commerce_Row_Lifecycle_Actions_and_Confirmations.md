@@ -42,6 +42,7 @@ row lifecycle actions and confirmed destructive flow.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/commerce-page.test.tsx`
   - Add or extend `tests/vitest/ui/commerce-list-page-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/commerceClient.test.ts`
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
