@@ -29,9 +29,12 @@ No child task files.
 - `core/admin/ui/shared/actionToasts.ts`
 - `core/admin/ui/shared/listActionToasts.ts` only if the existing helper is the
   better shared owner
-- `core/admin/ui/shared/AdminActionToast` related tests if helper shape changes
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/ui/dialogs.test.tsx`
+- `tests/vitest/ui/action-toasts.test.ts` if
+  `createAdminActionToastAdapter` behavior changes
+- `tests/vitest/ui/list-action-toasts.test.ts` only if the list helper is
+  extended
 - `tests/vitest/admin/adminApp.test.tsx`
 - `tests/vitest/admin/sonner.test.tsx`
 

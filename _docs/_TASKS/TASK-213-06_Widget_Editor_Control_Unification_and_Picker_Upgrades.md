@@ -20,7 +20,7 @@ audit:
   shared Radix Select primitives; their remaining report-owned issue is the
   loading/empty state covered by `TASK-213-01-02`.
 - Commerce widgets should not ask editors to type raw collection IDs as CSV when
-  a picker can use existing commerce/listing data.
+  the existing commerce collection client/cache can back a typed selector.
 - Gallery Mosaic should provide a media-selection quick path instead of only a
   count control.
 - Rich Text Section should not force routine content editing through raw
@@ -45,6 +45,11 @@ remains reserved for technical/raw payload work.
   - `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx`
   - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
   - `core/admin/ui/widgets/editors/ProductTableEditors.tsx`
+  - `core/admin/services/commerceClient.ts` for existing
+    `listCommerceCollectionsCached` reuse only; avoid adding a parallel client
+  - `core/admin/ui/commerce/components/CommerceCollectionsPanel.tsx` as the
+    existing checkbox-picker behavior reference, not necessarily as a direct
+    dependency
   - `core/widgets/core/commerceWidgetShared.ts`
   - `core/widgets/core/productGallery.tsx`
   - `core/widgets/core/productCompare.tsx`
@@ -58,9 +63,9 @@ remains reserved for technical/raw payload work.
   - `core/admin/ui/widgets/editors/StackEditors.tsx`
   - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
   - `core/admin/ui/widgets/editors/FooterEditors.tsx`
-- Supporting picker clients only if existing clients are insufficient:
-  - `core/admin/services/mediaClient.ts`
-  - commerce/listing client modules used by current product widgets
+  - `core/admin/ui/media/MediaPicker.tsx` as the existing media picker seam
+  - `core/admin/services/mediaClient.ts` for existing media cache reads only;
+    avoid adding a second media cache path
 - Relevant widget and UI wave tests.
 
 ## Implementation Direction
@@ -90,22 +95,27 @@ function WidgetSelectField({ label, value, onChange, options }) {
 }
 ```
 
-Pseudocode for collection IDs:
+Collection picking must reuse the current commerce collection cache:
 
 ```ts
-type CommerceSource = {
-  mode: "all" | "collection" | "manual";
-  collectionIds?: string[];
-};
+const collections = await listCommerceCollectionsCached({ force: false });
 
 onCollectionToggle(id) {
   updateSource({ collectionIds: toggle(normalized.collectionIds, id) });
 }
 ```
 
-For Rich Text Section, prefer existing structured block controls before adding a
-new editor dependency. Raw HTML can remain in Advanced as the technical escape
-hatch.
+For Gallery Mosaic, do not write raw `MediaPicker` ids into the existing
+`image`/`video` URL fields unless runtime rendering can resolve them safely.
+Either add schema-owned `mediaId` fields plus a runtime resolver, or map selected
+media to a safe public URL through the existing media client/cache. Private
+delivery URLs and full media records must not be persisted in widget data.
+
+For Rich Text Section, prefer the existing `body.blocks`, `outputMode`, and
+`sanitizeRichTextHtml` seams before adding a new editor dependency. If the Posts
+rich-text adapter is reused, keep it Bun-free at import time and adapt its output
+through the Rich Text Section normalizer instead of persisting post-editor block
+documents.
 
 ## Security Contract
 
@@ -136,11 +146,14 @@ hatch.
 - Product widgets:
   - `tests/vitest/widgets/productGallery.test.tsx`
   - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+  - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
   - `tests/vitest/widgets/productCompare.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
   - equivalent UI wave tests if added for compare/table.
 - Content/media/rich-text widgets:
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `tests/vitest/ui/media-picker.test.tsx` only if shared picker/cache
+    behavior changes
   - `tests/vitest/widgets/richTextSection.test.tsx`
   - existing current command surface:
     `tests/unit/widgets/postsFeedWidget.test.tsx`

@@ -20,6 +20,13 @@ controls and picker-style inputs. The goal is control consistency first, then a
 typed collection picker that still persists through the existing normalized
 commerce widget source contract.
 
+Current repo verification: collection listing is already available through
+`listCommerceCollectionsCached` in `core/admin/services/commerceClient.ts`, and
+the product editor already uses a checkbox collection picker pattern in
+`core/admin/ui/commerce/components/CommerceCollectionsPanel.tsx`. This leaf
+should reuse those seams; it must not invent a second collection client or leave
+collection selection as raw CSV if the existing client works.
+
 ## Sub-Tasks
 
 No child task files.
@@ -30,14 +37,17 @@ No child task files.
 - `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx`
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
 - `core/admin/ui/widgets/editors/ProductTableEditors.tsx`
+- `core/admin/services/commerceClient.ts` for existing cached collection reads
+  only if the selector needs a thin typed wrapper
+- `core/admin/ui/commerce/components/CommerceCollectionsPanel.tsx` as the
+  existing UI behavior reference for collection checkbox selection
 - `core/widgets/core/commerceWidgetShared.ts`
 - `core/widgets/core/productGallery.tsx`
 - `core/widgets/core/productCompare.tsx`
 - `core/widgets/core/productTable.tsx`
-- commerce/listing client modules only if an existing collection-list client is
-  missing
 - `tests/vitest/widgets/productGallery.test.tsx`
 - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+- `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
 - `tests/vitest/widgets/productCompare.test.tsx`
 - `tests/vitest/widgets/productTable.test.tsx`
 - new focused UI wave tests for Product Compare/Table if current coverage does
@@ -64,18 +74,22 @@ Pseudocode:
 ```
 
 Phase 2: replace CSV collection IDs with a typed picker when collection data is
-available.
+available. The current checkout already has collection data, so this phase is
+in scope unless implementation discovers a concrete route/auth blocker.
 
 ```ts
+const collections = await listCommerceCollectionsCached({ force: false });
 const collectionIds = normalizeCollectionIds(source.collectionIds);
 toggleCollection(id) {
   updateSource({ ...source, collectionIds: toggle(collectionIds, id) });
 }
 ```
 
-If a collection-list API is not available, keep this leaf limited to Radix
-control unification and create a follow-up task for the API-backed picker rather
-than inventing fake client data.
+If implementation discovers that the existing collection route cannot be used
+from widget editors because of auth/RBAC/route shape, do not fake client data or
+silently downgrade to CSV-only. Keep Radix control unification scoped, leave the
+picker portion open, and create a physical follow-up task with the API owner,
+blocker, and route/security contract.
 
 ## Security Contract
 
@@ -104,6 +118,7 @@ than inventing fake client data.
 - Targeted suites:
   - `tests/vitest/widgets/productGallery.test.tsx`
   - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+  - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
   - `tests/vitest/widgets/productCompare.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
 - Manual Playwright:
@@ -119,6 +134,7 @@ than inventing fake client data.
 ## Acceptance Criteria
 
 1. Product widget wizard selects use shared Radix UI controls.
-2. Collection selection is typed and normalized, or explicitly deferred with an
-   API-owner follow-up.
+2. Collection selection reuses the existing commerce collection cache, is typed
+   and normalized, or remains open with a physical API-owner follow-up if a real
+   route/security blocker is found.
 3. Stored commerce widget data remains backward-compatible.

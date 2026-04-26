@@ -72,6 +72,21 @@ stay in the existing Widget Library/editor seams.
 - Product widget editors still use native `<select>` controls in shared
   commerce source fields and gallery layout fields while most widget wizards use
   the shared Radix Select contract.
+- Commerce collection data already has an admin client/cache seam in
+  `core/admin/services/commerceClient.ts` (`listCommerceCollectionsCached`) and
+  a checkbox-picker UI pattern in
+  `core/admin/ui/commerce/components/CommerceCollectionsPanel.tsx`; TASK-213
+  must reuse that path instead of inventing a second collection picker or
+  downgrading collection selection to CSV-only cleanup.
+- Media selection already has `core/admin/ui/media/MediaPicker.tsx` plus
+  `listMediaCached`/media-cache tests. Gallery Mosaic picker work must either
+  persist schema-owned media ids with a safe runtime resolver or map selected
+  media to safe public URLs through the existing media client; it must not
+  store private media URLs or raw picker records in widget JSON.
+- Rich Text Section already owns `body.blocks`, `outputMode`, and
+  `sanitizeRichTextHtml` in `core/widgets/core/richTextSection.tsx`; quick
+  setup should extend those existing structured-block/sanitizer seams before
+  considering a new editor abstraction.
 - Posts Feed currently has a Bun-owned widget contract suite at
   `tests/unit/widgets/postsFeedWidget.test.tsx`; keep that current command
   surface green unless the pure widget contract is deliberately migrated to a
@@ -268,10 +283,13 @@ syncDocsChangelogAndBoard("TASK-213");
   - `tests/vitest/widgets/navigation.test.tsx`
   - `tests/vitest/widgets/footer.test.tsx`
   - `tests/vitest/widgets/productGallery.test.tsx`
+  - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
   - `tests/vitest/widgets/productCompare.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
   - `tests/vitest/widgets/richTextSection.test.tsx`
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `tests/vitest/ui/media-picker.test.tsx` when Gallery Mosaic media picker
+    behavior changes the shared picker/cache contract
 - Vitest UI/admin lanes:
   - `tests/vitest/ui/widget-library.test.tsx`
   - `tests/vitest/ui/widgetLibraryUtils.test.ts`

@@ -27,10 +27,15 @@ No child task files.
 - `core/admin/services/widgetTemplateCategoriesClient.ts` only if error mapping
   needs bounded helper copy
 - `tests/vitest/admin/widgetTemplateCategoriesClient.test.ts`
-- `tests/vitest/ui/widget-library.test.tsx` or a new focused
-  `tests/vitest/ui/widget-template-category-drawer.test.tsx`
+- `tests/vitest/ui/widget-library.test.tsx`
 - `tests/integration/routes/widgetTemplateCategories.test.ts` only if route
   errors change.
+
+## New Files to Create
+
+- `tests/vitest/ui/widget-template-category-drawer.test.tsx` only if the
+  category drawer contract is clearer as a focused suite than extending
+  `tests/vitest/ui/widget-library.test.tsx`.
 
 ## Implementation Direction
 

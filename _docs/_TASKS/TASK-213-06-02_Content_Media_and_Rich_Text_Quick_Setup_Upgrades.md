@@ -28,6 +28,17 @@ The report calls out:
 This leaf should upgrade common editor flows without turning Wizard into
 Advanced. Raw payload/HTML remains technical and belongs in Advanced.
 
+Current repo verification:
+
+- `core/admin/ui/media/MediaPicker.tsx` and `listMediaCached` already provide a
+  shared media selection/cache seam.
+- `core/widgets/core/galleryMosaic.tsx` currently stores `image`/`video` URL
+  strings and renders them directly. Picker work must not blindly persist media
+  ids into those URL fields.
+- `core/widgets/core/richTextSection.tsx` already owns `body.blocks`,
+  `outputMode`, `normalizeRichTextBlocks`, and `sanitizeRichTextHtml`; reuse
+  those seams before adding a new rich-text abstraction.
+
 ## Sub-Tasks
 
 No child task files.
@@ -42,11 +53,16 @@ No child task files.
 - `core/admin/ui/widgets/editors/StackEditors.tsx`
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 - `core/admin/ui/widgets/editors/FooterEditors.tsx`
+- `core/admin/ui/media/MediaPicker.tsx` as the existing media picker seam
+- `core/admin/services/mediaClient.ts` for existing media cache reads only if
+  Gallery Mosaic needs to resolve selected media records
 - `core/widgets/core/galleryMosaic.tsx`
 - `core/widgets/core/richTextSection.tsx`
 - `core/widgets/core/postsFeed.tsx`
 - `core/widgets/core/ctaBanner.tsx`
 - related widget normalizers when schema/defaults change
+- `tests/vitest/ui/media-picker.test.tsx` only if shared picker/cache behavior
+  changes
 - `tests/vitest/widgets/galleryMosaic.test.tsx`
 - `tests/vitest/widgets/richTextSection.test.tsx`
 - existing `tests/unit/widgets/postsFeedWidget.test.tsx`
@@ -76,8 +92,10 @@ Gallery media:
 
 ```tsx
 <MediaPicker
-  selectedIds={normalized.items.map((item) => item.mediaId).filter(Boolean)}
-  onSelect={(media) => updateItemsFromMedia(media)}
+  value={normalized.items.map((item) => item.mediaId).filter(Boolean)}
+  multiple
+  maxItems={galleryMosaicItemMax}
+  onChange={(mediaIds) => updateItemsFromMediaIds(mediaIds)}
 />
 ```
 
@@ -89,8 +107,18 @@ Posts Feed:
 <Select label="Layout" ... />
 ```
 
-Only add picker-backed fields when existing media/cache clients can support them
-without leaking private URLs into widget data.
+For Gallery Mosaic, first choose the storage contract:
+
+1. Add schema-owned `mediaId` fields and a safe runtime/public URL resolver; or
+2. Map selected records to sanitized public URLs through the existing media
+   client/cache.
+
+Do not store full media records, private delivery URLs, or unresolved picker ids
+inside `image`/`video` fields.
+
+For Rich Text Section, a Posts editor adapter may be reused only if the import
+stays Bun-free and its output is normalized back into `RichTextSectionData`
+(`body.blocks`/`body.html`), not persisted as a post document.
 
 ## Security Contract
 
@@ -112,6 +140,8 @@ without leaking private URLs into widget data.
 
 - Widget suites cover:
   - Gallery Mosaic media picker output normalization;
+  - Gallery Mosaic public rendering resolves picked media safely or persists
+    sanitized public URLs without private delivery data;
   - Rich Text Section structured quick editor and raw HTML sanitizer path;
   - Posts Feed title/count/layout quick fields through the existing Bun-owned
     widget suite and any added Bun-free Vitest editor suite;
