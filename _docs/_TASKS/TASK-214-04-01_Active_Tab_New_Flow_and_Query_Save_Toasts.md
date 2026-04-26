@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Listings + Admin/UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-214-01-02, TASK-208
+**Dependencies:** TASK-214-01-02, TASK-214-04-04, TASK-208
 **Status:** To Do
 
 ---

@@ -79,6 +79,8 @@ const handleNew = () => {
 - With `Queries` active, clicking `New` navigates to `/coderso/listings/new`.
 - With `Templates` active, clicking `New` opens the template create flow and
   does not navigate to query create.
+- The header button keeps compact visible copy `New` while exposing
+  resource-specific accessible names or descriptions for the active tab.
 - Switching tabs updates the header action context.
 - Template create state is parent-controlled; closing the dialog updates the
   shell state and reopening from the header starts a fresh create form.

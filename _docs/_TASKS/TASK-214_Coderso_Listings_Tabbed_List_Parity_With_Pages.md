@@ -232,11 +232,13 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
 1. Repair cache hydration and tab shell ownership first.
 2. Build query tab filters/table/pagination/selection.
 3. Build template tab filters/table/pagination/selection.
-4. Wire tab-scoped new/create/edit/delete/bulk flows with confirmations and
+4. Create the shared Listings toast adapters and export the route error mapper
+   needed for direct mapping coverage.
+5. Wire tab-scoped new/create/edit/delete/bulk flows with confirmations and
    toasts.
-5. Tighten route error mapping and test coverage where UI-visible errors depend
+6. Tighten route error mapping and test coverage where UI-visible errors depend
    on stable API codes.
-6. Update docs, changelog, source reports if any, and task board on closure.
+7. Update docs, changelog, source reports if any, and task board on closure.
 
 ## Testing Requirements
 

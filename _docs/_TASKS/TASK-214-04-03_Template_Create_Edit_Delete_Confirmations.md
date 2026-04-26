@@ -27,6 +27,9 @@ while preserving the existing template config and `BindingEditor` behavior.
   `updateListingTemplate` resolve.
 - [ ] Replace direct row delete with `ConfirmActionDialog`.
 - [ ] Add active-tab bulk delete with `Promise.allSettled`.
+- [ ] Full bulk success clears selected template ids.
+- [ ] Partial bulk failure keeps failed template ids selected and shows inline
+  plus toast feedback.
 - [ ] Keep `BindingEditor` value cloning and config normalization intact.
 
 ## Files to Change
@@ -85,6 +88,8 @@ if (form.id) {
 - Row delete and bulk delete requests pass through shell-owned pending
   confirmation state.
 - Bulk delete mutates only visible selected template ids.
+- Partial bulk failure keeps failed template ids selected and shows inline
+  feedback.
 - `BindingEditor` tests still pass if dialog code is extracted.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx`

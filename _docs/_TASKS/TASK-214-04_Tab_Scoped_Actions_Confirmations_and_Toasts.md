@@ -19,10 +19,10 @@ ids or mutation copy between queries and templates.
 
 ## Sub-Tasks
 
+- [ ] TASK-214-04-04: Listings Error Mapping and Toast Adapter
 - [ ] TASK-214-04-01: Active Tab New Flow and Query Save Toasts
 - [ ] TASK-214-04-02: Query Row and Bulk Delete Confirmations
 - [ ] TASK-214-04-03: Template Create, Edit, and Delete Confirmations
-- [ ] TASK-214-04-04: Listings Error Mapping and Toast Adapter
 - [ ] Add active-tab bulk delete bar placement in `PageHeader.actions`.
 - [ ] Keep inline alerts for contextual load/action errors.
 - [ ] Keep row/bulk delete pending state in `ListingListPage` for both queries

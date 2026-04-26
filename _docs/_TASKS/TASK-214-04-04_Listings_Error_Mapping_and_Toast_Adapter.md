@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Listings + API Contract + Admin/UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-214-04, TASK-208
+**Dependencies:** TASK-208
 **Status:** To Do
 
 ---
@@ -29,6 +29,10 @@ list uses shared toast normalization instead of ad hoc strings.
   `ListingEditorPage`.
 - [ ] Preserve inline alerts for contextual load or partial bulk failure copy.
 - [ ] Add route tests for known mapped errors that the UI depends on.
+- [ ] Export `mapListingError` from `core/server/routes/listingsRoutes.ts` for
+  direct route-boundary coverage, matching the existing media/forms route test
+  pattern. Export only the mapper; do not change behavior unless a real mapping
+  gap is found.
 - [ ] Add route tests for query create/update validation errors that are already
   emitted as `ApiError` by the query contract, including representative
   `listing_query_invalid`, `listing_query_invalid_source_config`,
@@ -48,7 +52,8 @@ list uses shared toast normalization instead of ad hoc strings.
 - `core/admin/ui/listings/listingActionToasts.ts`
 - `core/admin/ui/shared/listActionToasts.ts` only if the generic helper needs a
   target-safe extension.
-- `core/server/routes/listingsRoutes.ts` only if mapping gaps are found.
+- `core/server/routes/listingsRoutes.ts` to export `mapListingError`; add mapped
+  cases only if mapping gaps are found.
 - `core/server/validation/listingSchemas.ts` only if schema gaps are found.
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
@@ -91,6 +96,8 @@ export const mapListingError = (error: unknown) => {
 - Toast helper coverage includes query/template singular and plural copy.
 - UI tests prove failed query/template mutations show stable inline copy.
 - Route tests prove:
+  - `mapListingError` maps existing non-`ApiError` query/template sentinels
+    directly through an exported mapper;
   - missing query maps to `listing_query_not_found`;
   - invalid query create/update payloads preserve stable query errors such as
     `listing_query_invalid`, `listing_query_invalid_source_config`,
