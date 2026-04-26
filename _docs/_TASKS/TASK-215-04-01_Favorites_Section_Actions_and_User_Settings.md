@@ -14,7 +14,9 @@
 Make `Favorites` a first-class section in the new dropdown/table/grid flow.
 Favorites shows favorite core widgets and favorite templates, with management
 actions focused on removing favorites and then source-specific Edit/Insert
-actions where applicable.
+actions where applicable. Destructive template management does not run from
+the Favorites context; template Duplicate/Delete belongs to the Templates
+section action contract.
 
 ## Sub-Tasks
 
@@ -56,7 +58,7 @@ function getFavoriteActions(row: WidgetLibraryRow): WidgetLibraryAction[] {
   const sourceActions =
     row.source === "core"
       ? ["preview-placeholder", "edit", "insert"]
-      : ["preview-placeholder", "edit-template", "duplicate", "delete"];
+      : ["preview-placeholder", "edit-template"];
 
   return [...sourceActions, "remove-favorite"];
 }
@@ -76,6 +78,8 @@ async function removeVisibleFavorites(ids: string[]) {
 
 - Favorites section includes favorite core widgets and favorite templates.
 - Row action `Remove from favorites` updates `widgets.favorites`.
+- Favorite template rows do not expose Duplicate/Delete from the Favorites
+  context.
 - Bulk remove affects only visible selected favorite rows.
 - Removing favorites trims selection and updates counts.
 - If this task changes the `widgets.favorites` client/schema contract, settings

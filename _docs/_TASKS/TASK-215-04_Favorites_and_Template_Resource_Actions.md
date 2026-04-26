@@ -15,6 +15,8 @@ Wire the resource-specific actions for `Favorites` and `Templates`. Favorites
 focus on managing the user's saved widget/template list. Templates keep the
 existing template management contract: edit, duplicate, delete, categories,
 confirmed bulk delete, shared toasts, and cache refresh.
+Do not expose template Duplicate/Delete as Favorites management actions; those
+destructive operations belong to the Templates section.
 
 ## Sub-Tasks
 

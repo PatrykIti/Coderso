@@ -13,7 +13,8 @@
 
 Add row/card action menus for `All Items` with source-aware options. Core rows
 get Preview placeholder, Edit/Configure, Insert, and favorite actions. Template
-rows delegate to the template action contract from TASK-215-04.
+rows keep the catalog favorite toggle and can link to template Edit, while
+Duplicate/Delete stay under the template-management rules in TASK-215-04.
 The menu uses the Pages `MoreHorizontal` / three-dot dropdown pattern for both
 table rows and grid cards.
 
@@ -45,7 +46,7 @@ No child task files.
 
 ```ts
 const coreActions = ["preview-placeholder", "configure", "insert", "favorite"];
-const templateActions = ["preview-placeholder", "edit-template", "duplicate", "delete"];
+const templateActions = ["preview-placeholder", "edit-template", "favorite-toggle"];
 ```
 
 ## Testing Requirements
@@ -56,6 +57,8 @@ const templateActions = ["preview-placeholder", "edit-template", "duplicate", "d
   template preview or page/template update clients.
 - Template `All Items` rows do not show core Insert unless the row source is a
   core widget.
+- Template `All Items` rows keep favorite toggling because `widgets.favorites`
+  is keyed by catalog item id for both core and template rows.
 - Action menu works in table and grid.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/ui/widget-card.test.tsx`

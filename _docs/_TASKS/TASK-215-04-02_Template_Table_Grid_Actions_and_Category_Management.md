@@ -13,11 +13,11 @@
 
 Bring template rows into the same table/grid model while preserving existing
 template management: Edit, Duplicate, Delete, status/category display, category
-filter, and category drawer. Template row/card actions should move into the
-same three-dot dropdown pattern as Pages; do not keep the current inline
-Edit/Duplicate/Delete button group as the final table UI. The `Templates`
-section owns the active `New Template` action in the filter/action bar; no
-`New` action is shown for core-widget sections.
+filter, category drawer, and the existing catalog-id favorite toggle. Template
+row/card actions should move into the same three-dot dropdown pattern as Pages;
+do not keep the current inline Edit/Duplicate/Delete button group as the final
+table UI. The `Templates` section owns the active `New Template` action in the
+filter/action bar; no `New` action is shown for core-widget sections.
 
 ## Sub-Tasks
 
@@ -53,7 +53,7 @@ No child task files.
 const templateRows = viewRows.filter((row) => row.source === "template");
 
 function getTemplateActions(row: WidgetLibraryRow): WidgetLibraryAction[] {
-  return ["preview-placeholder", "edit-template", "duplicate", "delete"];
+  return ["preview-placeholder", "edit-template", "duplicate", "delete", "favorite-toggle"];
 }
 
 const handleTemplateAction = async (
@@ -88,6 +88,8 @@ const headerAction =
 - Template actions are exposed through the shared row/card action menu, not
   inline action buttons.
 - Template category filter still works in the filter bar.
+- Template rows preserve favorite toggling because favorites are keyed by
+  catalog item id.
 - Category drawer remains reachable after the left rail is removed.
 - `New Template` is visible only for the active `Templates` section; core-widget
   sections do not show a generic `New` action.

@@ -55,7 +55,7 @@ No child task files.
 | Grid mode | filter bar persists; grid rows match table visible ids; card click opens drawer |
 | Selection | filter, section, pagination, and cache refresh trim hidden ids |
 | Core actions | Preview placeholder is non-mutating; Edit opens drawer; Insert opens existing dialog |
-| Favorites | add/remove/bulk remove preserve `widgets.favorites` and max-50 behavior |
+| Favorites | add/remove/bulk add/bulk remove preserve `widgets.favorites` and max-50 behavior for core/template catalog rows |
 | Templates | edit/duplicate/delete/category actions remain on existing route/client owners |
 | Bulk template delete | confirmed, visible-scope, partial-failure safe |
 | Cache/prefetch | `/coderso/widgets` warmup and cache-bus refresh remain covered, including template/category-triggered `widgetCatalog:list` invalidation without assuming direct `widgetsClient` broadcasts |

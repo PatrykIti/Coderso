@@ -5,9 +5,9 @@
 **Category:** Coderso Widgets + Admin/UI + UX + Admin Cache
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-205, TASK-206, TASK-208, TASK-213
-**Reference Tasks:** TASK-214 is a non-blocking Pages-style list parity
-reference for tab/resource-scoped action wording. Do not wait for TASK-214
-completion unless implementation chooses to reuse a helper introduced there.
+**Reference Tasks:** TASK-214 is the completed Pages-style list parity
+reference for tab/resource-scoped action wording, visible selection, cache
+hydration, and shared toasts.
 **Status:** To Do
 
 ---
@@ -72,6 +72,10 @@ drawer that exists today.
 - `WidgetInsertDialog.tsx` already supports inserting core widgets into pages
   or widget templates. TASK-215 should route Insert actions through that dialog
   rather than introducing a second placement popup.
+- `handleFavoriteToggle` currently persists favorites by catalog item id, so
+  both core widgets and template rows can be favorited. TASK-215 must preserve
+  that catalog-id contract; it may add visible-scope favorite bulk helpers, but
+  it must not narrow favorites to core widgets only.
 - `PageTable.tsx` / `PageRowActions.tsx` are the Pages reference for table
   selection and the right-aligned three-dot actions menu. Widget table/grid
   actions should follow that dropdown pattern; the current inline template
@@ -119,10 +123,12 @@ drawer that exists today.
 10. Actions are section/resource specific:
    - `All Items`: Preview placeholder, Edit/Configure, Insert for core
      widgets; template rows get template-safe actions only.
-   - `Favorites`: source-specific Preview/Edit/Insert plus Remove from
-     favorites and bulk remove from favorites.
+   - `Favorites`: source-specific Preview/Edit/Insert where applicable plus
+     Remove from favorites and bulk remove from favorites. Favorites is not the
+     destructive template-management context; duplicate/delete stay in the
+     Templates section unless a later product task explicitly changes that.
    - `Templates`: Preview placeholder, Edit, Duplicate, Delete, category
-     management, and confirmed bulk delete.
+     management, favorite toggle, and confirmed bulk delete.
    - widget category sections: same core-widget actions as `All Widgets`,
      scoped to the selected category.
 11. Bulk actions operate only on visible selected rows in the active section and
@@ -178,7 +184,7 @@ drawer that exists today.
 - [ ] TASK-215-02-03: Grid View Selection and Drawer Parity
 - [ ] TASK-215-03-01: All Items Row Actions and Preview Placeholder
 - [ ] TASK-215-03-02: Core Widget Drawer and Insert Dialog Flow
-- [ ] TASK-215-03-03: Core Widget Bulk Actions and Favorites
+- [ ] TASK-215-03-03: Catalog Favorite Bulk Actions
 - [ ] TASK-215-04-01: Favorites Section Actions and User Settings
 - [ ] TASK-215-04-02: Template Table/Grid Actions and Category Management
 - [ ] TASK-215-04-03: Template Bulk Actions, Confirmations, and Toasts

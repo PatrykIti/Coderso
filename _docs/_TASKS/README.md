@@ -67,7 +67,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-215-03 | All Items and Core Widget Actions | High | Large | Core widget actions for All Items/All Widgets/category sections: Preview placeholder, Edit/Configure drawer, Insert dialog, favorites, and visible-scope bulk favorite actions |
 | TASK-215-03-01 | All Items Row Actions and Preview Placeholder | High | Medium | Technical leaf: source-aware action menus with non-mutating Preview placeholder and core/template-safe action split |
 | TASK-215-03-02 | Core Widget Drawer and Insert Dialog Flow | High | Medium | Technical leaf: Edit opens existing details drawer and Insert opens existing placement dialog for page/template targets |
-| TASK-215-03-03 | Core Widget Bulk Actions and Favorites | High | Medium | Technical leaf: visible-scope add/remove favorites while preserving `widgets.favorites` and max-50 behavior |
+| TASK-215-03-03 | Catalog Favorite Bulk Actions | High | Medium | Technical leaf: visible-scope add/remove favorites for core/template catalog rows while preserving `widgets.favorites` and max-50 behavior |
 | TASK-215-04 | Favorites and Template Resource Actions | High | Large | Favorites remove/manage flows plus Templates edit/duplicate/delete/category actions, confirmed bulk delete, shared toasts, and cache refresh |
 | TASK-215-04-01 | Favorites Section Actions and User Settings | High | Medium | Technical leaf: Favorites table/grid section handles favorite core widgets/templates and bulk remove from favorites |
 | TASK-215-04-02 | Template Table/Grid Actions and Category Management | High | Medium | Technical leaf: Templates section keeps edit, duplicate, delete, category filter, category drawer, and three-dot actions discoverable after rail removal |

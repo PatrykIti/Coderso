@@ -1,5 +1,5 @@
-# TASK-215-03-03: Core Widget Bulk Actions and Favorites
-# FileName: TASK-215-03-03_Core_Widget_Bulk_Actions_and_Favorites.md
+# TASK-215-03-03: Catalog Favorite Bulk Actions
+# FileName: TASK-215-03-03_Catalog_Favorite_Bulk_Actions.md
 
 **Priority:** High
 **Category:** Coderso Widgets + Admin/UI + Favorites
@@ -11,10 +11,10 @@
 
 ## Overview
 
-Add visible-scope bulk favorite management for core widget sections. Bulk
-actions should support adding selected visible core widgets to favorites and
-removing selected visible core widgets from favorites without crossing section,
-filter, or pagination boundaries.
+Add visible-scope bulk favorite management for eligible catalog rows. Bulk
+actions should support adding selected visible core widgets and template rows
+to favorites, and removing selected visible catalog rows from favorites,
+without crossing section, filter, or pagination boundaries.
 
 ## Sub-Tasks
 
@@ -48,17 +48,17 @@ No child task files.
 ## Pseudocode
 
 ```ts
-const visibleCoreIds = visibleRows
-  .filter((row) => row.source === "core")
+const visibleFavoriteableIds = visibleRows
+  .filter((row) => row.source === "core" || row.source === "template")
   .map((row) => row.id);
 
-const selectedVisibleCoreIds = selectedIds.filter((id) =>
-  visibleCoreIds.includes(id)
+const selectedVisibleFavoriteableIds = selectedIds.filter((id) =>
+  visibleFavoriteableIds.includes(id)
 );
 
 async function bulkAddFavorites() {
   const next = new Set(currentFavoriteIds);
-  for (const id of selectedVisibleCoreIds) next.add(id);
+  for (const id of selectedVisibleFavoriteableIds) next.add(id);
   if (next.size > 50) {
     showFavoriteLimitError();
     return;
@@ -69,7 +69,7 @@ async function bulkAddFavorites() {
 
 async function bulkRemoveFavorites() {
   const next = new Set(currentFavoriteIds);
-  for (const id of selectedVisibleCoreIds) next.delete(id);
+  for (const id of selectedVisibleFavoriteableIds) next.delete(id);
   await setUserSetting("widgets.favorites", Array.from(next));
   trimSelectionToVisibleRows();
 }
@@ -77,8 +77,8 @@ async function bulkRemoveFavorites() {
 
 ## Testing Requirements
 
-- Bulk add to favorites updates only selected visible core widget ids.
-- Bulk remove from favorites updates only selected visible core widget ids.
+- Bulk add to favorites updates only selected visible catalog row ids.
+- Bulk remove from favorites updates only selected visible catalog row ids.
 - Max-50 favorites behavior remains enforced.
 - Bulk favorite actions are disabled when no visible eligible row is selected.
 - If `widgets.favorites` validation or client typing changes, user settings
@@ -96,6 +96,6 @@ async function bulkRemoveFavorites() {
 
 ## Acceptance Criteria
 
-1. Bulk favorite actions are visible-scope safe.
+1. Bulk favorite actions are visible-scope safe for core and template rows.
 2. Favorite persistence still uses `widgets.favorites`.
 3. Bulk insert remains out of scope.

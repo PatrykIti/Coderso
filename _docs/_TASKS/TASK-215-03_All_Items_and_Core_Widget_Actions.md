@@ -16,14 +16,15 @@ category sections. Core widget actions use Preview placeholder, Edit/Configure
 drawer, Insert dialog, and favorite/bulk favorite operations.
 
 Template rows may appear in `All Items`, but they must use template-safe
-actions from TASK-215-04. Do not route template rows into the core widget
-configuration drawer.
+actions from TASK-215-04. Keep the existing catalog-id favorite contract for
+template rows, but do not route template rows into the core widget
+configuration drawer or core insert dialog.
 
 ## Sub-Tasks
 
 - [ ] TASK-215-03-01: All Items Row Actions and Preview Placeholder
 - [ ] TASK-215-03-02: Core Widget Drawer and Insert Dialog Flow
-- [ ] TASK-215-03-03: Core Widget Bulk Actions and Favorites
+- [ ] TASK-215-03-03: Catalog Favorite Bulk Actions
 - [ ] Keep Insert as a one-widget operation through `WidgetInsertDialog`.
 - [ ] Do not add a bulk insert action.
 
@@ -57,6 +58,9 @@ configuration drawer.
 
 - `All Items` core rows show Preview placeholder, Edit/Configure, Insert, and
   favorite actions.
+- Template rows in `All Items` preserve favorite toggling but delegate
+  template-specific management rules to TASK-215-04; this core-action leaf must
+  not add template Duplicate/Delete from the generic core action path.
 - `All Widgets` and category sections show the same core row actions.
 - Preview placeholder is non-mutating.
 - Insert opens existing dialog and does not mutate until confirmed.
