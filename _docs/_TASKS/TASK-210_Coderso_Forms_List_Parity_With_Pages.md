@@ -301,9 +301,11 @@ a backward-compatible alias through `adminPaths`.
 - `_docs/CMS_API.md` if route schemas or error mapping change.
 - `docs/coderso/forms-list-and-builder.md`
 - `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` list-scope closure notes for BUG-2,
-  UX-1, and the Forms-contract subset of BUG-5. BUG-5 requests for Duplicate,
-  Runtime Preview, and Embed Code remain deferred/non-goals unless their own
-  service/API/UI contracts are added first.
+  UX-1, the Forms-contract subset of BUG-5, and the Create New Form subset of
+  BUG-6. BUG-5 requests for Duplicate, Runtime Preview, and Embed Code remain
+  deferred/non-goals unless their own service/API/UI contracts are added first.
+  BUG-6 runtime preview/global dialog warnings remain outside TASK-210 unless a
+  separate dialog-wrapper task owns them.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 

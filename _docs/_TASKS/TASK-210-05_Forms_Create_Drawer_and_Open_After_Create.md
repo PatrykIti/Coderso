@@ -36,6 +36,10 @@ and Forms-specific inline validation.
   - emit create feedback through TASK-210-06;
   - navigate to `/coderso/forms/:id` when open-after-create is enabled;
   - otherwise close the drawer and background-refresh the list.
+- [ ] Preserve the existing null-create fallback: if `createForm` resolves
+  without a created row, do not dereference the missing row or navigate; close
+  the drawer after a forced background list refresh and leave a completion note
+  describing the fallback path.
 - [ ] Keep the list drawer payload passed into `createForm` limited to its
   current UI fields: `name`, optional `slug`, `status`, `description`. Do not
   pass UI-only fields or move builder-owned API fields (`successMessage`,
@@ -98,6 +102,11 @@ type FormListCreateInput = Pick<
 const handleCreate = async (payload: FormListCreateInput) => {
   const { openAfterCreate, ...formInput } = payload;
   const created = await createForm(formInput);
+  if (!created) {
+    await refresh({ force: true, background: true });
+    setCreateOpen(false);
+    return;
+  }
   formListToasts.success("create", { targetLabel: created.name });
   if (openAfterCreate) {
     navigate(`/coderso/forms/${encodeURIComponent(created.id)}`);
@@ -124,6 +133,8 @@ The actual payload sent to `createForm` must not include UI-only fields such as
     network boundary when the UI did not provide settings;
   - open-after-create enabled navigates to the form builder;
   - open-after-create disabled refreshes the list and closes the drawer;
+  - null create responses refresh and close without navigation or `created.name`
+    access;
   - preference load/persist failures do not block create.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`

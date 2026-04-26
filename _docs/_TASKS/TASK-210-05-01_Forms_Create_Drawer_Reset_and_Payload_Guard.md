@@ -33,6 +33,9 @@ preserving the current list-drawer payload boundary.
 - [ ] Preserve the existing `formsClient.createForm` behavior that attaches
   normalized default `settings` before the API request when no settings are
   provided.
+- [ ] Preserve the existing null-create fallback at the list owner: a missing
+  created row should refresh the list and close the drawer without navigating or
+  reading `created.name`.
 
 ## Files to Change
 
@@ -67,6 +70,8 @@ preserving the current list-drawer payload boundary.
   already present in the drawer contract.
 - Client-level tests keep proving that `formsClient.createForm` sends normalized
   default `settings` on the network payload.
+- Null create responses refresh and close without navigation or `created.name`
+  access.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/formsClient.test.ts`
@@ -87,3 +92,5 @@ preserving the current list-drawer payload boundary.
 4. Builder/settings ownership of advanced Forms fields is preserved.
 5. Existing `formsClient.createForm` default `settings` normalization is not
    removed to make the drawer test pass.
+6. A null create response follows the existing refresh-and-close fallback
+   instead of crashing or navigating to an invalid builder route.

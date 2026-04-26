@@ -35,9 +35,11 @@ security/runtime contracts still hold.
   and toast behavior.
 - [ ] Update `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` with dated closure notes for
   list-scope findings covered by TASK-210: BUG-2 and UX-1, plus the
-  Forms-contract subset of BUG-5. Explicitly defer BUG-5 requests for Duplicate,
-  Runtime Preview, and Embed Code until those flows have their own contracts, and
-  leave editor/runtime findings to separate task families.
+  Forms-contract subset of BUG-5 and the Create New Form subset of BUG-6.
+  Explicitly defer BUG-5 requests for Duplicate, Runtime Preview, and Embed Code
+  until those flows have their own contracts; explicitly defer BUG-6 runtime
+  preview/global dialog warnings to a separate dialog-wrapper task; and leave
+  editor/runtime findings to separate task families.
 - [ ] Confirm every TASK-210 leaf is either Done or explicitly superseded by
   the final implementation notes before moving the umbrella to Done.
 - [ ] Add a `_docs/_CHANGELOG/*` entry following the changelog numbering rules.
@@ -99,7 +101,8 @@ security/runtime contracts still hold.
 - `docs/coderso/forms-list-and-builder.md` must describe the final admin Forms
   list workflow and not preserve outdated `New form` / status-only table copy.
 - `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` must record which list findings TASK-210
-  closed and which editor/runtime findings remain outside scope.
+  closed, which Create New Form dialog warning subset TASK-210 closed, and which
+  editor/runtime findings remain outside scope.
 - `_docs/_CHANGELOG/*` and `_docs/_CHANGELOG/README.md` must include TASK-210.
 
 ## Acceptance Criteria

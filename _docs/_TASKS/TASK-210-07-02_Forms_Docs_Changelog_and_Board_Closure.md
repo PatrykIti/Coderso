@@ -30,9 +30,11 @@ the task board.
   confirmed delete behavior, and shared toast feedback.
 - [ ] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` for
   TASK-210-owned list findings (BUG-2, UX-1, and the Forms-contract subset of
-  BUG-5). Note that BUG-5 Duplicate, Runtime Preview, and Embed Code remain
-  deferred/non-goals until their own service/API/UI contracts exist, and that
-  editor/runtime findings remain separate.
+  BUG-5) plus the Create New Form subset of BUG-6. Note that BUG-5 Duplicate,
+  Runtime Preview, and Embed Code remain deferred/non-goals until their own
+  service/API/UI contracts exist; BUG-6 runtime preview/global dialog warnings
+  remain deferred to a separate dialog-wrapper task; and editor/runtime findings
+  remain separate.
 - [ ] Add one `_docs/_CHANGELOG/*` entry for TASK-210.
 - [ ] Update `_docs/_CHANGELOG/README.md`.
 - [ ] Mark TASK-210 umbrella, subtasks, and leaves Done with dated statuses and
@@ -78,7 +80,8 @@ the task board.
 
 1. Docs match shipped Forms behavior.
 2. Source QA report list findings are closed or explicitly deferred with dates,
-   including BUG-5 sub-items that remain outside the current Forms contract.
+   including BUG-5 sub-items that remain outside the current Forms contract and
+   the BUG-6 runtime/global dialog warning subset that remains outside TASK-210.
 3. Changelog entry and changelog index reference TASK-210.
 4. Task board rows and statistics are synchronized.
 5. Every TASK-210 file has final status and validation notes.
