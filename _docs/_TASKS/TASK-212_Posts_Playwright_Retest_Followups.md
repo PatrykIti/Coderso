@@ -56,6 +56,10 @@ proves a regression.
   `containerAriaLabel="Admin notifications"`.
 - `core/admin/ui/shared/actionToasts.ts` exists from the Pages editor follow-up
   and is the shared adapter for non-list admin mutation success/error copy.
+- The Pages editor fix is not a monolithic editor-wrapper framework. It is a
+  shared action-toast helper plus resource-local editor handlers/state. Posts
+  should plug into that seam instead of introducing an editor provider,
+  mutation bus, or Posts-only wrapper layer.
 - `core/admin/ui/pages/PageEditor.tsx` uses `createAdminActionToastAdapter` for
   save/publish success and error paths while keeping inline status/error state as
   contextual support.
@@ -70,9 +74,19 @@ proves a regression.
   directly and calls `toast.success(wasPublished ? "Changes saved" : "Post published")`
   after `editor.publish()`, then swallows rejected publish/update with
   `catch(() => undefined)`.
+- `core/admin/ui/posts/editor/PostEditorTopBar.tsx` and
+  `core/admin/ui/posts/editor/header/PostEditorActionCluster.tsx` are already
+  presentational callback surfaces. Keep mutation execution and toast/error
+  decisions in the shell/hook boundary unless a real source bug proves
+  otherwise.
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` already sets bounded
   inline errors and rethrows publish/save failures. The shell should route those
   rejections through the shared action-toast adapter instead of dropping them.
+- `PostBlockEditorShell` also has a manual autosave retry path
+  (`editor.saveDraft().catch(() => undefined)`). Do not add background autosave
+  success toasts. If the manual retry path is touched, keep the error handling
+  explicit and bounded, but do not turn this family into a new primary Save Draft
+  feature for Posts.
 - `RuntimePreviewDialog` already supports optional probe metadata from Pages.
   Posts currently uses the same dialog without probe metadata. Any parity work
   must reuse optional dialog props and the existing `previewPost` route/client
@@ -91,6 +105,8 @@ proves a regression.
 1. Posts editor wrapper parity matches Pages where the contract is shared:
    - success and failure outcomes emit through the shared Admin UI Sonner host
      via `createAdminActionToastAdapter`, not direct component-local Sonner calls;
+   - shared parity means shared owner boundaries and bounded feedback behavior,
+     not identical button sets or identical literal copy across Pages and Posts;
    - `apiClient` remains the single CSRF bootstrap/retry owner for admin writes;
    - `postsClient` remains the cache/TTL/cacheBus owner for list/detail cache
      changes;
@@ -131,8 +147,13 @@ proves a regression.
 ## Non-Goals
 
 - Do not add another toaster host, event bus, or Posts-only notification system.
+- Do not add a new generic editor-wrapper framework or provider. Extend the
+  existing shared action-toast helper only if a small generic option is truly
+  needed by Pages and Posts.
 - Do not reopen `BUG-5` as a missing visible toast unless a fresh replay proves
   that regression again.
+- Do not add a new primary Save Draft action to the Posts editor as part of this
+  family; Posts currently has publish/update plus autosave/manual retry flows.
 - Do not claim editor-wrapper parity from a mocked `toast.success` call alone.
 - Do not replace the Posts editor shell, publish/update route contract, cache
   client, CSRF transport, or autosave semantics.

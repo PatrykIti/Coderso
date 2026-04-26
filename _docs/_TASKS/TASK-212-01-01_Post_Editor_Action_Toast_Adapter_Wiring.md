@@ -36,16 +36,17 @@ No child task files.
 1. Define a Posts editor action-toast adapter near the shell owner or in a
    small Posts editor helper if reuse becomes real.
 2. Choose action copy based on mutation intent:
-   - draft save success: `Draft saved.`
    - published-post update success: `Changes saved`
    - publish success: `Post published`
    - publish fallback: `Failed to publish post.`
    - update fallback: `Failed to save changes.`
+   - optional manual autosave retry fallback, only if the existing Retry now
+     path is touched in this slice.
 3. Replace `catch(() => undefined)` with bounded error handling.
 4. Keep existing inline editor error/status behavior; toast is the visible
    global confirmation, not a replacement for truthful local state.
-5. Keep background autosave success quiet unless the parent task explicitly
-   changes autosave UX.
+5. Keep background autosave success quiet and do not add a new primary Save
+   Draft button as part of this leaf.
 
 Pseudocode:
 

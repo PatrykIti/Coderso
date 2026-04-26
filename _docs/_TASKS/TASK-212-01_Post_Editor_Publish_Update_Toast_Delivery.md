@@ -22,6 +22,12 @@ reuse the shared editor action-toast helper introduced by the Pages follow-up,
 prove the actual notification surface, and keep cache/dirty-state behavior
 truthful.
 
+This parity is about shared contract ownership, not copying the Pages editor
+surface wholesale. Pages has explicit Save draft and Publish buttons. Posts
+currently has publish/update plus autosave/manual retry behavior, so this task
+must normalize the existing Posts actions first instead of inventing a new
+primary Save Draft flow.
+
 ## Sub-Tasks
 
 - `TASK-212-01-01_Post_Editor_Action_Toast_Adapter_Wiring.md`
@@ -31,8 +37,10 @@ truthful.
 
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts`
-- `core/admin/ui/posts/editor/header/PostEditorActionCluster.tsx`
-- `core/admin/ui/posts/editor/PostEditorTopBar.tsx`
+- `core/admin/ui/posts/editor/header/PostEditorActionCluster.tsx` only if the
+  callback type/props need to stay explicit; keep it presentational
+- `core/admin/ui/posts/editor/PostEditorTopBar.tsx` only if callback typing is
+  affected; keep mutation behavior out of this wrapper
 - `core/admin/ui/shared/actionToasts.ts` only if the shared adapter needs a
   small extension
 - `core/admin/services/postsClient.ts` only if cache-broadcast or mutation
@@ -64,10 +72,6 @@ Posts should mirror that shape without inventing a new wrapper layer:
 ```ts
 const postEditorActionToasts = createAdminActionToastAdapter({
   actions: {
-    saveDraft: {
-      success: "Draft saved.",
-      errorFallback: "Failed to save changes.",
-    },
     publish: {
       success: "Post published",
       errorFallback: "Failed to publish post.",
@@ -85,8 +89,10 @@ status, but error handling cannot remain `catch(() => undefined)`. Failures
 must keep truthful inline error state and emit a bounded toast message.
 
 Do not add noisy success toasts for background autosave. Autosave success can
-remain inline (`Autosaved at ...`). Explicit retry/save/publish/update failures
-must be bounded and visible.
+remain inline (`Autosaved at ...`). If the existing manual autosave retry button
+is touched, failure handling must be bounded and visible, but success feedback
+should not be used to justify a new primary Save Draft action unless that
+separate product change is explicitly accepted.
 
 Cache/update parity guidance:
 

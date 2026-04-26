@@ -27,6 +27,9 @@ Current code anchors:
   `postsService.ts` imports that enum.
 - `core/admin/ui/posts/editor/blocks/blockCatalog.ts` currently lists only
   `Image` and `Embed` in the Media category.
+- `Embed` has video-oriented keywords, but it is still the existing external
+  embed block. Do not count it as dedicated `Video`, `Audio`, `Gallery`, or
+  `File` capability unless those block contracts are implemented explicitly.
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` currently opens an
   image-focused picker (`Select Image`) and filters media items to image assets.
 - `core/admin/ui/media/MediaPicker.tsx` already has generic `accept`,

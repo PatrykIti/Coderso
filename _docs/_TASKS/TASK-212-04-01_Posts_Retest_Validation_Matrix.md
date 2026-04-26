@@ -28,12 +28,13 @@ Always run:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/ui/action-toasts.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/action-toasts.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
 
 When `TASK-212-02` changes Create New Post drawer:
 
 - focused Posts drawer a11y suite, or the existing Posts list/create drawer
-  suite that owns the component.
+  suite that owns the component after its sheet harness is made faithful enough
+  to catch a missing `aria-describedby` target.
 
 When `TASK-212-03` implements media block types:
 
