@@ -1,8 +1,8 @@
-# TASK-212-01: Post Editor Publish Update Toast Delivery
+# TASK-212-01: Post Editor Mutation Wrapper Parity
 # FileName: TASK-212-01_Post_Editor_Publish_Update_Toast_Delivery.md
 
 **Priority:** High
-**Category:** CMS/Posts + Admin/UI + Notifications
+**Category:** CMS/Posts + Admin/UI + Notifications + Editor Wrapper
 **Estimated Effort:** Medium
 **Dependencies:** TASK-212, TASK-204-01, TASK-211-02
 **Status:** To Do
@@ -11,15 +11,16 @@
 
 ## Overview
 
-Repair `BUG-5` from the 2026-04-25 Posts replay. The publish/update mutation
-path succeeds, but no visible Sonner toast appears and the live region remains
-empty.
+Harden the Posts editor publish/update wrapper so it matches the shared Pages
+editor mutation-feedback and cache/update contract.
 
-The current direct `toast.success(...)` call in
-`PostBlockEditorShell` is not enough because the browser replay proves the
-user-visible notification contract is still broken. Posts must reuse the shared
-editor action-toast helper introduced by the Pages follow-up and prove the
-actual notification surface, not only a mocked function call.
+The 2026-04-26 replay proves the user-visible `BUG-5` toast symptom is now fixed
+live: Publish shows `Post published` and Update shows `Changes saved`. The code
+still does not match Pages editor architecture because `PostBlockEditorShell`
+calls Sonner directly and swallows rejected publish/update promises. Posts must
+reuse the shared editor action-toast helper introduced by the Pages follow-up,
+prove the actual notification surface, and keep cache/dirty-state behavior
+truthful.
 
 ## Sub-Tasks
 
@@ -34,8 +35,13 @@ actual notification surface, not only a mocked function call.
 - `core/admin/ui/posts/editor/PostEditorTopBar.tsx`
 - `core/admin/ui/shared/actionToasts.ts` only if the shared adapter needs a
   small extension
+- `core/admin/services/postsClient.ts` only if cache-broadcast or mutation
+  semantics need a parity bug fix
+- `core/admin/services/apiClient.ts` only if a shared CSRF/transport bug is
+  proven; do not add Posts-editor-local token handling
 - `tests/vitest/ui/action-toasts.test.ts`
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
+- `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
 - `tests/vitest/admin/adminApp.test.tsx`
 - `tests/vitest/admin/sonner.test.tsx`
@@ -43,21 +49,31 @@ actual notification surface, not only a mocked function call.
 ## Implementation Direction
 
 Keep mutation ownership in the editor hook/shell path and keep header
-components presentational. Posts should mirror the Pages shape:
+components presentational. Pages does not have a monolithic editor wrapper
+framework; it uses shared seams with thin resource adapters:
+
+- shared Sonner host: `AdminApp` + `Toaster`;
+- non-list mutation helper: `createAdminActionToastAdapter`;
+- shared transport: `apiClient` with CSRF bootstrap/retry;
+- resource client cache ownership: `pagesClient` / `postsClient` plus
+  `cacheBus`;
+- resource-local editor state for dirty/remote-update guards.
+
+Posts should mirror that shape without inventing a new wrapper layer:
 
 ```ts
 const postEditorActionToasts = createAdminActionToastAdapter({
   actions: {
     saveDraft: {
-      success: "Changes saved.",
+      success: "Draft saved.",
       errorFallback: "Failed to save changes.",
     },
     publish: {
-      success: "Post published.",
+      success: "Post published",
       errorFallback: "Failed to publish post.",
     },
     update: {
-      success: "Changes saved.",
+      success: "Changes saved",
       errorFallback: "Failed to save changes.",
     },
   },
@@ -67,6 +83,19 @@ const postEditorActionToasts = createAdminActionToastAdapter({
 The implementation may use `publish` versus `update` based on pre-mutation
 status, but error handling cannot remain `catch(() => undefined)`. Failures
 must keep truthful inline error state and emit a bounded toast message.
+
+Do not add noisy success toasts for background autosave. Autosave success can
+remain inline (`Autosaved at ...`). Explicit retry/save/publish/update failures
+must be bounded and visible.
+
+Cache/update parity guidance:
+
+- keep `postsClient` as the owner of `cacheKeys.postsList`,
+  `cacheKeys.postDetail(id)`, TTL/local-cache writes, and `cacheBus` broadcasts;
+- keep `usePostEditorState` as the dirty-state owner. Remote cache events must
+  set/clear `remoteUpdatePending` without overwriting unsaved local edits;
+- use existing `apiClient` `withCsrf` behavior. If stale-token behavior fails,
+  fix `apiClient` once for all admin writes rather than in the Posts editor.
 
 ## Security Contract
 
@@ -86,10 +115,14 @@ must keep truthful inline error state and emit a bounded toast message.
 
 - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
   - publish success emits the shared adapter message after the awaited mutation;
-  - update success emits `Changes saved.` after an already-published post is
+  - update success emits `Changes saved` after an already-published post is
     updated;
   - publish/update failures emit bounded error toasts and preserve inline error
     state.
+- `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
+  - save-before-publish keeps the current dirty-state/remote-update guard;
+  - cache refresh after publish/update does not overwrite unsaved local state;
+  - cacheBus-driven refresh keeps `remoteUpdatePending` behavior explicit.
 - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - header buttons remain presentational and keep current labels/states.
 - `tests/vitest/ui/action-toasts.test.ts`
@@ -98,7 +131,9 @@ must keep truthful inline error state and emit a bounded toast message.
   - the single shared toaster host remains mounted and token-backed.
 - Manual Playwright:
   - after Publish and Update, assert `[data-sonner-toast]` or the `Admin
-    notifications` live region contains the expected user-facing message.
+    notifications` live region contains the expected user-facing message;
+  - reject one publish/update path and assert bounded error toast plus inline
+    editor error state.
 
 ## Documentation Updates Required
 
@@ -108,8 +143,10 @@ must keep truthful inline error state and emit a bounded toast message.
 
 ## Acceptance Criteria
 
-1. Publish success produces a visible accessible toast.
-2. Update success produces a visible accessible toast.
+1. Publish success keeps visible accessible toast feedback.
+2. Update success keeps visible accessible toast feedback.
 3. Publish/update failures are no longer swallowed.
 4. Posts editor uses the shared action-toast contract, not direct ad hoc
    notification calls in presentation components.
+5. Cache refresh and remote-update behavior stay aligned with the current Pages
+   editor principles without replacing `postsClient` or `apiClient`.

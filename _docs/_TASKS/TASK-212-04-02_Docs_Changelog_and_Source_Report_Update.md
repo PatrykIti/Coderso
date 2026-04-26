@@ -15,7 +15,8 @@ Synchronize the source report, product docs, changelog, and task board after
 `TASK-212` is implemented and validated.
 
 This leaf must not rewrite the historical `TASK-204` closure. It should append a
-new TASK-212 closure section for the 2026-04-25 retest findings.
+new TASK-212 closure section for the 2026-04-25 retest findings and the
+2026-04-26 deep-retest status update.
 
 ## Sub-Tasks
 
@@ -39,12 +40,15 @@ Append a closure section with a compact matrix:
 
 | Source finding | Final state | Evidence |
 |---|---|---|
-| `BUG-5` publish/update toast | Fixed/Open | command + Playwright selector proof |
+| `BUG-5` publish/update toast | Fixed live + wrapper hardened/Open | command + Playwright selector proof + adapter/failure tests |
 | `BUG-8` Create New Post description | Fixed/Open | a11y test + console proof |
 | `UX-4` Media blocks | Fixed/Deferred/Open | implemented types or explicit owners |
+| 2026-04-26 new UX observations | Out of scope/New task | explicit note if not included |
 
 If any media type remains deferred, name the owner modules and keep the report
 honest. Do not claim the Media tab is complete if only Image/Embed remain.
+Do not rewrite the 2026-04-25 `BUG-5` finding away; add the 2026-04-26 status
+that the visible symptom was fixed before TASK-212 wrapper hardening.
 
 ## Security Contract
 

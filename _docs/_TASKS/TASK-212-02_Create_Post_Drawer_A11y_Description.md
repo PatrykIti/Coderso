@@ -11,9 +11,9 @@
 
 ## Overview
 
-Repair `BUG-8` from the 2026-04-25 Posts replay. Opening Create New Post logs a
-Radix missing description warning because the drawer's `aria-describedby`
-references a missing element id.
+Repair `BUG-8` from the 2026-04-25 Posts replay, still present in the
+2026-04-26 deep retest. Opening Create New Post logs a Radix missing description
+warning because the drawer's `aria-describedby` references a missing element id.
 
 The visible copy already exists: `Start a new article and publish when ready.`
 The implementation should bind that copy through the shared `SheetDescription`

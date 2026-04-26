@@ -14,9 +14,9 @@
 Add regression coverage for Posts dialogs/sheets that previously produced
 Radix missing-description warnings.
 
-The 2026-04-25 replay confirms Revisions is fixed but Create New Post regressed.
-This leaf prevents one-by-one fixes from moving the warning between Posts
-surfaces.
+The 2026-04-25 replay confirms Revisions is fixed but Create New Post regressed,
+and the 2026-04-26 deep retest still reports the Create New Post warning. This
+leaf prevents one-by-one fixes from moving the warning between Posts surfaces.
 
 ## Sub-Tasks
 

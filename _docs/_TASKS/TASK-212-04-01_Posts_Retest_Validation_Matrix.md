@@ -11,8 +11,8 @@
 
 ## Overview
 
-Collect and run the final validation matrix for the 2026-04-25 Posts retest
-follow-ups.
+Collect and run the final validation matrix for the 2026-04-25 and 2026-04-26
+Posts retest follow-ups.
 
 This leaf owns evidence, not implementation. It should not add new product
 behavior unless a test failure exposes a small missing fix in an already-owned
@@ -50,10 +50,21 @@ Manual Playwright CLI:
 
 - publish draft post and assert visible toast/live-region;
 - update published post and assert visible toast/live-region;
+- reject one publish/update path and assert bounded error toast plus inline
+  editor error state;
 - open Create New Post and assert no Radix warning;
 - open Media tab and verify accepted/deferred media state;
 - capture console/network output and distinguish browser-visible errors from
   server logs.
+
+Source-state matrix to preserve:
+
+| Source finding | Latest source state | Validation owner |
+|---|---|---|
+| `BUG-5` publish/update toast | Fixed live on 2026-04-26; wrapper hardening still required | `TASK-212-01-*` adapter, failure, cache/update, and Playwright regression proof |
+| `BUG-8` Create New Post description | Open on 2026-04-26 | `TASK-212-02-*` sheet description and console-clean proof |
+| `UX-4` media block gap | Open/deferred on 2026-04-26 | `TASK-212-03-*` full implementation or explicit deferral |
+| 2026-04-26 toolbar/delete/empty-block observations | Out of TASK-212 scope unless separately added | Record as separate future task only if product accepts them |
 
 ## Security Contract
 
@@ -72,5 +83,5 @@ Manual Playwright CLI:
 
 1. Final validation covers every touched seam.
 2. Skipped DB/runtime validation is explicitly explained.
-3. Playwright evidence uses the same selectors/console checks that found the
-   2026-04-25 issues.
+3. Playwright evidence uses the same selectors/console checks that found and
+   then rechecked the 2026-04-25/2026-04-26 issues.

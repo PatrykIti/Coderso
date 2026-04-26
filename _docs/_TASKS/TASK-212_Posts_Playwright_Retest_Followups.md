@@ -2,7 +2,7 @@
 # FileName: TASK-212_Posts_Playwright_Retest_Followups.md
 
 **Priority:** High
-**Category:** CMS/Posts + Admin/UI + Accessibility + Post Blocks
+**Category:** CMS/Posts + Admin/UI + Accessibility + Editor Wrapper + Post Blocks
 **Estimated Effort:** Large
 **Dependencies:** TASK-204, TASK-208, TASK-211
 **Status:** To Do
@@ -11,16 +11,20 @@
 
 ## Overview
 
-Close the remaining findings from the 2026-04-25 Playwright CLI retest in
-`_docs/PLAYWRIGHT/SUMMARY-POSTS.md`.
+Close the remaining Posts editor findings from the 2026-04-25 and 2026-04-26
+Playwright CLI retests in `_docs/PLAYWRIGHT/SUMMARY-POSTS.md`, and normalize the
+Posts editor wrapper behavior with the already-fixed Pages editor.
 
 `TASK-204` closed the first Posts follow-up wave and intentionally classified
 the larger Media tab gap as an explicit capability gap. The 2026-04-25 replay
-proves most of that work still holds, but it also shows three items that need a
-new implementation family:
+proved most of that work still holds and found two live issues. The 2026-04-26
+deep retest then proved the visible publish/update toast is fixed in the browser,
+while exposing that the Posts editor still has a wrapper-contract debt compared
+with Pages:
 
-- `BUG-5`: publish/update returns `200 OK` and updates badge/button state, but
-  no Sonner toast appears and `[aria-live=polite]` remains empty.
+- `BUG-5`: now live-fixed from a user perspective, but Posts still calls Sonner
+  directly from `PostBlockEditorShell` and swallows publish/update failures
+  instead of using the shared editor action-toast adapter that Pages uses.
 - `UX-4`: Media still contains only `Image` and `Embed`; `Video`, `Gallery`,
   `Audio`, and `File` remain absent.
 - `BUG-8`: Create New Post drawer logs a Radix missing description warning
@@ -30,19 +34,49 @@ The same replay confirms the older `TASK-195` and `TASK-204` repairs still work:
 bulk selection, Posts search copy, toolbar button semantics, category/media
 pickers, taxonomy raw-SQL redaction, revisions preview, revision dialog
 description, SEO summary, slug route context, typography helper copy, and
-category-scoped inserter search. This family must not reopen those fixed seams
-unless implementation or a fresh replay proves a regression.
+category-scoped inserter search, and 2026-04-26 publish/update toasts. This
+family must not reopen those fixed seams unless implementation or a fresh replay
+proves a regression.
+
+## Source Status Snapshot
+
+| Source item | Latest state | TASK-212 contract |
+|---|---|---|
+| `BUG-1`, `BUG-2` list normalization | Fixed | Regression-smoke only; do not reopen list surface work. |
+| `BUG-3`, `BUG-4`, `BUG-6`, `BUG-7`, `UX-1`, `UX-2`, `UX-3`, `UX-5`, `UX-6`, `UX-7` | Fixed | Preserve as baseline while touching editor seams. |
+| `BUG-5` publish/update toast | Fixed live on 2026-04-26 | Hardening task: move Posts onto the shared Pages editor adapter, bounded errors, and cache/update proof. |
+| `BUG-8` Create New Post Radix description | Open | Fix with `SheetDescription` and faithful dialog a11y coverage. |
+| `UX-4` Media block capability | Open/deferred capability gap | Implement end to end or keep explicitly deferred with no catalog-only labels. |
+| 2026-04-26 new UX observations | Not blockers for TASK-212 | Do not silently include toolbar type label, delete undo, or empty-block runtime-drop work unless separately added. |
 
 ## Current Repo Findings
 
-- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` calls
-  `toast.success(wasPublished ? "Changes saved" : "Post published")` after
-  `editor.publish()`, but the replay proves this is not reaching the visible
-  Sonner DOM/live-region path.
-- `core/admin/ui/shared/actionToasts.ts` now exists from the Pages follow-up and
-  is the shared adapter for editor mutation success/error copy.
-- `core/admin/ui/pages/PageEditor.tsx` already uses that adapter for save and
-  publish. Posts editor should follow the same shared editor-toast contract.
+- `core/admin/app/AdminApp.tsx` mounts the single shared `Toaster` with
+  `position="top-right"`, `richColors`, `closeButton`, `duration={4000}`, and
+  `containerAriaLabel="Admin notifications"`.
+- `core/admin/ui/shared/actionToasts.ts` exists from the Pages editor follow-up
+  and is the shared adapter for non-list admin mutation success/error copy.
+- `core/admin/ui/pages/PageEditor.tsx` uses `createAdminActionToastAdapter` for
+  save/publish success and error paths while keeping inline status/error state as
+  contextual support.
+- `core/admin/services/apiClient.ts` owns shared admin CSRF bootstrap and
+  retry-once refresh for `csrf_invalid` / `csrf_expired`; Posts must reuse this
+  transport through `postsClient`, not add editor-local token handling.
+- `core/admin/services/postsClient.ts` already uses shared cache keys, TTL-backed
+  local cache, `cacheBus` broadcasts, and `withCsrf` writes. `usePostEditorState`
+  already has `remoteUpdatePending`/dirty-state guards. TASK-212 should verify
+  and harden this behavior against Pages parity instead of replacing it.
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` still imports `toast`
+  directly and calls `toast.success(wasPublished ? "Changes saved" : "Post published")`
+  after `editor.publish()`, then swallows rejected publish/update with
+  `catch(() => undefined)`.
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` already sets bounded
+  inline errors and rethrows publish/save failures. The shell should route those
+  rejections through the shared action-toast adapter instead of dropping them.
+- `RuntimePreviewDialog` already supports optional probe metadata from Pages.
+  Posts currently uses the same dialog without probe metadata. Any parity work
+  must reuse optional dialog props and the existing `previewPost` route/client
+  seam first.
 - `core/admin/ui/posts/PostsCreateDrawer.tsx` renders the create drawer
   subtitle as a plain `<p>` while importing only `SheetTitle`; it should use the
   shared sheet description primitive so Radix can bind `aria-describedby`.
@@ -54,10 +88,15 @@ unless implementation or a fresh replay proves a regression.
 
 ## Required Product Behavior
 
-1. Publish/update feedback is visible and accessible:
-   - success and failure outcomes emit through the shared Admin UI Sonner host;
-   - visible toast DOM or equivalent live-region text is proven in tests;
-   - inline header state remains truthful but is not the only confirmation.
+1. Posts editor wrapper parity matches Pages where the contract is shared:
+   - success and failure outcomes emit through the shared Admin UI Sonner host
+     via `createAdminActionToastAdapter`, not direct component-local Sonner calls;
+   - `apiClient` remains the single CSRF bootstrap/retry owner for admin writes;
+   - `postsClient` remains the cache/TTL/cacheBus owner for list/detail cache
+     changes;
+   - editor state keeps dirty-state and remote-update guards so cache refreshes
+     cannot overwrite unsaved local edits;
+   - inline header/error state remains truthful but is not the only confirmation.
 2. Create New Post drawer is accessible:
    - the drawer content has a real description element bound by
      `aria-describedby`;
@@ -92,9 +131,11 @@ unless implementation or a fresh replay proves a regression.
 ## Non-Goals
 
 - Do not add another toaster host, event bus, or Posts-only notification system.
-- Do not claim `BUG-5` fixed from a mocked `toast.success` call alone.
-- Do not replace the Posts editor shell, publish/update route contract, or
-  autosave semantics.
+- Do not reopen `BUG-5` as a missing visible toast unless a fresh replay proves
+  that regression again.
+- Do not claim editor-wrapper parity from a mocked `toast.success` call alone.
+- Do not replace the Posts editor shell, publish/update route contract, cache
+  client, CSRF transport, or autosave semantics.
 - Do not add Media catalog labels that create unsupported block types.
 - Do not change stored post slug semantics, taxonomy storage, or revision kind
   semantics.
@@ -135,8 +176,9 @@ unless implementation or a fresh replay proves a regression.
 
 ## Implementation Order
 
-1. Fix publish/update toast delivery first because it is a replayed regression
-   against an already documented Posts editor contract.
+1. Harden publish/update feedback first. Treat the latest live toast as fixed,
+   but move the implementation onto the shared Pages adapter and bounded error
+   path.
 2. Fix Create New Post drawer description and add console-clean coverage.
 3. Implement or formally defer the Media block capability expansion using the
    full block contract.
@@ -152,6 +194,7 @@ unless implementation or a fresh replay proves a regression.
   - `tests/vitest/admin/adminApp.test.tsx`
   - `tests/vitest/admin/sonner.test.tsx`
   - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx`
+  - `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`
   - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
   - `tests/vitest/ui/page-post-list-wave.test.tsx` if shared list/editor toast
     helpers are touched.
@@ -173,6 +216,8 @@ unless implementation or a fresh replay proves a regression.
 - Manual Playwright CLI replay:
   - publish and update create visible `[data-sonner-toast]` or populated
     `Admin notifications` live-region output;
+  - rejected publish/update keeps inline error state and emits bounded error
+    toast copy;
   - Create New Post drawer opens without Radix description warning;
   - Media tab shows only fully supported capabilities.
 
@@ -188,10 +233,11 @@ unless implementation or a fresh replay proves a regression.
 
 ## Acceptance Criteria
 
-1. `BUG-5` is fixed by visible, accessible Sonner feedback after publish and
-   update, with failure feedback no longer swallowed.
+1. `BUG-5` remains fixed live, and Posts editor mutation feedback is normalized
+   onto the shared Pages editor action-toast adapter with failure feedback no
+   longer swallowed.
 2. `BUG-8` is fixed and covered by a console-clean drawer a11y test.
 3. `UX-4` is either implemented end to end for the accepted media block types
    or remains explicitly open with no unsupported catalog labels.
-4. The 2026-04-25 source report is updated with closure evidence and no
-   ambiguity between fixed, partial, open, and deferred states.
+4. The source report is updated with 2026-04-25 and 2026-04-26 closure evidence
+   and no ambiguity between fixed, partial, open, and deferred states.

@@ -11,13 +11,27 @@
 
 ## Overview
 
-Close or explicitly re-scope `UX-4` from the 2026-04-25 Posts replay. The Media
-tab currently exposes `Image` and `Embed`, while the report still expects
-`Video`, `Gallery`, `Audio`, and `File`.
+Close or explicitly re-scope `UX-4` from the 2026-04-25 and 2026-04-26 Posts
+replays. The Media tab currently exposes `Image` and `Embed`, while the report
+still expects `Video`, `Gallery`, `Audio`, and `File`.
 
 `TASK-204-03-02` correctly prevented fake catalog labels. This task is the
 implementation path if the product decision is to make the missing media blocks
 real.
+
+Current code anchors:
+
+- `core/services/posts/editor/postBlockDocument.ts` currently accepts only the
+  existing block types, including `image` and `embed`; adding to
+  `POST_BLOCK_TYPES` immediately changes the API schema because
+  `postsService.ts` imports that enum.
+- `core/admin/ui/posts/editor/blocks/blockCatalog.ts` currently lists only
+  `Image` and `Embed` in the Media category.
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` currently opens an
+  image-focused picker (`Select Image`) and filters media items to image assets.
+- `core/admin/ui/media/MediaPicker.tsx` already has generic `accept`,
+  `multiple`, and `maxItems` support; reuse or extend that shared picker before
+  inventing a Posts-only picker.
 
 ## Sub-Tasks
 
@@ -54,6 +68,8 @@ Out of scope:
 - `core/admin/ui/posts/editor/blocks/blockCatalog.ts`
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts`
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
+- `core/admin/ui/media/MediaPicker.tsx` only if the shared picker needs a
+  generic extension for gallery/audio/video/file selection
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx`
 - `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts`
 - `core/services/posts/runtime/postBlockRuntimeMapper.ts`
@@ -64,6 +80,9 @@ Out of scope:
 - `tests/vitest/posts/post-block-transforms.test.ts`
 - `tests/vitest/ui/post-block-inserter-wave.test.tsx`
 - `tests/vitest/ui/block-inserter-wave.test.tsx`
+- `tests/vitest/ui/post-editor-canvas-wave.test.tsx`
+- `tests/vitest/ui/media-picker.test.tsx` if the shared media picker contract is
+  changed
 
 ## Security Contract
 
@@ -105,6 +124,8 @@ Out of scope:
 - UI Vitest:
   - Media tab lists only supported media blocks;
   - each accepted block inserts and can be selected;
+  - image-only picker copy/filtering is replaced or scoped correctly for any
+    accepted non-image type;
   - inspector controls update attrs without corrupting other block types.
 - Runtime Vitest:
   - video/audio/file/gallery render safe deterministic markup;

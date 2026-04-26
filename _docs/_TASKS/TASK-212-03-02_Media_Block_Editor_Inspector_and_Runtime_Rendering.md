@@ -22,6 +22,15 @@ This leaf also finalizes acceptance of any `POST_BLOCK_TYPES` additions from
 `TASK-212-03-01`. If a type is not rendered here, it must remain absent from the
 visible catalog and must not be claimed as an accepted persisted Posts block.
 
+Current editor state to account for before implementation:
+
+- `blockCatalog.ts` exposes only `Image` and `Embed` in the Media category.
+- `PostEditorCanvas.tsx` has an image-only picker flow (`Select Image`) and
+  filters selectable media to images.
+- `MediaPicker.tsx` is already a shared picker with `accept`, `multiple`, and
+  `maxItems`; extend that shared contract only when the existing API is
+  insufficient for the accepted block types.
+
 ## Sub-Tasks
 
 No child task files.
@@ -31,12 +40,16 @@ No child task files.
 - `core/admin/ui/posts/editor/blocks/blockCatalog.ts`
 - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx`
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
+- `core/admin/ui/media/MediaPicker.tsx` only if accepted non-image media types
+  require shared picker behavior beyond current `accept`/`multiple` support
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx`
 - `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts`
 - `core/services/posts/runtime/postBlockRuntimeMapper.ts`
 - `core/services/posts/runtime/postBlockRuntimeRenderer.tsx`
 - `tests/vitest/ui/post-block-inserter-wave.test.tsx`
 - `tests/vitest/ui/block-inserter-wave.test.tsx`
+- `tests/vitest/ui/post-editor-canvas-wave.test.tsx`
+- `tests/vitest/ui/media-picker.test.tsx` if shared picker behavior changes
 - `tests/vitest/posts/post-block-runtime-renderer.test.tsx`
 
 ## Implementation Direction
@@ -48,10 +61,13 @@ For each accepted type:
 - Canvas:
   - render a stable placeholder when empty;
   - render selected media preview when resolvable;
+  - replace or scope the current image-only picker title/filter so non-image
+    blocks cannot open a misleading image-only flow;
   - keep dimensions stable so inserting/selecting does not shift layout.
 - Inspector:
   - expose only controls backed by normalized attrs;
   - use existing media picker APIs and MIME filters where possible.
+  - gallery selection must use deterministic ordering and a bounded item count.
 - Runtime:
   - map media ids through the runtime media resolver;
   - omit unsafe or unresolved media with a non-breaking placeholder when needed;
@@ -89,6 +105,8 @@ For each accepted type:
   - inserting each block creates the right default UI;
   - controls update normalized attrs;
   - unsupported media states render stable empty placeholders.
+  - the picker accepts only the MIME families supported by the selected block
+    type and does not regress existing Image behavior.
 - Runtime:
   - safe deterministic markup for each block type;
   - unresolved media does not crash runtime rendering;

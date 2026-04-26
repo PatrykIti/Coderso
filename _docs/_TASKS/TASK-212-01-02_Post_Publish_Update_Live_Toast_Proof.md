@@ -11,12 +11,16 @@
 
 ## Overview
 
-Add proof that Posts publish/update feedback reaches the visible Sonner surface
-and accessibility live-region path.
+Add regression proof that Posts publish/update feedback still reaches the
+visible Sonner surface and accessibility live-region path after adapter
+hardening.
 
-`TASK-204` proved the toaster host configuration, but the 2026-04-25 replay
-still found no `[data-sonner-toast]` and an empty `[aria-live=polite]` region
-after a successful publish. This leaf must close that exact evidence gap.
+`TASK-204` proved the toaster host configuration. The 2026-04-25 replay found
+no `[data-sonner-toast]`, but the 2026-04-26 deep retest now proves the live
+browser symptom is fixed: Publish shows `Post published`, Update shows
+`Changes saved`, and `[data-sonner-toast]` renders. This leaf preserves that
+proof while `TASK-212-01-01` moves Posts from direct Sonner calls to the shared
+Pages-style adapter and bounded failure handling.
 
 ## Sub-Tasks
 
@@ -32,14 +36,16 @@ No child task files.
 
 ## Implementation Direction
 
-1. Keep mocked adapter tests, but add at least one browser-like render proof
-   that a publish/update action creates the same DOM contract the Playwright
+1. Keep adapter-unit tests, but add at least one browser-like render proof that
+   a publish/update action still creates the same DOM contract the Playwright
    replay inspected.
 2. Prefer asserting the Sonner contract by visible selectors:
    - `[data-sonner-toast]`
    - `aria-live`
    - `Admin notifications`
-3. Keep the test isolated from real network and navigation under the Vitest
+3. Include failure-path proof: rejected publish/update produces bounded user
+   copy and leaves the hook-owned inline error state truthful.
+4. Keep the test isolated from real network and navigation under the Vitest
    happy-dom guardrails.
 
 Pseudocode:
@@ -48,7 +54,7 @@ Pseudocode:
 await clickPublish();
 await waitFor(() => {
   expect(container.querySelector("[data-sonner-toast]")?.textContent)
-    .toContain("Post published.");
+    .toContain("Post published");
 });
 ```
 
@@ -65,9 +71,12 @@ record the remaining manual Playwright proof requirement in this leaf.
 ## Testing Requirements
 
 - Vitest:
-  - publish success creates visible toast/liver-region output;
+  - publish success creates visible toast/live-region output;
   - update success creates visible toast/live-region output;
   - failure path creates bounded error toast.
+- `tests/vitest/ui/post-editor-state-hook-wave.test.tsx`:
+  - cache refresh after publish/update does not overwrite unsaved local edits;
+  - `cacheBus` events keep `remoteUpdatePending` behavior explicit.
 - Manual Playwright CLI:
   - publish a draft post and assert the toast/live-region;
   - update a published post and assert the toast/live-region;
@@ -79,6 +88,9 @@ record the remaining manual Playwright proof requirement in this leaf.
 
 ## Acceptance Criteria
 
-1. The same selector evidence that failed on 2026-04-25 now passes.
+1. The same selector evidence that passed on 2026-04-26 still passes after the
+   shared adapter wiring.
 2. Publish and update are both covered.
 3. The task cannot be closed with only a mocked `toast.success` assertion.
+4. Failure and cache/update parity are covered by targeted tests or explicitly
+   recorded as unchanged with evidence.

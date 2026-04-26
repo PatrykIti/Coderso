@@ -81,19 +81,19 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-213-07 | QA Docs and Widget Source Report Closure | Medium | Medium | Final validation matrix, Playwright source report closure, docs, changelog, and board synchronization for TASK-213 |
 | TASK-213-07-01 | Widget Playwright and Vitest Regression Matrix | Medium | Small | Technical leaf: map every SUMMARY-WIDGETS finding to exact automated/manual proof and record unrelated failures separately |
 | TASK-213-07-02 | Widgets Docs Changelog and Board Closure | Medium | Small | Technical leaf: update widgets docs, changelog/index, TASK-213 statuses, README counts, and source-report fixed/open states |
-| TASK-212 | Posts Playwright Retest Follow-ups | High | Large | Close 2026-04-25 Posts retest findings: real publish/update toasts, Create Post Radix description, media capability gap, and source-report closure |
-| TASK-212-01 | Post Editor Publish Update Toast Delivery | High | Medium | Repair BUG-5 by routing publish/update success and failure through the shared editor action-toast contract with visible live proof |
-| TASK-212-01-01 | Post Editor Action Toast Adapter Wiring | High | Small | Technical leaf: replace ad hoc Posts editor toast calls with the shared `createAdminActionToastAdapter` path and bounded failures |
-| TASK-212-01-02 | Post Publish Update Live Toast Proof | High | Small | Technical leaf: prove publish/update creates visible Sonner or Admin notifications live-region output, not only mocked toast calls |
+| TASK-212 | Posts Playwright Retest Follow-ups | High | Large | Close 2026-04-25/26 Posts editor follow-ups: Pages-style wrapper parity, Create Post Radix description, media capability gap, and source-report closure |
+| TASK-212-01 | Post Editor Mutation Wrapper Parity | High | Medium | Treat BUG-5 visible toast as fixed live, then normalize Posts publish/update onto the shared editor action-toast, cache, and update contract |
+| TASK-212-01-01 | Post Editor Action Toast Adapter Wiring | High | Small | Technical leaf: replace direct Sonner calls with the shared `createAdminActionToastAdapter` path and bounded failures |
+| TASK-212-01-02 | Post Publish Update Live Toast Proof | High | Small | Technical leaf: preserve visible publish/update Sonner proof, bounded failure feedback, and cache/remote-update parity after adapter hardening |
 | TASK-212-02 | Create Post Drawer A11y Description | Medium | Small | Repair BUG-8 by binding Create New Post drawer subtitle through `SheetDescription` and eliminating the Radix warning |
 | TASK-212-02-01 | Create Post Drawer SheetDescription Wiring | Medium | Small | Technical leaf: replace the plain subtitle paragraph in `PostsCreateDrawer` with the shared sheet description primitive |
 | TASK-212-02-02 | Post Dialog A11y Regression Matrix | Medium | Small | Technical leaf: add console-clean aria-describedby coverage for Create New Post and regression smoke for Revisions |
 | TASK-212-03 | Post Media Block Capability Expansion | Medium | Large | Decide and implement or explicitly defer Video/Gallery/Audio/File as real block capabilities without catalog-only labels |
 | TASK-212-03-01 | Media Block Schema Defaults and Normalization | Medium | Medium | Technical leaf: add accepted media block types to the domain contract, defaults, normalizer, and transforms before UI exposure |
 | TASK-212-03-02 | Media Block Editor Inspector and Runtime Rendering | Medium | Large | Technical leaf: expose accepted media blocks in inserter/canvas/inspector and render them safely at public runtime |
-| TASK-212-04 | QA Docs and Playwright Source Closure | Medium | Medium | Final validation, Playwright source report closure, product docs, changelog, and board sync for TASK-212 |
-| TASK-212-04-01 | Posts Retest Validation Matrix | Medium | Small | Technical leaf: targeted Vitest/lint/typecheck/manual Playwright matrix for BUG-5, BUG-8, and UX-4 |
-| TASK-212-04-02 | Docs Changelog and Source Report Update | Medium | Small | Technical leaf: append TASK-212 closure to SUMMARY-POSTS, sync docs/changelog/board, and preserve TASK-204 history |
+| TASK-212-04 | QA Docs and Playwright Source Closure | Medium | Medium | Final validation, Playwright source report closure, product docs, changelog, and board sync for TASK-212 with BUG-5 fixed baseline preserved |
+| TASK-212-04-01 | Posts Retest Validation Matrix | Medium | Small | Technical leaf: targeted Vitest/lint/typecheck/manual Playwright matrix for BUG-5 hardening, BUG-8, and UX-4 |
+| TASK-212-04-02 | Docs Changelog and Source Report Update | Medium | Small | Technical leaf: append TASK-212 closure to SUMMARY-POSTS with 2026-04-26 status, sync docs/changelog/board, and preserve TASK-204 history |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |

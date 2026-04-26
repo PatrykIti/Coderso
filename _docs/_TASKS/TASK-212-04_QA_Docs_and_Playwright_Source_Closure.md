@@ -14,9 +14,10 @@
 Close `TASK-212` with validation evidence, source-report updates, docs, board,
 and changelog.
 
-This closure must be based on the 2026-04-25 Playwright retest findings, not the
-older 2026-04-23 state. It should keep `TASK-204` closure intact and only update
-the status of the remaining/open findings from the new retest.
+This closure must be based on the 2026-04-25 retest plus the 2026-04-26 deep
+retest, not the older 2026-04-23 state. It should keep `TASK-204` closure
+intact and only update the status of the remaining/open findings from the new
+retests.
 
 ## Sub-Tasks
 
@@ -54,7 +55,8 @@ the status of the remaining/open findings from the new retest.
   before DB-backed tests:
   - `set -a && source .env && set +a`
 - Manual Playwright CLI replay:
-  - publish/update toast delivery;
+  - publish/update toast delivery and failure feedback, preserving the
+    2026-04-26 fixed visible-toast result;
   - Create New Post drawer console-clean state;
   - Media tab accepted/deferred state.
 
@@ -71,7 +73,8 @@ the status of the remaining/open findings from the new retest.
 ## Acceptance Criteria
 
 1. `SUMMARY-POSTS.md` has a final TASK-212 section that maps `BUG-5`, `BUG-8`,
-   and `UX-4`.
+   and `UX-4`, including that `BUG-5` was live-fixed before the wrapper
+   hardening work.
 2. Validation commands are recorded with pass/fail status.
 3. Board statistics and task statuses are synchronized.
 4. Changelog entry exists when this family is completed.

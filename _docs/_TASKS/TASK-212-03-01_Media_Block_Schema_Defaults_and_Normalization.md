@@ -12,7 +12,9 @@
 ## Overview
 
 Add the domain contract for accepted media block types before exposing them in
-the UI.
+the UI. The current Media tab is still `Image` + `Embed`; this leaf must not
+turn missing `Video`, `Gallery`, `Audio`, or `File` labels into accepted payloads
+until editor and runtime support are ready in the same closure slice.
 
 This leaf owns the domain draft for block type enums, default block creation,
 attrs/content normalization, transforms, and document-level tests. UI labels
@@ -76,6 +78,16 @@ type PostFileBlockAttrs = {
 Keep exact field names aligned with the existing media service and runtime
 renderer before coding. Prefer media-library `mediaId` references over raw URLs
 where the current media API supports the asset type.
+
+Before changing `POST_BLOCK_TYPES`, inspect the current media asset contract and
+picker support:
+
+- single-media blocks should use a stable `mediaId` reference when available;
+- gallery must define ordering, maximum item count, and missing-item behavior;
+- audio/video/file must not persist trusted runtime instructions derived only
+  from browser-selected MIME labels;
+- any required `MediaPicker` extension belongs in `TASK-212-03-02`, not in a
+  domain-only enum commit.
 
 Dependency guard:
 
