@@ -109,6 +109,26 @@ selection pattern: visible-row ids only, trim selection when filters hide rows,
 execute row-route deletes with bounded `Promise.allSettled`, and emit truthful
 partial-failure feedback through the shared list/action toast helper.
 
+Name and duplicate guard:
+
+```ts
+async function assertTemplateNameAvailable(name: string, exceptId?: string) {
+  const normalizedName = normalizeTemplateName(name);
+  const templates = await listWidgetTemplates();
+  const conflict = templates.find(
+    (item) =>
+      item.id !== exceptId &&
+      normalizeTemplateName(item.name) === normalizedName
+  );
+  if (conflict) throw new Error("widget_template_name_conflict");
+}
+```
+
+The guard belongs in `widgetTemplateService.ts` or a shared service helper, not
+inside the route handler or React component. If implementation chooses a DB
+unique constraint instead of service-level rejection/suffixing, include the full
+Drizzle migration artifacts required by `AGENTS.md`.
+
 ## Security Contract
 
 - Endpoint visibility: internal admin routes only (`/admin/api/widget-templates`
@@ -123,7 +143,10 @@ partial-failure feedback through the shared list/action toast helper.
 - Reject-unknown validation:
   - create/update/duplicate payloads use strict route schemas in
     `core/server/validation/widgetSchemas.ts`;
-  - name conflicts map to `widget_template_conflict` or equivalent known code.
+  - name conflicts map to `widget_template_name_conflict` or equivalent known
+    machine-readable code through `mapWidgetTemplateError`;
+  - duplicate payloads, if exposed as a route, reject unknown fields and never
+    copy caller-supplied blocks/settings over the source template.
 - Anti-abuse:
   - delete/duplicate re-check current id/name/status/category;
   - toasts do not include raw blocks/settings payloads;
@@ -141,6 +164,8 @@ partial-failure feedback through the shared list/action toast helper.
     confirmation.
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
   - duplicate/delete cache invalidation or update behavior.
+- `tests/unit/widgets/widgetTemplateService.test.ts`
+  - name conflict service guard and duplicate suffixing/rejection behavior.
 - `tests/integration/routes/widgetTemplates.test.ts`
   - route registration remains internal-admin scoped;
   - `mapWidgetTemplateError` covers duplicate/name-conflict, not-found, and

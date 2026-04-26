@@ -41,6 +41,15 @@ Pseudocode:
 | GLOBAL-2 Listing/Search native select | code refs + UI suite | inspect controls | Current-state verified |
 ```
 
+Minimum source matrix:
+
+- `BUG-1` through `BUG-7`
+- `UX-1` through `UX-8`
+- `GLOBAL-1` through `GLOBAL-3`
+- `BUG-9` and `BUG-10`
+- layout/content/forms/navigation per-widget notes that were intentionally
+  routed into `TASK-213-05-*` and `TASK-213-06-*`
+
 Use command output, not assumptions. If a suite fails for unrelated legacy
 reasons, isolate it with a smaller targeted suite and document the unrelated
 failure separately.

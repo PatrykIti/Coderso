@@ -126,6 +126,54 @@ stay in the existing Widget Library/editor seams.
      findings with concrete validation evidence;
    - task board, docs, changelog, and test evidence agree.
 
+## Source Finding Coverage Map
+
+Every finding from `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md` has an implementation
+owner or a verification owner:
+
+| Source finding | Owner | Required closure |
+|---|---|---|
+| `BUG-1` Insert Widget silent outcome | `TASK-213-02-01` | Await insert mutation, emit shared toast, and expose canonical editor link. |
+| `BUG-2` Favorite button a11y/state | `TASK-213-03-01` | Dynamic label/title, pressed state, visual state, and bounded persistence feedback. |
+| `BUG-3` Template save/create feedback | `TASK-213-04-01` | Shared create/update success/error toasts after awaited saves. |
+| `BUG-4` Template list cleanup actions | `TASK-213-04-01` | Row Edit/Duplicate/Delete plus confirmed visible-scope bulk delete. |
+| `BUG-5` Duplicate card/drawer insert entry | `TASK-213-02-02` | One configuration-first insert path; no mutation before placement submit. |
+| `BUG-6` Weak New Template CTA | `TASK-213-04-01` | Primary Templates-tab create action in the list header/action area. |
+| `BUG-7` Global tab counts under filters | `TASK-213-03-02` | Recommended/All counts computed from the active filter basis. |
+| `UX-1` Card click ambiguity | `TASK-213-02-02` | Resolve in favor of the repo's configured widget flow until a safe default target policy exists. |
+| `UX-2` Module readiness copy | `TASK-213-03-02` | Keep pack metadata internal while exposing editor-friendly labels. |
+| `UX-3` Advanced mode helper | `TASK-213-03-02` | Accessible helper/tooltip describing complexity filtering. |
+| `UX-4` Unlabeled view toggle | `TASK-213-03-01` | Named grid/list controls with selected state and visible layout effect. |
+| `UX-5` Filter hierarchy overload | `TASK-213-03-03` | Clarify sidebar vs toolbar ownership without creating a second library surface. |
+| `UX-6` Test/duplicate templates cleanup | `TASK-213-04-01` | Delete/duplicate/name-guard cleanup from the Templates list. |
+| `UX-7` Category inline edit/delete confusion | `TASK-213-04-02` | Visually distinct edit and delete states that preserve category context. |
+| `UX-8` Duplicate Favorites rail signals | `TASK-213-03-03` | One Favorites representation per rail state. |
+| `GLOBAL-1` Count vs exposed rows | `TASK-213-05-01` | Repair or current-state verify every named repeatable widget. |
+| `GLOBAL-2` Native select vs Radix | `TASK-213-06-01`, `TASK-213-07-01` | Product widgets use shared selects; Listing/Search select finding is current-state verified while loading states stay under `TASK-213-01-02`. |
+| `GLOBAL-3` Paired inputs without labels | `TASK-213-05-02` | Per-field labels or accessible names plus helper copy for technical fields. |
+| `BUG-9` Form Embed crash | `TASK-213-01-01` | UI-only sentinel; no sentinel persistence; no blank-editor crash. |
+| `BUG-10` Listing query loading state | `TASK-213-01-02` | Loading, empty, ready, and error states are truthful after fetch completion. |
+| Layout/content/forms/navigation audit notes | `TASK-213-05-*`, `TASK-213-06-*` | Scoped quick-setup upgrades through existing widget schemas, normalizers, editors, and runtime renderers. |
+
+`TASK-213-07` must copy this map into the final source-report closure state with
+actual test/manual evidence, not just planned ownership.
+
+## Implementation Guardrails
+
+- Route files stay orchestration-only: validate input, enforce permissions,
+  delegate to services, and map known domain errors through `map*Error`
+  helpers.
+- Widget data changes start in the owner schema/default/`normalize*` helper in
+  `core/widgets/core/*`; admin editors must not persist editor-only sentinels,
+  raw picker records, private media URLs, or unsupported fields.
+- New or changed admin cached resources must update cache keys/clients/events
+  and `_docs/ADMIN_CACHE.md` / `_docs/ADMIN_CACHE_MAP.md`.
+- Template duplicate/name guards must be service-owned and route-mapped. If an
+  implementation adds or changes a DB uniqueness constraint, it must include
+  the SQL migration, `meta/*_snapshot.json`, and `meta/_journal.json` update.
+- Tests must reflect real behavior. Do not add production fallbacks only to make
+  a suite pass.
+
 ## Sub-Tasks
 
 - `TASK-213-01_Widget_Editor_Stability_and_Data_Loading.md`
