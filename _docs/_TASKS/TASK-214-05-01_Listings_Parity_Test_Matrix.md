@@ -36,10 +36,13 @@ add real component suites where the mocked wave cannot prove behavior.
   cache-bus broadcasts.
 - [ ] Cover the controlled template boundary: header `New`, row Edit, dialog
   close, row Delete, and bulk Delete all update shell-owned state.
+- [ ] Cover that the template tab no longer gets its list rows, loading/error
+  state, selected ids, or bulk metadata from private `ListingTemplateManager`
+  state after the shell refactor.
 - [ ] Cover the route error split required by TASK-214-04-04: query-domain
   validation errors emitted as `ApiError` pass through unchanged, while
-  non-ApiError missing-resource/template sentinels map to stable `ApiError`
-  responses at the route boundary.
+  non-ApiError missing-resource, raw `listing_query_invalid`, and template
+  sentinels map to stable `ApiError` responses at the route boundary.
 - [ ] Assert no private `ListingTemplateManager` direct-delete or nested primary
   `New template` flow remains after the active-tab header implementation.
 

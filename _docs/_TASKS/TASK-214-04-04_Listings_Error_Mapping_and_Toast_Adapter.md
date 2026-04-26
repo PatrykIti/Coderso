@@ -39,6 +39,11 @@ list uses shared toast normalization instead of ad hoc strings.
   `listing_query_invalid_filter_value`, `listing_query_invalid_name`, and
   `listing_query_update_empty` paths. These should pass through
   `withListingErrors` unchanged rather than being remapped as raw exceptions.
+- [ ] Add explicit mapping coverage for raw non-`ApiError` query sentinels that
+  can leak through service code, especially the insert-failure
+  `listing_query_invalid` from `listingQueriesService.createListingQuery`.
+  This mapping should be separate from the query-builder `ApiError` pass-through
+  cases.
 - [ ] Confirm schemas reject unknown top-level query/template create/update
   fields.
 - [ ] Add missing stable mapping only if a real domain error currently leaks as
@@ -87,6 +92,9 @@ export const mapListingError = (error: unknown) => {
   if (error.message === "listing_query_not_found") {
     return new ApiError("listing_query_not_found", "Listing query not found", 404);
   }
+  if (error.message === "listing_query_invalid") {
+    return new ApiError("listing_query_invalid", "Listing query payload is invalid", 400);
+  }
   // Keep mapped template errors here.
 };
 ```
@@ -99,6 +107,7 @@ export const mapListingError = (error: unknown) => {
   - `mapListingError` maps existing non-`ApiError` query/template sentinels
     directly through an exported mapper;
   - missing query maps to `listing_query_not_found`;
+  - raw non-`ApiError` `listing_query_invalid` maps to a stable 400 response;
   - invalid query create/update payloads preserve stable query errors such as
     `listing_query_invalid`, `listing_query_invalid_source_config`,
     `listing_query_invalid_filter_value`, `listing_query_invalid_name`, and

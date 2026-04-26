@@ -33,6 +33,10 @@ must stop treating `Queries` as the only resource.
   child component internals.
 - [ ] Convert `ListingTemplateManager` to a controlled child boundary for
   create/edit open requests and template row action callbacks.
+- [ ] Move template list rows, loading/error state, visible ids, selection, and
+  table action requests to `ListingListPage` or a shell-called hook. The final
+  list tab must not depend on `ListingTemplateManager` owning
+  `useListingTemplates`.
 - [ ] Keep template form draft/config editing local only inside the controlled
   dialog; do not leave header, selection, or bulk state local-only in
   `ListingTemplateManager`.
@@ -45,6 +49,9 @@ must stop treating `Queries` as the only resource.
 - `ListingTemplateManager` may own transient dialog form state, `BindingEditor`
   cloned config, and save progress, but it receives create/edit open state and
   action callbacks from the parent.
+- `ListingTemplateManager` should receive template rows/loading/error from the
+  shell after the tab refactor. It must not be the hidden owner of template
+  filtering, pagination, selection, row delete, or bulk delete.
 - If template table, filters, bulk bar, or dialog are extracted, they remain
   controlled children. They must not read inactive-tab selection or expose a
   second local primary `New template` action.

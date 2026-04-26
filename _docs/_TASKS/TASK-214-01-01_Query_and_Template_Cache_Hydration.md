@@ -23,18 +23,24 @@ from cache-bus events without mount-force refetch loops.
   refresh policy. If a Listings-specific exported helper is useful for tests,
   keep it as a thin wrapper that delegates to the shared helper; do not
   duplicate the policy inline.
+- [ ] Reuse `resolveCacheRefreshBackground` inside each hook refresh function so
+  explicit `{ background: true }` refreshes and cache-event refreshes preserve
+  visible cached rows without toggling foreground loading.
 - [ ] Track `hasHydratedRef` like Pages/Forms list hooks.
 - [ ] Keep `getCachedListingQueries` and `getCachedListingTemplates` as the
   immediate hydration sources.
 - [ ] Keep `listListingQueriesCached({ force })` and
   `listListingTemplatesCached({ force })` as the only network/cache wrappers.
 - [ ] If `refresh` changes from the current boolean force argument to an
-  options object, preserve backwards compatibility or update every caller in
-  the same leaf. No caller should pass `{ force, background }` into a
+  options object, use a backwards-compatible signature such as
+  `boolean | { force?: boolean; background?: boolean }` or update every caller
+  in the same leaf. No caller should pass `{ force, background }` into a
   boolean-only hook.
 - [ ] Ensure cache-bus updates refresh in the background.
-- [ ] Preserve `useListingTemplates` behavior for both current consumers:
-  `ListingTemplateManager` and `ListingEditorPage`.
+- [ ] Preserve `useListingTemplates` behavior for current consumers while this
+  leaf lands. After TASK-214-01-02/03 moves template list ownership to the
+  shell, `ListingEditorPage` remains the separate editor consumer and the
+  template tab receives rows/loading/error through controlled props.
 
 ## Files to Change
 
@@ -64,7 +70,10 @@ from cache-bus events without mount-force refetch loops.
 ## Pseudocode
 
 ```ts
-import { resolveListMountRefreshOptions } from "@/utils/cacheRefresh";
+import {
+  resolveCacheRefreshBackground,
+  resolveListMountRefreshOptions,
+} from "@/utils/cacheRefresh";
 
 export function resolveListingsMountRefreshOptions(hasInitialCache: boolean) {
   return resolveListMountRefreshOptions(hasInitialCache);
@@ -74,6 +83,22 @@ const initialCached = useMemo(() => getCachedListingQueries(), []);
 const hasInitialCache = initialCached !== null;
 const [items, setItems] = useState(() => initialCached ?? []);
 const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
+const hasHydratedRef = useRef(hasInitialCache);
+
+const refresh = async (
+  options?: boolean | { force?: boolean; background?: boolean }
+) => {
+  const force = typeof options === "boolean" ? options : options?.force ?? false;
+  const background = resolveCacheRefreshBackground({
+    explicitBackground: typeof options === "object" ? options.background : undefined,
+    hasHydrated: hasHydratedRef.current,
+  });
+  if (!background) setIsLoading(true);
+  const nextItems = await listListingQueriesCached({ force });
+  setItems(nextItems);
+  hasHydratedRef.current = true;
+  if (!background) setIsLoading(false);
+};
 ```
 
 ## Testing Requirements
@@ -82,6 +107,8 @@ const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
 - Cached empty query list renders a true empty state, not a loading state.
 - Cached template list renders without `Loading templates...`.
 - Cache-bus event triggers background refresh for the matching key only.
+- Explicit background refresh keeps cached rows visible and does not show a
+  foreground loading empty state.
 - `ListingEditorPage` still renders its template selector after
   `useListingTemplates` changes.
 - Commands:

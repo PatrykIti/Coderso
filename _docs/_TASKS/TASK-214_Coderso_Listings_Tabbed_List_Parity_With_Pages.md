@@ -121,10 +121,26 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
   `useListingTemplates` is used by both `ListingTemplateManager` and
   `ListingEditorPage`; any refresh signature change must be compatible with
   those callers or update and test them in the same leaf.
+- The final tabbed list shell should own query and template list data. During
+  the refactor `ListingTemplateManager` can remain a migration consumer of
+  `useListingTemplates`, but the target state is that `ListingListPage` or a
+  shell-called hook passes template rows, loading/error state, selection, and
+  row-action callbacks into the template tab. `ListingEditorPage` remains the
+  separate editor consumer of `useListingTemplates`.
 - Existing `listingsClient` helpers already own CSRF, cached wrappers, local
   cache priming, and cache-bus broadcasts for query/template mutations. Bulk
   delete should compose those helpers with `Promise.allSettled`; do not add a
   batch endpoint only for UI parity.
+- Cache hook changes should follow the current shared list pattern exactly:
+  `resolveListMountRefreshOptions(hasInitialCache)` for mount and
+  `resolveCacheRefreshBackground(...)` for later refresh calls. If the hooks
+  accept the newer options object, keep the current boolean force call style
+  compatible until all callers are migrated and tested.
+- Route error work must distinguish query builder `ApiError` validation
+  failures, which pass through unchanged, from raw non-`ApiError` sentinels.
+  The raw `listing_query_invalid` insertion failure from
+  `listingQueriesService.createListingQuery` should be mapped explicitly if it
+  becomes UI-visible through list/editor save feedback.
 
 ## Required Product Behavior
 
