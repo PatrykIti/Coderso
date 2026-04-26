@@ -462,3 +462,218 @@ Treść description "Start a new article and publish when ready." istnieje w UI 
 
 - `screenshots/2026-04-25/posts-01-list-bulk.png` — bulk toolbar widoczny.
 - `screenshots/2026-04-25/posts-02-editor.png` — edytor po Publish (button → Update, badge Published).
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-26)
+
+**Tester:** Claude (Playwright CLI)
+**Środowisko:** http://localhost:5173/admin/coderso/posts
+**Zalogowany jako:** patryk.ciechanski@patrykiti.pl
+
+### Krok 1 — Re-weryfikacja BUG-5 + BUG-8 (z 25.04 outstanding)
+
+| ID | Status | Obserwacja na żywo |
+|---|---|---|
+| **BUG-5** Toast po Publish / Update | ✓ **FIXED** | Po kliknięciu **Publish** — sonner toast `Post published` pojawia się po ~2203ms. Po kliknięciu **Update** — sonner toast `Changes saved` po ~2915ms. `[data-sonner-toast]` faktycznie renderowany w DOM. **Pain point z 25.04 zamknięty.** |
+| **BUG-8** Radix `aria-describedby` w Create Post drawer | ✗ NIE NAPRAWIONE | Konsola: `Warning: Missing Description or aria-describedby={undefined} for {DialogContent}` przy każdym otwarciu drawera. DOM: `aria-describedby="radix-_r_8_"`, ale `document.getElementById('radix-_r_8_')` → `null`. Description text widoczny w UI ("Start a new article and publish when ready.") jako zwykły `<p>` bez `id={descId}`. **Wymaga `<DialogDescription>` wrappera** — fix jednolinijkowy. |
+
+**TL;DR Krok 1:** 1/2 starych pozycji domknięte. BUG-5 ✓ FIXED. BUG-8 ✗ wciąż otwarte (regresja Radix description w Create Post drawer).
+
+### Krok 2 — Pisanie treści, formatowanie inline, transformacja typów bloków
+
+**Strona testowa:** post `Deep Post Test 2026-04-26`.
+
+#### Inline formatowanie (Bold / Italic)
+
+| Akcja | Selekcja | Rezultat DOM | Status |
+|---|---|---|---|
+| Klik **Bold** na zaznaczonym tekście | "First paragraph" (15 znaków) | `<p><b>First paragraph</b> for formatting...` | ✓ Apply natychmiast |
+| Klik **Italic** na sąsiednim tekście | "for formatting tests with dia" | `<p><b>First paragraph</b> <i>for formatting tests with dia</i>critics...` | ✓ Apply natychmiast |
+| Po dłuższym czasie / Update | Bold/Italic w treści | `<strong>` zamiast `<b>`, `<em>` zamiast `<i>` | ✓ Normalizacja na semantic HTML — dobra praktyka |
+
+**Special chars:** polskie diakrytyki (`ąęłóżźć`) i znaki HTML (`<test>`) zachowane bez problemu — `<test>` escape'owany jako `&lt;test&gt;` w DOM.
+
+#### Transformacja typu bloku (Type dropdown)
+
+Kliknięcie **Type** w toolbarze otwiera menu: Section / Paragraph / Heading / Quote.
+
+| Akcja | Inspector (right panel) | Document Outline | DOM widoczny | Status |
+|---|---|---|---|---|
+| Type → Heading | "Selected block: **Heading** / Heading level (1-6)" | "1. Heading H2" | Renderowany jako `<p>` (z większą czcionką via class) | ✓ State się aktualizuje, runtime render to weryfikacja |
+| Type → Quote | "Selected block: **Quote** / Highlight block" | (analogicznie) | Renderowany w editor div | ✓ State się aktualizuje |
+| Type → Paragraph | "Selected block: Paragraph" | (czyste) | `<p>...</p>` | ✓ |
+
+**UX-OBSERWACJA-1 (NOWE):** Toolbar nie ma wizualnego wskaźnika aktualnego typu bloku. Kliknięcie "Type → Heading" zmienia stan, ale przycisk "Type" pozostaje statyczny — user musi zerknąć na inspector po prawej żeby wiedzieć "jestem teraz w Heading". WordPress + Notion pokazują aktywny typ na samym przycisku ("Heading" zamiast "Type").
+
+**UX-OBSERWACJA-2 (NOWE):** Toolbar **kontekstowy** per typ bloku — to dobra praktyka:
+- Paragraph: Bold / Italic / Link / Type / Align left/center/right
+- Quote: Bold / Italic / Link / Type / Align left (bez wszystkich Align)
+- (Heading prawdopodobnie ma własny set z Heading level picker)
+
+Kontekstowość → mniej szumu, ale brak wizualnej "kotwicy" zostawia użytkownika w niepewności co do dostępnych akcji bez kliknięcia.
+
+#### Drobne obserwacje
+
+- Po transformacji bloku przyciski **"Open runtime preview"** i **"Update published post"** w nagłówku editora były chwilowo `disabled` (~1-2s) — prawdopodobnie podczas autosave w toku. Po chwili aktywują się znowu.
+- `<b>` → `<strong>` i `<i>` → `<em>` normalizacja dzieje się przy save (autosave po edycji).
+- Empty `<p></p>` paragraphs pojawiają się gdy user naciska Enter na końcu — typowe dla rich text editora.
+
+**TL;DR Krok 2:** Inline formatting działa stabilnie z normalizacją na semantic HTML. Transformacja typów bloków działa, ale brakuje feedbacku w toolbarze (UX-OBSERWACJA-1). Toolbar kontekstowy per typ — pozytywne (UX-OBSERWACJA-2).
+
+### Krok 3 — Block Inserter: insert różnych typów bloków
+
+Kliknięcie "Add block" w nagłówku otwiera lewy panel **Block Inserter** z 4 zakładkami: All / Text / Media / Interactive. Każdy block-type ma kartę z nazwą + opisem.
+
+#### Wstawione bloki (test)
+
+| Block type | Wstawiony? | Placeholder po insert | Status |
+|---|---|---|---|
+| **List** | ✓ | `One item per line...` | OK — block-id=block-4, inspector pokazuje "Block-specific: Ordered..." |
+| **Heading** | ✓ | `Write content for this block...` | OK — wstawiony jako nowy `<section>` block |
+| **Code** | ✓ | `Write code for this block...` (dark mono background) | OK — wizualne wyróżnienie kodu |
+| **Image** | ✓ | `Click to choose image from media library / Advanced URL/media overrides stay in Block...` | OK — picker do otwarcia |
+| **Embed** | ✓ | `Click to configure embed URL / Supports YouTube, Vimeo, Loom, or custom URL.` | OK — z play iconem |
+| **Callout** | ✓ | (nie zweryfikowane wizualnie — sections count 6→7 po insert) | OK — block dodany |
+| **Quote** | ✓ | (przez Type dropdown, krok 2) | OK |
+
+Po 5 inserach: 9 sekcji w canvas (oryginał + 8 nowych). Canvas scrollowalny (scrollHeight=1492, clientHeight=466).
+
+#### Bardzo dobre UX
+
+- ✓ **Contextual placeholders** per block type — zamiast generic "Add content" każdy widget ma sugestię (Image: "Click to choose...", Code: "Write code...", List: "One item per line..."). Eliminuje confusion.
+- ✓ Block Inserter sticky na lewym panelu — zostaje otwarty po insert, można od razu dodać następny.
+- ✓ Wstawione bloki mają deterministyczny ID format (`block-1`, `block-4`, ...).
+- ✓ Inspector po prawej AUTOMATYCZNIE pokazuje "Selected block: {Type}" + sekcję "Block-specific" z opcjami specyficznymi (np. List: "Ordered", Quote: "Highlight block").
+
+#### Pomniejsze ryzyko
+
+- Eval-click on Block Inserter options był nieprzewidywalny w mojej automatyzacji (Radix internal state). Real-user click działa OK — to nie jest bug aplikacji, tylko ograniczenie testowe playwright eval.
+- Zakładka **Media** wciąż uboga: tylko **Image + Embed** (capability gap z UX-4 — TASK-204 jawnie pozostawiony otwarty). Brak Video, Gallery, Audio, File.
+
+**TL;DR Krok 3:** Block Inserter działa stabilnie i intuicyjnie. Wszystkie testowane block-types (List, Heading, Code, Image, Embed, Callout) wstawiają się poprawnie z kontekstowymi placeholderami. UX-4 (Media uboga) wciąż otwarte capability gap.
+
+### Krok 4 — Inspector Block tab + Document Outline + Focus mode
+
+#### Inspector Block tab (auto-aktualizuje się per zaznaczony blok)
+
+Klik dowolnego bloku w canvas → prawy panel automatycznie przełącza na zakładkę **Block** i pokazuje sekcję `Selected block: {Type}`.
+
+| Block type | Block-specific fields | Status |
+|---|---|---|
+| **Section** | "This block uses a fixed layout. Edit content directly on the canvas." | Sekcja jest wraperem dla podstawowego rich-text — fixed layout. |
+| **List** | `Ordered` (toggle) | Toggle ordered/unordered. |
+| **Heading** | `Heading level (1-6)` | H1–H6 picker. |
+| **Quote** | `Highlight block` (toggle) | Wyróżnienie wizualne. |
+| **Code** | `Language` (combobox) + `Show line numbers` (toggle) | OK — bogato. |
+| **Image** | `Media ID` + `Text wrap` (No wrap) + `Image width` (50%) + `Image spacing` (Balanced) + `Alt text` + `Caption` | **UWAGA:** "Media ID" jako label widoczny — czy to raw ID czy tylko meta? Wymaga sprawdzenia po wybraniu obrazu z picker. (Inline insertion przez "Click to choose image from media library" sugeruje, że picker działa.) |
+| **Embed** | `Provider` (Custom URL) + `Embed URL` + `Aspect ratio` (16:9 landscape) + `Lazy load embed` | Provider dropdown — sugeruje preset providery (YouTube/Vimeo/Loom) + Custom URL fallback. |
+| **Callout** | `Tone` (Info) + `Show icon` | Wymaga rozwijania Tone do sprawdzenia opcji (Info/Warning/Success?). |
+
+Wszystkie bloki mają również **Layout and style** (Width, Spacing top/bottom, Alignment) i sekcję **Advanced** (Toggle).
+
+#### Document Outline (lewy panel po toggle "Show document overview")
+
+Lewy panel z dwoma zakładkami: **Outline** / **List view**.
+
+- **Outline:** wykrywa headingi w dokumencie. Pokazuje: `Empty heading H2 1 warning` (×2) + paragraph "Outline checks: 2 issues detected in heading hierarchy." → **świetna A11y-świadoma kontrola hierarchii nagłówków!** Niewypełnione H2 oznaczone jako warning.
+- **List view:** numerowana lista wszystkich bloków: `1. Section`, `2. Image`, `3. Embed block`, `4. Callout`, `5. Code`, `6. Heading`, `7. List`, `8. Heading`, `9. List`. Helper: "Drag blocks to reorder. Keyboard: Alt + Arrow keys."
+
+#### Focus mode (Toggle full width editor)
+
+Klik **Focus** w toolbarze → wszystkie panele boczne (Block Inserter / Document Outline / Inspector) chowają się. Tylko sidebar nawigacji + canvas. Toggle off przywraca panele (3 asides → 1 → 3).
+
+#### Kasowanie bloków
+
+Każdy blok ma w prawym górnym rogu przycisk `Delete block: {Type}` z aria-label. Klik usuwa blok natychmiast (bez confirmation). Test: 9 → 6 bloków po 3 kasowaniach (Image, Embed, Callout).
+
+**UX-OBSERWACJA-3 (NOWE):** Brak `confirmation dialog` przy delete bloku. Dla pojedynczego bloku może być ok (szybko), ale **brak undo** w widocznym miejscu (Cmd+Z?). Risk: użytkownik może przypadkowo skasować ważny content. Sugestia: dodać "Undo" toast po delete (3-5s) z przyciskiem "Restore".
+
+**TL;DR Krok 4:** Inspector Block tab jest **bardzo dobrze zaprojektowany** — kontekstowe pola per block type, automatyczna sync z selected block. Document Outline ma A11y warnings + List view. Focus mode toggle działa cleanly. Brak undo po delete bloku — drobny risk.
+
+### Krok 5 — SEO + Update + Runtime Preview verification
+
+#### Konfiguracja Post-tab fields
+
+| Pole | Wartość testowa |
+|---|---|
+| Title | `Deep Post Test 2026-04-26` |
+| Tags | `qa-tag,deep-test,2026` (CSV format) |
+| Excerpt | `QA excerpt: krótkie streszczenie do listings (z polskimi znakami ąęłóżźć).` |
+| SEO title | `QA SEO Title — Deep Post Test 2026-04-26` |
+| SEO description | `QA SEO description: ten post jest częścią deep testu post editor & runtime preview.` |
+| Slug | `deep-post-test-2026-04-26` (auto z tytułu) |
+
+**Live SEO counter:** badge sekcji Advanced auto-aktualizował się z `SEO 0/3` → `SEO 2/3` po wpisaniu SEO title + description (Canonical URL pozostał pusty).
+
+**Slug helper:** "Public URL: http://localhost:3000/post/deep-post-test-2026-04-26" — kontekst URL widoczny.
+
+#### Update + toast
+
+| Akcja | Wynik | Czas |
+|---|---|---|
+| Klik **Update** | Sonner toast `Changes saved` | ~2239 ms |
+
+#### Runtime Preview — weryfikacja renderowania
+
+URL: `http://localhost:3000/preview?type=content&token=...&contentType=post&slug=deep-post-test-2026-04-26&device=desktop`
+
+**Co wyrenderowane:**
+
+| Block ID | Type | Rendered | Notatka |
+|---|---|---|---|
+| block-1 | `writing-canvas` | ✓ Pełna treść | `<strong>First paragraph</strong> <em>for formatting tests with dia</em>critics ąęłóżźć and HTML &lt;test&gt; chars.` + drugi paragraf — wszystko w `<div class="post-runtime-richtext">` |
+| block-6 | `code` | ⚠ Empty `<pre><code></code></pre>` | Rendered jako pusty kod (placeholder text "Write code..." nie wskakuje do output) |
+| block-5-...-canvas-1 | `writing-canvas` (z Heading) | ⚠ Empty `<h2></h2>` × 2 | Empty headings rendered jako puste H2 — Document Outline słusznie zgłasza to jako warning (A11y issue) |
+
+**Co odrzucone (filtered out):**
+
+`<article data-post-runtime-warning-count="2" data-post-runtime-warnings="legacy_runtime_block_dropped:block-4:list_empty,legacy_runtime_block_dropped:block-2:list_empty">` — runtime renderer **explicit drops empty List blocks** z exposed warning. Świetne — chroni przed pustymi `<ul></ul>` w produkcji.
+
+#### Bezpieczeństwo i lokalizacja
+
+- ✓ **HTML escape:** `<test>` w treści → `&lt;test&gt;` w runtime DOM. Brak XSS.
+- ✓ **Polish diacritics:** `ąęłóżźć` zachowane bez problemu w heading, body, excerpt, SEO description.
+- ✓ **Bold/italic:** semantic `<strong>` i `<em>` w runtime (znormalizowane z `<b>` / `<i>` na save).
+
+#### UX-OBSERWACJA-4 (NOWE): Empty blocks renderują się jako puste elementy
+
+`block-6` (Code, nigdy nie wpisano kodu) renderowany jako `<pre><code></code></pre>` — pusty box w UI. Podobnie empty `<h2></h2>` (Heading bez treści).
+
+**Sugestia:** rozszerzyć `legacy_runtime_block_dropped` (działający dla pustych List) na inne typy: empty Code, empty Heading, empty Paragraph, empty Quote. Drop ich z output zamiast renderować puste containery. Lub: dodać empty-state-CTA "Edit this block to add content" w preview mode (już ma `?preview` query).
+
+**TL;DR Krok 5:** Update toast działa (`Changes saved`), SEO counter live-aktualizuje się, Runtime Preview prawidłowo renderuje wypełnione bloki, ucieka HTML, zachowuje polskie znaki, drop'uje empty Lists. Drobne improvement: rozszerzyć drop na empty Code/Heading/etc.
+
+---
+
+## Podsumowanie deep testu Posts (2026-04-26)
+
+### Status starych pozycji
+
+- ✓ **BUG-5** (toast po Publish/Update) → **FIXED**: `Post published` ~2.2s, `Changes saved` ~2.5–2.9s.
+- ✗ **BUG-8** (Radix `aria-describedby` w Create Post drawer) → **NIE NAPRAWIONE**: warning w konsoli, descId pointuje na nieistniejący element.
+- ⚠ **UX-4** (Block Inserter Media: Image+Embed) → **NIE ZMIENIONE** (capability gap z TASK-204).
+
+### Nowe obserwacje UX (nie blokery, ale do rozważenia)
+
+- **UX-OBSERWACJA-1**: Toolbar przycisk "Type" nie pokazuje aktualnego typu bloku — user musi spojrzeć w inspector po prawej. WordPress/Notion mają to wbudowane w przycisk.
+- **UX-OBSERWACJA-2**: Toolbar **kontekstowy** per typ bloku (Quote: Align left only, Paragraph: Align l/c/r, Code: brak Align). Pozytywne, ale brak wizualnej "kotwicy" co dostępne.
+- **UX-OBSERWACJA-3**: Brak undo / confirmation dialog po `Delete block`. Risk przypadkowego skasowania ważnego content. Sugestia: undo toast 5s.
+- **UX-OBSERWACJA-4**: Empty blocks (Code, Heading) renderują się jako puste elementy w runtime preview. Rozszerzyć `legacy_runtime_block_dropped` na więcej typów.
+
+### Co działa świetnie ✨
+
+- ✓ **Block Inserter** — kontekstowe placeholdery per typ ("Click to choose image...", "Write code...", "One item per line..."). 
+- ✓ **Inspector Block tab** — automatyczna sync ze zaznaczonym blokiem, kontekstowe pola per type (Code: Language + line numbers; Image: Media ID + Text wrap + width + Alt + Caption; Embed: Provider + URL + Aspect ratio + Lazy load).
+- ✓ **Document Outline z A11y warnings** — wykrywa empty H2 jako issues w heading hierarchy. Bardzo profesjonalna funkcjonalność.
+- ✓ **Focus mode** — czyste przełączenie distraction-free editing.
+- ✓ **Runtime preview** — drop'uje empty Lists, renderuje wypełnione bloki, semantic HTML, escape XSS, polskie znaki.
+- ✓ **Sonner toasty** dla Save / Publish / Update — TASK-211 fix Pages → Posts spread (BUG-5 closed).
+- ✓ **Inline formatting** Bold/Italic z semantic normalization (`<strong>`/`<em>`).
+- ✓ **SEO live counter** (0/3 → 2/3) — motywacja UX bez nachalności.
+
+### Screeny (2026-04-26)
+
+- `screenshots/2026-04-26/posts-blocks-many.png` — editor z otwartym Block Inserter + 9 wstawionymi blokami.
+- `screenshots/2026-04-26/posts-blocks-scrolled.png` / `posts-blocks-scrolled2.png` — canvas po scrollu, widoczne empty blocks (Embed, Code z dark bg, Heading placeholders).
+- `screenshots/2026-04-26/posts-runtime-preview.png` — pełny runtime preview pełny (1280×1600) z H1, formatted paragraphs, Polish chars, escaped `<test>`.

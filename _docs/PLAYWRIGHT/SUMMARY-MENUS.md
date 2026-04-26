@@ -209,3 +209,151 @@ Poza oryginalnymi bugami — w dialogu Create Menu dodano walidację "Menu name 
 - `retest-fix/submenu-parent.png` — drugi item z parent = pierwszy
 - `retest-fix/submenu-applied.png` — sub-menu wcięte (24px offset)
 - `retest-fix/delete-confirm.png` — Radix AlertDialog "Delete menu item?" z warning i kontekstem
+
+---
+
+## Re-retest #2 (2026-04-26) — pełna ścieżka list+editor
+
+**Środowisko:** http://localhost:5173/admin/menus, login patryk.ciechanski@patrykiti.pl, sesja `playwright-cli -s=menus` (izolowana od innych równoległych agentów).
+
+**Zakres:** lista (search, status filter, location filter, kolumny, bulk-select, akcje rzędu), Create Menu dialog (walidacja, helper text), edytor menu (Add Item, Page selector, Custom URL, Parent dropdown, Visibility, Badge label+tone, Icon, Description, Update Item), zapis/Discard, dialog usuwania item + dialog usuwania całego menu, hierarchia sub-menu, status flow Draft↔Published.
+
+### Zweryfikowane działające ✓ (kontynuacja z poprzednich rund)
+
+| ID | Element | Obserwacja po fix-ie |
+|---|---|---|
+| BUG-1 | window.confirm dla item delete | **Trzymane.** Klik "Delete Blog" → Radix dialog `[role=dialog][data-state=open]` z treścią "Delete menu item? Blog will be removed from the current draft menu. This action cannot be undone after you save the menu. Only this item will be removed." + Cancel / Delete item. Stylistyka spójna. |
+| BUG-2 | Brak wcięcia sub-menu | **Trzymane.** Po ustawieniu Parent: Home dla Blog: `data-menu-depth="1"`, `style="margin-left: 24px"`, w treści wiersza ikona `↳` + tekst "Sub-item of Home". Hierarchia czytelna. |
+| BUG-3/UX-2 | "Active menu" combobox | **Wyeliminowane.** Lista + dedykowany edytor `/admin/menus/{uuid}`, breadcrumb `Content / Menus / Main Navigation` + button "Back to menus". |
+| BUG-4 | Brak toasta po Save | **Trzymane.** Po "Save changes" pojawia się toast "Menu saved." (region notyfikacji `alt+T`). Po "Menu created" — toast `Menu "Main Navigation" created.`. |
+| UX-1 | Redundantne ikony w wierszu | **Trzymane.** W liście menusów każdy wiersz ma rozróżnione: checkbox `Select Main Navigation`, link `Open menu editor for Main Navigation` (przejście na detail), button `Open menu actions` (kebab menu z Edit/Publish/Move to Draft/Delete). |
+| UX-3 | Drag handle | **Działa.** Każdy item ma widoczną ikonkę grip-vertical (lucide `grip-vertical`) w kontenerze `bg-muted/40 ... cursor-grab`. Instrukcja: "Drag the handle to reorder. Move slightly to the right while dragging to turn an item into a sub-menu." |
+| UX-5 | Location helper | **Trzymane.** Pole Location ma helper: "Theme slot identifier such as `primary` or `footer`. Use the value your frontend theme expects for navigation placement." (z inline `<code>` tagami). |
+
+### Nowe obserwacje na pozytywie ✨
+
+1. **Lista menusów = pełna parytet z Pages/Posts.** Tabela z kolumnami MENU/STATUS/LOCATION/PUBLISHED/CREATED/ACTIONS, search po name/location, filtry Status (All/Published/Draft) i Location (All/Not assigned/footer/primary — dynamicznie z istniejących menusów), paginacja.
+2. **Akcje rzędu (kebab)**: Edit, Publish, Move to Draft, Delete — wszystkie działają (Publish zmienia Status z Draft → Published i wypełnia kolumnę Published datą Apr 26, 2026 inline w tabeli, bez nawigacji).
+3. **Bulk select** z checkboxem `Select all menus` → toolbar "SELECTED 2, Apply a bulk action to the selected menus" + combobox "Bulk actions" (Publish / Move to Draft / Delete) + przyciski Apply/Clear. Solidnie zrealizowane.
+4. **Walidacja w Create Menu**: pole Menu name nie ma `disabled`, ale klik "Create Menu" z pustą nazwą pokazuje błąd "Menu name is required." pod polem (inline). Działa.
+5. **Helper inline `<code>`** w Create Menu Location: "Theme slot identifier such as `primary` or `footer`. Use the value your frontend theme expects for navigation placement." — zgodnie z poprzednim raportem.
+6. **Discard**: Modyfikacja pola Menu name → status zmienia się na "Unsaved changes", przyciski Discard/Save changes się odblokowują. Discard cofa zmianę i przywraca "All changes saved", value pola wraca do oryginału.
+7. **Token preview ikony**: Po wpisaniu `home` w Icon Name i kliknięciu Update Item — w panelu pokazuje się "Current token: home" pod polem. Mały krok do przodu w stosunku do "tokenu w próżnię" z poprzedniego raportu, ale wciąż NIE ma wizualnej miniatury ikony.
+8. **Delete menu (cały menu z listy)** też używa Radix dialogu — "Delete menu? Delete this menu? This cannot be undone." + Cancel / Delete menu. Dialog spójny.
+
+### Nowe bugi / regresje 🐞
+
+#### [BUG-N1] ŚREDNI: "Customize menu columns" button nie reaguje — popover nie otwiera się
+
+**Gdzie:** `/admin/menus` → toolbar listy → ikona kolumn (lucide `columns-2`) z aria-label `Customize menu columns`.
+
+**Co się dzieje:** Klik na button **nie otwiera żadnego popovera/menu**. Sprawdzone:
+- `[data-state=open]` count = 0
+- `[role=menu]`, `[role=dialog][data-state=open]`, `[data-radix-popper-content-wrapper]` count = 0
+- Button nie ma `aria-haspopup`, `aria-expanded`, `aria-controls`, ani innego znacznika triggera popovera
+- HTML buttona to plain `<button aria-label="Customize menu columns">` ze SVG bez listenera widocznego z poziomu DOM-u
+
+**Skutek:** Użytkownik nie może dostosować widocznych kolumn tabeli. W innych sekcjach Admin UI (Pages, Posts) ten sam wzorzec działa — tu jest "głuchy" przycisk.
+
+**Kierunek naprawy:** Albo podpiąć rzeczywiste sterowanie kolumnami (Popover z listą checkboxów MENU/STATUS/LOCATION/PUBLISHED/CREATED), albo — jeśli funkcja nie jest jeszcze gotowa — schować przycisk za feature flag i pokazać tylko gdy działa. Pozostawienie nieaktywnego buttona to UX dłuższy niż jego brak.
+
+**Screen:** `2026-04-26/menus-retest3/customize-columns-no-popover.png`
+
+---
+
+#### [BUG-N2] NISKI: Hidden native `<select>` w Parent Item dropdown ma stale label
+
+**Gdzie:** Edytor menu → panel Edit Menu Item → combobox Parent Item.
+
+**Co się dzieje:** Radix Select renderuje równolegle widoczny popup (z aktualnym labelem itemu, np. "Home") oraz hidden native `<select>` dla a11y. Native `<select>` zachowuje label sprzed renamea — w eksperymencie:
+1. Add Item → label domyślny "New item", UUID = X
+2. Zmień label na "Home", klik Update Item
+3. Add Item drugi → otwórz Parent Item dropdown
+4. Widoczny popup pokazuje opcje: "No Parent (Top Level)", "Home", **"New item"** (disabled = current item being edited)
+5. Hidden `<select>` w DOM-ie ma `<option value="X-uuid">New item</option>` — **stary label**
+
+**Skutek:** Screen reader anonsuje "New item" zamiast aktualnej nazwy. Wpis "New item" w popupie też jest błędny — po zmianie label-a "Home" przed save'em, ten sam wpis powinien się odświeżyć.
+
+**Powtarzalność:** 100% — każdy świeży Add Item z natychmiastową zmianą label-a powoduje rozjazd między popupem a native `<select>`. Po Update Item native `<select>` zostaje zsynchronizowany dla wszystkich INNYCH itemów, ale podczas tworzenia kolejnego itemu znowu się rozjeżdża dla niego samego.
+
+**Kierunek naprawy:** Synchronizować hidden `<select>` z aktualnie wpisanym labelem (live, on-change), nie tylko po Update Item.
+
+---
+
+#### [BUG-N3] NISKI: Page/Custom URL toggle nie ma `role="radiogroup"` / `aria-pressed`
+
+**Gdzie:** Edytor menu → panel Edit Menu Item → Link Type sekcja → buttony "Page" i "Custom URL".
+
+**Co się dzieje:** Toggle wizualny działa (selected → `data-variant="secondary"`, deselected → `data-variant="ghost"`), ale a11y atrybuty puste:
+- `aria-pressed` = null
+- `role` = "button" (nie `radio`)
+- Brak wspólnego `role="radiogroup"` na kontenerze
+
+**Skutek:** Screen reader anonsuje to jako dwa zwykłe przyciski bez wskazania który jest aktywny. Klawiatura: brak wzorca arrow-key navigation typowego dla radiogroup.
+
+**Kierunek naprawy:** Dodać `role="radiogroup"` na kontenerze, `role="radio"` + `aria-checked="true|false"` na każdym buttonie, klawiszowa nawigacja strzałkami.
+
+---
+
+#### [BUG-N4] DROBNY: Menu delete dialog (cały menu) nie podaje nazwy menu
+
+**Gdzie:** `/admin/menus` → kebab "Open menu actions" → Delete.
+
+**Co się dzieje:** Dialog ma treść "Delete menu? Delete this menu? This cannot be undone." — nie zawiera nazwy menu (np. "Footer Menu"). Dla porównania: dialog usuwania ITEMU ma nazwę ("Blog will be removed from the current draft menu.") — kontekst jest, w dialogu menu — go brak.
+
+**Skutek:** Drobna niespójność — usuwa się "ten" menu, ale nie wiadomo który dokładnie (jeśli kebab został otwarty z drugiego rzędu i flow zostało przerwane).
+
+**Kierunek naprawy:** Tytuł "Delete menu **Footer Menu**?" + opis "Footer Menu and its items will be removed. This cannot be undone." — analogicznie do dialogu usuwania itemu.
+
+### Ciągłe problemy (nie naprawione, status: jak w poprzednim raporcie) ⚠
+
+| ID | Element | Status |
+|---|---|---|
+| UX-4 | Icon Name picker | **Częściowo.** Po Update Item pojawia się "Current token: home" w panelu (tekst, NIE wizualna ikonka). Brak listy/autocomplete tokenów. Content manager wciąż w próżni. |
+| UX-3 (rozszerzenie) | Drag handle widoczność | Drag handle istnieje (lucide `grip-vertical` w kontenerze `bg-muted/40 cursor-grab`), wizualnie obecny dla widzącego. Brak hover state przyciągającego uwagę, ale poprawa względem oryginału. |
+
+### Zweryfikowane działające ✓ (nowe checkpoint-y)
+
+| Funkcja | Obserwacja |
+|---|---|
+| Status flow z listy (Publish action) | Po klik "Publish" w kebabie: Status zmienia się Draft → Published, kolumna Published wypełnia się datą `Apr 26, 2026`. Inline, bez page reload. |
+| Search po name + location | `footer` → filtruje do "Footer Menu", clear → wszystkie wracają. |
+| Status filter | Draft → 1 pasujący wynik. All → 2 wyniki. |
+| Location filter | Opcje generowane dynamicznie: All locations, Not assigned, footer, primary. Filter `primary` → tylko Main Navigation. |
+| Bulk select | Checkbox `Select all menus` → toolbar "SELECTED 2" + combobox "Bulk actions" (Publish/Move to Draft/Delete) + Apply/Clear. |
+| Page selector w Page Link Type | Lista istniejących stron: Widget UX Audit, Deep Editor Test Page, QA Retest 2026-04-25, HomePage. Wybór → label trzyma się z UUID. |
+| Custom URL field | Pole `https://` placeholder, zapisuje wprowadzoną wartość, w liście widoczna pod nazwą itemu. |
+| Visibility | 3 opcje: Show to everyone / Only logged-in users / Only logged-out users. |
+| Badge tone | 5 opcji: default, accent, success, warning, danger. |
+| Sub-menu indent | 24px ml + ↳ + "Sub-item of Home" w treści. |
+| Refresh button (editor) | Obecny w toolbarze edytora. |
+| Back to menus | Powrót do `/admin/menus` z zachowanym stanem (z listy). |
+| Breadcrumb | `Content / Menus / Main Navigation` (Menus jest klikalnym buttonem). |
+
+### UX feel — obserwacje całościowe
+
+**Co świetne:**
+- **Pełna parytetyczność z Pages/Posts** — lista, akcje rzędu, bulk select, filtry, paginacja, breadcrumb, save toast — wszystkie wzorce identyczne. Drugie redesign (po wcześniejszej rundzie z list+detail) jest bezbłędne.
+- **Dialog item delete** wciąż wygrywa: nazwa + warning + zakres ("Only this item will be removed"). Wzorzec do skopiowania do menu delete.
+- **Discard rzeczywiście cofa** — testowane z Menu name: zmiana → "Unsaved changes" → Discard → "All changes saved" + value przywrócone.
+- **Status zmiana inline** (Publish z kebabu zmienia Status w tej samej tabeli) — żadnego flicker, żadnego full reload.
+
+**Co zostawia niedosyt:**
+- **Customize menu columns** = niewypał. Button widoczny, klik nic nie robi. Poważny pierwszy-wrażeniowy minus dla kogoś próbującego dostosować widok.
+- **Icon picker** — UX-4 z poprzednich rund wciąż żyje. Mały token preview ("Current token: home") nie zastępuje listy ani podglądu.
+- **A11y radiogroup** — Page/Custom URL bez `role=radio`. Drobne, ale kumuluje się z stale-label w native `<select>`.
+- **Menu delete dialog** bez nazwy — niespójne z item delete.
+
+### Screenshoty
+
+- `2026-04-26/menus-retest3/list-view.png` — widok listy z 2 menusami (po Publish Main Navigation)
+- `2026-04-26/menus-retest3/editor.png` — edytor `/admin/menus/{uuid}` z item Home (Page link + badge v2 success + ikona + sub-item Blog wcięty)
+- `2026-04-26/menus-retest3/customize-columns-no-popover.png` — dowód że button "Customize menu columns" nie otwiera popovera
+
+### Stan testowych danych
+
+Po zakończeniu testów w bazie pozostają:
+- Menu **Main Navigation** (Published, primary) — pusty (po wyczyszczeniu items)
+- Menu **Footer Menu** (Draft, footer) — pusty
+
+Możliwe pozostałości z wcześniejszych testów innych agentów: nie obserwowano kolizji UUID, lista przed testami była pusta (No menus yet).
