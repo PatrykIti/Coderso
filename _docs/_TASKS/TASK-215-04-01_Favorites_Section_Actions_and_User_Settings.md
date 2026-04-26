@@ -28,6 +28,11 @@ No child task files.
   update.
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/ui/widgetLibraryUtils.test.ts`
+- `tests/vitest/admin/userSettingsClient.test.ts` only if the admin settings
+  client typing or cache behavior changes.
+- `tests/unit/settings/userSettingsService.test.ts` and
+  `tests/integration/routes/userSettings.test.ts` only if settings validation
+  or route behavior changes.
 
 ## Security Contract
 
@@ -46,6 +51,8 @@ No child task files.
 - Row action `Remove from favorites` updates `widgets.favorites`.
 - Bulk remove affects only visible selected favorite rows.
 - Removing favorites trims selection and updates counts.
+- If this task changes the `widgets.favorites` client/schema contract, settings
+  client/unit/route coverage is mandatory.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/ui/widgetLibraryUtils.test.ts`
   - `bun --cwd core lint`

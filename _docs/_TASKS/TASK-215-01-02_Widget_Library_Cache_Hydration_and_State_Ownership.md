@@ -23,11 +23,14 @@ No child task files.
 - `core/admin/ui/widgets/WidgetLibraryPage.tsx`
 - `core/admin/ui/widgets/widgetLibraryUtils.ts` if state normalization helpers
   are extracted.
+- `core/admin/utils/cacheRefresh.ts` only if the shared mount-refresh helper
+  needs a backward-compatible extension.
 - `core/admin/utils/adminPrefetch.ts` only if the warmup matrix changes.
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/admin/widgetsClient.test.ts`
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
 - `tests/vitest/admin/widgetTemplateCategoriesClient.test.ts`
+- `tests/vitest/admin/cacheRefresh.test.ts` if the shared helper changes.
 - `tests/vitest/admin/adminPrefetch.test.ts`
 
 ## Security Contract
@@ -63,12 +66,16 @@ type WidgetLibraryShellState = {
 
 - Cached catalog/category/page data hydrates before background refresh.
 - Cache-missing mount uses foreground loading.
-- Cache-bus events refresh catalog, template categories, templates, and pages
-  without clearing current section/view state.
+- Cache-bus events refresh catalog, template categories, and pages without
+  clearing current section/view state.
+- Template-list refresh is required only if this leaf introduces direct
+  template-list state; otherwise template rows stay sourced from the catalog and
+  template mutations reach the library through the existing catalog cache event.
 - Selection is trimmed after rows disappear from refreshed data.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/widgetsClient.test.ts tests/vitest/admin/widgetTemplatesClient.test.ts tests/vitest/admin/widgetTemplateCategoriesClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts` if the shared helper changes.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

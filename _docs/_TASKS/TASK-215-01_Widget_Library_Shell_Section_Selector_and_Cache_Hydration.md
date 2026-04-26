@@ -33,9 +33,12 @@ yet decide every row action; later subtasks wire the table/grid actions.
 - `core/admin/ui/widgets/WidgetLibraryPage.tsx`
 - `core/admin/ui/widgets/WidgetLibrarySectionSelect.tsx` if extracted.
 - `core/admin/ui/widgets/widgetLibraryUtils.ts`
+- `core/admin/utils/cacheRefresh.ts` only if the shared mount-refresh helper
+  needs a compatible extension.
 - `core/admin/utils/adminPrefetch.ts` only if the cache warmup matrix changes.
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/ui/widgetLibraryUtils.test.ts`
+- `tests/vitest/admin/cacheRefresh.test.ts` if the shared helper changes.
 - `tests/vitest/admin/adminPrefetch.test.ts`
 
 ## Security Contract
@@ -59,6 +62,7 @@ yet decide every row action; later subtasks wire the table/grid actions.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/ui/widgetLibraryUtils.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/cacheRefresh.test.ts` if the shared helper changes.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
 

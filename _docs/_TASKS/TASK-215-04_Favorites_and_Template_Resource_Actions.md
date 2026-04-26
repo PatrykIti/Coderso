@@ -37,12 +37,16 @@ confirmed bulk delete, shared toasts, and cache refresh.
 - `core/admin/services/widgetTemplateCategoriesClient.ts`
 - `core/server/routes/widgetTemplateRoutes.ts` only if route error mapping
   changes.
+- `core/server/routes/widgetTemplateCategoryRoutes.ts` only if category route
+  error mapping changes.
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/ui/widget-template-preview-dialog.test.tsx` only if preview
   behavior changes.
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
 - `tests/vitest/admin/widgetTemplateCategoriesClient.test.ts`
 - `tests/integration/routes/widgetTemplates.test.ts` if route mapping changes.
+- `tests/integration/routes/widgetTemplateCategories.test.ts` if category route
+  mapping changes.
 
 ## Security Contract
 

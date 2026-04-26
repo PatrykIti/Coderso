@@ -72,6 +72,10 @@ drawer that exists today.
 - `widgetTemplatesClient.ts`, `widgetTemplateCategoriesClient.ts`, and
   `widgetsClient.ts` already own cached widgets/template/category data and
   cache-bus broadcasts. The library should keep using those wrappers.
+- Display rows should continue to come from the widget catalog contract unless
+  a leaf explicitly proves a direct template-list read is needed. Do not add a
+  parallel template list state only because `listWidgetTemplatesCached()` is
+  prefetched for editor/insert compatibility.
 - `adminPrefetch.ts` already warms `/coderso/widgets` with widget catalog,
   template categories, and widget templates. Keep this warmup path and add
   proof if the data requirements change.
@@ -140,6 +144,9 @@ drawer that exists today.
 - View mode does not affect filtering or selection ownership. Switching table
   to grid preserves the current section/filter state and trims selection to the
   same visible rows.
+- If the existing internal `view` value keeps a `"list"` branch during the
+  migration, map user-facing copy/tests to `table` so the final contract is not
+  split between "list" and "table" terminology.
 
 ## Sub-Tasks
 

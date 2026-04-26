@@ -27,6 +27,11 @@ No child task files.
 - `core/admin/services/userSettingsClient.ts` only if existing typing needs a
   backward-compatible extension.
 - `tests/vitest/ui/widget-library.test.tsx`
+- `tests/vitest/admin/userSettingsClient.test.ts` only if the admin settings
+  client typing or cache behavior changes.
+- `tests/unit/settings/userSettingsService.test.ts` and
+  `tests/integration/routes/userSettings.test.ts` only if settings validation
+  or route behavior changes.
 
 ## Security Contract
 
@@ -46,6 +51,8 @@ No child task files.
 - Bulk remove from favorites updates only selected visible core widget ids.
 - Max-50 favorites behavior remains enforced.
 - Bulk favorite actions are disabled when no visible eligible row is selected.
+- If `widgets.favorites` validation or client typing changes, user settings
+  client/unit/route tests cover the change in the correct lane.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx`
   - `bun --cwd core lint`

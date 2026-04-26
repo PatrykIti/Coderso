@@ -22,6 +22,8 @@ the same visible rows as selectable cards.
 - [ ] TASK-215-02-03: Grid View Selection and Drawer Parity
 - [ ] Keep filters and counts in `widgetLibraryUtils.ts` or a clearly named
   extracted owner.
+- [ ] Treat table as the user-facing contract; if the legacy internal view key
+  remains `"list"` temporarily, tests and labels must still assert table mode.
 - [ ] Do not add fake table columns for data the catalog does not provide.
 
 ## Files to Change

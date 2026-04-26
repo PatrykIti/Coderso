@@ -59,6 +59,7 @@ No child task files.
 | Templates | edit/duplicate/delete/category actions remain on existing route/client owners |
 | Bulk template delete | confirmed, visible-scope, partial-failure safe |
 | Cache/prefetch | `/coderso/widgets` warmup and cache-bus refresh remain covered |
+| Settings | user settings client/unit/route coverage runs if `widgets.favorites` typing, validation, or route behavior changes |
 | Routes | Bun route coverage only when route/schema/error mapping changes |
 
 ## Testing Requirements
@@ -69,6 +70,9 @@ No child task files.
 - If route/schema behavior changes:
   - `set -a && source .env && set +a`
   - `bun test tests/integration/routes/widgets.test.ts tests/integration/routes/widgetTemplates.test.ts tests/integration/routes/widgetTemplateCategories.test.ts`
+- If `widgets.favorites` settings validation or route behavior changes:
+  - `set -a && source .env && set +a`
+  - `bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

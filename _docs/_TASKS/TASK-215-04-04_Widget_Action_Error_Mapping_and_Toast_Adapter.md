@@ -29,10 +29,14 @@ No child task files.
   better owner.
 - `core/server/routes/widgetTemplateRoutes.ts` only if `mapWidgetTemplateError`
   must be extended/exported for coverage.
+- `core/server/routes/widgetTemplateCategoryRoutes.ts` only if category
+  error mapping becomes UI-visible or needs exported coverage.
 - `tests/vitest/ui/widget-library.test.tsx`
 - `tests/vitest/ui/action-toasts.test.ts`
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/integration/routes/widgetTemplates.test.ts` if route mapping changes.
+- `tests/integration/routes/widgetTemplateCategories.test.ts` if category route
+  mapping changes.
 
 ## Security Contract
 
@@ -51,6 +55,8 @@ No child task files.
 - Core insert, favorite, template duplicate, template delete, and bulk delete
   feedback use one helper/adapter owner.
 - Known `widget_template_*` errors map to stable user-facing copy.
+- Known `widget_template_category_*` errors remain stable if category failures
+  become visible in the table/grid action flow.
 - Unknown failures use bounded fallback copy.
 - If route mapping changes:
   - `set -a && source .env && set +a`
