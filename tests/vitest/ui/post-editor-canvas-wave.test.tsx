@@ -4,6 +4,8 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { MediaRecord } from "../../../core/admin/services/mediaClient";
+
 const mediaState = vi.hoisted(() => ({
   records: [
     {
@@ -21,7 +23,7 @@ const mediaState = vi.hoisted(() => ({
       caption: "Hero caption",
       createdAt: "2026-03-12T10:00:00.000Z",
     },
-  ],
+  ] as MediaRecord[],
   error: null as unknown,
   calls: [] as Array<boolean | undefined>,
   reset() {
