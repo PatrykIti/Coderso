@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 86 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1242 tasks
+- **To Do:** 92 tasks
+- **In Progress:** 11 tasks
+- **Done:** 1245 tasks
 
 ---
 
