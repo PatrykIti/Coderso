@@ -23,6 +23,11 @@ editor contract.
 - [ ] TASK-214-03-03: Template Pagination and Visible Selection
 - [ ] Remove nested card-in-card treatment from the tab content.
 - [ ] Keep template row actions limited to Edit and Delete.
+- [ ] Keep template filters, pagination, visible ids, and selected template ids
+  shell-owned or exposed through controlled props so `ListingListPage` can render
+  the active-tab bulk bar in `PageHeader.actions`.
+- [ ] Keep `ListingTemplateManager` as the template dialog/form owner only after
+  it receives controlled open/edit state from the shell.
 
 ## Files to Change
 
@@ -30,6 +35,7 @@ editor contract.
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
 - `core/admin/ui/listings/ListingTemplateTable.tsx` if extracted.
 - `core/admin/ui/listings/ListingTemplateFilters.tsx` if extracted.
+- `core/admin/ui/listings/ListingTemplateBulkActionsBar.tsx` if extracted.
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listing-binding-editor.test.tsx` if dialog extraction changes
@@ -61,6 +67,14 @@ export function filterListingTemplates(items, search, layout) {
     return matchesSearch && matchesLayout;
   });
 }
+
+const templatePagination = useListPagination(filteredTemplates, { resetKey });
+const visibleTemplateIds = templatePagination.visibleRows.map((item) => item.id);
+const templateResourceState = {
+  selectedCount: selectedTemplateIds.length,
+  bulkBar: selectedTemplateIds.length > 0 ? templateBulkBar : null,
+  onNew: () => setTemplateCreateOpen(true),
+};
 ```
 
 ## Testing Requirements
@@ -70,6 +84,8 @@ export function filterListingTemplates(items, search, layout) {
 - Layout filter supports all, grid, list, table, calendar, map.
 - Header checkbox and row checkboxes update only visible template row
   selection.
+- Template selected count and bulk bar are visible to `ListingListPage` without
+  reading private child state.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx tests/vitest/ui/listing-list-page-wave.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-pagination.test.tsx`
@@ -86,3 +102,5 @@ export function filterListingTemplates(items, search, layout) {
 1. The Templates tab visually matches Pages-style list behavior.
 2. Template filters reset pagination and trim hidden selection.
 3. Template selection and pagination are tab-local.
+4. Template selection, pagination, and bulk metadata are available to the shell
+   for the active-tab header actions.

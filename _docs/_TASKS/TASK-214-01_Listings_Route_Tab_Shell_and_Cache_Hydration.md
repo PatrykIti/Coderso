@@ -28,6 +28,30 @@ must stop treating `Queries` as the only resource.
 - [ ] Convert `Tabs defaultValue="queries"` to controlled active-tab state.
 - [ ] Define parent-level active resource metadata for labels, selected count,
   header `New`, bulk bar, and error titles.
+- [ ] Lift query/template selection and bulk metadata high enough for
+  `PageHeader.actions` to render the active tab's bulk bar without querying
+  child component internals.
+- [ ] Convert `ListingTemplateManager` to a controlled child boundary for
+  create/edit open requests and template row action callbacks.
+- [ ] Keep template form draft/config editing local only inside the controlled
+  dialog; do not leave header, selection, or bulk state local-only in
+  `ListingTemplateManager`.
+
+## State Ownership Contract
+
+- `ListingListPage` owns `activeTab`, selected ids per tab, active bulk action
+  value per tab, pending row/bulk delete state per resource, active resource
+  labels, active resource inline feedback, and the single header `New` action.
+- `ListingTemplateManager` may own transient dialog form state, `BindingEditor`
+  cloned config, and save progress, but it receives create/edit open state and
+  action callbacks from the parent.
+- If template table, filters, bulk bar, or dialog are extracted, they remain
+  controlled children. They must not read inactive-tab selection or expose a
+  second local primary `New template` action.
+- The implementation may introduce a small shell-owned hook such as
+  `useListingsTemplateTabState`, but the hook must still be called by
+  `ListingListPage` so `PageHeader.actions` has direct access to selected
+  count, bulk action state, and `onNew`.
 
 ## Files to Change
 
@@ -62,6 +86,13 @@ const activeResource =
     ? queryResourceState
     : templateResourceState;
 
+const templateDialog = {
+  createOpen: templateCreateOpen,
+  editingTemplateId,
+  onCreateOpenChange: setTemplateCreateOpen,
+  onEditingTemplateIdChange: setEditingTemplateId,
+};
+
 <PageHeader
   title="Listings"
   actions={
@@ -74,11 +105,23 @@ const activeResource =
     </>
   }
 />
+
+<ListingTemplateManager
+  dialog={templateDialog}
+  selectedIds={selectedTemplateIds}
+  onSelectedIdsChange={setSelectedTemplateIds}
+  onRequestDelete={setPendingTemplateDeleteId}
+  onRequestBulkDelete={setPendingTemplateBulkDeleteIds}
+/>
 ```
 
 ## Testing Requirements
 
 - Active tab state changes which `New` handler is used.
+- Template `New` is controlled from `ListingListPage` and does not depend on an
+  imperative child ref or a nested primary `New template` button.
+- Template selected count in `PageHeader.actions` reflects only visible
+  selected template rows from the active tab.
 - Query and template cached data can hydrate independently without showing a
   foreground loading state when fresh cache exists.
 - Prefetch for `/coderso/listings` still warms both query and template cached

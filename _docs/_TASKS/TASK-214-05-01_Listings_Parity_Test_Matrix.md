@@ -27,6 +27,10 @@ add real component suites where the mocked wave cannot prove behavior.
 - [ ] Cover row and bulk delete confirmation timing.
 - [ ] Cover query/template toast copy and partial failure summaries.
 - [ ] Cover cache hydration and prefetch warmup.
+- [ ] Cover the controlled template boundary: header `New`, row Edit, dialog
+  close, row Delete, and bulk Delete all update shell-owned state.
+- [ ] Assert no private `ListingTemplateManager` direct-delete or nested primary
+  `New template` flow remains after the active-tab header implementation.
 
 ## Files to Change
 
@@ -36,6 +40,8 @@ add real component suites where the mocked wave cannot prove behavior.
 - New focused Listings component suites if needed.
 - `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/vitest/ui/list-pagination.test.tsx`
+- `tests/vitest/ui/listing-template-manager.test.tsx` or equivalent if the
+  controlled dialog/table boundary is extracted.
 - `tests/vitest/admin/listingsClient.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/integration/routes/listings.test.ts` if route mapping changes.
@@ -52,6 +58,8 @@ add real component suites where the mocked wave cannot prove behavior.
   payload rejection when mapping changes.
 - Anti-abuse: tests must prove destructive actions require confirmation and
   bulk ids are active-tab visible ids.
+- Template manager tests must prove template row actions emit controlled
+  callbacks instead of mutating inactive or hidden ids directly.
 
 ## Testing Requirements
 

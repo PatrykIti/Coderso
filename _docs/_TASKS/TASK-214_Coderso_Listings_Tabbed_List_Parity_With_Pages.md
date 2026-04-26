@@ -144,6 +144,29 @@ Pages and the parity waves for Entries, Custom Screens, and Forms:
     assistant action mappings, and public runtime contracts remain backward
     compatible.
 
+## State Ownership Contract
+
+- `ListingListPage` is the tab-level orchestration owner. It owns `activeTab`,
+  active resource metadata for `PageHeader.actions`, selected query ids,
+  selected template ids, active bulk action values, pending row delete ids,
+  pending bulk delete id lists, inline action feedback, and the active-tab
+  `New` handler.
+- Query and template table/filter components are controlled/presentational
+  boundaries. They receive visible rows, selected ids, checkbox state, and row
+  action callbacks from the list shell or from a shell-owned hook.
+- `ListingTemplateManager` must not remain an independent card-level list owner.
+  It may keep template form draft state, `BindingEditor` cloned config, save
+  progress, and field-level dialog errors while the template dialog is open, but
+  create/edit open state and row/bulk delete requests must be controlled by
+  `ListingListPage`.
+- The template create/edit dialog can stay in `ListingTemplateManager` only as a
+  controlled child API, for example `createOpen`, `editingTemplateId`,
+  `onCreateOpenChange`, `onEditingTemplateIdChange`, `onRequestDelete`, and
+  `onSaved`.
+- Do not use imperative refs or duplicated local `New template` state to bridge
+  the header into the templates tab. Header `New`, row Edit, row Delete, and
+  bulk Delete must all pass through the same active-tab resource state.
+
 ## Sub-Tasks
 
 - [ ] TASK-214-01: Listings Route, Tab Shell, and Cache Hydration

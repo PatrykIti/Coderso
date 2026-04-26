@@ -25,6 +25,28 @@ ids or mutation copy between queries and templates.
 - [ ] TASK-214-04-04: Listings Error Mapping and Toast Adapter
 - [ ] Add active-tab bulk delete bar placement in `PageHeader.actions`.
 - [ ] Keep inline alerts for contextual load/action errors.
+- [ ] Keep row/bulk delete pending state in `ListingListPage` for both queries
+  and templates.
+- [ ] Keep template create/edit form draft state in the controlled template
+  dialog, but route open/close/save completion back through shell-owned state.
+
+## Action Ownership Contract
+
+- `ListingListPage` owns query and template row delete confirmation state,
+  query and template bulk delete confirmation state, active bulk action values,
+  selected visible ids, and `PageHeader.actions` bulk bar placement.
+- `ListingTemplateManager` can keep form draft state and run
+  `createListingTemplate` / `updateListingTemplate` from the controlled dialog,
+  but it must receive create/edit open state from `ListingListPage` and report
+  save completion through `onSaved` so the shell can refresh, close, and clear
+  active-tab feedback consistently.
+- Template row Delete and bulk Delete must not execute inside a private manager
+  state path. They should call shell-owned `onRequestTemplateDelete` /
+  `onRequestTemplateBulkDelete`, then use `ConfirmActionDialog` from the shared
+  list action flow.
+- Query and template toast adapters may live in a shared Listings toast module
+  or near the components, but each list action must use the same
+  `createListActionToastAdapter` contract and resource-specific labels.
 
 ## Files to Change
 
@@ -72,6 +94,15 @@ const listingTemplateToasts = createListActionToastAdapter({
     delete: { pastTense: "deleted", failureVerb: "delete" },
   },
 });
+
+const activeResource =
+  activeTab === "queries" ? queryActionState : templateActionState;
+
+const handleTemplateSaved = async () => {
+  await refreshTemplates({ force: true, background: true });
+  setTemplateCreateOpen(false);
+  setEditingTemplateId(null);
+};
 ```
 
 ## Testing Requirements
@@ -82,6 +113,10 @@ const listingTemplateToasts = createListActionToastAdapter({
 - Bulk delete handles full success and partial failure with toast plus inline
   error copy.
 - Inactive-tab selected rows are never mutated.
+- Template delete requests are confirmation-gated by shell-owned pending state,
+  not by a private `ListingTemplateManager` direct delete path.
+- Template create/edit save closes through the controlled dialog state and does
+  not desynchronize the header `New` flow.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx tests/vitest/ui/list-action-toasts.test.ts`
   - `set -a && source .env && set +a && bun test tests/integration/routes/listings.test.ts` if route mapping changes.
@@ -99,3 +134,5 @@ const listingTemplateToasts = createListActionToastAdapter({
 1. Listings actions use shared toast helpers with resource-specific labels.
 2. Destructive row and bulk deletes are confirmation-gated.
 3. Bulk action execution is active-tab scoped and visible-row scoped.
+4. Template create/edit/delete state cannot fork into an independent
+   manager-local flow outside the active-tab shell.

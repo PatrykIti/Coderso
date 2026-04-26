@@ -24,10 +24,14 @@ behavior and accessible label must be resource-specific.
 - [ ] On `Queries`, `New` navigates to `/coderso/listings/new` through
   `useAdminRouter().navigate`.
 - [ ] On `Templates`, `New` opens the template create dialog/drawer owned by
-  the templates tab.
+  the templates tab through parent-controlled state.
 - [ ] Remove the nested `New template` primary button from
   `ListingTemplateManager` or demote it only if a separate empty-state CTA is
   still needed.
+- [ ] Lift `templateCreateOpen` and `editingTemplateId` or an equivalent
+  controlled template dialog object into `ListingListPage`.
+- [ ] Pass template dialog state and row action callbacks into
+  `ListingTemplateManager`; do not call child methods through an imperative ref.
 - [ ] Verify existing `/coderso/listings` prefetch still warms both resource
   caches and does not refetch the active route from active-link hover.
 
@@ -61,6 +65,13 @@ const handleNew = () => {
   }
   setTemplateCreateOpen(true);
 };
+
+<ListingTemplateManager
+  createOpen={templateCreateOpen}
+  editingTemplateId={editingTemplateId}
+  onCreateOpenChange={setTemplateCreateOpen}
+  onEditingTemplateIdChange={setEditingTemplateId}
+/>
 ```
 
 ## Testing Requirements
@@ -69,6 +80,8 @@ const handleNew = () => {
 - With `Templates` active, clicking `New` opens the template create flow and
   does not navigate to query create.
 - Switching tabs updates the header action context.
+- Template create state is parent-controlled; closing the dialog updates the
+  shell state and reopening from the header starts a fresh create form.
 - Prefetch tests still prove `/coderso/listings` warms queries and templates.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`

@@ -27,8 +27,9 @@ changes.
 ## Files to Change
 
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
-- `core/admin/ui/listings/ListingListPage.tsx` if pagination ownership is
-  lifted to the parent.
+- `core/admin/ui/listings/ListingListPage.tsx`; template pagination/selection
+  metadata must be parent-visible so the shell can render active-tab bulk
+  controls.
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
 - `tests/vitest/ui/listing-list-page-wave.test.tsx`
 
@@ -54,6 +55,8 @@ useEffect(() => {
     prev.filter((id) => visibleTemplateIds.includes(id))
   );
 }, [visibleTemplateIds]);
+
+const templateSelectedCount = selectedTemplateIds.length;
 ```
 
 ## Testing Requirements
@@ -61,6 +64,8 @@ useEffect(() => {
 - Template pagination footer shows correct counts.
 - Filter changes reset template pagination.
 - Hidden selected template ids are removed before a bulk action can run.
+- `ListingListPage` can read template selected count and pending bulk ids
+  directly or through a shell-owned hook, not through a child-only local state.
 - Empty copy differs between no templates and no filter matches.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx tests/vitest/ui/listing-list-page-wave.test.tsx`
@@ -77,3 +82,5 @@ useEffect(() => {
 
 1. Templates use the shared pagination footer.
 2. Template bulk selection is always limited to current visible rows.
+3. Template pagination and selected-count state is available to the active-tab
+   header bulk bar.
