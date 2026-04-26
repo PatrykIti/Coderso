@@ -131,6 +131,10 @@ if (await nameExists(input.name, { excludingId })) {
 - Client tests:
   - duplicate/delete/category updates patch or invalidate caches correctly.
 - Bun route tests:
+  - route registration still exposes the intended widget-template and category
+    endpoints only under the internal admin router;
+  - centralized `mapWidgetTemplateError` / category-error mapping covers known
+    duplicate, not-found, invalid, and conflict cases;
   - name conflict maps to a machine-readable route error;
   - duplicate/delete require auth/RBAC/CSRF and preserve cache events.
 - Manual Playwright:

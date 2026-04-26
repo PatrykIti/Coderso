@@ -133,6 +133,9 @@ selection when filters hide rows.
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
   - duplicate/delete cache invalidation or update behavior.
 - `tests/integration/routes/widgetTemplates.test.ts`
+  - route registration remains internal-admin scoped;
+  - `mapWidgetTemplateError` covers duplicate/name-conflict, not-found, and
+    invalid payload cases;
   - duplicate/name conflict route behavior;
   - delete auth/RBAC/CSRF behavior.
 - Manual Playwright:

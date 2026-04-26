@@ -36,6 +36,10 @@ deterministic, and accessible for the fields it does expose.
   - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx`
   - `core/admin/ui/widgets/editors/GridColumnsEditors.tsx`
   - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx`
+  - `core/admin/ui/widgets/editors/TeamEditors.tsx` and
+    `core/admin/ui/widgets/editors/TimelineEditors.tsx` as current-state
+    verification owners for the report's broader `GLOBAL-1` list; repair them
+    only if the current checkout still reproduces the mismatch
   - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
   - `core/admin/ui/widgets/editors/PricingPlansEditors.tsx`
   - `core/admin/ui/widgets/editors/TestimonialsEditors.tsx`
@@ -116,6 +120,9 @@ Paired fields must each be named:
   - normalizers still clamp min/max and preserve deterministic ids;
   - paired inputs have visible labels or `aria-label`s;
   - technical helper copy exists where fields remain technical.
+- For widgets named by the source report but not changed after inspection,
+  record `current-state verified` evidence in `TASK-213-07` and
+  `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md` instead of silently dropping them.
 - Required targeted suites include:
   - `tests/vitest/widgets/statsKpi.test.tsx`
   - `tests/vitest/widgets/logoCloud.test.tsx`

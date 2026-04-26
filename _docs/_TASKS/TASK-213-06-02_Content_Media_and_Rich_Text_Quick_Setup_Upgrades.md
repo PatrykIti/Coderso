@@ -49,7 +49,9 @@ No child task files.
 - related widget normalizers when schema/defaults change
 - `tests/vitest/widgets/galleryMosaic.test.tsx`
 - `tests/vitest/widgets/richTextSection.test.tsx`
-- `tests/vitest/widgets/postsFeed.test.tsx` or new focused suite if missing
+- existing `tests/unit/widgets/postsFeedWidget.test.tsx`
+- new focused Vitest Posts Feed editor/widget suite only if the changed module
+  remains Bun-free and does not import runtime/server adapters at module load
 - `tests/vitest/widgets/ctaBanner.test.tsx`
 - layout/footer/toggle widget suites when touched.
 
@@ -111,7 +113,8 @@ without leaking private URLs into widget data.
 - Widget suites cover:
   - Gallery Mosaic media picker output normalization;
   - Rich Text Section structured quick editor and raw HTML sanitizer path;
-  - Posts Feed title/count/layout quick fields;
+  - Posts Feed title/count/layout quick fields through the existing Bun-owned
+    widget suite and any added Bun-free Vitest editor suite;
   - CTA secondary/description/eyebrow quick fields if added;
   - Toggle default active pane;
   - Footer social add/remove within max bounds.

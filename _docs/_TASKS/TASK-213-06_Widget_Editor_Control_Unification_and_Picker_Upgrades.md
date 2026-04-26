@@ -142,8 +142,11 @@ hatch.
 - Content/media/rich-text widgets:
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
   - `tests/vitest/widgets/richTextSection.test.tsx`
-  - `tests/vitest/widgets/postsFeed.test.tsx` if present or a new focused
-    suite if missing
+  - existing current command surface:
+    `tests/unit/widgets/postsFeedWidget.test.tsx`
+  - add a focused Vitest Posts Feed editor/widget suite only if the changed
+    production module stays Bun-free and the suite can run without runtime
+    coupling
   - `tests/vitest/widgets/ctaBanner.test.tsx`
   - `tests/vitest/widgets/footer.test.tsx`
 - Manual Playwright:

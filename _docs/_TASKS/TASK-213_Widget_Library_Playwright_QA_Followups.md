@@ -72,6 +72,10 @@ stay in the existing Widget Library/editor seams.
 - Product widget editors still use native `<select>` controls in shared
   commerce source fields and gallery layout fields while most widget wizards use
   the shared Radix Select contract.
+- Posts Feed currently has a Bun-owned widget contract suite at
+  `tests/unit/widgets/postsFeedWidget.test.tsx`; keep that current command
+  surface green unless the pure widget contract is deliberately migrated to a
+  Vitest-owned suite.
 
 ## Required Product Behavior
 
@@ -277,6 +281,9 @@ syncDocsChangelogAndBoard("TASK-213");
 - Bun route/service lanes are required if template/category/page insert route
   contracts change. Load env before DB-backed tests:
   `set -a && source .env && set +a`.
+- For any changed widget-template/category route family, include route
+  registration assertions and `mapWidgetTemplateError` /
+  category-error mapping coverage in addition to service/domain tests.
 - Manual Playwright replay:
   - Form Embed can be opened repeatedly without a blank page;
   - Listing Filters/Search Box finish loading into empty/ready/error copy;

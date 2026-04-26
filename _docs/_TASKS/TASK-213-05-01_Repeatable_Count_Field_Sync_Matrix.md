@@ -21,7 +21,11 @@ should verify and repair at least:
 - Logo Cloud;
 - FAQ Accordion;
 - Grid Columns;
-- Gallery Mosaic;
+- Gallery Mosaic only for count/copy consistency; media-picking gaps stay owned
+  by `TASK-213-06-02`;
+- Team and Timeline as current-state verification from the report's broad
+  `GLOBAL-1` list; repair only if the current checkout still reproduces a
+  count/row mismatch;
 - Compare Timeline;
 - Pricing Plans and Testimonials only if current code still reproduces the
   mismatch after inspection.
@@ -37,6 +41,10 @@ No child task files.
 - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx`
 - `core/admin/ui/widgets/editors/GridColumnsEditors.tsx`
 - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx`
+- `core/admin/ui/widgets/editors/TeamEditors.tsx` if current-state verification
+  fails
+- `core/admin/ui/widgets/editors/TimelineEditors.tsx` if current-state
+  verification fails
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
 - `core/admin/ui/widgets/editors/PricingPlansEditors.tsx`
 - `core/admin/ui/widgets/editors/TestimonialsEditors.tsx`
@@ -103,6 +111,8 @@ Do not hide preset rows that will render publicly without telling the user.
   - `tests/vitest/widgets/faqAccordion.test.tsx`
   - `tests/vitest/widgets/gridColumns.test.tsx`
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `tests/vitest/widgets/team.test.tsx` if touched
+  - `tests/vitest/widgets/timeline.test.tsx` if touched
   - `tests/vitest/widgets/compareTimeline.test.tsx`
   - `tests/vitest/widgets/pricingPlans.test.tsx`
   - `tests/vitest/widgets/testimonials.test.tsx`
