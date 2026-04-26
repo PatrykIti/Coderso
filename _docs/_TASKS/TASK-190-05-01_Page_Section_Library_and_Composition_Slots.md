@@ -63,6 +63,11 @@ Owner rule:
 - Widget defaults and section seed data must come from existing widget
   schema/default owners wherever possible; the assistant layer must not fork
   those defaults into a second config registry.
+- Section data may reference media only through existing media-library ids and
+  the target widget schema. Prompts such as "use the attached images in the hero
+  and gallery" stay `needs_input`/gated until those files have trusted media ids;
+  prompts such as "use these existing gallery items" may compose page/widget data
+  that references the selected media ids.
 
 ## Initial Assistant Aliases
 
@@ -100,6 +105,9 @@ Rules:
   current page-facing surface.
 - `data` must normalize through the existing widget schema/default owner; this
   leaf must not create a parallel section-defaults registry.
+- media-bearing `data` fields must use the existing widget/media schema shape for
+  asset references and must not embed raw bytes, base64 payloads, signed URLs, or
+  upload tokens.
 
 ## Security Contract
 
@@ -123,6 +131,9 @@ Rules:
   current widget/preset owner seam exposes a deterministic mapping.
 - Section-library resolution stays aligned with current widget pack / preset
   metadata instead of drifting into a second section registry.
+- Media-bearing section fixtures cover existing media ids for hero/gallery/card
+  image fields and prove raw upload bytes are gated before widget data is
+  assembled.
 
 ## Documentation Updates Required
 

@@ -57,6 +57,9 @@ within the current typed action boundary:
 - content model and route setup,
 - public landing/list/detail pages,
 - supporting modules such as forms, FAQ, editorial, proof, SEO, and menus,
+- media-aware setup and edits: selecting existing gallery assets, attaching
+  existing media to content/gallery fields, replacing/removing media references,
+  and writing widget/page content that points at existing media ids,
 - admin editing surfaces for the generated resources.
 
 Where the repo already has an owner seam with the same business scope, TASK-190
@@ -82,6 +85,17 @@ means:
 - collection workspace and any assistant follow-up context must extend the
   current `adminPaths` / `prefetchAdminRoute` / admin-context seams rather than
   introducing parallel route-to-surface workflows,
+- assistant media work must stay on existing media/content/page/widget seams:
+  raw upload bytes are never provider/action payloads, newly attached user files
+  must first become media-library assets through the media owner flow, and then
+  the composer may reference those assets through `media.reference.attach`,
+  entry/page/widget owner actions, or `needs_input` when the asset does not yet
+  exist,
+- assistant resource catalogs used for composition must be server-derived from
+  current admin-context/catalog owners. Clients may request catalog inclusion
+  through the reviewed flag, but they must not submit a trusted
+  `resourceCatalog`, and catalog-backed LLM Guide planning remains gated by the
+  existing LLM availability checks,
 - when a leaf widens an existing contract, it should name the concrete write
   owner, read/cache owner, and admin/UI transport owner for that widened seam
   instead of leaving responsibility implicit,
@@ -356,6 +370,12 @@ Technical leaf tasks:
   milestone. Even if action assembly and no-duplicate checks are ready, do not
   flip user-visible composer routing before `TASK-190-06-03-*` keeps generated
   collections manually editable and `TASK-190-08` proves the rollout gates.
+- Once `detail_page_documents.content_type_id` exists, content-type deletion must
+  treat detail pages as real dependent resources. Auto-pruning
+  `site.contentRoutes` placeholders is not enough: deleting a content type with
+  linked detail-page documents must return a machine-readable
+  `content_type_has_detail_pages`-style conflict unless a later task explicitly
+  designs a safe cascade.
 
 ## Security Contract
 
@@ -377,6 +397,8 @@ Technical leaf tasks:
   - no autonomous mutation before review,
   - provider output remains draft-only,
   - conflicts and gated domains return `needs_input` or `gated`,
+  - provider and client payloads cannot smuggle raw media bytes, signed media
+    URLs, client-authored `resourceCatalog`, or executable action arrays,
   - destructive actions keep policy safety checks.
 - Public-write hardening:
   - if a composed plan creates public forms, it must use existing form access
@@ -395,11 +417,17 @@ Technical leaf tasks:
   - graph order and conflict resolution,
   - schema/facet/card/page/admin merge units,
   - action assembly fixtures,
-  - provider structured composition draft validation.
+  - provider structured composition draft validation,
+  - server-derived resource catalog packaging/rejection of client-supplied
+    catalogs,
+  - media reference planning for existing gallery assets, widget/page refs, and
+    `needs_input` for attached files that are not yet media-library assets.
 - Bun:
   - DB-backed no-duplicate/reuse behavior,
   - dry-run/execute for composed plans,
   - route/security tests when contracts change,
+  - content-type delete conflict coverage for content types that still own
+    detail-page documents,
   - live provider matrix for representative composition prompts.
 - Baseline commands:
   - `bun --cwd core lint`

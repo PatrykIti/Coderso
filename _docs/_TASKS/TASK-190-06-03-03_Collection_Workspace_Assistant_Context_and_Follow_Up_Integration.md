@@ -207,6 +207,11 @@ Rules:
   unhydrated,
 - assistant route/provider packaging extends the current bounded context package
   with `collectionWorkspace` only after server-side rehydration/validation,
+- when the workspace summary includes bounded media candidates, assistant context
+  may expose only server-hydrated safe media ids/labels needed for follow-up
+  prompts such as adding existing gallery assets to entries/detail/page widgets.
+  Browser hints must not provide raw media payloads, signed URLs, upload tokens,
+  or asset-delete authority,
 - `assistantActionSchemas.ts` must stay strict at the browser boundary: it may
   accept only the bounded `collectionWorkspaceHint`
   (`contentTypeId` plus optional `activeDetailPageId`), never canonical links,
@@ -241,7 +246,8 @@ Rules:
 - Anti-abuse: stale or mismatched workspace/detail-page ids are dropped on
   server rehydration.
 - Secret handling: no preview tokens, raw bindings payloads, or secret settings
-  leak into frontend runtime snapshot fields.
+  leak into frontend runtime snapshot fields; media context excludes raw bytes,
+  signed/private URLs, upload tokens, and secret storage details.
 
 ## Testing Requirements
 
@@ -278,6 +284,9 @@ Rules:
 - browser-owned `collectionWorkspace` summary payloads are rejected at the
   schema boundary; the server-owned bounded workspace summary is derived from
   `TASK-190-06-03-01`.
+- bounded media candidates in `collectionWorkspace` are server-hydrated and
+  redacted; browser-supplied media summaries, raw uploads, and signed URLs are
+  rejected or dropped before provider packaging.
 - if no canonical detail-page link exists yet, workspace/detail-page follow-up
   consumes only bounded server-owned `candidates.detailPages` from
   `TASK-190-06-03-01`; browser state must not invent candidate ids or promote a

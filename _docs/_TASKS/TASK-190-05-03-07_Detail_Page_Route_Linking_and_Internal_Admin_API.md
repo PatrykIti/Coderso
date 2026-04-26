@@ -231,6 +231,12 @@ Delete contract:
   Site Settings / `setting.content-route.upsert`.
 - After unlink, delete removes the document plus owned revisions and invalidates
   the same detail-page admin cache keys as other mutations.
+- Content-type delete must also be protected from the opposite direction: if a
+  content type still owns any `detail_page_documents`, the content-type delete
+  flow returns `content_type_has_detail_pages` and does not delete the content
+  type. This is a content-type boundary error, not a `mapDetailPageError`
+  replacement, but this leaf must keep the detail-page route/admin API contract
+  aligned with that dependency.
 
 ## Error Contract
 
@@ -276,6 +282,9 @@ Route boundary maps through centralized `mapDetailPageError`.
 
 - Route registration covers all detail page endpoints.
 - `mapDetailPageError` covers known errors.
+- Content-type delete route/service coverage maps `content_type_has_detail_pages`
+  through the existing content-type error boundary when detail-page documents
+  still reference the content type.
 - Create/update/delete/publish/unpublish/autosave/revision flow works through
   route handlers.
 - `POST /admin/api/detail-pages/:id/preview` returns `token`, `previewUrl`, and

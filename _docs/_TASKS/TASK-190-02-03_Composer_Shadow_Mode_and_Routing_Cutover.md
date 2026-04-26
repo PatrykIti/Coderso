@@ -58,6 +58,12 @@ Deferred full plan cutover:
   `TASK-190-08` must be green,
 - fallback to legacy blueprint builder remains available for a bounded period,
 - no provider-generated action payloads are introduced,
+- any cutover path that needs existing-resource awareness must use the reviewed
+  `includeResourceCatalog` request flag plus server-injected catalog data; it
+  must keep rejecting client-authored `context.resourceCatalog`,
+- catalog-backed/site-kit planning keeps the existing LLM availability gate and
+  does not silently switch to an under-informed local composer when the LLM Guide
+  is unavailable,
 - the existing `input.context.siteKit` short-circuit in `actionPlannerService.ts`
   remains authoritative for the explicit site-kit flow unless a later dedicated
   task intentionally converges site-kit and blueprint-composer routing.
@@ -161,6 +167,10 @@ if (shouldUseBlueprintComposer(input) && composerPlanIsReady(input)) {
 - Candidate selection snapshots are deterministic.
 - Candidate shadow flag runs only allowlisted families.
 - Full plan routing stays disabled in this leaf.
+- Shadow/cutover request validation keeps rejecting client-supplied
+  `context.resourceCatalog` while allowing the server-derived catalog package.
+- LLM-unavailable cases block catalog-backed composer/site-kit routing with the
+  existing assistant unavailable error.
 - No candidate shadow metadata leaks into production response unless explicitly
   enabled by a local debug flag exercised in Vitest.
 - Full composed plan cutover tests are deferred to `TASK-190-07` and

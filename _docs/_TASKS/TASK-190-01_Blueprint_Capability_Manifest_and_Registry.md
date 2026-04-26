@@ -71,6 +71,7 @@ type BlueprintResourceKind =
   | "listing-template"
   | "page"
   | "detail-page"
+  | "media"
   | "form"
   | "menu"
   | "seo"
@@ -80,6 +81,13 @@ type BlueprintResourceKind =
 
 UI labels may call this resource "Detail Template", but the technical
 resource/action kind is `detail-page`.
+
+`media` is a first-class resource kind for media-library assets and references.
+It does not allow manifests to carry raw files, upload bytes, signed URLs, or
+provider-authored media payloads. A media contribution may describe required
+gallery/hero/content/widget references and must map to existing media owner
+seams, for example `media.reference.attach` for entry targets or page/widget
+owner actions that store existing media ids in normalized widget data.
 
 Content-model relations stay owned by the existing schema/field contract in the
 content domain. If a capability contributes relation behavior, it does so
@@ -100,7 +108,9 @@ parallel setup router.
 4. Registry supports `detail-page` resources and `public-detail-page`
    capabilities as first-class metadata, including future/gated contributions
    that are not part of today's executable packs yet.
-5. No current generated action output changes in this task.
+5. Registry supports `media` resources as reference-only metadata and rejects
+   raw upload/file payload declarations.
+6. No current generated action output changes in this task.
 
 ## Security Contract
 
@@ -121,6 +131,8 @@ parallel setup router.
 - Vitest manifest normalization tests.
 - Registry snapshot tests for current blueprint packs.
 - `detail-page` resource kind and `public-detail-page` provide kind are accepted.
+- `media` resource kind accepts reference-only media-library contributions and
+  rejects raw upload/file payload declarations.
 - Invariant tests:
   - stable ids,
   - no duplicate capability ids,

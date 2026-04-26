@@ -43,6 +43,7 @@ type BlueprintCompositionGraph = {
   resources: BlueprintResourceNode[];
   pageSections: BlueprintSectionNode[];
   adminSections: BlueprintAdminNode[];
+  mediaReferences: BlueprintMediaReferenceNode[];
   conflicts: BlueprintConflict[];
   gated: BlueprintGatedNode[];
 };
@@ -55,6 +56,9 @@ type BlueprintCompositionGraph = {
 3. Conflicting slugs/routes/fields produce typed conflicts.
 4. Conflicts can be auto-resolved only when policy says it is safe.
 5. Unresolved conflicts return `needs_input` with questions.
+6. Media conflicts distinguish existing media references from attached files
+   that still need import, ambiguous existing-gallery matches, and unsupported
+   media deletion/upload requests.
 
 ## Security Contract
 
@@ -75,6 +79,8 @@ type BlueprintCompositionGraph = {
   - incompatible field type,
   - duplicate page route,
   - incompatible listing template slug,
+  - ambiguous media filename/label match,
+  - attached media file without trusted media-library id,
   - gated booking/checkout module.
 
 ## Documentation Updates Required

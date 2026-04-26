@@ -35,6 +35,8 @@ export const assembleCompositionActions = (graph): AssistantPlannedAction[] => {
     detailPageUpsertAction(graph.detailPage),
     contentRouteAction(graph.route, graph.detailPage?.id),
     pageUpsertAction(graph.listPage),
+    ...entryUpsertDraftActions(graph.seedEntries),
+    ...mediaReferenceAttachActions(graph.mediaReferences),
     ...formUpsertActions(graph.forms),
     ...menuActions(graph.menus),
     ...seoActions(graph.seo),
@@ -56,6 +58,18 @@ Ordering rules:
   into `page.upsert`.
 - forms/menus/SEO run after primary page/detail resources so they can reference
   stable resource ids and public URLs.
+- `entry.upsert-draft` seed actions, when a fixture explicitly enables sample
+  content creation, run before `media.reference.attach` actions that target those
+  entries.
+- `media.reference.attach` is emitted only for existing media-library assets and
+  supported entry targets. Page/widget media changes are represented in the
+  relevant `page.upsert` / widget data owner action, not as a generic media
+  patch. Raw uploads, attached files without trusted media ids, and media-library
+  asset deletion stay gated/needs-input unless a media owner action exists.
+- Media removal from a content/widget field means removing the reference through
+  the target owner action; it must not delete the media-library asset unless the
+  user explicitly asks for asset deletion and the media service action contract
+  exists.
 
 ## Security Contract
 
@@ -79,6 +93,13 @@ Ordering rules:
   referenced `detail-page.upsert` / `content-type.upsert` dependencies.
 - Assembler does not emit `detail-page.upsert` before content type
   dependencies.
+- Media reference actions are ordered after their target entry/resource exists,
+  never before the content/schema/page owner action they depend on.
+- Attached-file prompts without trusted media-library ids produce
+  `needs_input`/gated prerequisites instead of executable media actions.
+- Existing-gallery add/replace/remove flows are represented through
+  `media.reference.attach` for supported entry targets or page/widget owner
+  actions for widget data, with no raw upload payloads.
 - Gated modules produce non-executable metadata/questions.
 
 ## Documentation Updates Required

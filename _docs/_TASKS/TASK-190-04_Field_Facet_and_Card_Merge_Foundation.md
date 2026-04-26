@@ -21,6 +21,16 @@ Business value:
 - Existing content models can be extended safely.
 - Listing filters and cards can evolve with the composed model.
 
+The canonical Mabudo-like prompt in `_docs/_PROMPTS/mabudo-like-prompt.md`
+must be represented here as reusable fragments, not as one hardcoded preset. The
+house-project catalog composition needs fields/facets/card rows for project code,
+project price, start/plus/finish package prices, house type/floor enum, style,
+roof type, garage enum, construction technology, delivery time, energy level,
+promotion/new flags, display order, bathrooms, and gallery/hero media references.
+Those fields should merge into the current house-project content model through
+the schema owner and then drive listing facets/cards through existing listing
+contracts.
+
 ## Sub-Tasks
 
 - `TASK-190-04-01_Content_Schema_Field_Merge_Engine.md`
@@ -44,6 +54,10 @@ New owner files:
 4. Facets only reference existing/merged fields.
 5. Card config only references existing/merged fields.
 6. Unsupported fields return `needs_input` or are gated by policy.
+7. Mabudo-like field/facet/card fixtures cover the prompt analysis in
+   `_docs/_PROMPTS/mabudo-like-prompt.md`, including pricing packages,
+   style/roof/garage filters, and richer catalog cards without hardcoding a
+   one-off Mabudo preset path.
 
 ## Security Contract
 
@@ -63,6 +77,8 @@ New owner files:
 
 - Vitest schema merge fixtures.
 - Facet/card merge fixtures.
+- Mabudo-like house-project merge fixture proving added fields, filters, and card
+  config derive from reusable fragments and existing schema/listing contracts.
 - Invalid field path rejection tests.
 - Existing action plan schema tests must remain green.
 

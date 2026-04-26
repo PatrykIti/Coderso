@@ -125,6 +125,24 @@ type PageCollectionLink = {
   this persisted metadata from the page seam; they must not re-derive canonical
   list pages from title/slug heuristics once this contract exists.
 
+Media reference rules:
+
+- `page.upsert` may write page/widget block data that references existing
+  media-library assets when the target widget schema supports those references.
+  This covers prompts that ask the assistant to add/remove/replace a hero image,
+  gallery image, card image, logo, or proof section media from the existing
+  gallery.
+- If the user attached files to the prompt, this leaf does not upload or persist
+  raw files. It may only consume trusted media ids produced by the media owner
+  flow. Without those ids, the page composition returns `needs_input` or a gated
+  media-import prerequisite.
+- Removing media from a page/widget must be represented as a normalized block
+  data diff through the page owner seam, not as a media-library delete. Deleting
+  the asset itself remains owned by the media service/admin flow.
+- Media-bearing block data must pass the existing widget schema/default owner and
+  must not embed raw bytes, base64 payloads, upload tokens, or signed/private
+  storage URLs.
+
 ## Pseudocode
 
 ```ts
@@ -176,6 +194,9 @@ export const composePageUpsertInput = (graph): AssistantPageUpsertAction["input"
 - Any manual editor support for that metadata stays page-owned in the current
   Page settings drawer seam rather than moving into workspace-only controls or a
   second page-metadata form.
+- Page/widget media reference tests cover adding, replacing, and removing
+  existing gallery assets through normalized block data, plus a gated case for
+  attached files that do not yet have media-library ids.
 
 ## Documentation Updates Required
 

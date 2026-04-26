@@ -246,6 +246,11 @@ Rules:
 - supporting pages, editorial/proof/case-study resources, and SEO remain in
   scope, but they must arrive through explicit persisted links or owner-contract
   extensions rather than workspace-only heuristics,
+- bounded media candidates for the collection may be exposed when the media
+  owner can provide safe summaries. They support follow-up prompts such as
+  adding existing gallery assets to entries/detail/page widgets, but they are not
+  canonical links and must not include raw bytes, signed URLs, upload tokens, or
+  asset-delete authority,
 - unresolved tabs stay visible and explain what link is missing,
 - candidate lists stay bounded and redacted.
 
@@ -264,6 +269,7 @@ type CollectionWorkspaceSummary = {
   };
   linkedSecondary: {
     forms: ...[];
+    media: ...[];
     pages: ...[];
     seoDocuments: ...[];
     screens: ...[];
@@ -274,6 +280,7 @@ type CollectionWorkspaceSummary = {
     detailPages: ...[];
     listingQueries: ...[];
     listingTemplates: ...[];
+    media: ...[];
     adminScreens: ...[];
   };
 };
@@ -293,6 +300,8 @@ type CollectionWorkspaceSummary = {
     - `settings:read` for canonical `site.contentRoutes` row data and
       route-derived collection link fields,
     - `forms:read` for linked form summaries,
+    - `media:read` for bounded media summaries when the workspace exposes
+      existing gallery/asset candidates,
     - `content:read` for content types, pages, listings, detail pages, custom
       screens, and SEO summaries that already sit in the content-owned admin
       families,
@@ -324,8 +333,8 @@ type CollectionWorkspaceSummary = {
   does not get swallowed by the broader `/coderso/engine` prefix entry under the
   current `adminPrefetch.ts` matcher.
 - route tests cover the owner-read bundle explicitly: `content:read` for the
-  host route plus `settings:read` / `forms:read` gated slices where the
-  workspace summary includes those owner families.
+  host route plus `settings:read` / `forms:read` / `media:read` gated slices
+  where the workspace summary includes those owner families.
 - if `createAdminPrefetcher(...)` changes matching semantics to prefer the most
   specific route, extend the existing perf gate in
   `tests/perf/admin-prefetch-budget.test.ts` so the new matcher still stays
@@ -356,6 +365,9 @@ type CollectionWorkspaceSummary = {
   when multiple plausible matches exist.
 - forms/secondary pages/editorial/proof/SEO links come from explicit canonical
   resource references or owner-contract extensions, not slug-prefix guessing.
+- media candidates are exact-id/selectable summaries only; ambiguous filename
+  matches stay candidate/needs-input and raw upload details never appear in the
+  workspace payload.
 - workspace summary stays bounded and redacted.
 
 ## Documentation Updates Required

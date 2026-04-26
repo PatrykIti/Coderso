@@ -32,6 +32,8 @@ Signals:
 - domain nouns: house, product, service, portfolio, article, booking, lead,
 - outcome verbs: create, add, configure, refine,
 - module words: form, filters, blog, FAQ, booking, testimonials, contact,
+- media words: upload, attach, gallery, hero image, replace image, remove image,
+  use existing media, use selected gallery items, files from prompt,
 - style/reference phrases: "like Mabudo", "catalog plus inquiry",
 - current admin context,
 - existing planning state.
@@ -41,6 +43,8 @@ Scoring:
 - exact capability alias,
 - route/context boost,
 - adjunct module match,
+- media intent match, with a hard distinction between existing media-library
+  references and attached files that still need media-import gating,
 - gated capability penalty,
 - conflict risk penalty.
 
@@ -77,6 +81,9 @@ export const resolveBlueprintCandidates = (input: {
 - Multi-module prompts.
 - Ambiguous prompts return needs-input candidate reason.
 - Existing prompt routing remains stable.
+- Media prompt signals select media-aware adjuncts without emitting actions in
+  this leaf; attached-file signals are marked as gated/needs-input until trusted
+  media ids exist.
 
 ## Documentation Updates Required
 

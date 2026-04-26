@@ -49,6 +49,28 @@ Scope guard:
 - no production planner path may silently switch from `cms_operation_draft` to a
   new response contract in this leaf.
 
+Resource catalog packaging contract:
+
+- `providerPlanningContext.ts` must package resource summaries from the
+  server-derived admin-context/resource-catalog owners only. The client may set a
+  reviewed `includeResourceCatalog` flag, but it must not submit a trusted
+  `resourceCatalog` object.
+- Catalog-backed LLM Guide planning must keep the current LLM availability gate:
+  if catalog context or site-kit planning needs an LLM and the guide is
+  unavailable, planning returns the existing unavailable error instead of
+  falling back to an under-informed local mutation.
+- The provider package must stay bounded/redacted. It may include summaries for
+  the resource groups that exist in the current catalog contract, including
+  pages, posts, entries, content types, custom screens, listings, forms, menus,
+  SEO documents, widgets, media, commerce, solution kits, and detail pages once
+  the detail-page owner leaves land. If a group is not ready, omit it with an
+  explicit warning/limitation rather than silently pretending the assistant can
+  reuse it.
+- Media in provider context is metadata only: existing media ids, labels, alt
+  text, dimensions/mime/type-like hints, and safe thumbnails when already
+  allowed by the media owner. Provider context must not include raw bytes,
+  signed/private URLs, upload tokens, or secret storage details.
+
 ## Pseudocode
 
 ```ts
@@ -79,6 +101,10 @@ const normalizeProviderBlueprintCompositionDraft = (value, registry) => {
 - Secret handling: provider context includes redacted manifest summaries only.
 - Planner boundary: current generic CMS/admin provider contract stays
   `cms_operation_draft` until a later explicit cutover task.
+- Catalog boundary: reject client-authored `context.resourceCatalog`; only the
+  server can inject the catalog package after auth/RBAC/LLM availability checks.
+- Media boundary: provider may suggest media intent, but it cannot create upload
+  payloads or executable media mutations.
 
 ## Testing Requirements
 
@@ -88,6 +114,13 @@ const normalizeProviderBlueprintCompositionDraft = (value, registry) => {
 - Provider cannot invent page sections.
 - Fallback uses deterministic local candidates.
 - Generic CMS/admin provider path keeps using `cms_operation_draft`.
+- Provider context tests cover server-derived resource catalog packaging for
+  media/entries/posts and explicit omission warnings for not-yet-owned groups.
+- Request validation rejects client-supplied `context.resourceCatalog`.
+- LLM-unavailable tests cover catalog-backed/site-kit planning and do not allow a
+  silent local fallback when the prompt requires catalog context.
+- Media prompts with attached files produce gated/needs-input media-import
+  prerequisites until trusted media-library ids exist.
 
 ## Documentation Updates Required
 

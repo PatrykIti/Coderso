@@ -34,6 +34,10 @@ This leaf owns the later generic assistant integration for `detail-page`:
 - extend provider guidance/package metadata so providers can describe
   `detail-page` as a resource family,
 - keep execution on the existing `detail-page.upsert` action path.
+- preserve current generic resource breadth while adding `detail-page`: pages,
+  posts, entries, media, commerce, solution kits, content types, custom screens,
+  listings, forms, menus, SEO documents, and widgets must not be accidentally
+  narrowed or dropped from the resource catalog/provider package.
 
 This leaf does **not**:
 
@@ -67,6 +71,9 @@ Reuse rule:
   and must not add a second divergent `detail-page` inference branch,
 - do not add one-off service lookups when catalog/policy seams can answer the
   same question deterministically.
+- keep media integration on the existing generic media seams. This leaf does not
+  introduce media uploads or media deletion; it only ensures detail-page resource
+  promotion coexists with existing media summaries and media target resolution.
 
 ## Contract Direction
 
@@ -105,6 +112,8 @@ Rules:
   remains operation-draft-only and cannot bypass local action assembly.
 - generic assistant flows must not guess detail page ids from free-text names
   alone.
+- provider/resource catalog packaging remains server-derived and redacted; adding
+  `detail-page` must not make client-authored `resourceCatalog` trusted.
 
 ## Security Contract
 
@@ -133,6 +142,10 @@ Rules:
   slug labels when both are available in bounded catalog data.
 - missing/ambiguous detail-page lookup returns `needs_input` or no match, not a
   fuzzy mutation target.
+- catalog/provider package tests prove adding `detail-page` does not remove
+  existing posts, entries, media, commerce, or solution-kit groups from the
+  bounded context.
+- request validation still rejects client-supplied `context.resourceCatalog`.
 - existing `detail-page.upsert` execution path remains unchanged.
 
 ## Documentation Updates Required

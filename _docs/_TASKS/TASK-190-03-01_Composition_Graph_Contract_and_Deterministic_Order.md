@@ -38,6 +38,7 @@ export const buildBlueprintCompositionGraph = (input: {
     resources: collectResourceNodes(nodes),
     pageSections: collectPageSections(nodes),
     adminSections: collectAdminSections(nodes),
+    mediaReferences: collectMediaReferenceNodes(nodes),
     gated: collectGatedNodes(nodes),
     conflicts: [],
   };
@@ -54,6 +55,8 @@ export const buildBlueprintCompositionGraph = (input: {
 - Reject-unknown validation: graph nodes from normalized manifests only.
 - Anti-abuse: graph cannot execute.
 - Secret handling: graph excludes secrets.
+- Media handling: graph nodes may carry trusted media ids and target metadata,
+  but never raw bytes, base64 payloads, upload tokens, or signed/private URLs.
 
 ## Testing Requirements
 
@@ -61,6 +64,8 @@ export const buildBlueprintCompositionGraph = (input: {
 - Primary before adjunct.
 - Gated nodes preserved.
 - Duplicate nodes deduped by capability id.
+- Media reference nodes preserve deterministic order and attached-file prompts
+  without trusted ids become gated/needs-input nodes, not executable refs.
 
 ## Documentation Updates Required
 

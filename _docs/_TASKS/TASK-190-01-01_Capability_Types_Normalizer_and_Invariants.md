@@ -64,6 +64,18 @@ Required invariants:
 - `detail-page` in manifests is capability metadata only; the actual detail page
   document types/schema/normalizer remain owned by the content domain rather
   than a second schema in `assistant/blueprints`.
+- `media` is a first-class resource kind only for existing media-library assets
+  and media references. Manifests may require/offer hero, gallery, content-field,
+  or widget media references, but they cannot embed raw file bytes, base64 blobs,
+  signed URLs, upload instructions, or provider-authored asset metadata as
+  executable payload.
+- If the prompt includes user-attached files, the normalized manifest/plan must
+  represent them as a gated media-import prerequisite or a `needs_input` item
+  until the media service returns trusted asset ids. Only then may downstream
+  actions reference those ids.
+- Media add/remove/replace intent must normalize as explicit reference
+  operations against existing fields/widgets. It must not become ad hoc
+  untyped patches or filename-only fuzzy matching.
 - no secret-like keys in defaults.
 
 ## Pseudocode
@@ -122,6 +134,11 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
   contributions; a standalone `relation` resource entry rejects.
 - capability metadata for `detail-page` does not redefine the content-domain
   detail page schema/normalizer.
+- `media` manifest entries accept bounded existing-asset references and reject
+  raw file bytes, base64 payloads, signed URLs, and filename-only mutation
+  targets.
+- Attached-file prompts normalize to gated/needs-input media-import prerequisites
+  when no trusted media-library id exists yet.
 - current-pack detail-page metadata without a matching gated/latent declaration
   rejects.
 - Secret-like defaults reject.

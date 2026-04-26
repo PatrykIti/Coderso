@@ -34,6 +34,12 @@ This slice owns the assistant-facing bounded catalog summary needed for
 existing-resource reuse. `detail-page` must become a cataloged resource here
 instead of being matched through one-off service calls.
 
+This slice must also preserve the breadth of the current
+`AssistantResourceCatalogSnapshot` contract. Existing optional groups such as
+posts, entries, media, commerce, and solution kits remain part of the bounded
+catalog story; adding `detailPages` must not narrow provider/context reuse back
+to only pages/content types/listings/forms/menus/SEO/widgets.
+
 Required summary shape:
 
 ```ts
@@ -50,9 +56,26 @@ type AssistantDetailPageSummary = {
 };
 ```
 
+Media summary requirements:
+
+- Reuse the existing media catalog summary shape when it already exists. If it
+  must be widened, keep it bounded to safe asset metadata such as id, label/file
+  name, alt text, mime/type-like hints, dimensions, size/checksum when already
+  available, folder/tag-like labels, and updated timestamp.
+- Media catalog summaries must not include raw file bytes, base64 payloads,
+  upload tokens, signed/private storage URLs, or secret storage details.
+- Existing-media reuse must prefer explicit asset ids selected by the user or
+  trusted admin context. Checksum/originalName-style hints may produce a
+  confirmation candidate, but filename-only matching is not enough for silent
+  attach/replace/delete behavior.
+
 Rules:
 
 - `AssistantResourceCatalogSnapshot` gains a bounded `detailPages` group.
+- `AssistantResourceCatalogSnapshot` keeps the current bounded groups for pages,
+  posts, entries, content types, custom screens, listings, forms, menus, SEO
+  documents, widgets, media, commerce, and solution kits where those owners are
+  already available.
 - Catalog summaries must stay redacted: no raw blocks, no full binding payloads,
   no preview tokens, and no unpublished entry data.
 - This slice extends the existing bounded catalog seam in
@@ -77,6 +100,9 @@ Rules:
   matcher logic; it must not introduce planner-owned metadata fallbacks.
 - Non-unique fields such as listing query `name` or custom screen `name` are
   advisory labels only; they are not sufficient for silent reuse.
+- Media labels, file names, and alt text are advisory labels only. They are not
+  sufficient for silent media reuse, replacement, or removal without an exact id
+  or explicit user confirmation.
 - `blueprintExistingResourceMatcher.ts` consumes these summaries for reuse and
   idempotency.
 - matcher output feeds the existing `actionExecutorService` / idempotency store
@@ -141,6 +167,13 @@ Matcher rules:
 - This slice never invents or persists `compositionKey`, `collectionRole`,
   canonical list-page links, or page-attached listing refs inside matcher logic,
   planning state, or provider context.
+- For existing media, matcher output may select by explicit id or trusted active
+  selection only. Ambiguous media candidates return `unresolved`/`needs_input`
+  with candidate options.
+- Media reference reuse/removal is target-aware: entry gallery/content fields use
+  supported entry/media action contracts, page/widget references use the
+  page/widget owner contract, and asset deletion remains out of scope unless a
+  media-service delete action exists for that exact request.
 
 ## Security Contract
 
@@ -158,6 +191,11 @@ Matcher rules:
 - DB-backed no-duplicate tests.
 - Bounded detail-page catalog summaries normalize and round-trip through the
   assistant resource catalog builders.
+- Existing catalog groups for posts, entries, media, commerce, and solution kits
+  remain present or explicitly omitted with owner/gating metadata; adding
+  `detailPages` does not regress the current catalog breadth.
+- Media catalog summaries normalize without raw bytes, signed URLs, upload
+  tokens, or secret storage details.
 - Existing resource update/reuse tests.
 - Non-unique `listing-query.name` and `custom-screen.name` collisions return
   `unresolved` or equivalent conflict metadata; they do not silently reuse the
@@ -176,6 +214,9 @@ Matcher rules:
 - Generic provider/policy/target-resolver coverage for `detail-page` remains
   owned by `TASK-190-05-03-08`; this slice keeps reuse/idempotency assertions on
   bounded catalog builders and matcher behavior only.
+- Existing media add/replace/remove tests prove exact-id reuse, ambiguous
+  filename candidates returning `needs_input`, and target-aware handling for
+  entry vs page/widget references.
 - Idempotency replay tests.
 - Conflict when existing resource is incompatible.
 

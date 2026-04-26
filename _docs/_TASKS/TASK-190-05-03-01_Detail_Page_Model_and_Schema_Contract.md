@@ -36,6 +36,10 @@ No child task files.
 - Add SQL migration for `detail_page_documents`
 - Add SQL migration for `detail_page_revisions`
 - Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates.
+- Update `core/services/content/typeService.ts` delete guards for the new
+  `detail_page_documents.content_type_id` dependency.
+- Add/extend content-type delete guard tests for content types that own detail
+  page documents.
 
 ## Responsibility Boundary
 
@@ -54,6 +58,10 @@ No child task files.
   - `contentRouteMatcher` route-match metadata.
 - `TASK-190-05-03-04` remains the owner of preview-token storage/query
   semantics for detail-page preview.
+- Because this leaf introduces the persisted `content_type_id` dependency, it
+  also owns the storage/service contract that prevents deleting a content type
+  while detail-page documents still reference it. Route-boundary mapping may live
+  in the current content-type route owner, but the dependency rule starts here.
 
 ## Data Contract
 
@@ -110,6 +118,14 @@ Rules:
   resource family. This leaf must extend the current id-based content-domain
   contract instead of introducing a second top-level relational owner field for
   mutable slug data.
+- Content-type deletion must treat `detail_page_documents.content_type_id` as a
+  blocking dependency. The content-type delete flow must return a
+  machine-readable `content_type_has_detail_pages` conflict when any detail page
+  document still references the content type, unless a later task explicitly
+  defines a safe cascade/unlink flow.
+- Existing `site.contentRoutes` auto-pruning remains route-placeholder cleanup
+  only; it does not satisfy the detail-page document dependency because
+  `detail_page_documents` is the document owner.
 - `site.contentRoutes` can reference `detailPageId` for matching but does not
   own the document.
 - `site.contentRoutes` remains the only runtime route owner; detail-page
@@ -237,6 +253,10 @@ Normalization rules:
 - Shared dot-path semantics stay compatible with the current custom-screen
   binding contract.
 - Secret-like field binding rejects unless explicitly allowed as non-public.
+- Content-type delete guard tests prove that a content type with any
+  `detail_page_documents.content_type_id` dependency returns
+  `content_type_has_detail_pages` and does not rely on `site.contentRoutes`
+  placeholder pruning as the only cleanup.
 - End-to-end settings/action/admin-client/UI/matcher round-trip for
   `detailPageId` is explicitly deferred to `TASK-190-05-03-07`; this leaf only
   defines the shared contract that slice must consume.

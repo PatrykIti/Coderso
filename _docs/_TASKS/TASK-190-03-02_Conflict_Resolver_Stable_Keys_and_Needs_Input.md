@@ -30,6 +30,10 @@ No child task files.
 - `field_type_conflict`
 - `facet_field_missing`
 - `widget_capability_missing`
+- `media_asset_missing`
+- `media_asset_ambiguous`
+- `media_upload_gated`
+- `media_delete_gated`
 - `permission_gap`
 - `gated_domain`
 
@@ -65,6 +69,9 @@ export const resolveBlueprintConflicts = (graph, context) => {
 - Route collision test.
 - Permission gap test.
 - Gated module test.
+- Media conflict tests for missing asset id, ambiguous filename/label matches,
+  attached files that need media import first, and asset deletion requests that
+  lack an executable media-service action.
 
 ## Documentation Updates Required
 
