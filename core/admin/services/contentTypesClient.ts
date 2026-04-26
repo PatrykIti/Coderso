@@ -1,7 +1,12 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
-import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import {
+  clearLocalCache,
+  createMemoryBackedLocalCache,
+  readLocalCache,
+  writeLocalCache,
+} from "@/utils/storageCache";
 
 export type ContentSchemaProperty = {
   type?: "string" | "number" | "integer" | "boolean" | "array";
@@ -44,7 +49,6 @@ export type ContentTypePayload = {
   status?: "draft" | "published";
 };
 
-let cachedContentTypes: ContentTypeSummary[] | null = null;
 let cachedContentTypesPromise: Promise<ContentTypeSummary[]> | null = null;
 
 const isContentTypeList = (value: unknown): value is ContentTypeSummary[] =>
@@ -52,6 +56,12 @@ const isContentTypeList = (value: unknown): value is ContentTypeSummary[] =>
 
 const isContentType = (value: unknown): value is ContentTypeSummary =>
   Boolean(value && typeof value === "object");
+
+const contentTypesListCache = createMemoryBackedLocalCache({
+  key: cacheKeys.contentTypesList,
+  ttlMs: cacheTtlMs.list,
+  validate: isContentTypeList,
+});
 
 const writeContentTypeDetailCache = (item: ContentTypeSummary) => {
   writeLocalCache(cacheKeys.contentTypeDetail(item.id), item);
@@ -61,13 +71,12 @@ const readContentTypeDetailCache = (id: string) =>
   readLocalCache(cacheKeys.contentTypeDetail(id), cacheTtlMs.detail, isContentType);
 
 const primeContentTypesCacheInternal = (items: ContentTypeSummary[]) => {
-  cachedContentTypes = items;
   cachedContentTypesPromise = null;
-  writeLocalCache(cacheKeys.contentTypesList, items);
+  contentTypesListCache.write(items);
 };
 
 const upsertCachedContentType = (item: ContentTypeSummary) => {
-  const current = cachedContentTypes ?? readLocalCache(cacheKeys.contentTypesList, cacheTtlMs.list, isContentTypeList) ?? [];
+  const current = contentTypesListCache.read() ?? [];
   const index = current.findIndex((cached) => cached.id === item.id);
   const next = [...current];
   if (index == -1) {
@@ -80,19 +89,14 @@ const upsertCachedContentType = (item: ContentTypeSummary) => {
 };
 
 const removeCachedContentType = (id: string) => {
-  const current = cachedContentTypes ?? readLocalCache(cacheKeys.contentTypesList, cacheTtlMs.list, isContentTypeList);
+  const current = contentTypesListCache.read();
   if (!current) return;
   primeContentTypesCacheInternal(current.filter((item) => item.id !== id));
   clearLocalCache(cacheKeys.contentTypeDetail(id));
 };
 
 export const getCachedContentTypes = () => {
-  if (cachedContentTypes) return cachedContentTypes;
-  const sessionCached = readLocalCache(cacheKeys.contentTypesList, cacheTtlMs.list, isContentTypeList);
-  if (sessionCached) {
-    cachedContentTypes = sessionCached;
-  }
-  return cachedContentTypes;
+  return contentTypesListCache.read();
 };
 
 export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
@@ -100,9 +104,8 @@ export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
 };
 
 export const clearContentTypesCache = () => {
-  cachedContentTypes = null;
   cachedContentTypesPromise = null;
-  clearLocalCache(cacheKeys.contentTypesList);
+  contentTypesListCache.clear();
 };
 
 export async function listContentTypes() {

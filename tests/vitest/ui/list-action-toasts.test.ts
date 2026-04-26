@@ -13,6 +13,7 @@ vi.mock("sonner", () => ({
 }));
 
 import { createListActionToastAdapter } from "../../../core/admin/ui/shared/listActionToasts";
+import { customScreenListToasts } from "../../../core/admin/ui/custom-screens/customScreenListToasts";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -146,5 +147,31 @@ test("list action toasts support resource-specific draft copy and entry refs", (
   );
   expect(adapter.error("draft", undefined)).toBe(
     "Failed to move entry to draft."
+  );
+});
+
+test("custom screen list toasts cover create, activate, draft, and delete copy", () => {
+  expect(
+    customScreenListToasts.success("create", { targetLabel: "Catalog" })
+  ).toBe('Custom screen "Catalog" created.');
+  expect(customScreenListToasts.error("activate", undefined)).toBe(
+    "Failed to activate custom screen."
+  );
+
+  const partial = customScreenListToasts.summarizeBulkAction(
+    "moveToDraft",
+    ["screen-1", "screen-2"],
+    [
+      { status: "fulfilled", value: undefined },
+      { status: "rejected", reason: new Error("draft failed") },
+    ]
+  );
+
+  expect(partial.toastMessage).toBe(
+    "Moved 1 custom screen to draft; failed 1."
+  );
+  customScreenListToasts.emitBulk(partial);
+  expect(toastState.error).toHaveBeenCalledWith(
+    "Moved 1 custom screen to draft; failed 1."
   );
 });

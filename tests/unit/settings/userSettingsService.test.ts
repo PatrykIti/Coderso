@@ -44,6 +44,11 @@ testIfDb("set/get/list user settings", async () => {
 
   const defaultValue = await getUserSetting(userId, "pages.openAfterCreate");
   expect(defaultValue).toBe(true);
+  const defaultCustomScreensOpenAfterCreate = await getUserSetting(
+    userId,
+    "customScreens.openAfterCreate"
+  );
+  expect(defaultCustomScreensOpenAfterCreate).toBe(true);
   const defaultMedia = await getUserSetting(userId, "media.openAfterUpload");
   expect(defaultMedia).toBe(false);
   const defaultFavorites = await getUserSetting(userId, "widgets.favorites");
@@ -80,6 +85,7 @@ testIfDb("set/get/list user settings", async () => {
   expect(defaultAssistantAvatarAsset).toBeNull();
 
   await setUserSetting(userId, "pages.openAfterCreate", false);
+  await setUserSetting(userId, "customScreens.openAfterCreate", false);
   await setUserSetting(userId, "media.openAfterUpload", true);
   await setUserSetting(userId, "widgets.favorites", ["hero", "footer"]);
   await setUserSetting(userId, "widgets.hero.presets", [
@@ -105,6 +111,11 @@ testIfDb("set/get/list user settings", async () => {
   await setUserSetting(userId, "assistant.ui.avatarAsset", "assistant-bot.glb");
   const updated = await getUserSetting(userId, "pages.openAfterCreate");
   expect(updated).toBe(false);
+  const updatedCustomScreensOpenAfterCreate = await getUserSetting(
+    userId,
+    "customScreens.openAfterCreate"
+  );
+  expect(updatedCustomScreensOpenAfterCreate).toBe(false);
   const updatedMedia = await getUserSetting(userId, "media.openAfterUpload");
   expect(updatedMedia).toBe(true);
   const updatedFavorites = await getUserSetting(userId, "widgets.favorites");
@@ -149,6 +160,7 @@ testIfDb("set/get/list user settings", async () => {
 
   const list = await listUserSettings(userId);
   expect(list["pages.openAfterCreate"]).toBe(false);
+  expect(list["customScreens.openAfterCreate"]).toBe(false);
   expect(list["media.openAfterUpload"]).toBe(true);
   expect(list["widgets.favorites"]).toEqual(["hero", "footer"]);
   expect(list["widgets.hero.presets"]).toEqual([
@@ -315,6 +327,10 @@ testIfDb("rejects invalid post editor preferences payload", async () => {
 });
 
 test("validateUserSettingValue validates assistant and post editor settings", () => {
+  expect(validateUserSettingValue("customScreens.openAfterCreate", true)).toBe(true);
+  expect(() =>
+    validateUserSettingValue("customScreens.openAfterCreate", "yes")
+  ).toThrow("user_settings_value_invalid");
   expect(validateUserSettingValue("assistant.mode", "llm-guide")).toBe("llm-guide");
   expect(validateUserSettingValue("assistant.mode", "llm-rag")).toBe("llm-guide");
   expect(validateUserSettingValue("assistant.mode", null)).toBeNull();

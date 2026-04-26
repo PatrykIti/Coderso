@@ -190,7 +190,11 @@ const defaultEntries: AdminPrefetchEntry[] = [
   },
   {
     match: "/coderso/custom-screens",
-    run: () => listCustomScreensCached(prefetchWarmupOptions),
+    run: () =>
+      Promise.all([
+        listCustomScreensCached(prefetchWarmupOptions),
+        listContentTypesCached(prefetchWarmupOptions),
+      ]),
   },
   {
     match: "/coderso/forms",

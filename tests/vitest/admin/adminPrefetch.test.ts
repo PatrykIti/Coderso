@@ -229,3 +229,37 @@ test("default entries prefetch warms content types and all entries", async () =>
     }
   });
 });
+
+test("default custom screens prefetch warms screens and content type labels", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listContentTypesCached = vi.fn().mockResolvedValue([]);
+    const listCustomScreensCached = vi.fn().mockResolvedValue([]);
+
+    vi.doMock("@/services/contentTypesClient", () => ({
+      listContentTypesCached,
+    }));
+    vi.doMock("@/services/customScreensClient", () => ({
+      listCustomScreensCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      module.prefetchAdminRoute("/admin/coderso/custom-screens", "/admin", {
+        activeHref: "/admin/pages",
+      });
+      await flushAsync();
+
+      expect(listCustomScreensCached).toHaveBeenCalledWith(
+        module.prefetchWarmupOptions
+      );
+      expect(listContentTypesCached).toHaveBeenCalledWith(
+        module.prefetchWarmupOptions
+      );
+    } finally {
+      vi.doUnmock("@/services/contentTypesClient");
+      vi.doUnmock("@/services/customScreensClient");
+      vi.resetModules();
+    }
+  });
+});

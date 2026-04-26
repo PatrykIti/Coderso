@@ -1094,6 +1094,16 @@ Notes:
 - `schemaVersion` jest wersjonowany (aktualnie `1`).
 - `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
+- lista `/admin/coderso/custom-screens` wzbogaca wiersze o nazwy content type
+  z `contentTypes:list`, ale nie zapisuje denormalizowanych labeli do custom
+  screen record.
+- lista pokazuje status sidebar shortcut jako pochodna:
+  `active + showInSidebar` -> visible shortcut,
+  `draft + showInSidebar` -> configured after activation,
+  otherwise -> not shown.
+- create drawer na liscie wysyla tylko istniejace pola create schema:
+  `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`,
+  `blocks`, `bindings`.
 - builder preview rozwiazuje bindings przed przekazaniem blokow do `WidgetRenderer`.
 - response record niesie tez derived `capabilities`:
   - `mode: "collection-only" | "dashboard" | "editor"`
@@ -2594,6 +2604,7 @@ Auth: wymagane zalogowanie (session cookie). Dotyczy preferencji per użytkownik
 
 Przykładowe klucze:
 - `pages.openAfterCreate` (bool)
+- `customScreens.openAfterCreate` (bool)
 - `media.openAfterUpload` (bool)
 - `widgets.favorites` (string[])
 - `widgets.hero.presets` (preset[])

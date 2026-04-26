@@ -35,6 +35,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `entries:list:all`
 - `entries:list:<typeSlug>`
 - `entries:detail:<typeSlug>:<id>`
+- `customScreens:list`
+- `customScreens:detail:<id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
 - `menus:list`
@@ -260,6 +262,29 @@ Clients update caches and broadcast events on:
 - Failed metadata writes must not mutate list or detail cache state.
 - Entry editor background refresh must not overwrite unsaved content or metadata
   edits; the editor defers active reload while either dirty flag is set.
+
+### Custom Screens list/detail cache note
+
+- Custom Screens list cache (`customScreens:list`) uses
+  `createMemoryBackedLocalCache`, so module memory and `localStorage` share the
+  same list TTL.
+- `useCustomScreens()` follows the shared mount policy:
+  - cache present -> `{ force: false, background: true }`,
+  - cache missing -> `{ force: true, background: false }`,
+  - cache-bus list events -> `{ force: true, background: true }`.
+- `/admin/coderso/custom-screens` prefetch warms both `customScreens:list` and
+  `contentTypes:list` because the first-screen table and filters display
+  content-type labels.
+- `contentTypesClient` also uses TTL-backed memory for `contentTypes:list`, so
+  Custom Screens label projection cannot be pinned to stale module memory after
+  the shared list TTL expires.
+- The Custom Screens list subscribes to `contentTypes:list` cache events and
+  refreshes labels in the background. Screen records keep their original
+  `contentTypeId`; labels are a UI projection only.
+- `createCustomScreen()`, `updateCustomScreen()`, and `deleteCustomScreen()`
+  update or invalidate `customScreens:list` / `customScreens:detail:<id>` and
+  broadcast cache events for the list, sidebar shortcuts, builder, and records
+  workflow.
 
 ## Extending The Cache
 When adding a new resource:

@@ -69,8 +69,13 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Custom Screens
 - Screens list
   - UI: `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
-  - Cached APIs: `listCustomScreensCached`, `getCachedCustomScreens`
-  - Cache bus: `customScreens:list`
+  - Cached APIs: `listCustomScreensCached`, `getCachedCustomScreens`,
+    `listContentTypesCached`, `getCachedContentTypes`
+  - Mutations: `createCustomScreen`, `updateCustomScreen`,
+    `deleteCustomScreen`
+  - Cache bus: `customScreens:list`, `contentTypes:list` for label projection
+  - Prefetch: `/coderso/custom-screens` warms both `customScreens:list` and
+    `contentTypes:list`
 - Custom screen builder and records workflow
   - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`, `CustomScreenEntriesPage.tsx`, `CustomScreenEntryEditor.tsx`
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`, `listCustomScreensCached`

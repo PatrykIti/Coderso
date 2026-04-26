@@ -25,8 +25,9 @@ test("CustomScreenListPage renders shell and loading state", () => {
   });
 
   expect(html).toContain("Custom Screens");
-  expect(html).toContain("New screen");
+  expect(html).toContain("New");
   expect(html).toContain("Loading custom screens");
+  expect(html).toContain("Search custom screens");
 });
 
 test("CustomScreenListPage renders cached screens without loading placeholder", () => {
@@ -62,7 +63,7 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
     });
 
     expect(html).toContain("Cached screen");
-    expect(html).toContain("Sidebar shortcut:");
+    expect(html).toContain("Sidebar label:");
     expect(html).toContain("Catalog");
     expect(html).not.toContain("Loading custom screens");
   } finally {
@@ -98,7 +99,7 @@ test("CustomScreenListPage renders list shell", () => {
   });
 
   expect(html).toContain("Custom Screens");
-  expect(html).toContain("New screen");
+  expect(html).toContain("New");
 });
 
 test("CustomScreenEditorPage renders builder canvas and save action", () => {

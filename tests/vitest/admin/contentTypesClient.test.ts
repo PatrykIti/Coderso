@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import {
   clearContentTypesCache,
@@ -13,7 +13,7 @@ import {
   primeContentTypesCache,
   updateContentType,
 } from "../../../core/admin/services/contentTypesClient";
-import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -38,6 +38,11 @@ const createLocalStorage = () => {
 const resetCaches = () => {
   clearContentTypesCache();
 };
+
+afterEach(() => {
+  vi.useRealTimers();
+  resetCaches();
+});
 
 test("listContentTypes hits GET /content-types", async () => {
   const originalFetch = globalThis.fetch;
@@ -334,6 +339,74 @@ test("listContentTypesCached reads from local storage", async () => {
     const result = await listContentTypesCached();
     expect(result).toEqual(cached);
     expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("expired content type memory yields to fresher storage before network fallback", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([
+      {
+        id: "ct-network",
+        name: "Network",
+        slug: "network",
+        status: "published",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+      },
+    ]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-14T00:00:00.000Z"));
+    resetCaches();
+    await listContentTypesCached({ force: true });
+
+    vi.setSystemTime(new Date(Date.now() + 1000));
+    storage.setItem(
+      cacheKeys.contentTypesList,
+      JSON.stringify({
+        value: [
+          {
+            id: "ct-storage",
+            name: "Storage",
+            slug: "storage",
+            status: "draft",
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {},
+            },
+            createdAt: "2026-02-14T00:00:00.000Z",
+            updatedAt: "2026-02-14T00:00:00.000Z",
+          },
+        ],
+        savedAt: Date.now(),
+      })
+    );
+
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list));
+    const result = await listContentTypesCached();
+
+    expect(result[0]?.id).toBe("ct-storage");
+    expect(getCachedContentTypes()?.[0]?.name).toBe("Storage");
+    expect(calls).toHaveLength(1);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {

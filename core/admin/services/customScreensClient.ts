@@ -1,7 +1,12 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
-import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import {
+  clearLocalCache,
+  createMemoryBackedLocalCache,
+  readLocalCache,
+  writeLocalCache,
+} from "@/utils/storageCache";
 import type { WidgetBlock } from "../../widgets/types";
 import {
   resolveCustomScreenCapabilities,
@@ -94,7 +99,6 @@ const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
 const isCustomScreenList = (value: unknown): value is CustomScreenRecord[] =>
   Array.isArray(value) && value.every(isCustomScreenRecord);
 
-let cachedScreens: CustomScreenRecord[] | null = null;
 let cachedScreensPromise: Promise<CustomScreenRecord[]> | null = null;
 
 const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => ({
@@ -109,8 +113,14 @@ const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenReco
     }),
 });
 
+const customScreensListCache = createMemoryBackedLocalCache({
+  key: cacheKeys.customScreensList,
+  ttlMs: cacheTtlMs.list,
+  validate: isCustomScreenList,
+});
+
 const readScreensCache = () =>
-  readLocalCache(cacheKeys.customScreensList, cacheTtlMs.list, isCustomScreenList);
+  customScreensListCache.read()?.map(normalizeCustomScreenRecord) ?? null;
 
 const readScreenDetailCache = (id: string) =>
   readLocalCache(cacheKeys.customScreenDetail(id), cacheTtlMs.detail, isCustomScreenRecord);
@@ -120,13 +130,12 @@ const writeScreenDetailCache = (item: CustomScreenRecord) => {
 };
 
 const primeScreensCacheInternal = (items: CustomScreenRecord[]) => {
-  cachedScreens = items.map(normalizeCustomScreenRecord);
   cachedScreensPromise = null;
-  writeLocalCache(cacheKeys.customScreensList, cachedScreens);
+  customScreensListCache.write(items.map(normalizeCustomScreenRecord));
 };
 
 const upsertCachedScreen = (item: CustomScreenRecord) => {
-  const current = cachedScreens ?? readScreensCache() ?? [];
+  const current = readScreensCache() ?? [];
   const index = current.findIndex((entry) => entry.id === item.id);
   const next = [...current];
   if (index === -1) {
@@ -140,29 +149,25 @@ const upsertCachedScreen = (item: CustomScreenRecord) => {
 };
 
 const removeCachedScreen = (id: string) => {
-  const current = cachedScreens ?? readScreensCache();
+  const current = readScreensCache();
   if (current) primeScreensCacheInternal(current.filter((entry) => entry.id !== id));
   clearLocalCache(cacheKeys.customScreenDetail(id));
 };
 
 export const getCachedCustomScreens = () => {
-  if (cachedScreens) return cachedScreens;
-  const cached = readScreensCache();
-  if (cached) cachedScreens = cached.map(normalizeCustomScreenRecord);
-  return cachedScreens;
+  return readScreensCache();
 };
 
 export const getCachedCustomScreen = (id: string) => {
-  const fromMemory = cachedScreens?.find((entry) => entry.id === id);
+  const fromMemory = readScreensCache()?.find((entry) => entry.id === id);
   if (fromMemory) return fromMemory;
   const cached = readScreenDetailCache(id);
   return cached ? normalizeCustomScreenRecord(cached) : cached;
 };
 
 export const clearCustomScreensCache = () => {
-  cachedScreens = null;
   cachedScreensPromise = null;
-  clearLocalCache(cacheKeys.customScreensList);
+  customScreensListCache.clear();
 };
 
 export async function listCustomScreens() {

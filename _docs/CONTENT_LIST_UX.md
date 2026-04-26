@@ -33,9 +33,10 @@ Gdy zaznaczysz wpisy na liscie:
 
 ## Shared List Action Toasts
 
-- Pages, Posts, Menus, Content Types, and Entries emit the shared top-right
-  Admin UI toast after list-owned create, publish, unpublish/draft, archive,
-  and delete mutations complete.
+- Pages, Posts, Menus, Content Types, Entries, and Custom Screens emit the
+  shared top-right Admin UI toast after list-owned create, publish,
+  unpublish/draft, archive, activate, move-to-draft, and delete mutations
+  complete.
 - Delete toasts are emitted only after the shared confirmation dialog is
   confirmed and the delete mutation settles. Opening or cancelling the
   confirmation dialog does not emit a floating toast.
@@ -142,6 +143,42 @@ Gdy zaznaczysz wpisy na liscie:
   existing service guards; guarded failures are reported as partial-failure
   copy instead of being hidden.
 - Destructive row and bulk delete use the shared Admin UI confirmation dialog.
+
+## Custom Screens parity
+
+- Custom Screens list follows the Pages first-screen pattern: `AdminShell`,
+  `PageHeader`, compact `New`, filter strip, table card, inline selected-row
+  bulk controls, and shared pagination footer.
+- Filters are Custom Screens-specific:
+  - search by screen name, sidebar label, content-type label, or
+    `contentTypeId`,
+  - status: `All`, `Active`, `Draft`,
+  - content type: fetched labels plus stable missing-`contentTypeId` fallback
+    options for legacy or deleted content types.
+- Rows keep Custom Screens domain columns and routes:
+  - `Screen` links to `/admin/coderso/custom-screens/:id`,
+  - `Records` links to `/admin/coderso/custom-screens/:id/entries`,
+  - columns show active/draft status, content type, capability mode, derived
+    sidebar shortcut state, and updated date.
+- Sidebar shortcut display is derived, not persisted:
+  - active + shortcut-enabled -> `Visible`,
+  - draft + shortcut-enabled -> `Configured after activation`,
+  - otherwise -> `Not shown`.
+- Row actions are limited to `Records`, `Edit`, `Activate` or `Move to draft`,
+  and `Delete`. Preview and duplicate remain absent until a dedicated Custom
+  Screens service/API contract exists.
+- `New` opens a list-owned create drawer for the existing create schema fields:
+  name, `contentTypeId`, status, optional sidebar shortcut, and empty
+  `blocks`/`bindings`. The drawer blocks submit until a fetched content type is
+  selected and links admins to Engine when no content type exists.
+- `customScreens.openAfterCreate` persists the drawer preference separately
+  from Pages while defaulting to opening the builder after create.
+- Row delete and bulk delete require `ConfirmActionDialog`; delete mutations do
+  not run from the dropdown or bulk select directly.
+- Bulk actions operate only on currently visible selected rows and support:
+  - Activate,
+  - Move to draft,
+  - Delete.
 
 ## Menus parity
 
