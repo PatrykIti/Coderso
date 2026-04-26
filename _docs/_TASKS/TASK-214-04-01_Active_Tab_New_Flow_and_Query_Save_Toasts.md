@@ -24,9 +24,8 @@ keeps that route and adds feedback after save mutations settle.
   `createListingQuery` resolves.
 - [ ] Query update success emits a shared action toast after
   `updateListingQuery` resolves.
-- [ ] Query create/update failures keep inline error state and emit or return
-  shared normalized copy consistently with existing editor action toast
-  patterns.
+- [ ] Query create/update failures emit a shared failure toast after the rejected
+  mutation settles and keep the existing inline error state for editor context.
 - [ ] Preserve dirty-state, preview, discard, and template-selection behavior in
   `ListingEditorPage`.
 
