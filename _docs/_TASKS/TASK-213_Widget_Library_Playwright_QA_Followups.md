@@ -348,11 +348,16 @@ syncDocsChangelogAndBoard("TASK-213");
   - `tests/vitest/widgets/navigation.test.tsx`
   - `tests/vitest/widgets/footer.test.tsx`
   - `tests/vitest/widgets/productGallery.test.tsx`
+  - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
   - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
   - `tests/vitest/widgets/productCompare.test.tsx`
+  - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
+  - `tests/vitest/ui/product-table-editor-wave.test.tsx`
   - `tests/vitest/widgets/richTextSection.test.tsx`
+  - `tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
   - `tests/vitest/ui/media-picker.test.tsx` when Gallery Mosaic media picker
     behavior changes the shared picker/cache contract
 - Vitest UI/admin lanes:
@@ -384,6 +389,8 @@ syncDocsChangelogAndBoard("TASK-213");
 
 - `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md`
 - `_docs/WIDGETS.md`
+- `_docs/WIDGETS_COMPOSITE_STRATEGY.md` if progressive-disclosure or advanced
+  filter behavior changes
 - `_docs/WIDGET_PACK_MATRIX.md` if module readiness wording or pack matrix
   semantics change
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache keys,

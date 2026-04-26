@@ -33,8 +33,7 @@ No child task files.
 - existing rich-text editor components only if they can be imported without
   runtime/server coupling
 - `tests/vitest/widgets/richTextSection.test.tsx`
-- focused UI/editor suite if the quick editor lives outside the widget contract
-  test
+- `tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -87,7 +86,7 @@ cannot express the needed editor output and the widget schema is updated first.
   - structured quick blocks normalize deterministically;
   - raw HTML remains sanitized;
   - output mode renders the expected public markup.
-- UI/editor test if an editor component is added:
+- `tests/vitest/ui/rich-text-section-editor-wave.test.tsx`:
   - routine rich-text editing does not require raw HTML;
   - switching Wizard/Visual/Advanced does not lose structured content.
 - Manual Playwright:

@@ -161,13 +161,16 @@ keeps any remaining valid work under an implementation owner.
   - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
   - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
   - `tests/vitest/widgets/productCompare.test.tsx`
+  - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
-  - equivalent UI wave tests if added for compare/table.
+  - `tests/vitest/ui/product-table-editor-wave.test.tsx`
 - Media/rich-text/dynamic-content/layout widgets:
   - `tests/vitest/widgets/galleryMosaic.test.tsx`
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
   - `tests/vitest/ui/media-picker.test.tsx` only if shared picker/cache
     behavior changes
   - `tests/vitest/widgets/richTextSection.test.tsx`
+  - `tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
   - existing current command surface:
     `tests/unit/widgets/postsFeedWidget.test.tsx`
   - add a focused Vitest Posts Feed editor/widget suite only if the changed

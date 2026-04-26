@@ -44,8 +44,11 @@ No child task files.
 - `tests/vitest/widgets/toggleBlock.test.tsx`
 - `tests/vitest/widgets/navigation.test.tsx`
 - `tests/vitest/widgets/footer.test.tsx`
-- focused UI editor suites when accessible helper behavior is not covered by
-  widget contract tests
+- `tests/vitest/ui/split-layout-editor-wave.test.tsx`
+- `tests/vitest/ui/stack-editor-wave.test.tsx`
+- `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+- `tests/vitest/ui/navigation-editor-wave.test.tsx`
+- `tests/vitest/ui/footer-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -113,7 +116,7 @@ schema/defaults/normalizer first.
   - Toggle Block default pane renders deterministically;
   - Navigation links-source helper does not change source semantics;
   - Footer social add/remove stays bounded and uses accessible labels.
-- UI editor tests if added:
+- UI editor tests:
   - paired link/social inputs have per-field labels;
   - add/remove controls preserve row identity and focusable labels.
 - Manual Playwright:

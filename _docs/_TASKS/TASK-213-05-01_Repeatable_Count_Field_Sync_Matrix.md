@@ -53,6 +53,17 @@ No child task files.
 - `core/widgets/core/faqAccordion.tsx`
 - `core/widgets/core/gridColumns.tsx`
 - matching `tests/vitest/widgets/*.test.tsx` files.
+- Existing UI editor wave suites for every touched editor:
+  - `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+  - `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+  - `tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `tests/vitest/ui/team-editor-wave.test.tsx` if Team is touched
+  - `tests/vitest/ui/timeline-editor-wave.test.tsx` if Timeline is touched
+  - `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
+  - `tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+  - `tests/vitest/ui/testimonials-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -116,6 +127,8 @@ Do not hide preset rows that will render publicly without telling the user.
   - `tests/vitest/widgets/compareTimeline.test.tsx`
   - `tests/vitest/widgets/pricingPlans.test.tsx`
   - `tests/vitest/widgets/testimonials.test.tsx`
+  - matching `tests/vitest/ui/*-editor-wave.test.tsx` suites for each touched
+    editor listed in Files to Change.
 - Manual Playwright:
   - change count selectors and verify visible rows/copy align.
 

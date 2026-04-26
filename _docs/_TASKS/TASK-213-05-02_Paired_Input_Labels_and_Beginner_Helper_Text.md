@@ -40,6 +40,18 @@ No child task files.
 - `core/admin/ui/widgets/editors/StackEditors.tsx`
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 - matching `tests/vitest/widgets/*.test.tsx` files.
+- Existing UI editor wave suites for every touched editor, including:
+  - `tests/vitest/ui/navigation-editor-wave.test.tsx`
+  - `tests/vitest/ui/footer-editor-wave.test.tsx`
+  - `tests/vitest/ui/hero-editor-wave.test.tsx`
+  - `tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+  - `tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+  - `tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
+  - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+  - `tests/vitest/ui/split-layout-editor-wave.test.tsx`
+  - `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -110,8 +122,12 @@ visibility.
   - `tests/vitest/widgets/faqAccordion.test.tsx`
   - `tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
   - `tests/vitest/widgets/bookingCalendar.test.tsx`
+  - `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
   - `tests/vitest/widgets/appointmentForm.test.tsx`
-  - layout widget suites for Split/Stack/Toggle if touched.
+  - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+  - layout widget suites plus `tests/vitest/ui/split-layout-editor-wave.test.tsx`,
+    `tests/vitest/ui/stack-editor-wave.test.tsx`, and
+    `tests/vitest/ui/toggle-block-editor-wave.test.tsx` if touched.
 - Manual Playwright:
   - inspect labels for Navigation/Footer pairs;
   - inspect Pricing Plans and FAQ quick rows for distinct field names;

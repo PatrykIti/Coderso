@@ -44,6 +44,7 @@ No child task files.
   changes
 - `tests/vitest/ui/media-picker.test.tsx` only if shared picker/cache behavior
   changes
+- `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
 - `tests/vitest/widgets/galleryMosaic.test.tsx`
 
 ## Implementation Direction
@@ -91,6 +92,9 @@ inside `image`/`video` fields.
   - Gallery Mosaic media picker output normalization;
   - Gallery Mosaic public rendering resolves picked media safely or persists
     sanitized public URLs without private delivery data;
+- `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - Wizard exposes a picker-backed quick setup without raw ID/URL typing;
+  - save/reopen keeps normalized picker output visible.
 - Manual Playwright:
   - add Gallery Mosaic and pick media without raw IDs;
   - verify the mosaic renders picked media after save/reopen;

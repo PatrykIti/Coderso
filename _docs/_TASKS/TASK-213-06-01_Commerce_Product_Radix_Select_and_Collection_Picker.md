@@ -49,9 +49,9 @@ No child task files.
 - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
 - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
 - `tests/vitest/widgets/productCompare.test.tsx`
+- `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `tests/vitest/widgets/productTable.test.tsx`
-- new focused UI wave tests for Product Compare/Table if current coverage does
-  not exercise editor controls.
+- `tests/vitest/ui/product-table-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -120,7 +120,9 @@ blocker, and route/security contract.
   - `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
   - `tests/vitest/ui/commerce-widget-editor-shared.test.tsx`
   - `tests/vitest/widgets/productCompare.test.tsx`
+  - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
   - `tests/vitest/widgets/productTable.test.tsx`
+  - `tests/vitest/ui/product-table-editor-wave.test.tsx`
 - Manual Playwright:
   - Product Gallery/Compare/Table controls visually match other widget selects;
   - collection selection does not require raw CSV typing if picker scope lands.

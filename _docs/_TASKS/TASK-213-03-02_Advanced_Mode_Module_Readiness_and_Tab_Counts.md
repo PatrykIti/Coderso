@@ -107,6 +107,8 @@ cleanup as a follow-up instead of silently redesigning the whole rail.
 ## Documentation Updates Required
 
 - `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md`
+- `_docs/WIDGETS_COMPOSITE_STRATEGY.md` if the meaning of `Recommended`,
+  `All widgets`, or `Advanced mode` changes
 - `_docs/WIDGET_PACK_MATRIX.md`
 - `docs/coderso/widget-library.md`
 

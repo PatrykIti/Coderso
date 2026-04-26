@@ -131,6 +131,8 @@ Favorite state:
 ## Documentation Updates Required
 
 - `_docs/PLAYWRIGHT/SUMMARY-WIDGETS.md`
+- `_docs/WIDGETS_COMPOSITE_STRATEGY.md` if progressive-disclosure or advanced
+  filtering semantics change
 - `_docs/WIDGET_PACK_MATRIX.md` if readiness copy contract changes
 - `docs/coderso/widget-library.md`
 - `_docs/_TASKS/README.md`

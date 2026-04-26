@@ -32,8 +32,9 @@ No child task files.
 - `core/widgets/core/ctaBanner.tsx`
 - `core/widgets/core/compareTimeline.tsx`
 - `tests/vitest/widgets/ctaBanner.test.tsx`
+- `tests/vitest/ui/cta-banner-editor-wave.test.tsx`
 - `tests/vitest/widgets/compareTimeline.test.tsx`
-- focused UI editor suites if current widget tests do not cover the quick fields
+- `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -80,7 +81,7 @@ editor cannot find.
 - `tests/vitest/widgets/compareTimeline.test.tsx`
   - track labels and axis count normalize deterministically;
   - helper-scoped hidden fields do not render stale preset surprises.
-- UI/editor tests if added:
+- UI/editor tests:
   - paired CTA URL inputs have accessible labels;
   - changing step count preserves deterministic labels/defaults.
 - Manual Playwright:

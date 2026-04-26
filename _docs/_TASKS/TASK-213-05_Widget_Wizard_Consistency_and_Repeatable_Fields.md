@@ -60,6 +60,19 @@ deterministic, and accessible for the fields it does expose.
   - `core/widgets/core/gridColumns.tsx`
   - related `core/widgets/core/*` normalizers only when stored defaults change
 - Relevant `tests/vitest/widgets/*.test.tsx` for every editor touched.
+- Existing UI editor wave suites for every touched editor, including:
+  - `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+  - `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+  - `tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `tests/vitest/ui/grid-columns-editor-wave.test.tsx`
+  - `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  - `tests/vitest/ui/navigation-editor-wave.test.tsx`
+  - `tests/vitest/ui/footer-editor-wave.test.tsx`
+  - `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
+  - `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+  - `tests/vitest/ui/split-layout-editor-wave.test.tsx`
+  - `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -133,6 +146,8 @@ Paired fields must each be named:
   - `tests/vitest/widgets/footer.test.tsx`
   - `tests/vitest/widgets/bookingCalendar.test.tsx`
   - `tests/vitest/widgets/appointmentForm.test.tsx`
+  - the existing `tests/vitest/ui/*-editor-wave.test.tsx` suite for each
+    touched editor listed above.
 - Manual Playwright:
   - changing count visibly adds/removes matching quick rows or clearly explains
     that additional rows live in Visual;

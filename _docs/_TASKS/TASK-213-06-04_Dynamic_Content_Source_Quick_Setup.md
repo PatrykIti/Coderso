@@ -36,9 +36,11 @@ No child task files.
 - `core/widgets/core/contentList.tsx`
 - `core/widgets/core/entryTeaser.tsx`
 - existing `tests/unit/widgets/postsFeedWidget.test.tsx`
+- `tests/vitest/ui/posts-feed-editor-wave.test.tsx`
 - `tests/vitest/widgets/contentList.test.tsx`
+- `tests/vitest/ui/content-list-editor-wave.test.tsx`
 - `tests/vitest/widgets/entryTeaser.test.tsx`
-- focused UI/editor suites only where production imports remain Bun-free
+- `tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
 
 ## Implementation Direction
 
@@ -93,8 +95,8 @@ source-picker implementation.
     runtime coupling.
 - Content List and Entry Teaser:
   - widget tests cover source/count/layout normalization;
-  - UI tests cover helper copy/current-state verification if editor controls
-    change.
+  - existing UI editor wave tests cover helper copy/current-state verification
+    when editor controls change.
 - Manual Playwright:
   - add Posts Feed, Content List, and Entry Teaser;
   - verify source/count/layout choices are understandable or record an explicit
