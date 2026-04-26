@@ -4,7 +4,10 @@
 **Priority:** High
 **Category:** Coderso Widgets + Admin/UI + UX + Admin Cache
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-205, TASK-208, TASK-213, TASK-214
+**Dependencies:** TASK-205, TASK-208, TASK-213
+**Reference Tasks:** TASK-214 is a non-blocking Pages-style list parity
+reference for tab/resource-scoped action wording. Do not wait for TASK-214
+completion unless implementation chooses to reuse a helper introduced there.
 **Status:** To Do
 
 ---
@@ -69,9 +72,12 @@ drawer that exists today.
 - `WidgetInsertDialog.tsx` already supports inserting core widgets into pages
   or widget templates. TASK-215 should route Insert actions through that dialog
   rather than introducing a second placement popup.
-- `widgetTemplatesClient.ts`, `widgetTemplateCategoriesClient.ts`, and
-  `widgetsClient.ts` already own cached widgets/template/category data and
-  cache-bus broadcasts. The library should keep using those wrappers.
+- `widgetsClient.ts` owns cached catalog reads and `widgetCatalog:list` storage,
+  but it does not currently emit cache-bus events itself. `widgetTemplatesClient.ts`
+  and `widgetTemplateCategoriesClient.ts` own template/category cache updates and
+  invalidate/broadcast `widgetCatalog:list` after template/category mutations.
+  TASK-215 should subscribe to the existing cache keys and extend existing
+  clients only if a concrete mutation/cache gap is proven.
 - Display rows should continue to come from the widget catalog contract unless
   a leaf explicitly proves a direct template-list read is needed. Do not add a
   parallel template list state only because `listWidgetTemplatesCached()` is

@@ -68,6 +68,10 @@ type WidgetLibraryShellState = {
 - Cache-missing mount uses foreground loading.
 - Cache-bus events refresh catalog, template categories, and pages without
   clearing current section/view state.
+- Catalog cache-bus proof must follow the real owners: template/category
+  mutations broadcast `widgetCatalog:list` after invalidating the catalog cache;
+  tests should not assume `widgetsClient.ts` emits catalog events directly
+  unless this leaf intentionally adds that compatible behavior.
 - Template-list refresh is required only if this leaf introduces direct
   template-list state; otherwise template rows stay sourced from the catalog and
   template mutations reach the library through the existing catalog cache event.

@@ -58,7 +58,7 @@ No child task files.
 | Favorites | add/remove/bulk remove preserve `widgets.favorites` and max-50 behavior |
 | Templates | edit/duplicate/delete/category actions remain on existing route/client owners |
 | Bulk template delete | confirmed, visible-scope, partial-failure safe |
-| Cache/prefetch | `/coderso/widgets` warmup and cache-bus refresh remain covered |
+| Cache/prefetch | `/coderso/widgets` warmup and cache-bus refresh remain covered, including template/category-triggered `widgetCatalog:list` invalidation without assuming direct `widgetsClient` broadcasts |
 | Settings | user settings client/unit/route coverage runs if `widgets.favorites` typing, validation, or route behavior changes |
 | Routes | Bun route coverage only when route/schema/error mapping changes |
 
