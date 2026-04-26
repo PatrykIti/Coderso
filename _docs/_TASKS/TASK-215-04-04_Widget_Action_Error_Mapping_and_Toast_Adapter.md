@@ -62,14 +62,48 @@ type WidgetLibraryToastAction =
   | "template-bulk-delete";
 
 export const widgetLibraryToasts = createListActionToastAdapter({
-  resourceLabel: "Widget",
-  messages: {
-    insert: { success: "Widget inserted.", error: "Failed to insert widget." },
-    "favorite-add": { success: "Added to favorites.", error: "Failed to save favorites." },
-    "favorite-remove": { success: "Removed from favorites.", error: "Failed to save favorites." },
-    "template-duplicate": { success: "Template duplicated.", error: "Failed to duplicate template." },
-    "template-delete": { success: "Template deleted.", error: "Failed to delete template." },
-    "template-bulk-delete": { success: "Templates deleted.", error: "Failed to delete templates." },
+  labels: { singular: "widget", plural: "widgets" },
+  actions: {
+    insert: {
+      pastTense: "inserted",
+      failureVerb: "insert",
+    },
+    "favorite-add": {
+      pastTense: "added to favorites",
+      failureVerb: "save favorites for",
+      singleSuccessMessage: () => "Added to favorites.",
+      errorFallback: "Failed to save favorites.",
+    },
+    "favorite-remove": {
+      pastTense: "removed from favorites",
+      failureVerb: "save favorites for",
+      singleSuccessMessage: () => "Removed from favorites.",
+      errorFallback: "Failed to save favorites.",
+    },
+    "template-duplicate": {
+      pastTense: "duplicated",
+      failureVerb: "duplicate",
+      singleSuccessMessage: ({ targetLabel }) =>
+        targetLabel ? `Template "${targetLabel}" duplicated.` : "Template duplicated.",
+      errorFallback: "Failed to duplicate template.",
+    },
+    "template-delete": {
+      pastTense: "deleted",
+      failureVerb: "delete",
+      singleSuccessMessage: ({ targetLabel }) =>
+        targetLabel ? `Template "${targetLabel}" deleted.` : "Template deleted.",
+      errorFallback: "Failed to delete template.",
+    },
+    "template-bulk-delete": {
+      pastTense: "deleted",
+      failureVerb: "delete",
+      bulkSuccessMessage: ({ succeededCount }) =>
+        succeededCount === 1 ? "Template deleted." : `${succeededCount} templates deleted.`,
+      bulkPartialMessage: ({ succeededCount, failedCount }) =>
+        `Deleted ${succeededCount}; failed ${failedCount}.`,
+      bulkFailureMessage: ({ failedCount }) =>
+        failedCount === 1 ? "Failed to delete 1 template." : `Failed to delete ${failedCount} templates.`,
+    },
   },
 });
 
