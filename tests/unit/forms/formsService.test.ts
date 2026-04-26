@@ -12,6 +12,7 @@ import {
 } from "../../../core/db/schema";
 import {
   countFormSubmissions,
+  countFormActionRuns,
   createForm,
   deleteForm,
   listFormFields,
@@ -111,7 +112,7 @@ testIfDb("form slug must be unique", async () => {
   );
 });
 
-testIfDb("countFormSubmissions counts persisted submissions without reading payloads", async () => {
+testIfDb("retained submissions block hard delete with stable domain error", async () => {
   const form = await createForm({ name: "Counted Form" });
   await db.insert(formSubmissions).values({
     formId: form.id,
@@ -120,8 +121,27 @@ testIfDb("countFormSubmissions counts persisted submissions without reading payl
     createdAt: new Date(),
   });
 
-  await expect(deleteForm(form.id)).rejects.toThrow();
+  await expect(deleteForm(form.id)).rejects.toThrow("form_delete_restricted");
   await expect(countFormSubmissions(form.id)).resolves.toBe(1);
+});
+
+testIfDb("retained action runs block hard delete with stable domain error", async () => {
+  const form = await createForm({ name: "Action Run Form" });
+  await db.insert(formActionRuns).values({
+    formId: form.id,
+    actionType: "success_message",
+    actionLabel: "Success message",
+    status: "failed",
+    attempt: 1,
+    trigger: "submission",
+    actionCondition: { operator: "always" },
+    actionConfig: {},
+    submissionPayload: {},
+    createdAt: new Date(),
+  });
+
+  await expect(deleteForm(form.id)).rejects.toThrow("form_delete_restricted");
+  await expect(countFormActionRuns(form.id)).resolves.toBe(1);
 });
 
 testIfDb("setFormFields replaces existing fields", async () => {

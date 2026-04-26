@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Docs + Task Board
 **Estimated Effort:** Small
 **Dependencies:** TASK-210-07-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,30 +16,30 @@ the task board.
 
 ## Sub-Tasks
 
-- [ ] Update `_docs/CONTENT_LIST_UX.md` with final Forms list behavior.
-- [ ] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` with final
+- [x] Update `_docs/CONTENT_LIST_UX.md` with final Forms list behavior.
+- [x] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` with final
   Forms cache hydration and mutation invalidation behavior.
-- [ ] Update `_docs/ARCHITECTURE.md` so Forms admin UI wording uses canonical
+- [x] Update `_docs/ARCHITECTURE.md` so Forms admin UI wording uses canonical
   `/admin/coderso/forms` routes and keeps `/forms/*` as backend API/runtime
   route notation.
-- [ ] Update `_docs/ADMIN_NAVIGATION.md` if route/canonical wording changed.
-- [ ] Update `_docs/CMS_API.md` if route schemas, user settings, or error
+- [x] Update `_docs/ADMIN_NAVIGATION.md` if route/canonical wording changed.
+- [x] Update `_docs/CMS_API.md` if route schemas, user settings, or error
   response docs changed.
-- [ ] Update `docs/coderso/forms-list-and-builder.md` so the Forms guide reflects
+- [x] Update `docs/coderso/forms-list-and-builder.md` so the Forms guide reflects
   the final list search/status/access filters, selected-row bulk actions,
   confirmed delete behavior, and shared toast feedback.
-- [ ] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` for
+- [x] Add dated closure notes to `_docs/PLAYWRIGHT/SUMMARY-FORMS.md` for
   TASK-210-owned list findings (BUG-2, UX-1, and the Forms-contract subset of
   BUG-5) plus the Create New Form subset of BUG-6. Note that BUG-5 Duplicate,
   Runtime Preview, and Embed Code remain deferred/non-goals until their own
   service/API/UI contracts exist; BUG-6 runtime preview/global dialog warnings
   remain deferred to a separate dialog-wrapper task; and editor/runtime findings
   remain separate.
-- [ ] Add one `_docs/_CHANGELOG/*` entry for TASK-210.
-- [ ] Update `_docs/_CHANGELOG/README.md`.
-- [ ] Mark TASK-210 umbrella, subtasks, and leaves Done with dated statuses and
+- [x] Add one `_docs/_CHANGELOG/*` entry for TASK-210.
+- [x] Update `_docs/_CHANGELOG/README.md`.
+- [x] Mark TASK-210 umbrella, subtasks, and leaves Done with dated statuses and
   validation evidence.
-- [ ] Move all TASK-210 rows to Done in `_docs/_TASKS/README.md` and update
+- [x] Move all TASK-210 rows to Done in `_docs/_TASKS/README.md` and update
   statistics.
 
 ## Files to Change
@@ -85,3 +85,15 @@ the task board.
 3. Changelog entry and changelog index reference TASK-210.
 4. Task board rows and statistics are synchronized.
 5. Every TASK-210 file has final status and validation notes.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -8,6 +8,10 @@ import {
   type FormRecord,
 } from "@/services/formsClient";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import {
+  resolveCacheRefreshBackground,
+  resolveListMountRefreshOptions,
+} from "@/utils/cacheRefresh";
 
 const resolveFormsError = (err: unknown) => {
   if (isApiClientError(err)) return err.message;
@@ -16,40 +20,59 @@ const resolveFormsError = (err: unknown) => {
 };
 
 export function useForms(options?: { skip?: boolean }) {
-  const [items, setItems] = useState<FormRecord[]>(() => getCachedForms() ?? []);
-  const [isLoading, setIsLoading] = useState(() => !getCachedForms());
+  const initialCached = useMemo(() => getCachedForms(), []);
+  const hasInitialCache = initialCached !== null;
+  const [items, setItems] = useState<FormRecord[]>(() => initialCached ?? []);
+  const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [error, setError] = useState<string | null>(null);
+  const hasHydratedRef = useRef(hasInitialCache);
 
-  const refresh = useCallback(async (force?: boolean) => {
+  const refresh = useCallback(async (options?: boolean | { force?: boolean; background?: boolean }) => {
+    const force = typeof options === "boolean" ? options : options?.force ?? false;
+    const background = resolveCacheRefreshBackground({
+      explicitBackground: typeof options === "object" ? options.background : undefined,
+      hasHydrated: hasHydratedRef.current,
+    });
+    if (!background) {
+      setIsLoading(true);
+    }
     try {
       const nextItems = await listFormsCached({ force });
       setItems(nextItems);
+      hasHydratedRef.current = true;
       setError(null);
     } catch (err) {
       setError(resolveFormsError(err));
     } finally {
-      setIsLoading(false);
+      if (!background) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    const cached = getCachedForms();
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-    }
-    refresh(true).catch(() => undefined);
+    refresh(resolveFormsListMountRefreshOptions(hasInitialCache)).catch(() => undefined);
     return undefined;
-  }, [options?.skip, refresh]);
+  }, [hasInitialCache, options?.skip, refresh]);
 
   useEffect(() => {
     if (options?.skip) return undefined;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.formsList) return;
-      refresh(true).catch(() => undefined);
+      const cached = getCachedForms();
+      if (cached) {
+        setItems(cached);
+        hasHydratedRef.current = true;
+        setIsLoading(false);
+      }
+      refresh({ force: true, background: true }).catch(() => undefined);
     });
   }, [options?.skip, refresh]);
 
   return { items, isLoading, error, refresh };
+}
+
+export function resolveFormsListMountRefreshOptions(hasInitialCache: boolean) {
+  return resolveListMountRefreshOptions(hasInitialCache);
 }

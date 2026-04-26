@@ -175,3 +175,35 @@ test("custom screen list toasts cover create, activate, draft, and delete copy",
     "Moved 1 custom screen to draft; failed 1."
   );
 });
+
+test("forms list toasts cover create, lifecycle, delete, and bulk failures", () => {
+  const adapter = createListActionToastAdapter({
+    labels: { singular: "form", plural: "forms" },
+    actions: {
+      create: { pastTense: "created", failureVerb: "create" },
+      publish: { pastTense: "published", failureVerb: "publish" },
+      draft: { pastTense: "moved to draft", failureVerb: "move to draft" },
+      archive: { pastTense: "archived", failureVerb: "archive" },
+      delete: { pastTense: "deleted", failureVerb: "delete" },
+    },
+  });
+
+  expect(adapter.success("create", { targetLabel: "Contact" })).toBe(
+    'Form "Contact" created.'
+  );
+  expect(adapter.error("delete", undefined)).toBe("Failed to delete form.");
+
+  const partial = adapter.summarizeBulkAction(
+    "archive",
+    ["form-1", "form-2"],
+    [
+      { status: "fulfilled", value: undefined },
+      { status: "rejected", reason: new Error("blocked") },
+    ]
+  );
+
+  expect(partial.toastMessage).toBe("Archived 1 form; failed 1.");
+  expect(partial.failedTargets).toEqual(["form-2"]);
+  adapter.emitBulk(partial);
+  expect(toastState.error).toHaveBeenCalledWith("Archived 1 form; failed 1.");
+});

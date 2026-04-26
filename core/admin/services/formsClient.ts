@@ -7,8 +7,9 @@ import {
   normalizeFormSettings,
   type FormPresetId as SharedFormPresetId,
 } from "../../services/forms/formSettings";
+import type { FormStatus as SharedFormStatus } from "../../services/forms/formStatus";
 
-export type FormStatus = "draft" | "published" | "archived";
+export type FormStatus = SharedFormStatus;
 
 export type FormRecord = {
   id: string;

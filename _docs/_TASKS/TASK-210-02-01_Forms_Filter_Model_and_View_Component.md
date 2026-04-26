@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,13 +16,13 @@ using Forms fields and status/access vocabulary.
 
 ## Sub-Tasks
 
-- [ ] Add `filterForms()` near the Forms list owner or in a close Forms-only
+- [x] Add `filterForms()` near the Forms list owner or in a close Forms-only
   helper file.
-- [ ] Filter by search across `name`, `slug`, and `description`.
-- [ ] Filter by status: `all`, `published`, `draft`, `archived`.
-- [ ] Filter by submission access: `all`, `public`, `internal`.
-- [ ] Add `FormFilters` if extracting keeps `FormListPage` readable.
-- [ ] Reset pagination when any filter value changes.
+- [x] Filter by search across `name`, `slug`, and `description`.
+- [x] Filter by status: `all`, `published`, `draft`, `archived`.
+- [x] Filter by submission access: `all`, `public`, `internal`.
+- [x] Add `FormFilters` if extracting keeps `FormListPage` readable.
+- [x] Reset pagination when any filter value changes.
 
 ## Files to Change
 
@@ -78,3 +78,15 @@ export function filterForms(forms, query, status, access) {
 1. Forms filters are resource-specific and not copied from Pages authors.
 2. Filtering runs before pagination and selection.
 3. Filter copy uses Forms terms: status and submission access.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

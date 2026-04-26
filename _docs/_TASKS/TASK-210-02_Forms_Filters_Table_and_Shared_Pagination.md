@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-210-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,19 +20,19 @@ are owned by TASK-210-03 and TASK-210-04.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-02-01: Forms Filter Model and View Component
-- [ ] TASK-210-02-02: Forms Table Selection and Access Column
-- [ ] TASK-210-02-03: Forms Shared Pagination and Selection Trim
-- [ ] Add a Forms-specific filter strip:
+- [x] TASK-210-02-01: Forms Filter Model and View Component
+- [x] TASK-210-02-02: Forms Table Selection and Access Column
+- [x] TASK-210-02-03: Forms Shared Pagination and Selection Trim
+- [x] Add a Forms-specific filter strip:
   - search by `name`, `slug`, and `description`;
   - status: all, published, draft, archived;
   - access: all, public, internal.
-- [ ] Update or extract `FormTable` to follow the Pages table behavior:
+- [x] Update or extract `FormTable` to follow the Pages table behavior:
   checkbox column, row selection styling, responsive metadata, right-aligned
   three-dot actions, and table card treatment.
-- [ ] Add `useListPagination` after filtering and before table rendering.
-- [ ] Add `ListPaginationFooter` with `resourceLabel="forms"`.
-- [ ] Trim hidden selected ids when filters, page, or page size changes.
+- [x] Add `useListPagination` after filtering and before table rendering.
+- [x] Add `ListPaginationFooter` with `resourceLabel="forms"`.
+- [x] Trim hidden selected ids when filters, page, or page size changes.
 
 ## Files to Change
 
@@ -120,3 +120,15 @@ Table columns should remain Forms-specific:
 3. Forms table has Pages-style checkbox selection and responsive row metadata.
 4. Shared pagination footer controls the actual visible row set.
 5. Selection never includes hidden rows after filter/page changes.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-05, TASK-210-01-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,24 +16,24 @@ preserving the current list-drawer payload boundary.
 
 ## Sub-Tasks
 
-- [ ] Rename the header trigger from `New form` to `New`.
-- [ ] Reset drawer internal state on each open, using the Pages drawer key
+- [x] Rename the header trigger from `New form` to `New`.
+- [x] Reset drawer internal state on each open, using the Pages drawer key
   pattern if needed.
-- [ ] Add a `SheetDescription` or equivalent `aria-describedby` path matching
+- [x] Add a `SheetDescription` or equivalent `aria-describedby` path matching
   `PageCreateDrawer` so this create drawer is accessible after the list parity
   work. This leaf only covers the create drawer warning; runtime preview and
   global dialog wrapper warnings stay outside TASK-210.
-- [ ] Add an open-after-create checkbox to the drawer UI.
-- [ ] Pass only `name`, optional `slug`, `status`, and `description` from the
+- [x] Add an open-after-create checkbox to the drawer UI.
+- [x] Pass only `name`, optional `slug`, `status`, and `description` from the
   list drawer into `createForm`.
-- [ ] Do not include UI-only `openAfterCreate` in the `createForm` call or API
+- [x] Do not include UI-only `openAfterCreate` in the `createForm` call or API
   payload.
-- [ ] Keep builder-owned fields (`submissionAccess`, `successMessage`,
+- [x] Keep builder-owned fields (`submissionAccess`, `successMessage`,
   `successRedirectUrl`, `settings`) in the builder/settings flow.
-- [ ] Preserve the existing `formsClient.createForm` behavior that attaches
+- [x] Preserve the existing `formsClient.createForm` behavior that attaches
   normalized default `settings` before the API request when no settings are
   provided.
-- [ ] Preserve the existing null-create fallback at the list owner: a missing
+- [x] Preserve the existing null-create fallback at the list owner: a missing
   created row should refresh the list and close the drawer without navigating or
   reading `created.name`.
 
@@ -94,3 +94,15 @@ preserving the current list-drawer payload boundary.
    removed to make the drawer test pass.
 6. A null create response follows the existing refresh-and-close fallback
    instead of crashing or navigating to an invalid builder route.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

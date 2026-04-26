@@ -7,18 +7,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AdminLink } from "@/ui/shared/AdminLink";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import type { FormRecord } from "@/services/formsClient";
+import { FormRowActions } from "./FormRowActions";
 
 const statusStyles: Record<string, string> = {
   published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -30,6 +23,16 @@ const statusLabels: Record<string, string> = {
   published: "Published",
   draft: "Draft",
   archived: "Archived",
+};
+
+const accessStyles: Record<string, string> = {
+  public: "bg-sky-500/10 text-sky-600 border-sky-500/20",
+  internal: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+};
+
+const accessLabels: Record<string, string> = {
+  public: "Public",
+  internal: "Internal",
 };
 
 const formatDate = (value: string) => {
@@ -44,58 +47,62 @@ const formatDate = (value: string) => {
   }
 };
 
-type FormRowActionsProps = {
-  formId: string;
-  onEdit?: (id: string) => void;
-  onDelete?: (id: string) => void;
-};
-
-function FormRowActions({ formId, onEdit, onDelete }: FormRowActionsProps) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36">
-        <DropdownMenuItem onClick={() => onEdit?.(formId)}>
-          <Pencil className="h-4 w-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete?.(formId)}>
-          <Trash2 className="h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 export type FormTableProps = {
   items: FormRecord[];
   emptyMessage?: string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onToggleForm?: (id: string) => void;
   onEdit: (id: string) => void;
+  onActionLogs: (id: string) => void;
+  onPublish: (id: string) => void;
+  onMoveToDraft: (id: string) => void;
+  onArchive: (id: string) => void;
   onDelete?: (id: string) => void;
 };
 
-export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTableProps) {
+export function FormTable({
+  items,
+  emptyMessage,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onToggleForm,
+  onEdit,
+  onActionLogs,
+  onPublish,
+  onMoveToDraft,
+  onArchive,
+  onDelete,
+}: FormTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
-            <TableHead className="min-w-[14rem] pl-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Form name
+            <TableHead className="w-10 pl-4">
+              <Checkbox
+                aria-label="Select all forms"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
+            </TableHead>
+            <TableHead className="min-w-[14rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Form
             </TableHead>
             <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
               Status
             </TableHead>
             <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
+              Access
+            </TableHead>
+            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
               Last updated
             </TableHead>
-            <TableHead className="w-12 pr-6 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Actions
             </TableHead>
           </TableRow>
@@ -104,19 +111,28 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
           {items.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={4}
-                className="px-6 py-12 text-center text-sm text-muted-foreground"
+                colSpan={6}
+                className="py-10 text-center text-sm text-muted-foreground"
               >
                 {emptyMessage ?? "No forms yet. Create your first form to get started."}
               </TableCell>
             </TableRow>
           ) : null}
-          {items.map((form) => (
-            <TableRow key={form.id}>
-              <TableCell className="py-6 pl-6">
+          {items.map((form) => {
+            const isSelected = selectedIds.includes(form.id);
+            return (
+            <TableRow key={form.id} className={isSelected ? "bg-muted/30" : undefined}>
+              <TableCell className="pl-4">
+                <Checkbox
+                  aria-label={`Select ${form.name}`}
+                  checked={isSelected}
+                  onCheckedChange={() => onToggleForm?.(form.id)}
+                />
+              </TableCell>
+              <TableCell>
                 <div className="flex flex-col">
                   <AdminLink
-                    href={`/forms/${encodeURIComponent(form.id)}`}
+                    href={`/coderso/forms/${encodeURIComponent(form.id)}`}
                     prefetch
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                     aria-label={`Edit form: ${form.name}`}
@@ -135,11 +151,18 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
                       {statusLabels[form.status] ?? form.status}
                     </Badge>
                     <span className="text-muted-foreground/60">•</span>
+                    <Badge
+                      variant="outline"
+                      className={accessStyles[form.submissionAccess] ?? accessStyles.public}
+                    >
+                      {accessLabels[form.submissionAccess] ?? form.submissionAccess}
+                    </Badge>
+                    <span className="text-muted-foreground/60">•</span>
                     <span>{formatDate(form.updatedAt)}</span>
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="hidden px-4 py-6 md:table-cell">
+              <TableCell className="hidden px-4 md:table-cell">
                 <Badge
                   variant="outline"
                   className={statusStyles[form.status] ?? statusStyles.draft}
@@ -147,14 +170,31 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
                   {statusLabels[form.status] ?? form.status}
                 </Badge>
               </TableCell>
-              <TableCell className="hidden px-4 py-6 text-sm text-muted-foreground lg:table-cell">
+              <TableCell className="hidden px-4 lg:table-cell">
+                <Badge
+                  variant="outline"
+                  className={accessStyles[form.submissionAccess] ?? accessStyles.public}
+                >
+                  {accessLabels[form.submissionAccess] ?? form.submissionAccess}
+                </Badge>
+              </TableCell>
+              <TableCell className="hidden px-4 text-sm text-muted-foreground lg:table-cell">
                 {formatDate(form.updatedAt)}
               </TableCell>
-              <TableCell className="w-12 py-6 pr-6 text-right">
-                <FormRowActions formId={form.id} onEdit={onEdit} onDelete={onDelete} />
+              <TableCell className="w-12 pr-4 text-right">
+                <FormRowActions
+                  status={form.status}
+                  onEdit={() => onEdit(form.id)}
+                  onActionLogs={() => onActionLogs(form.id)}
+                  onPublish={() => onPublish(form.id)}
+                  onMoveToDraft={() => onMoveToDraft(form.id)}
+                  onArchive={() => onArchive(form.id)}
+                  onDelete={onDelete ? () => onDelete(form.id) : undefined}
+                />
               </TableCell>
             </TableRow>
-          ))}
+          );
+          })}
         </TableBody>
       </Table>
     </div>

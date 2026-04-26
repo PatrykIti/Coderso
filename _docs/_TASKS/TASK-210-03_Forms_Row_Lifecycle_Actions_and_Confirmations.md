@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-02, TASK-210-06-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -27,23 +27,23 @@ constraint error.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-03-01: Forms Row Lifecycle Menu Contract
-- [ ] TASK-210-03-02: Forms Row Delete Confirmation Contract
-- [ ] Add or extract `FormRowActions` with:
+- [x] TASK-210-03-01: Forms Row Lifecycle Menu Contract
+- [x] TASK-210-03-02: Forms Row Delete Confirmation Contract
+- [x] Add or extract `FormRowActions` with:
   - Edit;
   - Action logs;
   - Publish when `status !== "published"`;
   - Move to draft when `status !== "draft"`;
   - Archive when `status !== "archived"`;
   - Delete.
-- [ ] Navigate Action logs through canonical `/coderso/forms/:id/action-runs`.
-- [ ] Wire lifecycle actions through `updateForm` and list refresh/cache patch
+- [x] Navigate Action logs through canonical `/coderso/forms/:id/action-runs`.
+- [x] Wire lifecycle actions through `updateForm` and list refresh/cache patch
   behavior from `formsClient`.
-- [ ] Replace immediate row delete with `ConfirmActionDialog`.
-- [ ] Treat hard delete as deletion-safe only: if the route reports a retained
+- [x] Replace immediate row delete with `ConfirmActionDialog`.
+- [x] Treat hard delete as deletion-safe only: if the route reports a retained
   submission/action-diagnostic conflict, keep the row recoverable, show inline
   conflict copy, and leave Archive available as the safe retained-history action.
-- [ ] Keep delete toast emission for TASK-210-06; this task only ensures the
+- [x] Keep delete toast emission for TASK-210-06; this task only ensures the
   mutation is gated by confirmation and surfaces inline state.
 
 ## Files to Change
@@ -120,3 +120,15 @@ const handleDelete = (id: string) => {
 5. Inline errors remain visible when lifecycle/delete fails or is blocked by
    retained-history constraints.
 6. Existing builder and action-log route behavior is not changed.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

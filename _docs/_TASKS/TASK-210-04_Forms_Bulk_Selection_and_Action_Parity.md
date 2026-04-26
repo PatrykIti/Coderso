@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-02, TASK-210-03, TASK-210-06-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -25,24 +25,24 @@ database errors or false successes.
 
 ## Sub-Tasks
 
-- [ ] TASK-210-04-01: Forms Bulk Action Bar and Visible Selection
-- [ ] TASK-210-04-02: Forms Bulk Mutation Execution and Partial Failures
-- [ ] Add a Forms bulk action bar rendered inline in `PageHeader.actions`, to
+- [x] TASK-210-04-01: Forms Bulk Action Bar and Visible Selection
+- [x] TASK-210-04-02: Forms Bulk Mutation Execution and Partial Failures
+- [x] Add a Forms bulk action bar rendered inline in `PageHeader.actions`, to
   the left of `New`.
-- [ ] Support Forms lifecycle actions:
+- [x] Support Forms lifecycle actions:
   - Publish;
   - Move to draft;
   - Archive;
   - Delete.
-- [ ] Execute bulk actions through `Promise.allSettled`.
-- [ ] Confirm bulk delete before calling `deleteForm`.
-- [ ] Bulk delete confirmation copy must state the selected count and the
+- [x] Execute bulk actions through `Promise.allSettled`.
+- [x] Confirm bulk delete before calling `deleteForm`.
+- [x] Bulk delete confirmation copy must state the selected count and the
   irreversible impact for deletion-safe forms, plus that retained
   submissions/action diagnostics may block hard delete and should be preserved
   through Archive.
-- [ ] Keep selected ids scoped to current visible rows after filters and
+- [x] Keep selected ids scoped to current visible rows after filters and
   pagination changes.
-- [ ] Keep failed ids selected when that helps recovery; otherwise document the
+- [x] Keep failed ids selected when that helps recovery; otherwise document the
   selection cleanup behavior in the task completion notes.
 
 ## Files to Change
@@ -123,3 +123,15 @@ summary shape without emitting until that dependency lands.
 4. Bulk execution never mutates hidden filtered-out rows.
 5. Partial failures, including retained-history delete conflicts, are visible
    and truthful.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

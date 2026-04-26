@@ -263,3 +263,27 @@ test("default custom screens prefetch warms screens and content type labels", as
     }
   });
 });
+
+test("default forms prefetch warms canonical forms list with cached options", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listFormsCached = vi.fn().mockResolvedValue([]);
+
+    vi.doMock("@/services/formsClient", () => ({
+      listFormsCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      module.prefetchAdminRoute("/admin/forms", "/admin", {
+        activeHref: "/admin/pages",
+      });
+      await flushAsync();
+
+      expect(listFormsCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+    } finally {
+      vi.doUnmock("@/services/formsClient");
+      vi.resetModules();
+    }
+  });
+});

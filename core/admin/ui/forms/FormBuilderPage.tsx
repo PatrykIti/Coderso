@@ -590,7 +590,7 @@ export function FormBuilderPage() {
 
   const openActionLogs = () => {
     if (!formId) return;
-    navigate(`/forms/${encodeURIComponent(formId)}/action-runs`);
+    navigate(`/coderso/forms/${encodeURIComponent(formId)}/action-runs`);
   };
 
   const openRuntimePreview = () => {
@@ -651,7 +651,7 @@ export function FormBuilderPage() {
 
   return (
     <EditorShell
-      activeHref="/admin/forms"
+      activeHref="/admin/coderso/forms"
       leftPanel={
         <Tabs
           value={leftTab}

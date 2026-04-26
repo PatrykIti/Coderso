@@ -12,6 +12,7 @@ export type HeroPresetSetting = {
 export type UserSettings = {
   "pages.openAfterCreate": boolean;
   "customScreens.openAfterCreate": boolean;
+  "forms.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSetting[];

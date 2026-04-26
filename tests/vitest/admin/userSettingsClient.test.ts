@@ -18,6 +18,7 @@ const jsonResponse = (payload: unknown, status = 200) =>
 const makeSettings = (): UserSettings => ({
   "pages.openAfterCreate": true,
   "customScreens.openAfterCreate": true,
+  "forms.openAfterCreate": true,
   "media.openAfterUpload": false,
   "widgets.favorites": ["hero"],
   "widgets.hero.presets": [],
@@ -84,6 +85,16 @@ test("setUserSetting updates cached settings", async () => {
         value: false,
       });
     }
+    if (
+      url.includes("/user-settings/forms.openAfterCreate") &&
+      init?.method === "PATCH"
+    ) {
+      settings["forms.openAfterCreate"] = false;
+      return jsonResponse({
+        key: "forms.openAfterCreate",
+        value: false,
+      });
+    }
     return jsonResponse({}, 404);
   };
 
@@ -93,9 +104,12 @@ test("setUserSetting updates cached settings", async () => {
 
     await getUserSettings();
     await setUserSetting("customScreens.openAfterCreate", false);
+    await setUserSetting("forms.openAfterCreate", false);
 
     const next = await getUserSetting("customScreens.openAfterCreate");
     expect(next.value).toBe(false);
+    const nextForms = await getUserSetting("forms.openAfterCreate");
+    expect(nextForms.value).toBe(false);
 
     const getCalls = calls.filter((call) => String(call.input).endsWith("/user-settings"));
     expect(getCalls).toHaveLength(1);

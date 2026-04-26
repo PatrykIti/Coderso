@@ -3,11 +3,13 @@ import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -30,7 +32,10 @@ type FormCreateDrawerProps = {
     slug?: string | null;
     status: FormStatus;
     description?: string | null;
+    openAfterCreate: boolean;
   }) => Promise<void> | void;
+  openAfterCreate: boolean;
+  onOpenAfterCreateChange: (value: boolean) => void;
   isSubmitting?: boolean;
   error?: string | null;
 };
@@ -46,6 +51,8 @@ export function FormCreateDrawer({
   open,
   onOpenChange,
   onCreate,
+  openAfterCreate,
+  onOpenAfterCreateChange,
   isSubmitting = false,
   error,
 }: FormCreateDrawerProps) {
@@ -56,6 +63,10 @@ export function FormCreateDrawer({
   const [description, setDescription] = useState("");
 
   const canSubmit = useMemo(() => name.trim().length > 0, [name]);
+  const nameHint =
+    name.trim().length === 0
+      ? "Name is required before you can create the form."
+      : "The slug is generated from the name until you edit it.";
 
   const handleSubmit = () => {
     if (!canSubmit || isSubmitting) return;
@@ -65,6 +76,7 @@ export function FormCreateDrawer({
       slug: trimmedSlug.length > 0 ? trimmedSlug : null,
       status,
       description: description.trim().length > 0 ? description.trim() : null,
+      openAfterCreate,
     });
   };
 
@@ -78,9 +90,9 @@ export function FormCreateDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Create New Form</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Collect responses with a custom form layout.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close create form drawer">
@@ -103,6 +115,7 @@ export function FormCreateDrawer({
               <Input
                 placeholder="e.g. Contact form"
                 value={name}
+                aria-describedby="form-create-name-hint"
                 onChange={(event) => {
                   const nextName = event.target.value;
                   setName(nextName);
@@ -111,6 +124,12 @@ export function FormCreateDrawer({
                   }
                 }}
               />
+              <p
+                id="form-create-name-hint"
+                className="text-xs text-muted-foreground"
+              >
+                {nameHint}
+              </p>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -160,13 +179,28 @@ export function FormCreateDrawer({
         </div>
         <Separator />
         <div className="bg-muted/30 px-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create form"}
-            </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label
+              htmlFor="form-open-after-create"
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <Checkbox
+                id="form-open-after-create"
+                checked={openAfterCreate}
+                onCheckedChange={(checked) =>
+                  onOpenAfterCreateChange(checked === true)
+                }
+              />
+              Open in builder after create
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create form"}
+              </Button>
+            </div>
           </div>
         </div>
       </SheetContent>

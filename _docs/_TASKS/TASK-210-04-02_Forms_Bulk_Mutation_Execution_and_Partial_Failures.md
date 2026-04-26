@@ -5,7 +5,7 @@
 **Category:** Coderso Forms + Admin/UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-210-04-01, TASK-210-03-02, TASK-210-06-02
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,21 +20,21 @@ base acceptance on raw constraint strings.
 
 ## Sub-Tasks
 
-- [ ] Run bulk lifecycle actions through `Promise.allSettled`.
-- [ ] Map publish/draft/archive to `updateForm(id, { status })`.
-- [ ] Confirm bulk delete before calling `deleteForm`.
-- [ ] Bulk delete confirmation copy includes selected count and explains that
+- [x] Run bulk lifecycle actions through `Promise.allSettled`.
+- [x] Map publish/draft/archive to `updateForm(id, { status })`.
+- [x] Confirm bulk delete before calling `deleteForm`.
+- [x] Bulk delete confirmation copy includes selected count and explains that
   hard delete is irreversible for deletion-safe forms, while retained
   submissions/action diagnostics may block delete and should be preserved by
   archiving.
-- [ ] Refresh the list after bulk execution settles.
-- [ ] Keep inline partial-failure copy visible.
-- [ ] Count retained-history delete conflicts as per-row failures, keep affected
+- [x] Refresh the list after bulk execution settles.
+- [x] Keep inline partial-failure copy visible.
+- [x] Count retained-history delete conflicts as per-row failures, keep affected
   rows recoverable, and do not emit an all-success delete toast when any row is
   blocked.
-- [ ] Either keep failed ids selected for recovery or document why selection is
+- [x] Either keep failed ids selected for recovery or document why selection is
   cleared in the completion notes.
-- [ ] Leave final toast adapter wiring to TASK-210-06-01.
+- [x] Leave final toast adapter wiring to TASK-210-06-01.
 
 ## Files to Change
 
@@ -97,3 +97,15 @@ const results = await Promise.allSettled(
 2. Bulk delete is confirmed before mutation.
 3. Partial failures, including retained-history conflicts, are visible and not
    collapsed into a false success.
+
+## Completion Notes (2026-04-26)
+
+- Implemented in branch `task/TASK-210-forms-list-parity` with Forms list parity scoped to the refined TASK-210 contract.
+- Validation:
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui/list-action-toasts.test.ts tests/vitest/ui/list-pagination.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminPaths.test.ts tests/vitest/admin/userSettingsClient.test.ts` - PASS (9 files, 48 tests).
+  - `bun --cwd core lint` - PASS.
+  - `bun --cwd core lint:types` - PASS.
+  - `set -a && source ../Nextless/.env && set +a && bun test tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts` - PASS (20 tests; run outside sandbox for DB/env access).
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts` - PASS (2 files, 14 tests).
+  - `set -a && source ../Nextless/.env && set +a && bun run gates:coderso` - BLOCKED after Core lint and Core typecheck passed; the gate script still points Functional UI smoke at absent `tests/unit/ui/*` files while current UI suites live under `tests/vitest/ui/*`.
+- Scope notes: TASK-210 closes the Forms list/create-drawer/cache/toast/error-mapping/docs contract. Runtime preview, editor, duplicate, embed-code, and global dialog-wrapper follow-ups remain outside TASK-210 unless covered by a separate task.

@@ -35,6 +35,16 @@ Forms to kreator formularzy z konfigurowalnymi polami, akcjami po wysłaniu (ema
 
 ---
 
+## Status domknięcia TASK-210 (2026-04-26)
+
+- TASK-210 zamknął listowy zakres BUG-2: usuwanie z wiersza i bulk delete używa `ConfirmActionDialog`, toast pojawia się po zakończeniu mutacji, a backend zwraca stabilny konflikt `form_delete_restricted` dla formularzy z zachowaną historią submissions/action runs. Taki formularz zostaje na liście i nadal można użyć Archive jako bezpiecznej akcji lifecycle.
+- TASK-210 zamknął UX-1 dla listy: `/admin/coderso/forms` ma search po name/slug/description, filtr statusu (`all`, `published`, `draft`, `archived`), filtr submission access (`all`, `public`, `internal`), shared pagination i visible-row selection.
+- TASK-210 zamknął Forms-contract subset BUG-5: row menu ma Edit, Action logs, Publish, Move to draft, Archive i Delete. Duplicate, Runtime Preview i Embed Code pozostają świadomie odroczone, bo wymagają osobnych service/API/UI kontraktów.
+- TASK-210 zamknął Create New Form subset BUG-6: listowy create drawer ma `SheetDescription` / `aria-describedby` zgodny z Pages. Runtime Preview i globalne ostrzeżenia wrappera dialogów pozostają poza TASK-210.
+- TASK-210 nie zamyka runtime/editor findings z tego raportu, w tym BUG-1, BUG-3, BUG-4, BUG-7 oraz UX-2..UX-8. Te punkty wymagają oddzielnych tasków.
+
+---
+
 ## Bugi
 
 ### [BUG-1] KRYTYCZNY: Runtime Preview submit zwraca 500 Internal Server Error

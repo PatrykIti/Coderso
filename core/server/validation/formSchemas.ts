@@ -1,10 +1,12 @@
+import { FORM_STATUS_VALUES } from "../../services/forms/formStatus";
+
 export const formCreateSchema = {
   type: "object",
   required: ["name"],
   properties: {
     name: { type: "string" },
     slug: { type: "string" },
-    status: { type: "string" },
+    status: { enum: FORM_STATUS_VALUES },
     description: { type: ["string", "null"] },
     successMessage: { type: ["string", "null"] },
     successRedirectUrl: { type: ["string", "null"] },
@@ -19,7 +21,7 @@ export const formUpdateSchema = {
   properties: {
     name: { type: "string" },
     slug: { type: "string" },
-    status: { type: "string" },
+    status: { enum: FORM_STATUS_VALUES },
     description: { type: ["string", "null"] },
     successMessage: { type: ["string", "null"] },
     successRedirectUrl: { type: ["string", "null"] },
@@ -42,7 +44,7 @@ export const formFieldsSchema = {
       orderIndex: { type: "number" },
       settings: { type: "object" },
     },
-    additionalProperties: true,
+    additionalProperties: false,
   },
 };
 
