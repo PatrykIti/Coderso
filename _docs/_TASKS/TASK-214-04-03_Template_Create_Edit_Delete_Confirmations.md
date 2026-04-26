@@ -23,6 +23,9 @@ while preserving the existing template config and `BindingEditor` behavior.
 - [ ] Keep `ListingTemplateManager` local state limited to the form draft,
   cloned `BindingEditor` config, save progress, and dialog-local validation
   messages.
+- [ ] Import and use `listingTemplateToasts` from
+  `core/admin/ui/listings/listingActionToasts.ts`; do not add template
+  create/update/delete strings local to `ListingTemplateManager`.
 - [ ] Emit shared create/update toasts after `createListingTemplate` and
   `updateListingTemplate` resolve.
 - [ ] Replace direct row delete with `ConfirmActionDialog`.
@@ -36,10 +39,12 @@ while preserving the existing template config and `BindingEditor` behavior.
 
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
 - `core/admin/ui/listings/ListingListPage.tsx`
+- `core/admin/ui/listings/listingActionToasts.ts`
 - `core/admin/ui/listings/ListingTemplateBulkActionsBar.tsx` if extracted.
 - `core/admin/ui/listings/ListingTemplateTable.tsx` if row actions are
   extracted from the manager.
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
+- `tests/vitest/ui/list-action-toasts.test.ts`
 - `tests/vitest/ui/listing-binding-editor.test.tsx` if edit dialog extraction
   touches binding behavior.
 
@@ -84,6 +89,7 @@ if (form.id) {
   template dialog state.
 - Template create success emits create toast and refreshes templates.
 - Template update success emits update toast.
+- Template toast copy comes from the shared Listings toast owner.
 - Row delete is confirmation-gated.
 - Row delete and bulk delete requests pass through shell-owned pending
   confirmation state.
@@ -93,6 +99,7 @@ if (form.id) {
 - `BindingEditor` tests still pass if dialog code is extracted.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/list-action-toasts.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-binding-editor.test.tsx` if dialog extraction touches it.
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

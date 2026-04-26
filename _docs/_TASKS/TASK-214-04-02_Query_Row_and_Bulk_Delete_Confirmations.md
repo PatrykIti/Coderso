@@ -18,6 +18,9 @@ that use shared toasts and visible-scope selection.
 
 - [ ] Row delete opens `ConfirmActionDialog`.
 - [ ] Confirmed row delete calls `deleteListingQuery`.
+- [ ] Import and use `listingQueryToasts` from
+  `core/admin/ui/listings/listingActionToasts.ts`; do not add query delete
+  strings local to the table or shell.
 - [ ] Bulk delete opens `ConfirmActionDialog` with selected query count.
 - [ ] Bulk delete executes `Promise.allSettled` over visible selected query ids.
 - [ ] Full success clears selected query ids.
@@ -60,6 +63,8 @@ const runQueryBulkDelete = async (ids: string[]) => {
 - Row delete does not call `deleteListingQuery` before confirmation.
 - Confirmed row delete refreshes queries and emits delete toast.
 - Bulk delete uses selected visible query ids only.
+- Query delete success, full failure, and partial failure feedback uses the
+  shared query toast adapter from the Listings toast owner.
 - Partial failure keeps failed ids selected and shows inline feedback.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listing-list-page-wave.test.tsx tests/vitest/ui/listings-cluster-wave.test.tsx`

@@ -23,11 +23,17 @@ date.
 - [ ] Show `/{slug}` and optional description under the template name.
 - [ ] Keep row actions: Edit and Delete.
 - [ ] Keep `BindingEditor` inside the create/edit dialog, not in the list row.
+- [ ] Keep selected ids, all/indeterminate checkbox state, and row action
+  callbacks shell-owned in `ListingListPage`; the template table or manager
+  receives them through controlled props instead of deriving private selection
+  state.
 
 ## Files to Change
 
+- `core/admin/ui/listings/ListingListPage.tsx`
 - `core/admin/ui/listings/ListingTemplateManager.tsx`
 - `core/admin/ui/listings/ListingTemplateTable.tsx` if extracted.
+- `tests/vitest/ui/listing-list-page-wave.test.tsx`
 - `tests/vitest/ui/listings-cluster-wave.test.tsx`
 - `tests/vitest/ui/listing-binding-editor.test.tsx` if extraction touches the
   binding editor contract.
@@ -62,6 +68,8 @@ date.
 - Header checkbox selects visible template rows.
 - Row checkbox toggles one template row.
 - Selected row gets a visible selected state.
+- `ListingListPage` can render selected template count and active-tab bulk
+  state from shell-owned state after table selection changes.
 - Template table displays layout and field binding count.
 - Commands:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/listings-cluster-wave.test.tsx`
