@@ -129,6 +129,30 @@ export const createPostBlock = (type: PostBlockType, id?: string): PostBlock => 
       return { ...base, content: "" };
     case "image":
       return { ...base, attrs: { mediaId: null, alt: "" }, content: null };
+    case "video":
+      return {
+        ...base,
+        attrs: { mediaId: null, url: "", caption: "", controls: true, autoplay: false },
+        content: null,
+      };
+    case "gallery":
+      return {
+        ...base,
+        attrs: { mediaIds: [], columns: 3, captions: true },
+        content: null,
+      };
+    case "audio":
+      return {
+        ...base,
+        attrs: { mediaId: null, url: "", caption: "", controls: true },
+        content: null,
+      };
+    case "file":
+      return {
+        ...base,
+        attrs: { mediaId: null, label: "Download file", showSize: true, newTab: false },
+        content: null,
+      };
     case "separator":
       return { ...base, content: null };
     case "callout":

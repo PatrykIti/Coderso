@@ -23,6 +23,7 @@ test("searchPostBlockCatalog filters by category", () => {
 });
 
 test("searchPostBlockCatalog does not match keywords outside the scoped category", () => {
+  const mediaResults = searchPostBlockCatalog("", { category: "media" });
   const mediaCtaResults = searchPostBlockCatalog("cta", { category: "media" });
   const interactiveCtaResults = searchPostBlockCatalog("cta", {
     category: "interactive",
@@ -32,6 +33,9 @@ test("searchPostBlockCatalog does not match keywords outside the scoped category
   expect(mediaCtaResults).toHaveLength(0);
   expect(interactiveCtaResults.map((item) => item.type)).toContain("button");
   expect(mediaVideoResults.every((item) => item.category === "media")).toBe(true);
+  expect(mediaResults.map((item) => item.type)).toEqual(
+    expect.arrayContaining(["image", "video", "gallery", "audio", "file", "embed"])
+  );
   expect(mediaVideoResults.map((item) => item.type)).toContain("embed");
 });
 

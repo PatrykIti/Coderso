@@ -37,6 +37,10 @@ const DEFAULT_WORDS_PER_MINUTE = 200;
 const MAX_WRITING_CANVAS_NODES = 400;
 const MAX_WRITING_CANVAS_LIST_ITEMS = 200;
 const MAX_WRITING_CANVAS_CAPTION_LENGTH = 320;
+const MAX_MEDIA_CAPTION_LENGTH = 320;
+const MAX_MEDIA_LABEL_LENGTH = 160;
+const MAX_MEDIA_URL_LENGTH = 2048;
+const MAX_GALLERY_ITEMS = 12;
 
 const CALL_OUT_TONES = ["info", "success", "warning", "danger", "neutral"] as const;
 const ALIGN_VALUES = ["left", "center", "right"] as const;
@@ -47,6 +51,7 @@ const BUTTON_VARIANT_VALUES = ["primary", "secondary", "ghost", "link"] as const
 const BUTTON_SIZE_VALUES = ["sm", "md", "lg"] as const;
 const EMBED_PROVIDER_VALUES = ["custom", "youtube", "vimeo", "loom"] as const;
 const EMBED_ASPECT_VALUES = ["16:9", "4:3", "1:1"] as const;
+const GALLERY_COLUMN_VALUES = [2, 3, 4] as const;
 const SEPARATOR_STYLE_VALUES = ["solid", "dashed", "dotted"] as const;
 const META_FONT_FAMILY_VALUES = ["sans", "serif", "mono"] as const;
 const META_BASE_TEXT_SCALE_VALUES = ["sm", "md", "lg", "xl"] as const;
@@ -74,6 +79,42 @@ const normalizeOptionalString = (value: unknown, maxLength: number) => {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   return trimmed.length > maxLength ? trimmed.slice(0, maxLength) : trimmed;
+};
+
+const normalizeMediaId = (value: unknown) =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+const normalizeSafeMediaUrl = (value: unknown) => {
+  const trimmed = normalizeOptionalString(value, MAX_MEDIA_URL_LENGTH);
+  if (!trimmed) return "";
+  if (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
+    return trimmed;
+  }
+  return "";
+};
+
+const normalizeGalleryMediaIds = (value: unknown) => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const mediaIds: string[] = [];
+  for (const item of value) {
+    const mediaId = normalizeMediaId(item);
+    if (!mediaId || seen.has(mediaId)) continue;
+    seen.add(mediaId);
+    mediaIds.push(mediaId);
+    if (mediaIds.length >= MAX_GALLERY_ITEMS) break;
+  }
+  return mediaIds;
+};
+
+const normalizeGalleryColumns = (value: unknown) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 3;
+  const rounded = Math.round(value);
+  return (GALLERY_COLUMN_VALUES as readonly number[]).includes(rounded) ? rounded : 3;
 };
 
 const normalizeOptionalAnchorId = (value: unknown) => {
@@ -234,10 +275,7 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
     case "image":
       return {
         ...common,
-        mediaId:
-          typeof source.mediaId === "string" && source.mediaId.trim().length > 0
-            ? source.mediaId.trim()
-            : null,
+        mediaId: normalizeMediaId(source.mediaId),
         alt: normalizeString(source.alt, 500),
         ...(normalizeOptionalString(source.caption, MAX_WRITING_CANVAS_CAPTION_LENGTH)
           ? {
@@ -250,6 +288,46 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
         wrap: normalizePostImageWrap(source.wrap),
         widthPercent: normalizePostImageWidth(source.widthPercent),
         marginPreset: normalizePostImageMargin(source.marginPreset),
+      };
+    case "video":
+      return {
+        ...common,
+        mediaId: normalizeMediaId(source.mediaId),
+        url: normalizeSafeMediaUrl(source.url),
+        ...(normalizeOptionalString(source.caption, MAX_MEDIA_CAPTION_LENGTH)
+          ? {
+              caption: normalizeOptionalString(source.caption, MAX_MEDIA_CAPTION_LENGTH),
+            }
+          : {}),
+        controls: source.controls !== false,
+        autoplay: false,
+      };
+    case "gallery":
+      return {
+        ...common,
+        mediaIds: normalizeGalleryMediaIds(source.mediaIds),
+        columns: normalizeGalleryColumns(source.columns),
+        captions: source.captions !== false,
+      };
+    case "audio":
+      return {
+        ...common,
+        mediaId: normalizeMediaId(source.mediaId),
+        url: normalizeSafeMediaUrl(source.url),
+        ...(normalizeOptionalString(source.caption, MAX_MEDIA_CAPTION_LENGTH)
+          ? {
+              caption: normalizeOptionalString(source.caption, MAX_MEDIA_CAPTION_LENGTH),
+            }
+          : {}),
+        controls: true,
+      };
+    case "file":
+      return {
+        ...common,
+        mediaId: normalizeMediaId(source.mediaId),
+        label: normalizeOptionalString(source.label, MAX_MEDIA_LABEL_LENGTH) ?? "Download file",
+        showSize: source.showSize !== false,
+        newTab: source.newTab === true,
       };
     case "callout":
       return {

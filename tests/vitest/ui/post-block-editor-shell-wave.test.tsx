@@ -168,6 +168,7 @@ const postShellState = vi.hoisted(() => ({
       if (key === "error") this.editor.error = "Post editor error";
       if (key === "autosaveError") this.editor.autosaveError = "Autosave paused";
       if (key === "loading") this.editor.loading = false;
+      if (key === "status") this.editor.status = "draft";
       if (key === "deletingPost") this.editor.deletingPost = false;
     }
     this.editor.post = {
@@ -192,6 +193,7 @@ const postShellState = vi.hoisted(() => ({
     this.preferences.setPreferences.mockReset();
     this.preferences.resetPreferences.mockReset();
     toastState.success.mockReset();
+    toastState.error.mockReset();
     taxonomyClientState.getTaxonomyOverview.mockReset();
     taxonomyClientState.getTaxonomyOverview.mockResolvedValue(
       taxonomyClientState.overview
@@ -201,6 +203,7 @@ const postShellState = vi.hoisted(() => ({
 
 const toastState = vi.hoisted(() => ({
   success: vi.fn(),
+  error: vi.fn(),
 }));
 
 const taxonomyClientState = vi.hoisted(() => {
@@ -303,6 +306,7 @@ vi.mock("@/services/siteSettingsClient", () => ({
 vi.mock("sonner", () => ({
   toast: {
     success: toastState.success,
+    error: toastState.error,
   },
 }));
 
@@ -655,7 +659,7 @@ test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and setting
   }
 });
 
-test("PostBlockEditorShell retries autosave and emits publish success toast", async () => {
+test("PostBlockEditorShell retries autosave and emits publish success toast through shared adapter", async () => {
   const { PostBlockEditorShell } = await import(
     "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
   );
@@ -674,8 +678,52 @@ test("PostBlockEditorShell retries autosave and emits publish success toast", as
     expect(postShellState.editor.saveDraft).toHaveBeenCalledTimes(1);
     expect(postShellState.editor.publish).toHaveBeenCalledTimes(1);
     expect(toastState.success).toHaveBeenCalledWith("Post published");
+    expect(toastState.error).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell emits update success and bounded failure toasts", async () => {
+  const { ApiClientError } = await import("../../../core/admin/services/apiClient");
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.editor.status = "published";
+  const updateView = mount(<PostBlockEditorShell />);
+
+  try {
+    const buttons = Array.from(updateView.container.querySelectorAll("button"));
+
+    await act(async () => {
+      buttons.find((button) => button.textContent === "publish-post")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(toastState.success).toHaveBeenCalledWith("Changes saved");
+  } finally {
+    updateView.cleanup();
+  }
+
+  postShellState.reset();
+  postShellState.editor.publish.mockRejectedValueOnce(
+    new ApiClientError("post_publish_denied", "Publishing is unavailable.", 403)
+  );
+  const failureView = mount(<PostBlockEditorShell />);
+
+  try {
+    const buttons = Array.from(failureView.container.querySelectorAll("button"));
+
+    await act(async () => {
+      buttons.find((button) => button.textContent === "publish-post")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(toastState.error).toHaveBeenCalledWith("Publishing is unavailable.");
+    expect(toastState.success).not.toHaveBeenCalled();
+  } finally {
+    failureView.cleanup();
   }
 });
 

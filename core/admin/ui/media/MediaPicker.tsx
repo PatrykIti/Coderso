@@ -1,4 +1,4 @@
-import { FileAudio, FileText, ImagePlus, X } from "lucide-react";
+import { FileAudio, FileText, ImagePlus, Video, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -257,6 +257,8 @@ export function MediaPicker({
                 <div className="flex h-16 w-20 items-center justify-center rounded-lg border bg-muted/30">
                   {item.type === "audio" ? (
                     <FileAudio className="h-6 w-6 text-muted-foreground" />
+                  ) : item.type === "video" ? (
+                    <Video className="h-6 w-6 text-muted-foreground" />
                   ) : (
                     <FileText className="h-6 w-6 text-muted-foreground" />
                   )}

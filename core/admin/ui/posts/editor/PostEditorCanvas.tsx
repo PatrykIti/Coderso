@@ -1,4 +1,12 @@
-import { Image as ImageIcon, PlayCircle, Trash2 } from "lucide-react";
+import {
+  FileAudio,
+  FileText,
+  Image as ImageIcon,
+  Images,
+  PlayCircle,
+  Trash2,
+  Video,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -225,6 +233,89 @@ const writingCanvasPlaceholder = "Start writing or paste content from Word...";
 const mediaPlaceholderClassName =
   "group flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-100";
 
+type MediaPickerKind = "image" | "video" | "gallery" | "audio" | "file";
+
+type MediaPickerState = {
+  blockId: string;
+  kind: MediaPickerKind;
+};
+
+const mediaPickerCopy: Record<
+  MediaPickerKind,
+  {
+    title: string;
+    empty: string;
+    accept: (item: MediaItem) => boolean;
+  }
+> = {
+  image: {
+    title: "Select Image",
+    empty: "No image assets found for this query.",
+    accept: (item) => item.mimeType.toLowerCase().startsWith("image/"),
+  },
+  video: {
+    title: "Select Video",
+    empty: "No video assets found for this query.",
+    accept: (item) => item.mimeType.toLowerCase().startsWith("video/"),
+  },
+  gallery: {
+    title: "Select Gallery Images",
+    empty: "No image assets found for this query.",
+    accept: (item) => item.mimeType.toLowerCase().startsWith("image/"),
+  },
+  audio: {
+    title: "Select Audio",
+    empty: "No audio assets found for this query.",
+    accept: (item) => item.mimeType.toLowerCase().startsWith("audio/"),
+  },
+  file: {
+    title: "Select File",
+    empty: "No file assets found for this query.",
+    accept: (item) =>
+      !item.mimeType.toLowerCase().startsWith("image/") &&
+      !item.mimeType.toLowerCase().startsWith("video/") &&
+      !item.mimeType.toLowerCase().startsWith("audio/"),
+  },
+};
+
+const getMediaDisplayName = (item: MediaItem | undefined, fallback: string) =>
+  item?.title?.trim() || item?.originalName?.trim() || item?.name?.trim() || fallback;
+
+const formatMediaSize = (bytes: number | undefined) => {
+  if (!bytes || !Number.isFinite(bytes)) return null;
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+};
+
+const readMediaId = (attrs: Record<string, unknown>) =>
+  typeof attrs.mediaId === "string" && attrs.mediaId.trim().length > 0
+    ? attrs.mediaId.trim()
+    : null;
+
+const readMediaIds = (attrs: Record<string, unknown>) =>
+  Array.isArray(attrs.mediaIds)
+    ? attrs.mediaIds
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+
+const resolveMediaSource = (
+  attrs: Record<string, unknown>,
+  mediaById: Map<string, MediaItem>
+) => {
+  const mediaId = readMediaId(attrs);
+  const selectedMedia = mediaId ? mediaById.get(mediaId) : undefined;
+  const url =
+    selectedMedia?.url ??
+    (typeof attrs.url === "string" && attrs.url.trim().length > 0
+      ? attrs.url.trim()
+      : null);
+  return { mediaId, selectedMedia, url };
+};
+
 const resolveBlockActionLabel = (block: PostBlock) => {
   if (block.type === "writing-canvas") return "Section";
   if (block.type === "toc") return "Table of contents";
@@ -245,7 +336,7 @@ function PostCanvasBlockItem({
   onUploadClipboardImage,
   onInsertBlock,
   onDeleteBlock,
-  onOpenImagePicker,
+  onOpenMediaPicker,
   mediaById,
   onEnsureDynamicTocBlock,
   onOpenBlockDetails,
@@ -267,7 +358,7 @@ function PostCanvasBlockItem({
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
   onDeleteBlock?: (id: string) => void;
-  onOpenImagePicker?: (blockId: string) => void;
+  onOpenMediaPicker?: (blockId: string, kind: MediaPickerKind) => void;
   mediaById: Map<string, MediaItem>;
   onEnsureDynamicTocBlock?: () => void;
   onOpenBlockDetails?: (blockId: string) => void;
@@ -322,7 +413,7 @@ function PostCanvasBlockItem({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => onOpenImagePicker?.(block.id)}
+            onClick={() => onOpenMediaPicker?.(block.id, "image")}
           >
             Replace image
           </Button>
@@ -449,6 +540,101 @@ function PostCanvasBlockItem({
               <SelectItem value="1:1">1:1</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      ) : null}
+
+      {selected && block.type === "video" && onUpdateBlockAttrs ? (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 bg-muted/20 p-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenMediaPicker?.(block.id, "video")}
+          >
+            Replace video
+          </Button>
+          <Input
+            value={typeof attrs.caption === "string" ? attrs.caption : ""}
+            onChange={(event) => onUpdateBlockAttrs({ caption: event.target.value })}
+            placeholder="Video caption"
+            className="h-9 min-w-[12rem] flex-1"
+          />
+        </div>
+      ) : null}
+
+      {selected && block.type === "gallery" && onUpdateBlockAttrs ? (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 bg-muted/20 p-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenMediaPicker?.(block.id, "gallery")}
+          >
+            Select gallery images
+          </Button>
+          <Select
+            value={typeof attrs.columns === "number" ? String(attrs.columns) : "3"}
+            onValueChange={(value) => onUpdateBlockAttrs({ columns: Number(value) })}
+          >
+            <SelectTrigger className="h-8 w-[7.5rem] bg-background text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2 columns</SelectItem>
+              <SelectItem value="3">3 columns</SelectItem>
+              <SelectItem value="4">4 columns</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
+      {selected && block.type === "audio" && onUpdateBlockAttrs ? (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 bg-muted/20 p-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenMediaPicker?.(block.id, "audio")}
+          >
+            Replace audio
+          </Button>
+          <Input
+            value={typeof attrs.caption === "string" ? attrs.caption : ""}
+            onChange={(event) => onUpdateBlockAttrs({ caption: event.target.value })}
+            placeholder="Audio caption"
+            className="h-9 min-w-[12rem] flex-1"
+          />
+        </div>
+      ) : null}
+
+      {selected && block.type === "file" && onUpdateBlockAttrs ? (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 bg-muted/20 p-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenMediaPicker?.(block.id, "file")}
+          >
+            Replace file
+          </Button>
+          <Input
+            value={typeof attrs.label === "string" ? attrs.label : "Download file"}
+            onChange={(event) => onUpdateBlockAttrs({ label: event.target.value })}
+            placeholder="Download label"
+            className="h-9 min-w-[12rem] flex-1"
+          />
         </div>
       ) : null}
 
@@ -698,7 +884,7 @@ function PostCanvasBlockItem({
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelect();
-                  onOpenImagePicker?.(block.id);
+                  onOpenMediaPicker?.(block.id, "image");
                 }}
                 data-post-editor-media-placeholder="image"
               >
@@ -722,6 +908,182 @@ function PostCanvasBlockItem({
                 <figcaption className="pt-2 text-xs text-slate-600">{attrs.caption}</figcaption>
               ) : null}
             </figure>
+          );
+        })()
+      ) : null}
+
+      {block.type === "video" ? (
+        (() => {
+          const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+          const caption =
+            typeof attrs.caption === "string" && attrs.caption.trim().length > 0
+              ? attrs.caption.trim()
+              : selectedMedia?.caption?.trim();
+          if (!url) {
+            return (
+              <button
+                type="button"
+                className={mediaPlaceholderClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect();
+                  onOpenMediaPicker?.(block.id, "video");
+                }}
+                data-post-editor-media-placeholder="video"
+              >
+                <Video className="mb-2 h-8 w-8" />
+                <p className="text-sm font-medium">Click to choose video from media library</p>
+                <p className="mt-1 text-xs text-slate-500">Supports uploaded video assets.</p>
+              </button>
+            );
+          }
+          return (
+            <figure className="space-y-2 rounded-lg border bg-black/5 p-2">
+              <video
+                src={url}
+                controls={attrs.controls !== false}
+                preload="metadata"
+                className="aspect-video w-full rounded-md bg-black"
+              />
+              {caption ? (
+                <figcaption className="px-1 text-xs text-slate-600">{caption}</figcaption>
+              ) : null}
+            </figure>
+          );
+        })()
+      ) : null}
+
+      {block.type === "gallery" ? (
+        (() => {
+          const mediaIds = readMediaIds(attrs).slice(0, 12);
+          const columns =
+            typeof attrs.columns === "number" && [2, 3, 4].includes(attrs.columns)
+              ? attrs.columns
+              : 3;
+          const images = mediaIds
+            .map((id) => mediaById.get(id))
+            .filter((item): item is MediaItem => Boolean(item?.url));
+          if (images.length === 0) {
+            return (
+              <button
+                type="button"
+                className={mediaPlaceholderClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect();
+                  onOpenMediaPicker?.(block.id, "gallery");
+                }}
+                data-post-editor-media-placeholder="gallery"
+              >
+                <Images className="mb-2 h-8 w-8" />
+                <p className="text-sm font-medium">Click to choose gallery images</p>
+                <p className="mt-1 text-xs text-slate-500">Select up to 12 image assets.</p>
+              </button>
+            );
+          }
+          return (
+            <div
+              className={cn(
+                "grid gap-3",
+                columns === 2 ? "grid-cols-2" : columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"
+              )}
+              data-post-editor-gallery-grid="true"
+            >
+              {images.map((item) => (
+                <figure key={item.id} className="space-y-1">
+                  <img
+                    src={item.url}
+                    alt={item.alt ?? getMediaDisplayName(item, "Gallery image")}
+                    className="aspect-square w-full rounded-lg border object-cover"
+                    loading="lazy"
+                  />
+                  {attrs.captions !== false && item.caption ? (
+                    <figcaption className="text-xs text-slate-600">{item.caption}</figcaption>
+                  ) : null}
+                </figure>
+              ))}
+            </div>
+          );
+        })()
+      ) : null}
+
+      {block.type === "audio" ? (
+        (() => {
+          const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+          const caption =
+            typeof attrs.caption === "string" && attrs.caption.trim().length > 0
+              ? attrs.caption.trim()
+              : selectedMedia?.caption?.trim();
+          if (!url) {
+            return (
+              <button
+                type="button"
+                className={mediaPlaceholderClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect();
+                  onOpenMediaPicker?.(block.id, "audio");
+                }}
+                data-post-editor-media-placeholder="audio"
+              >
+                <FileAudio className="mb-2 h-8 w-8" />
+                <p className="text-sm font-medium">Click to choose audio from media library</p>
+                <p className="mt-1 text-xs text-slate-500">Supports uploaded audio assets.</p>
+              </button>
+            );
+          }
+          return (
+            <figure className="space-y-2 rounded-lg border bg-slate-50 p-3">
+              <audio src={url} controls className="w-full" preload="metadata" />
+              {caption ? (
+                <figcaption className="text-xs text-slate-600">{caption}</figcaption>
+              ) : null}
+            </figure>
+          );
+        })()
+      ) : null}
+
+      {block.type === "file" ? (
+        (() => {
+          const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+          const label =
+            typeof attrs.label === "string" && attrs.label.trim().length > 0
+              ? attrs.label.trim()
+              : getMediaDisplayName(selectedMedia, "Download file");
+          const sizeLabel = formatMediaSize(selectedMedia?.sizeBytes);
+          if (!url) {
+            return (
+              <button
+                type="button"
+                className={mediaPlaceholderClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect();
+                  onOpenMediaPicker?.(block.id, "file");
+                }}
+                data-post-editor-media-placeholder="file"
+              >
+                <FileText className="mb-2 h-8 w-8" />
+                <p className="text-sm font-medium">Click to choose file from media library</p>
+                <p className="mt-1 text-xs text-slate-500">Renders as a safe download link.</p>
+              </button>
+            );
+          }
+          return (
+            <a
+              href={url}
+              target={attrs.newTab === true ? "_blank" : undefined}
+              rel={attrs.newTab === true ? "noopener noreferrer" : undefined}
+              className="flex items-center justify-between gap-3 rounded-lg border bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-100"
+              onClick={(event) => event.preventDefault()}
+            >
+              <span className="min-w-0 truncate">{label}</span>
+              {attrs.showSize !== false && sizeLabel ? (
+                <span className="shrink-0 text-xs text-slate-500">
+                  {sizeLabel}
+                </span>
+              ) : null}
+            </a>
           );
         })()
       ) : null}
@@ -841,7 +1203,8 @@ export function PostEditorCanvas({
   onOpenBlockDetails,
 }: PostEditorCanvasProps) {
   const blockRefs = useRef(new Map<string, HTMLDivElement>());
-  const [imagePickerBlockId, setImagePickerBlockId] = useState<string | null>(null);
+  const lastMediaLookupKeyRef = useRef<string | null>(null);
+  const [mediaPicker, setMediaPicker] = useState<MediaPickerState | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -855,8 +1218,9 @@ export function PostEditorCanvas({
 
   const filteredMediaItems = useMemo(() => {
     const normalizedQuery = mediaQuery.trim().toLowerCase();
+    const copy = mediaPicker ? mediaPickerCopy[mediaPicker.kind] : mediaPickerCopy.image;
     return mediaItems.filter((item) => {
-      if (item.type !== "image") return false;
+      if (!copy.accept(item)) return false;
       if (!normalizedQuery) return true;
       return (
         item.name.toLowerCase().includes(normalizedQuery)
@@ -864,42 +1228,52 @@ export function PostEditorCanvas({
         || (item.title ?? "").toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [mediaItems, mediaQuery]);
+  }, [mediaItems, mediaPicker, mediaQuery]);
 
-  const selectedImageMediaId = useMemo(() => {
-    if (!imagePickerBlockId) return null;
-    const block = document.blocks.find((item) => item.id === imagePickerBlockId);
-    if (!block || block.type !== "image") return null;
+  const selectedPickerMediaIds = useMemo(() => {
+    if (!mediaPicker) return [];
+    const block = document.blocks.find((item) => item.id === mediaPicker.blockId);
+    if (!block) return [];
     const attrs = (block.attrs ?? {}) as Record<string, unknown>;
-    if (typeof attrs.mediaId !== "string") return null;
-    const mediaId = attrs.mediaId.trim();
-    return mediaId.length > 0 ? mediaId : null;
-  }, [document.blocks, imagePickerBlockId]);
+    if (mediaPicker.kind === "gallery") return readMediaIds(attrs);
+    const mediaId = readMediaId(attrs);
+    return mediaId ? [mediaId] : [];
+  }, [document.blocks, mediaPicker]);
 
-  const openImagePicker = useCallback((blockId: string) => {
+  const openMediaPicker = useCallback((blockId: string, kind: MediaPickerKind) => {
     setMediaQuery("");
     setMediaError(null);
     setMediaLoading(true);
-    setImagePickerBlockId(blockId);
+    setMediaPicker({ blockId, kind });
   }, []);
 
   const handleMediaSelect = useCallback(
     (id: string) => {
-      if (!imagePickerBlockId || !onUpdateBlockAttrs) return;
+      if (!mediaPicker || !onUpdateBlockAttrs) return;
       const media = mediaById.get(id);
+      if (mediaPicker.kind === "gallery") {
+        const block = document.blocks.find((item) => item.id === mediaPicker.blockId);
+        const attrs = (block?.attrs ?? {}) as Record<string, unknown>;
+        const current = readMediaIds(attrs);
+        const next = current.includes(id)
+          ? current.filter((item) => item !== id)
+          : [...current, id].slice(0, 12);
+        onUpdateBlockAttrs(mediaPicker.blockId, { mediaIds: next });
+        return;
+      }
       const patch: Record<string, unknown> = {
         mediaId: id,
       };
-      if (typeof media?.alt === "string" && media.alt.trim().length > 0) {
+      if (mediaPicker.kind === "image" && typeof media?.alt === "string" && media.alt.trim().length > 0) {
         patch.alt = media.alt;
       }
       if (typeof media?.caption === "string" && media.caption.trim().length > 0) {
         patch.caption = media.caption;
       }
-      onUpdateBlockAttrs(imagePickerBlockId, patch);
-      setImagePickerBlockId(null);
+      onUpdateBlockAttrs(mediaPicker.blockId, patch);
+      setMediaPicker(null);
     },
-    [imagePickerBlockId, mediaById, onUpdateBlockAttrs]
+    [document.blocks, mediaById, mediaPicker, onUpdateBlockAttrs]
   );
 
   useEffect(() => {
@@ -932,17 +1306,39 @@ export function PostEditorCanvas({
   }, [insertFocusToken, selectedBlockId]);
 
   useEffect(() => {
-    const imageBlocksRequireLookup = document.blocks.some((block) => {
-      if (block.type !== "image") return false;
+    const missingMediaIds = new Set<string>();
+    document.blocks.forEach((block) => {
+      if (
+        block.type !== "image" &&
+        block.type !== "video" &&
+        block.type !== "gallery" &&
+        block.type !== "audio" &&
+        block.type !== "file"
+      ) {
+        return;
+      }
       const attrs = (block.attrs ?? {}) as Record<string, unknown>;
-      if (typeof attrs.mediaId !== "string") return false;
-      const mediaId = attrs.mediaId.trim();
-      if (!mediaId) return false;
-      if (mediaId.startsWith("/") || mediaId.startsWith("http")) return false;
-      return !mediaById.has(mediaId);
+      const mediaIds =
+        block.type === "gallery" ? readMediaIds(attrs) : [readMediaId(attrs)].filter(Boolean);
+      mediaIds.forEach((mediaId) => {
+        if (!mediaId) return false;
+        if (mediaId.startsWith("/") || mediaId.startsWith("http")) return false;
+        if (!mediaById.has(mediaId)) {
+          missingMediaIds.add(mediaId);
+        }
+        return false;
+      });
     });
 
-    if (!imageBlocksRequireLookup) return;
+    if (missingMediaIds.size === 0) {
+      lastMediaLookupKeyRef.current = null;
+      return;
+    }
+
+    const lookupKey = [...missingMediaIds].sort().join("|");
+    if (lastMediaLookupKeyRef.current === lookupKey) return;
+    lastMediaLookupKeyRef.current = lookupKey;
+
     let active = true;
     void listMediaCached({ force: false })
       .then((items) => {
@@ -956,7 +1352,7 @@ export function PostEditorCanvas({
   }, [document.blocks, mediaById]);
 
   useEffect(() => {
-    if (!imagePickerBlockId) return;
+    if (!mediaPicker) return;
     let active = true;
     void listMediaCached({ force: true })
       .then((items) => {
@@ -979,7 +1375,7 @@ export function PostEditorCanvas({
     return () => {
       active = false;
     };
-  }, [imagePickerBlockId]);
+  }, [mediaPicker]);
 
   return (
     <div
@@ -1053,7 +1449,7 @@ export function PostEditorCanvas({
                     onUploadClipboardImage={onUploadClipboardImage}
                     onInsertBlock={onInsertBlock}
                     onDeleteBlock={onDeleteBlock}
-                    onOpenImagePicker={openImagePicker}
+                    onOpenMediaPicker={openMediaPicker}
                     mediaById={mediaById}
                     onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
                     onOpenBlockDetails={onOpenBlockDetails}
@@ -1066,10 +1462,10 @@ export function PostEditorCanvas({
       </div>
 
       <Dialog
-        open={Boolean(imagePickerBlockId)}
+        open={Boolean(mediaPicker)}
         onOpenChange={(open) => {
           if (!open) {
-            setImagePickerBlockId(null);
+            setMediaPicker(null);
             setMediaQuery("");
             setMediaError(null);
           }
@@ -1077,7 +1473,9 @@ export function PostEditorCanvas({
       >
         <DialogContent className="max-h-[85vh] w-[95vw] max-w-5xl overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Select Image</DialogTitle>
+            <DialogTitle>
+              {mediaPicker ? mediaPickerCopy[mediaPicker.kind].title : "Select Media"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -1099,15 +1497,23 @@ export function PostEditorCanvas({
               </div>
             ) : filteredMediaItems.length === 0 ? (
               <div className="flex min-h-[14rem] items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-                No image assets found for this query.
+                {mediaPicker ? mediaPickerCopy[mediaPicker.kind].empty : "No media assets found."}
               </div>
             ) : (
               <div className="max-h-[58vh] overflow-y-auto pr-1">
                 <MediaGrid
                   items={filteredMediaItems}
-                  selectedId={selectedImageMediaId}
+                  selectedId={mediaPicker?.kind === "gallery" ? undefined : selectedPickerMediaIds[0]}
+                  selectedIds={mediaPicker?.kind === "gallery" ? selectedPickerMediaIds : undefined}
                   onSelect={handleMediaSelect}
                 />
+                {mediaPicker?.kind === "gallery" ? (
+                  <div className="mt-3 flex justify-end">
+                    <Button type="button" variant="outline" onClick={() => setMediaPicker(null)}>
+                      Done
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>

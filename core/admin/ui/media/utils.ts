@@ -27,6 +27,7 @@ export function formatDate(value: string) {
 export function resolveKindFromMime(mimeType: string): MediaKind {
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType.startsWith("video/")) return "video";
   return "document";
 }
 

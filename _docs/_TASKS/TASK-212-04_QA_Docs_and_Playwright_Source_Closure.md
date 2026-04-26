@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-212-01, TASK-212-02, TASK-212-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -69,6 +69,18 @@ retests.
 - `_docs/UI/POST_EDITOR_NEXTLESS_CURRENT_STATE.md` if applicable
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
+
+## Closure Notes (2026-04-26)
+
+- `_docs/PLAYWRIGHT/SUMMARY-POSTS.md` now has a TASK-212 closure section for
+  `BUG-5`, `BUG-8`, and `UX-4`.
+- Product/API/editor docs now describe the new Posts media block contract:
+  `Video`, `Gallery`, `Audio`, and `File`.
+- Changelog entry `744` records the Posts editor media, toast-wrapper, a11y,
+  docs, and validation closure.
+- Validation completed with lint, typecheck, and the targeted Vitest lanes listed
+  in the parent task closure notes. Manual Playwright was not rerun in this
+  implementation pass.
 
 ## Acceptance Criteria
 

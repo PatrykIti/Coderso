@@ -1,4 +1,4 @@
-import { AlertTriangle, FileAudio, FileText, Image as ImageIcon } from "lucide-react";
+import { AlertTriangle, FileAudio, FileText, Image as ImageIcon, Video } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ const typeIconMap = {
   image: ImageIcon,
   document: FileText,
   audio: FileAudio,
+  video: Video,
 };
 
 export function MediaCard({

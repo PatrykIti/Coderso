@@ -114,6 +114,10 @@ test("BlockInserter renders most-used section, category filters, and empty-searc
 
     clickByText(view.container, "Media");
     expect(view.container.textContent).toContain("Image");
+    expect(view.container.textContent).toContain("Video");
+    expect(view.container.textContent).toContain("Gallery");
+    expect(view.container.textContent).toContain("Audio");
+    expect(view.container.textContent).toContain("File");
     expect(view.container.textContent).not.toContain("Paragraph");
 
     const searchInput = view.container.querySelector('input[aria-label="Search Media blocks"]');

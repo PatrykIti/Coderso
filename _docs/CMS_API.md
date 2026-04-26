@@ -647,6 +647,8 @@ Posts API jest niezaleznym, internal kontraktem dla domeny posts:
 
 Post document contract (update `TASK-061-02` + `TASK-062`):
 - `PostBlockType` zawiera typy `writing-canvas` i `toc`,
+- dedicated media block types are accepted only with same-scope editor/runtime
+  support: `image`, `embed`, `video`, `gallery`, `audio`, `file`,
 - `writing-canvas` przechowuje typed payload:
   - `version: 1`,
   - `nodes[]` (`paragraph`, `heading`, `list`, `quote`, `image`),
@@ -659,6 +661,13 @@ Post document contract (update `TASK-061-02` + `TASK-062`):
   - `ordered` (boolean),
   - `hideIfEmpty` (boolean),
 - normalizer egzekwuje deterministic limits/sanitization dla nodow i zachowuje compatibility z legacy data.
+- media block attrs are normalized before persistence/runtime:
+  - `video`: `mediaId`, safe `url` fallback, bounded `caption`, `controls`,
+    forced non-autoplay default,
+  - `gallery`: unique `mediaIds[]` capped at 12, `columns` clamped to `2 | 3 | 4`,
+    `captions`,
+  - `audio`: `mediaId`, safe `url` fallback, bounded `caption`, `controls`,
+  - `file`: `mediaId`, bounded `label`, `showSize`, `newTab`.
 
 Smart paste contract (update `TASK-061-03`):
 - editor normalizuje payload `text/html` i `text/plain` przez `normalizePostPastePayload`,
@@ -725,6 +734,9 @@ Editor header action flow (update `TASK-063-11`):
 - gear dialog zapisuje preference state lokalnie (`nextless.posts.editor.preferences.v2`, compatibility read/write `v1`),
 - gear dialog synchronizuje preference state w tle przez `PATCH /user-settings/posts.editor.preferences` (local-first fallback),
 - save lifecycle nadal korzysta z istniejących endpointow internal (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`).
+- publish/update success and bounded error feedback is emitted through the
+  shared admin action-toast adapter; the shell keeps inline editor state truthful
+  and does not swallow rejected publish/update promises.
 
 Editor outline insert flow (update `TASK-063-11-02`):
 - primary insert trigger (`+`) jest przeniesiony do `Document Outline` sidebar,
@@ -761,7 +773,9 @@ Editor details context contract (update `TASK-063-11-03/04`):
 - klik tła canvasu resetuje selekcje bloku i wraca do kontekstu `Post`,
 - `Post` inspector flow jest uporzadkowany jako `Publishing -> Categories/Tags -> Featured image -> Danger zone`, a pola SEO/metadata sa pod `Advanced` collapse,
 - `Block` inspector zachowuje ten sam kontrakt attrs, ale `Advanced` section jest collapsed by default,
-- media/interactive placeholdery (`image`, `embed`, `button`) nie wymagają nowych API; używają istniejących block attrs w `PostBlockDocument`.
+- media/interactive placeholdery (`image`, `embed`, `video`, `gallery`,
+  `audio`, `file`, `button`) nie wymagają nowych API; używają istniejących
+  block attrs w `PostBlockDocument` i shared Media Library read contract.
 - aktywny tab jest deterministyczny: default z `posts.editor.preferences.defaultInspectorTab`, a ostatni tab jest odtwarzany lokalnie gdy `restoreLastSidebarsState = true`.
 
 Danger zone contract (update `TASK-063-12-05`):
@@ -916,6 +930,15 @@ Runtime rendering contract (posts):
   - custom `anchorId` jest respektowany i tylko deduplikowany gdy wystapi konflikt,
   - dla pustego zakresu headingow renderer zwraca empty-state lub ukrywa TOC, zgodnie z `hideIfEmpty`.
 - legacy posts without `data.document` are auto-coerced from legacy fields (`content`/`excerpt`) before runtime rendering.
+- dedicated media runtime:
+  - `video` and `audio` resolve a media-library asset by `mediaId` first, then
+    a sanitized same-origin/http(s) `url` fallback, and render native playback
+    controls without autoplay,
+  - `gallery` resolves up to 12 media-library image assets, drops unresolved
+    items from output, and clamps columns to `2 | 3 | 4`,
+  - `file` resolves a media-library asset and renders a safe download/open link
+    with optional size label and `noopener noreferrer` for new-tab output,
+  - unresolved media references render no executable fallback markup.
 - read-path compatibility adapter:
   - legacy text blocks (`paragraph`, `heading`, `list`, `quote`, `image`) sa grupowane do segmentow `writing-canvas` bez zapisu migracyjnego,
   - unsupported/non-convertible blocks pozostaja w legacy render path (non-destructive fallback).
@@ -1502,6 +1525,9 @@ Upload response:
   `originalName`, `type`, `mimeType`, `size`, dimensions when available,
   metadata, `createdAt`, and `createdBy`). Admin clients use this row as the
   authoritative cache-upsert payload.
+- Admin media kind classification is MIME-driven: `image/*` -> `image`,
+  `audio/*` -> `audio`, `video/*` -> `video`, and remaining files ->
+  `document`.
 
 Update metadata payload:
 

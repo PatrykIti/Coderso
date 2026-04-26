@@ -677,3 +677,26 @@ URL: `http://localhost:3000/preview?type=content&token=...&contentType=post&slug
 - `screenshots/2026-04-26/posts-blocks-many.png` — editor z otwartym Block Inserter + 9 wstawionymi blokami.
 - `screenshots/2026-04-26/posts-blocks-scrolled.png` / `posts-blocks-scrolled2.png` — canvas po scrollu, widoczne empty blocks (Embed, Code z dark bg, Heading placeholders).
 - `screenshots/2026-04-26/posts-runtime-preview.png` — pełny runtime preview pełny (1280×1600) z H1, formatted paragraphs, Polish chars, escaped `<test>`.
+
+---
+
+## Domknięcie TASK-212 (2026-04-26)
+
+Zakres TASK-212 domknął follow-upy z manualnych replayów 2026-04-25 i
+2026-04-26. W tym code pass nie uruchomiono ponownie manualnego Playwright CLI;
+status `BUG-5` korzysta z live dowodu z 2026-04-26, a `BUG-8` i `UX-4` zostały
+zamknięte kodem oraz targetowaną automatyczną walidacją.
+
+| ID | Status po TASK-212 | Dowód / właściciel |
+|---|---|---|
+| BUG-5 | Fixed live + wrapper hardened | 2026-04-26 replay potwierdził `Post published` i `Changes saved` w Sonner DOM; `PostBlockEditorShell` używa teraz `createAdminActionToastAdapter` dla publish/update success/error i nie połyka rejectionów. |
+| BUG-8 | Fixed | `PostsCreateDrawer` binduje widoczny tekst przez `SheetDescription`; focused Vitest sprawdza `role="dialog"` + `aria-describedby` i brak Radix `Missing Description` warning. |
+| UX-4 | Fixed for accepted scope | Media tab ma `Image`, `Embed`, `Video`, `Gallery`, `Audio`, `File`; nowe typy mają `POST_BLOCK_TYPES`, defaults, normalizer, canvas placeholders/selection, inspector controls, runtime mapper/renderer i testy. |
+| 2026-04-26 UX observations | Outside TASK-212 | Toolbar current-type label, delete undo, and empty Code/Heading runtime drops pozostają obserwacjami do osobnych tasków, bez silent scope creep w TASK-212. |
+
+Walidacja wykonana dla TASK-212:
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/ui/action-toasts.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/posts-create-drawer-a11y.test.tsx tests/vitest/posts/post-block-document-writing-canvas.test.ts tests/vitest/posts/postEditorStore.test.ts tests/vitest/posts/post-block-normalizer-writing-canvas.test.ts tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/posts/post-block-runtime-renderer.test.tsx tests/vitest/ui/post-block-inspector-wave.test.tsx tests/vitest/ui/post-editor-canvas-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/block-inserter-wave.test.tsx`

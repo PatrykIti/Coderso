@@ -184,6 +184,105 @@ test("mapPostDocumentForRuntime resolves image media id and embed providers", as
   expect(html).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
 });
 
+test("mapPostDocumentForRuntime renders dedicated media blocks safely", async () => {
+  const mediaRecords = {
+    "video-1": {
+      id: "video-1",
+      key: "uploads/demo.mp4",
+      url: "https://cdn.example.com/media/demo.mp4",
+      mimeType: "video/mp4",
+      size: 4096,
+      title: "Demo video",
+      caption: "Video caption",
+    },
+    "gallery-1": {
+      id: "gallery-1",
+      key: "uploads/gallery-1.jpg",
+      url: "https://cdn.example.com/media/gallery-1.jpg",
+      mimeType: "image/jpeg",
+      size: 1024,
+      alt: "Gallery one",
+      caption: "Gallery caption",
+    },
+    "audio-1": {
+      id: "audio-1",
+      key: "uploads/audio.mp3",
+      url: "https://cdn.example.com/media/audio.mp3",
+      mimeType: "audio/mpeg",
+      size: 2048,
+      caption: "Audio caption",
+    },
+    "file-1": {
+      id: "file-1",
+      key: "uploads/report.pdf",
+      url: "https://cdn.example.com/media/report.pdf",
+      mimeType: "application/pdf",
+      size: 8192,
+      title: "Quarterly report",
+    },
+  };
+  const mapped = await mapPostDocumentForRuntime(
+    {
+      document: {
+        version: 1,
+        blocks: [
+          {
+            id: "video-block",
+            type: "video",
+            attrs: { mediaId: "video-1", caption: "Custom video caption" },
+            content: null,
+          },
+          {
+            id: "gallery-block",
+            type: "gallery",
+            attrs: { mediaIds: ["gallery-1", "missing"], columns: 4 },
+            content: null,
+          },
+          {
+            id: "audio-block",
+            type: "audio",
+            attrs: { mediaId: "audio-1" },
+            content: null,
+          },
+          {
+            id: "file-block",
+            type: "file",
+            attrs: { mediaId: "file-1", label: "Download report", newTab: true },
+            content: null,
+          },
+          {
+            id: "unsafe-video",
+            type: "video",
+            attrs: { url: "javascript:alert(1)" },
+            content: null,
+          },
+        ],
+        meta: {},
+      },
+    },
+    {
+      getMediaById: async (id) =>
+        (mediaRecords[id as keyof typeof mediaRecords] ?? null) as Awaited<
+          ReturnType<typeof getMediaById>
+        >,
+    }
+  );
+
+  const html = renderToString(<PostBlockRuntimeRenderer document={mapped} />);
+
+  expect(html).toContain("https://cdn.example.com/media/demo.mp4");
+  expect(html).toContain("Custom video caption");
+  expect(html).toContain('data-post-runtime-gallery="true"');
+  expect(html).toContain("https://cdn.example.com/media/gallery-1.jpg");
+  expect(html).toContain("Gallery caption");
+  expect(html).toContain("https://cdn.example.com/media/audio.mp3");
+  expect(html).toContain("Audio caption");
+  expect(html).toContain('href="https://cdn.example.com/media/report.pdf"');
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain("8.0 KB");
+  expect(html).not.toContain("javascript:alert");
+});
+
 test("mapPostDocumentForRuntime falls back to legacy content and excerpt helpers", async () => {
   const mapped = await mapPostDocumentForRuntime({
     content: "<p>Legacy paragraph content</p>",

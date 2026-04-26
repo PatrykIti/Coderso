@@ -185,15 +185,18 @@ vi.mock("@/ui/media/MediaGrid", () => ({
   MediaGrid: ({
     items,
     selectedId,
+    selectedIds,
     onSelect,
   }: {
     items: Array<{ id: string; name: string }>;
     selectedId?: string | null;
+    selectedIds?: string[];
     onSelect: (id: string) => void;
   }) => (
     <div>
       <span>{`media-grid:${items.length}`}</span>
       <span>{`selected-media:${selectedId ?? "none"}`}</span>
+      <span>{`selected-media-list:${selectedIds?.join(",") ?? "none"}`}</span>
       {items.map((item) => (
         <button key={item.id} type="button" onClick={() => onSelect(item.id)}>
           {`select-media:${item.name}`}
@@ -876,6 +879,147 @@ test("PostEditorCanvas opens image picker, loads media, applies selected asset, 
     expect(lookupView.container.innerHTML).toContain('alt="Hero alt"');
   } finally {
     lookupView.cleanup();
+  }
+});
+
+test("PostEditorCanvas scopes media picker and patches video, gallery, audio, and file blocks", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.records = [
+    {
+      id: "video-1",
+      key: "uploads/video.mp4",
+      url: "/media/video.mp4",
+      originalName: "video.mp4",
+      type: "file" as const,
+      mimeType: "video/mp4",
+      size: 2048,
+      createdAt: "2026-03-12T10:00:00.000Z",
+    },
+    {
+      id: "image-2",
+      key: "uploads/gallery.png",
+      url: "/media/gallery.png",
+      originalName: "gallery.png",
+      type: "image" as const,
+      mimeType: "image/png",
+      size: 1024,
+      createdAt: "2026-03-12T10:00:00.000Z",
+    },
+    {
+      id: "audio-1",
+      key: "uploads/audio.mp3",
+      url: "/media/audio.mp3",
+      originalName: "audio.mp3",
+      type: "file" as const,
+      mimeType: "audio/mpeg",
+      size: 1024,
+      createdAt: "2026-03-12T10:00:00.000Z",
+    },
+    {
+      id: "file-1",
+      key: "uploads/report.pdf",
+      url: "/media/report.pdf",
+      originalName: "report.pdf",
+      type: "file" as const,
+      mimeType: "application/pdf",
+      size: 4096,
+      createdAt: "2026-03-12T10:00:00.000Z",
+    },
+  ];
+  const onUpdateBlockAttrs = vi.fn();
+
+  const renderWithBlock = (block: Record<string, unknown>) =>
+    mount(
+      <PostEditorCanvas
+        document={{ version: 1, meta: {}, blocks: [block as never] }}
+        title="Canvas"
+        onTitleChange={() => undefined}
+        selectedBlockId={String(block.id)}
+        insertFocusToken={0}
+        onSelectBlock={() => undefined}
+        onUpdateBlockContent={() => undefined}
+        onUpdateBlockAttrs={onUpdateBlockAttrs}
+        onInsertBlock={() => undefined}
+      />
+    );
+
+  const videoView = renderWithBlock({
+    id: "video-block",
+    type: "video",
+    attrs: {},
+    content: null,
+  });
+
+  try {
+    clickByText(videoView.container, "Click to choose video from media library");
+    await flush();
+    expect(videoView.container.textContent).toContain("Select Video");
+    expect(videoView.container.textContent).toContain("media-grid:1");
+    clickByText(videoView.container, "select-media:video.mp4");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("video-block", {
+      mediaId: "video-1",
+    });
+  } finally {
+    videoView.cleanup();
+  }
+
+  const galleryView = renderWithBlock({
+    id: "gallery-block",
+    type: "gallery",
+    attrs: { mediaIds: ["media-1"] },
+    content: null,
+  });
+
+  try {
+    clickByText(galleryView.container, "Click to choose gallery images");
+    await flush();
+    expect(galleryView.container.textContent).toContain("Select Gallery Images");
+    expect(galleryView.container.textContent).toContain("media-grid:1");
+    clickByText(galleryView.container, "select-media:gallery.png");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("gallery-block", {
+      mediaIds: ["media-1", "image-2"],
+    });
+  } finally {
+    galleryView.cleanup();
+  }
+
+  const audioView = renderWithBlock({
+    id: "audio-block",
+    type: "audio",
+    attrs: {},
+    content: null,
+  });
+
+  try {
+    clickByText(audioView.container, "Click to choose audio from media library");
+    await flush();
+    clickByText(audioView.container, "select-media:audio.mp3");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("audio-block", {
+      mediaId: "audio-1",
+    });
+  } finally {
+    audioView.cleanup();
+  }
+
+  const fileView = renderWithBlock({
+    id: "file-block",
+    type: "file",
+    attrs: {},
+    content: null,
+  });
+
+  try {
+    clickByText(fileView.container, "Click to choose file from media library");
+    await flush();
+    clickByText(fileView.container, "select-media:report.pdf");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("file-block", {
+      mediaId: "file-1",
+    });
+  } finally {
+    fileView.cleanup();
   }
 });
 

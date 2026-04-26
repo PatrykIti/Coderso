@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Block Editor + Domain Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-212-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

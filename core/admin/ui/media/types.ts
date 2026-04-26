@@ -1,4 +1,4 @@
-export type MediaKind = "image" | "document" | "audio";
+export type MediaKind = "image" | "document" | "audio" | "video";
 
 export type MediaItem = {
   id: string;

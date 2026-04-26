@@ -454,6 +454,93 @@ test("BlockInspector routes image, callout, and separator controls", () => {
   }
 });
 
+test("BlockInspector routes dedicated media block controls", () => {
+  const onVideoChange = vi.fn();
+  const videoView = mount(
+    <BlockInspector
+      block={createBlock("video", {
+        mediaId: "video-1",
+        url: "",
+        caption: "",
+        controls: true,
+      })}
+      onChangeAttrs={onVideoChange}
+    />
+  );
+
+  try {
+    const inputs = Array.from(videoView.container.querySelectorAll("input"));
+    setInputValue(inputs[0], "video-2");
+    setInputValue(inputs[1], "https://cdn.example.com/video.mp4");
+    setInputValue(inputs[2], "Video caption");
+    toggleCheckbox(videoView.container.querySelector('input[type="checkbox"]'));
+
+    expect(onVideoChange).toHaveBeenCalledWith({ mediaId: "video-2" });
+    expect(onVideoChange).toHaveBeenCalledWith({
+      url: "https://cdn.example.com/video.mp4",
+    });
+    expect(onVideoChange).toHaveBeenCalledWith({ caption: "Video caption" });
+    expect(onVideoChange).toHaveBeenCalledWith({ controls: false });
+  } finally {
+    videoView.cleanup();
+  }
+
+  const onGalleryChange = vi.fn();
+  const galleryView = mount(
+    <BlockInspector
+      block={createBlock("gallery", {
+        mediaIds: ["image-1"],
+        columns: 3,
+        captions: true,
+      })}
+      onChangeAttrs={onGalleryChange}
+    />
+  );
+
+  try {
+    const inputs = Array.from(galleryView.container.querySelectorAll("input"));
+    const selects = Array.from(galleryView.container.querySelectorAll("select"));
+    setInputValue(inputs[0], "image-1, image-2");
+    setSelectValue(selects.at(-1), "4");
+    toggleCheckbox(galleryView.container.querySelector('input[type="checkbox"]'));
+
+    expect(onGalleryChange).toHaveBeenCalledWith({ mediaIds: ["image-1", "image-2"] });
+    expect(onGalleryChange).toHaveBeenCalledWith({ columns: 4 });
+    expect(onGalleryChange).toHaveBeenCalledWith({ captions: false });
+  } finally {
+    galleryView.cleanup();
+  }
+
+  const onFileChange = vi.fn();
+  const fileView = mount(
+    <BlockInspector
+      block={createBlock("file", {
+        mediaId: "file-1",
+        label: "Download file",
+        showSize: true,
+        newTab: false,
+      })}
+      onChangeAttrs={onFileChange}
+    />
+  );
+
+  try {
+    const inputs = Array.from(fileView.container.querySelectorAll("input"));
+    setInputValue(inputs[0], "file-2");
+    setInputValue(inputs[1], "Download report");
+    const toggles = Array.from(fileView.container.querySelectorAll('input[type="checkbox"]'));
+    toggleCheckbox(toggles[0]);
+    toggleCheckbox(toggles[1]);
+
+    expect(onFileChange).toHaveBeenCalledWith({ mediaId: "file-2" });
+    expect(onFileChange).toHaveBeenCalledWith({ label: "Download report" });
+    expect(onFileChange).toHaveBeenCalledWith({ showSize: false });
+    expect(onFileChange).toHaveBeenCalledWith({ newTab: true });
+  } finally {
+    fileView.cleanup();
+  }
+});
+
 test("BlockInspector routes button, embed, code, paragraph, and fixed-layout guidance states", () => {
   const onButtonChange = vi.fn();
   const buttonView = mount(

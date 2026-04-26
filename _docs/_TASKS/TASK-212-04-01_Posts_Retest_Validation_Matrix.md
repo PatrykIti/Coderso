@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-212-01, TASK-212-02, TASK-212-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

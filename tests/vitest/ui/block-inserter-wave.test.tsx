@@ -115,6 +115,10 @@ test("BlockInserter filters by category and search, renders most-used, and respe
     });
 
     expect(view.container.textContent).toContain("Image");
+    expect(view.container.textContent).toContain("Video");
+    expect(view.container.textContent).toContain("Gallery");
+    expect(view.container.textContent).toContain("Audio");
+    expect(view.container.textContent).toContain("File");
     expect(view.container.textContent).not.toContain("Paragraph");
 
     act(() => {
