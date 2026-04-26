@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Task Board
 **Estimated Effort:** Medium
 **Dependencies:** TASK-215-01, TASK-215-02, TASK-215-03, TASK-215-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -16,8 +16,8 @@ docs, changelog entry, and synchronized task board status.
 
 ## Sub-Tasks
 
-- [ ] TASK-215-05-01: Widgets Pages-Parity Test Matrix
-- [ ] TASK-215-05-02: Widgets Docs, Changelog, and Board Closure
+- [x] TASK-215-05-01: Widgets Pages-Parity Test Matrix
+- [x] TASK-215-05-02: Widgets Docs, Changelog, and Board Closure
 - [ ] Record skipped or CI-only checks explicitly.
 - [ ] Keep task statuses and board statistics synchronized.
 

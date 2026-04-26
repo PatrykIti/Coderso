@@ -1,28 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
-  Columns,
-  Copy,
-  FileText,
-  GalleryVerticalEnd,
   Grid2X2,
-  Image as ImageIcon,
-  LayoutGrid,
-  List,
   Play,
   Plus,
   Search,
   Star,
+  Table2,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedPages, getPageCached, listPagesCached, updatePage, type PageSummary } from "@/services/pagesClient";
@@ -46,9 +38,11 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { resolveAdminActionErrorMessage } from "@/ui/shared/actionToasts";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { listRegisteredWidgetLibraryWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -67,15 +61,20 @@ import type { Block } from "@/ui/pages/builder/types";
 
 import { WidgetCard } from "./WidgetCard";
 import { WidgetCatalogFilters } from "./WidgetCatalogFilters";
+import { WidgetLibraryRowActions } from "./WidgetLibraryRowActions";
+import { WidgetLibraryTable } from "./WidgetLibraryTable";
 import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
 import {
   buildWidgetModuleOptions,
-  countWidgetLibraryWidgets,
-  countWidgetLibraryWidgetsByCategory,
+  countWidgetLibrarySections,
   filterWidgetLibraryItems,
+  filterWidgetLibraryItemsBySection,
   normalizeCategoryValue,
+  normalizeWidgetLibrarySection,
+  trimWidgetLibrarySelection,
+  type WidgetLibrarySection,
 } from "./widgetLibraryUtils";
 import { widgetCategoryLabels, widgetCategoryOrder } from "./widgetCategoryMeta";
 import type {
@@ -86,11 +85,10 @@ import type {
   WidgetSource,
 } from "./types";
 
-type LibraryScope = "all-items" | "favorites" | "templates" | "widgets";
 type WidgetCategoryFilter = "all" | WidgetCategoryId;
 type WidgetComplexityFilter = "all" | WidgetComplexity;
 type TemplateCategoryFilter = "all" | string;
-type WidgetView = "grid" | "list";
+type WidgetView = "grid" | "table";
 type WidgetPreview =
   | "hero"
   | "grid"
@@ -101,11 +99,6 @@ type WidgetPreview =
   | "pricing"
   | "banner";
 
-type CategoryItem = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-};
 type WidgetWithPreview = WidgetItem & { preview: WidgetPreview; source: WidgetSource };
 
 const formatModuleBadgeLabel = (value: string) =>
@@ -115,31 +108,16 @@ const formatModuleBadgeLabel = (value: string) =>
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
-const primaryCategories: CategoryItem[] = [
-  { id: "all-items", label: "All Items", icon: LayoutGrid },
-  { id: "favorites", label: "Favorites", icon: Star },
-  { id: "templates", label: "Templates", icon: LayoutGrid },
-];
-
 const categoryMeta: Record<
   WidgetCategoryId,
-  { label: string; icon: LucideIcon; preview: WidgetPreview }
+  { label: string; preview: WidgetPreview }
 > = {
-  layout: { label: widgetCategoryLabels.layout, icon: GalleryVerticalEnd, preview: "hero" },
-  content: { label: widgetCategoryLabels.content, icon: Columns, preview: "grid" },
-  forms: { label: widgetCategoryLabels.forms, icon: FileText, preview: "form" },
-  navigation: { label: widgetCategoryLabels.navigation, icon: List, preview: "banner" },
-  media: { label: widgetCategoryLabels.media, icon: ImageIcon, preview: "media" },
+  layout: { label: widgetCategoryLabels.layout, preview: "hero" },
+  content: { label: widgetCategoryLabels.content, preview: "grid" },
+  forms: { label: widgetCategoryLabels.forms, preview: "form" },
+  navigation: { label: widgetCategoryLabels.navigation, preview: "banner" },
+  media: { label: widgetCategoryLabels.media, preview: "media" },
 };
-
-const widgetCategories: CategoryItem[] = [
-  { id: "widgets-all", label: "All Widgets", icon: LayoutGrid },
-  ...widgetCategoryOrder.map((id) => ({
-    id,
-    label: categoryMeta[id].label,
-    icon: categoryMeta[id].icon,
-  })),
-];
 
 function PreviewFrame({
   children,
@@ -270,12 +248,10 @@ export function WidgetLibraryPage() {
     pages: Boolean(initialPages),
   });
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<WidgetView>("grid");
-  const [activeScope, setActiveScope] = useState<LibraryScope>("widgets");
+  const [view, setView] = useState<WidgetView>("table");
+  const [section, setSection] = useState<WidgetLibrarySection>("all-items");
   const [widgetTab, setWidgetTab] = useState<WidgetLibraryTab>("all");
   const [advancedMode, setAdvancedMode] = useState(false);
-  const [widgetCategory, setWidgetCategory] =
-    useState<WidgetCategoryFilter>("all");
   const [widgetComplexity, setWidgetComplexity] =
     useState<WidgetComplexityFilter>("all");
   const [widgetModule, setWidgetModule] = useState("all");
@@ -301,15 +277,14 @@ export function WidgetLibraryPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [insertError, setInsertError] = useState<string | null>(null);
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(
-    new Set()
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [templateDeleteTarget, setTemplateDeleteTarget] = useState<{
     ids: string[];
     label: string;
   } | null>(null);
   const [templateActionError, setTemplateActionError] = useState<string | null>(null);
   const [isTemplateActionWorking, setIsTemplateActionWorking] = useState(false);
+  const [previewNotice, setPreviewNotice] = useState<string | null>(null);
   const adminBasePath = useAdminBasePath();
   const { navigate } = useAdminRouter();
   const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
@@ -494,35 +469,33 @@ export function WidgetLibraryPage() {
       }
     });
   }, [refreshCatalog, refreshCategories, refreshPages]);
-  const widgetScopeCount = useMemo(
-    () =>
-      countWidgetLibraryWidgets(widgets, {
-        query,
-        widgetTab,
-        widgetModule,
-        widgetComplexity,
-      }),
-    [widgets, query, widgetTab, widgetModule, widgetComplexity]
-  );
-  const widgetCategoryCounts = useMemo(
-    () =>
-      countWidgetLibraryWidgetsByCategory(widgets, {
-        query,
-        widgetTab,
-        widgetModule,
-        widgetComplexity,
-      }),
-    [widgets, query, widgetTab, widgetModule, widgetComplexity]
-  );
+  const activeWidgetCategory: WidgetCategoryFilter =
+    section === "widgets-all"
+      ? "all"
+      : widgetCategoryOrder.includes(section as WidgetCategoryId)
+        ? (section as WidgetCategoryId)
+        : "all";
 
-  const scopeCounts = useMemo(
-    () => ({
-      allItems: widgets.length,
-      favorites: widgets.filter((widget) => widget.isFavorite).length,
-      templates: widgets.filter((widget) => widget.source === "template").length,
-      widgets: widgets.filter((widget) => widget.source === "core").length,
-    }),
-    [widgets]
+  const normalizedTemplateCategory =
+    templateCategory === "all" ? "all" : normalizeCategoryValue(templateCategory);
+
+  const sectionCounts = useMemo(
+    () =>
+      countWidgetLibrarySections(widgets, {
+        query,
+        templateCategory: normalizedTemplateCategory,
+        widgetTab,
+        widgetModule,
+        widgetComplexity,
+      }),
+    [
+      normalizedTemplateCategory,
+      query,
+      widgetComplexity,
+      widgetModule,
+      widgets,
+      widgetTab,
+    ]
   );
 
   const widgetTabCounts = useMemo(() => {
@@ -531,7 +504,7 @@ export function WidgetLibraryPage() {
         query,
         activeScope: "widgets",
         templateCategory: "all",
-        widgetCategory,
+        widgetCategory: activeWidgetCategory,
         widgetTab: "recommended",
         widgetModule,
         widgetComplexity,
@@ -540,13 +513,13 @@ export function WidgetLibraryPage() {
         query,
         activeScope: "widgets",
         templateCategory: "all",
-        widgetCategory,
+        widgetCategory: activeWidgetCategory,
         widgetTab: "all",
         widgetModule,
         widgetComplexity,
       }).length,
     };
-  }, [widgets, query, widgetCategory, widgetComplexity, widgetModule]);
+  }, [widgets, query, activeWidgetCategory, widgetComplexity, widgetModule]);
 
   const widgetModuleOptions = useMemo(() => {
     const modules = new Set<string>();
@@ -560,52 +533,67 @@ export function WidgetLibraryPage() {
 
   const filteredWidgets = useMemo(
     () =>
-      filterWidgetLibraryItems(widgets, {
+      filterWidgetLibraryItemsBySection(widgets, {
         query,
-        activeScope,
-        templateCategory:
-          templateCategory === "all"
-            ? "all"
-            : normalizeCategoryValue(templateCategory),
-        widgetCategory,
+        section,
+        templateCategory: normalizedTemplateCategory,
         widgetTab,
         widgetModule,
         widgetComplexity,
       }),
     [
-    widgets,
-    query,
-    activeScope,
-    templateCategory,
-    widgetCategory,
-    widgetTab,
-    widgetModule,
-    widgetComplexity,
+      widgets,
+      query,
+      section,
+      normalizedTemplateCategory,
+      widgetTab,
+      widgetModule,
+      widgetComplexity,
     ]
   );
 
-  const visibleTemplateWidgets = useMemo(
-    () => filteredWidgets.filter((widget) => widget.source === "template"),
-    [filteredWidgets]
+  const pagination = useListPagination(filteredWidgets, {
+    resetKey: JSON.stringify({
+      query,
+      section,
+      normalizedTemplateCategory,
+      widgetTab,
+      widgetModule,
+      widgetComplexity,
+    }),
+  });
+
+  const visibleIds = useMemo(
+    () => pagination.visibleRows.map((widget) => widget.id),
+    [pagination.visibleRows]
   );
-  const visibleTemplateIds = useMemo(
-    () => visibleTemplateWidgets.map((widget) => widget.id),
-    [visibleTemplateWidgets]
+
+  const selectedIdList = useMemo(() => Array.from(selectedIds), [selectedIds]);
+  const selectedVisibleRows = useMemo(
+    () => pagination.visibleRows.filter((widget) => selectedIds.has(widget.id)),
+    [pagination.visibleRows, selectedIds]
   );
-  const allVisibleTemplatesSelected =
-    visibleTemplateIds.length > 0 &&
-    visibleTemplateIds.every((id) => selectedTemplateIds.has(id));
+  const selectedVisibleTemplateRows = useMemo(
+    () => selectedVisibleRows.filter((widget) => widget.source === "template"),
+    [selectedVisibleRows]
+  );
+  const isAllVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const isSelectionIndeterminate =
+    selectedVisibleRows.length > 0 && !isAllVisibleSelected;
 
   useEffect(() => {
-    setSelectedTemplateIds((previous) => {
-      const visible = new Set(visibleTemplateIds);
-      const next = new Set([...previous].filter((id) => visible.has(id)));
-      const same =
+    setSelectedIds((previous) => {
+      const next = new Set(trimWidgetLibrarySelection(previous, visibleIds));
+      if (
         next.size === previous.size &&
-        [...next].every((id) => previous.has(id));
-      return same ? previous : next;
+        [...next].every((id) => previous.has(id))
+      ) {
+        return previous;
+      }
+      return next;
     });
-  }, [visibleTemplateIds]);
+  }, [visibleIds]);
 
   const templateCategoryOptions = useMemo(
     () => [
@@ -621,6 +609,30 @@ export function WidgetLibraryPage() {
     ],
     [templateCategories]
   );
+
+  const sectionOptions = useMemo(
+    () => [
+      { value: "all-items" as const, label: "All Items" },
+      { value: "favorites" as const, label: "Favorites" },
+      { value: "templates" as const, label: "Templates" },
+      { value: "widgets-all" as const, label: "All Widgets" },
+      ...widgetCategoryOrder.map((id) => ({
+        value: id,
+        label: categoryMeta[id].label,
+      })),
+    ],
+    []
+  );
+
+  const activeSectionLabel =
+    sectionOptions.find((option) => option.value === section)?.label ?? "All Items";
+
+  const resourceLabel =
+    section === "templates"
+      ? "templates"
+      : section === "widgets-all" || widgetCategoryOrder.includes(section as WidgetCategoryId)
+        ? "widgets"
+        : "items";
 
   const handleFavoriteToggle = async (id: string) => {
     setFavoritesError(null);
@@ -649,18 +661,14 @@ export function WidgetLibraryPage() {
     }
   };
 
-  const handleSelectScope = (scope: LibraryScope) => {
-    setActiveScope(scope);
-  };
-
-  const handleSelectWidgetCategory = (category: WidgetCategoryFilter) => {
-    setActiveScope("widgets");
-    setWidgetCategory(category);
+  const handleSectionChange = (value: string) => {
+    setSection(normalizeWidgetLibrarySection(value));
+    setPreviewNotice(null);
+    setSelectedIds(new Set());
   };
 
   const handleWidgetTabChange = (value: WidgetLibraryTab) => {
     setWidgetTab(value);
-    setActiveScope("widgets");
   };
 
   const handleAdvancedModeChange = (enabled: boolean) => {
@@ -671,8 +679,23 @@ export function WidgetLibraryPage() {
   };
 
   const handleSelectWidget = (widget: WidgetWithPreview) => {
+    if (widget.source !== "core") return;
     setSelectedWidget(widget);
     setDetailsOpen(true);
+  };
+
+  const handleOpenPrimary = (widget: WidgetWithPreview) => {
+    if (widget.source === "template") {
+      handleEditTemplate(widget);
+      return;
+    }
+    handleSelectWidget(widget);
+  };
+
+  const handlePreview = (widget: WidgetWithPreview) => {
+    const message = `${widget.name} preview is not available yet.`;
+    setPreviewNotice(message);
+    toast.info(message);
   };
 
   const handleInsertWidget = (widget: WidgetWithPreview | null) => {
@@ -850,10 +873,11 @@ export function WidgetLibraryPage() {
     navigate(templateEditHref(widget.id));
   };
 
-  const toggleTemplateSelection = (id: string, checked: boolean) => {
-    setSelectedTemplateIds((previous) => {
+  const toggleSelection = (id: string, checked?: boolean) => {
+    setSelectedIds((previous) => {
       const next = new Set(previous);
-      if (checked) {
+      const shouldSelect = checked ?? !next.has(id);
+      if (shouldSelect) {
         next.add(id);
       } else {
         next.delete(id);
@@ -862,10 +886,48 @@ export function WidgetLibraryPage() {
     });
   };
 
-  const toggleAllVisibleTemplates = (checked: boolean) => {
-    setSelectedTemplateIds(
-      checked ? new Set(visibleTemplateIds) : new Set()
-    );
+  const toggleAllVisible = () => {
+    setSelectedIds(isAllVisibleSelected ? new Set() : new Set(visibleIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkFavoriteChange = async (shouldFavorite: boolean) => {
+    if (selectedVisibleRows.length === 0) return;
+    setFavoritesError(null);
+    const previous = new Set(favoriteIds);
+    const next = new Set(previous);
+
+    if (shouldFavorite) {
+      const newIds = selectedVisibleRows
+        .map((widget) => widget.id)
+        .filter((id) => !next.has(id));
+      if (next.size + newIds.length > 50) {
+        setFavoritesError("Favorites limit reached.");
+        toast.error("Favorites limit reached.");
+        return;
+      }
+      for (const id of newIds) next.add(id);
+    } else {
+      for (const widget of selectedVisibleRows) next.delete(widget.id);
+    }
+
+    setFavoriteIds(next);
+    try {
+      await setUserSetting("widgets.favorites", Array.from(next));
+      toast.success(
+        shouldFavorite
+          ? `${selectedVisibleRows.length} items added to favorites.`
+          : `${selectedVisibleRows.length} items removed from favorites.`
+      );
+      clearSelection();
+    } catch {
+      setFavoriteIds(previous);
+      setFavoritesError("Failed to save favorites.");
+      toast.error("Failed to save favorites.");
+    }
   };
 
   const handleDuplicateTemplate = async (widget: WidgetWithPreview) => {
@@ -892,14 +954,12 @@ export function WidgetLibraryPage() {
     if (!templateDeleteTarget) return;
     setTemplateActionError(null);
     setIsTemplateActionWorking(true);
-    const failed: string[] = [];
-    for (const id of templateDeleteTarget.ids) {
-      try {
-        await deleteWidgetTemplate(id);
-      } catch {
-        failed.push(id);
-      }
-    }
+    const results = await Promise.allSettled(
+      templateDeleteTarget.ids.map((id) => deleteWidgetTemplate(id))
+    );
+    const failed = templateDeleteTarget.ids.filter(
+      (_, index) => results[index]?.status === "rejected"
+    );
     const deletedCount = templateDeleteTarget.ids.length - failed.length;
     if (deletedCount > 0) {
       toast.success(
@@ -916,10 +976,7 @@ export function WidgetLibraryPage() {
       setTemplateActionError(message);
       toast.error(message);
     }
-    setSelectedTemplateIds((previous) => {
-      const deletedIds = new Set(templateDeleteTarget.ids.filter((id) => !failed.includes(id)));
-      return new Set([...previous].filter((id) => !deletedIds.has(id)));
-    });
+    setSelectedIds(new Set(failed));
     setTemplateDeleteTarget(null);
     try {
       await reloadCatalog();
@@ -927,6 +984,40 @@ export function WidgetLibraryPage() {
       setIsTemplateActionWorking(false);
     }
   };
+
+  const renderWidgetActions = (widget: WidgetWithPreview) => (
+    <WidgetLibraryRowActions
+      source={widget.source}
+      section={section}
+      isFavorite={Boolean(widget.isFavorite)}
+      onPreview={() => handlePreview(widget)}
+      onConfigure={
+        widget.source === "core" ? () => handleSelectWidget(widget) : undefined
+      }
+      onInsert={
+        widget.source === "core" ? () => handleInsertWidget(widget) : undefined
+      }
+      onEditTemplate={
+        widget.source === "template" ? () => handleEditTemplate(widget) : undefined
+      }
+      onDuplicateTemplate={
+        widget.source === "template"
+          ? () => void handleDuplicateTemplate(widget)
+          : undefined
+      }
+      onDeleteTemplate={
+        widget.source === "template"
+          ? () =>
+              setTemplateDeleteTarget({
+                ids: [widget.id],
+                label: widget.name,
+              })
+          : undefined
+      }
+      onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
+      disabled={isTemplateActionWorking && widget.source === "template"}
+    />
+  );
 
   const templateList = useMemo(
     () =>
@@ -936,10 +1027,9 @@ export function WidgetLibraryPage() {
     [catalogItems]
   );
 
-  const showTemplateAction = activeScope === "templates";
   return (
     <AdminShell
-      activeHref="/admin/widgets"
+      activeHref="/admin/coderso/widgets"
       contentClassName="px-6 py-8 overflow-hidden"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -948,209 +1038,63 @@ export function WidgetLibraryPage() {
           <span className="text-foreground">Library</span>
         </div>
       }
-      search={
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search items..."
-            className="pl-9"
-          />
-        </div>
-      }
     >
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col gap-6">
         <PageHeader
           title="Widget Library"
           description="Manage and reuse your custom interface components across all pages."
-        />
-        <Separator className="my-6" />
-        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
-          <aside className="flex w-full min-h-0 flex-col lg:w-72">
-            <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border/60 bg-card px-4 py-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                  Library
-                </p>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[10px]">
-                    {scopeCounts.allItems}
+          actions={
+            <>
+              {selectedVisibleRows.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">
+                    {selectedVisibleRows.length} selected
                   </Badge>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() => setCategoriesOpen(true)}
-                  >
-                    Categories
-                  </Button>
-                </div>
-              </div>
-              <Separator className="my-4" />
-              <ScrollArea className="flex-1 min-h-0 pr-2">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                      Items
-                    </p>
-                    {primaryCategories.map((category) => {
-                      const isActive = activeScope === category.id;
-                      const count =
-                        category.id === "all-items"
-                          ? scopeCounts.allItems
-                          : category.id === "favorites"
-                            ? scopeCounts.favorites
-                            : scopeCounts.templates;
-
-                      return (
-                        <button
-                          key={category.id}
-                          type="button"
-                          onClick={() => handleSelectScope(category.id as LibraryScope)}
-                          className={cn(
-                            "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
-                            isActive
-                              ? "border-primary/40 bg-primary/10 text-primary"
-                              : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
-                          )}
-                        >
-                          <category.icon className="h-4 w-4" />
-                          <span>{category.label}</span>
-                          <Badge variant="outline" className="ml-auto text-[10px]">
-                            {count}
-                          </Badge>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                      Widgets
-                    </p>
-                    {widgetCategories.map((category) => {
-                      const isAllWidgets = category.id === "widgets-all";
-                      const isActive = isAllWidgets
-                        ? activeScope === "widgets" && widgetCategory === "all"
-                        : activeScope === "widgets" &&
-                          widgetCategory === category.id;
-                      const count = isAllWidgets
-                        ? widgetScopeCount
-                        : widgetCategoryCounts[category.id as WidgetCategoryId] ??
-                          0;
-
-                      return (
-                        <button
-                          key={category.id}
-                          type="button"
-                          onClick={() =>
-                            handleSelectWidgetCategory(
-                              isAllWidgets
-                                ? "all"
-                                : (category.id as WidgetCategoryId)
-                            )
-                          }
-                          className={cn(
-                            "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
-                            isActive
-                              ? "border-primary/40 bg-primary/10 text-primary"
-                              : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
-                          )}
-                        >
-                          <category.icon className="h-4 w-4" />
-                          <span>{category.label}</span>
-                          <Badge variant="outline" className="ml-auto text-[10px]">
-                            {count}
-                          </Badge>
-                        </button>
-                      );
-                    })}
-                    {favoritesError ? (
-                      <p className="text-xs text-destructive">{favoritesError}</p>
-                    ) : null}
-                  </div>
-                </div>
-              </ScrollArea>
-            </div>
-          </aside>
-
-          <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge variant="secondary">
-                  {filteredWidgets.length}{" "}
-                  {activeScope === "widgets"
-                    ? "widgets"
-                    : activeScope === "templates"
-                      ? "templates"
-                      : "items"}
-                </Badge>
-                {activeScope === "widgets" ? (
-                  <WidgetCatalogFilters
-                    tab={widgetTab}
-                    onTabChange={handleWidgetTabChange}
-                    recommendedCount={widgetTabCounts.recommended}
-                    allCount={widgetTabCounts.all}
-                    advancedMode={advancedMode}
-                    onAdvancedModeChange={handleAdvancedModeChange}
-                    moduleFilter={widgetModule}
-                    onModuleFilterChange={setWidgetModule}
-                    moduleOptions={widgetModuleOptions}
-                    complexityFilter={widgetComplexity}
-                    onComplexityFilterChange={setWidgetComplexity}
-                  />
-                ) : null}
-                {activeScope === "templates" ? (
-                  <Select
-                    value={templateCategory}
-                    onValueChange={setTemplateCategory}
-                  >
-                    <SelectTrigger className="h-9 w-[180px] text-xs">
-                      <SelectValue placeholder="All categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templateCategoryOptions.map((category) => (
-                        <SelectItem key={category.id} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
-                <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
-                  <Button
-                    variant={view === "grid" ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    onClick={() => setView("grid")}
-                    aria-label="Show widgets as grid"
-                    aria-pressed={view === "grid"}
-                    title="Grid view"
-                  >
-                    <Grid2X2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={view === "list" ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    onClick={() => setView("list")}
-                    aria-label="Show widgets as list"
-                    aria-pressed={view === "list"}
-                    title="List view"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {showTemplateAction ? (
-                  selectedTemplateIds.size > 0 ? (
+                  {section === "favorites" ? (
                     <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => void handleBulkFavoriteChange(false)}
+                    >
+                      <Star className="h-4 w-4" />
+                      Remove favorites
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => void handleBulkFavoriteChange(true)}
+                      >
+                        <Star className="h-4 w-4" />
+                        Add favorites
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => void handleBulkFavoriteChange(false)}
+                      >
+                        <X className="h-4 w-4" />
+                        Remove favorites
+                      </Button>
+                    </>
+                  )}
+                  {section === "templates" && selectedVisibleTemplateRows.length > 0 ? (
+                    <Button
+                      type="button"
                       size="sm"
                       variant="destructive"
                       className="gap-2"
                       onClick={() =>
                         setTemplateDeleteTarget({
-                          ids: Array.from(selectedTemplateIds),
-                          label: `${selectedTemplateIds.size} selected templates`,
+                          ids: selectedVisibleTemplateRows.map((widget) => widget.id),
+                          label: `${selectedVisibleTemplateRows.length} selected templates`,
                         })
                       }
                       disabled={isTemplateActionWorking}
@@ -1158,176 +1102,206 @@ export function WidgetLibraryPage() {
                       <Trash2 className="h-4 w-4" />
                       Delete selected
                     </Button>
-                  ) : null
-                ) : null}
-                {showTemplateAction ? (
-                  <Button size="sm" className="gap-2" asChild>
-                    <AdminLink href={templateCreateHref}>
-                      <Plus className="h-4 w-4" />
-                      New Template
-                    </AdminLink>
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            <ScrollArea className="flex-1 min-h-0 pr-2">
-              {activeScope === "templates" ? (
-                <div className="space-y-3">
-                  {templateActionError ? (
-                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                      {templateActionError}
-                    </div>
                   ) : null}
-                  {visibleTemplateWidgets.length === 0 ? (
-                    <div className="rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-                      No templates match your search.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
-                      <div className="min-w-[760px]">
-                        <div className="grid grid-cols-[2.5rem_1.4fr_1fr_0.7fr_16rem] items-center gap-3 border-b bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          <label className="flex items-center justify-center">
-                            <input
-                              type="checkbox"
-                              aria-label="Select all visible templates"
-                              checked={allVisibleTemplatesSelected}
-                              onChange={(event) =>
-                                toggleAllVisibleTemplates(event.target.checked)
-                              }
-                            />
-                          </label>
-                          <span>Name</span>
-                          <span>Category</span>
-                          <span>Status</span>
-                          <span className="text-right">Actions</span>
-                        </div>
-                        {visibleTemplateWidgets.map((widget) => (
-                          <div
-                            key={widget.id}
-                            className="grid grid-cols-[2.5rem_1.4fr_1fr_0.7fr_16rem] items-center gap-3 border-b px-4 py-3 last:border-b-0"
-                          >
-                            <label className="flex items-center justify-center">
-                              <input
-                                type="checkbox"
-                                aria-label={`Select ${widget.name}`}
-                                checked={selectedTemplateIds.has(widget.id)}
-                                onChange={(event) =>
-                                  toggleTemplateSelection(
-                                    widget.id,
-                                    event.target.checked
-                                  )
-                                }
-                              />
-                            </label>
-                            <div className="min-w-0">
-                              <button
-                                type="button"
-                                className="truncate text-left text-sm font-semibold text-foreground hover:text-primary"
-                                onClick={() => handleEditTemplate(widget)}
-                              >
-                                {widget.name}
-                              </button>
-                              {widget.description ? (
-                                <p className="truncate text-xs text-muted-foreground">
-                                  {widget.description}
-                                </p>
-                              ) : null}
-                            </div>
-                            <span className="truncate text-sm text-muted-foreground">
-                              {widget.categoryLabel}
-                            </span>
-                            <Badge
-                              variant={
-                                widget.status === "published" ? "default" : "outline"
-                              }
-                            >
-                              {widget.status ?? "draft"}
-                            </Badge>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="xs"
-                                onClick={() => handleEditTemplate(widget)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="xs"
-                                className="gap-1"
-                                onClick={() => void handleDuplicateTemplate(widget)}
-                                disabled={isTemplateActionWorking}
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                                Duplicate
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="xs"
-                                className="gap-1"
-                                onClick={() =>
-                                  setTemplateDeleteTarget({
-                                    ids: [widget.id],
-                                    label: widget.name,
-                                  })
-                                }
-                                disabled={isTemplateActionWorking}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearSelection}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setCategoriesOpen(true)}
+              >
+                Categories
+              </Button>
+              {section === "templates" ? (
+                <Button size="sm" className="gap-2" asChild>
+                  <AdminLink href={templateCreateHref}>
+                    <Plus className="h-4 w-4" />
+                    New Template
+                  </AdminLink>
+                </Button>
+              ) : null}
+            </>
+          }
+        />
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <span className="sr-only">
+            Available widget library sections:{" "}
+            {sectionOptions.map((option) => option.label).join(", ")}
+          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[16rem] flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search widgets and templates..."
+                className="pl-9"
+                aria-label="Search widgets and templates"
+              />
+            </div>
+            <Select value={section} onValueChange={handleSectionChange}>
+              <SelectTrigger className="h-9 w-[220px] text-sm">
+                <SelectValue placeholder="All Items" />
+              </SelectTrigger>
+              <SelectContent>
+                {sectionOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label} ({sectionCounts[option.value]})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary">
+              {pagination.totalItems} {resourceLabel}
+            </Badge>
+            <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
+              <Button
+                type="button"
+                variant={view === "table" ? "secondary" : "ghost"}
+                size="icon-sm"
+                onClick={() => setView("table")}
+                aria-label="Show widgets as table"
+                aria-pressed={view === "table"}
+                title="Table view"
+              >
+                <Table2 className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={view === "grid" ? "secondary" : "ghost"}
+                size="icon-sm"
+                onClick={() => setView("grid")}
+                aria-label="Show widgets as grid"
+                aria-pressed={view === "grid"}
+                title="Grid view"
+              >
+                <Grid2X2 className="h-4 w-4" />
+              </Button>
+            </div>
+            {(section === "widgets-all" ||
+              widgetCategoryOrder.includes(section as WidgetCategoryId)) ? (
+              <WidgetCatalogFilters
+                tab={widgetTab}
+                onTabChange={handleWidgetTabChange}
+                recommendedCount={widgetTabCounts.recommended}
+                allCount={widgetTabCounts.all}
+                advancedMode={advancedMode}
+                onAdvancedModeChange={handleAdvancedModeChange}
+                moduleFilter={widgetModule}
+                onModuleFilterChange={setWidgetModule}
+                moduleOptions={widgetModuleOptions}
+                complexityFilter={widgetComplexity}
+                onComplexityFilterChange={setWidgetComplexity}
+              />
+            ) : null}
+            {section === "templates" ? (
+              <Select
+                value={templateCategory}
+                onValueChange={setTemplateCategory}
+              >
+                <SelectTrigger className="h-9 w-[180px] text-xs">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateCategoryOptions.map((category) => (
+                    <SelectItem key={category.id} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span>Section: {activeSectionLabel}</span>
+            <span className="text-muted-foreground/60">/</span>
+            <span>Default view: table</span>
+            {favoritesError ? (
+              <>
+                <span className="text-muted-foreground/60">/</span>
+                <span className="text-destructive">{favoritesError}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+        {previewNotice ? (
+          <div className="rounded-lg border border-muted bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            {previewNotice}
+          </div>
+        ) : null}
+        {templateActionError ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {templateActionError}
+          </div>
+        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          {view === "table" ? (
+            <WidgetLibraryTable
+              rows={pagination.visibleRows}
+              selectedIds={selectedIdList}
+              isAllSelected={isAllVisibleSelected}
+              isIndeterminate={isSelectionIndeterminate}
+              emptyMessage={
+                section === "templates"
+                  ? "No templates match your search."
+                  : "No items match your search."
+              }
+              onToggleAll={toggleAllVisible}
+              onToggleRow={(id) => toggleSelection(id)}
+              onOpenPrimary={(widget) => handleOpenPrimary(widget as WidgetWithPreview)}
+              renderActions={(widget) => renderWidgetActions(widget as WidgetWithPreview)}
+            />
+          ) : (
+            <div
+              className={cn(
+                "grid gap-6",
+                "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              )}
+            >
+              {pagination.visibleRows.length === 0 ? (
+                <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+                  {section === "templates"
+                    ? "No templates match your search."
+                    : "No items match your search."}
                 </div>
               ) : (
-                <div
-                  className={cn(
-                    "grid gap-6",
-                    view === "grid"
-                      ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                      : "grid-cols-1"
-                  )}
-                >
-                  {filteredWidgets.length === 0 ? (
-                    <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-                      No items match your search.
-                    </div>
-                  ) : (
-                    filteredWidgets.map((widget) => (
-                      <WidgetCard
-                        key={widget.id}
-                        name={widget.name}
-                        categoryLabel={widget.categoryLabel}
-                        preview={renderPreview(widget.preview)}
-                        badge={widget.badge}
-                        metaBadges={
-                          widget.source === "core"
-                            ? [widget.complexity, formatModuleBadgeLabel(widget.module)]
-                            : undefined
-                        }
-                        isFavorite={widget.isFavorite}
-                        onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
-                        onAction={
-                          widget.source === "template"
-                            ? () => handleEditTemplate(widget)
-                            : () => handleSelectWidget(widget)
-                        }
-                        actionLabel={widget.source === "template" ? "Edit" : "Configure"}
-                        onSelect={() => handleSelectWidget(widget)}
-                      />
-                    ))
-                  )}
-                </div>
+                pagination.visibleRows.map((widget) => (
+                  <WidgetCard
+                    key={widget.id}
+                    name={widget.name}
+                    categoryLabel={widget.categoryLabel}
+                    preview={renderPreview(widget.preview)}
+                    badge={widget.badge}
+                    metaBadges={
+                      widget.source === "core"
+                        ? [widget.complexity, formatModuleBadgeLabel(widget.module)]
+                        : undefined
+                    }
+                    isFavorite={widget.isFavorite}
+                    selected={selectedIds.has(widget.id)}
+                    onSelectionChange={(checked) =>
+                      toggleSelection(widget.id, checked)
+                    }
+                    actions={renderWidgetActions(widget)}
+                    onSelect={() => handleOpenPrimary(widget)}
+                  />
+                ))
               )}
-            </ScrollArea>
-          </section>
+            </div>
+          )}
+          <ListPaginationFooter
+            resourceLabel={resourceLabel}
+            pagination={pagination}
+          />
         </div>
       </div>
       <WidgetDetailsDrawer

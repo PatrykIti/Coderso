@@ -106,6 +106,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Widget library
   - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
   - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`, `listPagesCached`, `getCachedPages`, `getPageCached`
+  - UI state: section dropdown, table/grid mode, pagination, and selected row ids
+    are shell-owned; only catalog/category/page data comes from cache.
+  - Cache bus: `widgetCatalog:list`, `widgetTemplateCategories:list`, and
+    `pages:list` refresh the section-aware model in the background.
 
 
 ## Media

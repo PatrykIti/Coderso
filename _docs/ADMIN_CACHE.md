@@ -226,6 +226,23 @@ Clients update caches and broadcast events on:
   treats the server response as source of truth.
 - Failed name-conflict or delete mutations must not patch browser cache state.
 
+### Widget library cache note
+
+- Widget library list state is owned by
+  `core/admin/ui/widgets/WidgetLibraryPage.tsx` and is backed by
+  `widgetCatalog:list`, `widgetTemplateCategories:list`, and `pages:list`.
+- The page hydrates catalog, template categories, and pages from
+  `getCachedWidgetCatalog()`, `getCachedWidgetTemplateCategories()`, and
+  `getCachedPages()` on first render, then revalidates in the background when a
+  cache entry exists.
+- Cache-bus events for `widgetCatalog:list`,
+  `widgetTemplateCategories:list`, and `pages:list` refresh the list model in
+  the background. The section dropdown, table/grid mode, and selected row ids
+  remain shell-owned UI state and are not persisted into browser cache.
+- Template duplicate/delete/category mutations continue to refresh the catalog
+  through the existing template/category clients; TASK-215 adds no new cache key
+  or public write path.
+
 ### Media cache note
 
 - Media list cache (`media:list`) is owned by

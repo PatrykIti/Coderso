@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Templates + Bulk Actions
 **Estimated Effort:** Medium
 **Dependencies:** TASK-215-04, TASK-208, TASK-213-04-03
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

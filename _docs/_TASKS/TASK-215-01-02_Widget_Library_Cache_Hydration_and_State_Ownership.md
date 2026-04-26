@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Admin Cache + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-215-01, TASK-206
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

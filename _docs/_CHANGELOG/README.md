@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 747 | 2026-04-26 | TASK-215 widgets Pages-style library parity | CMS Widgets/Admin UI |
 | 746 | 2026-04-26 | TASK-214 listings tabbed list parity | CMS Listings/Admin UI |
 | 745 | 2026-04-26 | TASK-213 widget library QA followups | CMS Widgets/Admin UI |
 | 744 | 2026-04-26 | TASK-212 posts editor media followups | CMS Posts/Admin UI |

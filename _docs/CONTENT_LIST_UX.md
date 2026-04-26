@@ -126,6 +126,24 @@ Gdy zaznaczysz wpisy na liscie:
 - Pages list uses the shared admin pagination footer after filtering and keeps
   header selection scoped to the current visible page.
 
+## Widgets library parity
+
+- Widgets library follows the Pages-style first-screen pattern while preserving
+  widget-library-specific resources and dialogs.
+- The primary section selector is a filter-bar dropdown, not a left rail. It
+  covers `All Items`, `Favorites`, `Templates`, `All Widgets`, and the widget
+  category sections.
+- `All Items` opens in table view by default. Grid view is optional and uses the
+  same filtered, paginated visible rows as the table.
+- Table rows and grid cards both expose checkbox selection and a right-aligned
+  three-dot action menu.
+- Selection is clipped to the current visible page before favorite or template
+  bulk actions run.
+- Core widget actions are Preview placeholder, Configure, Insert, and favorite
+  toggle. Template Duplicate/Delete remains scoped to the `Templates` section.
+- Template row and bulk delete use `ConfirmActionDialog` and partial-failure
+  feedback instead of running destructive mutations directly from selection.
+
 ## Content Types parity
 
 - Content Types use the same shared pagination footer as Pages, Posts, and

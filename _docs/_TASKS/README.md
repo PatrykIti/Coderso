@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 92 tasks
+- **To Do:** 72 tasks
 - **In Progress:** 11 tasks
-- **Done:** 1245 tasks
+- **Done:** 1265 tasks
 
 ---
 
@@ -56,26 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-216-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final validation matrix, Commerce catalog/cache/docs, source report split, changelog, task statuses, and board sync |
 | TASK-216-05-01 | Commerce Parity Test Matrix | Medium | Small | Technical leaf: map Commerce list behavior to UI/admin/cache/prefetch/route/runtime suites |
 | TASK-216-05-02 | Commerce Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: update Commerce docs, SUMMARY-COMMERCE, changelog, TASK-216 statuses, and board statistics |
-| TASK-215 | Coderso Widgets Pages-Style Library Parity | High | Very Large | Replace the Widgets left rail with a filter-bar section dropdown, default table view, grid mode with selectable cards, and Pages-style three-dot actions for all items, favorites, widgets, categories, and templates |
-| TASK-215-01 | Widget Library Shell, Section Selector, and Cache Hydration | High | Large | Pages-style shell, section dropdown replacing the rail, canonical `/coderso/widgets` routing, and shared cache hydration/prefetch ownership |
-| TASK-215-01-01 | Pages-Style Shell and Section Dropdown | High | Medium | Technical leaf: move All Items/Favorites/Templates/All Widgets/category choices into one filter-bar dropdown |
-| TASK-215-01-02 | Widget Library Cache Hydration and State Ownership | High | Medium | Technical leaf: cache-present background refresh, cache-missing foreground load, cache-bus refresh, and shell-owned section/view/action state |
-| TASK-215-02 | Widget Library Filter Bar, Table, and Grid Model | High | Large | Shared section-aware model for filters, counts, default table view, grid transformation, pagination, and visible-row selection |
-| TASK-215-02-01 | Section-Aware Filter Model and Counts | High | Medium | Technical leaf: one deterministic model for section dropdown, search, widget filters, template category filter, and counts |
-| TASK-215-02-02 | Table View Selection and Pagination | High | Medium | Technical leaf: Pages-style checkbox table, three-dot row action menus, shared pagination, and visible-id selection trimming |
-| TASK-215-02-03 | Grid View Selection and Drawer Parity | High | Medium | Technical leaf: grid cards use the same visible rows, keep filter bar visible, expose checkboxes, and preserve drawer click behavior |
-| TASK-215-03 | All Items and Core Widget Actions | High | Large | Core widget actions for All Items/All Widgets/category sections: Preview placeholder, Edit/Configure drawer, Insert dialog, favorites, and visible-scope bulk favorite actions |
-| TASK-215-03-01 | All Items Row Actions and Preview Placeholder | High | Medium | Technical leaf: source-aware action menus with non-mutating Preview placeholder and core/template-safe action split |
-| TASK-215-03-02 | Core Widget Drawer and Insert Dialog Flow | High | Medium | Technical leaf: Edit opens existing details drawer and Insert opens existing placement dialog for page/template targets |
-| TASK-215-03-03 | Catalog Favorite Bulk Actions | High | Medium | Technical leaf: visible-scope add/remove favorites for core/template catalog rows while preserving `widgets.favorites` and max-50 behavior |
-| TASK-215-04 | Favorites and Template Resource Actions | High | Large | Favorites remove/manage flows plus Templates edit/duplicate/delete/category actions, confirmed bulk delete, shared toasts, and cache refresh |
-| TASK-215-04-01 | Favorites Section Actions and User Settings | High | Medium | Technical leaf: Favorites table/grid section handles favorite core widgets/templates and bulk remove from favorites |
-| TASK-215-04-02 | Template Table/Grid Actions and Category Management | High | Medium | Technical leaf: Templates section keeps edit, duplicate, delete, category filter, category drawer, and three-dot actions discoverable after rail removal |
-| TASK-215-04-03 | Template Bulk Actions, Confirmations, and Toasts | High | Medium | Technical leaf: confirmed visible-scope template bulk delete with partial-failure feedback and cache invalidation |
-| TASK-215-04-04 | Widget Action Error Mapping and Toast Adapter | High | Medium | Technical leaf: one bounded Widget Library action-feedback owner and route-error coverage when UI-visible template errors change |
-| TASK-215-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final validation matrix, Widgets/list/cache docs, changelog, task statuses, and board sync |
-| TASK-215-05-01 | Widgets Pages-Parity Test Matrix | Medium | Small | Technical leaf: map shell, section dropdown, table/grid, selection, actions, cache, client, and route coverage to exact suites |
-| TASK-215-05-02 | Widgets Docs, Changelog, and Board Closure | Medium | Small | Technical leaf: update WIDGETS/CONTENT_LIST_UX/Admin Cache docs, changelog, TASK-215 statuses, and board statistics |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -143,6 +123,26 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-215 | Coderso Widgets Pages-Style Library Parity | High | Very Large | Done: `/admin/coderso/widgets` now uses a Pages-style table-first shell with section dropdown, shared pagination, selectable grid cards, source-aware actions, favorites/template bulk flows, docs, changelog 747, and validation |
+| TASK-215-01 | Widget Library Shell, Section Selector, and Cache Hydration | High | Large | Done: left rail is replaced by one filter-bar section dropdown while existing catalog/category/page cache hydration and prefetch contracts are preserved |
+| TASK-215-01-01 | Pages-Style Shell and Section Dropdown | High | Medium | Done: All Items/Favorites/Templates/All Widgets/category choices moved into the section dropdown and All Items opens by default |
+| TASK-215-01-02 | Widget Library Cache Hydration and State Ownership | High | Medium | Done: shell owns section/view/action state and continues cache-present background refresh plus cache-bus refresh for widget data |
+| TASK-215-02 | Widget Library Filter Bar, Table, and Grid Model | High | Large | Done: one section-aware model drives filters, counts, table/grid rows, pagination, and visible-row selection |
+| TASK-215-02-01 | Section-Aware Filter Model and Counts | High | Medium | Done: `widgetLibraryUtils` owns section normalization, section filtering/counts, and selection trimming |
+| TASK-215-02-02 | Table View Selection and Pagination | High | Medium | Done: default table view uses checkbox selection, source/category/details columns, action menus, and `ListPaginationFooter` |
+| TASK-215-02-03 | Grid View Selection and Drawer Parity | High | Medium | Done: grid renders the same paginated rows with selectable cards, action menus, and core-widget drawer click behavior |
+| TASK-215-03 | All Items and Core Widget Actions | High | Large | Done: core widgets expose Preview placeholder, Configure, Insert, favorite toggle, and bulk favorite operations through shared menus |
+| TASK-215-03-01 | All Items Row Actions and Preview Placeholder | High | Medium | Done: row/card action menus are source-aware and Preview is a bounded non-mutating placeholder |
+| TASK-215-03-02 | Core Widget Drawer and Insert Dialog Flow | High | Medium | Done: Configure opens `WidgetDetailsDrawer` and Insert reuses `WidgetInsertDialog` for page/template targets |
+| TASK-215-03-03 | Catalog Favorite Bulk Actions | High | Medium | Done: visible selected catalog rows can be added to or removed from `widgets.favorites` while preserving max-50 feedback |
+| TASK-215-04 | Favorites and Template Resource Actions | High | Large | Done: Favorites and Templates have separate action surfaces with visible-scope favorite/remove flows and template management |
+| TASK-215-04-01 | Favorites Section Actions and User Settings | High | Medium | Done: Favorites supports source-aware row/card actions plus single and bulk removal from favorites |
+| TASK-215-04-02 | Template Table/Grid Actions and Category Management | High | Medium | Done: Templates keeps edit, duplicate, delete, category filter, category drawer, and three-dot actions after rail removal |
+| TASK-215-04-03 | Template Bulk Actions, Confirmations, and Toasts | High | Medium | Done: template bulk delete uses `ConfirmActionDialog`, `Promise.allSettled`, partial-failure feedback, and cache refresh |
+| TASK-215-04-04 | Widget Action Error Mapping and Toast Adapter | High | Medium | Done: Widget library action feedback stays bounded through existing admin error mapping and no route contract changes were needed |
+| TASK-215-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: validation matrix, Widgets/list/cache docs, task statuses, board stats, and changelog are synchronized |
+| TASK-215-05-01 | Widgets Pages-Parity Test Matrix | Medium | Small | Done: shell, section model, table/grid, selection, actions, pagination, and cache/client checks are mapped to Vitest/lint/typecheck |
+| TASK-215-05-02 | Widgets Docs, Changelog, and Board Closure | Medium | Small | Done: WIDGETS, CONTENT_LIST_UX, ADMIN_CACHE, ADMIN_CACHE_MAP, changelog 747, and TASK-215 board closure are complete |
 | TASK-214 | Coderso Listings Tabbed List Parity With Pages | High | Very Large | Done: `/admin/coderso/listings` now follows Pages list behavior while preserving tab-scoped Queries/Templates resources, active-tab New, visible selection, confirmations, toasts, cache hydration, docs, changelog 746, and validation |
 | TASK-214-01 | Listings Route, Tab Shell, and Cache Hydration | High | Large | Done: shell owns active tab state, header New routing, query/template cache hydration, and shared prefetch compatibility |
 | TASK-214-01-01 | Query and Template Cache Hydration | High | Medium | Done: query/template hooks hydrate cache immediately and refresh in the background when cache exists |

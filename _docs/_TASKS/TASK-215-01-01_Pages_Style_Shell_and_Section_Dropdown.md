@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-215-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

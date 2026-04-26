@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Admin/UI + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-215, TASK-205, TASK-206
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -21,8 +21,8 @@ yet decide every row action; later subtasks wire the table/grid actions.
 
 ## Sub-Tasks
 
-- [ ] TASK-215-01-01: Pages-Style Shell and Section Dropdown
-- [ ] TASK-215-01-02: Widget Library Cache Hydration and State Ownership
+- [x] TASK-215-01-01: Pages-Style Shell and Section Dropdown
+- [x] TASK-215-01-02: Widget Library Cache Hydration and State Ownership
 - [ ] Keep `/admin/coderso/widgets` as the canonical route through shared
   admin path helpers.
 - [ ] Preserve `WidgetTemplateCategoryDrawer`, `WidgetDetailsDrawer`,

@@ -4,9 +4,13 @@ import {
   buildWidgetModuleOptions,
   countWidgetLibraryWidgets,
   countWidgetLibraryWidgetsByCategory,
+  countWidgetLibrarySections,
   filterWidgetLibraryItems,
+  filterWidgetLibraryItemsBySection,
   matchesTemplateCategory,
   normalizeCategoryValue,
+  normalizeWidgetLibrarySection,
+  trimWidgetLibrarySelection,
 } from "../../../core/admin/ui/widgets/widgetLibraryUtils";
 
 test("normalizeCategoryValue trims and lowercases", () => {
@@ -22,6 +26,12 @@ test("matchesTemplateCategory ignores case and whitespace", () => {
 
 test("matchesTemplateCategory allows all", () => {
   expect(matchesTemplateCategory("Layout", "all")).toBe(true);
+});
+
+test("normalizeWidgetLibrarySection rejects unknown section ids", () => {
+  expect(normalizeWidgetLibrarySection("media")).toBe("media");
+  expect(normalizeWidgetLibrarySection("unknown")).toBe("all-items");
+  expect(normalizeWidgetLibrarySection(null)).toBe("all-items");
 });
 
 test("filterWidgetLibraryItems returns only composite items in recommended widgets tab", () => {
@@ -102,6 +112,62 @@ test("filterWidgetLibraryItems applies module and complexity filters in widgets 
   expect(items[0]?.name).toBe("Spacer");
 });
 
+test("filterWidgetLibraryItemsBySection maps dropdown sections to scope filters", () => {
+  const widgets = [
+    {
+      name: "Hero",
+      categoryLabel: "Layout",
+      category: "layout",
+      complexity: "composite" as const,
+      module: "content",
+      source: "core" as const,
+      isFavorite: true,
+    },
+    {
+      name: "Gallery Template",
+      categoryLabel: "Media",
+      category: "media",
+      complexity: "composite" as const,
+      module: "content",
+      source: "template" as const,
+      isFavorite: false,
+    },
+  ];
+
+  expect(
+    filterWidgetLibraryItemsBySection(widgets, {
+      query: "",
+      section: "favorites",
+      templateCategory: "all",
+      widgetTab: "all",
+      widgetModule: "all",
+      widgetComplexity: "all",
+    }).map((item) => item.name)
+  ).toEqual(["Hero"]);
+
+  expect(
+    filterWidgetLibraryItemsBySection(widgets, {
+      query: "",
+      section: "templates",
+      templateCategory: "media",
+      widgetTab: "all",
+      widgetModule: "all",
+      widgetComplexity: "all",
+    }).map((item) => item.name)
+  ).toEqual(["Gallery Template"]);
+
+  expect(
+    filterWidgetLibraryItemsBySection(widgets, {
+      query: "",
+      section: "layout",
+      templateCategory: "all",
+      widgetTab: "all",
+      widgetModule: "all",
+      widgetComplexity: "all",
+    }).map((item) => item.name)
+  ).toEqual(["Hero"]);
+});
+
 test("countWidgetLibraryWidgets and category counts respect the same widget filters as the grid", () => {
   const widgets = [
     {
@@ -153,6 +219,50 @@ test("countWidgetLibraryWidgets and category counts respect the same widget filt
     navigation: 0,
     media: 0,
   });
+});
+
+test("countWidgetLibrarySections and trimWidgetLibrarySelection stay visible-scope safe", () => {
+  const widgets = [
+    {
+      name: "Hero",
+      categoryLabel: "Layout",
+      category: "layout",
+      complexity: "composite" as const,
+      module: "content",
+      source: "core" as const,
+      isFavorite: true,
+    },
+    {
+      name: "Template",
+      categoryLabel: "Layout",
+      category: "layout",
+      complexity: "composite" as const,
+      module: "content",
+      source: "template" as const,
+      isFavorite: true,
+    },
+  ];
+
+  expect(
+    countWidgetLibrarySections(widgets, {
+      query: "",
+      templateCategory: "all",
+      widgetTab: "all",
+      widgetModule: "all",
+      widgetComplexity: "all",
+    })
+  ).toMatchObject({
+    "all-items": 2,
+    favorites: 2,
+    templates: 1,
+    "widgets-all": 1,
+    layout: 1,
+  });
+
+  expect(trimWidgetLibrarySelection(["a", "b", "c"], ["b", "c"])).toEqual([
+    "b",
+    "c",
+  ]);
 });
 
 test("buildWidgetModuleOptions sorts strict ready modules first", () => {

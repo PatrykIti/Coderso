@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 type WidgetCardProps = {
@@ -16,6 +17,9 @@ type WidgetCardProps = {
   onInsert?: () => void;
   onAction?: () => void;
   actionLabel?: string;
+  actions?: React.ReactNode;
+  selected?: boolean;
+  onSelectionChange?: (checked: boolean) => void;
   onSelect?: () => void;
   variant?: "default" | "compact";
   draggable?: boolean;
@@ -34,6 +38,9 @@ export function WidgetCard({
   onInsert,
   onAction,
   actionLabel,
+  actions,
+  selected = false,
+  onSelectionChange,
   onSelect,
   variant = "default",
   draggable,
@@ -83,7 +90,26 @@ export function WidgetCard({
       <div className="relative mx-4 mt-4 aspect-video overflow-hidden rounded-xl border border-border/70 bg-muted/30">
         {preview ? <div className="absolute inset-0">{preview}</div> : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        {onFavoriteToggle ? (
+        {onSelectionChange ? (
+          <div
+            className="absolute left-2 top-2 rounded-md bg-background/85 p-1 shadow-sm backdrop-blur"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              aria-label={`Select ${name}`}
+              checked={selected}
+              onCheckedChange={(checked) => onSelectionChange(checked === true)}
+            />
+          </div>
+        ) : null}
+        {actions ? (
+          <div
+            className="absolute right-2 top-2 rounded-md bg-background/85 shadow-sm backdrop-blur"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {actions}
+          </div>
+        ) : onFavoriteToggle ? (
           <Button
             type="button"
             variant="ghost"
@@ -122,16 +148,18 @@ export function WidgetCard({
         </div>
         <div className="flex items-start justify-between gap-4">
           <h3 className="text-sm font-semibold text-foreground">{name}</h3>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={(event) => {
-              event.stopPropagation();
-              resolvedAction?.();
-            }}
-          >
-            {resolvedLabel}
-          </Button>
+          {resolvedAction ? (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                resolvedAction();
+              }}
+            >
+              {resolvedLabel}
+            </Button>
+          ) : null}
         </div>
       </CardContent>
     </Card>
