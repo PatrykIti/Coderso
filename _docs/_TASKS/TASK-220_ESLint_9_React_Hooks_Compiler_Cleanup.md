@@ -286,8 +286,16 @@ Supporting files expected during implementation and closure:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run lint:repo:types`
-- Focused Vitest suites for touched admin/UI surfaces.
-- `bun run test:vitest` after broad shared-hook or shared-admin changes.
+- Focused Vitest suites for touched admin/UI surfaces. Each implementation leaf
+  must record the exact focused suite command it ran in `TASK-220-07-01`, mapped
+  to the changed source files before the leaf is considered complete.
+- `bun run test:vitest` after any shared-hook, shared-cache, editor, or
+  cross-resource admin change. If a focused suite fails for a pre-existing
+  reason, record the exact failing test and a narrower substitute only after the
+  failure is isolated.
+- `bun run test:bun` before final closure, because broad admin changes can
+  still regress route/client contracts indirectly even when the primary logic is
+  Vitest-owned.
 - `git diff --check`
 
 ## Documentation Updates Required
