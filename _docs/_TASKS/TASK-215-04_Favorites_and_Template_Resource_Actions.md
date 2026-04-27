@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Templates + Admin/UI + Actions
 **Estimated Effort:** Large
 **Dependencies:** TASK-215-02, TASK-215-03, TASK-208, TASK-213-04
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -20,10 +20,10 @@ destructive operations belong to the Templates section.
 
 ## Sub-Tasks
 
-- [ ] TASK-215-04-01: Favorites Section Actions and User Settings
-- [ ] TASK-215-04-02: Template Table/Grid Actions and Category Management
-- [ ] TASK-215-04-03: Template Bulk Actions, Confirmations, and Toasts
-- [ ] TASK-215-04-04: Widget Action Error Mapping and Toast Adapter
+- [x] TASK-215-04-01: Favorites Section Actions and User Settings
+- [x] TASK-215-04-02: Template Table/Grid Actions and Category Management
+- [x] TASK-215-04-03: Template Bulk Actions, Confirmations, and Toasts
+- [x] TASK-215-04-04: Widget Action Error Mapping and Toast Adapter
 - [ ] Keep template edits on the existing canonical template editor route.
 - [ ] Keep category management in `WidgetTemplateCategoryDrawer`.
 

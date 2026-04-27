@@ -7,6 +7,7 @@ import { WidgetLibraryPage } from "../../../core/admin/ui/widgets/WidgetLibraryP
 test("Widget library renders core widgets", () => {
   const html = renderAdminUi(<WidgetLibraryPage />);
   expect(html).toContain("Widget Library");
-  expect(html).toContain("Recommended");
+  expect(html).toContain("Default view: table");
+  expect(html).toContain("Select all visible widgets");
   expect(html).toContain("No items match your search.");
 });

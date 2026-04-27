@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Admin/UI + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-215-01, TASK-205
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -17,9 +17,9 @@ the same visible rows as selectable cards.
 
 ## Sub-Tasks
 
-- [ ] TASK-215-02-01: Section-Aware Filter Model and Counts
-- [ ] TASK-215-02-02: Table View Selection and Pagination
-- [ ] TASK-215-02-03: Grid View Selection and Drawer Parity
+- [x] TASK-215-02-01: Section-Aware Filter Model and Counts
+- [x] TASK-215-02-02: Table View Selection and Pagination
+- [x] TASK-215-02-03: Grid View Selection and Drawer Parity
 - [ ] Keep filters and counts in `widgetLibraryUtils.ts` or a clearly named
   extracted owner.
 - [ ] Treat table as the user-facing contract; if the legacy internal view key

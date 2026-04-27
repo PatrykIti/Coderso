@@ -144,6 +144,27 @@ Uwaga:
 - nowe widget types nadal sa code/plugin-authored i musza byc zarejestrowane w widget registry,
 - z poziomu admina user moze tworzyc `widget templates` przez flow `New Template`.
 
+## Widget Library Admin UX
+
+`/admin/coderso/widgets` follows the shared Pages-style list contract:
+- `All Items` opens by default in table view.
+- The old library rail is represented by one section dropdown in the filter bar:
+  `All Items`, `Favorites`, `Templates`, `All Widgets`, `Layout`, `Content`,
+  `Forms`, `Navigation`, and `Media`.
+- Table and grid use the same section-aware row model, shared pagination, and
+  visible-row selection trimming.
+- Grid cards remain selectable and core widget card clicks still open the
+  existing `WidgetDetailsDrawer`.
+- Row and card actions use one three-dot menu. Core widget rows expose Preview
+  placeholder, Configure, Insert, and favorite actions. Template rows use
+  template-safe Edit/favorite actions, while Duplicate/Delete are available only
+  in the `Templates` section.
+- Favorites remain stored per user under `widgets.favorites` and keep the
+  existing max-50 behavior. Bulk favorite add/remove operates only on currently
+  visible selected rows.
+- Template destructive actions continue through `ConfirmActionDialog`,
+  `deleteWidgetTemplate`, partial-failure feedback, and cache refresh.
+
 Minimalny screen widget pack dla admin UI:
 - `screen-record-header`
 - `screen-field-value`

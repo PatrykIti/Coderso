@@ -19,7 +19,42 @@ export const matchesTemplateCategory = (
   );
 };
 
-type LibraryScope = "all-items" | "favorites" | "templates" | "widgets";
+export type WidgetLibraryScope = "all-items" | "favorites" | "templates" | "widgets";
+
+export type WidgetLibrarySection =
+  | "all-items"
+  | "favorites"
+  | "templates"
+  | "widgets-all"
+  | WidgetCategoryId;
+
+export const WIDGET_LIBRARY_SECTION_IDS = [
+  "all-items",
+  "favorites",
+  "templates",
+  "widgets-all",
+  "layout",
+  "content",
+  "forms",
+  "navigation",
+  "media",
+] as const satisfies readonly WidgetLibrarySection[];
+
+const widgetCategorySections = new Set<WidgetLibrarySection>([
+  "layout",
+  "content",
+  "forms",
+  "navigation",
+  "media",
+]);
+
+export function normalizeWidgetLibrarySection(
+  value: string | null | undefined
+): WidgetLibrarySection {
+  return WIDGET_LIBRARY_SECTION_IDS.includes(value as WidgetLibrarySection)
+    ? (value as WidgetLibrarySection)
+    : "all-items";
+}
 
 export type WidgetFilterItem = Pick<
   WidgetItem,
@@ -34,12 +69,19 @@ export type WidgetFilterItem = Pick<
 
 export type WidgetFilterOptions = {
   query: string;
-  activeScope: LibraryScope;
+  activeScope: WidgetLibraryScope;
   templateCategory: string;
   widgetCategory: "all" | WidgetCategoryId;
   widgetTab: WidgetLibraryTab;
   widgetModule: string;
   widgetComplexity: "all" | WidgetComplexity;
+};
+
+export type WidgetSectionFilterOptions = Omit<
+  WidgetFilterOptions,
+  "activeScope" | "widgetCategory"
+> & {
+  section: WidgetLibrarySection;
 };
 
 export type WidgetModuleOption = {
@@ -56,6 +98,28 @@ export type WidgetScopeCountOptions = Pick<
 
 const toSource = (value: WidgetFilterItem["source"]): WidgetSource =>
   value === "template" ? "template" : "core";
+
+export function resolveWidgetLibrarySectionFilter(
+  section: WidgetLibrarySection
+): Pick<WidgetFilterOptions, "activeScope" | "widgetCategory"> {
+  if (section === "widgets-all") {
+    return { activeScope: "widgets", widgetCategory: "all" };
+  }
+  if (widgetCategorySections.has(section)) {
+    return {
+      activeScope: "widgets",
+      widgetCategory: section as WidgetCategoryId,
+    };
+  }
+  if (
+    section === "all-items" ||
+    section === "favorites" ||
+    section === "templates"
+  ) {
+    return { activeScope: section, widgetCategory: "all" };
+  }
+  return { activeScope: "all-items", widgetCategory: "all" };
+}
 
 export const filterWidgetLibraryItems = <T extends WidgetFilterItem>(
   widgets: T[],
@@ -119,6 +183,17 @@ export const filterWidgetLibraryItems = <T extends WidgetFilterItem>(
   });
 };
 
+export function filterWidgetLibraryItemsBySection<T extends WidgetFilterItem>(
+  widgets: T[],
+  options: WidgetSectionFilterOptions
+) {
+  const sectionFilter = resolveWidgetLibrarySectionFilter(options.section);
+  return filterWidgetLibraryItems(widgets, {
+    ...options,
+    ...sectionFilter,
+  });
+}
+
 export function countWidgetLibraryWidgets<T extends WidgetFilterItem>(
   widgets: T[],
   options: WidgetScopeCountOptions
@@ -158,6 +233,40 @@ export function countWidgetLibraryWidgetsByCategory<T extends WidgetFilterItem>(
     navigation: 0,
     media: 0,
   });
+}
+
+export function countWidgetLibrarySections<T extends WidgetFilterItem>(
+  widgets: T[],
+  options: Omit<WidgetSectionFilterOptions, "section">
+) {
+  return WIDGET_LIBRARY_SECTION_IDS.reduce<Record<WidgetLibrarySection, number>>(
+    (result, section) => {
+      result[section] = filterWidgetLibraryItemsBySection(widgets, {
+        ...options,
+        section,
+      }).length;
+      return result;
+    },
+    {
+      "all-items": 0,
+      favorites: 0,
+      templates: 0,
+      "widgets-all": 0,
+      layout: 0,
+      content: 0,
+      forms: 0,
+      navigation: 0,
+      media: 0,
+    }
+  );
+}
+
+export function trimWidgetLibrarySelection(
+  selectedIds: Iterable<string>,
+  visibleIds: Iterable<string>
+) {
+  const visible = new Set(visibleIds);
+  return Array.from(selectedIds).filter((id) => visible.has(id));
 }
 
 const toDisplayLabel = (value: string) =>

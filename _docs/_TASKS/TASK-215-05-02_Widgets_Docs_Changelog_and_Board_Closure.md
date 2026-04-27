@@ -5,7 +5,7 @@
 **Category:** Docs + Changelog + Task Board
 **Estimated Effort:** Small
 **Dependencies:** TASK-215-05, TASK-215-05-01
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 

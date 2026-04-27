@@ -5,7 +5,7 @@
 **Category:** Coderso Widgets + Admin/UI + Actions
 **Estimated Effort:** Large
 **Dependencies:** TASK-215-02, TASK-208, TASK-213
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -22,9 +22,9 @@ configuration drawer or core insert dialog.
 
 ## Sub-Tasks
 
-- [ ] TASK-215-03-01: All Items Row Actions and Preview Placeholder
-- [ ] TASK-215-03-02: Core Widget Drawer and Insert Dialog Flow
-- [ ] TASK-215-03-03: Catalog Favorite Bulk Actions
+- [x] TASK-215-03-01: All Items Row Actions and Preview Placeholder
+- [x] TASK-215-03-02: Core Widget Drawer and Insert Dialog Flow
+- [x] TASK-215-03-03: Catalog Favorite Bulk Actions
 - [ ] Keep Insert as a one-widget operation through `WidgetInsertDialog`.
 - [ ] Do not add a bulk insert action.
 

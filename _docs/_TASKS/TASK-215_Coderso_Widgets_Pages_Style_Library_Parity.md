@@ -8,7 +8,7 @@
 **Reference Tasks:** TASK-214 is the completed Pages-style list parity
 reference for tab/resource-scoped action wording, visible selection, cache
 hydration, and shared toasts.
-**Status:** To Do
+**Status:** Done (2026-04-26)
 
 ---
 
@@ -169,28 +169,28 @@ drawer that exists today.
 
 ## Sub-Tasks
 
-- [ ] TASK-215-01: Widget Library Shell, Section Selector, and Cache Hydration
-- [ ] TASK-215-02: Widget Library Filter Bar, Table, and Grid Model
-- [ ] TASK-215-03: All Items and Core Widget Actions
-- [ ] TASK-215-04: Favorites and Template Resource Actions
-- [ ] TASK-215-05: QA, Docs, Changelog, and Closure
+- [x] TASK-215-01: Widget Library Shell, Section Selector, and Cache Hydration
+- [x] TASK-215-02: Widget Library Filter Bar, Table, and Grid Model
+- [x] TASK-215-03: All Items and Core Widget Actions
+- [x] TASK-215-04: Favorites and Template Resource Actions
+- [x] TASK-215-05: QA, Docs, Changelog, and Closure
 
 ## Leaf Breakdown
 
-- [ ] TASK-215-01-01: Pages-Style Shell and Section Dropdown
-- [ ] TASK-215-01-02: Widget Library Cache Hydration and State Ownership
-- [ ] TASK-215-02-01: Section-Aware Filter Model and Counts
-- [ ] TASK-215-02-02: Table View Selection and Pagination
-- [ ] TASK-215-02-03: Grid View Selection and Drawer Parity
-- [ ] TASK-215-03-01: All Items Row Actions and Preview Placeholder
-- [ ] TASK-215-03-02: Core Widget Drawer and Insert Dialog Flow
-- [ ] TASK-215-03-03: Catalog Favorite Bulk Actions
-- [ ] TASK-215-04-01: Favorites Section Actions and User Settings
-- [ ] TASK-215-04-02: Template Table/Grid Actions and Category Management
-- [ ] TASK-215-04-03: Template Bulk Actions, Confirmations, and Toasts
-- [ ] TASK-215-04-04: Widget Action Error Mapping and Toast Adapter
-- [ ] TASK-215-05-01: Widgets Pages-Parity Test Matrix
-- [ ] TASK-215-05-02: Widgets Docs, Changelog, and Board Closure
+- [x] TASK-215-01-01: Pages-Style Shell and Section Dropdown
+- [x] TASK-215-01-02: Widget Library Cache Hydration and State Ownership
+- [x] TASK-215-02-01: Section-Aware Filter Model and Counts
+- [x] TASK-215-02-02: Table View Selection and Pagination
+- [x] TASK-215-02-03: Grid View Selection and Drawer Parity
+- [x] TASK-215-03-01: All Items Row Actions and Preview Placeholder
+- [x] TASK-215-03-02: Core Widget Drawer and Insert Dialog Flow
+- [x] TASK-215-03-03: Catalog Favorite Bulk Actions
+- [x] TASK-215-04-01: Favorites Section Actions and User Settings
+- [x] TASK-215-04-02: Template Table/Grid Actions and Category Management
+- [x] TASK-215-04-03: Template Bulk Actions, Confirmations, and Toasts
+- [x] TASK-215-04-04: Widget Action Error Mapping and Toast Adapter
+- [x] TASK-215-05-01: Widgets Pages-Parity Test Matrix
+- [x] TASK-215-05-02: Widgets Docs, Changelog, and Board Closure
 
 ## Non-Goals
 
