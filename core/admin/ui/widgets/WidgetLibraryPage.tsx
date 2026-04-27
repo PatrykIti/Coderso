@@ -284,7 +284,6 @@ export function WidgetLibraryPage() {
   } | null>(null);
   const [templateActionError, setTemplateActionError] = useState<string | null>(null);
   const [isTemplateActionWorking, setIsTemplateActionWorking] = useState(false);
-  const [previewNotice, setPreviewNotice] = useState<string | null>(null);
   const adminBasePath = useAdminBasePath();
   const { navigate } = useAdminRouter();
   const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
@@ -663,7 +662,6 @@ export function WidgetLibraryPage() {
 
   const handleSectionChange = (value: string) => {
     setSection(normalizeWidgetLibrarySection(value));
-    setPreviewNotice(null);
     setSelectedIds(new Set());
   };
 
@@ -694,7 +692,6 @@ export function WidgetLibraryPage() {
 
   const handlePreview = (widget: WidgetWithPreview) => {
     const message = `${widget.name} preview is not available yet.`;
-    setPreviewNotice(message);
     toast.info(message);
   };
 
@@ -1232,11 +1229,6 @@ export function WidgetLibraryPage() {
             ) : null}
           </div>
         </div>
-        {previewNotice ? (
-          <div className="rounded-lg border border-muted bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            {previewNotice}
-          </div>
-        ) : null}
         {templateActionError ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {templateActionError}
