@@ -21,6 +21,9 @@ test("WidgetLibraryPage renders a Pages-style table shell by default", () => {
   expect(html).toContain("Actions");
   expect(html).toContain("Showing 0 of 0 items");
   expect(html).toContain("No items match your search.");
+  const mainClass = html.match(/<main class="([^"]+)"/)?.[1] ?? "";
+  expect(mainClass).toContain("overflow-y-auto");
+  expect(mainClass).not.toContain("overflow-hidden");
   expect(html).not.toContain("Recommended");
   expect(html).not.toContain("Advanced mode");
   expect(html).not.toContain("Create Widget");
