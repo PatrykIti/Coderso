@@ -1038,7 +1038,7 @@ export function WidgetLibraryPage() {
         </div>
       }
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Widget Library"
           description="Manage and reuse your custom interface components across all pages."
