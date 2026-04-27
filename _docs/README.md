@@ -25,6 +25,7 @@
 - `ADMIN_CACHE.md` - admin cache layer policy and behavior
 - `ADMIN_CACHE_MAP.md` - admin cache route map
 - `RBAC_SPEC.md` - roles and permissions
+- `RELEASE_PROCESS.md` - semantic-release, PR release notes, and Docker image publishing
 - `THEMES_SPEC.md` - themes and theme profiles
 - `SEARCH_SPEC.md` - search and indexing
 - `AUDIT_SPEC.md` - audit logs

@@ -1,6 +1,7 @@
 # Core runtime image (admin UI + API)
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
+ARG APP_VERSION=1.0.0
 
 FROM oven/bun:1.3.13 AS builder
 WORKDIR /app
@@ -26,7 +27,12 @@ RUN bun x vite build --config vite.site.config.ts \
 FROM oven/bun:1.3.6 AS runner
 WORKDIR /app
 
+ARG APP_VERSION=1.0.0
 ENV NODE_ENV=production
+ENV CORE_VERSION=${APP_VERSION}
+
+LABEL org.opencontainers.image.title="nextless-core"
+LABEL org.opencontainers.image.version="${APP_VERSION}"
 
 COPY --from=builder --chown=bun:bun /app /app
 

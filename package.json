@@ -1,5 +1,6 @@
 {
   "name": "nextless",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "core",
@@ -60,10 +61,14 @@
     "db:migrate": "set -a; [ ! -f .env ] || . ./.env; set +a; bunx drizzle-kit migrate --config core/db/drizzle.config.ts",
     "gates:coderso": "bun scripts/coderso-release-gates.ts --report .tmp/coderso-release-gates.json",
     "gates:coderso:perf": "bun scripts/coderso-release-gates.ts --gate performance",
-    "gates:coderso:security": "bun scripts/coderso-release-gates.ts --gate security"
+    "gates:coderso:security": "bun scripts/coderso-release-gates.ts --gate security",
+    "release:semantic": "semantic-release"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
@@ -77,6 +82,7 @@
     "globals": "^17.5.0",
     "happy-dom": "^20.9.0",
     "minimatch": "^3.1.5",
+    "semantic-release": "^25.0.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"
   },

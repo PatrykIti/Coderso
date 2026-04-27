@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1294 tasks
+- **Done:** 1295 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-223 | Semantic Release and Docker Image Workflow | High | Medium | Done: semantic-release now parses categorized PR release notes into root CHANGELOG.md, syncs generated versions, and builds/pushes nextless-core Docker images with the release tag |
 | TASK-222 | Public Homepage Runtime Settings Route | High | Small | Done: public `/` now renders the published page selected by `site.homepageId`, with DB-backed Bun runtime regression coverage |
 | TASK-221 | Entries Metadata Panel Scroll Containment | High | Small | Done: right Entries metadata panel now has one bounded scroll container, no nested desktop/sheet scroll wrappers, and Vitest regression coverage |
 | TASK-219 | Dependency CVE Remediation | High | Medium | Done: dependency CVEs remediated without scanner allowlists; `happy-dom`, Vite, Vitest, ESLint 9, TypeScript ESLint, React Hooks plugin, Rollup/Picomatch/Flatted/Minimatch graph, docs, changelog 751, SBOM, and strict security scan closure completed |

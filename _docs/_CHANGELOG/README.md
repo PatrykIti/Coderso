@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 754 | 2026-04-27 | TASK-223 semantic release and Docker workflow | Release Engineering/CI |
 | 753 | 2026-04-27 | TASK-222 public homepage runtime settings route | Site Runtime/CMS Pages |
 | 752 | 2026-04-27 | TASK-221 entries metadata panel scroll containment | CMS Entries/Admin UI |
 | 751 | 2026-04-27 | TASK-219 dependency CVE remediation | Security/Dependencies |

@@ -19,6 +19,7 @@ Primary docs live in `_docs/`:
 - `_docs/ORM_SPEC.md` - ORM choice and configuration
 - `_docs/AUTH_SPEC.md` - authentication and sessions
 - `_docs/RBAC_SPEC.md` - roles and permissions
+- `_docs/RELEASE_PROCESS.md` - semantic-release, PR release notes, and Docker image publishing
 - `_docs/THEMES_SPEC.md` - themes and theme profiles
 - `_docs/SEARCH_SPEC.md` - search and indexing
 - `_docs/AUDIT_SPEC.md` - audit logs
