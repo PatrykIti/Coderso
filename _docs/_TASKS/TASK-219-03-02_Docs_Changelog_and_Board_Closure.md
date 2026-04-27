@@ -5,7 +5,7 @@
 **Category:** Docs + Security + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-219-03-01
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -15,11 +15,11 @@ Close the dependency CVE remediation family after strict scanner validation pass
 
 ## Sub-Tasks
 
-- [ ] Mark completed `TASK-219*` files as Done with date.
-- [ ] Move rows from To Do to Done in `_docs/_TASKS/README.md` and update statistics.
-- [ ] Add a numbered changelog entry for `TASK-219`.
-- [ ] Update `_docs/_CHANGELOG/README.md`.
-- [ ] Update `_docs/SECURITY_SPEC.md` if scanner policy, exceptions, or SBOM process changed.
+- [x] Mark completed `TASK-219*` files as Done with date.
+- [x] Move rows from To Do to Done in `_docs/_TASKS/README.md` and update statistics.
+- [x] Add a numbered changelog entry for `TASK-219`.
+- [x] Update `_docs/_CHANGELOG/README.md`.
+- [x] Update `_docs/SECURITY_SPEC.md` if scanner policy, exceptions, or SBOM process changed.
 
 ## Files to Change
 
@@ -87,3 +87,8 @@ Close the dependency CVE remediation family after strict scanner validation pass
 2. Board statistics match row counts.
 3. Changelog entry names the exact scanner/test evidence.
 4. No scanner findings are hidden by docs wording.
+
+## Progress Notes
+
+- 2026-04-27: Closed `TASK-219*` files, synchronized the task board, and added changelog entry `751`.
+- 2026-04-27: `_docs/SECURITY_SPEC.md` did not require changes because scanner policy and exception handling were unchanged.

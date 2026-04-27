@@ -236,12 +236,15 @@ vi.mock("@/services/apiClient", () => ({
 vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
     postDetail: (id: string) => `post:${id}`,
+    postRevisions: (id: string) => `post-revisions:${id}`,
   },
 }));
 
 vi.mock("@/services/postsClient", () => ({
   getCachedPostDetail: (id: string) =>
     hookState.cachedPost && hookState.cachedPost.id === id ? hookState.cachedPost : null,
+  getCachedPostRevisions: (id: string) =>
+    id === "post-1" && hookState.revisions.length > 0 ? hookState.revisions : null,
   getPostCached: vi.fn(async (id: string, { force }: { force?: boolean } = {}) => {
     hookState.getPostCalls.push({ id, force });
     if (hookState.nextGetError) {
@@ -342,6 +345,15 @@ vi.mock("@/services/postsClient", () => ({
     };
   }),
   listPostRevisions: vi.fn(async (id: string) => {
+    hookState.listRevisionCalls.push(id);
+    if (hookState.nextRevisionsError) {
+      const error = hookState.nextRevisionsError;
+      hookState.nextRevisionsError = null;
+      throw error;
+    }
+    return hookState.revisions;
+  }),
+  listPostRevisionsCached: vi.fn(async (id: string) => {
     hookState.listRevisionCalls.push(id);
     if (hookState.nextRevisionsError) {
       const error = hookState.nextRevisionsError;
@@ -926,7 +938,7 @@ test("usePostEditorState loads revisions and restores a revision", async () => {
     });
     await waitFor(() => view.current().restoringRevisionId === null);
 
-    expect(hookState.listRevisionCalls.length).toBeGreaterThanOrEqual(2);
+    expect(hookState.listRevisionCalls).toEqual(["post-1"]);
     expect(hookState.restoreCalls).toEqual([{ id: "post-1", revisionId: "rev-1" }]);
     expect(view.current().title).toBe("Restored title");
     expect(view.current().revisionsError).toBeNull();

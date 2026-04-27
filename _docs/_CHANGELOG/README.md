@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 751 | 2026-04-27 | TASK-219 dependency CVE remediation | Security/Dependencies |
 | 750 | 2026-04-27 | TASK-218 post editor polish | CMS Posts/Admin UI |
 | 749 | 2026-04-27 | TASK-217 security scan baseline hardening | Security/Tooling |
 | 748 | 2026-04-26 | TASK-216 commerce catalog list parity | CMS Commerce/Admin UI |

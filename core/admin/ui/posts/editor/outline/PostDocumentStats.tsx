@@ -1,7 +1,7 @@
-import type { PostDocumentStats } from "../../../../../services/posts/editor/postDocumentStats";
+import type { PostDocumentStats as PostDocumentStatsValue } from "../../../../../services/posts/editor/postDocumentStats";
 
 type PostDocumentStatsProps = {
-  stats: PostDocumentStats;
+  stats: PostDocumentStatsValue;
 };
 
 export function PostDocumentStats({ stats }: PostDocumentStatsProps) {

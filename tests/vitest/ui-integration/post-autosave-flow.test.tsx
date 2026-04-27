@@ -29,7 +29,7 @@ const createBaseProps = () => ({
 test("PostEditorTopBar renders autosave and revisions status", () => {
   const html = renderToString(<PostEditorTopBar {...createBaseProps()} />);
 
-  expect(html).toContain("Autosaved at");
+  expect(html).toContain("Saved at");
   expect(html).toContain("Revisions");
 });
 

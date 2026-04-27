@@ -5,7 +5,7 @@
 **Category:** Security + Dependencies
 **Estimated Effort:** Medium
 **Dependencies:** TASK-217
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -42,15 +42,15 @@ Non-goals:
 
 ## Sub-Tasks
 
-- [ ] TASK-219-01: Direct Test and Build Tooling Bumps
-  - [ ] TASK-219-01-01: Happy DOM Vitest Runtime Upgrade
-  - [ ] TASK-219-01-02: Vite Core Build Tool Upgrade
-- [ ] TASK-219-02: Transitive Lockfile CVE Remediation
-  - [ ] TASK-219-02-01: Rollup and Picomatch Lockfile Closure
-  - [ ] TASK-219-02-02: ESLint Flatted and Minimatch Closure
-- [ ] TASK-219-03: Scanner Validation and Closure
-  - [ ] TASK-219-03-01: Strict Security Scan CVE Closure
-  - [ ] TASK-219-03-02: Docs, Changelog, and Board Closure
+- [x] TASK-219-01: Direct Test and Build Tooling Bumps
+  - [x] TASK-219-01-01: Happy DOM Vitest Runtime Upgrade
+  - [x] TASK-219-01-02: Vite Core Build Tool Upgrade
+- [x] TASK-219-02: Transitive Lockfile CVE Remediation
+  - [x] TASK-219-02-01: Rollup and Picomatch Lockfile Closure
+  - [x] TASK-219-02-02: ESLint Flatted and Minimatch Closure
+- [x] TASK-219-03: Scanner Validation and Closure
+  - [x] TASK-219-03-01: Strict Security Scan CVE Closure
+  - [x] TASK-219-03-02: Docs, Changelog, and Board Closure
 
 ## Implementation Order
 
@@ -214,3 +214,10 @@ On completion:
 5. Vitest/admin UI lanes still pass after `happy-dom`, Vite, Rollup, and transitive glob dependency updates.
 6. Admin and site Vite builds still pass.
 7. Changelog and task board are synchronized.
+
+## Progress Notes
+
+- 2026-04-27: Completed dependency CVE remediation without scanner allowlists. Root tooling now uses `happy-dom` `^20.9.0`, `vitest`/`@vitest/coverage-v8` `^4.1.5`, `eslint` `^9.39.4`, `@eslint/js` `^9.39.4`, `@typescript-eslint/*` `^8.59.0`, `eslint-plugin-react-hooks` `^7.1.1`, `globals` `^17.5.0`, and a root `minimatch` `^3.1.5` compatibility pin for remaining 3.x consumers.
+- 2026-04-27: Core build tooling now uses Vite `^8.0.10`, `@vitejs/plugin-react` `^6.0.1`, `@tailwindcss/vite` `^4.2.4`, and `tailwindcss` `^4.2.4`. The lockfile no longer resolves vulnerable `happy-dom@17.6.3`, `vite@7.3.1`, `rollup@4.56.0`, `picomatch@4.0.3`, `flatted@3.3.3`, or `minimatch@3.1.2` rows.
+- 2026-04-27: Validation completed: `bun audit --audit-level high`, Trivy HIGH/CRITICAL lockfile CVE scan with dev dependencies, `bun run scan:security:strict`, `bun run scan:sbom`, `bun run test:vitest`, focused post-editor Vitest suites, `bun test tests/unit/security/securityGateConfig.test.ts`, `bun --cwd core lint:types`, `bun run lint:repo:types`, admin Vite build, site build, and `git diff --check`.
+- 2026-04-27: `bun --cwd core lint` passed under the ESLint 9 flat-config compatibility baseline. After the follow-up request to enable the full `eslint-plugin-react-hooks` recommended preset, the current lint intentionally reports new React Hooks/Compiler cleanup findings; that non-CVE follow-up is tracked in `TASK-220`.

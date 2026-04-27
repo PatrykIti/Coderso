@@ -5,7 +5,7 @@
 **Category:** Security + Test Infrastructure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-01
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -22,11 +22,11 @@ Target policy: use `^20.8.9` or a newer stable fixed line. Do not downgrade scan
 
 ## Sub-Tasks
 
-- [ ] Confirm current owner with `bun pm why happy-dom`.
-- [ ] Update root `package.json` `devDependencies.happy-dom` to a fixed version.
-- [ ] Refresh `bun.lock`.
-- [ ] Fix Vitest setup/helpers only if happy-dom 20 behavior requires it.
-- [ ] Prove the Vitest lane still passes.
+- [x] Confirm current owner with `bun pm why happy-dom`.
+- [x] Update root `package.json` `devDependencies.happy-dom` to a fixed version.
+- [x] Refresh `bun.lock`.
+- [x] Fix Vitest setup/helpers only if happy-dom 20 behavior requires it.
+- [x] Prove the Vitest lane still passes.
 
 ## Files to Change
 
@@ -88,3 +88,9 @@ If Vitest fails after the upgrade:
 2. `happy-dom` no longer appears in `bun audit --audit-level high`.
 3. Vitest passes or any failures are fixed in the owning test/setup files.
 4. No production runtime code changes are made only to satisfy happy-dom.
+
+## Progress Notes
+
+- 2026-04-27: Upgraded root `happy-dom` to `^20.9.0` and refreshed `bun.lock` to `happy-dom@20.9.0`.
+- 2026-04-27: Kept compatibility fixes in Vitest test expectations/mocks for the post-editor suites; no production fallback was added for test-runner-only behavior.
+- 2026-04-27: `bun run test:vitest` passed after the upgrade.

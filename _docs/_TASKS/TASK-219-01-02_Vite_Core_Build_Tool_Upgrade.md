@@ -5,7 +5,7 @@
 **Category:** Security + Build Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-01
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -21,11 +21,11 @@ Target policy: try the minimal fixed Vite 7 line first (`^7.3.2` or newer fixed 
 
 ## Sub-Tasks
 
-- [ ] Confirm current owner with `bun pm why vite`.
-- [ ] Update `core/package.json` `devDependencies.vite`.
-- [ ] Refresh `bun.lock` without broad unrelated dependency churn.
-- [ ] Build admin and site bundles.
-- [ ] Validate Vitest still runs with the Vite/Vitest peer graph.
+- [x] Confirm current owner with `bun pm why vite`.
+- [x] Update `core/package.json` `devDependencies.vite`.
+- [x] Refresh `bun.lock` without broad unrelated dependency churn.
+- [x] Build admin and site bundles.
+- [x] Validate Vitest still runs with the Vite/Vitest peer graph.
 
 ## Files to Change
 
@@ -89,3 +89,9 @@ bun update --filter @nextless/core vite@^8
 2. Vite no longer appears in `bun audit --audit-level high`.
 3. Admin and site builds pass.
 4. Vite config does not broaden dev-server filesystem or origin exposure.
+
+## Progress Notes
+
+- 2026-04-27: Upgraded core Vite to `^8.0.10`, `@vitejs/plugin-react` to `^6.0.1`, `@tailwindcss/vite` to `^4.2.4`, and `tailwindcss` to `^4.2.4` after checking current registry versions and peer compatibility.
+- 2026-04-27: A stale `core/node_modules/vite@7.3.1` shadowed the workspace install and caused the local `Missing field moduleType` dev-server error. Removing stale nested installs and running a clean `bun install` left the workspace on Vite `8.0.10`.
+- 2026-04-27: Admin Vite build and site build passed on Vite `8.0.10`.

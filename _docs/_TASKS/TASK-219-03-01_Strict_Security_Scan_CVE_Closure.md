@@ -5,7 +5,7 @@
 **Category:** Security + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-01-01, TASK-219-01-02, TASK-219-02-01, TASK-219-02-02, TASK-219-03
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -15,10 +15,10 @@ Prove the hardened security scanner matrix passes after dependency remediation. 
 
 ## Sub-Tasks
 
-- [ ] Run direct audit and Trivy vulnerability checks.
-- [ ] Run full `scan:security:strict`.
-- [ ] Generate SBOM after the lockfile is clean.
-- [ ] Record scanner summary in the closure changelog.
+- [x] Run direct audit and Trivy vulnerability checks.
+- [x] Run full `scan:security:strict`.
+- [x] Generate SBOM after the lockfile is clean.
+- [x] Record scanner summary in the closure changelog.
 
 ## Files to Change
 
@@ -80,3 +80,10 @@ gitleaks-worktree: ok
 1. `bun run scan:security:strict` exits `0`.
 2. SBOM generation succeeds.
 3. Any exception is narrow, time-boxed, and documented with owner/reason/ticket.
+
+## Progress Notes
+
+- 2026-04-27: Direct `bun audit --audit-level high` completed cleanly.
+- 2026-04-27: Direct Trivy lockfile CVE scan with `--include-dev-deps` completed with 0 HIGH/CRITICAL findings.
+- 2026-04-27: `bun run scan:security:strict` completed cleanly across Semgrep, Bun audit, Trivy vuln/config/secret, and Gitleaks history/worktree.
+- 2026-04-27: `bun run scan:sbom` generated the CycloneDX SBOM artifact at ignored path `.tmp/security-sbom.cdx.json`.

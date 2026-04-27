@@ -5,7 +5,7 @@
 **Category:** Security + Build Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-01-02, TASK-219-02
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -19,10 +19,10 @@ Scanner findings to close:
 
 ## Sub-Tasks
 
-- [ ] Confirm owners with `bun pm why rollup` and `bun pm why picomatch`.
-- [ ] Check whether the Vite lock refresh already moves Rollup and Picomatch.
-- [ ] Apply targeted lockfile update if vulnerable versions remain.
-- [ ] Use narrow overrides only if the lockfile cannot otherwise resolve fixed versions.
+- [x] Confirm owners with `bun pm why rollup` and `bun pm why picomatch`.
+- [x] Check whether the Vite lock refresh already moves Rollup and Picomatch.
+- [x] Apply targeted lockfile update if vulnerable versions remain.
+- [x] Use narrow overrides only if the lockfile cannot otherwise resolve fixed versions.
 
 ## Files to Change
 
@@ -81,3 +81,8 @@ bun update rollup picomatch
 1. Rollup resolves to `4.59.0` or newer fixed version.
 2. Picomatch resolves to `4.0.4` or newer fixed version for 4.x consumers.
 3. Vite build and Vitest tooling still pass.
+
+## Progress Notes
+
+- 2026-04-27: Vite 8/Rolldown graph removed the vulnerable `rollup@4.56.0` lockfile row instead of requiring a Rollup override.
+- 2026-04-27: `picomatch` now resolves to `4.0.4`; admin Vite build, site build, full Vitest, Bun audit, Trivy CVE scan, and strict security scan passed.

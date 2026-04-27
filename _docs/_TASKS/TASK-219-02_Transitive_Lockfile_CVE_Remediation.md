@@ -5,7 +5,7 @@
 **Category:** Security + Lockfile
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-01
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -15,8 +15,8 @@ Close the remaining HIGH/CRITICAL lockfile findings after direct `happy-dom` and
 
 ## Sub-Tasks
 
-- [ ] TASK-219-02-01: Rollup and Picomatch Lockfile Closure
-- [ ] TASK-219-02-02: ESLint Flatted and Minimatch Closure
+- [x] TASK-219-02-01: Rollup and Picomatch Lockfile Closure
+- [x] TASK-219-02-02: ESLint Flatted and Minimatch Closure
 
 ## Security Contract
 
@@ -55,3 +55,8 @@ Close the remaining HIGH/CRITICAL lockfile findings after direct `happy-dom` and
 1. `bun.lock` no longer resolves vulnerable Rollup, Picomatch, Flatted, or Minimatch rows.
 2. Overrides, if any, are narrow and documented.
 3. Lint/build/test tooling still works after transitive updates.
+
+## Progress Notes
+
+- 2026-04-27: Completed transitive lockfile closure. Vite 8 removed the vulnerable Rollup row from the lockfile, `picomatch` resolves to `4.0.4`, `flatted` resolves to `3.4.2`, and vulnerable `minimatch@3.1.2` rows are gone.
+- 2026-04-27: Avoided a broad `minimatch` override because it would collapse incompatible major ranges. The final graph keeps a root `minimatch` `^3.1.5` for 3.x consumers while newer TypeScript tooling resolves `minimatch@10.2.5`.

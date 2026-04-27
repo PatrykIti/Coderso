@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 64 tasks
-- **In Progress:** 11 tasks
-- **Done:** 1285 tasks
+- **To Do:** 49 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1292 tasks
 
 ---
 
@@ -38,16 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-219 | Dependency CVE Remediation | High | Medium | Remediate `happy-dom`, Vite/Rollup, picomatch, flatted, and minimatch CVEs surfaced by hardened `scan:security` |
-| TASK-219-01 | Direct Test and Build Tooling Bumps | High | Medium | Direct manifest owners for fixed `happy-dom` and Vite versions |
-| TASK-219-01-01 | Happy DOM Vitest Runtime Upgrade | High | Medium | Upgrade root `happy-dom` to a fixed 20.x+ line and prove Vitest compatibility |
-| TASK-219-01-02 | Vite Core Build Tool Upgrade | High | Medium | Upgrade core Vite to a fixed 7.x+ line and prove admin/site builds |
-| TASK-219-02 | Transitive Lockfile CVE Remediation | High | Medium | Close Rollup/Picomatch and ESLint-chain Flatted/Minimatch lockfile findings |
-| TASK-219-02-01 | Rollup and Picomatch Lockfile Closure | High | Medium | Ensure Vite/Vitest transitive Rollup and Picomatch resolve to fixed versions |
-| TASK-219-02-02 | ESLint Flatted and Minimatch Closure | High | Medium | Resolve lint-chain Flatted and Minimatch CVEs without broad incompatible overrides |
-| TASK-219-03 | Scanner Validation and Closure | High | Medium | Prove strict scanner matrix, SBOM, docs, changelog, and board closure |
-| TASK-219-03-01 | Strict Security Scan CVE Closure | High | Medium | Run audit, Trivy vuln, full strict security scan, and SBOM generation |
-| TASK-219-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Close task family docs only after scanner evidence exists |
+| TASK-220 | ESLint 9 React Hooks Compiler Cleanup | High | Large | Fix the 113 React Hooks/Compiler lint findings surfaced by the full `eslint-plugin-react-hooks` recommended preset |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -115,6 +106,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-219 | Dependency CVE Remediation | High | Medium | Done: dependency CVEs remediated without scanner allowlists; `happy-dom`, Vite, Vitest, ESLint 9, TypeScript ESLint, React Hooks plugin, Rollup/Picomatch/Flatted/Minimatch graph, docs, changelog 751, SBOM, and strict security scan closure completed |
+| TASK-219-01 | Direct Test and Build Tooling Bumps | High | Medium | Done: root Vitest/happy-dom and core Vite/Tailwind build tooling moved to fixed compatible versions |
+| TASK-219-01-01 | Happy DOM Vitest Runtime Upgrade | High | Medium | Done: root `happy-dom` resolves to `20.9.0`; full Vitest and focused post-editor Vitest suites pass |
+| TASK-219-01-02 | Vite Core Build Tool Upgrade | High | Medium | Done: core Vite resolves to `8.0.10`; stale nested Vite install issue documented; admin and site builds pass |
+| TASK-219-02 | Transitive Lockfile CVE Remediation | High | Medium | Done: vulnerable Rollup/Picomatch/Flatted/Minimatch lockfile rows removed without broad incompatible overrides |
+| TASK-219-02-01 | Rollup and Picomatch Lockfile Closure | High | Medium | Done: Vite 8 graph removes vulnerable Rollup row and Picomatch resolves to `4.0.4` |
+| TASK-219-02-02 | ESLint Flatted and Minimatch Closure | High | Medium | Done: ESLint 9 compatible stack resolves Flatted `3.4.2` and removes vulnerable Minimatch `3.1.2`; full React Hooks preset cleanup is tracked by TASK-220 |
+| TASK-219-03 | Scanner Validation and Closure | High | Medium | Done: Bun audit, Trivy CVE/config/secret, Semgrep, Gitleaks history/worktree, SBOM, docs, and board closure completed |
+| TASK-219-03-01 | Strict Security Scan CVE Closure | High | Medium | Done: `bun run scan:security:strict` and `bun run scan:sbom` completed cleanly |
+| TASK-219-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Done: TASK-219 docs, board, changelog 751, and scanner evidence synchronized |
 | TASK-218 | Post Editor Header Revisions Cache and Inspector Polish | High | Medium | Done: Posts editor status moved to the global topbar, local back row shows only the post title, focus-mode panel state is no longer misleading, Post inspector defaults/Advanced/canonical URL behavior were polished, revisions now use the shared cache, runtime canonical links render explicitly, docs, changelog 750, and validation |
 | TASK-217 | Security Scan Baseline Hardening | High | Medium | Done: local scanner matrix now covers SAST, Bun audit, Trivy CVE/misconfig/secrets, Gitleaks history/worktree, optional image scan, docs, CI strict behavior, and changelog 749 |
 | TASK-216 | Coderso Commerce Catalog List Parity With Pages | High | Very Large | Done: `/admin/coderso/commerce` now follows the Pages list contract with product filters, collection enrichment, checkbox table, visible selection, shared pagination, row/bulk lifecycle actions, confirmations, shared toasts, cache hydration, docs, changelog 748, and validation |

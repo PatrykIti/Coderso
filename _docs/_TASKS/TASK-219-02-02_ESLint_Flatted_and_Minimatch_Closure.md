@@ -5,7 +5,7 @@
 **Category:** Security + Lint Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-02
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -20,10 +20,10 @@ Target policy: resolve Flatted to `3.4.2` or newer and 3.x Minimatch consumers t
 
 ## Sub-Tasks
 
-- [ ] Confirm owners with `bun pm why flatted` and `bun pm why minimatch`.
-- [ ] Try lockfile-only compatible updates first.
-- [ ] If pinned, upgrade parent lint packages before using broad overrides.
-- [ ] Use scanner exception only if the vulnerable parent chain cannot be fixed safely in this repo cycle.
+- [x] Confirm owners with `bun pm why flatted` and `bun pm why minimatch`.
+- [x] Try lockfile-only compatible updates first.
+- [x] If pinned, upgrade parent lint packages before using broad overrides.
+- [x] Use scanner exception only if the vulnerable parent chain cannot be fixed safely in this repo cycle.
 
 ## Files to Change
 
@@ -86,3 +86,9 @@ CVE-... # expires: YYYY-MM-DD owner: Platform/Security reason: parent package ha
 1. Flatted resolves to `3.4.2` or newer fixed version.
 2. Vulnerable 3.x Minimatch rows are removed or documented with a narrow, time-boxed exception.
 3. Core lint and repo typecheck still pass.
+
+## Progress Notes
+
+- 2026-04-27: Upgraded the lint stack to ESLint 9 compatible packages: `eslint` `^9.39.4`, `@eslint/js` `^9.39.4`, `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` `^8.59.0`, `eslint-plugin-react-hooks` `^7.1.1`, and `globals` `^17.5.0`.
+- 2026-04-27: Added `flatted` `^3.4.2` override and root `minimatch` `^3.1.5` compatibility pin. `bun.lock` no longer resolves vulnerable `flatted@3.3.3` or `minimatch@3.1.2`.
+- 2026-04-27: `bun --cwd core lint` passed under the ESLint 9 compatibility baseline. The full `eslint-plugin-react-hooks` recommended preset was enabled afterward and the resulting React Hooks/Compiler cleanup is tracked separately in `TASK-220`.

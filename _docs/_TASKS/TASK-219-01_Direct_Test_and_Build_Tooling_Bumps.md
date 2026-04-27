@@ -5,7 +5,7 @@
 **Category:** Security + Dependencies + Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -20,8 +20,8 @@ This subtask must use minimal fixed versions first and avoid broad runtime depen
 
 ## Sub-Tasks
 
-- [ ] TASK-219-01-01: Happy DOM Vitest Runtime Upgrade
-- [ ] TASK-219-01-02: Vite Core Build Tool Upgrade
+- [x] TASK-219-01-01: Happy DOM Vitest Runtime Upgrade
+- [x] TASK-219-01-02: Vite Core Build Tool Upgrade
 
 ## Security Contract
 
@@ -61,3 +61,8 @@ This subtask must use minimal fixed versions first and avoid broad runtime depen
 2. `bun.lock` resolves `happy-dom` and `vite` to fixed versions.
 3. Vitest and both Vite builds still pass.
 4. No unrelated runtime dependency family is changed unless required by lock resolution.
+
+## Progress Notes
+
+- 2026-04-27: Completed direct tooling bumps. Root manifest now requests `happy-dom` `^20.9.0`, `vitest` `^4.1.5`, and `@vitest/coverage-v8` `^4.1.5`. Core manifest now requests Vite `^8.0.10`, `@vitejs/plugin-react` `^6.0.1`, `@tailwindcss/vite` `^4.2.4`, and `tailwindcss` `^4.2.4`.
+- 2026-04-27: Validation covered full Vitest, focused post-editor Vitest suites, admin Vite build, site build, type lint, repo type lint, and strict security scanning.

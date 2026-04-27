@@ -5,7 +5,7 @@
 **Category:** Security + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-219-01, TASK-219-02
-**Status:** To Do
+**Status:** Done (2026-04-27)
 
 ---
 
@@ -15,8 +15,8 @@ Validate that dependency remediation actually closes the hardened scanner matrix
 
 ## Sub-Tasks
 
-- [ ] TASK-219-03-01: Strict Security Scan CVE Closure
-- [ ] TASK-219-03-02: Docs, Changelog, and Board Closure
+- [x] TASK-219-03-01: Strict Security Scan CVE Closure
+- [x] TASK-219-03-02: Docs, Changelog, and Board Closure
 
 ## Security Contract
 
@@ -55,3 +55,8 @@ Validate that dependency remediation actually closes the hardened scanner matrix
 1. Strict scanner matrix no longer reports the dependency CVEs.
 2. Scanner policy remains at least as strong as `TASK-217`.
 3. Task board and changelog are synchronized at closure.
+
+## Progress Notes
+
+- 2026-04-27: `bun audit --audit-level high`, Trivy HIGH/CRITICAL lockfile CVE scan with `--include-dev-deps`, `bun run scan:security:strict`, and `bun run scan:sbom` completed cleanly after dependency remediation.
+- 2026-04-27: No `.trivyignore` or scanner-policy exception was introduced.

@@ -63,24 +63,28 @@
     "gates:coderso:security": "bun scripts/coderso-release-gates.ts --gate security"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.53.1",
-    "@typescript-eslint/parser": "^8.53.1",
-    "@vitest/coverage-v8": "^4.0.7",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "concurrently": "^9.2.1",
-    "eslint": "8.57.1",
+    "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "happy-dom": "^17.6.3",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.5.0",
+    "happy-dom": "^20.9.0",
+    "minimatch": "^3.1.5",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.7"
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "semver": "^7.7.3"
   },
   "overrides": {
-    "fast-xml-parser": "^5.5.6"
+    "fast-xml-parser": "^5.5.6",
+    "flatted": "^3.4.2"
   }
 }
