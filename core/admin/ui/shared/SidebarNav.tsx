@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -6,6 +7,8 @@ import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import type { NavItem, NavSection } from "@/ui/navigation/sidebarConfig";
 import { isAdminHrefActive } from "@/utils/adminPaths";
+
+const SIDEBAR_SCROLL_STORAGE_KEY = "nextless.admin.sidebarScrollTop";
 
 const defaultBrand = (
   <div className="flex items-center gap-3 px-2">
@@ -47,9 +50,43 @@ export function SidebarNav({
   onNavigate,
 }: SidebarNavProps) {
   const adminBasePath = useAdminBasePath();
+  const navRef = useRef<HTMLElement | null>(null);
+  const shouldPersistScroll = variant === "desktop";
   const canAccessPermission = (permission?: string) => {
     if (!permission) return true;
     return canAccess ? canAccess(permission) : true;
+  };
+
+  const persistScrollPosition = useCallback(() => {
+    if (!shouldPersistScroll || typeof window === "undefined") return;
+    const nav = navRef.current;
+    if (!nav) return;
+    window.sessionStorage.setItem(
+      SIDEBAR_SCROLL_STORAGE_KEY,
+      String(nav.scrollTop)
+    );
+  }, [shouldPersistScroll]);
+
+  useEffect(() => {
+    if (!shouldPersistScroll || typeof window === "undefined") return;
+    const nav = navRef.current;
+    if (!nav) return;
+    const stored = window.sessionStorage.getItem(SIDEBAR_SCROLL_STORAGE_KEY);
+    if (!stored) return;
+    const scrollTop = Number.parseInt(stored, 10);
+    if (!Number.isFinite(scrollTop) || scrollTop < 0) return;
+
+    const restoreScroll = () => {
+      nav.scrollTop = scrollTop;
+    };
+    restoreScroll();
+    const frame = window.requestAnimationFrame(restoreScroll);
+    return () => window.cancelAnimationFrame(frame);
+  }, [shouldPersistScroll]);
+
+  const handleNavigate = () => {
+    persistScrollPosition();
+    if (variant === "mobile") onNavigate?.();
   };
 
   const visibleSections = sections
@@ -93,7 +130,11 @@ export function SidebarNav({
       )}
     >
       <div className="p-6 pb-4">{brand}</div>
-      <nav className="flex-1 overflow-y-auto px-4 pb-6">
+      <nav
+        ref={navRef}
+        className="flex-1 overflow-y-auto px-4 pb-6"
+        onScroll={persistScrollPosition}
+      >
         {visibleSections.map((section) => (
           <div key={section.title} className="mb-6">
             <p className="px-3 text-xs font-semibold uppercase tracking-wider text-[var(--admin-sidebar-text)]/70">
@@ -112,9 +153,7 @@ export function SidebarNav({
                     key={item.href}
                     href={item.href}
                     prefetch
-                    onClick={() => {
-                      if (variant === "mobile") onNavigate?.();
-                    }}
+                    onClick={handleNavigate}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
                       isActive &&
@@ -174,9 +213,7 @@ export function SidebarNav({
                               key={item.href}
                               href={item.href}
                               prefetch
-                              onClick={() => {
-                                if (variant === "mobile") onNavigate?.();
-                              }}
+                              onClick={handleNavigate}
                               className={cn(
                                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
                                 isItemActive &&
@@ -210,9 +247,7 @@ export function SidebarNav({
                     key={item.href}
                     href={item.href}
                     prefetch
-                    onClick={() => {
-                      if (variant === "mobile") onNavigate?.();
-                    }}
+                    onClick={handleNavigate}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
                       isActive &&
@@ -242,9 +277,7 @@ export function SidebarNav({
                 key={item.href}
                 href={item.href}
                 prefetch
-                onClick={() => {
-                  if (variant === "mobile") onNavigate?.();
-                }}
+                onClick={handleNavigate}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]"
               >
                 <Icon className="h-4 w-4" />
