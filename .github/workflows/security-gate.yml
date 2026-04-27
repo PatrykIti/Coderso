@@ -37,6 +37,7 @@ jobs:
       - name: Run Semgrep (SAST)
         run: |
           semgrep \
+            --error \
             --config .semgrep.yml \
             --config p/owasp-top-ten \
             --config p/security-audit \
@@ -57,8 +58,11 @@ jobs:
           scan-ref: .
           format: sarif
           output: trivy.sarif
+          exit-code: "1"
           ignore-unfixed: true
           severity: HIGH,CRITICAL
+          scanners: "vuln,secret,misconfig"
+          skip-dirs: "_docs,node_modules,dist,build,.next,.git"
 
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v3

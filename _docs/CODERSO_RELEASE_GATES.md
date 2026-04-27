@@ -60,15 +60,20 @@ Additional security suites are executed in gate runner:
 - `tests/unit/forms/submissionNonce.test.ts`
 - `tests/unit/server/publicBookingApi.test.ts`
 
-## CI Security Gate (SAST/SCA/Secrets/CVE)
+## CI and Local Security Gate (SAST/SCA/Secrets/CVE)
 
-Additional CI-only security gate is enforced via:
+Additional CI and local security gates are enforced via:
 - `.github/workflows/security-gate.yml`
 - `.semgrep.yml` (local SAST rules + registry packs)
 - `.gitleaks.toml` (secrets scanning config)
 - `.trivyignore` (time-boxed allowlist for CVEs)
+- `scripts/run-security-scan.ts` (local scanner matrix runner)
 
-It blocks PRs on critical/high findings and uploads SARIF reports for auditability.
+CI blocks PRs on critical/high findings and uploads SARIF reports for auditability.
+Local `bun run scan:security` runs advisory SAST, dependency, misconfiguration,
+filesystem secret, Git-history secret, and worktree secret scans without stopping
+after the first finding. Local `bun run scan:security:strict` uses the same
+matrix as a release-style fail-fast gate.
 
 ## CI Integration
 
@@ -98,9 +103,10 @@ bun scripts/coderso-release-gates.ts --gate security
 bun scripts/coderso-release-gates.ts --gate performance
 ```
 
-Run strict local scanners after the scanner baseline is clean:
+Run local scanners:
 
 ```bash
+bun run scan:security
 bun run scan:security:strict
 ```
 

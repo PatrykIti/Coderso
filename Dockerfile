@@ -16,8 +16,9 @@ COPY core core
 COPY packages packages
 COPY themes themes
 
-RUN cd core && bun x vite build --config vite.config.ts
-RUN cd core && bun x vite build --config vite.site.config.ts \
+WORKDIR /app/core
+RUN bun x vite build --config vite.config.ts
+RUN bun x vite build --config vite.site.config.ts \
   && if [ -f dist/site/.vite/manifest.json ] && [ ! -f dist/site/manifest.json ]; then \
        cp dist/site/.vite/manifest.json dist/site/manifest.json; \
      fi

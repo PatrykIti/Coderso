@@ -56,19 +56,24 @@ Related gate suites executed by runner:
 - `tests/unit/forms/submissionNonce.test.ts`
 - `tests/unit/server/publicBookingApi.test.ts`
 
-### CI Security Gate (SAST/SCA/Secrets/CVE)
+### CI and Local Security Gate (SAST/SCA/Secrets/CVE)
 
 Automated CI gate blocks PRs on critical/high findings:
 - SAST: Semgrep (`.semgrep.yml` + OWASP/security packs).
-- SCA/CVE: Trivy filesystem scan (`.trivyignore` for time-boxed exceptions).
-- Secrets: Gitleaks (`.gitleaks.toml` allowlist config).
+- SCA/CVE: Bun audit plus Trivy filesystem lockfile scans (`.trivyignore` for time-boxed exceptions).
+- Misconfiguration: Trivy config scan for Docker/IaC-style files.
+- Secrets: Trivy filesystem secret scan plus Gitleaks history and worktree scans (`.gitleaks.toml` allowlist config).
 
 Local runbook:
 ```bash
 pip install semgrep
 semgrep --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit --config p/nodejs --config p/typescript
-trivy fs --severity HIGH,CRITICAL --ignore-unfixed --skip-dirs _docs --skip-dirs node_modules --skip-dirs dist --skip-dirs build --skip-dirs .next .
-gitleaks detect --config .gitleaks.toml
+bun audit --audit-level high
+trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --include-dev-deps --skip-dirs _docs --skip-dirs node_modules --skip-dirs dist --skip-dirs build --skip-dirs .next --skip-dirs .git .
+trivy config --severity MEDIUM,HIGH,CRITICAL --skip-dirs _docs --skip-dirs node_modules --skip-dirs dist --skip-dirs build --skip-dirs .next .
+trivy fs --scanners secret --skip-dirs _docs --skip-dirs node_modules --skip-dirs dist --skip-dirs build --skip-dirs .next --skip-dirs .git .
+gitleaks git --config .gitleaks.toml --redact=100 .
+gitleaks dir --config .gitleaks.toml --redact=100 .
 ```
 
 Convenience package scripts wrap the same scanner commands when the CLIs are
@@ -76,24 +81,54 @@ available on `PATH`:
 ```bash
 bun run scan:security
 bun run scan:security:strict
+bun run scan:security:image
 bun run scan:semgrep
 bun run scan:semgrep:strict
+bun run scan:audit
+bun run scan:audit:strict
 bun run scan:trivy
 bun run scan:trivy:strict
+bun run scan:trivy:vuln
+bun run scan:trivy:vuln:strict
+bun run scan:trivy:config
+bun run scan:trivy:config:strict
+bun run scan:trivy:secret
+bun run scan:trivy:secret:strict
 bun run scan:gitleaks
 bun run scan:gitleaks:strict
+bun run scan:gitleaks:history
+bun run scan:gitleaks:history:strict
+bun run scan:gitleaks:worktree
+bun run scan:gitleaks:worktree:strict
+bun run scan:sbom
 ```
 
-Strict scanner scripts fail on blocking Semgrep findings, HIGH/CRITICAL Trivy
+`scan:security` uses `scripts/run-security-scan.ts` and runs every configured
+scanner even if one scanner reports findings. Advisory mode prints all scanner
+output and exits successfully unless a scanner cannot run. `scan:security:strict`
+uses the same matrix but fails on blocking Semgrep findings, HIGH/CRITICAL Bun
+audit or Trivy vulnerability findings, MEDIUM/HIGH/CRITICAL Trivy misconfig
 findings, or Gitleaks leaks. Use advisory scripts for local triage and strict
 scripts for release/CI-style verification.
 
+Container image scanning is opt-in because it requires a built image:
+```bash
+SECURITY_SCAN_IMAGE=nextless:local bun run scan:security:image
+```
+
 Trivy local scan scope:
 - Owner: Platform/Security.
-- Reason: Trivy local SCA scope should match the non-runtime path exclusions from `.semgrep.yml`. `_docs/` contains documentation, reference fixtures, and vendored UI snapshots; `node_modules`, `dist`, `build`, and `.next` are generated/dependency/build output paths rather than source-of-truth runtime lockfiles.
-- Scope: local `scan:trivy` and `scan:security` package scripts skip `_docs`, `node_modules`, `dist`, `build`, and `.next`.
+- Reason: Trivy local SCA and secret scope should match the non-runtime path exclusions from `.semgrep.yml`. `_docs/` contains documentation, reference fixtures, and vendored UI snapshots; `node_modules`, `dist`, `build`, `.next`, and `.git` are generated/dependency/build/history output paths rather than source-of-truth runtime lockfiles. Git history is covered separately by Gitleaks.
+- Scope: local `scan:trivy`, `scan:security`, and strict package scripts skip `_docs`, `node_modules`, `dist`, `build`, `.next`, and `.git` for filesystem scans. Trivy config scans skip `_docs`, `node_modules`, `dist`, `build`, and `.next`.
 - Expiry/review: review this exclusion by 2026-07-14 or when `_docs/` starts carrying runtime-installed packages.
 - Ticket: scanner baseline follow-up from `TASK-174` closure / changelog 643.
+
+Gitleaks local scan scope:
+- Owner: Platform/Security.
+- Reason: `gitleaks git` owns Git history scanning, while `gitleaks dir` owns current worktree scanning. `.git` internals are excluded from directory scanning to avoid duplicate object scanning; vendored Gutenberg UI snapshots and generated output paths stay allowlisted.
+- Scope: `.gitleaks.toml` allowlists `.git`, `node_modules`, `_docs/UI/gutenberg-trunk`, `dist`, `build`, and `.next`.
+- Expiry/review: review this exclusion by 2026-07-14 or when generated/vendor paths start carrying deployable source.
+- Ticket: `TASK-217` scanner baseline hardening.
 
 Semgrep local suppressions:
 - Owner: Platform/Security.

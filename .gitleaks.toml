@@ -3,6 +3,7 @@ title = "Nextless Gitleaks Config"
 [allowlist]
 description = "Allowlist for vendor/generated docs and build artifacts."
 paths = [
+  '''.*.git/.*''',
   '''.*node_modules/.*''',
   '''.*_docs/UI/gutenberg-trunk/.*''',
   '''.*dist/.*''',
