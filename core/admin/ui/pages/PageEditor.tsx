@@ -350,11 +350,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
-  const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const statusNoticeTimerRef = useRef<number | null>(null);
 
   const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = useMemo(() => {
@@ -437,30 +435,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     []
   );
 
-  const showStatusNotice = useCallback((message: string) => {
-    setStatusNotice(message);
-    if (typeof window === "undefined") return;
-    if (statusNoticeTimerRef.current !== null) {
-      window.clearTimeout(statusNoticeTimerRef.current);
-    }
-    statusNoticeTimerRef.current = window.setTimeout(() => {
-      setStatusNotice(null);
-      statusNoticeTimerRef.current = null;
-    }, 4000);
-  }, []);
-
   const focusInsertedBlock = useCallback((blockId: string) => {
     setSelectedId(blockId);
     setHighlightedBlockId(blockId);
     setPendingScrollBlockId(blockId);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && statusNoticeTimerRef.current !== null) {
-        window.clearTimeout(statusNoticeTimerRef.current);
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -806,7 +784,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     if (!pageId) return;
     setIsSaving(true);
     setError(null);
-    setStatusNotice(null);
     try {
       const updated = await updatePage(pageId, {
         data: pageData,
@@ -815,7 +792,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
       pageEditorActionToasts.success("saveDraft");
-      showStatusNotice("Draft saved.");
     } catch (err) {
       const message = pageEditorActionToasts.error("saveDraft", err);
       setError(message);
@@ -828,7 +804,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     if (!pageId) return;
     setIsPublishing(true);
     setError(null);
-    setStatusNotice(null);
     try {
       await publishPage(pageId, pageData);
       const updated = await getPageCached(pageId, { force: true });
@@ -839,7 +814,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         setRemoteUpdatePending(false);
       }
       pageEditorActionToasts.success("publish");
-      showStatusNotice("Page published.");
     } catch (err) {
       const message = pageEditorActionToasts.error("publish", err);
       setError(message);
@@ -1127,12 +1101,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <Alert variant="destructive">
             <AlertTitle>Page settings error</AlertTitle>
             <AlertDescription>{metaError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {statusNotice ? (
-          <Alert>
-            <AlertTitle>Page updated</AlertTitle>
-            <AlertDescription>{statusNotice}</AlertDescription>
           </Alert>
         ) : null}
         {remoteUpdatePending ? (
