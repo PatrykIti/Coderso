@@ -90,6 +90,11 @@ const pageEditorActionToasts = createAdminActionToastAdapter({
   },
 });
 
+const pageEditorStatusBadgeClassName = (status: string) =>
+  status === "published"
+    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
+    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
+
 const resolvePageId = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
   const pageIndex = parts.findIndex((segment) => segment === "pages");
@@ -326,6 +331,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const pageMutationInFlightRef = useRef(false);
   const [isUpdatingMeta, setIsUpdatingMeta] = useState(false);
   const [isAutosavingSettings, setIsAutosavingSettings] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -780,6 +786,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const handleSaveDraft = async () => {
     if (!pageId) return;
+    if (pageMutationInFlightRef.current) return;
+    pageMutationInFlightRef.current = true;
     setIsSaving(true);
     setError(null);
     try {
@@ -794,12 +802,15 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       const message = pageEditorActionToasts.error("saveDraft", err);
       setError(message);
     } finally {
+      pageMutationInFlightRef.current = false;
       setIsSaving(false);
     }
   };
 
   const handlePublish = async () => {
     if (!pageId) return;
+    if (pageMutationInFlightRef.current) return;
+    pageMutationInFlightRef.current = true;
     setIsPublishing(true);
     setError(null);
     try {
@@ -816,6 +827,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       const message = pageEditorActionToasts.error("publish", err);
       setError(message);
     } finally {
+      pageMutationInFlightRef.current = false;
       setIsPublishing(false);
     }
   };
@@ -958,6 +970,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const status = page?.status ?? "draft";
   const title = page?.title ?? "Homepage";
+  const isPageMutationInFlight = isSaving || isPublishing;
   const renderLibraryPanel = () => (
     <LibraryPanel
       onAddWidget={handleAddBlock}
@@ -993,7 +1006,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <span>Pages</span>
           <span>/</span>
           <span className="text-foreground">{title}</span>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+          <span className={pageEditorStatusBadgeClassName(status)}>
             {status === "published" ? "Published" : "Draft"}
           </span>
           {hasUnsavedChanges ? (
@@ -1023,7 +1036,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 size="sm"
                 className="gap-2"
                 onClick={handleSaveDraft}
-                disabled={isSaving || isLoading}
+                disabled={isPageMutationInFlight || isLoading}
               >
                 <Save className="h-4 w-4" />
                 {isSaving ? "Saving..." : "Save draft"}
@@ -1033,7 +1046,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               size="sm"
               className="gap-2"
               onClick={handlePublish}
-              disabled={isPublishing || isLoading}
+              disabled={isPageMutationInFlight || isLoading}
             >
               <Eye className="h-4 w-4" />
               {isPublishing ? "Publishing..." : "Publish"}

@@ -619,6 +619,11 @@ const clickButton = (
   });
 };
 
+const findSpanByText = (container: HTMLElement, label: string) =>
+  Array.from(container.querySelectorAll("span")).find(
+    (candidate) => candidate.textContent === label
+  );
+
 const apiError = (message: string) => ({
   kind: "api" as const,
   name: "ApiClientError",
@@ -699,6 +704,9 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     await flush();
 
     expect(view.container.textContent).not.toContain("Runtime preview device");
+    const draftBadge = findSpanByText(view.container, "Draft");
+    expect(draftBadge?.className).toContain("bg-amber-100");
+    expect(draftBadge?.className).toContain("text-amber-800");
 
     clickButton(view.container, "Preview");
     await flush();
@@ -730,6 +738,10 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
       })
     );
     expect(view.container.textContent).toContain("Published");
+    const publishedBadge = findSpanByText(view.container, "Published");
+    expect(publishedBadge?.className).toContain("bg-emerald-500/10");
+    expect(publishedBadge?.className).toContain("text-emerald-600");
+    expect(publishedBadge?.className).toContain("border-emerald-500/20");
     expect(view.container.textContent).not.toContain("Page published.");
     expect(pageEditorToastState.success).toHaveBeenCalledWith("Page published.");
 
@@ -818,9 +830,25 @@ test("PageEditor emits save success toast only after the mutation resolves", asy
   try {
     await flush();
 
-    clickButton(view.container, "Save draft");
+    const saveButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Save draft")
+    );
+    const publishButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Publish")
+    );
+    if (!saveButton || !publishButton) {
+      throw new Error("Missing save or publish button");
+    }
+
+    act(() => {
+      saveButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      publishButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     await flush();
 
+    expect(pageEditorState.updatePage).toHaveBeenCalledTimes(1);
+    expect(pageEditorState.publishPage).not.toHaveBeenCalled();
+    expect((publishButton as HTMLButtonElement).disabled).toBe(true);
     expect(pageEditorToastState.success).not.toHaveBeenCalledWith("Draft saved.");
 
     await act(async () => {

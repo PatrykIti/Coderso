@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1296 tasks
+- **Done:** 1297 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-225 | Page Editor Status Badge and Action Locking | High | Small | Done: editor `Published` badge now matches the Pages table emerald styling and save/publish mutations cannot start concurrently |
 | TASK-224 | Page Editor Preview Action Consolidation | High | Small | Done: Pages editor toolbar now exposes `Preview` directly before `Save draft`, while device selection stays inside the runtime preview dialog |
 | TASK-223 | Semantic Release and Docker Image Workflow | High | Medium | Done: semantic-release now parses categorized PR release notes into root CHANGELOG.md, syncs generated versions, and builds/pushes nextless-core Docker images with the release tag |
 | TASK-222 | Public Homepage Runtime Settings Route | High | Small | Done: public `/` now renders the published page selected by `site.homepageId`, with DB-backed Bun runtime regression coverage |

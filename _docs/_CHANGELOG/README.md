@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 756 | 2026-04-27 | TASK-225 page editor status badge and action locking | CMS Pages/Admin UI |
 | 755 | 2026-04-27 | TASK-224 page editor preview action consolidation | CMS Pages/Admin UI |
 | 754 | 2026-04-27 | TASK-223 semantic release and Docker workflow | Release Engineering/CI |
 | 753 | 2026-04-27 | TASK-222 public homepage runtime settings route | Site Runtime/CMS Pages |
