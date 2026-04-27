@@ -7,13 +7,29 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type {
   CommerceCollectionRecord,
   CommerceProductRecord,
+  CommerceProductUpdateInput,
 } from "../../../core/admin/services/commerceClient";
+
+type RefreshCommerceProductsMock = (
+  options?: boolean | { force?: boolean; background?: boolean }
+) => Promise<void>;
+
+type UpdateCommerceProductMock = (
+  id: string,
+  input: CommerceProductUpdateInput
+) => Promise<void>;
+
+type DeleteCommerceProductMock = (id: string) => Promise<void>;
 
 const commercePageState = vi.hoisted(() => ({
   navigate: vi.fn(),
-  refreshProducts: vi.fn(async () => undefined),
-  updateCommerceProduct: vi.fn(async () => undefined),
-  deleteCommerceProduct: vi.fn(async () => undefined),
+  refreshProducts: vi.fn<RefreshCommerceProductsMock>(async () => undefined),
+  updateCommerceProduct: vi.fn<UpdateCommerceProductMock>(
+    async () => undefined
+  ),
+  deleteCommerceProduct: vi.fn<DeleteCommerceProductMock>(
+    async () => undefined
+  ),
   products: [
     {
       id: "product-1",
