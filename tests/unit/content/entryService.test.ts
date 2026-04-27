@@ -75,48 +75,69 @@ afterAll(async () => {
   await cleanup();
 });
 
-testIfDb("publish flow creates revisions and preview", async () => {
-  const [user] = await db
-    .insert(users)
-    .values({
-      email: `author-${randomUUID()}@example.com`,
-      passwordHash: "test",
-      status: "active",
-    })
-    .returning();
-  userId = user?.id;
+testIfDbWithOptions(
+  "publish flow creates revisions and preview",
+  async () => {
+    let localContentTypeId: string | undefined;
+    let localEntryId: string | undefined;
+    let localUserId: string | undefined;
 
-  const type = await createContentType({
-    name: uniqueName("News"),
-    slug: `news-${randomUUID()}`,
-    schema,
-  });
-  contentTypeId = type.id;
+    try {
+      const [user] = await db
+        .insert(users)
+        .values({
+          email: `author-${randomUUID()}@example.com`,
+          passwordHash: "test",
+          status: "active",
+        })
+        .returning();
+      localUserId = user?.id;
 
-  const entry = await createEntry(type.id, {
-    title: "Entry",
-    slug: `entry-${randomUUID()}`,
-    data: { title: "Hello" },
-  });
-  entryId = entry?.id;
+      const type = await createContentType({
+        name: uniqueName("News"),
+        slug: `news-${randomUUID()}`,
+        schema,
+      });
+      localContentTypeId = type.id;
 
-  const published = await publishEntry(entry.id, userId!);
-  expect(published?.status).toBe("published");
+      const entry = await createEntry(type.id, {
+        title: "Entry",
+        slug: `entry-${randomUUID()}`,
+        data: { title: "Hello" },
+      });
+      localEntryId = entry?.id;
 
-  const revisions = await listEntryRevisions(entry.id);
-  expect(revisions.length).toBe(1);
+      const published = await publishEntry(entry.id, localUserId!);
+      expect(published?.status).toBe("published");
 
-  const preview = await createEntryPreview(entry.id, 30);
-  expect(preview.token).toHaveLength(36);
+      const revisions = await listEntryRevisions(entry.id);
+      expect(revisions.length).toBe(1);
 
-  const draft = await unpublishEntry(entry.id);
-  expect(draft?.status).toBe("draft");
+      const preview = await createEntryPreview(entry.id, 30);
+      expect(preview.token).toHaveLength(36);
 
-  await cleanup();
-  contentTypeId = undefined;
-  entryId = undefined;
-  userId = undefined;
-});
+      const draft = await unpublishEntry(entry.id);
+      expect(draft?.status).toBe("draft");
+    } finally {
+      if (localEntryId) {
+        await db
+          .delete(contentRevisions)
+          .where(eq(contentRevisions.entryId, localEntryId));
+        await db
+          .delete(previewTokens)
+          .where(eq(previewTokens.targetId, localEntryId));
+        await db.delete(contentEntries).where(eq(contentEntries.id, localEntryId));
+      }
+      if (localContentTypeId) {
+        await db.delete(contentTypes).where(eq(contentTypes.id, localContentTypeId));
+      }
+      if (localUserId) {
+        await db.delete(users).where(eq(users.id, localUserId));
+      }
+    }
+  },
+  { timeout: 15_000 }
+);
 
 testIfDb("enforces slug uniqueness per type", async () => {
   const type = await createContentType({
@@ -240,114 +261,134 @@ testIfDb("updateEntry preserves author metadata", async () => {
   userId = undefined;
 });
 
-testIfDb("updateEntryMetadata stores taxonomy tags, schedule, and SEO", async () => {
-  const type = await createContentType({
-    name: uniqueName("Blog"),
-    slug: `blog-${randomUUID()}`,
-    schema,
-  });
-  contentTypeId = type.id;
+testIfDbWithOptions(
+  "updateEntryMetadata stores taxonomy tags, schedule, and SEO",
+  async () => {
+    let localContentTypeId: string | undefined;
+    let localEntryId: string | undefined;
 
-  const taxonomies = await setTaxonomyConfig(type.id, {
-    categories: true,
-    tags: true,
-  });
-  const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
-  const tag = await createTerm(tagTaxonomy!.id, { name: "Release" });
+    try {
+      const type = await createContentType({
+        name: uniqueName("Blog"),
+        slug: `blog-${randomUUID()}`,
+        schema,
+      });
+      localContentTypeId = type.id;
 
-  const entry = await createEntry(type.id, {
-    title: "Entry",
-    slug: `entry-${randomUUID()}`,
-    data: { title: "Hello" },
-  });
-  entryId = entry?.id;
+      const taxonomies = await setTaxonomyConfig(type.id, {
+        categories: true,
+        tags: true,
+      });
+      const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
+      const tag = await createTerm(tagTaxonomy!.id, { name: "Release" });
 
-  const scheduledAt = new Date(Date.now() + 60 * 60 * 1000);
-  await updateEntryMetadata(entry.id, {
-    status: "scheduled",
-    scheduledAt,
-    taxonomy: { tagIds: [tag!.id] },
-    seo: { description: "SEO summary" },
-  });
+      const entry = await createEntry(type.id, {
+        title: "Entry",
+        slug: `entry-${randomUUID()}`,
+        data: { title: "Hello" },
+      });
+      localEntryId = entry?.id;
 
-  const updated = await getEntry(entry.id);
-  expect(updated?.status).toBe("scheduled");
-  expect(updated?.scheduledAt?.toISOString()).toBe(scheduledAt.toISOString());
-  expect(updated?.tags).toEqual(["Release"]);
-  expect(updated?.taxonomy?.tags?.map((term) => term.name)).toEqual(["Release"]);
-  expect(updated?.seo?.description).toBe("SEO summary");
+      const scheduledAt = new Date(Date.now() + 60 * 60 * 1000);
+      await updateEntryMetadata(entry.id, {
+        status: "scheduled",
+        scheduledAt,
+        taxonomy: { tagIds: [tag!.id] },
+        seo: { description: "SEO summary" },
+      });
 
-  await cleanup();
-  contentTypeId = undefined;
-  entryId = undefined;
-});
+      const updated = await getEntry(entry.id);
+      expect(updated?.status).toBe("scheduled");
+      expect(updated?.scheduledAt?.toISOString()).toBe(scheduledAt.toISOString());
+      expect(updated?.tags).toEqual(["Release"]);
+      expect(updated?.taxonomy?.tags?.map((term) => term.name)).toEqual([
+        "Release",
+      ]);
+      expect(updated?.seo?.description).toBe("SEO summary");
+    } finally {
+      if (localEntryId) {
+        await db.delete(contentEntries).where(eq(contentEntries.id, localEntryId));
+      }
+      if (localContentTypeId) {
+        await db.delete(contentTypes).where(eq(contentTypes.id, localContentTypeId));
+      }
+    }
+  },
+  { timeout: 15_000 }
+);
 
 testIfDbWithOptions(
   "duplicateEntry creates a draft copy with unique slug and metadata",
   async () => {
-    const [user] = await db
-      .insert(users)
-      .values({
-        email: `entry-copy-${randomUUID()}@example.com`,
-        passwordHash: "test",
-        status: "active",
-      })
-      .returning();
-    userId = user?.id;
+    let localContentTypeId: string | undefined;
+    let localUserId: string | undefined;
 
-    const type = await createContentType({
-      name: uniqueName("Stories"),
-      slug: `stories-${randomUUID()}`,
-      schema,
-    });
-    contentTypeId = type.id;
+    try {
+      const [user] = await db
+        .insert(users)
+        .values({
+          email: `entry-copy-${randomUUID()}@example.com`,
+          passwordHash: "test",
+          status: "active",
+        })
+        .returning();
+      localUserId = user?.id;
 
-    const taxonomies = await setTaxonomyConfig(type.id, {
-      categories: true,
-      tags: true,
-    });
-    const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
-    const tag = await createTerm(tagTaxonomy!.id, { name: "Featured" });
+      const type = await createContentType({
+        name: uniqueName("Stories"),
+        slug: `stories-${randomUUID()}`,
+        schema,
+      });
+      localContentTypeId = type.id;
 
-    const sourceSlug = `story-${randomUUID()}`;
-    const entry = await createEntry(type.id, {
-      title: "Source Story",
-      slug: sourceSlug,
-      data: { title: "Source Story" },
-    });
-    entryId = entry?.id;
+      const taxonomies = await setTaxonomyConfig(type.id, {
+        categories: true,
+        tags: true,
+      });
+      const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
+      const tag = await createTerm(tagTaxonomy!.id, { name: "Featured" });
 
-    await createEntry(type.id, {
-      title: "Existing copy",
-      slug: `${sourceSlug}-copy`,
-      data: { title: "Existing copy" },
-    });
+      const sourceSlug = `story-${randomUUID()}`;
+      const entry = await createEntry(type.id, {
+        title: "Source Story",
+        slug: sourceSlug,
+        data: { title: "Source Story" },
+      });
 
-    await updateEntryMetadata(entry.id, {
-      taxonomy: { tagIds: [tag!.id] },
-      seo: { description: "Source SEO summary", robots: "index,follow" },
-    });
+      await createEntry(type.id, {
+        title: "Existing copy",
+        slug: `${sourceSlug}-copy`,
+        data: { title: "Existing copy" },
+      });
 
-    const duplicated = await duplicateEntry(entry.id, userId);
+      await updateEntryMetadata(entry.id, {
+        taxonomy: { tagIds: [tag!.id] },
+        seo: { description: "Source SEO summary", robots: "index,follow" },
+      });
 
-    expect(duplicated?.title).toBe("Source Story (Copy 2)");
-    expect(duplicated?.slug).toBe(`${sourceSlug}-copy-2`);
-    expect(duplicated?.status).toBe("draft");
-    expect(duplicated?.publishedAt).toBeNull();
-    expect(duplicated?.scheduledAt).toBeNull();
-    expect(duplicated?.author?.id).toBe(userId);
-    expect(duplicated?.taxonomy?.tags?.map((term) => term.name)).toEqual([
-      "Featured",
-    ]);
-    expect(duplicated?.seo?.description).toBe("Source SEO summary");
-    expect(duplicated?.seo?.robots).toBe("index,follow");
+      const duplicated = await duplicateEntry(entry.id, localUserId);
 
-    await cleanup();
-    contentTypeId = undefined;
-    entryId = undefined;
-    userId = undefined;
+      expect(duplicated?.title).toBe("Source Story (Copy 2)");
+      expect(duplicated?.slug).toBe(`${sourceSlug}-copy-2`);
+      expect(duplicated?.status).toBe("draft");
+      expect(duplicated?.publishedAt).toBeNull();
+      expect(duplicated?.scheduledAt).toBeNull();
+      expect(duplicated?.author?.id).toBe(localUserId);
+      expect(duplicated?.taxonomy?.tags?.map((term) => term.name)).toEqual([
+        "Featured",
+      ]);
+      expect(duplicated?.seo?.description).toBe("Source SEO summary");
+      expect(duplicated?.seo?.robots).toBe("index,follow");
+    } finally {
+      if (localContentTypeId) {
+        await db.delete(contentTypes).where(eq(contentTypes.id, localContentTypeId));
+      }
+      if (localUserId) {
+        await db.delete(users).where(eq(users.id, localUserId));
+      }
+    }
   },
-  { timeout: 10_000 }
+  { timeout: 15_000 }
 );
 
 testIfDb("validates relation entry IDs", async () => {

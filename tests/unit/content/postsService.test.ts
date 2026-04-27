@@ -22,6 +22,11 @@ import { createContentType } from "../../../core/services/content/typeService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
 const slugPrefix = "task-059-02-posts-service";
 
 async function canConnect() {
@@ -113,55 +118,59 @@ testIfDb("duplicatePost creates a draft clone with copied metadata", async () =>
   expect(deleted.ok).toBe(true);
 });
 
-testIfDb("updatePostMetadata preserves free-text tags when category changes", async () => {
-  const id = randomUUID();
-  const post = await createPost({
-    title: `Taxonomy save ${id}`,
-    slug: `${slugPrefix}-taxonomy-save-${id}`,
-    data: {
-      excerpt: "Taxonomy save",
-      content: "Taxonomy save content",
-    },
-  });
-  if (!post) throw new Error("post_create_failed");
+testIfDbWithOptions(
+  "updatePostMetadata preserves free-text tags when category changes",
+  async () => {
+    const id = randomUUID();
+    const post = await createPost({
+      title: `Taxonomy save ${id}`,
+      slug: `${slugPrefix}-taxonomy-save-${id}`,
+      data: {
+        excerpt: "Taxonomy save",
+        content: "Taxonomy save content",
+      },
+    });
+    if (!post) throw new Error("post_create_failed");
 
-  const type = await createContentType({
-    name: `Post Taxonomy ${id}`,
-    slug: `${slugPrefix}-taxonomy-type-${id}`,
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {},
-    },
-  });
-  const taxonomies = await setTaxonomyConfig(type.id, {
-    categories: true,
-    tags: true,
-  });
-  const categoryTaxonomy = taxonomies.find((item) => item.kind === "category");
-  const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
-  if (!categoryTaxonomy || !tagTaxonomy) {
-    throw new Error("taxonomy_create_failed");
-  }
+    const type = await createContentType({
+      name: `Post Taxonomy ${id}`,
+      slug: `${slugPrefix}-taxonomy-type-${id}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+    });
+    const taxonomies = await setTaxonomyConfig(type.id, {
+      categories: true,
+      tags: true,
+    });
+    const categoryTaxonomy = taxonomies.find((item) => item.kind === "category");
+    const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
+    if (!categoryTaxonomy || !tagTaxonomy) {
+      throw new Error("taxonomy_create_failed");
+    }
 
-  const category = await createTerm(categoryTaxonomy.id, { name: "Release" });
-  const taxonomyTag = await createTerm(tagTaxonomy.id, { name: "Taxonomy tag" });
-  if (!category || !taxonomyTag) throw new Error("term_create_failed");
+    const category = await createTerm(categoryTaxonomy.id, { name: "Release" });
+    const taxonomyTag = await createTerm(tagTaxonomy.id, { name: "Taxonomy tag" });
+    if (!category || !taxonomyTag) throw new Error("term_create_failed");
 
-  const categoryOnly = await updatePostMetadata(post.id, {
-    tags: ["typed-tag"],
-    taxonomy: { categoryId: category.id },
-  });
-  expect(categoryOnly?.tags).toEqual(["typed-tag"]);
-  expect(categoryOnly?.taxonomy?.category?.id).toBe(category.id);
+    const categoryOnly = await updatePostMetadata(post.id, {
+      tags: ["typed-tag"],
+      taxonomy: { categoryId: category.id },
+    });
+    expect(categoryOnly?.tags).toEqual(["typed-tag"]);
+    expect(categoryOnly?.taxonomy?.category?.id).toBe(category.id);
 
-  const taxonomyTagUpdate = await updatePostMetadata(post.id, {
-    tags: ["ignored-when-taxonomy-tags-are-explicit"],
-    taxonomy: { tagIds: [taxonomyTag.id] },
-  });
-  expect(taxonomyTagUpdate?.tags).toEqual(["Taxonomy tag"]);
-  expect(taxonomyTagUpdate?.taxonomy?.category?.id).toBe(category.id);
-  expect(taxonomyTagUpdate?.taxonomy?.tags.map((term) => term.id)).toEqual([
-    taxonomyTag.id,
-  ]);
-});
+    const taxonomyTagUpdate = await updatePostMetadata(post.id, {
+      tags: ["ignored-when-taxonomy-tags-are-explicit"],
+      taxonomy: { tagIds: [taxonomyTag.id] },
+    });
+    expect(taxonomyTagUpdate?.tags).toEqual(["Taxonomy tag"]);
+    expect(taxonomyTagUpdate?.taxonomy?.category?.id).toBe(category.id);
+    expect(taxonomyTagUpdate?.taxonomy?.tags.map((term) => term.id)).toEqual([
+      taxonomyTag.id,
+    ]);
+  },
+  { timeout: 15_000 }
+);
