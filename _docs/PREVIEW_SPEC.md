@@ -15,7 +15,8 @@ public rendering.
 - Otwierany w modalu iframe z device switcherem.
 - Stylowany tokenami Site Theme.
 - Uzywa tego samego render pipeline co output publiczny (page templates + runtime link sources).
-- Device selection jest synchronizowany miedzy headerem edytora a modalem i przekazywany jako `?device=desktop|tablet|mobile`.
+- Device selection jest wlasnoscia `RuntimePreviewDialog` i jest przekazywany
+  jako `?device=desktop|tablet|mobile`.
 
 ## Unified admin preview UX
 
@@ -34,7 +35,7 @@ Dotyczy:
 
 ## Runtime token flow
 
-1. Admin klika `Runtime preview`.
+1. Admin klika `Preview`.
 2. API tworzy preview token (`preview_tokens`).
 3. API zwraca `previewUrl` i `expiresAt`.
 4. Pages editor moze poprosic o bounded probe (`probe: true`); serwer sprawdza

@@ -161,10 +161,6 @@ vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: pageEditorState.subscribeCacheEvents,
 }));
 
-vi.mock("@/ui/pages/DeviceSwitcher", () => ({
-  DeviceSwitcher: () => <div>device-switcher</div>,
-}));
-
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   RuntimePreviewDialog: () => null,
 }));

@@ -30,8 +30,7 @@ import {
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
-import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/RuntimePreviewDialog";
+import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
@@ -345,7 +344,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [previewProbe, setPreviewProbe] = useState<PreviewProbeResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<RuntimePreviewDeviceId>("desktop");
   const [libraryTab, setLibraryTab] = useState<"widgets" | "templates" | "forms">("widgets");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
@@ -1009,34 +1007,28 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Runtime preview device
-              </p>
-              <DeviceSwitcher value={previewDevice} onChange={setPreviewDevice} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handlePreview}
+                disabled={isLoading}
+              >
+                <Eye className="h-4 w-4" />
+                Preview
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                onClick={handleSaveDraft}
+                disabled={isSaving || isLoading}
+              >
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save draft"}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handlePreview}
-              disabled={isLoading}
-            >
-              <Eye className="h-4 w-4" />
-              Runtime preview
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="gap-2"
-              onClick={handleSaveDraft}
-              disabled={isSaving || isLoading}
-            >
-              <Save className="h-4 w-4" />
-              {isSaving ? "Saving..." : "Save draft"}
-            </Button>
             <Button
               size="sm"
               className="gap-2"
@@ -1210,8 +1202,6 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         error={previewError}
         cannotPreviewMessage="Save this page first to generate a runtime preview."
         iframeTitle="Page runtime preview"
-        device={previewDevice}
-        onDeviceChange={setPreviewDevice}
         onFixPreviewTarget={() => {
           setPreviewOpen(false);
           setSettingsOpen(true);

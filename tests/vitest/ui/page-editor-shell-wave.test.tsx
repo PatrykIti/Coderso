@@ -228,23 +228,6 @@ vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: pageEditorState.subscribeCacheEvents,
 }));
 
-vi.mock("@/ui/pages/DeviceSwitcher", () => ({
-  DeviceSwitcher: ({
-    value,
-    onChange,
-  }: {
-    value: string;
-    onChange: (value: "desktop" | "tablet" | "mobile") => void;
-  }) => (
-    <div>
-      <span>{`device:${value}`}</span>
-      <button type="button" onClick={() => onChange("tablet")}>
-        device-tablet
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   RuntimePreviewDialog: ({
     open,
@@ -252,14 +235,12 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
     probeResult,
     isLoading,
     error,
-    device,
   }: {
     open: boolean;
     previewUrl: string | null;
     probeResult?: { ok: boolean; targetLabel?: string } | null;
     isLoading: boolean;
     error: string | null;
-    device: string;
   }) =>
     open ? (
       <div>
@@ -267,7 +248,6 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
         <span>{`preview-probe:${probeResult ? String(probeResult.ok) : "none"}`}</span>
         <span>{`preview-loading:${String(isLoading)}`}</span>
         <span>{`preview-error:${error ?? "none"}`}</span>
-        <span>{`preview-device:${device}`}</span>
       </div>
     ) : null,
 }));
@@ -718,8 +698,9 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
   try {
     await flush();
 
-    clickButton(view.container, "device-tablet");
-    clickButton(view.container, "Runtime preview");
+    expect(view.container.textContent).not.toContain("Runtime preview device");
+
+    clickButton(view.container, "Preview");
     await flush();
 
     expect(pageEditorState.previewPage).toHaveBeenCalledWith("page-1", {
@@ -727,7 +708,6 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     });
     expect(view.container.textContent).toContain("preview-url:https://preview.test/page-1");
     expect(view.container.textContent).toContain("preview-probe:true");
-    expect(view.container.textContent).toContain("preview-device:tablet");
 
     clickButton(view.container, "Save draft");
     await flush();
@@ -887,7 +867,7 @@ test("PageEditor resolves page id from location and surfaces generic preview/tem
   try {
     await flush();
 
-    clickButton(view.container, "Runtime preview");
+    clickButton(view.container, "Preview");
     await flush();
     expect(view.container.textContent).toContain("preview-error:Failed to generate preview.");
 
@@ -1211,7 +1191,7 @@ test("PageEditor handles mobile details, no-page preview/settings guards, and no
 
   try {
     await flush();
-    clickButton(noPageView.container, "Runtime preview");
+    clickButton(noPageView.container, "Preview");
     await flush();
     expect(pageEditorState.previewPage).not.toHaveBeenCalled();
     expect(noPageView.container.textContent).toContain("Loading page...");
@@ -1240,7 +1220,7 @@ test("PageEditor surfaces API client error messages across page, settings, and r
     expect(view.container.textContent).toContain("Remote refresh denied");
 
     pageEditorState.previewPage.mockRejectedValueOnce(apiError("Preview denied"));
-    clickButton(view.container, "Runtime preview");
+    clickButton(view.container, "Preview");
     await flush();
     expect(view.container.textContent).toContain("preview-error:Preview denied");
 
