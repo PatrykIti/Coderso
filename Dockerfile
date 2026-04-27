@@ -2,7 +2,7 @@
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 
-FROM oven/bun:1.3.6 AS builder
+FROM oven/bun:1.3.13 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
