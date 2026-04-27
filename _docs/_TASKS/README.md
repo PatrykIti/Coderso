@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 49 tasks
+- **To Do:** 75 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1292 tasks
 
@@ -39,6 +39,32 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-220 | ESLint 9 React Hooks Compiler Cleanup | High | Large | Fix the 113 React Hooks/Compiler lint findings surfaced by the full `eslint-plugin-react-hooks` recommended preset |
+| TASK-220-01 | Baseline, Rule Policy, and Contributor Guardrails | High | Medium | Lock the ESLint 9 hooks baseline, rule policy, and contributor guidance before implementation |
+| TASK-220-01-01 | Lint Inventory and Rule Ownership | High | Small | Keep a reproducible JSON/grouped inventory and assign every finding to one implementation leaf |
+| TASK-220-01-02 | React Hooks Compiler Remediation Patterns and AGENTS Guidance | High | Small | Document that hooks compiler findings must be fixed, not suppressed |
+| TASK-220-02 | Admin Bootstrap and Read-Only Loader Effects | High | Large | Fix mount loader effects in AdminApp, read-only pages, and analytics |
+| TASK-220-02-01 | AdminApp Auth, Settings, and Theme Bootstrap Effects | High | Medium | Clean protected-route auth/settings/theme bootstrap without weakening read-through cache behavior |
+| TASK-220-02-02 | Read-Only Dashboard, Audit, Security, and Settings Loaders | High | Large | Refactor simple read loaders that synchronously set loading/error state from effects |
+| TASK-220-02-03 | Analytics Memoization and KPI Derived State | High | Medium | Fix Analytics loader and manual memoization failures while preserving KPI behavior |
+| TASK-220-03 | Cache Hydration Hooks and List Mount Refresh | High | Large | Preserve admin cache hydration while clearing hooks compiler findings |
+| TASK-220-03-01 | Shared Cached List Hooks Mount Refresh | High | Large | Fix shared cached list hooks and cache-bus refresh patterns |
+| TASK-220-03-02 | Admin List Page Mount Refresh and Selection Trim | High | Large | Move list mount refresh and visible selection trimming out of post-render repair effects |
+| TASK-220-03-03 | Cached Detail and Editor Hydration | High | Large | Refactor cached detail/editor hydration without dirty-state overwrites |
+| TASK-220-04 | Form, Drawer, Dialog, and Derived Field State | High | Large | Move auto-slug, reset, picker, and settings form state out of repair effects |
+| TASK-220-04-01 | Create Drawers Auto Slug and Reset State | High | Medium | Fix create drawer auto-slug/default reset patterns |
+| TASK-220-04-02 | Dialog Preview Picker and Slot Derived State | High | Large | Fix preview, picker, slot, media, and template dialog derived state |
+| TASK-220-04-03 | Settings Form Snapshots and Profile Route State | High | Large | Fix settings/profile/user route-derived form state without exposing secrets |
+| TASK-220-05 | Editor Dirty-State, Refs, and Autosave Safety | High | Large | Fix higher-risk editor findings around refs, autosave, dirty state, and revisions |
+| TASK-220-05-01 | Post Editor Ref and Autosave Signature Cleanup | High | Large | Remove render-time ref reads and preserve Posts autosave/dirty-state behavior |
+| TASK-220-05-02 | Page Editor Route, Cache, Revisions, and Template Loaders | High | Large | Fix PageEditor route/cache/revision/template loader findings |
+| TASK-220-05-03 | Entry Content Type and Relation Editor State | High | Large | Fix Entry/Content Type relation hydration, tab/field state, and memoization |
+| TASK-220-06 | Widget, Commerce, Listings, and Resource-Specific Loaders | High | Large | Clean remaining resource-specific loader/list findings after shared patterns land |
+| TASK-220-06-01 | Widget Library, Template Category, and Editor Loaders | High | Large | Fix widget template cache, category, and library selection patterns |
+| TASK-220-06-02 | Commerce, Listings, Forms, Menus, and Posts Resource Lists | High | Large | Preserve resource list parity while clearing resource-specific loader findings |
+| TASK-220-06-03 | Widget Hero and Navigation Editor Async Loaders | Medium | Medium | Fix widget editor async preset/menu loaders |
+| TASK-220-07 | Validation, Docs, and Closure | Medium | Medium | Own final lint/type/Vitest validation, docs, changelog, and board sync |
+| TASK-220-07-01 | React Hooks Compiler Regression Matrix | Medium | Medium | Map changed surfaces to focused Vitest suites and shared gates |
+| TASK-220-07-02 | Docs, Changelog, Board, and Lint Gate Closure | Medium | Small | Close task family with changelog, board, and source-of-truth docs |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
