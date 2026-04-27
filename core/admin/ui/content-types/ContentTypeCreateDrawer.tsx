@@ -1,5 +1,5 @@
 import { BookOpen, Hash, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -48,26 +48,25 @@ export function ContentTypeCreateDrawer({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (!slugTouched) {
-      setSlug(name ? slugify(name) : "");
-    }
-  }, [name, slugTouched]);
+  const resolvedSlug = slugTouched ? slug : name ? slugify(name) : "";
 
-  useEffect(() => {
-    if (!open) {
-      setName("");
-      setSlug("");
-      setSlugTouched(false);
-      setError(null);
-      setIsSaving(false);
-    }
-  }, [open]);
+  const resetForm = () => {
+    setName("");
+    setSlug("");
+    setSlugTouched(false);
+    setError(null);
+    setIsSaving(false);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) resetForm();
+    onOpenChange(nextOpen);
+  };
 
   const handleSubmit = async () => {
-    if (!name.trim() || !slug.trim()) return;
+    if (!name.trim() || !resolvedSlug.trim()) return;
     const normalizedName = name.trim().toLowerCase();
-    const normalizedSlug = slug.trim().toLowerCase();
+    const normalizedSlug = resolvedSlug.trim().toLowerCase();
     if (existingTypes.some((type) => type.name.trim().toLowerCase() === normalizedName)) {
       setError("Content type name already exists.");
       return;
@@ -86,7 +85,7 @@ export function ContentTypeCreateDrawer({
         status: "draft",
       });
       onCreated?.(created);
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -103,12 +102,13 @@ export function ContentTypeCreateDrawer({
     (type) => type.name.trim().toLowerCase() === name.trim().toLowerCase()
   );
   const duplicateSlug = existingTypes.some(
-    (type) => type.slug.trim().toLowerCase() === slug.trim().toLowerCase()
+    (type) => type.slug.trim().toLowerCase() === resolvedSlug.trim().toLowerCase()
   );
-  const isDisabled = !name.trim() || !slug.trim() || duplicateName || duplicateSlug || isSaving;
+  const isDisabled =
+    !name.trim() || !resolvedSlug.trim() || duplicateName || duplicateSlug || isSaving;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
         className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
@@ -162,7 +162,7 @@ export function ContentTypeCreateDrawer({
                 <Input
                   placeholder="blog-posts"
                   className="pl-9"
-                  value={slug}
+                  value={resolvedSlug}
                   onChange={(event) => {
                     setSlug(event.target.value);
                     setSlugTouched(true);

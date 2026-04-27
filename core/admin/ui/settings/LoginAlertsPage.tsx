@@ -60,8 +60,6 @@ export function LoginAlertsPage() {
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setError(null);
     getSecuritySettings()
       .then((result) => {
         if (!active) return;

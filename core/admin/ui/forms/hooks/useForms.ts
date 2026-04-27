@@ -52,8 +52,24 @@ export function useForms(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    refresh(resolveFormsListMountRefreshOptions(hasInitialCache)).catch(() => undefined);
-    return undefined;
+    const mountOptions = resolveFormsListMountRefreshOptions(hasInitialCache);
+    let active = true;
+    listFormsCached({ force: mountOptions.force })
+      .then((nextItems) => {
+        if (!active) return;
+        setItems(nextItems);
+        hasHydratedRef.current = true;
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (active) setError(resolveFormsError(err));
+      })
+      .finally(() => {
+        if (active && !mountOptions.background) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [hasInitialCache, options?.skip, refresh]);
 
   useEffect(() => {

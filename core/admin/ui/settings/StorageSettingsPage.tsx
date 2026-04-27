@@ -376,8 +376,6 @@ export function StorageSettingsPage() {
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setError(null);
     getStorageSettings()
       .then((result) => {
         if (!active) return;

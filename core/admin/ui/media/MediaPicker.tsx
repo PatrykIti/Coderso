@@ -1,5 +1,5 @@
 import { FileAudio, FileText, ImagePlus, Video, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -56,10 +56,14 @@ export function MediaPicker({
   accept,
   maxItems,
 }: MediaPickerProps) {
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const initialCached = useMemo(() => getCachedMedia(), []);
+  const hasInitialCache = initialCached !== null;
+  const [items, setItems] = useState<MediaItem[]>(() =>
+    initialCached ? initialCached.map(toMediaItem) : []
+  );
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
@@ -81,41 +85,31 @@ export function MediaPicker({
   const canAddMore =
     !multiple || !maxItems || selectedIds.length < maxItems;
 
-  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
-    if (!options?.background) {
-      setIsLoading(true);
-    }
-    setError(null);
-    try {
-      const result = await listMediaCached({ force: options?.force ?? false });
-      setItems(result.map(toMediaItem));
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load media assets.");
-      }
-    } finally {
-      if (!options?.background) {
-        setIsLoading(false);
-      }
-      setHasLoaded(true);
-    }
-  }, []);
-
   useEffect(() => {
     if (hasLoaded) return;
     if (!isOpen && selectedIds.length === 0) return;
-    const cached = getCachedMedia();
-    if (cached) {
-      setItems(cached.map(toMediaItem));
-      setIsLoading(false);
-      setHasLoaded(true);
-      void refresh({ force: false, background: true });
-      return;
-    }
-    void refresh({ force: false, background: false });
-  }, [hasLoaded, isOpen, refresh, selectedIds.length]);
+    let active = true;
+    listMediaCached({ force: false })
+      .then((result) => {
+        if (active) setItems(result.map(toMediaItem));
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load media assets.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        if (!hasInitialCache) setIsLoading(false);
+        setHasLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache, hasLoaded, isOpen, selectedIds.length]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {

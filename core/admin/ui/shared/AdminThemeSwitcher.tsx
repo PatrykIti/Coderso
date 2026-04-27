@@ -1,5 +1,5 @@
 import { Palette } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AdminLink } from "@/ui/shared/AdminLink";
@@ -55,10 +55,25 @@ export function AdminThemeSwitcher() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    void refreshProfiles();
-  }, [open, refreshProfiles]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) return;
+    setIsLoading(true);
+    setError(null);
+    listAdminThemeProfilesCached()
+      .then((items) => {
+        setProfiles(items);
+        setActiveId(resolveActiveProfileId(items));
+      })
+      .catch((err) => {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load admin themes.");
+        }
+      })
+      .finally(() => setIsLoading(false));
+  };
 
   const handleSelect = async (nextId: string) => {
     if (!nextId || nextId === activeId) return;
@@ -82,7 +97,7 @@ export function AdminThemeSwitcher() {
   const basePath = resolveAdminBasePath();
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Palette className="h-4 w-4" />

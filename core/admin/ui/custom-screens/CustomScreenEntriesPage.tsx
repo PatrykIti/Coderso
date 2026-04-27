@@ -308,24 +308,50 @@ export function CustomScreenEntriesPage() {
 
   useEffect(() => {
     if (!screenId) return;
-    const cachedScreen = getCachedCustomScreen(screenId);
-    const cachedTypes = getCachedContentTypes();
-    if (cachedScreen) {
-      setScreen(cachedScreen);
-      const cachedType =
-        cachedTypes?.find((item) => item.id === cachedScreen.contentTypeId) ?? null;
-      if (cachedType) {
-        setContentTypeSlug(cachedType.slug);
-        setContentTypeName(cachedType.name);
-        const cachedEntries = getCachedEntries(cachedType.slug);
-        if (cachedEntries) {
-          setEntries(cachedEntries);
-          setIsLoading(false);
+    let active = true;
+    getCustomScreenCached(screenId, { force: true })
+      .then(async (nextScreen) => {
+        if (!active) return;
+        if (!nextScreen) {
+          setError("Custom screen not found.");
+          setEntries([]);
+          return;
         }
-      }
-    }
-    refresh(true).catch(() => undefined);
-  }, [refresh, screenId]);
+        const contentTypes = await listContentTypesCached({ force: true });
+        if (!active) return;
+        const contentType =
+          contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
+        if (!contentType) {
+          setScreen(nextScreen);
+          setContentTypeSlug(null);
+          setContentTypeName(null);
+          setEntries([]);
+          setError("Content type not found.");
+          return;
+        }
+        const nextEntries = await listEntriesCached(contentType.slug, { force: true });
+        if (!active) return;
+        setScreen(nextScreen);
+        setContentTypeSlug(contentType.slug);
+        setContentTypeName(contentType.name);
+        setEntries(nextEntries);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load custom screen records.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [screenId]);
 
   useEffect(() => {
     if (!screenId) return undefined;

@@ -118,8 +118,32 @@ export function ThemesPage() {
   );
 
   useEffect(() => {
-    refresh({ force: true }).catch(() => undefined);
-  }, [refresh]);
+    let active = true;
+    Promise.all([
+      listAdminThemeTemplatesCached({ force: true }),
+      listAdminThemeProfilesCached({ force: true }),
+    ])
+      .then(([templatesResult, profilesResult]) => {
+        if (!active) return;
+        setTemplates(templatesResult);
+        setProfiles(profilesResult);
+        hasHydratedRef.current = true;
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load admin themes.");
+        }
+      })
+      .finally(() => {
+        if (active && !hasInitialCache) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {

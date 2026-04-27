@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -57,27 +57,23 @@ export function ListingFiltersPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [showExamples, setShowExamples] = useState(false);
 
-  useEffect(() => {
-    if (selectedListingQueryId) return;
-    if (items.length === 0) return;
-    setSelectedListingQueryId(items[0]!.id);
-  }, [items, selectedListingQueryId]);
+  const resolvedListingQueryId = selectedListingQueryId || items[0]?.id || "";
 
   const activeListingLabel = useMemo(() => {
-    if (!selectedListingQueryId) return "No query selected";
+    if (!resolvedListingQueryId) return "No query selected";
     return (
-      items.find((item) => item.id === selectedListingQueryId)?.name ??
+      items.find((item) => item.id === resolvedListingQueryId)?.name ??
       "Selected listing query"
     );
-  }, [items, selectedListingQueryId]);
+  }, [items, resolvedListingQueryId]);
 
   const runtimeTokenPrefix = useMemo(
     () => {
       const fallbackQueryId = items[0]?.id ?? "<listingQueryId>";
-      const queryId = selectedListingQueryId || fallbackQueryId;
+      const queryId = resolvedListingQueryId || fallbackQueryId;
       return `lq.${queryId}`;
     },
-    [items, selectedListingQueryId]
+    [items, resolvedListingQueryId]
   );
 
   const queryExamples = useMemo<QueryExample[]>(
@@ -124,14 +120,14 @@ export function ListingFiltersPage() {
 
   const runPreview = async () => {
     const inferredListingQueryId = extractListingQueryIdFromQueryString(queryString);
-    const resolvedListingQueryId = selectedListingQueryId || inferredListingQueryId;
-    if (!resolvedListingQueryId) {
+    const previewListingQueryId = resolvedListingQueryId || inferredListingQueryId;
+    if (!previewListingQueryId) {
       setPreviewError(
         "Select a listing query first, or provide tokens like lq.<listingQueryId>.<field>.<operator> in query string."
       );
       return;
     }
-    if (!LISTING_QUERY_ID_PATTERN.test(resolvedListingQueryId)) {
+    if (!LISTING_QUERY_ID_PATTERN.test(previewListingQueryId)) {
       setPreviewError(
         "Listing query id in runtime tokens has invalid format. Use an existing query from Coderso -> Listings."
       );
@@ -141,7 +137,7 @@ export function ListingFiltersPage() {
     setPreviewError(null);
     try {
       const result = await previewListingFilters({
-        listingQueryId: resolvedListingQueryId,
+        listingQueryId: previewListingQueryId,
         queryString,
       });
       if (!selectedListingQueryId && inferredListingQueryId) {
@@ -201,7 +197,7 @@ export function ListingFiltersPage() {
             <div className="space-y-2">
               <p className="text-sm font-medium">Listing query</p>
               <Select
-                value={selectedListingQueryId || NO_LISTING_QUERY_VALUE}
+                value={resolvedListingQueryId || NO_LISTING_QUERY_VALUE}
                 onValueChange={(next) =>
                   setSelectedListingQueryId(
                     next === NO_LISTING_QUERY_VALUE ? "" : next
@@ -229,9 +225,9 @@ export function ListingFiltersPage() {
                   Loading listing queries...
                 </p>
               ) : null}
-              {selectedListingQueryId ? (
+              {resolvedListingQueryId ? (
                 <p className="text-xs text-muted-foreground">
-                  Query ID: <code>{selectedListingQueryId}</code>
+                  Query ID: <code>{resolvedListingQueryId}</code>
                 </p>
               ) : null}
               <p className="text-xs text-muted-foreground">
@@ -328,7 +324,7 @@ export function ListingFiltersPage() {
                     </article>
                   ))}
                 </div>
-                {!selectedListingQueryId ? (
+                {!resolvedListingQueryId ? (
                   <p className="text-xs text-muted-foreground">
                     Select a listing query to run preview, or keep token format with
                     <code> lq.&lt;listingQueryId&gt;...</code> in query string.

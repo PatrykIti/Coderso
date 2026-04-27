@@ -94,8 +94,6 @@ export function PermissionsMatrixPage() {
   );
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const [rolesData, permissionsData] = await Promise.all([
         listAdminRoles(),
@@ -103,6 +101,7 @@ export function PermissionsMatrixPage() {
       ]);
       const resolvedPermissions =
         permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups;
+      setError(null);
       setRoles(rolesData);
       setPermissionGroups(resolvedPermissions);
       setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
@@ -118,8 +117,32 @@ export function PermissionsMatrixPage() {
   }, [buildRolePermissions]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    Promise.all([listAdminRoles(), listPermissionCatalog()])
+      .then(([rolesData, permissionsData]) => {
+        if (!active) return;
+        const resolvedPermissions =
+          permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups;
+        setError(null);
+        setRoles(rolesData);
+        setPermissionGroups(resolvedPermissions);
+        setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load roles and permissions.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [buildRolePermissions]);
 
   const hasUnsavedChanges = useMemo(() => {
     return roles.some((role) => {

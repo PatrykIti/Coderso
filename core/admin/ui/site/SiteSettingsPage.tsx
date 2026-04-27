@@ -178,7 +178,7 @@ export function SiteSettingsPage() {
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle"
+    "loading"
   );
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -191,8 +191,6 @@ export function SiteSettingsPage() {
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
-    setError(null);
 
     Promise.all([getSiteSettings(), listPagesCached({ force: true }), listContentTypesCached({ force: true })])
       .then(([settings, pagesResult, typesResult]) => {
@@ -200,6 +198,10 @@ export function SiteSettingsPage() {
         setForm((prev) => ({
           ...prev,
           ...toFormValues(settings),
+          contentRoutes: mergeContentRoutes(
+            toFormValues(settings).contentRoutes,
+            typesResult
+          ),
         }));
         setPages(pagesResult);
         setContentTypes(typesResult);
@@ -218,14 +220,6 @@ export function SiteSettingsPage() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!contentTypes.length) return;
-    setForm((prev) => ({
-      ...prev,
-      contentRoutes: mergeContentRoutes(prev.contentRoutes, contentTypes),
-    }));
-  }, [contentTypes]);
 
   const routeValidation = useMemo(
     () => validateContentRoutes(form.contentRoutes),
@@ -782,7 +776,7 @@ export function SiteSettingsPage() {
                 disabled={busy || hasValidationErrors}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {busy ? "Saving..." : "Save changes"}
+                {saving ? "Saving..." : "Save changes"}
               </Button>
             </div>
           </div>

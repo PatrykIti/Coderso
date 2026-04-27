@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -48,14 +48,30 @@ export function SetupWizard({
   error = null,
 }: SetupWizardProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [form, setForm] = useState<SetupWizardValues>(() =>
-    resolveInitialValues(initialValues)
-  );
+  const [formState, setFormState] = useState(() => ({
+    source: initialValues,
+    form: resolveInitialValues(initialValues),
+  }));
   const [localError, setLocalError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setForm(resolveInitialValues(initialValues));
-  }, [initialValues]);
+  const form =
+    formState.source === initialValues
+      ? formState.form
+      : resolveInitialValues(initialValues);
+  const setForm = (
+    next: SetupWizardValues | ((previous: SetupWizardValues) => SetupWizardValues)
+  ) => {
+    setFormState((previous) => {
+      const current =
+        previous.source === initialValues
+          ? previous.form
+          : resolveInitialValues(initialValues);
+      return {
+        source: initialValues,
+        form: typeof next === "function" ? next(current) : next,
+      };
+    });
+  };
 
   const stepError = useMemo(() => validateSetupWizardStep(form, step), [form, step]);
   const visibleError = localError ?? stepError ?? error;

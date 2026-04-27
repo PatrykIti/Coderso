@@ -1,5 +1,5 @@
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -36,14 +36,18 @@ export function WidgetTemplateCategoryDrawer({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
+  const resetForm = () => {
     setNewName("");
     setEditingId(null);
     setEditingName("");
     setPendingDeleteId(null);
     setActionError(null);
-  }, [open]);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) resetForm();
+    onOpenChange(nextOpen);
+  };
 
   const handleCreate = async () => {
     const trimmed = newName.trim();
@@ -97,7 +101,7 @@ export function WidgetTemplateCategoryDrawer({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
         showCloseButton={false}

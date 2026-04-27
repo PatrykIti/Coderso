@@ -57,9 +57,13 @@ export function ThemeEditorPage({
   profileId: initialProfileId,
   initialProfile,
 }: ThemeEditorPageProps) {
-  const [profileId, setProfileId] = useState<string | null>(
-    initialProfileId ?? initialProfile?.id ?? null
-  );
+  const [profileId] = useState<string | null>(() => {
+    if (initialProfileId ?? initialProfile?.id) {
+      return initialProfileId ?? initialProfile?.id ?? null;
+    }
+    if (typeof window === "undefined") return null;
+    return resolveProfileId(window.location.pathname);
+  });
   const [profile, setProfile] = useState<ThemeProfile | null>(
     initialProfile ?? null
   );
@@ -86,11 +90,6 @@ export function ThemeEditorPage({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
-
-  useEffect(() => {
-    if (profileId || typeof window === "undefined") return;
-    setProfileId(resolveProfileId(window.location.pathname));
-  }, [profileId]);
 
   const loadProfile = async (id: string) => {
     setIsLoading(true);
@@ -127,7 +126,41 @@ export function ThemeEditorPage({
   useEffect(() => {
     if (!profileId) return;
     if (initialProfile) return;
-    void loadProfile(profileId);
+    let active = true;
+    Promise.all([
+      getThemeProfile(profileId),
+      listThemes(),
+      listPagesCached({ force: true }),
+    ])
+      .then(([profileResult, themesResult, pagesResult]) => {
+        if (!active) return;
+        setProfile(profileResult);
+        setThemes(themesResult.items);
+        setPages(pagesResult);
+        const nextTokens = (profileResult.tokens ?? {}) as DesignTokenOverrides;
+        const nextRoutes = mapRoutesToDraft(profileResult.routes ?? []);
+        setTokens(nextTokens);
+        setTokensDraft(JSON.stringify(nextTokens, null, 2));
+        setTokensError(null);
+        setTokensValid(true);
+        setRoutes(nextRoutes);
+        setBaselineTokens(nextTokens);
+        setBaselineRoutes(nextRoutes);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load theme profile.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [profileId, initialProfile]);
 
   const themeMeta = useMemo(

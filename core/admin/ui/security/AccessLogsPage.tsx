@@ -11,7 +11,7 @@ import {
   Tablet,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,31 +141,34 @@ export function AccessLogsPage() {
     };
   }, [query, statusFilter, dateRange, userFilter]);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const items = await listAccessLogs({
-        limit: 200,
-        status: filters.status,
-        query: filters.query,
-        from: filters.from,
-      });
-      setLogs(items.map(mapAccessLog));
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load access logs.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters]);
-
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listAccessLogs({
+      limit: 200,
+      status: filters.status,
+      query: filters.query,
+      from: filters.from,
+    })
+      .then((items) => {
+        if (!active) return;
+        setError(null);
+        setLogs(items.map(mapAccessLog));
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load access logs.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filters]);
 
   return (
     <AdminShell

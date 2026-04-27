@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -100,19 +100,39 @@ export function FormRuntimePreviewDialog({
   hasUnsavedChanges,
   onOpenLogs,
 }: FormRuntimePreviewDialogProps) {
-  const [values, setValues] = useState<RuntimeValues>({});
+  const [valuesState, setValuesState] = useState(() => ({
+    source: fields,
+    values: buildInitialValues(fields),
+  }));
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FormSubmissionResponse | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    setValues(buildInitialValues(fields));
-    setCurrentStep(1);
-    setError(null);
-    setResult(null);
-  }, [fields, open]);
+  const values =
+    valuesState.source === fields ? valuesState.values : buildInitialValues(fields);
+  const setValues = (
+    next: RuntimeValues | ((previous: RuntimeValues) => RuntimeValues)
+  ) => {
+    setValuesState((previous) => {
+      const current =
+        previous.source === fields ? previous.values : buildInitialValues(fields);
+      return {
+        source: fields,
+        values: typeof next === "function" ? next(current) : next,
+      };
+    });
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setValuesState({ source: fields, values: buildInitialValues(fields) });
+      setCurrentStep(1);
+      setError(null);
+      setResult(null);
+    }
+    onOpenChange(nextOpen);
+  };
 
   const visibleFields = useMemo(() => {
     return fields.filter((field) =>
@@ -121,7 +141,9 @@ export function FormRuntimePreviewDialog({
   }, [fields, values]);
 
   const stepGroups = useMemo(() => toStepGroups(visibleFields), [visibleFields]);
-  const activeStep = settings.layoutMode === "multi_step" ? currentStep : 1;
+  const maxStep = settings.layoutMode === "multi_step" ? Math.max(stepGroups.length, 1) : 1;
+  const activeStep =
+    settings.layoutMode === "multi_step" ? Math.min(currentStep, maxStep) : 1;
 
   const activeStepFields = useMemo(() => {
     if (settings.layoutMode !== "multi_step") return visibleFields;
@@ -129,13 +151,7 @@ export function FormRuntimePreviewDialog({
     return group?.fields ?? [];
   }, [activeStep, settings.layoutMode, stepGroups, visibleFields]);
 
-  const maxStep = settings.layoutMode === "multi_step" ? Math.max(stepGroups.length, 1) : 1;
   const isLastStep = activeStep >= maxStep;
-
-  useEffect(() => {
-    if (activeStep <= maxStep) return;
-    setCurrentStep(maxStep);
-  }, [activeStep, maxStep]);
 
   const updateValue = (name: string, value: string | boolean) => {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -188,7 +204,7 @@ export function FormRuntimePreviewDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-4xl" showCloseButton={false}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Form Runtime Preview</DialogTitle>

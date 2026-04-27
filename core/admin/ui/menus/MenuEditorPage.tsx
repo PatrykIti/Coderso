@@ -348,7 +348,9 @@ export function MenuEditorPage() {
   const activeItemIdRef = useRef<string | null>(activeItemId);
   const [isLoading, setIsLoading] = useState(() => Boolean(menuId && !initialMenu));
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    () => (menuId ? null : "Select a menu from the Menus list.")
+  );
 
   const pageMap = useMemo(() => new Map(pages.map((page) => [page.id, page])), [pages]);
   const displayTree = useMemo(() => buildDisplayTree(items, pageMap), [items, pageMap]);
@@ -475,31 +477,44 @@ export function MenuEditorPage() {
   );
 
   useEffect(() => {
-    if (!menuId) {
-      setOriginalMenu(null);
-      setItems([]);
-      setOriginalItems([]);
-      setActiveItemId(null);
-      setPendingDelete(null);
-      setError("Select a menu from the Menus list.");
-      setIsLoading(false);
-      return;
-    }
-
-    const cached = getCachedMenuDetail(menuId);
-    if (cached) {
-      applyMenuPayload(cached);
-      setIsLoading(false);
-    } else {
-      setOriginalMenu(null);
-      setItems([]);
-      setOriginalItems([]);
-      setActiveItemId(null);
-    }
-
-    const mountOptions = resolveMenuMountRefreshOptions(Boolean(cached || initialPages));
-    refreshMenu(mountOptions).catch(() => undefined);
-  }, [applyMenuPayload, initialPages, menuId, refreshMenu]);
+    if (!menuId) return;
+    const mountOptions = resolveMenuMountRefreshOptions(
+      Boolean(initialMenu || initialPages)
+    );
+    let active = true;
+    Promise.all([
+      listPagesCached({ force: mountOptions.force }),
+      getMenuWithItemsCached(menuId, { force: mountOptions.force }),
+    ])
+      .then(([pageList, payload]) => {
+        if (!active) return;
+        setPages(pageList);
+        hasHydratedRef.current = true;
+        if (!payload) {
+          setOriginalMenu(null);
+          setItems([]);
+          setOriginalItems([]);
+          setActiveItemId(null);
+          setError("Menu not found.");
+          return;
+        }
+        applyMenuPayload(payload, { preserveItemId: activeItemIdRef.current });
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load menu.");
+        }
+      })
+      .finally(() => {
+        if (active && !mountOptions.background) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyMenuPayload, initialMenu, initialPages, menuId]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {

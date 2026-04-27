@@ -105,10 +105,23 @@ export function CustomScreenListPage() {
   );
 
   useEffect(() => {
-    refreshContentTypes(
-      resolveListMountRefreshOptions(hasInitialContentTypes)
-    ).catch(() => undefined);
-  }, [hasInitialContentTypes, refreshContentTypes]);
+    const mountOptions = resolveListMountRefreshOptions(hasInitialContentTypes);
+    let active = true;
+    listContentTypesCached({ force: mountOptions.force })
+      .then((next) => {
+        if (!active) return;
+        setContentTypes(next);
+        contentTypesHydratedRef.current = true;
+      })
+      .catch(() => {
+        if (active && !mountOptions.background) {
+          setActionError("Failed to load content type labels.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialContentTypes]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -164,17 +177,11 @@ export function CustomScreenListPage() {
     () => pagination.visibleRows.map((row) => row.screen.id),
     [pagination.visibleRows]
   );
-  const selectedCount = selectedIds.length;
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
 
   const handleDrawerOpenChange = (next: boolean) => {
     setCreateOpen(next);
@@ -323,12 +330,12 @@ export function CustomScreenListPage() {
   };
 
   const handleBulkApply = () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
     if (bulkAction === "delete") {
-      setPendingBulkDeleteIds(selectedIds);
+      setPendingBulkDeleteIds(visibleSelectedIds);
       return;
     }
-    void runBulkAction(bulkAction, selectedIds);
+    void runBulkAction(bulkAction, visibleSelectedIds);
   };
 
   return (
@@ -401,7 +408,7 @@ export function CustomScreenListPage() {
                 ? "No custom screens match your current filters."
                 : undefined
             }
-            selectedIds={selectedIds}
+            selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
             workingId={workingStatusId}

@@ -34,10 +34,9 @@ export function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const payload = await getDashboardData();
+      setError(null);
       setData(payload);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -51,8 +50,28 @@ export function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    getDashboardData()
+      .then((payload) => {
+        if (!active) return;
+        setError(null);
+        setData(payload);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load dashboard data.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const cards = useMemo(() => {
     const totals = data?.totals ?? { pages: 0, entries: 0, media: 0 };
@@ -95,7 +114,15 @@ export function DashboardPage() {
           description="Welcome back, Admin. Here's what's happening today."
           actions={
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={() => void refresh()} disabled={isLoading}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsLoading(true);
+                  setError(null);
+                  void refresh();
+                }}
+                disabled={isLoading}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>

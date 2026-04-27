@@ -212,18 +212,52 @@ export function EntryList() {
   );
 
   useEffect(() => {
-    refreshEntries({
-      force: !hasInitialEntries,
-      background: hasInitialEntries,
-    }).catch(() => undefined);
-  }, [hasInitialEntries, refreshEntries]);
+    let active = true;
+    listAllEntriesCached({ force: !hasInitialEntries })
+      .then((next) => {
+        if (!active) return;
+        setEntries(next);
+        hasHydratedEntriesRef.current = true;
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load entries.");
+        }
+      })
+      .finally(() => {
+        if (active && !hasInitialEntries) setEntriesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialEntries]);
 
   useEffect(() => {
-    refreshTypes({
-      force: !hasInitialTypes,
-      background: hasInitialTypes,
-    }).catch(() => undefined);
-  }, [hasInitialTypes, refreshTypes]);
+    let active = true;
+    listContentTypesCached({ force: !hasInitialTypes })
+      .then((next) => {
+        if (!active) return;
+        setTypes(next);
+        hasHydratedTypesRef.current = true;
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load content types.");
+        }
+      })
+      .finally(() => {
+        if (active && !hasInitialTypes) setTypesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialTypes]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -304,24 +338,20 @@ export function EntryList() {
     [pagination.visibleRows]
   );
   const visibleKeySet = useMemo(() => new Set(visibleKeys), [visibleKeys]);
-  const selectedKeys = useMemo(
-    () => selectedRefs.map(resolveEntrySelectionKey),
-    [selectedRefs]
+  const visibleSelectedRefs = selectedRefs.filter((ref) =>
+    visibleKeySet.has(resolveEntrySelectionKey(ref))
   );
-  const selectedCount = selectedRefs.length;
+  const selectedKeys = useMemo(
+    () => visibleSelectedRefs.map(resolveEntrySelectionKey),
+    [visibleSelectedRefs]
+  );
+  const selectedCount = visibleSelectedRefs.length;
   const isAllSelected =
     visibleKeys.length > 0 && visibleKeys.every((key) => selectedKeys.includes(key));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
   const isLoading = entriesLoading || typesLoading;
   const defaultCreateTypeSlug =
     typeFilter !== "all" ? typeFilter : types[0]?.slug ?? entries[0]?.contentType.slug ?? null;
-
-  useEffect(() => {
-    setSelectedRefs((prev) => {
-      const next = prev.filter((ref) => visibleKeySet.has(resolveEntrySelectionKey(ref)));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleKeySet]);
 
   const findEntry = (id: string) => entries.find((entry) => entry.id === id) ?? null;
 
@@ -418,11 +448,11 @@ export function EntryList() {
     const status =
       action === "publish" ? "published" : action === "draft" ? "draft" : "archived";
     const results = await Promise.allSettled(
-      selectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
+      visibleSelectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
     );
     const summary = entryListToasts.summarizeBulkAction(
       action,
-      selectedRefs,
+      visibleSelectedRefs,
       results
     );
     entryListToasts.emitBulk(summary);
@@ -430,16 +460,16 @@ export function EntryList() {
   };
 
   const handleBulkApply = async () => {
-    if (!bulkAction || selectedRefs.length === 0) return;
+    if (!bulkAction || visibleSelectedRefs.length === 0) return;
     if (bulkAction === "delete") {
       setDeleteRequest({
-        refs: selectedRefs,
-        title: `Delete ${selectedRefs.length} entr${
-          selectedRefs.length === 1 ? "y" : "ies"
+        refs: visibleSelectedRefs,
+        title: `Delete ${selectedCount} entr${
+          selectedCount === 1 ? "y" : "ies"
         }?`,
         description: "Selected entries will be removed permanently.",
         confirmLabel:
-          selectedRefs.length === 1 ? "Delete entry" : "Delete entries",
+          selectedCount === 1 ? "Delete entry" : "Delete entries",
         mode: "bulk",
       });
       return;

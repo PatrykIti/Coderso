@@ -124,8 +124,28 @@ export function PageListPage() {
 
   useEffect(() => {
     const mountOptions = resolvePageListMountRefreshOptions(hasInitialCache);
-    refresh(mountOptions).catch(() => undefined);
-  }, [hasInitialCache, refresh]);
+    let active = true;
+    listPagesCached({ force: mountOptions.force })
+      .then((next) => {
+        if (!active) return;
+        setItems(next);
+        hasHydratedRef.current = true;
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load pages.");
+        }
+      })
+      .finally(() => {
+        if (active && !mountOptions.background) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -176,17 +196,11 @@ export function PageListPage() {
     () => pagination.visibleRows.map((page) => page.id),
     [pagination.visibleRows]
   );
-  const selectedCount = selectedIds.length;
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
 
   const handleCreate = async (payload: {
     title: string;
@@ -342,12 +356,12 @@ export function PageListPage() {
   };
 
   const handleBulkApply = () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
     if (bulkAction === "delete") {
-      setPendingBulkDeleteIds(selectedIds);
+      setPendingBulkDeleteIds(visibleSelectedIds);
       return;
     }
-    void runBulkAction(bulkAction, selectedIds);
+    void runBulkAction(bulkAction, visibleSelectedIds);
   };
 
   const handleDrawerOpenChange = (next: boolean) => {
@@ -428,7 +442,7 @@ export function PageListPage() {
                 ? "No pages match your current filters."
                 : undefined
             }
-            selectedIds={selectedIds}
+            selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
             onToggleAll={handleToggleAll}

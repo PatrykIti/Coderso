@@ -16,8 +16,9 @@ const resolveReviewsError = (error: unknown) => {
 };
 
 export function useReviews(options?: { skip?: boolean }) {
-  const [items, setItems] = useState<ReviewRecord[]>(() => getCachedReviews() ?? []);
-  const [isLoading, setIsLoading] = useState(() => !getCachedReviews());
+  const initialCached = getCachedReviews();
+  const [items, setItems] = useState<ReviewRecord[]>(() => initialCached ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (force?: boolean) => {
@@ -34,14 +35,23 @@ export function useReviews(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    const cached = getCachedReviews();
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-    }
-    refresh(true).catch(() => undefined);
-    return undefined;
-  }, [options?.skip, refresh]);
+    let active = true;
+    listReviewsCached({ force: true })
+      .then((nextItems) => {
+        if (!active) return;
+        setItems(nextItems);
+        setError(null);
+      })
+      .catch((error: unknown) => {
+        if (active) setError(resolveReviewsError(error));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [options?.skip]);
 
   useEffect(() => {
     if (options?.skip) return undefined;

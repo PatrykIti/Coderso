@@ -59,9 +59,25 @@ export function useCustomScreens(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    refresh(resolveListMountRefreshOptions(hasInitialCache)).catch(() => undefined);
-    return undefined;
-  }, [hasInitialCache, options?.skip, refresh]);
+    const mountOptions = resolveListMountRefreshOptions(hasInitialCache);
+    let active = true;
+    listCustomScreensCached({ force: mountOptions.force })
+      .then((nextItems) => {
+        if (!active) return;
+        setItems(nextItems);
+        setError(null);
+        hasHydratedRef.current = true;
+      })
+      .catch((err: unknown) => {
+        if (active) setError(resolveCustomScreensError(err));
+      })
+      .finally(() => {
+        if (active && !mountOptions.background) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache, options?.skip]);
 
   useEffect(() => {
     if (options?.skip) return undefined;

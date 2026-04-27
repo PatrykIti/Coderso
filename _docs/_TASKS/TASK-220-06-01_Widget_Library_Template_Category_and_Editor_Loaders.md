@@ -5,7 +5,7 @@
 **Category:** Widgets + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-06, TASK-220-03-01
-**Status:** To Do
+**Status:** In Progress (2026-04-27)
 
 ---
 

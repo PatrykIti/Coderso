@@ -1,5 +1,5 @@
 import { CalendarDays } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   Select,
@@ -39,32 +39,32 @@ export function AnalyticsPage() {
     return parsed;
   }, [rangeValue]);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [nextOverview, nextTop] = await Promise.all([
-        getOverview(rangeDays),
-        getTopContent({ limit: 12 }),
-      ]);
-      setOverview(nextOverview);
-      setTopContent(nextTop);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load analytics data.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  useEffect(() => {
+    let active = true;
+    Promise.all([getOverview(rangeDays), getTopContent({ limit: 12 })])
+      .then(([nextOverview, nextTop]) => {
+        if (!active) return;
+        setError(null);
+        setOverview(nextOverview);
+        setTopContent(nextTop);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load analytics data.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [rangeDays]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const metrics = useMemo((): KpiCard[] => {
+  const metrics: KpiCard[] = (() => {
     if (!overview) return [];
     const format = (value: number) => value.toLocaleString("en-US");
     const calcChange = (current: number, previous: number) => {
@@ -107,7 +107,7 @@ export function AnalyticsPage() {
         trend: media.trend,
       },
     ];
-  }, [overview]);
+  })();
 
   const topRows = useMemo((): TopContentRow[] => {
     return topContent.map((item) => ({
@@ -142,7 +142,14 @@ export function AnalyticsPage() {
         </div>
       }
       topbarActions={
-        <Select defaultValue={rangeValue} onValueChange={setRangeValue}>
+        <Select
+          value={rangeValue}
+          onValueChange={(nextValue) => {
+            setIsLoading(true);
+            setError(null);
+            setRangeValue(nextValue);
+          }}
+        >
           <SelectTrigger className="h-9">
             <CalendarDays className="h-4 w-4" />
             <SelectValue placeholder="Select range" />

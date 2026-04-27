@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
@@ -141,26 +141,29 @@ export function AuditList() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const items = await listAuditLogs(200);
-      setLogs(items.map(mapAuditRecord));
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load audit logs.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listAuditLogs(200)
+      .then((items) => {
+        if (!active) return;
+        setError(null);
+        setLogs(items.map(mapAuditRecord));
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load audit logs.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredLogs = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

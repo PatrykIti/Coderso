@@ -73,6 +73,14 @@ export type UsersRolesPageProps = {
 };
 
 export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesPageProps) {
+  const initialUserId =
+    typeof window === "undefined"
+      ? ""
+      : new URLSearchParams(window.location.search).get("user") ?? "";
+  const initialIsLargeScreen =
+    typeof window === "undefined"
+      ? true
+      : window.matchMedia("(min-width: 1024px)").matches;
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [permissionGroups, setPermissionGroups] = useState(
@@ -81,7 +89,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("any");
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState(initialUserId);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [pendingSelectUserId, setPendingSelectUserId] = useState<string | null>(null);
   const [pendingSelectRoleId, setPendingSelectRoleId] = useState<string | null>(null);
@@ -93,8 +101,10 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [isLargeScreen, setIsLargeScreen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(
+    Boolean(initialUserId) && !initialIsLargeScreen
+  );
+  const [isLargeScreen, setIsLargeScreen] = useState(initialIsLargeScreen);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,18 +120,6 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const userId = params.get("user");
-    if (userId) {
-      setPendingSelectUserId(userId);
-      if (!isLargeScreen) {
-        setDetailsOpen(true);
-      }
-    }
-  }, [isLargeScreen]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -150,8 +148,36 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    Promise.all([
+      listAdminUsers(),
+      listAdminRoles(),
+      listPermissionCatalog(),
+    ])
+      .then(([usersData, rolesData, permissionsData]) => {
+        if (!active) return;
+        const roleList = rolesData as RoleSummary[];
+        setRoles(roleList);
+        setUsers(usersData.map(mapUserSummary));
+        setPermissionGroups(
+          permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups
+        );
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load users and roles.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -168,39 +194,16 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     });
   }, [query, roleFilter, statusFilter, users]);
 
-  useEffect(() => {
-    if (pendingSelectUserId) {
-      const exists = users.some((user) => user.id === pendingSelectUserId);
-      if (exists) {
-        setSelectedUserId(pendingSelectUserId);
-        setPendingSelectUserId(null);
-        return;
-      }
-    }
-    if (!selectedUserId || !users.some((user) => user.id === selectedUserId)) {
-      setSelectedUserId(users[0]?.id ?? "");
-    }
-  }, [pendingSelectUserId, selectedUserId, users]);
-
-  useEffect(() => {
-    if (pendingSelectRoleId) {
-      const exists = roles.some((role) => role.id === pendingSelectRoleId);
-      if (exists) {
-        setSelectedRoleId(pendingSelectRoleId);
-        setPendingSelectRoleId(null);
-        return;
-      }
-    }
-    if (!selectedRoleId || !roles.some((role) => role.id === selectedRoleId)) {
-      setSelectedRoleId(roles[0]?.id ?? "");
-    }
-  }, [pendingSelectRoleId, roles, selectedRoleId]);
-
   const selectedUser = useMemo(() => {
-    return (
-      users.find((user) => user.id === selectedUserId) ?? filteredUsers[0]
-    );
-  }, [filteredUsers, selectedUserId, users]);
+    const pendingUser = pendingSelectUserId
+      ? users.find((user) => user.id === pendingSelectUserId)
+      : null;
+    return pendingUser ?? users.find((user) => user.id === selectedUserId) ?? filteredUsers[0];
+  }, [filteredUsers, pendingSelectUserId, selectedUserId, users]);
+  const activeSelectedRoleId =
+    roles.find((role) => role.id === (pendingSelectRoleId ?? selectedRoleId))?.id ??
+    roles[0]?.id ??
+    "";
 
   const adminRoleIds = useMemo(
     () =>
@@ -408,6 +411,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   };
 
   const handleSelectUser = (id: string) => {
+    setPendingSelectUserId(null);
     setSelectedUserId(id);
     if (!isLargeScreen) setDetailsOpen(true);
   };
@@ -528,10 +532,13 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           />
           <RoleList
             roles={roles}
-            selectedId={selectedRoleId}
+            selectedId={activeSelectedRoleId}
             usageCounts={roleUsageCounts}
             canManageRoles={roleActionsEnabled}
-            onSelect={setSelectedRoleId}
+            onSelect={(id) => {
+              setPendingSelectRoleId(null);
+              setSelectedRoleId(id);
+            }}
             onEdit={openRoleEditor}
             onDuplicate={handleDuplicateRole}
             onDelete={handleDeleteRole}

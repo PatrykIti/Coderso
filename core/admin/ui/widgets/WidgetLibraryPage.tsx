@@ -73,7 +73,6 @@ import {
   filterWidgetLibraryItemsBySection,
   normalizeCategoryValue,
   normalizeWidgetLibrarySection,
-  trimWidgetLibrarySelection,
   type WidgetLibrarySection,
 } from "./widgetLibraryUtils";
 import { widgetCategoryLabels, widgetCategoryOrder } from "./widgetCategoryMeta";
@@ -580,19 +579,6 @@ export function WidgetLibraryPage() {
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const isSelectionIndeterminate =
     selectedVisibleRows.length > 0 && !isAllVisibleSelected;
-
-  useEffect(() => {
-    setSelectedIds((previous) => {
-      const next = new Set(trimWidgetLibrarySelection(previous, visibleIds));
-      if (
-        next.size === previous.size &&
-        [...next].every((id) => previous.has(id))
-      ) {
-        return previous;
-      }
-      return next;
-    });
-  }, [visibleIds]);
 
   const templateCategoryOptions = useMemo(
     () => [

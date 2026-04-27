@@ -31,13 +31,12 @@ export function BackupsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const [nextBackups, nextSchedule] = await Promise.all([
         listBackups(),
         getBackupSchedule(),
       ]);
+      setError(null);
       setBackups(nextBackups);
       setSchedule(nextSchedule);
     } catch (err) {
@@ -52,8 +51,29 @@ export function BackupsPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    Promise.all([listBackups(), getBackupSchedule()])
+      .then(([nextBackups, nextSchedule]) => {
+        if (!active) return;
+        setError(null);
+        setBackups(nextBackups);
+        setSchedule(nextSchedule);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load backups.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleCreateBackup = async () => {
     setIsSaving(true);

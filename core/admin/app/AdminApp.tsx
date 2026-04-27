@@ -707,9 +707,6 @@ export function AdminApp({ path }: AdminAppProps) {
   useEffect(() => {
     if (!isAdminPath) return;
     let active = true;
-    if (isProtected) {
-      setAuthState("checking");
-    }
     resolveAuthBootstrap()
       .then((result) => {
         if (active) setAuthState(result.state);
@@ -724,8 +721,37 @@ export function AdminApp({ path }: AdminAppProps) {
 
   useEffect(() => {
     if (authState !== "authenticated") return;
-    refreshSettings();
-  }, [authState, refreshSettings]);
+    let active = true;
+    const fallbackState: SettingsState = {
+      status: "idle",
+      values: defaultSettingsValues,
+      error: null,
+    };
+    getSettings()
+      .then((payload) => {
+        if (!active) return;
+        const resolved = resolveSettingsPayload(payload, fallbackState);
+        setSettingsState((prev) => ({
+          ...prev,
+          status: "ready",
+          ...resolved,
+        }));
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = isApiClientError(error)
+          ? error.message
+          : "Failed to load settings.";
+        setSettingsState((prev) => ({
+          ...prev,
+          status: "error",
+          error: message,
+        }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [authState]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;

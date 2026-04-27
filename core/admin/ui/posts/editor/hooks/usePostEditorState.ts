@@ -368,8 +368,10 @@ export function usePostEditorState(): UsePostEditorStateResult {
     createInitialPostEditorState(normalizeEditorDocumentForWritingFlow(initialCachedPost?.data))
   );
 
-  const baseDataRef = useRef<Record<string, unknown>>(getPostDataRecord(initialCachedPost));
-  const baseMetadataSignatureRef = useRef<string>(
+  const [baseData, setBaseData] = useState<Record<string, unknown>>(() =>
+    getPostDataRecord(initialCachedPost)
+  );
+  const [baseMetadataSignature, setBaseMetadataSignature] = useState<string>(() =>
     serializeMetadataDraft(createMetadataDraftState(initialCachedPost))
   );
   const autosaveInFlightRef = useRef(false);
@@ -380,7 +382,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setSlug(nextPost.slug);
     setStatus(nextPost.status);
     setLastSavedAt(nextPost.updatedAt);
-    baseDataRef.current = getPostDataRecord(nextPost);
+    setBaseData(getPostDataRecord(nextPost));
     const nextFeaturedImage =
       isRecord(nextPost.data) && typeof nextPost.data.featuredImage === "string"
         ? nextPost.data.featuredImage
@@ -388,7 +390,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setFeaturedImage(nextFeaturedImage);
     const nextMetadataDraft = createMetadataDraftState(nextPost);
     setMetadataDraft(nextMetadataDraft);
-    baseMetadataSignatureRef.current = serializeMetadataDraft(nextMetadataDraft);
+    setBaseMetadataSignature(serializeMetadataDraft(nextMetadataDraft));
     dispatch({
       type: "hydrate",
       document: normalizeEditorDocumentForWritingFlow(nextPost.data),
@@ -403,8 +405,8 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setStatus(snapshot.status);
     setFeaturedImage(snapshot.featuredImage);
     setMetadataDraft(snapshot.metadataDraft);
-    baseDataRef.current = snapshot.baseData;
-    baseMetadataSignatureRef.current = snapshot.metadataSignature;
+    setBaseData(snapshot.baseData);
+    setBaseMetadataSignature(snapshot.metadataSignature);
     dispatch({ type: "mark_saved", at: snapshot.savedAt });
     setLastSavedAt(snapshot.savedAt);
     setRemoteUpdatePending(false);
@@ -421,7 +423,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     () => serializeMetadataDraft(metadataDraft),
     [metadataDraft]
   );
-  const metadataDirty = metadataSignature !== baseMetadataSignatureRef.current;
+  const metadataDirty = metadataSignature !== baseMetadataSignature;
   const hasUnsavedChanges =
     state.dirty || titleDirty || slugDirty || featuredImageDirty || metadataDirty;
   const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
@@ -476,8 +478,42 @@ export function usePostEditorState(): UsePostEditorStateResult {
   );
 
   useEffect(() => {
-    refresh({ force: true, setLoading: !initialCachedPost }).catch(() => undefined);
-  }, [initialCachedPost, refresh]);
+    let active = true;
+    Promise.resolve()
+      .then(async () => {
+        if (!postId) {
+          if (!active) return;
+          setLoading(false);
+          setError("Post ID is missing.");
+          return;
+        }
+        const nextPost = await getPostCached(postId, { force: true });
+        if (!active) return;
+        if (!nextPost) {
+          setError("Post not found.");
+          return;
+        }
+        if (shouldDeferRefreshForDirtyState(undefined, hasUnsavedChangesRef.current)) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyLoadedPost(nextPost);
+        setRemoteUpdatePending(false);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(
+          isApiClientError(err) ? err.message : "Failed to load post editor."
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyLoadedPost, postId]);
 
   useEffect(() => {
     if (!postId) return;
@@ -499,7 +535,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
   }, [postId]);
 
   const buildPayloadData = useCallback(() => {
-    const current = { ...baseDataRef.current };
+    const current = { ...baseData };
     current.document = state.document;
     const nextFeaturedImage = featuredImage.trim();
     if (nextFeaturedImage.length > 0) {
@@ -508,7 +544,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
       delete current.featuredImage;
     }
     return current;
-  }, [featuredImage, state.document]);
+  }, [baseData, featuredImage, state.document]);
 
   const buildMetadataPayload = useCallback(() => {
     const normalizedTags = normalizeTagInput(metadataDraft.tagsInput);

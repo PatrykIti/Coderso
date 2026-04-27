@@ -69,8 +69,36 @@ export function FormActionLogsPage() {
   }, [formId, statusFilter]);
 
   useEffect(() => {
-    refresh().catch(() => undefined);
-  }, [refresh]);
+    if (!formId) return undefined;
+    let active = true;
+    Promise.all([
+      getForm(formId),
+      listFormActionRuns(formId, {
+        status: statusFilter === "all" ? undefined : statusFilter,
+        limit: 200,
+      }),
+    ])
+      .then(([form, nextRuns]) => {
+        if (!active) return;
+        setFormName(form?.name ?? "Form");
+        setRuns(nextRuns);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load action logs.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [formId, statusFilter]);
 
   useEffect(() => {
     if (!formId) return undefined;
@@ -169,7 +197,10 @@ export function FormActionLogsPage() {
           </div>
           <Select
             value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as FormActionRunStatus | "all")}
+            onValueChange={(value) => {
+              setIsLoading(true);
+              setStatusFilter(value as FormActionRunStatus | "all");
+            }}
           >
             <SelectTrigger className="w-56">
               <SelectValue placeholder="All statuses" />

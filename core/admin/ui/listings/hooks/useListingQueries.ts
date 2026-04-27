@@ -59,11 +59,25 @@ export function useListingQueries(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    refresh(resolveListMountRefreshOptions(hasInitialCache)).catch(
-      () => undefined
-    );
-    return undefined;
-  }, [hasInitialCache, options?.skip, refresh]);
+    const mountOptions = resolveListMountRefreshOptions(hasInitialCache);
+    let active = true;
+    listListingQueriesCached({ force: mountOptions.force })
+      .then((nextItems) => {
+        if (!active) return;
+        setItems(nextItems);
+        hasHydratedRef.current = true;
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (active) setError(resolveListingsError(err));
+      })
+      .finally(() => {
+        if (active && !mountOptions.background) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache, options?.skip]);
 
   useEffect(() => {
     if (options?.skip) return undefined;

@@ -104,19 +104,45 @@ export function useCommerceCatalog(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return;
-    refreshProducts(
-      resolveCommerceListMountRefreshOptions(hasInitialProductCache)
-    ).catch(() => undefined);
-    refreshCollections(
-      resolveCommerceListMountRefreshOptions(hasInitialCollectionCache)
-    ).catch(() => undefined);
-  }, [
-    hasInitialCollectionCache,
-    hasInitialProductCache,
-    options?.skip,
-    refreshCollections,
-    refreshProducts,
-  ]);
+    const productMountOptions =
+      resolveCommerceListMountRefreshOptions(hasInitialProductCache);
+    const collectionMountOptions =
+      resolveCommerceListMountRefreshOptions(hasInitialCollectionCache);
+    let active = true;
+    listCommerceProductsCached({ force: productMountOptions.force })
+      .then((items) => {
+        if (!active) return;
+        setProducts(items);
+        hasHydratedProductsRef.current = true;
+        setError(null);
+      })
+      .catch((error: unknown) => {
+        if (active) setError(resolveCommerceError(error));
+      })
+      .finally(() => {
+        if (active && !productMountOptions.background) {
+          setIsLoadingProducts(false);
+        }
+      });
+    listCommerceCollectionsCached({ force: collectionMountOptions.force })
+      .then((items) => {
+        if (!active) return;
+        setCollections(items);
+        hasHydratedCollectionsRef.current = true;
+        setError(null);
+      })
+      .catch((error: unknown) => {
+        if (active) setError(resolveCommerceError(error));
+      })
+      .finally(() => {
+        if (active && !collectionMountOptions.background) {
+          setIsLoadingCollections(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCollectionCache, hasInitialProductCache, options?.skip]);
 
   useEffect(() => {
     if (options?.skip) return undefined;

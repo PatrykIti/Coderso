@@ -16,10 +16,11 @@ const resolveTemplatesError = (err: unknown) => {
 };
 
 export function useWidgetTemplates() {
+  const initialCached = getCachedWidgetTemplates();
   const [items, setItems] = useState<WidgetTemplate[]>(() =>
-    getCachedWidgetTemplates() ?? []
+    initialCached ?? []
   );
-  const [isLoading, setIsLoading] = useState(() => !getCachedWidgetTemplates());
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (force?: boolean) => {
@@ -35,13 +36,23 @@ export function useWidgetTemplates() {
   }, []);
 
   useEffect(() => {
-    const cached = getCachedWidgetTemplates();
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-    }
-    refresh(true).catch(() => undefined);
-  }, [refresh]);
+    let active = true;
+    listWidgetTemplatesCached({ force: true })
+      .then((nextItems) => {
+        if (!active) return;
+        setItems(nextItems);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (active) setError(resolveTemplatesError(err));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {

@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-220-02, TASK-220-03, TASK-220-04, TASK-220-05, TASK-220-06
-**Status:** To Do
+**Status:** In Progress (2026-04-27)
 
 ---
 
@@ -67,6 +67,18 @@ If `bun run test:bun` needs `DATABASE_URL`, load repo env first:
 ```bash
 set -a && source .env && set +a && bun run test:bun
 ```
+
+## Validation Log
+
+2026-04-27 implementation pass:
+
+- `bun --cwd core lint --format json --output-file /tmp/nextless-task220-current-eslint.json` passed after reducing the React Hooks Compiler findings from the audited 113 errors to 0.
+- `bun run lint` passed after the implementation changes and again after the Vitest regression fixes.
+- `bun run test:vitest -- tests/vitest/ui/page-editor-shell-wave.test.tsx tests/vitest/ui/site-settings.test.tsx` passed after fixing the Page Editor template-options loader and Site Settings loading label regressions.
+- `bun run test:vitest` passed: 538 files, 2254 tests.
+- `set -a && source .env && set +a && bun run test:bun` still hit the same pre-implementation DB timeout in `tests/unit/content/entryService.test.ts` for `duplicateEntry creates a draft copy with unique slug and metadata` at the default 5000 ms timeout; all other Bun tests in that run passed.
+- `tests/unit/content/entryService.test.ts` now gives that slow DB duplicate-entry regression the same explicit per-test timeout pattern used by other long DB suites. The rerun after that test-only timeout adjustment is still pending because the tool approval was rejected by the session usage limit.
+- `git diff --check` passed after the timeout adjustment.
 
 ## Files to Change
 

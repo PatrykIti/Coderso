@@ -74,12 +74,14 @@ export function PopupEditorPage() {
   );
 
   useEffect(() => {
-    if (isCreateMode) {
-      setIsLoading(false);
-      return;
-    }
+    if (isCreateMode) return;
     let active = true;
-    refreshPopup(true)
+    if (!popupId) return undefined;
+    getPopupCached(popupId, { force: true })
+      .then((item) => {
+        if (!active || !item) return;
+        applyPopup(item);
+      })
       .catch((error) => {
         if (!active) return;
         setError(
@@ -93,7 +95,7 @@ export function PopupEditorPage() {
     return () => {
       active = false;
     };
-  }, [isCreateMode, refreshPopup]);
+  }, [applyPopup, isCreateMode, popupId]);
 
   useEffect(() => {
     if (isCreateMode || !popupId) return undefined;

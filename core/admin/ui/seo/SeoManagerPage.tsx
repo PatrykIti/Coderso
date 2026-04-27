@@ -105,31 +105,39 @@ export function SeoManagerPage() {
 
   useEffect(() => {
     let active = true;
-    (async () => {
-      await refresh();
-      if (!active) return;
-    })();
+    listSeo()
+      .then((result) => {
+        if (active) setItems(result.map(mapSeoItem));
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load SEO data.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [refresh]);
+  }, []);
 
-  useEffect(() => {
-    if (selectedId && !items.find((item) => item.id === selectedId)) {
-      setSelectedId(null);
-    }
-  }, [items, selectedId]);
+  const activeSelectedId =
+    selectedId && items.some((item) => item.id === selectedId) ? selectedId : null;
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
       if (
         event.key === cacheKeys.seoList ||
-        (selectedId && event.key === cacheKeys.seoDetail(selectedId))
+        (activeSelectedId && event.key === cacheKeys.seoDetail(activeSelectedId))
       ) {
         void refresh();
       }
     });
-  }, [refresh, selectedId]);
+  }, [activeSelectedId, refresh]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -143,7 +151,7 @@ export function SeoManagerPage() {
     });
   }, [items, query, statusFilter]);
 
-  const selectedItem = items.find((item) => item.id === selectedId) ?? null;
+  const selectedItem = items.find((item) => item.id === activeSelectedId) ?? null;
 
   const averageScore = useMemo(() => {
     if (!items.length) return 0;
@@ -273,14 +281,14 @@ export function SeoManagerPage() {
         ) : (
           <SeoTable
             items={filteredItems}
-            activeId={selectedId}
+            activeId={activeSelectedId}
             onEdit={setSelectedId}
           />
         )}
       </div>
 
       <SeoDrawer
-        key={selectedId ?? "empty"}
+        key={activeSelectedId ?? "empty"}
         item={selectedItem}
         open={Boolean(selectedItem)}
         onOpenChange={(nextOpen) => {

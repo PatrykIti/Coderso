@@ -91,12 +91,15 @@ export function MediaDetailsDrawer({
   const [replaceStatus, setReplaceStatus] = useState<"idle" | "replacing" | "replaced" | "error">("idle");
 
   useEffect(() => {
-    setTitle(item?.title ?? (item ? resolveMediaDisplayName(item) : ""));
-    setAlt(item?.alt ?? "");
-    setCaption(item?.caption ?? "");
-    setSaveStatus("idle");
-    setCopyStatus("idle");
-    setReplaceStatus("idle");
+    const frameId = window.requestAnimationFrame(() => {
+      setTitle(item?.title ?? (item ? resolveMediaDisplayName(item) : ""));
+      setAlt(item?.alt ?? "");
+      setCaption(item?.caption ?? "");
+      setSaveStatus("idle");
+      setCopyStatus("idle");
+      setReplaceStatus("idle");
+    });
+    return () => window.cancelAnimationFrame(frameId);
   }, [item]);
 
   const handleSaveMeta = async () => {

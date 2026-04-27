@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -150,13 +150,6 @@ export function CommerceListPage() {
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
 
   const refreshProductList = () =>
     refreshProducts({ force: true, background: true });

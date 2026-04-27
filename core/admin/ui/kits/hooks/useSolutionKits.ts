@@ -14,10 +14,11 @@ const resolveError = (error: unknown) => {
 };
 
 export function useSolutionKits(options?: { skip?: boolean }) {
+  const initialCached = getCachedSolutionKits();
   const [items, setItems] = useState<SolutionKitSummary[]>(
-    () => getCachedSolutionKits() ?? []
+    () => initialCached ?? []
   );
-  const [isLoading, setIsLoading] = useState(() => !getCachedSolutionKits());
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (force?: boolean) => {
@@ -34,14 +35,23 @@ export function useSolutionKits(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    const cached = getCachedSolutionKits();
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-    }
-    refresh(true).catch(() => undefined);
-    return undefined;
-  }, [options?.skip, refresh]);
+    let active = true;
+    listSolutionKitsCached({ force: true })
+      .then((next) => {
+        if (!active) return;
+        setItems(next);
+        setError(null);
+      })
+      .catch((error: unknown) => {
+        if (active) setError(resolveError(error));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [options?.skip]);
 
   return {
     items,

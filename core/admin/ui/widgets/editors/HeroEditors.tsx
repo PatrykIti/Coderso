@@ -681,7 +681,7 @@ export function HeroVisualEditor({
   const mediaType: HeroMediaType = media.type ?? "none";
   const backgroundMediaType: HeroMediaType = backgroundMedia.type ?? "none";
   const [presets, setPresets] = useState<HeroPresetSetting[]>([]);
-  const [presetsLoading, setPresetsLoading] = useState(false);
+  const [presetsLoading, setPresetsLoading] = useState(true);
   const [presetsError, setPresetsError] = useState<string | null>(null);
   const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -748,8 +748,6 @@ export function HeroVisualEditor({
 
   useEffect(() => {
     let active = true;
-    setPresetsLoading(true);
-    setPresetsError(null);
     getUserSetting("widgets.hero.presets")
       .then((response) => {
         if (!active) return;

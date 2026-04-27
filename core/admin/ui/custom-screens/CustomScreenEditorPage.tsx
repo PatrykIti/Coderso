@@ -333,12 +333,28 @@ export function CustomScreenEditorPage() {
   }, []);
 
   useEffect(() => {
-    if (isCreateMode) {
-      setIsLoading(false);
-      return;
-    }
-    refreshScreen(true).catch(() => undefined);
-  }, [isCreateMode, refreshScreen]);
+    if (isCreateMode) return;
+    if (!screenId) return;
+    let active = true;
+    getCustomScreenCached(screenId, { force: true })
+      .then((detail) => {
+        if (!active || !detail) return;
+        applyScreen(detail);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(
+          isApiClientError(err) ? err.message : "Failed to load custom screen."
+        );
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyScreen, isCreateMode, screenId]);
 
   useEffect(() => {
     if (isCreateMode || !screenId) return undefined;

@@ -37,8 +37,26 @@ export function useIpAllowlist() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listIpAllowlist()
+      .then((items) => {
+        if (active) setEntries(items);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load IP allowlist.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const addEntry = useCallback(
     async (payload: IpAllowlistFormPayload) => {

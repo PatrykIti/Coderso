@@ -16,8 +16,9 @@ const resolvePopupsError = (error: unknown) => {
 };
 
 export function usePopups(options?: { skip?: boolean }) {
-  const [items, setItems] = useState<PopupRecord[]>(() => getCachedPopups() ?? []);
-  const [isLoading, setIsLoading] = useState(() => !getCachedPopups());
+  const initialCached = getCachedPopups();
+  const [items, setItems] = useState<PopupRecord[]>(() => initialCached ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (force?: boolean) => {
@@ -34,14 +35,23 @@ export function usePopups(options?: { skip?: boolean }) {
 
   useEffect(() => {
     if (options?.skip) return undefined;
-    const cached = getCachedPopups();
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-    }
-    refresh(true).catch(() => undefined);
-    return undefined;
-  }, [options?.skip, refresh]);
+    let active = true;
+    listPopupsCached({ force: true })
+      .then((nextItems) => {
+        if (!active) return;
+        setItems(nextItems);
+        setError(null);
+      })
+      .catch((error: unknown) => {
+        if (active) setError(resolvePopupsError(error));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [options?.skip]);
 
   useEffect(() => {
     if (options?.skip) return undefined;

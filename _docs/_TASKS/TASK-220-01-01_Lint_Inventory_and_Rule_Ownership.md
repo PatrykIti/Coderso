@@ -5,7 +5,7 @@
 **Category:** Tooling + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-220-01
-**Status:** To Do
+**Status:** In Progress (2026-04-27)
 
 ---
 

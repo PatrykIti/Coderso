@@ -5,7 +5,7 @@
 **Category:** Tooling + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-219
-**Status:** To Do
+**Status:** In Progress (2026-04-27)
 
 ---
 

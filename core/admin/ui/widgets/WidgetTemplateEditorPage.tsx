@@ -249,14 +249,25 @@ export function WidgetTemplateEditorPage() {
     () => getCachedWidgetTemplateCategories(),
     []
   );
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const initialTemplate = useMemo(
+    () =>
+      !isNew && templateId ? getCachedWidgetTemplate(templateId) ?? null : null,
+    [isNew, templateId]
+  );
+  const [blocks, setBlocks] = useState<Block[]>(
+    () => (initialTemplate?.blocks as Block[]) ?? []
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState<WidgetTemplateStatus>("draft");
+  const [name, setName] = useState(() => initialTemplate?.name ?? "");
+  const [description, setDescription] = useState(
+    () => initialTemplate?.description ?? ""
+  );
+  const [category, setCategory] = useState(() => initialTemplate?.category ?? "");
+  const [status, setStatus] = useState<WidgetTemplateStatus>(
+    () => initialTemplate?.status ?? "draft"
+  );
   const [templateSettings, setTemplateSettings] = useState<WidgetTemplateSettings>(
-    () => normalizeWidgetTemplateSettings(undefined)
+    () => normalizeWidgetTemplateSettings(initialTemplate?.settings)
   );
   const [activeCategory, setActiveCategory] = useState<
     WidgetCategoryId | "all"
@@ -264,8 +275,9 @@ export function WidgetTemplateEditorPage() {
   const [templateCategories, setTemplateCategories] = useState<
     WidgetTemplateCategory[]
   >(() => initialCategories ?? []);
+  const resolvedCategory = category || templateCategories[0]?.name || "";
   const hasHydratedCategoriesRef = useRef(Boolean(initialCategories));
-  const [isLoading, setIsLoading] = useState(!isNew);
+  const [isLoading, setIsLoading] = useState(!isNew && !initialTemplate);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
@@ -345,7 +357,7 @@ export function WidgetTemplateEditorPage() {
         id: templateId,
         name: name.trim() || "Untitled template",
         status,
-        category: category.trim() || "uncategorized",
+        category: resolvedCategory.trim() || "uncategorized",
       },
       selectedBlockId: selectedId,
       blocks: summarizeTemplateBlocksForAssistant(blocks),
@@ -362,10 +374,10 @@ export function WidgetTemplateEditorPage() {
     };
   }, [
     blocks,
-    category,
     isNew,
     name,
     remoteUpdatePending,
+    resolvedCategory,
     selectedId,
     status,
     templateId,
@@ -585,8 +597,27 @@ export function WidgetTemplateEditorPage() {
   }, [applyTemplate, templateId]);
 
   useEffect(() => {
-    void loadTemplate();
-  }, [loadTemplate]);
+    if (!templateId || templateId === "new") return;
+    let active = true;
+    getWidgetTemplateCached(templateId, { force: true })
+      .then((template) => {
+        if (!active || !template) return;
+        applyTemplate(template);
+      })
+      .catch((err) => {
+        if (!active) return;
+        const message = isApiClientError(err)
+          ? err.message
+          : "Failed to load template.";
+        setError(message);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyTemplate, templateId]);
 
   useEffect(() => {
     if (!templateId || templateId === "new") return;
@@ -621,8 +652,23 @@ export function WidgetTemplateEditorPage() {
   );
 
   useEffect(() => {
-    refreshCategories({ force: true, background: true }).catch(() => undefined);
-  }, [refreshCategories]);
+    let active = true;
+    listWidgetTemplateCategoriesCached({ force: true })
+      .then((result) => {
+        if (!active) return;
+        setTemplateCategories(result);
+        setCategoriesError(null);
+        hasHydratedCategoriesRef.current = true;
+      })
+      .catch(() => {
+        if (active && !hasHydratedCategoriesRef.current) {
+          setCategoriesError("Failed to load categories.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -631,17 +677,12 @@ export function WidgetTemplateEditorPage() {
     });
   }, [refreshCategories]);
 
-  useEffect(() => {
-    if (category || templateCategories.length === 0) return;
-    setCategory(templateCategories[0].name);
-  }, [category, templateCategories]);
-
   const handleSave = async () => {
     if (!name.trim()) {
       setError("Template name is required.");
       return;
     }
-    if (!category.trim()) {
+    if (!resolvedCategory.trim()) {
       setError("Template category is required.");
       return;
     }
@@ -652,7 +693,7 @@ export function WidgetTemplateEditorPage() {
         const created = await createWidgetTemplate({
           name: name.trim(),
           description: description.trim() ? description.trim() : null,
-          category: category.trim(),
+          category: resolvedCategory.trim(),
           status,
           blocks,
           settings: templateSettings,
@@ -665,7 +706,7 @@ export function WidgetTemplateEditorPage() {
       await updateWidgetTemplate(templateId, {
         name: name.trim(),
         description: description.trim() ? description.trim() : null,
-        category: category.trim(),
+        category: resolvedCategory.trim(),
         status,
         blocks,
         settings: templateSettings,
@@ -809,7 +850,7 @@ export function WidgetTemplateEditorPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Category
             </p>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={resolvedCategory} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="Category" />
               </SelectTrigger>

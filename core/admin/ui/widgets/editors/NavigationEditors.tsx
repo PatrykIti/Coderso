@@ -229,15 +229,13 @@ function MenuSelectField({
   }) => void;
 }) {
   const [menus, setMenus] = useState<MenuSummary[]>([]);
-  const [isLoadingMenus, setIsLoadingMenus] = useState(false);
+  const [isLoadingMenus, setIsLoadingMenus] = useState(true);
   const [isResolvingMenu, setIsResolvingMenu] = useState(false);
   const [menuError, setMenuError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
     let active = true;
-    setIsLoadingMenus(true);
-    setMenuError(null);
     listMenus()
       .then((items) => {
         if (!active) return;

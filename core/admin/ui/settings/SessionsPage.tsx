@@ -118,8 +118,26 @@ export function SessionsPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listSessions()
+      .then((items) => {
+        if (active) setSessions(items.map(mapSessionItem));
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load sessions.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const activeCount = useMemo(() => sessions.length, [sessions.length]);
 

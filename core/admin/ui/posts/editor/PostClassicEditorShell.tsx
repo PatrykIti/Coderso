@@ -204,13 +204,31 @@ export function PostClassicEditorShell() {
 
   useEffect(() => {
     if (!postId) return;
-    const cached = getCachedPostDetail(postId);
-    if (cached) {
-      applyPost(cached);
-      setIsLoading(false);
-    }
-    refreshPost({ setLoading: !cached }).catch(() => undefined);
-  }, [applyPost, postId, refreshPost]);
+    let active = true;
+    getPostCached(postId, { force: true })
+      .then((refreshed) => {
+        if (!active || !refreshed) return;
+        if (hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyPost(refreshed);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load post.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyPost, postId]);
 
   useEffect(() => {
     if (!postId) return;

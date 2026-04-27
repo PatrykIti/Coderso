@@ -1,5 +1,5 @@
 import { FileText, Tag, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export function EntryCreateDrawer({
   onCreated,
   onCreateError,
 }: EntryCreateDrawerProps) {
-  const [typeSlug, setTypeSlug] = useState<string>(defaultTypeSlug ?? "");
+  const [typeSlug, setTypeSlug] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -58,48 +58,45 @@ export function EntryCreateDrawer({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (!slugTouched) {
-      setSlug(title ? slugify(title) : "");
-    }
-  }, [title, slugTouched]);
+  const resolvedSlug = slugTouched ? slug : title ? slugify(title) : "";
+  const resolvedTypeSlug = typeSlug || defaultTypeSlug || "";
 
-  useEffect(() => {
-    if (open) return;
+  const resetForm = () => {
+    setTypeSlug("");
     setTitle("");
     setSlug("");
     setSlugTouched(false);
     setOpenAfterCreate(true);
     setError(null);
     setIsSaving(false);
-  }, [open]);
+  };
 
-  useEffect(() => {
-    if (!defaultTypeSlug) return;
-    setTypeSlug(defaultTypeSlug);
-  }, [defaultTypeSlug]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) resetForm();
+    onOpenChange(nextOpen);
+  };
 
   const typeOptions = useMemo(() => types, [types]);
   const selectedType = useMemo(
-    () => types.find((type) => type.slug === typeSlug) ?? null,
-    [types, typeSlug]
+    () => types.find((type) => type.slug === resolvedTypeSlug) ?? null,
+    [types, resolvedTypeSlug]
   );
   const { singular: typeSingular } = getContentTypeLabels(
     selectedType?.name ?? typeSlug
   );
 
   const handleSubmit = async () => {
-    if (!typeSlug || !title.trim() || !slug.trim()) return;
+    if (!resolvedTypeSlug || !title.trim() || !resolvedSlug.trim()) return;
     setIsSaving(true);
     setError(null);
     try {
-      const created = await createEntry(typeSlug, {
+      const created = await createEntry(resolvedTypeSlug, {
         title: title.trim(),
-        slug: slug.trim(),
+        slug: resolvedSlug.trim(),
         data: {},
       });
-      onCreated?.(created, typeSlug, openAfterCreate);
-      onOpenChange(false);
+      onCreated?.(created, resolvedTypeSlug, openAfterCreate);
+      handleOpenChange(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -112,10 +109,11 @@ export function EntryCreateDrawer({
     }
   };
 
-  const isDisabled = !typeSlug || !title.trim() || !slug.trim() || isSaving;
+  const isDisabled =
+    !resolvedTypeSlug || !title.trim() || !resolvedSlug.trim() || isSaving;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
         className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
@@ -145,7 +143,7 @@ export function EntryCreateDrawer({
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Content type
               </label>
-              <Select value={typeSlug} onValueChange={setTypeSlug}>
+              <Select value={resolvedTypeSlug} onValueChange={setTypeSlug}>
                 <SelectTrigger className="h-10">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Select content type" />
@@ -175,7 +173,7 @@ export function EntryCreateDrawer({
               </label>
               <Input
                 placeholder="launch-announcement"
-                value={slug}
+                value={resolvedSlug}
                 onChange={(event) => {
                   setSlug(event.target.value);
                   setSlugTouched(true);

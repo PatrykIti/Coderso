@@ -37,10 +37,9 @@ export function RedirectsPage() {
   })
 
   const refresh = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
     try {
       const data = await listRedirects()
+      setError(null)
       setItems(data.map(mapRow))
     } catch (err) {
       if (isApiClientError(err)) {
@@ -54,8 +53,28 @@ export function RedirectsPage() {
   }, [])
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    let active = true
+    listRedirects()
+      .then((data) => {
+        if (!active) return
+        setError(null)
+        setItems(data.map(mapRow))
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        if (isApiClientError(err)) {
+          setError(err.message)
+        } else {
+          setError("Failed to load redirects.")
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const openCreate = () => {
     setEditingRedirect(null)

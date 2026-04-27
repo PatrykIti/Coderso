@@ -68,11 +68,30 @@ export function ContentTypeEditor() {
     if (typeof window === "undefined") return null;
     return resolveContentTypeIdFromPath(window.location.pathname);
   });
-  const [name, setName] = useState("" as string);
-  const [slug, setSlug] = useState("" as string);
-  const [status, setStatus] = useState<"draft" | "published">("draft");
-  const [fields, setFields] = useState<ContentField[]>(defaultFields);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCachedType = useMemo(() => {
+    if (!typeId) return null;
+    return getCachedContentTypes()?.find((type) => type.id === typeId) ?? null;
+  }, [typeId]);
+  const initialFields = useMemo(
+    () =>
+      initialCachedType ? fieldsFromSchema(initialCachedType.schema) : defaultFields,
+    [initialCachedType]
+  );
+  const initialRelationTargets = useMemo(
+    () =>
+      (getCachedContentTypes() ?? []).map((type) => ({
+        slug: type.slug,
+        name: type.name,
+      })),
+    []
+  );
+  const [name, setName] = useState(() => initialCachedType?.name ?? "");
+  const [slug, setSlug] = useState(() => initialCachedType?.slug ?? "");
+  const [status, setStatus] = useState<"draft" | "published">(
+    () => initialCachedType?.status ?? "draft"
+  );
+  const [fields, setFields] = useState<ContentField[]>(() => initialFields);
+  const [isLoading, setIsLoading] = useState(() => !initialCachedType);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -84,9 +103,9 @@ export function ContentTypeEditor() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [relationTargets, setRelationTargets] = useState<
     Array<{ slug: string; name: string }>
-  >([]);
+  >(() => initialRelationTargets);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
-    defaultFields[0]?.id ?? null
+    () => initialFields[0]?.id ?? null
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
@@ -147,15 +166,23 @@ export function ContentTypeEditor() {
     if (!typeId) return;
     let active = true;
 
-    const cached = getCachedContentTypes();
-    const cachedType = cached?.find((type) => type.id === typeId) ?? null;
-    if (cachedType) {
-      applyContentType(cachedType);
-      setError(null);
-      setIsLoading(false);
-    }
-
-    refreshContentType({ setLoading: !cachedType }).catch(() => undefined);
+    getContentTypeCached(typeId, { force: true })
+      .then((result) => {
+        if (!active || !result) return;
+        applyContentType(result);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load content type.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
 
     (async () => {
       try {
@@ -174,7 +201,7 @@ export function ContentTypeEditor() {
     return () => {
       active = false;
     };
-  }, [applyContentType, refreshContentType, typeId]);
+  }, [applyContentType, typeId]);
 
   useEffect(() => {
     if (!typeId) return;
@@ -186,10 +213,6 @@ export function ContentTypeEditor() {
 
   useEffect(() => {
     let active = true;
-    const cached = getCachedContentTypes();
-    if (cached) {
-      setRelationTargets(cached.map((type) => ({ slug: type.slug, name: type.name })));
-    }
     listContentTypesCached()
       .then((types) => {
         if (!active) return;
@@ -200,17 +223,10 @@ export function ContentTypeEditor() {
       active = false;
     };
   }, []);
-
-
-  useEffect(() => {
-    if (fields.length === 0) {
-      setSelectedFieldId(null);
-      return;
-    }
-    if (!selectedFieldId || !fields.some((field) => field.id === selectedFieldId)) {
-      setSelectedFieldId(fields[0]?.id ?? null);
-    }
-  }, [fields, selectedFieldId]);
+  const activeSelectedFieldId =
+    selectedFieldId && fields.some((field) => field.id === selectedFieldId)
+      ? selectedFieldId
+      : fields[0]?.id ?? null;
 
   const schema = useMemo(() => buildSchemaFromFields(fields), [fields]);
 
@@ -403,7 +419,8 @@ export function ContentTypeEditor() {
     }
   };
 
-  const selectedField = fields.find((field) => field.id === selectedFieldId) ?? null;
+  const selectedField =
+    fields.find((field) => field.id === activeSelectedFieldId) ?? null;
   const nameError = useMemo(() => {
     if (!selectedField) return null;
     const names = fields.map((field) => ({ id: field.id, name: field.name }));
@@ -424,7 +441,7 @@ export function ContentTypeEditor() {
       leftPanel={
         <FieldsListPanel
           fields={fields}
-          selectedId={selectedFieldId}
+          selectedId={activeSelectedFieldId}
           onSelect={(id) => setSelectedFieldId(id)}
           onAdd={handleAddField}
         />
@@ -645,7 +662,7 @@ export function ContentTypeEditor() {
               <FieldsListPanel
                 className="lg:hidden"
                 fields={fields}
-                selectedId={selectedFieldId}
+                selectedId={activeSelectedFieldId}
                 onSelect={(id) => setSelectedFieldId(id)}
                 onAdd={handleAddField}
               />

@@ -94,11 +94,20 @@ export function WidgetInsertDialog({
   const selectedBlockMeta = selectedBlockData
     ? widgetMetaMap.get(selectedBlockData.type)
     : null;
+  const targetOptions = targetType === "page" ? pageOptions : templateOptions;
+  const resolvedTargetId =
+    placement === "inside" ? targetId || targetOptions[0]?.id || "" : "";
   const slotOptions = useMemo(() => {
     if (!selectedBlockData || !selectedBlockMeta?.slots?.length) return [];
     return buildSlotOptions(selectedBlockMeta.slots, selectedBlockData, widget?.id);
   }, [selectedBlockData, selectedBlockMeta, widget?.id]);
   const selectedSlot = slotOptions.find((slot) => slot.id === slotId) ?? null;
+  const firstAvailableSlot =
+    slotOptions.find((slot) => !slot.disabled) ?? slotOptions[0] ?? null;
+  const resolvedSlotId =
+    selectedSlot && !selectedSlot.disabled ? selectedSlot.id : firstAvailableSlot?.id ?? "";
+  const resolvedSelectedSlot =
+    slotOptions.find((slot) => slot.id === resolvedSlotId) ?? null;
   const supportsLegacyChildren = selectedBlockMeta?.canHaveChildren ?? false;
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting && !nextOpen) return;
@@ -111,6 +120,7 @@ export function WidgetInsertDialog({
       setSlotId("");
       setBlocks([]);
       setBlockTree([]);
+      setBlocksLoading(false);
       setBlocksError(null);
       setSubmitError(null);
     }
@@ -121,34 +131,19 @@ export function WidgetInsertDialog({
     placement === "new"
       ? Boolean(resolvedPageId)
       : Boolean(
-          targetId &&
+          resolvedTargetId &&
             blockId &&
             (slotOptions.length === 0 ||
-              (selectedSlot && !selectedSlot.disabled))
+              (resolvedSelectedSlot && !resolvedSelectedSlot.disabled))
         );
 
   useEffect(() => {
-    if (placement !== "inside") return;
-    const options = targetType === "page" ? pageOptions : templateOptions;
-    if (targetId || options.length === 0) return;
-    setTargetId(options[0]?.id ?? "");
-  }, [placement, targetType, pageOptions, templateOptions, targetId]);
-
-  useEffect(() => {
-    if (placement !== "inside" || !targetId) {
-      setBlocks([]);
-      setBlockId("");
-      setSlotId("");
-      setBlockTree([]);
-      return;
-    }
+    if (placement !== "inside" || !resolvedTargetId) return;
     let active = true;
-    setBlocksLoading(true);
-    setBlocksError(null);
     const loadBlocks = async () => {
       try {
         if (targetType === "template") {
-          const template = await getWidgetTemplateCached(targetId, { force: true });
+          const template = await getWidgetTemplateCached(resolvedTargetId, { force: true });
           const items = Array.isArray(template.blocks) ? template.blocks : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
             widgetMetaMap.get(type)?.label ?? type
@@ -158,7 +153,7 @@ export function WidgetInsertDialog({
           setBlockTree(items as Block[]);
           setBlockId(mapped[0]?.id ?? "");
         } else {
-          const page = await getPageCached(targetId, { force: true });
+          const page = await getPageCached(resolvedTargetId, { force: true });
           const data = (page.currentData ?? {}) as Record<string, unknown>;
           const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
@@ -185,17 +180,7 @@ export function WidgetInsertDialog({
     return () => {
       active = false;
     };
-  }, [placement, targetId, targetType, widgetMetaMap]);
-
-  useEffect(() => {
-    if (slotOptions.length === 0) {
-      setSlotId("");
-      return;
-    }
-    if (selectedSlot && !selectedSlot.disabled) return;
-    const firstAvailable = slotOptions.find((slot) => !slot.disabled);
-    setSlotId(firstAvailable?.id ?? slotOptions[0]?.id ?? "");
-  }, [slotOptions, selectedSlot]);
+  }, [placement, resolvedTargetId, targetType, widgetMetaMap]);
 
   const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) return;
@@ -209,9 +194,9 @@ export function WidgetInsertDialog({
         : {
             placement: "inside",
             targetType,
-            targetId,
+            targetId: resolvedTargetId,
             blockId,
-            slotId: slotOptions.length > 0 ? slotId : undefined,
+            slotId: slotOptions.length > 0 ? resolvedSlotId : undefined,
           };
     setSubmitError(null);
     setIsSubmitting(true);
@@ -296,7 +281,19 @@ export function WidgetInsertDialog({
                     type="radio"
                     name="widget-placement"
                     checked={placement === option.id}
-                    onChange={() => setPlacement(option.id)}
+                    onChange={() => {
+                      setPlacement(option.id);
+                      setBlockId("");
+                      setSlotId("");
+                      setBlocksError(null);
+                      if (option.id === "new") {
+                        setBlocks([]);
+                        setBlockTree([]);
+                        setBlocksLoading(false);
+                      } else {
+                        setBlocksLoading(targetOptions.length > 0);
+                      }
+                    }}
                     className="mt-1 h-4 w-4 accent-primary"
                   />
                   <div>
@@ -348,9 +345,15 @@ export function WidgetInsertDialog({
                 <Select
                   value={targetType}
                   onValueChange={(value) => {
-                    setTargetType(value as "page" | "template");
+                    const nextTargetType = value as "page" | "template";
+                    const nextOptions =
+                      nextTargetType === "page" ? pageOptions : templateOptions;
+                    setTargetType(nextTargetType);
                     setTargetId("");
                     setBlockId("");
+                    setSlotId("");
+                    setBlocksError(null);
+                    setBlocksLoading(nextOptions.length > 0);
                   }}
                 >
                   <SelectTrigger>
@@ -367,8 +370,14 @@ export function WidgetInsertDialog({
                   {targetType === "template" ? "Target template" : "Target page"}
                 </label>
                 <Select
-                  value={targetId}
-                  onValueChange={(value) => setTargetId(value)}
+                  value={resolvedTargetId}
+                  onValueChange={(value) => {
+                    setTargetId(value);
+                    setBlockId("");
+                    setSlotId("");
+                    setBlocksError(null);
+                    setBlocksLoading(true);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -448,7 +457,10 @@ export function WidgetInsertDialog({
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Target slot
                     </label>
-                    <Select value={slotId} onValueChange={(value) => setSlotId(value)}>
+                    <Select
+                      value={resolvedSlotId}
+                      onValueChange={(value) => setSlotId(value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a slot" />
                       </SelectTrigger>
@@ -471,9 +483,9 @@ export function WidgetInsertDialog({
                         })}
                       </SelectContent>
                     </Select>
-                    {selectedSlot?.reason ? (
+                    {resolvedSelectedSlot?.reason ? (
                       <p className="text-xs text-destructive">
-                        {selectedSlot.reason}
+                        {resolvedSelectedSlot.reason}
                       </p>
                     ) : null}
                   </div>

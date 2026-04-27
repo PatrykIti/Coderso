@@ -81,8 +81,26 @@ export function WebhooksPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listWebhooks()
+      .then((data) => {
+        if (active) setItems(data);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load webhooks.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const openCreate = () => {
     setEditingWebhook(null);

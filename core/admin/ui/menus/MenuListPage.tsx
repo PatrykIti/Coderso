@@ -506,8 +506,28 @@ export function MenuListPage() {
 
   useEffect(() => {
     const mountOptions = resolveMenuListMountRefreshOptions(hasInitialCache);
-    refresh(mountOptions).catch(() => undefined);
-  }, [hasInitialCache, refresh]);
+    let active = true;
+    listMenusCached({ force: mountOptions.force })
+      .then((next) => {
+        if (!active) return;
+        setItems(next);
+        hasHydratedRef.current = true;
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load menus.");
+        }
+      })
+      .finally(() => {
+        if (active && !mountOptions.background) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -562,17 +582,11 @@ export function MenuListPage() {
     () => pagination.visibleRows.map((item) => item.id),
     [pagination.visibleRows]
   );
-  const selectedCount = selectedIds.length;
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
 
   const handleEdit = (id: string) => {
     navigate(`/menus/${encodeURIComponent(id)}`);
@@ -661,14 +675,14 @@ export function MenuListPage() {
   };
 
   const handleBulkApply = () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
 
     if (bulkAction === "delete") {
-      setPendingBulkDeleteIds(selectedIds);
+      setPendingBulkDeleteIds(visibleSelectedIds);
       return;
     }
 
-    void runBulkAction(bulkAction, selectedIds);
+    void runBulkAction(bulkAction, visibleSelectedIds);
   };
 
   return (
@@ -735,7 +749,7 @@ export function MenuListPage() {
                 ? "No menus match your current filters."
                 : undefined
             }
-            selectedIds={selectedIds}
+            selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
             onToggleAll={handleToggleAll}

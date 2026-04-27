@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -99,35 +99,51 @@ export function ListingTemplateManager({
   onEditingTemplateIdChange,
   onSaved,
 }: ListingTemplateManagerProps) {
-  const [form, setForm] = useState<TemplateFormState>(emptyTemplateForm);
+  const activeTemplate = editingTemplateId
+    ? items.find((entry) => entry.id === editingTemplateId) ?? null
+    : null;
+  const sourceKey = createOpen ? "create" : editingTemplateId ?? "closed";
+  const sourceForm = createOpen
+    ? emptyTemplateForm()
+    : activeTemplate
+      ? {
+          id: activeTemplate.id,
+          name: activeTemplate.name,
+          slug: activeTemplate.slug,
+          description: activeTemplate.description ?? "",
+          layout: activeTemplate.layout,
+          config: cloneTemplateConfig(
+            activeTemplate.config ?? defaultTemplateConfig()
+          ),
+        }
+      : emptyTemplateForm();
+  const [formState, setFormState] = useState(() => ({
+    sourceKey,
+    form: sourceForm,
+  }));
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const dialogOpen = createOpen || editingTemplateId !== null;
-
-  useEffect(() => {
-    if (createOpen) {
-      setSaveError(null);
-      setForm(emptyTemplateForm());
-      return;
-    }
-
-    if (!editingTemplateId) return;
-    const current = items.find((entry) => entry.id === editingTemplateId);
-    if (!current) {
-      setSaveError("Listing template not found.");
-      return;
-    }
-    setSaveError(null);
-    setForm({
-      id: current.id,
-      name: current.name,
-      slug: current.slug,
-      description: current.description ?? "",
-      layout: current.layout,
-      config: cloneTemplateConfig(current.config ?? defaultTemplateConfig()),
+  const form = formState.sourceKey === sourceKey ? formState.form : sourceForm;
+  const setForm = (
+    next:
+      | TemplateFormState
+      | ((previous: TemplateFormState) => TemplateFormState)
+  ) => {
+    setFormState((previous) => {
+      const current =
+        previous.sourceKey === sourceKey ? previous.form : sourceForm;
+      return {
+        sourceKey,
+        form: typeof next === "function" ? next(current) : next,
+      };
     });
-  }, [createOpen, editingTemplateId, items]);
+  };
+  const visibleSaveError =
+    !createOpen && editingTemplateId && !activeTemplate
+      ? "Listing template not found."
+      : saveError;
 
   const closeDialog = () => {
     onCreateOpenChange(false);
@@ -185,10 +201,10 @@ export function ListingTemplateManager({
           </DialogDescription>
         </DialogHeader>
 
-        {saveError ? (
+        {visibleSaveError ? (
           <Alert variant="destructive">
             <AlertTitle>Template action failed</AlertTitle>
-            <AlertDescription>{saveError}</AlertDescription>
+            <AlertDescription>{visibleSaveError}</AlertDescription>
           </Alert>
         ) : null}
 

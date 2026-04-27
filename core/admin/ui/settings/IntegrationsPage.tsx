@@ -6,7 +6,7 @@ import {
   ShieldAlert,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,26 +94,27 @@ export function IntegrationsPage() {
     });
   }, [items, filter, query]);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await listIntegrations();
-      setItems(data);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load integrations.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listIntegrations()
+      .then((data) => {
+        if (active) setItems(data);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load integrations.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleOpenIntegration = (integration: IntegrationRecord) => {
     setActiveId(integration.id);

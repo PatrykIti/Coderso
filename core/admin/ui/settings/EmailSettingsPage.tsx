@@ -105,8 +105,35 @@ export function EmailSettingsPage() {
   }, []);
 
   useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
+    let active = true;
+    getEmailSettings()
+      .then((data) => {
+        if (!active) return;
+        setSettings(data);
+        setSmtpHost(data.smtp.host ?? "");
+        setSmtpPort(data.smtp.port ? String(data.smtp.port) : "");
+        setSmtpSecure(data.smtp.secure);
+        setSmtpUser(data.smtp.user ?? "");
+        setFromName(data.from.name ?? "");
+        setFromEmail(data.from.email ?? "");
+        setUpdatePassword(false);
+        setSmtpPassword("");
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load email settings.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const statusConfigured = settings?.status.configured ?? false;
   const statusItems = useMemo(

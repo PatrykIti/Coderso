@@ -1,5 +1,5 @@
 import { Code2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +44,7 @@ export function WidgetCreateDialog({
   const [baseTemplate, setBaseTemplate] = useState("blank");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const resolvedCategory = category || (categories[0]?.name ?? "");
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -56,19 +57,12 @@ export function WidgetCreateDialog({
     onOpenChange(nextOpen);
   };
 
-  useEffect(() => {
-    if (!open) return;
-    if (!category && categories.length > 0) {
-      setCategory(categories[0].name);
-    }
-  }, [open, category, categories]);
-
   const handleCreate = async () => {
     if (!name.trim()) {
       setError("Please enter a widget name.");
       return;
     }
-    if (!category) {
+    if (!resolvedCategory) {
       setError("Please select a category.");
       return;
     }
@@ -79,7 +73,7 @@ export function WidgetCreateDialog({
       await onCreate?.({
         name: name.trim(),
         description: description.trim() ? description.trim() : null,
-        category,
+        category: resolvedCategory,
         blocks,
       });
       handleOpenChange(false);
@@ -136,7 +130,7 @@ export function WidgetCreateDialog({
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Category
               </label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={resolvedCategory} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>

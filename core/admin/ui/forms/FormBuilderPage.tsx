@@ -201,25 +201,46 @@ export function FormBuilderPage() {
     if (typeof window === "undefined") return null;
     return resolveFormId(window.location.pathname);
   });
-  const [activeForm, setActiveForm] = useState<FormRecord | null>(null);
-  const [meta, setMeta] = useState<FormMetaState>({
-    name: "",
-    description: "",
-    status: "draft",
-    submissionAccess: "public",
-    successMessage: "",
-    successRedirectUrl: "",
-    settings: getDefaultFormSettings(),
-  });
-  const [formActions, setFormActions] = useState<FormActionInput[]>([]);
+  const initialCachedFormDetail = useMemo(
+    () => (formId ? getCachedFormDetail(formId) : null),
+    [formId]
+  );
+  const initialCachedFormActions = useMemo(
+    () => (formId ? getCachedFormActions(formId) : null),
+    [formId]
+  );
+  const [activeForm, setActiveForm] = useState<FormRecord | null>(
+    () => initialCachedFormDetail?.form ?? null
+  );
+  const [meta, setMeta] = useState<FormMetaState>(() =>
+    initialCachedFormDetail
+      ? toFormMeta(initialCachedFormDetail.form)
+      : {
+          name: "",
+          description: "",
+          status: "draft",
+          submissionAccess: "public",
+          successMessage: "",
+          successRedirectUrl: "",
+          settings: getDefaultFormSettings(),
+        }
+  );
+  const [formActions, setFormActions] = useState<FormActionInput[]>(() =>
+    initialCachedFormActions?.map(toFormActionInput) ?? []
+  );
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
   const [inspectorTab, setInspectorTab] = useState<"settings" | "automation">(
     "settings"
   );
-  const [fields, setFields] = useState<FormFieldState[]>([]);
-  const [selectedTarget, setSelectedTarget] = useState<SelectedTarget>({ type: "form" });
+  const [fields, setFields] = useState<FormFieldState[]>(() =>
+    initialCachedFormDetail?.fields.map(toFieldState) ?? []
+  );
+  const [selectedTarget, setSelectedTarget] = useState<SelectedTarget>(() => {
+    const firstField = initialCachedFormDetail?.fields[0];
+    return firstField ? { type: "field", id: firstField.id } : { type: "form" };
+  });
   const [leftTab, setLeftTab] = useState("fields");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !initialCachedFormDetail);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -283,11 +304,6 @@ export function FormBuilderPage() {
     [formId]
   );
 
-  const refreshContentTypes = useCallback(async () => {
-    const list = await listContentTypesCached({ force: true });
-    setContentTypes(list);
-  }, []);
-
   const refreshForm = useCallback(
     async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
       if (!formId) return;
@@ -320,20 +336,44 @@ export function FormBuilderPage() {
 
   useEffect(() => {
     if (!formId) return;
-    const cached = getCachedFormDetail(formId);
-    const cachedActions = getCachedFormActions(formId);
-    if (cached) {
-      applyDetail(cached);
-      setLoadError(null);
-      setIsLoading(false);
-    }
-    if (cachedActions) {
-      setFormActions(cachedActions.map(toFormActionInput));
-    }
-    refreshActions({ setDirty: false }).catch(() => undefined);
-    refreshContentTypes().catch(() => undefined);
-    refreshForm({ setLoading: !cached }).catch(() => undefined);
-  }, [applyDetail, formId, refreshActions, refreshContentTypes, refreshForm]);
+    let active = true;
+    listFormActionsCached(formId, { force: true })
+      .then((actions) => {
+        if (!active) return;
+        setFormActions(actions.map(toFormActionInput));
+      })
+      .catch(() => undefined);
+    listContentTypesCached({ force: true })
+      .then((list) => {
+        if (!active) return;
+        setContentTypes(list);
+      })
+      .catch(() => undefined);
+    getFormDetailCached(formId, { force: true })
+      .then((detail) => {
+        if (!active) return;
+        if (!detail) {
+          setLoadError("Form not found.");
+          return;
+        }
+        if (hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyDetail(detail);
+        setLoadError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setLoadError(isApiClientError(err) ? err.message : "Failed to load form.");
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyDetail, formId]);
 
   useEffect(() => {
     if (!formId) return undefined;

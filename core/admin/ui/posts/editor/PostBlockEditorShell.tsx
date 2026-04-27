@@ -267,20 +267,15 @@ export function PostBlockEditorShell() {
   const editorTypeId = editor.post?.typeId ?? null;
 
   const retryTaxonomyOverview = useCallback(() => {
+    setTaxonomyLoading(Boolean(editorTypeId));
+    setTaxonomyError(null);
     setTaxonomyRetryToken((current) => current + 1);
-  }, []);
+  }, [editorTypeId]);
 
   useEffect(() => {
-    if (!editorTypeId) {
-      setCategoryOptions([]);
-      setTaxonomyError(null);
-      setTaxonomyLoading(false);
-      return;
-    }
+    if (!editorTypeId) return;
 
     let active = true;
-    setTaxonomyLoading(true);
-    setTaxonomyError(null);
 
     (async () => {
       try {

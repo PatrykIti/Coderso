@@ -67,8 +67,28 @@ export function useSolutionKitRuns(kitId: SolutionKitId | null) {
   );
 
   useEffect(() => {
-    refreshRuns(true).catch(() => undefined);
-  }, [refreshRuns]);
+    if (!kitId) return;
+    let active = true;
+    listSolutionKitRunsCached({ kitId, force: true })
+      .then((items) => {
+        if (!active) return;
+        setRuns(items);
+        setError(null);
+        setSelectedRunId((previous) => {
+          if (previous && items.some((item) => item.id === previous)) return previous;
+          return items[0]?.id ?? null;
+        });
+      })
+      .catch((error) => {
+        if (active) setError(resolveError(error));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [kitId]);
 
   const refreshRunDetail = useCallback(
     async (runId: string | null, force = false) => {
@@ -95,8 +115,26 @@ export function useSolutionKitRuns(kitId: SolutionKitId | null) {
   );
 
   useEffect(() => {
-    refreshRunDetail(selectedRunId).catch(() => undefined);
-  }, [refreshRunDetail, selectedRunId]);
+    if (!selectedRunId) return;
+    let active = true;
+    getSolutionKitRunCached(selectedRunId)
+      .then((detail) => {
+        if (!active) return;
+        setSelectedRun(detail);
+        setDetailError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSelectedRun(null);
+        setDetailError(resolveError(error));
+      })
+      .finally(() => {
+        if (active) setIsDetailLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedRunId]);
 
   const apply = useCallback(
     async (input: {
@@ -159,12 +197,12 @@ export function useSolutionKitRuns(kitId: SolutionKitId | null) {
   }, [runs]);
 
   return {
-    runs,
+    runs: kitId ? runs : [],
     isLoading,
     error,
-    selectedRunId,
+    selectedRunId: kitId ? selectedRunId : null,
     setSelectedRunId,
-    selectedRun,
+    selectedRun: selectedRunId ? selectedRun : null,
     isDetailLoading,
     detailError,
     refreshRuns,

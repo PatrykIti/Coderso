@@ -139,8 +139,28 @@ export function PostsListPage() {
   );
 
   useEffect(() => {
-    refresh({ force: true, background: hasInitialCache }).catch(() => undefined);
-  }, [hasInitialCache, refresh]);
+    let active = true;
+    listPostsCached({ force: true })
+      .then((next) => {
+        if (!active) return;
+        setItems(next);
+        hasHydratedRef.current = true;
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load posts.");
+        }
+      })
+      .finally(() => {
+        if (active && !hasInitialCache) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasInitialCache]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -208,16 +228,11 @@ export function PostsListPage() {
     () => pagination.visibleRows.map((item) => item.id),
     [pagination.visibleRows]
   );
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
-  const isIndeterminate = selectedIds.length > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   const clearSelection = useCallback(() => {
     setSelectedIds([]);
@@ -380,14 +395,14 @@ export function PostsListPage() {
   };
 
   const handleBulkApply = () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
 
     if (bulkAction === "delete") {
-      setPendingBulkDeleteIds(selectedIds);
+      setPendingBulkDeleteIds(visibleSelectedIds);
       return;
     }
 
-    void runBulkAction(bulkAction, selectedIds);
+    void runBulkAction(bulkAction, visibleSelectedIds);
   };
 
   const handleDrawerOpenChange = (next: boolean) => {
@@ -421,14 +436,14 @@ export function PostsListPage() {
           description="Create and publish articles rendered by widgets and templates."
           actions={
             <>
-              {selectedIds.length > 0 ? (
+              {selectedCount > 0 ? (
                 <div
                   data-post-bulk-actions="inline"
                   className="flex min-w-0 flex-wrap items-center justify-end gap-2"
                 >
                   <div className="flex shrink-0 items-center gap-2 text-sm">
                     <span className="font-semibold text-foreground">
-                      {selectedIds.length} post{selectedIds.length === 1 ? "" : "s"} selected
+                      {selectedCount} post{selectedCount === 1 ? "" : "s"} selected
                     </span>
                     <span className="sr-only">
                       Apply a bulk action to the visible selection.
@@ -510,7 +525,7 @@ export function PostsListPage() {
                 ? "No posts match your current filters."
                 : undefined
             }
-            selectedIds={selectedIds}
+            selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
             onToggleAll={handleToggleAll}

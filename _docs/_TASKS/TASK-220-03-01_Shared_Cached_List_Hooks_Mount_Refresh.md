@@ -5,7 +5,7 @@
 **Category:** Admin Cache + Hooks
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-03
-**Status:** To Do
+**Status:** In Progress (2026-04-27)
 
 ---
 

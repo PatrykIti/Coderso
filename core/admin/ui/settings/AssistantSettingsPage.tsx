@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -74,7 +74,10 @@ export function AssistantSettingsPage({
     };
   };
 
-  const [form, setForm] = useState(() => normalizeValues(values));
+  const [formState, setFormState] = useState(() => ({
+    source: values,
+    form: normalizeValues(values),
+  }));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [reindexError, setReindexError] = useState<string | null>(null);
@@ -84,12 +87,25 @@ export function AssistantSettingsPage({
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
     useSettingsAutoSave();
 
+  const form =
+    formState.source === values ? formState.form : normalizeValues(values);
+  const setForm = (
+    next:
+      | AssistantSettingsValues
+      | ((previous: AssistantSettingsValues) => AssistantSettingsValues)
+  ) => {
+    setFormState((previous) => {
+      const current =
+        previous.source === values ? previous.form : normalizeValues(values);
+      return {
+        source: values,
+        form: typeof next === "function" ? next(current) : next,
+      };
+    });
+  };
+
   const validationError = resolveAssistantValidationError(form);
   const hasValidationErrors = Boolean(validationError);
-
-  useEffect(() => {
-    setForm(normalizeValues(values));
-  }, [values]);
 
   const handleSave = useCallback(async () => {
     if (!onSave) return false;

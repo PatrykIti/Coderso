@@ -433,8 +433,6 @@ export function SecuritySettingsPage() {
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setError(null);
     Promise.all([getSecuritySettings(), getSettings()])
       .then(([securityResult, runtimeSettings]) => {
         if (!active) return;

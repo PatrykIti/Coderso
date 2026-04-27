@@ -122,17 +122,11 @@ export function FormListPage() {
     () => pagination.visibleRows.map((form) => form.id),
     [pagination.visibleRows]
   );
-  const selectedCount = selectedIds.length;
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
 
   const handleCreate = async (payload: {
     name: string;
@@ -249,12 +243,12 @@ export function FormListPage() {
   };
 
   const handleBulkApply = () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
     if (bulkAction === "delete") {
-      setPendingBulkDeleteIds(selectedIds);
+      setPendingBulkDeleteIds(visibleSelectedIds);
       return;
     }
-    void runBulkAction(bulkAction, selectedIds);
+    void runBulkAction(bulkAction, visibleSelectedIds);
   };
 
   const handleDrawerOpenChange = (next: boolean) => {
@@ -341,7 +335,7 @@ export function FormListPage() {
                 ? "No forms match your current filters."
                 : undefined
             }
-            selectedIds={selectedIds}
+            selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
             onToggleAll={handleToggleAll}

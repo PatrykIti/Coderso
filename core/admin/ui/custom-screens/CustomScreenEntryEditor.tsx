@@ -163,7 +163,12 @@ export function CustomScreenEntryEditor() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [relationTargets, setRelationTargets] = useState<
     Array<{ slug: string; name: string }>
-  >([]);
+  >(() =>
+    (getCachedContentTypes() ?? []).map((item) => ({
+      slug: item.slug,
+      name: item.name,
+    }))
+  );
 
   const schemaFieldNames = useMemo(
     () => new Set(fields.map((field) => field.name)),
@@ -298,14 +303,49 @@ export function CustomScreenEntryEditor() {
 
   useEffect(() => {
     if (!screenId || !entryId) return;
-    refresh(true).catch(() => undefined);
-  }, [entryId, refresh, screenId]);
+    let active = true;
+    getCustomScreenCached(screenId, { force: true })
+      .then(async (nextScreen) => {
+        if (!active) return;
+        if (!nextScreen) {
+          setError("Custom screen not found.");
+          return;
+        }
+        const contentTypes = await listContentTypesCached({ force: true });
+        if (!active) return;
+        const nextContentType =
+          contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
+        if (!nextContentType) {
+          setError("Content type not found.");
+          return;
+        }
+        const nextEntry = await getEntryCached(nextContentType.slug, entryId, {
+          force: true,
+        });
+        if (!active) return;
+        if (!nextEntry) {
+          setError("Record not found.");
+          return;
+        }
+        applyLoadedState(nextScreen, nextContentType, nextEntry);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load record.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyLoadedState, entryId, screenId]);
 
   useEffect(() => {
-    const cached = getCachedContentTypes();
-    if (cached) {
-      setRelationTargets(cached.map((item) => ({ slug: item.slug, name: item.name })));
-    }
     listContentTypesCached({ force: true })
       .then((items) =>
         setRelationTargets(items.map((item) => ({ slug: item.slug, name: item.name })))

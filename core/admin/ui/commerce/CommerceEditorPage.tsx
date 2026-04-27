@@ -90,11 +90,6 @@ export function CommerceEditorPage() {
     setHasUnsavedChanges(false);
   }, []);
 
-  const refreshCollections = useCallback(async (force?: boolean) => {
-    const items = await listCommerceCollectionsCached({ force });
-    setCollections(items);
-  }, []);
-
   const refreshProduct = useCallback(
     async (force?: boolean) => {
       if (!productId || isCreateMode) return;
@@ -106,8 +101,10 @@ export function CommerceEditorPage() {
 
   useEffect(() => {
     let active = true;
-    setIsLoading((current) => current && !isCreateMode);
-    refreshCollections(true)
+    listCommerceCollectionsCached({ force: true })
+      .then((items) => {
+        if (active) setCollections(items);
+      })
       .catch((error) => {
         if (!active) return;
         setError(
@@ -121,8 +118,12 @@ export function CommerceEditorPage() {
         if (isCreateMode) setIsLoading(false);
       });
 
-    if (!isCreateMode) {
-      refreshProduct(true)
+    if (!isCreateMode && productId) {
+      getCommerceProductCached(productId, { force: true })
+        .then((item) => {
+          if (!active || !item) return;
+          applyProduct(item);
+        })
         .catch((error) => {
           if (!active) return;
           setError(
@@ -139,7 +140,7 @@ export function CommerceEditorPage() {
     return () => {
       active = false;
     };
-  }, [isCreateMode, refreshCollections, refreshProduct]);
+  }, [applyProduct, isCreateMode, productId]);
 
   useEffect(() => {
     if (!productId || isCreateMode) return undefined;

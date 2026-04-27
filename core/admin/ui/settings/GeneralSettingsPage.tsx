@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -43,7 +43,10 @@ export function GeneralSettingsPage({
     siteLocale: input.siteLocale ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteLocale,
   });
 
-  const [form, setForm] = useState(() => normalizeValues(values));
+  const [formState, setFormState] = useState(() => ({
+    source: values,
+    form: normalizeValues(values),
+  }));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
@@ -52,9 +55,22 @@ export function GeneralSettingsPage({
 
   const hasValidationErrors = false;
 
-  useEffect(() => {
-    setForm(normalizeValues(values));
-  }, [values]);
+  const form =
+    formState.source === values ? formState.form : normalizeValues(values);
+  const setForm = (
+    next:
+      | GeneralSettingsValues
+      | ((previous: GeneralSettingsValues) => GeneralSettingsValues)
+  ) => {
+    setFormState((previous) => {
+      const current =
+        previous.source === values ? previous.form : normalizeValues(values);
+      return {
+        source: values,
+        form: typeof next === "function" ? next(current) : next,
+      };
+    });
+  };
 
   const handleSave = useCallback(async () => {
     if (!onSave) return false;

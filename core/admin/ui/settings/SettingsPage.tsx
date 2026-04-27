@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -39,24 +39,33 @@ export function SettingsPage({
   isSaving = false,
   error = null,
 }: SettingsPageProps) {
-  const [form, setForm] = useState(values);
-  const [tokenOverrides, setTokenOverrides] = useState(tokens);
+  const [tokenState, setTokenState] = useState(() => ({
+    source: tokens,
+    overrides: tokens,
+  }));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
+
+  const form = values;
+  const tokenOverrides =
+    tokenState.source === tokens ? tokenState.overrides : tokens;
+  const setTokenOverrides = (
+    next: TokenOverrides | ((previous: TokenOverrides) => TokenOverrides)
+  ) => {
+    setTokenState((previous) => {
+      const current = previous.source === tokens ? previous.overrides : tokens;
+      return {
+        source: tokens,
+        overrides: typeof next === "function" ? next(current) : next,
+      };
+    });
+  };
 
   const previewStyle = useMemo(() => {
     const resolved = mergeTokens(DEFAULT_TOKENS, tokenOverrides);
     return toCssVariableMap(resolved);
   }, [tokenOverrides]);
-
-  useEffect(() => {
-    setTokenOverrides(tokens);
-  }, [tokens]);
-
-  useEffect(() => {
-    setForm(values);
-  }, [values]);
 
   const handleSave = async () => {
     setSaveError(null);

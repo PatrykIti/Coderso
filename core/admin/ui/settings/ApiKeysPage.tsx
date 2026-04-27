@@ -58,8 +58,26 @@ export function ApiKeysPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let active = true;
+    listApiKeys()
+      .then((data) => {
+        if (active) setItems(data);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load API keys.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleCreate = async (payload: { name: string; scopes: string[] }) => {
     setIsSaving(true);

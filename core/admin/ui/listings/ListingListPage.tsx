@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -146,20 +146,6 @@ export function ListingListPage() {
     () => templatePagination.visibleRows.map((item) => item.id),
     [templatePagination.visibleRows]
   );
-
-  useEffect(() => {
-    setSelectedQueryIds((prev) => {
-      const next = prev.filter((id) => visibleQueryIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleQueryIds]);
-
-  useEffect(() => {
-    setSelectedTemplateIds((prev) => {
-      const next = prev.filter((id) => visibleTemplateIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleTemplateIds]);
 
   const visibleSelectedQueryIds = selectedQueryIds.filter((id) =>
     visibleQueryIds.includes(id)

@@ -27,7 +27,6 @@ import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedContentTypes, listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
   deleteEntry,
-  getCachedEntryDetail,
   getEntryCached,
   previewEntry,
   publishEntry,
@@ -120,6 +119,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
 
+const mapRelationTargets = (items: ContentTypeSummary[]) =>
+  items.map((item) => ({ slug: item.slug, name: item.name }));
+
 export function EntryEditor() {
   const { navigate } = useAdminRouter();
   const [{ type, id }] = useState<{
@@ -169,7 +171,7 @@ export function EntryEditor() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [relationTargets, setRelationTargets] = useState<
     Array<{ slug: string; name: string }>
-  >([]);
+  >(() => mapRelationTargets(getCachedContentTypes() ?? []));
   const [taxonomyOverview, setTaxonomyOverview] = useState<TaxonomyOverview | null>(
     null
   );
@@ -271,24 +273,37 @@ export function EntryEditor() {
 
   useEffect(() => {
     if (!type || !id) return;
-    const cachedEntry = getCachedEntryDetail(type, id);
-    const cachedContentType =
-      getCachedContentTypes()?.find((item) => item.slug === type) ?? null;
-
-    if (cachedEntry && cachedContentType) {
-      applyEntry(cachedEntry, cachedContentType);
-      loadTaxonomy(cachedContentType.id, cachedEntry).catch(() => undefined);
-      setIsLoading(false);
-    } else {
-      setTaxonomyOverview(null);
-      setSelectedCategoryId(null);
-      setSelectedTagIds([]);
-    }
-
-    refreshEntry({ setLoading: !(cachedEntry && cachedContentType) }).catch(
-      () => undefined
-    );
-  }, [applyEntry, id, loadTaxonomy, refreshEntry, type]);
+    let active = true;
+    Promise.all([
+      getEntryCached(type, id, { force: true }),
+      listContentTypesCached({ force: true }),
+    ])
+      .then(async ([entryResult, contentTypes]) => {
+        if (!active) return;
+        const contentType = contentTypes.find((item) => item.slug === type) ?? null;
+        if (!contentType) {
+          setError("Content type not found.");
+          return;
+        }
+        if (!entryResult) return;
+        if (hasUnsavedChangesRef.current || hasUnsavedMetadataChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyEntry(entryResult, contentType);
+        await loadTaxonomy(contentType.id, entryResult);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(resolveEditorErrorMessage(err, "Failed to load entry."));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyEntry, id, loadTaxonomy, type]);
 
   useEffect(() => {
     if (!type || !id) return;
@@ -300,14 +315,10 @@ export function EntryEditor() {
 
   useEffect(() => {
     let active = true;
-    const cached = getCachedContentTypes();
-    if (cached) {
-      setRelationTargets(cached.map((item) => ({ slug: item.slug, name: item.name })));
-    }
     listContentTypesCached({ force: true })
       .then((types) => {
         if (!active) return;
-        setRelationTargets(types.map((item) => ({ slug: item.slug, name: item.name })));
+        setRelationTargets(mapRelationTargets(types));
       })
       .catch(() => undefined);
     return () => {
@@ -320,7 +331,7 @@ export function EntryEditor() {
       if (event.key !== cacheKeys.contentTypesList) return;
       listContentTypesCached({ force: true })
         .then((types) => {
-          setRelationTargets(types.map((item) => ({ slug: item.slug, name: item.name })));
+          setRelationTargets(mapRelationTargets(types));
         })
         .catch(() => undefined);
     });
@@ -652,21 +663,16 @@ export function EntryEditor() {
     "Relation fields link entries together (e.g. Team → Projects).",
     "Use categories and tags to organize and filter content.",
   ];
-  const checklist = useMemo(
-    () =>
-      buildEntryChecklist({
-        title,
-        slug,
-        status,
-        scheduledAt,
-        fields,
-        values,
-      }),
-    [fields, scheduledAt, slug, status, title, values]
-  );
-  const missingRequiredNames = useMemo(
-    () => new Set(checklist.missingRequiredFields.map((field) => field.name)),
-    [checklist.missingRequiredFields]
+  const checklist = buildEntryChecklist({
+    title,
+    slug,
+    status,
+    scheduledAt,
+    fields,
+    values,
+  });
+  const missingRequiredNames = new Set(
+    checklist.missingRequiredFields.map((field) => field.name)
   );
   const tabGroups = useMemo(() => {
     const resolveTabLabel = (field: ContentField) => {
@@ -711,12 +717,9 @@ export function EntryEditor() {
     });
   }, [fields]);
   const [activeTab, setActiveTab] = useState("content");
-
-  useEffect(() => {
-    if (tabGroups.length === 0) return;
-    const hasActive = tabGroups.some((tab) => tab.id === activeTab);
-    if (!hasActive) setActiveTab(tabGroups[0].id);
-  }, [activeTab, tabGroups]);
+  const activeTabId = tabGroups.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : tabGroups[0]?.id ?? activeTab;
 
   return (
     <AdminShell
@@ -855,7 +858,7 @@ export function EntryEditor() {
               </div>
             ) : (
               <Tabs
-                value={activeTab}
+                value={activeTabId}
                 onValueChange={setActiveTab}
                 className="space-y-6"
               >

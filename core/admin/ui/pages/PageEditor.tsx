@@ -297,12 +297,23 @@ type SlotInsertTarget = {
 };
 
 export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorProps) {
-  const [pageId, setPageId] = useState<string | null>(initialPageId ?? initialPage?.id ?? null);
-  const [page, setPage] = useState<PageDetail | null>(initialPage ?? null);
-  const [pageData, setPageData] = useState<Record<string, unknown>>(
-    initialPage?.currentData ?? { blocks: defaultBlocks }
+  const [pageId] = useState<string | null>(() => {
+    if (initialPageId ?? initialPage?.id) return initialPageId ?? initialPage?.id ?? null;
+    if (typeof window === "undefined") return null;
+    return resolvePageId(window.location.pathname);
+  });
+  const initialCachedPage = useMemo(
+    () => (!initialPage && pageId ? getCachedPageDetail(pageId) : null),
+    [initialPage, pageId]
   );
-  const [blocks, setBlocks] = useState<Block[]>(normalizeBlocks(initialPage?.currentData));
+  const initialPageDetail = initialPage ?? initialCachedPage;
+  const [page, setPage] = useState<PageDetail | null>(initialPageDetail ?? null);
+  const [pageData, setPageData] = useState<Record<string, unknown>>(
+    initialPageDetail?.currentData ?? { blocks: defaultBlocks }
+  );
+  const [blocks, setBlocks] = useState<Block[]>(
+    normalizeBlocks(initialPageDetail?.currentData)
+  );
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
@@ -312,7 +323,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   };
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [isLoading, setIsLoading] = useState(
-    !initialPage && typeof window !== "undefined"
+    !initialPageDetail && typeof window !== "undefined"
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -481,7 +492,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     target.scrollIntoView({ behavior: "smooth", block: "start" });
     const focusTarget = target.querySelector<HTMLElement>("[data-block-select='true']");
     focusTarget?.focus({ preventScroll: true });
-    setPendingScrollBlockId(null);
+    const frameId = window.requestAnimationFrame(() => setPendingScrollBlockId(null));
+    return () => window.cancelAnimationFrame(frameId);
   }, [blocks, pendingScrollBlockId]);
 
   const refreshPage = useCallback(
@@ -512,21 +524,33 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   );
 
   useEffect(() => {
-    if (pageId || typeof window === "undefined") return;
-    const resolved = resolvePageId(window.location.pathname);
-    setPageId(resolved);
-  }, [pageId]);
-
-  useEffect(() => {
     if (!pageId) return;
     if (initialPage) return;
-    const cachedDetail = getCachedPageDetail(pageId);
-    if (cachedDetail) {
-      applyPage(cachedDetail, { preserveSelection: true });
-      setIsLoading(false);
-    }
-    refreshPage({ setLoading: !cachedDetail }).catch(() => undefined);
-  }, [applyPage, initialPage, pageId, refreshPage]);
+    let active = true;
+    getPageCached(pageId, { force: true })
+      .then((result) => {
+        if (!active || !result) return;
+        if (hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyPage(result, { preserveSelection: true });
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load page.");
+        }
+      })
+      .finally(() => {
+        if (active && !initialCachedPage) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applyPage, initialCachedPage, initialPage, pageId]);
 
   useEffect(() => {
     if (!pageId) return;
@@ -555,14 +579,30 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   useEffect(() => {
     if (!settingsOpen) return;
-    if (templateOptions || templateOptionsLoading || templateOptionsError) return;
-    void loadTemplateOptions();
+    if (templateOptions || templateOptionsError) return;
+    let active = true;
+    getPageTemplateOptions()
+      .then((payload) => {
+        if (active) setTemplateOptions(payload);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setTemplateOptionsError(err.message);
+        } else {
+          setTemplateOptionsError("Failed to load template options.");
+        }
+      })
+      .finally(() => {
+        if (active) setTemplateOptionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [
-    loadTemplateOptions,
     settingsOpen,
     templateOptions,
     templateOptionsError,
-    templateOptionsLoading,
   ]);
 
   const refreshRevisions = useCallback(
@@ -586,10 +626,50 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     [pageId]
   );
 
+  const handleSettingsOpenChange = (nextOpen: boolean) => {
+    if (
+      nextOpen &&
+      !templateOptions &&
+      !templateOptionsLoading &&
+      !templateOptionsError
+    ) {
+      setTemplateOptionsLoading(true);
+      setTemplateOptionsError(null);
+    }
+    setSettingsOpen(nextOpen);
+  };
+
+  const handleRevisionsOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && pageId) {
+      setRevisionsLoading(true);
+      setRevisionsError(null);
+    }
+    setRevisionsOpen(nextOpen);
+  };
+
   useEffect(() => {
     if (!revisionsOpen) return;
-    refreshRevisions().catch(() => undefined);
-  }, [refreshRevisions, revisionsOpen]);
+    if (!pageId) return;
+    let active = true;
+    listPageRevisions(pageId)
+      .then((items) => {
+        if (active) setRevisions(items);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setRevisionsError(err.message);
+        } else {
+          setRevisionsError("Failed to load page history.");
+        }
+      })
+      .finally(() => {
+        if (active) setRevisionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pageId, revisionsOpen]);
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
@@ -998,7 +1078,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               variant="ghost"
               size="sm"
               className="gap-2"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => handleSettingsOpenChange(true)}
               disabled={!page}
             >
               <Settings2 className="h-4 w-4" />
@@ -1009,7 +1089,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 variant="ghost"
                 size="sm"
                 className="gap-2"
-                onClick={() => setRevisionsOpen(true)}
+                onClick={() => handleRevisionsOpenChange(true)}
                 disabled={!page}
               >
                 <History className="h-4 w-4" />
@@ -1120,7 +1200,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       <PageSettingsDrawer
         key={`${page?.id ?? "page-settings"}-${settingsOpen ? "open" : "closed"}`}
         open={settingsOpen}
-        onOpenChange={setSettingsOpen}
+        onOpenChange={handleSettingsOpenChange}
         page={page}
         settings={pageSettings}
         templateOptions={templateOptions?.templates ?? null}
@@ -1137,7 +1217,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       />
       <PageRevisionDrawer
         open={revisionsOpen}
-        onOpenChange={setRevisionsOpen}
+        onOpenChange={handleRevisionsOpenChange}
         revisions={revisions}
         isLoading={revisionsLoading}
         error={revisionsError}

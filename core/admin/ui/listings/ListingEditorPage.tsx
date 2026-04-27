@@ -213,8 +213,38 @@ export function ListingEditorPage() {
 
   useEffect(() => {
     if (isCreateMode) return;
-    refreshQuery(true).catch(() => undefined);
-  }, [isCreateMode, refreshQuery]);
+    if (!listingId) return;
+    let active = true;
+    getListingQueryCached(listingId, { force: true })
+      .then((detail) => {
+        if (!active) return;
+        if (!detail) {
+          setError("Listing query not found.");
+          return;
+        }
+        applySnapshot({
+          name: detail.name,
+          description: detail.description ?? "",
+          query: detail.query,
+          selectedTemplateId: "",
+        });
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load listing query.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [applySnapshot, isCreateMode, listingId]);
 
   useEffect(() => {
     if (!listingId || isCreateMode) return undefined;

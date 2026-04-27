@@ -202,17 +202,11 @@ export function ContentTypeList() {
     () => pagination.visibleRows.map((row) => row.id),
     [pagination.visibleRows]
   );
-  const selectedCount = selectedIds.length;
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
-
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = prev.filter((id) => visibleIds.includes(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [visibleIds]);
 
   useEffect(() => {
     let active = true;
@@ -360,12 +354,12 @@ export function ContentTypeList() {
   };
 
   const handleBulkApply = () => {
-    if (!bulkAction || selectedIds.length === 0) return;
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
     if (bulkAction === "delete") {
-      setPendingBulkDeleteIds(selectedIds);
+      setPendingBulkDeleteIds(visibleSelectedIds);
       return;
     }
-    void runBulkAction(bulkAction, selectedIds);
+    void runBulkAction(bulkAction, visibleSelectedIds);
   };
 
   return (
@@ -451,7 +445,7 @@ export function ContentTypeList() {
           }
           sortKey={sortKey}
           sortDirection={sortDirection}
-          selectedIds={selectedIds}
+          selectedIds={visibleSelectedIds}
           isAllSelected={isAllSelected}
           isIndeterminate={isIndeterminate}
           onToggleAll={handleToggleAll}
