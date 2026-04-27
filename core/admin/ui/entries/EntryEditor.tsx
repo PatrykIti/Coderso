@@ -942,71 +942,65 @@ export function EntryEditor() {
             </div>
           </ScrollArea>
         </div>
-        <aside className="hidden min-h-0 w-96 shrink-0 border-l bg-muted/30 lg:flex lg:flex-col">
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="px-6 py-6">
-              <EntryMetadataPanel
-                status={status}
-                onStatusChange={handleStatusChange}
-                scheduledAt={scheduledAt}
-                onScheduledAtChange={handleScheduledAtChange}
-                title={title}
-                slug={slug}
-                seoPreviewUrl={seoDisplay.value}
-                seoDescription={seoDescription}
-                onSeoDescriptionChange={handleSeoDescriptionChange}
-                checklist={checklist}
-                taxonomy={taxonomyState}
-                onCategoryChange={handleCategoryChange}
-                onTagIdsChange={handleTagIdsChange}
-                onCreateCategory={(name) => handleCreateTerm("category", name)}
-                onCreateTag={(name) => handleCreateTerm("tag", name)}
-                helpItems={helpItems}
-                taxonomySettingsHref={taxonomySettingsHref}
-                author={entry?.author ?? null}
-                onSave={handleSaveMetadata}
-                isSaving={isSavingMetadata}
-                onDelete={() => setDeleteDialogOpen(true)}
-                isDeleting={isDeleting}
-              />
-            </div>
-          </ScrollArea>
+        <aside className="hidden min-h-0 w-96 shrink-0 overflow-hidden border-l bg-muted/30 lg:flex lg:flex-col">
+          <EntryMetadataPanel
+            status={status}
+            onStatusChange={handleStatusChange}
+            scheduledAt={scheduledAt}
+            onScheduledAtChange={handleScheduledAtChange}
+            title={title}
+            slug={slug}
+            seoPreviewUrl={seoDisplay.value}
+            seoDescription={seoDescription}
+            onSeoDescriptionChange={handleSeoDescriptionChange}
+            checklist={checklist}
+            taxonomy={taxonomyState}
+            onCategoryChange={handleCategoryChange}
+            onTagIdsChange={handleTagIdsChange}
+            onCreateCategory={(name) => handleCreateTerm("category", name)}
+            onCreateTag={(name) => handleCreateTerm("tag", name)}
+            helpItems={helpItems}
+            taxonomySettingsHref={taxonomySettingsHref}
+            author={entry?.author ?? null}
+            onSave={handleSaveMetadata}
+            isSaving={isSavingMetadata}
+            onDelete={() => setDeleteDialogOpen(true)}
+            isDeleting={isDeleting}
+          />
         </aside>
       </div>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Content details</SheetTitle>
           <SheetDescription className="sr-only">
             Edit status, SEO, and metadata for this entry.
           </SheetDescription>
-          <ScrollArea className="h-full">
-            <div className="px-6 py-6">
-              <EntryMetadataPanel
-                status={status}
-                onStatusChange={handleStatusChange}
-                scheduledAt={scheduledAt}
-                onScheduledAtChange={handleScheduledAtChange}
-                title={title}
-                slug={slug}
-                seoPreviewUrl={seoDisplay.value}
-                seoDescription={seoDescription}
-                onSeoDescriptionChange={handleSeoDescriptionChange}
-                checklist={checklist}
-                taxonomy={taxonomyState}
-                onCategoryChange={handleCategoryChange}
-                onTagIdsChange={handleTagIdsChange}
-                onCreateCategory={(name) => handleCreateTerm("category", name)}
-                onCreateTag={(name) => handleCreateTerm("tag", name)}
-                helpItems={helpItems}
-                taxonomySettingsHref={taxonomySettingsHref}
-                author={entry?.author ?? null}
-                onSave={handleSaveMetadata}
-                isSaving={isSavingMetadata}
-                onDelete={() => setDeleteDialogOpen(true)}
-                isDeleting={isDeleting}
-              />
-            </div>
-          </ScrollArea>
+          <div className="min-h-0 flex-1">
+            <EntryMetadataPanel
+              status={status}
+              onStatusChange={handleStatusChange}
+              scheduledAt={scheduledAt}
+              onScheduledAtChange={handleScheduledAtChange}
+              title={title}
+              slug={slug}
+              seoPreviewUrl={seoDisplay.value}
+              seoDescription={seoDescription}
+              onSeoDescriptionChange={handleSeoDescriptionChange}
+              checklist={checklist}
+              taxonomy={taxonomyState}
+              onCategoryChange={handleCategoryChange}
+              onTagIdsChange={handleTagIdsChange}
+              onCreateCategory={(name) => handleCreateTerm("category", name)}
+              onCreateTag={(name) => handleCreateTerm("tag", name)}
+              helpItems={helpItems}
+              taxonomySettingsHref={taxonomySettingsHref}
+              author={entry?.author ?? null}
+              onSave={handleSaveMetadata}
+              isSaving={isSavingMetadata}
+              onDelete={() => setDeleteDialogOpen(true)}
+              isDeleting={isDeleting}
+            />
+          </div>
         </SheetContent>
       </Sheet>
       <EntryDeleteDialog

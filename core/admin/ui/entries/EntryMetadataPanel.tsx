@@ -241,8 +241,11 @@ export function EntryMetadataPanel({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <ScrollArea className="flex-1 px-6 py-6">
+    <div
+      data-entry-metadata-panel="true"
+      className="flex h-full min-h-0 flex-col overflow-hidden"
+    >
+      <ScrollArea className="min-h-0 flex-1 px-6 py-6">
         <div className="space-y-6 pb-6">
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -562,7 +565,7 @@ export function EntryMetadataPanel({
           ) : null}
         </div>
       </ScrollArea>
-      <div className="border-t px-6 py-4">
+      <div className="shrink-0 border-t px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/40 to-primary/10" />
           <div className="flex flex-col">

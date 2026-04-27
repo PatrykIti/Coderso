@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1292 tasks
+- **Done:** 1293 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-221 | Entries Metadata Panel Scroll Containment | High | Small | Done: right Entries metadata panel now has one bounded scroll container, no nested desktop/sheet scroll wrappers, and Vitest regression coverage |
 | TASK-219 | Dependency CVE Remediation | High | Medium | Done: dependency CVEs remediated without scanner allowlists; `happy-dom`, Vite, Vitest, ESLint 9, TypeScript ESLint, React Hooks plugin, Rollup/Picomatch/Flatted/Minimatch graph, docs, changelog 751, SBOM, and strict security scan closure completed |
 | TASK-219-01 | Direct Test and Build Tooling Bumps | High | Medium | Done: root Vitest/happy-dom and core Vite/Tailwind build tooling moved to fixed compatible versions |
 | TASK-219-01-01 | Happy DOM Vitest Runtime Upgrade | High | Medium | Done: root `happy-dom` resolves to `20.9.0`; full Vitest and focused post-editor Vitest suites pass |
