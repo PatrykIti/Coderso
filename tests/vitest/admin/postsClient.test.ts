@@ -6,10 +6,13 @@ import {
   createPost,
   duplicatePost,
   getPostCached,
+  getCachedPostRevisions,
   listPostRevisions,
+  listPostRevisionsCached,
   listPosts,
   listPostsCached,
   previewPost,
+  publishPost,
   restorePostRevision,
 } from "../../../core/admin/services/postsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
@@ -191,6 +194,138 @@ test("listPostRevisions calls revisions endpoint", async () => {
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("listPostRevisionsCached reads from shared revisions cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  const cachedRevision = {
+    id: "rev-cached",
+    postId: "post-1",
+    version: 3,
+    data: {},
+    createdAt: "2026-02-21T10:00:00.000Z",
+    createdBy: null,
+  };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    storage.setItem(
+      cacheKeys.postRevisions("post-1"),
+      JSON.stringify({ value: [cachedRevision], savedAt: Date.now() })
+    );
+
+    const result = await listPostRevisionsCached("post-1");
+    expect(result).toEqual([cachedRevision]);
+    expect(calls).toHaveLength(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("post mutations patch revisions cache from returned revision payloads", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const revisionOne = {
+    id: "rev-1",
+    postId: "post-1",
+    version: 1,
+    data: {},
+    createdAt: "2026-02-21T10:00:00.000Z",
+    createdBy: null,
+  };
+  const revisionTwo = {
+    ...revisionOne,
+    id: "rev-2",
+    version: 2,
+  };
+  const post = {
+    id: "post-1",
+    typeId: "post-type",
+    title: "Cached",
+    slug: "cached",
+    status: "draft" as const,
+    data: {},
+    tags: [],
+    createdAt: "2026-02-21T10:00:00.000Z",
+    updatedAt: "2026-02-21T10:00:00.000Z",
+  };
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    if (url.endsWith("/autosave")) {
+      return jsonResponse({
+        post,
+        revision: revisionOne,
+        savedAt: "2026-02-21T10:00:00.000Z",
+        reusedRevision: false,
+      });
+    }
+    if (url.endsWith("/publish")) {
+      return jsonResponse({
+        ok: true,
+        revision: revisionTwo,
+        reusedRevision: false,
+      });
+    }
+    if (url.endsWith("/revisions/rev-1/restore")) {
+      return jsonResponse({
+        ok: true,
+        restored: true,
+        revision: revisionOne,
+        post,
+      });
+    }
+    return jsonResponse({ ok: true });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+
+    await autosavePost("post-1", { title: "Cached" });
+    expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual([
+      "rev-1",
+    ]);
+
+    await publishPost("post-1");
+    expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual([
+      "rev-2",
+      "rev-1",
+    ]);
+
+    await restorePostRevision("post-1", "rev-1");
+    expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual([
+      "rev-2",
+      "rev-1",
+    ]);
+    expect(storage.getItem(cacheKeys.postRevisions("post-1"))).toContain("rev-2");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
   }
 });
 

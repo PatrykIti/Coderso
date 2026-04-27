@@ -85,6 +85,29 @@ describe("post editor layout state", () => {
     expect(restored.focusRestore).toBeNull();
   });
 
+  test("initial focus mode hides restored panels but keeps one-click restore snapshot", () => {
+    const state = createPostEditorLayoutState({
+      initialSecondarySidebar: "list-view",
+      initialDetailsOpen: true,
+      initialFocusMode: true,
+    });
+
+    expect(state.focusMode).toBe(true);
+    expect(state.secondarySidebar).toBeNull();
+    expect(state.detailsOpen).toBe(false);
+    expect(state.focusRestore).toEqual({
+      secondarySidebar: "list-view",
+      detailsOpen: true,
+    });
+
+    const opened = postEditorLayoutReducer(state, {
+      type: "open_secondary",
+      sidebar: "list-view",
+    });
+    expect(opened.focusMode).toBe(false);
+    expect(opened.secondarySidebar).toBe("list-view");
+  });
+
   test("opening panel while focused clears stored snapshot", () => {
     const focused = postEditorLayoutReducer(
       createPostEditorLayoutState({

@@ -253,7 +253,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("DocumentInspector toggles advanced fields and routes document callbacks", () => {
+test("DocumentInspector keeps advanced fields expanded and routes document callbacks", () => {
   const onMoveToTrash = vi.fn();
   const onTitleChange = vi.fn();
   const onSlugChange = vi.fn();
@@ -318,17 +318,7 @@ test("DocumentInspector toggles advanced fields and routes document callbacks", 
       mediaButton.click();
     });
 
-    const toggle = Array.from(view.container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Toggle")
-    );
-    if (!(toggle instanceof HTMLButtonElement)) {
-      throw new Error("missing advanced toggle");
-    }
-
-    React.act(() => {
-      toggle.click();
-    });
-
+    expect(view.container.textContent).not.toContain("Toggle");
     expect(view.container.textContent).toContain("SEO fields completed: 0/3");
     expect(view.container.textContent).toContain("Public URL:");
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -53,6 +54,20 @@ const postEditorActionToasts = createAdminActionToastAdapter({
   },
 });
 
+const statusLabel: Record<string, string> = {
+  draft: "Draft",
+  published: "Published",
+  scheduled: "Scheduled",
+  archived: "Archived",
+};
+
+const statusClass: Record<string, string> = {
+  published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
+  draft: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+  scheduled: "border-blue-500/30 bg-blue-500/10 text-blue-700",
+  archived: "border-slate-500/30 bg-slate-500/10 text-slate-700",
+};
+
 type StoredPostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
   detailsOpen: boolean;
@@ -104,10 +119,6 @@ const resolveInitialLayoutState = (
       typeof parsed.detailsOpen === "boolean"
         ? parsed.detailsOpen
         : fallback.detailsOpen;
-    const detailsTab =
-      parsed.detailsTab === "block" || parsed.detailsTab === "document"
-        ? parsed.detailsTab
-        : fallback.detailsTab;
     const leftRailMode =
       parsed.leftRailMode === "list-view" || parsed.leftRailMode === "outline"
         ? parsed.leftRailMode
@@ -116,7 +127,7 @@ const resolveInitialLayoutState = (
     return {
       secondarySidebar,
       detailsOpen,
-      detailsTab,
+      detailsTab: fallback.detailsTab,
       leftRailMode,
     };
   } catch {
@@ -138,10 +149,14 @@ const resolveInitialFocusMode = (preferences: PostEditorPreferences) => {
 export function PostBlockEditorShell() {
   const { navigate } = useAdminRouter();
   const editor = usePostEditorState();
+  const editorPostId = editor.postId;
+  const editorCanonicalUrl = editor.seoDraft.canonicalUrl;
+  const setEditorSeoDraft = editor.setSeoDraft;
   const focusReturn = useFocusReturn();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const outlineButtonRef = useRef<HTMLButtonElement>(null);
   const detailsButtonRef = useRef<HTMLButtonElement>(null);
+  const canonicalAutoFillRef = useRef<{ postId: string; value: string } | null>(null);
   const {
     preferences,
     initialPreferences,
@@ -296,6 +311,50 @@ export function PostBlockEditorShell() {
     () => resolvePostSlugDisplay(slugRouteContext, editor.slug),
     [editor.slug, slugRouteContext]
   );
+
+  useEffect(() => {
+    if (!editorPostId) {
+      canonicalAutoFillRef.current = null;
+      return;
+    }
+
+    if (canonicalAutoFillRef.current?.postId !== editorPostId) {
+      canonicalAutoFillRef.current = null;
+    }
+
+    const fallbackCanonicalUrl =
+      slugDisplay.concrete ? slugDisplay.value.trim() : "";
+    if (!fallbackCanonicalUrl) return;
+
+    const autoFilled = canonicalAutoFillRef.current;
+    const currentCanonicalUrl = editorCanonicalUrl.trim();
+    if (!currentCanonicalUrl && autoFilled === null) {
+      canonicalAutoFillRef.current = {
+        postId: editorPostId,
+        value: fallbackCanonicalUrl,
+      };
+      setEditorSeoDraft({ canonicalUrl: fallbackCanonicalUrl });
+      return;
+    }
+
+    if (
+      autoFilled?.postId === editorPostId &&
+      currentCanonicalUrl === autoFilled.value &&
+      currentCanonicalUrl !== fallbackCanonicalUrl
+    ) {
+      canonicalAutoFillRef.current = {
+        postId: editorPostId,
+        value: fallbackCanonicalUrl,
+      };
+      setEditorSeoDraft({ canonicalUrl: fallbackCanonicalUrl });
+    }
+  }, [
+    editorCanonicalUrl,
+    editorPostId,
+    setEditorSeoDraft,
+    slugDisplay.concrete,
+    slugDisplay.value,
+  ]);
 
   const handleCloseSecondarySidebar = useCallback(
     (target: "inserter" | "outline") => {
@@ -452,21 +511,24 @@ export function PostBlockEditorShell() {
   );
 
   const shellBreadcrumbs = (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <span>Content</span>
+    <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+      <span>Posts</span>
       <span>/</span>
-      <span className="text-foreground">Posts</span>
+      <span className="truncate text-foreground">{editor.title || "Edit Post"}</span>
+      <Badge
+        variant="outline"
+        className={statusClass[editor.status] ?? statusClass.draft}
+        data-post-editor-topbar-status="true"
+      >
+        {statusLabel[editor.status] ?? editor.status}
+      </Badge>
     </div>
   );
 
   const editorBreadcrumbs = useMemo(
     () => (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Content</span>
-        <span>/</span>
-        <span>Posts</span>
-        <span>/</span>
-        <span className="text-foreground">{editor.title || "Edit Post"}</span>
+      <div className="flex min-w-0 items-center gap-2 text-sm">
+        <span className="truncate font-medium text-foreground">{editor.title || "Edit Post"}</span>
       </div>
     ),
     [editor.title]
@@ -594,9 +656,11 @@ export function PostBlockEditorShell() {
             onToggleFocusMode={layout.toggleFocusMode}
             focusMode={layout.focusMode}
             onToggleOutline={handleToggleOutline}
-            outlineVisible={layout.secondarySidebarOpen && !layout.showInserter}
+            outlineVisible={
+              !layout.focusMode && layout.secondarySidebarOpen && !layout.showInserter
+            }
             onToggleDetails={handleToggleDetails}
-            detailsOpen={layout.detailsSidebarOpen}
+            detailsOpen={!layout.focusMode && layout.detailsSidebarOpen}
             onOpenSettings={() => setSettingsOpen(true)}
             addButtonRef={addButtonRef}
             outlineButtonRef={outlineButtonRef}

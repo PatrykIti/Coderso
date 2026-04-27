@@ -282,6 +282,19 @@ Clients update caches and broadcast events on:
   title/slug/status fields into an existing list row without dropping the
   current author identity.
 
+### Posts list/detail/revisions cache note
+
+- Posts list/detail cache stays owned by `core/admin/services/postsClient.ts`
+  through `posts:list` and `posts:detail:<id>`.
+- Post revision history now uses the same shared cache contract with
+  `posts:revisions:<id>` and `listPostRevisionsCached()`.
+- Autosave, publish, and revision restore responses patch the cached revision
+  list with the returned revision payload and broadcast `posts:revisions:<id>`
+  instead of forcing the editor drawer to reload the full revisions list.
+- The Posts editor hydrates revision drawer state from the cached list and from
+  same-tab/cache-bus updates while keeping dirty editor content protected by the
+  existing detail-refresh guard.
+
 ### Entries list/detail cache note
 
 - Entries first-screen list cache (`entries:list:all`) is the all-content-type

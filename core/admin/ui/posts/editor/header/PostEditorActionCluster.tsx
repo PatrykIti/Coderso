@@ -31,11 +31,9 @@ export function PostEditorActionCluster({
     ? "Saving..."
     : dirty
       ? "Unsaved changes"
-      : status === "published"
-        ? "Published"
-        : lastSavedAt
-          ? `Autosaved at ${formatSavedAt(lastSavedAt)}`
-          : "Synced";
+      : lastSavedAt
+        ? `Saved at ${formatSavedAt(lastSavedAt)}`
+        : "Synced";
 
   return (
     <div

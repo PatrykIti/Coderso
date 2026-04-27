@@ -104,6 +104,7 @@ export type PostAutosaveResponse = {
 
 let cachedPostsPromise: Promise<PostSummary[]> | null = null;
 const cachedPostDetails = new Map<string, PostDetail>();
+const cachedPostRevisions = new Map<string, PostRevision[]>();
 
 const isPostList = (value: unknown): value is PostSummary[] => Array.isArray(value);
 
@@ -115,6 +116,9 @@ const postsListCache = createMemoryBackedLocalCache({
 
 const isPostDetail = (value: unknown): value is PostDetail =>
   Boolean(value && typeof value === "object");
+
+const isPostRevisionList = (value: unknown): value is PostRevision[] =>
+  Array.isArray(value);
 
 const toPostSummary = (post: PostSummary | PostDetail): PostSummary => ({
   id: post.id,
@@ -142,6 +146,9 @@ const readPostsCache = () =>
 
 const readPostDetailCache = (id: string) =>
   readLocalCache(cacheKeys.postDetail(id), cacheTtlMs.detail, isPostDetail);
+
+const readPostRevisionsCache = (id: string) =>
+  readLocalCache(cacheKeys.postRevisions(id), cacheTtlMs.detail, isPostRevisionList);
 
 const primePostsCache = (items: PostSummary[]) => {
   cachedPostsPromise = null;
@@ -182,12 +189,30 @@ const removeCachedPost = (id: string) => {
   const current = readPostsCache();
   if (current) primePostsCache(current.filter((item) => item.id !== id));
   cachedPostDetails.delete(id);
+  cachedPostRevisions.delete(id);
   clearLocalCache(cacheKeys.postDetail(id));
+  clearLocalCache(cacheKeys.postRevisions(id));
+};
+
+const writePostRevisionsCache = (id: string, revisions: PostRevision[]) => {
+  const sorted = [...revisions].sort((left, right) => right.version - left.version);
+  cachedPostRevisions.set(id, sorted);
+  writeLocalCache(cacheKeys.postRevisions(id), sorted);
+};
+
+const upsertCachedPostRevision = (id: string, revision: PostRevision) => {
+  const current = getCachedPostRevisions(id) ?? [];
+  const index = current.findIndex((item) => item.id === revision.id);
+  const next = [...current];
+  if (index === -1) next.unshift(revision);
+  else next[index] = revision;
+  writePostRevisionsCache(id, next);
 };
 
 export const clearPostsCache = () => {
   cachedPostsPromise = null;
   cachedPostDetails.clear();
+  cachedPostRevisions.clear();
   postsListCache.clear();
 };
 
@@ -199,6 +224,17 @@ export const getCachedPostDetail = (id: string) => {
   const stored = readPostDetailCache(id);
   if (stored) {
     cachedPostDetails.set(id, stored);
+    return stored;
+  }
+  return null;
+};
+
+export const getCachedPostRevisions = (id: string) => {
+  const existing = cachedPostRevisions.get(id);
+  if (existing) return existing;
+  const stored = readPostRevisionsCache(id);
+  if (stored) {
+    cachedPostRevisions.set(id, stored);
     return stored;
   }
   return null;
@@ -319,6 +355,10 @@ export async function autosavePost(id: string, payload: PostAutosavePayload) {
   );
   if (result?.post) {
     upsertCachedPost(result.post);
+    if (result.revision) {
+      upsertCachedPostRevision(result.post.id, result.revision);
+      broadcastCacheEvent({ key: cacheKeys.postRevisions(result.post.id), action: "update" });
+    }
     broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.postDetail(result.post.id), action: "update" });
   }
@@ -327,6 +367,16 @@ export async function autosavePost(id: string, payload: PostAutosavePayload) {
 
 export async function listPostRevisions(id: string) {
   return apiRequest<PostRevision[]>(`/posts/${id}/revisions`, { method: "GET" });
+}
+
+export async function listPostRevisionsCached(id: string, options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedPostRevisions(id);
+    if (cached) return cached;
+  }
+  const revisions = await listPostRevisions(id);
+  writePostRevisionsCache(id, revisions);
+  return revisions;
 }
 
 export async function restorePostRevision(id: string, revisionId: string) {
@@ -342,6 +392,10 @@ export async function restorePostRevision(id: string, revisionId: string) {
   );
   if (result?.post) {
     upsertCachedPost(result.post);
+    if (result.revision) {
+      upsertCachedPostRevision(result.post.id, result.revision);
+      broadcastCacheEvent({ key: cacheKeys.postRevisions(result.post.id), action: "update" });
+    }
     broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.postDetail(result.post.id), action: "update" });
   }
@@ -349,13 +403,21 @@ export async function restorePostRevision(id: string, revisionId: string) {
 }
 
 export async function publishPost(id: string) {
-  const result = await apiRequest<{ ok: boolean }>(
+  const result = await apiRequest<{
+    ok: boolean;
+    revision?: PostRevision;
+    reusedRevision?: boolean;
+  }>(
     `/posts/${id}/publish`,
     { method: "POST" },
     { withCsrf: true }
   );
   if (result?.ok) {
     updateCachedPostStatus(id, "published");
+    if (result.revision) {
+      upsertCachedPostRevision(id, result.revision);
+      broadcastCacheEvent({ key: cacheKeys.postRevisions(id), action: "update" });
+    }
     broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "update" });
   }

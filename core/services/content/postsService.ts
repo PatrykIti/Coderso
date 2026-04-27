@@ -789,7 +789,7 @@ export async function publishPost(id: string, actorId: string) {
   if (!existing) throw new Error("post_not_found");
 
   const normalizedData = ensurePostDocumentForWrite(normalizePostData(existing.data));
-  await createOrReuseRevision(id, normalizedData, actorId);
+  const { revision, reused } = await createOrReuseRevision(id, normalizedData, actorId);
 
   const [updated] = await db
     .update(posts)
@@ -802,7 +802,13 @@ export async function publishPost(id: string, actorId: string) {
     .where(eq(posts.id, id))
     .returning({ id: posts.id });
 
-  return updated ?? null;
+  return updated
+    ? {
+        ...updated,
+        revision,
+        reusedRevision: reused,
+      }
+    : null;
 }
 
 export async function unpublishPost(id: string) {

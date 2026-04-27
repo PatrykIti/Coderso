@@ -260,8 +260,13 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
   router.post("/posts/:id/publish", requirePermission("content:publish"), async (ctx) => {
     return withPostErrors(async () => {
       if (!ctx.user?.id) throw new Error("auth_required");
-      await publishPost(ctx.params.id, ctx.user.id);
-      return { ok: true };
+      const result = await publishPost(ctx.params.id, ctx.user.id);
+      if (!result) throw new Error("post_not_found");
+      return {
+        ok: true,
+        revision: result.revision,
+        reusedRevision: result.reusedRevision,
+      };
     });
   });
 

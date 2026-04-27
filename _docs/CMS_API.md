@@ -771,12 +771,21 @@ Editor details context contract (update `TASK-063-11-03/04`):
 - prawy inspector tabs: `Post` i `Block`,
 - klik bloku (w tym media placeholdera) ustawia selekcje i przełącza context na `Block`,
 - klik tła canvasu resetuje selekcje bloku i wraca do kontekstu `Post`,
-- `Post` inspector flow jest uporzadkowany jako `Publishing -> Categories/Tags -> Featured image -> Danger zone`, a pola SEO/metadata sa pod `Advanced` collapse,
+- `Post` inspector flow jest uporzadkowany jako `Publishing -> Categories/Tags -> Featured image -> Danger zone`, a pola SEO/metadata sa pod rozwinietym `Advanced`,
 - `Block` inspector zachowuje ten sam kontrakt attrs, ale `Advanced` section jest collapsed by default,
 - media/interactive placeholdery (`image`, `embed`, `video`, `gallery`,
   `audio`, `file`, `button`) nie wymagają nowych API; używają istniejących
   block attrs w `PostBlockDocument` i shared Media Library read contract.
-- aktywny tab jest deterministyczny: default z `posts.editor.preferences.defaultInspectorTab`, a ostatni tab jest odtwarzany lokalnie gdy `restoreLastSidebarsState = true`.
+- aktywny tab jest deterministyczny: start edytora wybiera `Post`, a klikniecie
+  bloku przelacza context na `Block`.
+- `Post` inspector otwiera sie domyslnie na tabie `Post`; zapisany layout moze
+  odtworzyc widocznosc panelu, ale nie wymusza startowego tabu `Block`.
+- `Post` inspector `Advanced` jest rozwiniety bez toggle, a `Canonical URL`
+  jest auto-wypelniany z wyliczonego publicznego URL, gdy `site.publicBaseUrl`
+  i route posta zawieraja `:slug`.
+- `GET /posts/:id/revisions` pozostaje endpointem read-only, a admin client
+  cache'uje wynik pod `posts:revisions:<id>`; autosave/publish/restore patchuja
+  cache znana rewizja z odpowiedzi zamiast wymuszac pelny reload drawer.
 
 Danger zone contract (update `TASK-063-12-05`):
 - akcja `Move to trash` korzysta z istniejacego endpointu `DELETE /posts/:id`,

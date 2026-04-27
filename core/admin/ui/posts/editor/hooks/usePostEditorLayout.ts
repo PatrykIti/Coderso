@@ -40,14 +40,25 @@ const normalizeLeftRailMode = (
 
 export const createPostEditorLayoutState = (
   options: CreatePostEditorLayoutStateOptions = {}
-): PostEditorLayoutState => ({
-  secondarySidebar: normalizeSecondarySidebar(options.initialSecondarySidebar),
-  detailsOpen: options.initialDetailsOpen === true,
-  detailsTab: normalizeDetailsTab(options.initialDetailsTab),
-  focusMode: options.initialFocusMode === true,
-  leftRailMode: normalizeLeftRailMode(options.initialLeftRailMode),
-  focusRestore: null,
-});
+): PostEditorLayoutState => {
+  const secondarySidebar = normalizeSecondarySidebar(options.initialSecondarySidebar);
+  const detailsOpen = options.initialDetailsOpen === true;
+  const focusMode = options.initialFocusMode === true;
+
+  return {
+    secondarySidebar: focusMode ? null : secondarySidebar,
+    detailsOpen: focusMode ? false : detailsOpen,
+    detailsTab: normalizeDetailsTab(options.initialDetailsTab),
+    focusMode,
+    leftRailMode: normalizeLeftRailMode(options.initialLeftRailMode),
+    focusRestore: focusMode
+      ? {
+          secondarySidebar,
+          detailsOpen,
+        }
+      : null,
+  };
+};
 
 export type PostEditorLayoutAction =
   | { type: "open_secondary"; sidebar: Exclude<PostEditorSecondarySidebar, null> }

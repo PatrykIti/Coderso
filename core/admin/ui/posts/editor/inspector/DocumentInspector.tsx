@@ -1,12 +1,5 @@
-import { ChevronDown } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -224,104 +217,92 @@ export function DocumentInspector({
         />
       </InspectorSection>
 
-      <Collapsible defaultOpen={false}>
-        <InspectorSection
-          title="Advanced"
-          info="Optional technical metadata and SEO fields."
-          action={
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">SEO {seoCompleteCount}/3</Badge>
-              <CollapsibleTrigger asChild>
-                <Button type="button" variant="ghost" size="sm" className="group">
-                  Toggle
-                  <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                </Button>
-              </CollapsibleTrigger>
+      <InspectorSection
+        title="Advanced"
+        info="Optional technical metadata and SEO fields."
+        action={<Badge variant="outline">SEO {seoCompleteCount}/3</Badge>}
+      >
+        <div className="space-y-3 border-t pt-3">
+          <InspectorSection
+            title="Title, URL and excerpt"
+            tone="muted"
+            className="rounded-lg"
+          >
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Post title</label>
+              <Input value={title} onChange={(event) => onTitleChange(event.target.value)} />
             </div>
-          }
-        >
-          <CollapsibleContent className="space-y-3 border-t pt-3">
-            <InspectorSection
-              title="Title, URL and excerpt"
-              tone="muted"
-              className="rounded-lg"
-            >
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Post title</label>
-                <Input value={title} onChange={(event) => onTitleChange(event.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Slug</label>
-                <Input value={slug} onChange={(event) => onSlugChange(event.target.value)} />
-                {slugDisplay ? (
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">{slugDisplay.label}:</span>{" "}
-                    {slugDisplay.value}
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Excerpt</label>
-                <Textarea
-                  value={excerpt}
-                  onChange={(event) => onExcerptChange(event.target.value)}
-                  placeholder="Short summary for listings"
-                />
-              </div>
-            </InspectorSection>
-
-            <InspectorSection title="SEO summary" tone="muted" className="rounded-lg">
-              <div className="space-y-1">
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Slug</label>
+              <Input value={slug} onChange={(event) => onSlugChange(event.target.value)} />
+              {slugDisplay ? (
                 <p className="text-xs text-muted-foreground">
-                  SEO fields completed: {seoCompleteCount}/3
+                  <span className="font-medium text-foreground">{slugDisplay.label}:</span>{" "}
+                  {slugDisplay.value}
                 </p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">SEO title</label>
-                <Input
-                  value={seo.title}
-                  onChange={(event) => onSeoChange({ title: event.target.value })}
-                  placeholder="Title shown in search results"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">SEO description</label>
-                <Textarea
-                  value={seo.description}
-                  onChange={(event) => onSeoChange({ description: event.target.value })}
-                  placeholder="Description shown in search results"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Canonical URL</label>
-                <Input
-                  value={seo.canonicalUrl}
-                  onChange={(event) => onSeoChange({ canonicalUrl: event.target.value })}
-                  placeholder="https://example.com/post"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Robots</label>
-                <Select
-                  value={seo.robots || "index,follow"}
-                  onValueChange={(value) => onSeoChange({ robots: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select robots policy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BLOG_SEO_ROBOTS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </InspectorSection>
-          </CollapsibleContent>
-        </InspectorSection>
-      </Collapsible>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Excerpt</label>
+              <Textarea
+                value={excerpt}
+                onChange={(event) => onExcerptChange(event.target.value)}
+                placeholder="Short summary for listings"
+              />
+            </div>
+          </InspectorSection>
+
+          <InspectorSection title="SEO summary" tone="muted" className="rounded-lg">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                SEO fields completed: {seoCompleteCount}/3
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">SEO title</label>
+              <Input
+                value={seo.title}
+                onChange={(event) => onSeoChange({ title: event.target.value })}
+                placeholder="Title shown in search results"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">SEO description</label>
+              <Textarea
+                value={seo.description}
+                onChange={(event) => onSeoChange({ description: event.target.value })}
+                placeholder="Description shown in search results"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Canonical URL</label>
+              <Input
+                value={seo.canonicalUrl}
+                onChange={(event) => onSeoChange({ canonicalUrl: event.target.value })}
+                placeholder="https://example.com/post"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Robots</label>
+              <Select
+                value={seo.robots || "index,follow"}
+                onValueChange={(value) => onSeoChange({ robots: value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select robots policy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BLOG_SEO_ROBOTS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </InspectorSection>
+        </div>
+      </InspectorSection>
 
       <InspectorSection
         title="Danger zone"

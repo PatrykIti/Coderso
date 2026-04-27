@@ -86,6 +86,7 @@ export type PublicEntryListOptions = {
   devModuleScripts?: string[] | null;
   isPreview?: boolean;
   metaDescription?: string | null;
+  canonicalUrl?: string | null;
 };
 
 export type PublicEntryDetailOptions = {
@@ -98,6 +99,7 @@ export type PublicEntryDetailOptions = {
   devModuleScripts?: string[] | null;
   isPreview?: boolean;
   metaDescription?: string | null;
+  canonicalUrl?: string | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -151,6 +153,7 @@ const renderDocument = (
   cssHref?: string | null,
   inlineCss?: string | null,
   metaDescription?: string | null,
+  canonicalUrl?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean
 ) => {
@@ -168,6 +171,10 @@ const renderDocument = (
     headTags.push(
       <meta key="description" name="description" content={metaDescription} />
     );
+  }
+
+  if (canonicalUrl) {
+    headTags.push(<link key="canonical" rel="canonical" href={canonicalUrl} />);
   }
 
   if (inlineCss) {
@@ -272,6 +279,7 @@ export async function renderPublicEntryListHtml(
     devModuleScripts,
     isPreview,
     metaDescription,
+    canonicalUrl,
     themeName,
   } = options;
 
@@ -309,6 +317,7 @@ export async function renderPublicEntryListHtml(
     cssHref,
     inlineCss,
     metaDescription,
+    canonicalUrl,
     devModuleScripts,
     isPreview
   );
@@ -326,6 +335,7 @@ export async function renderPublicEntryDetailHtml(
     devModuleScripts,
     isPreview,
     metaDescription,
+    canonicalUrl,
     themeName,
   } = options;
 
@@ -368,6 +378,7 @@ export async function renderPublicEntryDetailHtml(
     cssHref,
     inlineCss,
     metaDescription,
+    canonicalUrl,
     devModuleScripts,
     isPreview
   );

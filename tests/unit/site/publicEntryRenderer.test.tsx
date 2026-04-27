@@ -92,9 +92,12 @@ test("renderPublicEntryDetailHtml renders entry data", async () => {
     entry: baseEntry,
     cssHref: "/site/assets/site.css",
     inlineCss: ":root{--color-bg:#ffffff;}",
+    canonicalUrl: "https://example.com/blog/hello",
   });
 
   expect(html).toContain("<title>Hello</title>");
+  expect(html).toContain('rel="canonical"');
+  expect(html).toContain('href="https://example.com/blog/hello"');
   expect(html).toContain("Hello");
   expect(html).toContain("data-template=\"content-detail\"");
   expect(html).toContain("summary");

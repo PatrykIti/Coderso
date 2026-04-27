@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 750 | 2026-04-27 | TASK-218 post editor polish | CMS Posts/Admin UI |
+| 749 | 2026-04-27 | TASK-217 security scan baseline hardening | Security/Tooling |
 | 748 | 2026-04-26 | TASK-216 commerce catalog list parity | CMS Commerce/Admin UI |
 | 747 | 2026-04-26 | TASK-215 widgets Pages-style library parity | CMS Widgets/Admin UI |
 | 746 | 2026-04-26 | TASK-214 listings tabbed list parity | CMS Listings/Admin UI |

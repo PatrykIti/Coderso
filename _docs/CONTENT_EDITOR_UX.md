@@ -96,6 +96,9 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
 - Revisions drawer ma opis a11y i bounded read-only preview przed restore; dla
   pustych/krotkich rewizji pokazuje metadata snapshotu zamiast negatywnego
   empty state.
+- Revisions drawer korzysta z cache `posts:revisions:<id>`; autosave, publish
+  i restore patchuja znana rewizje w cache zamiast wymuszac pelne odswiezenie
+  listy po kazdej zmianie.
 - Create New Post drawer uzywa `SheetDescription`, wiec widoczny opis
   `Start a new article and publish when ready.` jest powiazany z dialogiem przez
   `aria-describedby`.
@@ -109,7 +112,11 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   nie czysci wpisanych tagow; taxonomy tagIds nadpisuja tagi tylko gdy sa
   jawnie wyslane.
 - Featured image reuse’uje `MediaPicker` i ogranicza wybor do `image/*`.
-- Sekcja `Advanced` pokazuje badge `SEO {done}/3` nawet w stanie zwinietym.
+- Sekcja `Advanced` jest domyslnie rozwinieta, bez dodatkowego przycisku
+  toggle, i pokazuje badge `SEO {done}/3`.
+- Pole `Canonical URL` jest automatycznie wypelniane wyliczonym publicznym URL,
+  kiedy `site.publicBaseUrl` i post route z `:slug` sa dostepne; bez tego
+  pozostaje jawna wartoscia override, a route hint pokazuje przewidywana sciezke.
 - Pole slug pokazuje:
   - concrete public URL tylko gdy istnieje wiarygodny `publicBaseUrl` i route
     oparty o `:slug`,

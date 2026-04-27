@@ -10,6 +10,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/pages/PageEditor.tsx`
   - Cached APIs: `getPageCached`, `getCachedPageDetail`
 
+## Posts
+- Posts list
+  - UI: `core/admin/ui/posts/PostsListPage.tsx`
+  - Cached APIs: `listPostsCached`, `getCachedPosts`
+  - Cache bus: `posts:list`, `posts:detail:<id>`
+- Post editor
+  - UI: `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+  - Cached APIs: `getPostCached`, `getCachedPostDetail`,
+    `listPostRevisionsCached`, `getCachedPostRevisions`
+  - Cache bus: `posts:list`, `posts:detail:<id>`, `posts:revisions:<id>`
+
 ## Content Entries
 - Entries list
   - UI: `core/admin/ui/entries/EntryList.tsx`

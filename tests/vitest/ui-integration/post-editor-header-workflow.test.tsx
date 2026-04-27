@@ -62,6 +62,7 @@ test("PostEditorTopBar switches publish label for published status", () => {
     />
   );
 
-  expect(html).toContain("Published");
+  expect(html).not.toContain("data-post-editor-header-status");
+  expect(html).not.toContain(">Published<");
   expect(html).toContain("Update");
 });

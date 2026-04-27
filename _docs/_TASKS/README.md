@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 54 tasks
+- **To Do:** 55 tasks
 - **In Progress:** 11 tasks
-- **Done:** 1283 tasks
+- **Done:** 1285 tasks
 
 ---
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-219 | Dependency CVE Remediation | High | Medium | Remediate `happy-dom`, Vite/Rollup, picomatch, flatted, and minimatch CVEs surfaced by hardened `scan:security` |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -105,6 +106,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-218 | Post Editor Header Revisions Cache and Inspector Polish | High | Medium | Done: Posts editor status moved to the global topbar, local back row shows only the post title, focus-mode panel state is no longer misleading, Post inspector defaults/Advanced/canonical URL behavior were polished, revisions now use the shared cache, runtime canonical links render explicitly, docs, changelog 750, and validation |
+| TASK-217 | Security Scan Baseline Hardening | High | Medium | Done: local scanner matrix now covers SAST, Bun audit, Trivy CVE/misconfig/secrets, Gitleaks history/worktree, optional image scan, docs, CI strict behavior, and changelog 749 |
 | TASK-216 | Coderso Commerce Catalog List Parity With Pages | High | Very Large | Done: `/admin/coderso/commerce` now follows the Pages list contract with product filters, collection enrichment, checkbox table, visible selection, shared pagination, row/bulk lifecycle actions, confirmations, shared toasts, cache hydration, docs, changelog 748, and validation |
 | TASK-216-01 | Commerce Catalog Route Shell and Cache Hydration | High | Large | Done: product and collection caches hydrate independently, cache-bus events refresh in the background, shell width/header New/prefetch stay aligned with Pages |
 | TASK-216-01-01 | Product and Collection Cache Hydration | High | Medium | Done: `useCommerceCatalog` uses shared mount refresh options, separate hydration refs, and background cache-event refresh |

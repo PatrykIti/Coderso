@@ -1,6 +1,5 @@
 import { ArrowLeft, Columns3, History, ListTree, Plus, Settings, Sidebar } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { PostEditorActionCluster } from "./PostEditorActionCluster";
@@ -32,20 +31,6 @@ type PostEditorHeaderProps = {
   addButtonRef?: React.Ref<HTMLButtonElement>;
   outlineButtonRef?: React.Ref<HTMLButtonElement>;
   detailsButtonRef?: React.Ref<HTMLButtonElement>;
-};
-
-const statusLabel: Record<string, string> = {
-  draft: "Draft",
-  published: "Published",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
-
-const statusClass: Record<string, string> = {
-  published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
-  draft: "border-amber-500/30 bg-amber-500/10 text-amber-700",
-  scheduled: "border-blue-500/30 bg-blue-500/10 text-blue-700",
-  archived: "border-slate-500/30 bg-slate-500/10 text-slate-700",
 };
 
 export function PostEditorHeader({
@@ -113,13 +98,6 @@ export function PostEditorHeader({
 
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="min-w-0">{leftContext}</div>
-            <Badge
-              variant="outline"
-              className={statusClass[status] ?? statusClass.draft}
-              data-post-editor-header-status="true"
-            >
-              {statusLabel[status] ?? status}
-            </Badge>
           </div>
         </div>
 

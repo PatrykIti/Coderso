@@ -743,6 +743,7 @@ const renderEntryDetailHtml = async (
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
       metaDescription:
         post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
+      canonicalUrl: post.seo?.canonicalUrl ?? null,
     });
   }
 
@@ -777,6 +778,10 @@ const renderEntryDetailHtml = async (
       "seo" in entryDetail && entryDetail.seo
         ? entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data)
         : resolvePostRuntimeMetaDescription(entryDetail.data),
+    canonicalUrl:
+      "seo" in entryDetail && entryDetail.seo
+        ? entryDetail.seo.canonicalUrl ?? null
+        : null,
   });
 };
 
