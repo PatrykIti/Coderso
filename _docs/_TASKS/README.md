@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 55 tasks
+- **To Do:** 64 tasks
 - **In Progress:** 11 tasks
 - **Done:** 1285 tasks
 
@@ -39,6 +39,15 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-219 | Dependency CVE Remediation | High | Medium | Remediate `happy-dom`, Vite/Rollup, picomatch, flatted, and minimatch CVEs surfaced by hardened `scan:security` |
+| TASK-219-01 | Direct Test and Build Tooling Bumps | High | Medium | Direct manifest owners for fixed `happy-dom` and Vite versions |
+| TASK-219-01-01 | Happy DOM Vitest Runtime Upgrade | High | Medium | Upgrade root `happy-dom` to a fixed 20.x+ line and prove Vitest compatibility |
+| TASK-219-01-02 | Vite Core Build Tool Upgrade | High | Medium | Upgrade core Vite to a fixed 7.x+ line and prove admin/site builds |
+| TASK-219-02 | Transitive Lockfile CVE Remediation | High | Medium | Close Rollup/Picomatch and ESLint-chain Flatted/Minimatch lockfile findings |
+| TASK-219-02-01 | Rollup and Picomatch Lockfile Closure | High | Medium | Ensure Vite/Vitest transitive Rollup and Picomatch resolve to fixed versions |
+| TASK-219-02-02 | ESLint Flatted and Minimatch Closure | High | Medium | Resolve lint-chain Flatted and Minimatch CVEs without broad incompatible overrides |
+| TASK-219-03 | Scanner Validation and Closure | High | Medium | Prove strict scanner matrix, SBOM, docs, changelog, and board closure |
+| TASK-219-03-01 | Strict Security Scan CVE Closure | High | Medium | Run audit, Trivy vuln, full strict security scan, and SBOM generation |
+| TASK-219-03-02 | Docs, Changelog, and Board Closure | Medium | Small | Close task family docs only after scanner evidence exists |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
