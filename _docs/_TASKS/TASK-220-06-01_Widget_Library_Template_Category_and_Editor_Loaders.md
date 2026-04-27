@@ -11,8 +11,10 @@
 
 ## Overview
 
-Fix Widget library/template flows that still rely on mount effects for template
-loading, category loading/defaulting, and visible selection trimming.
+Fix Widget template editor flows that still rely on mount effects for template
+loading and category loading/defaulting. Shared widget list hook, library
+selection, category drawer, and create dialog findings are owned by earlier
+leaves and should be treated as dependencies, not primary ownership here.
 
 ## Finding Inventory
 
@@ -26,23 +28,24 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 
 ## Sub-Tasks
 
-- [ ] Apply shared cached-list hook fixes to widget template lists.
 - [ ] Refactor template editor load/category refresh so effects do not
   synchronously set state.
 - [ ] Move default category selection into initialization or reducer transitions.
-- [ ] Preserve Widget Library Pages-style table/grid selection behavior.
+- [ ] Preserve compatibility with the shared widget list/library behavior fixed
+  by TASK-220-03-01 and TASK-220-03-02.
 
 ## Files to Change
 
-- `core/admin/ui/widgets/hooks/useWidgetTemplates.ts`
-- `core/admin/ui/widgets/WidgetLibraryPage.tsx`
+Primary source ownership for this leaf:
+
 - `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`
-- `core/admin/ui/widgets/WidgetTemplateCategoryDrawer.tsx`
-- `core/admin/ui/widgets/WidgetCreateDialog.tsx`
-- `tests/vitest/ui/widget-library*.test.tsx`
 - `tests/vitest/ui/widget-template*.test.tsx`
 - `tests/vitest/admin/widgetTemplatesClient.test.ts`
-- `tests/vitest/admin/cacheRefresh.test.ts`
+
+Coordination note: `useWidgetTemplates.ts` belongs to TASK-220-03-01,
+`WidgetLibraryPage.tsx` belongs to TASK-220-03-02,
+`WidgetCreateDialog.tsx` belongs to TASK-220-04-01, and
+`WidgetTemplateCategoryDrawer.tsx` belongs to TASK-220-04-02.
 
 ## Security Contract
 

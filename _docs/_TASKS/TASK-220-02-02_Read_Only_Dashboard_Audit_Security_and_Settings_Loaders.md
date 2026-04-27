@@ -68,9 +68,11 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 - `core/admin/ui/settings/useIpAllowlist.ts`
 - `core/admin/ui/setup/SetupWizard.tsx`
 - `core/admin/ui/kits/hooks/useSolutionKitRuns.ts`
-- `core/admin/ui/kits/hooks/useSolutionKits.ts`
 - Existing nearest Vitest suites under `tests/vitest/ui/**` and
   `tests/vitest/admin/**`.
+
+Ownership note: `useSolutionKitRuns` belongs to this read-loader leaf.
+`useSolutionKits` is the cached list hook owned by TASK-220-03-01.
 
 ## Security Contract
 

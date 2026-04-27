@@ -39,18 +39,21 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 
 ## Files to Change
 
-- `core/admin/ui/pages/PageEditor.tsx`
-- `core/admin/ui/entries/EntryEditor.tsx`
-- `core/admin/ui/forms/FormBuilderPage.tsx`
+Primary source ownership for this leaf:
+
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx`
-- `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`
+- `core/admin/ui/forms/FormBuilderPage.tsx`
 - `core/admin/ui/listings/ListingEditorPage.tsx`
-- `core/admin/ui/media/MediaPicker.tsx`
 - `core/admin/ui/popups/PopupEditorPage.tsx`
-- `core/admin/ui/posts/editor/PostClassicEditorShell.tsx`
 - Existing editor/cache Vitest suites under `tests/vitest/ui/**` and
   `tests/vitest/ui-integration/**`.
+
+Coordination note: Page, Entry, Custom Screen entry, Media picker, and Posts
+classic editor findings are owned by their resource-specific leaves
+(`TASK-220-05-02`, `TASK-220-05-03`, `TASK-220-04-02`, and
+`TASK-220-05-01`). Do not claim those files here unless an implementation
+change in this leaf requires a direct integration update.
 
 ## Security Contract
 

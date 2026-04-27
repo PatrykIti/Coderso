@@ -48,11 +48,14 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 - `core/admin/ui/settings/AssistantSettingsPage.tsx`
 - `core/admin/ui/settings/GeneralSettingsPage.tsx`
 - `core/admin/ui/site/SiteSettingsPage.tsx`
-- `core/admin/ui/themes/ThemeEditorPage.tsx`
 - `core/admin/ui/themes/ThemesPage.tsx`
 - `core/admin/ui/users/UsersRolesPage.tsx`
 - `core/admin/ui/seo/SeoManagerPage.tsx`
 - Existing settings/theme/users/SEO Vitest suites under `tests/vitest/ui/**`.
+
+Ownership note: `ThemeEditorPage.tsx` is route/profile bootstrap work owned by
+TASK-220-02-01; this leaf owns `ThemesPage.tsx` and settings/profile snapshot
+repair only.
 
 ## Security Contract
 

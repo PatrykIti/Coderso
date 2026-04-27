@@ -11,24 +11,24 @@
 
 ## Overview
 
-Document the repo policy for the new React Hooks Compiler lint surface. The
-goal is to keep `eslint-plugin-react-hooks` recommended rules enabled while
-giving implementers clear patterns for fixing `set-state-in-effect`,
-`preserve-manual-memoization`, and `refs` findings.
+Verify and maintain the repo policy for the new React Hooks Compiler lint
+surface. `AGENTS.md` already contains the baseline guidance; this leaf should
+only edit it if the guidance drifts from the TASK-220 remediation contract.
 
 ## Sub-Tasks
 
-- [ ] Update `AGENTS.md` with React Hooks Compiler cleanup guidance.
+- [ ] Verify the existing `AGENTS.md` React Hooks Compiler guidance and update
+  it only if the wording no longer matches the TASK-220 contract.
 - [ ] State that Vite 8 did not introduce the behavior change; the new findings
-  come from the upgraded hooks lint preset.
+  come from the upgraded hooks lint preset in the TASK-220 task family.
 - [ ] Ban blanket rule downgrades and production fallbacks that only satisfy
-  tests/lint.
+  tests/lint in contributor-facing guidance.
 - [ ] Document preferred patterns: lazy initializers, render-time derivation,
   reducers, event handlers, subscription callbacks, and async result boundaries.
 
 ## Files to Change
 
-- `AGENTS.md`
+- `AGENTS.md` only if the current guidance drifts from this task contract.
 - `_docs/_TASKS/TASK-220_ESLint_9_React_Hooks_Compiler_Cleanup.md`
 - `_docs/_TASKS/README.md`
 
@@ -61,7 +61,7 @@ For admin React/UI work under ESLint 9 and React Hooks Compiler rules:
 
 ## Documentation Updates Required
 
-- `AGENTS.md`
+- `AGENTS.md` only if wording changes are required.
 - TASK-220 umbrella notes.
 - `_docs/_TASKS/README.md` on status changes.
 

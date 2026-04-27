@@ -54,10 +54,12 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 - `core/admin/ui/reviews/hooks/useReviews.ts`
 - `core/admin/ui/widgets/hooks/useWidgetTemplates.ts`
 - `core/admin/ui/kits/hooks/useSolutionKits.ts`
-- `core/admin/ui/kits/hooks/useSolutionKitRuns.ts`
 - `tests/vitest/admin/cacheRefresh.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts`
 - Resource-specific UI suites for changed hooks.
+
+Ownership note: this leaf owns cached list hooks only. `useSolutionKitRuns`
+is a read/detail loader and remains under TASK-220-02-02.
 
 ## Security Contract
 

@@ -11,10 +11,10 @@
 
 ## Overview
 
-Fix resource-specific list/editor loader findings that remain after the shared
-cache and list-selection leaves. These surfaces must preserve the Pages-style
-list contract: cached background refresh, visible selection, scoped bulk
-actions, and confirmations.
+Fix resource-specific loader findings that remain after the shared cache and
+list-selection leaves. This leaf owns the three primary residual findings below;
+Commerce/Listings/Forms/Menus/Posts list parity remains regression context
+unless a listed primary file requires a direct integration update.
 
 ## Finding Inventory
 
@@ -28,37 +28,29 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 
 ## Sub-Tasks
 
-- [ ] Apply compiler-safe mount refresh to Commerce, Listings, Forms, Menus,
-  Posts, and related editor/listing manager surfaces.
-- [ ] Preserve active-tab and tab-scoped resource ownership for Listings.
-- [ ] Preserve retained-history delete behavior for Forms and lifecycle actions
-  for Menus/Posts/Commerce.
+- [ ] Apply compiler-safe loader cleanup to the Commerce editor, Forms action
+  logs, and Menu editor findings listed in this leaf.
+- [ ] Preserve retained-history action-log behavior for Forms and lifecycle
+  actions for Menus/Commerce.
+- [ ] Treat Listings, Posts, and list page parity as regression context owned by
+  TASK-220-03-02 or resource-specific earlier leaves unless an integration
+  change is required.
 - [ ] Keep current route/service error mapping untouched unless tests reveal a
   real contract gap.
 
 ## Files to Change
 
+Primary source ownership for this leaf:
+
 - `core/admin/ui/commerce/CommerceEditorPage.tsx`
-- `core/admin/ui/commerce/CommerceListPage.tsx`
-- `core/admin/ui/commerce/hooks/useCommerceCatalog.ts`
-- `core/admin/ui/listings/ListingListPage.tsx`
-- `core/admin/ui/listings/ListingEditorPage.tsx`
-- `core/admin/ui/listings/ListingFiltersPage.tsx`
-- `core/admin/ui/listings/ListingTemplateManager.tsx`
-- `core/admin/ui/listings/hooks/useListingQueries.ts`
-- `core/admin/ui/listings/hooks/useListingTemplates.ts`
 - `core/admin/ui/forms/FormActionLogsPage.tsx`
-- `core/admin/ui/forms/FormBuilderPage.tsx`
-- `core/admin/ui/forms/FormListPage.tsx`
-- `core/admin/ui/forms/hooks/useForms.ts`
 - `core/admin/ui/menus/MenuEditorPage.tsx`
-- `core/admin/ui/menus/MenuListPage.tsx`
-- `core/admin/ui/posts/PostsListPage.tsx`
 - `tests/vitest/ui/commerce-page.test.tsx`
-- `tests/vitest/ui/listing-list-page*.test.tsx`
-- `tests/vitest/ui/forms-list*.test.tsx`
-- `tests/vitest/ui/menu-list-page.test.tsx`
-- `tests/vitest/ui/posts-list*.test.tsx`
+- Focused Forms action-log and Menu editor suites where present.
+
+Coordination note: cached hooks are owned by TASK-220-03-01, list selection and
+mount refresh by TASK-220-03-02, dialog/listing derived state by TASK-220-04-02,
+and cached detail/editor hydration by TASK-220-03-03.
 
 ## Security Contract
 
@@ -88,10 +80,9 @@ useEffect(() => {
 
 ## Testing Requirements
 
-- Cached resource lists render rows without foreground loading.
-- Visible selection and bulk actions remain scoped after filtering/pagination.
-- Listings active-tab New/delete behavior remains tab-scoped.
-- Forms retained-history delete conflict behavior remains recoverable.
+- Commerce editor loading remains stable in create/edit modes.
+- Forms action logs load without mount repair effects.
+- Menu editor reset/original state behavior remains deterministic.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
