@@ -231,6 +231,21 @@ testIfDb("public page runtime renders published data while preview renders curre
   expect(previewHtml).toContain("Preview mode");
 });
 
+testIfDb("public root renders the configured homepage by page id", async () => {
+  resetRateLimitBuckets();
+  await setTestSetting("site.cacheTtlSeconds", 0);
+  await setTestSetting("site.contentRoutes", []);
+
+  const fixture = await createPublishedPageWithDraft();
+  await setTestSetting("site.homepageId", fixture.page.id);
+
+  const response = await requestPublicPath("/");
+  expect(response.status).toBe(200);
+  const html = await response.text();
+  expect(html).toContain(fixture.publishedHeadline);
+  expect(html).not.toContain(fixture.draftHeadline);
+});
+
 testIfDb("public page runtime rejects drafts and published rows without published data", async () => {
   resetRateLimitBuckets();
   await setTestSetting("site.cacheTtlSeconds", 0);

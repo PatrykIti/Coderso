@@ -921,6 +921,24 @@ export async function handlePublicRequest(req: Request) {
     }
   }
 
+  if (slugPath === "/") {
+    const homepageId = (await getSetting("site.homepageId")) as string | null;
+    if (homepageId) {
+      const page = await getPage(homepageId);
+      if (!page || page.status !== "published" || !page.publishedData) {
+        return new Response("Not Found", { status: 404 });
+      }
+      const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+        themeName,
+        runtimeSearchParams: url.searchParams,
+      });
+      if (shouldUseCache) {
+        setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+      }
+      return buildHtmlResponse(html);
+    }
+  }
+
   const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const match = matchContentRoute(slugPath, contentRoutes);
   if (match) {
