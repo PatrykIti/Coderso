@@ -18,7 +18,7 @@ forms. The list route helps you find or create forms; the builder route is
 where you design fields, define settings, configure automation, and preview the
 submission experience.
 
-In the current UI, the canonical list route is `/admin/coderso/forms`.
+In the current UI, the canonical list route is `/admin/advanced/forms`.
 `/admin/forms` is kept only as a legacy admin alias. The list route includes:
 - `Forms` header,
 - compact `New`,

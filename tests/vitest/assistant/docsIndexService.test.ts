@@ -14,7 +14,7 @@ import {
 const tempDirs: string[] = [];
 
 const createDocsFixture = async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "nextless-assistant-docs-"));
+  const root = await mkdtemp(path.join(tmpdir(), "coderso-assistant-docs-"));
   tempDirs.push(root);
   const docsDir = path.join(root, "_docs");
   await mkdir(path.join(docsDir, "widgets"), { recursive: true });

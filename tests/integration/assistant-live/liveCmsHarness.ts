@@ -113,7 +113,7 @@ export const createLiveProviderRuntime = (
       apiKey,
       model,
       retryCount: 0,
-      appName: "Nextless LLM Guide Live CMS Matrix",
+      appName: "Coderso LLM Guide Live CMS Matrix",
     }),
   };
 };

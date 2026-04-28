@@ -67,7 +67,7 @@ const createCoreDeps = (
       password: "secret",
     },
     from: {
-      name: "Nextless",
+      name: "Coderso",
       email: "hello@example.com",
     },
   }),
@@ -171,7 +171,7 @@ test("runFormAutomationCore renders email actions with configured sender default
   expect(result.runs[0]?.status).toBe("success");
   expect(deliveries).toEqual([
     {
-      from: "Nextless <hello@example.com>",
+      from: "Coderso <hello@example.com>",
       to: "lead@example.com",
       subject: "Lead Patryk",
       text: "Body for Patryk",

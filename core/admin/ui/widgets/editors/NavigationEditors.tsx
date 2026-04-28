@@ -548,7 +548,7 @@ export function NavigationWizardEditor({
           onValueChange={(next) =>
             updateLogo({
               type: next as NavigationLogo["type"],
-              value: next === "text" ? logo.value || "Nextless" : logo.value,
+              value: next === "text" ? logo.value || "Coderso" : logo.value,
             })
           }
         >
@@ -569,7 +569,7 @@ export function NavigationWizardEditor({
             <Input
               value={logo.value}
               onChange={(event) => updateLogo({ value: event.target.value })}
-              placeholder="Nextless"
+              placeholder="Coderso"
             />
           </>
         ) : (
@@ -829,7 +829,7 @@ export function NavigationVisualEditor({
             onValueChange={(next) =>
               updateLogo({
                 type: next as NavigationLogo["type"],
-                value: next === "text" ? logo.value || "Nextless" : logo.value,
+                value: next === "text" ? logo.value || "Coderso" : logo.value,
               })
             }
           >
@@ -849,7 +849,7 @@ export function NavigationVisualEditor({
             <Input
               value={logo.value}
               onChange={(event) => updateLogo({ value: event.target.value })}
-              placeholder="Nextless"
+              placeholder="Coderso"
             />
           </div>
         ) : (

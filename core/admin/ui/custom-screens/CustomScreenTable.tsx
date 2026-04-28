@@ -133,7 +133,7 @@ export function CustomScreenTable({
                 <TableCell>
                   <div className="flex flex-col">
                     <AdminLink
-                      href={`/coderso/custom-screens/${encodeURIComponent(screen.id)}`}
+                      href={`/advanced/custom-screens/${encodeURIComponent(screen.id)}`}
                       prefetch
                       className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                       aria-label={`Edit custom screen: ${screen.name}`}

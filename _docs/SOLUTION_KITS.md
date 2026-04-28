@@ -54,14 +54,14 @@ Normalization rules:
 Selected kit can act as an admin-side focus preference:
 - active kit selection is persisted client-side in admin UI,
 - `AdminShell` can narrow the `Coderso` sidebar to modules declared by the active kit,
-- active kit focus expands module dependencies from the Coderso module registry,
+- active kit focus expands module dependencies from the Advanced module registry,
 - content kits with `engine`, `entries`, and `widgets` keep `Screens` visible,
 - no active kit means full default `Coderso` navigation remains visible,
 - `Solution Kits` stays visible even when kit gating is active so the user can switch kits.
 
 Recommended module scope after audit:
 
-| Kit ID | Recommended Coderso modules |
+| Kit ID | Recommended Advanced modules |
 |---|---|
 | `automotive-workshop` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
 | `medical-clinic` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |

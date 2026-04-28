@@ -113,7 +113,7 @@ scripts for release/CI-style verification.
 
 Container image scanning is opt-in because it requires a built image:
 ```bash
-SECURITY_SCAN_IMAGE=nextless:local bun run scan:security:image
+SECURITY_SCAN_IMAGE=coderso:local bun run scan:security:image
 ```
 
 Trivy local scan scope:
@@ -439,10 +439,12 @@ Rotacja klucza:
 
 - Podpisywanie requestow webhookow: HMAC SHA256.
 - Naglowki:
-  - `X-Nextless-Signature` (hex HMAC)
-  - `X-Nextless-Timestamp` (ms timestamp)
-  - `X-Nextless-Event` (nazwa eventu)
-  - `X-Nextless-Delivery` (delivery id)
+  - `X-Coderso-Signature` (hex HMAC)
+  - `X-Coderso-Timestamp` (ms timestamp)
+  - `X-Coderso-Event` (nazwa eventu)
+  - `X-Coderso-Delivery` (delivery id)
+- Kompatybilnosc migracyjna: delivery nadal wysyla rownolegle legacy
+  `X-Nextless-*` headers do czasu zamkniecia okna migracji konsumentow.
 - Payload do podpisu: `${timestamp}.${body}`.
 - Sekrety webhookow sa szyfrowane w DB (AES-256-GCM) z tym samym master key.
 

@@ -249,7 +249,7 @@ export function CommerceListPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/commerce"
+      activeHref="/admin/advanced/commerce"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>
@@ -277,7 +277,7 @@ export function CommerceListPage() {
               ) : null}
               <Button
                 className="gap-2"
-                onClick={() => navigate("/coderso/commerce/new")}
+                onClick={() => navigate("/advanced/commerce/new")}
               >
                 <Plus className="h-4 w-4" />
                 New
@@ -328,7 +328,7 @@ export function CommerceListPage() {
             isIndeterminate={isIndeterminate}
             onToggleAll={handleToggleAll}
             onToggleProduct={handleToggleProduct}
-            onEdit={(id) => navigate(`/coderso/commerce/${encodeURIComponent(id)}`)}
+            onEdit={(id) => navigate(`/advanced/commerce/${encodeURIComponent(id)}`)}
             onPublish={(id) => handleSetStatus(id, "published", "publish")}
             onMoveToDraft={(id) => handleSetStatus(id, "draft", "draft")}
             onArchive={(id) => handleSetStatus(id, "archived", "archive")}

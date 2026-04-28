@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-226-01, TASK-226-02
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -18,8 +18,8 @@ context, and docs did not drift apart.
 
 ## Sub-Tasks
 
-- [ ] TASK-226-03-01: Rebrand and IA Regression Matrix
-- [ ] TASK-226-03-02: Source Docs, Changelog, Board, and Residual Inventory Closure
+- [x] TASK-226-03-01: Rebrand and IA Regression Matrix
+- [x] TASK-226-03-02: Source Docs, Changelog, Board, and Residual Inventory Closure
 
 ## Files to Change
 

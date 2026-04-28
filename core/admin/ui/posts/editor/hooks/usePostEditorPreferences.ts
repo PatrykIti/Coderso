@@ -9,8 +9,11 @@ import {
   type PostEditorPreferences,
 } from "../settings/postEditorPreferences";
 
-export const POST_EDITOR_PREFERENCES_STORAGE_KEY = "nextless.posts.editor.preferences.v2";
-export const POST_EDITOR_PREFERENCES_LEGACY_STORAGE_KEY = "nextless.posts.editor.preferences.v1";
+export const POST_EDITOR_PREFERENCES_STORAGE_KEY = "coderso.posts.editor.preferences.v2";
+export const POST_EDITOR_PREFERENCES_LEGACY_CURRENT_STORAGE_KEY =
+  "nextless.posts.editor.preferences.v2";
+export const POST_EDITOR_PREFERENCES_LEGACY_STORAGE_KEY =
+  "nextless.posts.editor.preferences.v1";
 
 export type PreferencesStorage = Pick<
   Storage,
@@ -38,17 +41,32 @@ const parsePreferencesFromStorage = (
 export const resolveStoredPostEditorPreferences = (
   storage: PreferencesStorage
 ): StoredPreferencesState => {
-  const v2 = parsePreferencesFromStorage(
-    storage,
-    POST_EDITOR_PREFERENCES_STORAGE_KEY
-  );
+  const v2 = parsePreferencesFromStorage(storage, POST_EDITOR_PREFERENCES_STORAGE_KEY);
   if (v2) return { preferences: v2, hasStoredValue: true };
+
+  const legacyV2 = parsePreferencesFromStorage(
+    storage,
+    POST_EDITOR_PREFERENCES_LEGACY_CURRENT_STORAGE_KEY
+  );
+  if (legacyV2) {
+    storage.setItem(
+      POST_EDITOR_PREFERENCES_STORAGE_KEY,
+      JSON.stringify(toStoredPostEditorPreferences(legacyV2))
+    );
+    return { preferences: legacyV2, hasStoredValue: true };
+  }
 
   const v1 = parsePreferencesFromStorage(
     storage,
     POST_EDITOR_PREFERENCES_LEGACY_STORAGE_KEY
   );
-  if (v1) return { preferences: v1, hasStoredValue: true };
+  if (v1) {
+    storage.setItem(
+      POST_EDITOR_PREFERENCES_STORAGE_KEY,
+      JSON.stringify(toStoredPostEditorPreferences(v1))
+    );
+    return { preferences: v1, hasStoredValue: true };
+  }
 
   return { preferences: DEFAULT_POST_EDITOR_PREFERENCES, hasStoredValue: false };
 };
@@ -116,6 +134,10 @@ export function usePostEditorPreferences(): UsePostEditorPreferencesResult {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
       POST_EDITOR_PREFERENCES_STORAGE_KEY,
+      JSON.stringify(toStoredPostEditorPreferences(preferences))
+    );
+    window.localStorage.setItem(
+      POST_EDITOR_PREFERENCES_LEGACY_CURRENT_STORAGE_KEY,
       JSON.stringify(toStoredPostEditorPreferences(preferences))
     );
     window.localStorage.setItem(

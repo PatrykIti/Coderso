@@ -424,7 +424,7 @@ test("ListingListPage routes active-tab New through the shell", () => {
 
   try {
     clickByText(view.container, "New");
-    expect(listingPageState.navigate).toHaveBeenCalledWith("/coderso/listings/new");
+    expect(listingPageState.navigate).toHaveBeenCalledWith("/advanced/listings/new");
 
     clickByText(view.container, "Templates");
     clickByText(view.container, "New");

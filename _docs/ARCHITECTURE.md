@@ -38,7 +38,7 @@ Nie-cele:
 ## Strategia testow i coverage (TASK-102 target)
 
 Architektura testow musi byc zgodna z architektura produktu.
-Nextless jest celowo WordPress-like na poziomie runtime:
+Coderso jest celowo WordPress-like na poziomie runtime:
 - Bun pozostaje runtime kernelem,
 - pluginy i widget bundles sa ladowane dynamicznie,
 - runtime nie moze byc sztucznie podporzadkowany jednemu runnerowi tylko po to,
@@ -81,11 +81,11 @@ przez `setup.completed=true`.
 
 - W admin sidebar jest jeden nadrzedny modul: `Coderso`.
 - Domyslne moduly v1 (widoczne w sidebar):
-  - `Engine` (`/admin/coderso/engine`) - content model builder (content types + schema).
-  - `Entries` (`/admin/coderso/entries`) - wpisy rekordow typow z Engine.
-  - `Screens` (`/admin/coderso/custom-screens`) - custom admin screens z widgetow dla danych entry.
-  - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
-  - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
+  - `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
+  - `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
+  - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z widgetow dla danych entry.
+  - `Widgets` (`/admin/advanced/widgets`) - biblioteka widgetow i template editor.
+  - `Forms` (`/admin/advanced/forms`) - lista i edytor formularzy.
 - `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Coderso`.
   - **TASK-059 (done):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
   - UI editor posts jest odciety od `EntryEditor` (`TASK-059-04`): classic fallback realizuje `PostClassicEditorShell`, a `EntryEditor` jest entries-only,
@@ -180,7 +180,7 @@ przez `setup.completed=true`.
     - media/interactive blocks maja klikalne placeholdery, ktore ustawiają selekcje i przełączają prawy panel na `Block`,
     - prawy panel tabs zostaly ustalone jako `Post` i `Block` (selection-driven context),
     - header po prawej utrzymuje kontrakt `Preview`, `Publish`, `Gear` (+ revisions/focus toggles), a gear otwiera `PostEditorSettingsDialog`,
-    - ustawienia edytora sa persistowane lokalnie (`nextless.posts.editor.preferences.v1`) i obejmuja m.in. compact side panels/focus on open.
+    - ustawienia edytora sa persistowane lokalnie (`coderso.posts.editor.preferences.v2`, z legacy fallbackiem `nextless.posts.editor.preferences.v1`) i obejmuja m.in. compact side panels/focus on open.
   - **TASK-063-12 (done):** final reference parity pass dla `_docs/UI/admin_panel/46-post-editor/code.html`:
     - prawa kolumna `Post/Block` ma reference flow (`Publishing -> Categories/Tags -> Featured image -> Danger zone`) i progressive disclosure (`Advanced` collapsed),
     - `Move to trash` w `Danger zone` usuwa post i wykonuje SPA redirect do `/admin/posts` (`replace: true`),
@@ -190,7 +190,7 @@ przez `setup.completed=true`.
       - `defaultInspectorTab` (`post`/`block`),
       - `restoreLastSidebarsState`,
     - persistence preferences jest dualna:
-      - local-first (`nextless.posts.editor.preferences.v2` + compatibility write do `v1`),
+      - local-first (`coderso.posts.editor.preferences.v2` + compatibility write do `v1`),
       - background sync do internal `user-settings` key `posts.editor.preferences`,
     - focus mode ma deterministic snapshot restore side paneli po wyjsciu (`hide -> restore`), a layout restore jest zapisywany per user-session local state.
   - **TASK-063-07 (done):** details inspector tabs + preferences:
@@ -218,13 +218,13 @@ przez `setup.completed=true`.
     - roundtrip kontrakt (`html -> nodes -> html`) utrzymuje typ `paragraph`/`quote` bez degradacji po `blur/reselect`.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
-  jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`
+  jest utrzymywany w rejestrze `core/admin/ui/navigation/advancedModules.ts`
   i opisany w `_docs/CODERSO_MODULES.md`.
 - Sidebar Coderso jest budowany z rejestru przez
-  `buildDefaultNavSections(flags)` + `buildCodersoNavItems(flags)`,
+  `buildDefaultNavSections(flags)` + `buildAdvancedNavItems(flags)`,
   co pozwala wlaczac przyszle moduly przez feature flags bez przepisywania menu.
 - Legacy sciezki admina sa wspierane przez aliasy i normalizowane do canonical routes
-  (np. `/admin/content-types` -> `/admin/coderso/engine`).
+  (np. `/admin/content-types` -> `/admin/advanced/engine`).
 - Alias dziala rowniez dla nested routes (np. `/admin/content-types/:id/schema`).
 - Logika canonicalizacji jest centralna w `core/admin/utils/adminPaths.ts` i jest wspolna dla:
   - renderowania linkow admin (`resolveAdminHref`),
@@ -621,8 +621,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Automatyzacje formularza sa trzymane w `form_actions` (ordered pipeline per form).
 - Historia wykonania akcji jest trzymana w `form_action_runs` (success/failed/skipped + retry link).
 - Admin UI zarzadza formularzami w kanonicznych trasach
-  `/admin/coderso/forms`, `/admin/coderso/forms/:id` i
-  `/admin/coderso/forms/:id/action-runs`; `/admin/forms` jest tylko aliasem
+  `/admin/advanced/forms`, `/admin/advanced/forms/:id` i
+  `/admin/advanced/forms/:id/action-runs`; `/admin/forms` jest tylko aliasem
   kompatybilnosci admina.
 - Backend API pozostaje pod `/forms/*`: edytor zapisuje pola przez
   `PUT /forms/:id/fields`, pipeline przez `/forms/:id/actions`, a logi przez
@@ -669,23 +669,23 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Shortcut model:
   - tylko `active` screen z `showInSidebar=true` moze trafic do lewego menu,
   - skrot jest renderowany po grupie `Coderso`,
-  - link prowadzi do `/admin/coderso/custom-screens/:screenId/entries`,
+  - link prowadzi do `/admin/advanced/custom-screens/:screenId/entries`,
   - `sidebarLabel` nadpisuje domyslna nazwe screena, ale jest opcjonalny.
-- Builder (`/admin/coderso/custom-screens/:id`) ma trzy warstwy pracy:
+- Builder (`/admin/advanced/custom-screens/:id`) ma trzy warstwy pracy:
   - screen settings,
   - widget-level bindings dla zaznaczonego bloku,
   - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
 - `Screens` nie korzysta juz z calej public/page widget library:
   - insert library filtruje do surface `custom-screen-builder`,
-  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa ukryte w `Coderso/Widgets`,
+  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa ukryte w `Advanced/Widgets`,
   - wspoldzielone prymitywy layoutowe musza byc jawnie dopuszczone do obu surface'ow.
 - Kazdy custom screen ma derived capabilities:
   - `collection-only`: brak dedykowanego record screen; shortcut zawęża tylko liste rekordow,
   - `dashboard`: screen moze previewowac dane rekordu, ale edycja zostaje w classic editor,
   - `editor`: screen ma writable bindings i moze pelnic role dedykowanego record editor.
 - Workflow rekordow custom screen korzysta z istniejacego domain `entries`, bez nowego storage:
-  - list route: `/admin/coderso/custom-screens/:screenId/entries`,
-  - editor route: `/admin/coderso/custom-screens/:screenId/entries/:entryId`,
+  - list route: `/admin/advanced/custom-screens/:screenId/entries`,
+  - editor route: `/admin/advanced/custom-screens/:screenId/entries/:entryId`,
   - `contentTypeId` z `custom_screens` jest rozwiazywany do `content_types.slug`, a zapis/listowanie dalej ida przez `content_entries`.
 - Record workflow jest gate'owany przez capabilities:
   - `collection-only` prowadzi rekord bezposrednio do classic editor,
@@ -725,7 +725,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
     - `internal`: slots/reservations wymagaja sesji admina lub API key scope `booking.submit`, bez nonce/captcha,
   - bledy domenowe sa mapowane do stabilnych kodow API (bez 500 dla znanych przypadkow).
 - Admin UI:
-  - ekran `/admin/coderso/booking` grupuje operacje domenowe w zakladkach:
+  - ekran `/admin/advanced/booking` grupuje operacje domenowe w zakladkach:
     - `Resources`
     - `Services`
     - `Availability`
@@ -806,8 +806,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - run metadata (`run.options.wizard`) przechowuje plan snapshot do `rerun` i `clone as draft`.
 - Admin navigation focus contract:
   - selected kit moze byc persistowany client-side jako active admin preference,
-  - `AdminShell` wyprowadza z niego `CodersoFeatureFlags`,
-  - active kit focus rozwija dependency graph z `CODERSO_MODULE_REGISTRY`,
+  - `AdminShell` wyprowadza z niego `AdvancedFeatureFlags`,
+  - active kit focus rozwija dependency graph z `ADVANCED_MODULE_REGISTRY`,
   - kity z `engine`, `entries` i `widgets` nie ukrywaja `Screens` (`custom-screens`),
   - gating dotyczy tylko grupy `Coderso`; top-level `Main/Tools/Admin` pozostaja bez zmian,
   - `Solution Kits` pozostaje widoczne niezaleznie od aktywnego kitu.

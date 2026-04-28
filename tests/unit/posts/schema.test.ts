@@ -14,6 +14,7 @@ import {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const dbTestTimeoutMs = 15_000;
 const slugPrefix = "task-059-posts-schema";
 
 async function canConnect() {
@@ -43,87 +44,91 @@ const cleanup = async () => {
 
 beforeEach(async () => {
   await cleanup();
-});
+}, dbTestTimeoutMs);
 
 afterAll(async () => {
   await cleanup();
-});
+}, dbTestTimeoutMs);
 
-testIfDb("posts tables accept inserts and cascade post-owned relations", async () => {
-  const [type] = await db
-    .insert(contentTypes)
-    .values({
-      name: "Task 059 Type",
-      slug: `${slugPrefix}-type`,
-      schema: { type: "object", additionalProperties: true },
-    })
-    .returning();
+testIfDb(
+  "posts tables accept inserts and cascade post-owned relations",
+  async () => {
+    const [type] = await db
+      .insert(contentTypes)
+      .values({
+        name: "Task 059 Type",
+        slug: `${slugPrefix}-type`,
+        schema: { type: "object", additionalProperties: true },
+      })
+      .returning();
 
-  const [taxonomy] = await db
-    .insert(contentTaxonomies)
-    .values({
-      typeId: type.id,
-      name: "Task 059 Tags",
-      slug: `${slugPrefix}-taxonomy`,
-      kind: "tags",
-    })
-    .returning();
+    const [taxonomy] = await db
+      .insert(contentTaxonomies)
+      .values({
+        typeId: type.id,
+        name: "Task 059 Tags",
+        slug: `${slugPrefix}-taxonomy`,
+        kind: "tags",
+      })
+      .returning();
 
-  const [term] = await db
-    .insert(contentTerms)
-    .values({
-      taxonomyId: taxonomy.id,
-      name: "Release",
-      slug: `${slugPrefix}-term`,
-    })
-    .returning();
+    const [term] = await db
+      .insert(contentTerms)
+      .values({
+        taxonomyId: taxonomy.id,
+        name: "Release",
+        slug: `${slugPrefix}-term`,
+      })
+      .returning();
 
-  const [post] = await db
-    .insert(posts)
-    .values({
-      title: "Task 059 Post",
-      slug: `${slugPrefix}-entry`,
-      status: "draft",
-      data: { blocks: [] },
-    })
-    .returning();
+    const [post] = await db
+      .insert(posts)
+      .values({
+        title: "Task 059 Post",
+        slug: `${slugPrefix}-entry`,
+        status: "draft",
+        data: { blocks: [] },
+      })
+      .returning();
 
-  await db.insert(postTermAssignments).values({
-    postId: post.id,
-    termId: term.id,
-  });
+    await db.insert(postTermAssignments).values({
+      postId: post.id,
+      termId: term.id,
+    });
 
-  await db.insert(postRevisions).values({
-    postId: post.id,
-    version: 1,
-    data: { title: "Task 059 Post", blocks: [] },
-  });
+    await db.insert(postRevisions).values({
+      postId: post.id,
+      version: 1,
+      data: { title: "Task 059 Post", blocks: [] },
+    });
 
-  await db.insert(postPreviewTokens).values({
-    postId: post.id,
-    tokenHash: `${post.id}-token`,
-    expiresAt: new Date(Date.now() + 60_000),
-  });
+    await db.insert(postPreviewTokens).values({
+      postId: post.id,
+      tokenHash: `${post.id}-token`,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
 
-  await db.delete(posts).where(eq(posts.id, post.id));
+    await db.delete(posts).where(eq(posts.id, post.id));
 
-  const [assignmentCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(postTermAssignments)
-    .where(eq(postTermAssignments.termId, term.id));
-  const [revisionCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(postRevisions)
-    .where(eq(postRevisions.postId, post.id));
-  const [previewCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(postPreviewTokens)
-    .where(eq(postPreviewTokens.postId, post.id));
+    const [assignmentCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(postTermAssignments)
+      .where(eq(postTermAssignments.termId, term.id));
+    const [revisionCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(postRevisions)
+      .where(eq(postRevisions.postId, post.id));
+    const [previewCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(postPreviewTokens)
+      .where(eq(postPreviewTokens.postId, post.id));
 
-  expect(assignmentCount?.count ?? 0).toBe(0);
-  expect(revisionCount?.count ?? 0).toBe(0);
-  expect(previewCount?.count ?? 0).toBe(0);
-});
+    expect(assignmentCount?.count ?? 0).toBe(0);
+    expect(revisionCount?.count ?? 0).toBe(0);
+    expect(previewCount?.count ?? 0).toBe(0);
+  },
+  dbTestTimeoutMs
+);
 
 testIfDb("posts slug must be unique", async () => {
   await db.insert(posts).values({

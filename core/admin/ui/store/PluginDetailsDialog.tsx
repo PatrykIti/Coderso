@@ -75,7 +75,7 @@ export function PluginDetailsDialog({
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This plugin integrates directly with the Nextless runtime and is
+              This plugin integrates directly with the Coderso runtime and is
               updated automatically when new security patches are released.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -118,7 +118,7 @@ export function PluginDetailsDialog({
               </p>
               <div className="mt-2 flex items-center gap-2 text-sm">
                 <Download className="h-4 w-4 text-muted-foreground" />
-                Bundles signed and hosted by Nextless Store.
+                Bundles signed and hosted by Coderso Store.
               </div>
             </div>
           </TabsContent>

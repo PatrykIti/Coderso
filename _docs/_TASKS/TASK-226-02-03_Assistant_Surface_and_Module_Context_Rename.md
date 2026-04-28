@@ -5,7 +5,7 @@
 **Category:** Assistant + Admin Context + Schema Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-226-02-02
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -19,14 +19,14 @@ assistant route tests.
 
 ## Sub-Tasks
 
-- [ ] Add `advancedModule` to assistant runtime/admin context types.
-- [ ] Update `area` values from `coderso` to `advanced` where the value means
+- [x] Add `advancedModule` to assistant runtime/admin context types.
+- [x] Update `area` values from `coderso` to `advanced` where the value means
   the admin group.
-- [ ] Preserve strict legacy handling for `codersoModule` if existing wire
+- [x] Preserve strict legacy handling for `codersoModule` if existing wire
   payloads or tests require migration.
-- [ ] Update assistant action schemas without permitting unknown fields.
-- [ ] Update operation policy route coverage to canonical `/admin/advanced/*`.
-- [ ] Update assistant examples/docs from `Coderso > Widgets` to
+- [x] Update assistant action schemas without permitting unknown fields.
+- [x] Update operation policy route coverage to canonical `/admin/advanced/*`.
+- [x] Update assistant examples/docs from `Coderso > Widgets` to
   `Advanced > Widgets` while preserving Coderso as product brand.
 
 ## Files to Change

@@ -69,7 +69,7 @@ test("getSettings hits GET /settings", async () => {
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ "site.name": "Nextless", "site.locale": "en" });
+    return jsonResponse({ "site.name": "Coderso", "site.locale": "en" });
   };
 
   try {
@@ -107,7 +107,7 @@ test("getSetting hits GET /settings/:key", async () => {
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ key: "site.name", value: "Nextless" });
+    return jsonResponse({ key: "site.name", value: "Coderso" });
   };
 
   try {
@@ -130,12 +130,12 @@ test("updateSettings uses CSRF and PATCH", async () => {
     if (url.endsWith("/auth/csrf")) {
       return jsonResponse({ token: "csrf-token" });
     }
-    return jsonResponse({ "site.name": "Nextless", "site.locale": "en" });
+    return jsonResponse({ "site.name": "Coderso", "site.locale": "en" });
   };
 
   try {
     resetCsrfToken();
-    await updateSettings({ "site.name": "Nextless" });
+    await updateSettings({ "site.name": "Coderso" });
 
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/settings");

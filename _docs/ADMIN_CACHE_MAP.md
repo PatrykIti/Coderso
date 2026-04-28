@@ -105,7 +105,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
   - Cache bus: `customScreens:list`, `contentTypes:list` for label projection
-  - Prefetch: `/coderso/custom-screens` warms both `customScreens:list` and
+  - Prefetch: `/advanced/custom-screens` warms both `customScreens:list` and
     `contentTypes:list`
 - Custom screen builder and records workflow
   - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`, `CustomScreenEntriesPage.tsx`, `CustomScreenEntryEditor.tsx`
@@ -193,17 +193,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
-- `/coderso/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
-- `/coderso/engine` -> `listContentTypesCached`
-- `/coderso/entries` -> `listContentTypesCached`, `listAllEntriesCached`
-- `/coderso/forms` -> `listFormsCached`
-- `/coderso/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
-- `/coderso/filters` -> `listListingQueriesCached`
-- `/coderso/search` -> `listListingQueriesCached`
-- `/coderso/booking` -> `listBookingResourcesCached`, `listBookingServicesCached`, `listBookingReservationsCached`, `listBookingBlackoutsCached`
-- `/coderso/reviews` -> `listReviewsCached`
-- `/coderso/commerce` -> `listCommerceProductsCached`, `listCommerceCollectionsCached`
-- `/coderso/popups` -> `listPopupsCached`
+- `/advanced/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/advanced/engine` -> `listContentTypesCached`
+- `/advanced/entries` -> `listContentTypesCached`, `listAllEntriesCached`
+- `/advanced/forms` -> `listFormsCached`
+- `/advanced/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
+- `/advanced/filters` -> `listListingQueriesCached`
+- `/advanced/search` -> `listListingQueriesCached`
+- `/advanced/booking` -> `listBookingResourcesCached`, `listBookingServicesCached`, `listBookingReservationsCached`, `listBookingBlackoutsCached`
+- `/advanced/reviews` -> `listReviewsCached`
+- `/advanced/commerce` -> `listCommerceProductsCached`, `listCommerceCollectionsCached`
+- `/advanced/popups` -> `listPopupsCached`
 - `/menus` -> `listMenusCached`
 - `/media` -> `listMediaCached`
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`

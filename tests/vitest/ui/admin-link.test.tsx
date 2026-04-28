@@ -6,7 +6,7 @@ import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBase
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { AdminLink } from "../../../core/admin/ui/shared/AdminLink";
 
-test("AdminLink renders canonical coderso href for legacy paths", () => {
+test("AdminLink renders canonical advanced href for legacy paths", () => {
   const html = renderToString(
     <AdminRouterProvider initialPath="/admin">
       <AdminBasePathProvider value="/admin">
@@ -15,17 +15,17 @@ test("AdminLink renders canonical coderso href for legacy paths", () => {
     </AdminRouterProvider>
   );
 
-  expect(html).toContain('href="/admin/coderso/engine"');
+  expect(html).toContain('href="/admin/advanced/engine"');
 });
 
 test("AdminLink keeps external href untouched", () => {
   const html = renderToString(
     <AdminRouterProvider initialPath="/admin">
       <AdminBasePathProvider value="/admin">
-        <AdminLink href="https://nextless.dev/docs">Docs</AdminLink>
+        <AdminLink href="https://coderso.dev/docs">Docs</AdminLink>
       </AdminBasePathProvider>
     </AdminRouterProvider>
   );
 
-  expect(html).toContain('href="https://nextless.dev/docs"');
+  expect(html).toContain('href="https://coderso.dev/docs"');
 });

@@ -133,14 +133,14 @@ function createMediaRecords(): TestMediaRecord[] {
   return [
     {
       id: "logo-1",
-      key: "logos/nextless-mark.png",
+      key: "logos/coderso-mark.png",
       url: "https://cdn.example.com/logo.png",
-      originalName: "nextless-mark.png",
+      originalName: "coderso-mark.png",
       type: "image",
       mimeType: "image/png",
       size: 2048,
       alt: null,
-      title: "Nextless mark",
+      title: "Coderso mark",
       createdAt: "2026-03-08T12:00:00.000Z",
     },
   ];
@@ -152,7 +152,7 @@ function createNavigationValue(
   return {
     logo: {
       type: "text",
-      value: "Nextless",
+      value: "Coderso",
       href: "/",
       source: "external",
       ...overrides.logo,
@@ -717,7 +717,7 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
       source: "library",
       assetId: "logo-1",
       value: "https://cdn.example.com/logo.png",
-      alt: "Nextless mark",
+      alt: "Coderso mark",
     });
 
     clickByText(view.container, "clear-media");
@@ -842,7 +842,7 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
       href: "/platform",
     });
 
-    setInputValue(findInputByPlaceholder(view.container, "Nextless"), "Northwind");
+    setInputValue(findInputByPlaceholder(view.container, "Coderso"), "Northwind");
     setInputValue(findInputByPlaceholder(view.container, "Logo link (e.g. /)"), "/home");
 
     expect(latestValue.logo).toMatchObject({
@@ -1199,7 +1199,7 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"), "/brand");
     setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Logo alt text"), "Brand mark");
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "text");
-    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Nextless"), "Northwind OS");
+    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Coderso"), "Northwind OS");
 
     expect(latestValue.logo).toMatchObject({
       type: "text",
@@ -1371,7 +1371,7 @@ test("Navigation editors fall back to default source, items, behavior, and layou
       (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | null | undefined)?.value
     ).toBe("/");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Nextless") as HTMLInputElement | null | undefined)
+      (findInputByPlaceholder(wizardView.container, "Coderso") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
   } finally {

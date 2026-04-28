@@ -8,7 +8,7 @@ test("previewImport summarizes bundle contents", async () => {
   const bundle = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    settings: { "site.name": "Nextless" },
+    settings: { "site.name": "Coderso" },
     menus: [
       {
         name: "Main",

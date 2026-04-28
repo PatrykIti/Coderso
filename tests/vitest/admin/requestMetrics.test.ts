@@ -48,7 +48,7 @@ test("snapshot aggregates per method/path/route and applies time window", () => 
   const first = startRequestMetric({
     path: "/content-types",
     method: "GET",
-    route: "/admin/coderso/entries",
+    route: "/admin/advanced/entries",
     startedAt: 5_000,
   });
   first({ status: 200, ok: true, endedAt: 5_090 });
@@ -56,7 +56,7 @@ test("snapshot aggregates per method/path/route and applies time window", () => 
   const second = startRequestMetric({
     path: "/content-types",
     method: "GET",
-    route: "/admin/coderso/entries",
+    route: "/admin/advanced/entries",
     startedAt: 7_000,
   });
   second({ status: 500, ok: false, errorCode: "http_error", endedAt: 7_120 });
@@ -64,7 +64,7 @@ test("snapshot aggregates per method/path/route and applies time window", () => 
   const third = startRequestMetric({
     path: "/user-settings",
     method: "GET",
-    route: "/admin/coderso/entries",
+    route: "/admin/advanced/entries",
     startedAt: 8_000,
   });
   third({ status: 200, ok: true, endedAt: 8_040 });
@@ -100,6 +100,12 @@ test("metrics can be disabled", () => {
 
 test("debug handle is exposed on global scope when metrics are enabled", () => {
   const scope = globalThis as unknown as {
+    __CODERSO_ADMIN_NET_DEBUG__?: {
+      events: () => unknown[];
+      reset: () => void;
+      snapshot: (windowMs?: number) => unknown;
+      setEnabled: (value: boolean) => void;
+    };
     __NEXTLESS_ADMIN_NET_DEBUG__?: {
       events: () => unknown[];
       reset: () => void;
@@ -116,6 +122,7 @@ test("debug handle is exposed on global scope when metrics are enabled", () => {
   });
   close({ status: 200, ok: true, endedAt: 160 });
 
-  expect(scope.__NEXTLESS_ADMIN_NET_DEBUG__).toBeDefined();
-  expect(scope.__NEXTLESS_ADMIN_NET_DEBUG__?.events().length).toBe(1);
+  expect(scope.__CODERSO_ADMIN_NET_DEBUG__).toBeDefined();
+  expect(scope.__CODERSO_ADMIN_NET_DEBUG__?.events().length).toBe(1);
+  expect(scope.__NEXTLESS_ADMIN_NET_DEBUG__).toBe(scope.__CODERSO_ADMIN_NET_DEBUG__);
 });

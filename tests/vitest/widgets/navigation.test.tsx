@@ -28,7 +28,7 @@ test("navigation renders defaults", () => {
     <NavigationBlock data={navigationDefaults} variant="simple" />
   );
 
-  expect(html).toContain("Nextless");
+  expect(html).toContain("Coderso");
   expect(html).toContain("Home");
   expect(html).toContain("About");
   expect(html).toContain("justify-end");
@@ -89,7 +89,7 @@ test("navigation schema accepts submenu children and image logo metadata", () =>
         logo: {
           type: "image",
           value: "https://cdn.example.com/logo.png",
-          alt: "Nextless",
+          alt: "Coderso",
           href: "/",
           source: "library",
           assetId: "asset-logo-1",

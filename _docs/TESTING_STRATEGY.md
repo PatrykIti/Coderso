@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the target testing architecture for Nextless.
+This document defines the target testing architecture for Coderso.
 The system is intentionally WordPress-like at runtime:
 - Bun remains the runtime kernel,
 - plugin and widget bundles are loaded without rebuilding the whole CMS,

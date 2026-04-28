@@ -9,7 +9,7 @@ import { searchDocsIndex } from "../../../core/services/assistant/docsRetriever"
 const tempDirs: string[] = [];
 
 const createRetrieverFixture = async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "nextless-assistant-retriever-"));
+  const root = await mkdtemp(path.join(tmpdir(), "coderso-assistant-retriever-"));
   tempDirs.push(root);
   const docsDir = path.join(root, "_docs");
   await mkdir(path.join(docsDir, "widgets"), { recursive: true });

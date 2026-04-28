@@ -85,7 +85,7 @@ test("AiSiteWizard renders guided flow sections", () => {
       selectedKit={null}
       onSelectKit={() => undefined}
     />,
-    { path: "/admin/coderso/solution-kits" }
+    { path: "/admin/advanced/solution-kits" }
   );
 
   expect(html).toContain("AI Site Wizard");
@@ -187,7 +187,7 @@ test("AiSiteWizardStepContent renders explainable action map in plan review", ()
       latestApplyRunId={null}
       validation={null}
     />,
-    { path: "/admin/coderso/solution-kits" }
+    { path: "/admin/advanced/solution-kits" }
   );
 
   expect(html).toContain("Action map");
@@ -243,7 +243,7 @@ test("AiSiteWizardStepContent renders validation checks in execute step", () => 
         ],
       }}
     />,
-    { path: "/admin/coderso/solution-kits" }
+    { path: "/admin/advanced/solution-kits" }
   );
 
   expect(html).toContain("Validation result");

@@ -64,7 +64,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   if (!hasDb) return;
 
-  tempDir = await mkdtemp(path.join(tmpdir(), "nextless-media-access-"));
+  tempDir = await mkdtemp(path.join(tmpdir(), "coderso-media-access-"));
   await writeFile(path.join(tempDir, "sample.txt"), "secured-media", "utf8");
 
   await setStorageSettings({

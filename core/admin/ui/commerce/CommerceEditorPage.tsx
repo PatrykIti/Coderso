@@ -182,7 +182,7 @@ export function CommerceEditorPage() {
       if (isCreateMode) {
         const created = await createCommerceProduct(payload);
         applyProduct(created);
-        navigate(`/coderso/commerce/${encodeURIComponent(created.id)}`);
+        navigate(`/advanced/commerce/${encodeURIComponent(created.id)}`);
       } else if (productId) {
         const updated = await updateCommerceProduct(productId, payload);
         applyProduct(updated);
@@ -232,7 +232,7 @@ export function CommerceEditorPage() {
 
   if (isLoading) {
     return (
-      <EditorShell activeHref="/admin/coderso/commerce" leftPanel={leftPanel} rightPanel={rightPanel}>
+      <EditorShell activeHref="/admin/advanced/commerce" leftPanel={leftPanel} rightPanel={rightPanel}>
         <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
           Loading product editor...
         </div>
@@ -242,7 +242,7 @@ export function CommerceEditorPage() {
 
   return (
     <EditorShell
-      activeHref="/admin/coderso/commerce"
+      activeHref="/admin/advanced/commerce"
       leftPanel={leftPanel}
       rightPanel={rightPanel}
       breadcrumbs={
@@ -287,7 +287,7 @@ export function CommerceEditorPage() {
             <Button
               variant="outline"
               className="gap-2"
-              onClick={() => navigate("/coderso/commerce")}
+              onClick={() => navigate("/advanced/commerce")}
             >
               <ArrowLeft className="h-4 w-4" />
               Back to list

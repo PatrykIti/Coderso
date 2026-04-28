@@ -35,7 +35,7 @@ test("CanvasFrame renders preview chrome and seeded sections", () => {
 
   expect(html).toContain("100% • 1024px");
   expect(html).toContain("Hero section");
-  expect(html).toContain("Build faster with Nextless");
+  expect(html).toContain("Build your system with Coderso");
   expect(html).toContain("Versioned content");
   expect(html).toContain("Newsletter");
   expect(html).toContain("Subscribe");

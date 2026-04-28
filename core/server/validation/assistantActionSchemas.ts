@@ -94,21 +94,41 @@ const runtimeSnapshotVisibleActionSchema = {
   },
 } as const;
 
-const runtimeSnapshotSchema = {
+const runtimeSnapshotAdvancedModuleSchema = {
+  anyOf: [
+    {
+      type: "string",
+      enum: [
+        "engine",
+        "entries",
+        "custom-screens",
+        "widgets",
+        "forms",
+        "listings",
+        "booking",
+        "commerce",
+        "other",
+      ],
+    },
+    { type: "null" },
+  ],
+} as const;
+
+const runtimeSnapshotV2Schema = {
   type: "object",
   required: [
     "schemaVersion",
     "route",
     "activeHref",
     "area",
-    "codersoModule",
+    "advancedModule",
     "selectedResource",
     "visibleActions",
     "permissionHints",
   ],
   additionalProperties: false,
   properties: {
-    schemaVersion: { enum: [1] },
+    schemaVersion: { enum: [2] },
     route: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
     },
@@ -117,27 +137,9 @@ const runtimeSnapshotSchema = {
     },
     area: {
       type: "string",
-      enum: ["dashboard", "pages", "posts", "coderso", "settings", "other"],
+      enum: ["dashboard", "pages", "posts", "advanced", "settings", "other"],
     },
-    codersoModule: {
-      anyOf: [
-        {
-          type: "string",
-          enum: [
-            "engine",
-            "entries",
-            "custom-screens",
-            "widgets",
-            "forms",
-            "listings",
-            "booking",
-            "commerce",
-            "other",
-          ],
-        },
-        { type: "null" },
-      ],
-    },
+    advancedModule: runtimeSnapshotAdvancedModuleSchema,
     selectedResource: runtimeSnapshotSelectedResourceSchema,
     visibleActions: {
       type: "array",
@@ -163,6 +165,46 @@ const runtimeSnapshotSchema = {
       },
     },
   },
+} as const;
+
+const runtimeSnapshotV1LegacySchema = {
+  type: "object",
+  required: [
+    "schemaVersion",
+    "route",
+    "activeHref",
+    "area",
+    "codersoModule",
+    "selectedResource",
+    "visibleActions",
+    "permissionHints",
+  ],
+  additionalProperties: false,
+  properties: {
+    schemaVersion: { enum: [1] },
+    route: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
+    },
+    activeHref: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
+    },
+    area: {
+      type: "string",
+      enum: ["dashboard", "pages", "posts", "coderso", "settings", "other"],
+    },
+    codersoModule: runtimeSnapshotAdvancedModuleSchema,
+    selectedResource: runtimeSnapshotSelectedResourceSchema,
+    visibleActions: {
+      type: "array",
+      maxItems: 40,
+      items: runtimeSnapshotVisibleActionSchema,
+    },
+    permissionHints: runtimeSnapshotV2Schema.properties.permissionHints,
+  },
+} as const;
+
+const runtimeSnapshotSchema = {
+  anyOf: [runtimeSnapshotV2Schema, runtimeSnapshotV1LegacySchema],
 } as const;
 
 const activeSurfaceBlockSchema = {

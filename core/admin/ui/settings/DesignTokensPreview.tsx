@@ -96,7 +96,7 @@ export function DesignTokensPreview() {
                           <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             className="pl-9"
-                            defaultValue="hello@nextless.com"
+                            defaultValue="hello@coderso.com"
                           />
                         </div>
                       </div>

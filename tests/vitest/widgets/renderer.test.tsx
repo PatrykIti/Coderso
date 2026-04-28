@@ -207,7 +207,7 @@ test("renderer respects visibility devices in runtime preview", () => {
   );
 
   expect(desktopHtml).toBe("");
-  expect(mobileHtml).toContain("Build faster with Nextless");
+  expect(mobileHtml).toContain("Build your system with Coderso");
 });
 
 test("renderer hides widget when visibility devices are empty", () => {

@@ -87,7 +87,7 @@ export function ResetPasswordPage({
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Layers className="h-5 w-5" />
           </span>
-          <span className="text-xl font-semibold">Nextless CMS</span>
+          <span className="text-xl font-semibold">Coderso CMS</span>
         </div>
       }
       footer={
@@ -109,7 +109,7 @@ export function ResetPasswordPage({
           <div className="space-y-2 text-center">
             <h1 className="text-2xl font-semibold">Reset password</h1>
             <p className="text-sm text-muted-foreground">
-              Recover access to your Nextless account.
+              Recover access to your Coderso account.
             </p>
           </div>
           {success ? (

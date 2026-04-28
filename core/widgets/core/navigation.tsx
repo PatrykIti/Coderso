@@ -208,7 +208,7 @@ export const navigationSchema = {
 };
 
 export const navigationDefaults: NavigationData = {
-  logo: { type: "text", value: "Nextless", href: "/", source: "external" },
+  logo: { type: "text", value: "Coderso", href: "/", source: "external" },
   items: [
     { label: "Home", href: "/" },
     { label: "About", href: "/about" },

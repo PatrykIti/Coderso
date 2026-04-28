@@ -1,5 +1,5 @@
 {
-  "name": "@nextless/core",
+  "name": "@coderso/core",
   "version": "1.0.0",
   "scripts": {
     "dev": "bun run server/dev.ts",

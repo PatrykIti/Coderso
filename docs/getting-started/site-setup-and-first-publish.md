@@ -37,7 +37,7 @@ between screens ad hoc.
 # Examples
 
 - A brochure site can launch after core settings, pages, menus, theme work, and
-  SEO checks without using complex Coderso modules.
+  SEO checks without using complex Advanced modules.
 - A service business can launch faster by starting from a Solution Kit and then
   refining Booking, Forms, and Listings after the first publish.
 - A commerce site should validate products, collections, forms, and checkout

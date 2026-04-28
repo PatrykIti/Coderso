@@ -126,7 +126,7 @@ export function CustomScreenCreateDrawer({
                 <AlertTitle>No content types available</AlertTitle>
                 <AlertDescription>
                   Add a content type in{" "}
-                  <AdminLink href="/coderso/engine" className="underline" prefetch>
+                  <AdminLink href="/advanced/engine" className="underline" prefetch>
                     Engine
                   </AdminLink>{" "}
                   before creating a custom screen.

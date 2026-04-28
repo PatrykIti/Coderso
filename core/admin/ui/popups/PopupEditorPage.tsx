@@ -133,7 +133,7 @@ export function PopupEditorPage() {
       if (isCreateMode) {
         const created = await createPopup(payload);
         applyPopup(created);
-        navigate(`/coderso/popups/${encodeURIComponent(created.id)}`);
+        navigate(`/advanced/popups/${encodeURIComponent(created.id)}`);
       } else if (popupId) {
         const updated = await updatePopup(popupId, payload);
         applyPopup(updated);
@@ -152,7 +152,7 @@ export function PopupEditorPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/popups"
+      activeHref="/admin/advanced/popups"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>
@@ -174,7 +174,7 @@ export function PopupEditorPage() {
                   {popup.status}
                 </Badge>
               ) : null}
-              <Button variant="outline" className="gap-2" onClick={() => navigate("/coderso/popups")}>
+              <Button variant="outline" className="gap-2" onClick={() => navigate("/advanced/popups")}>
                 <ArrowLeft className="h-4 w-4" />
                 Back to list
               </Button>

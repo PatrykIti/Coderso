@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 test("scanThemes indexes valid themes and sorts by name", async () => {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "nextless-themes-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "coderso-themes-"));
   process.env.THEMES_DIR = tempDir;
 
   await createTheme(tempDir, "beta", {
@@ -42,7 +42,7 @@ test("scanThemes indexes valid themes and sorts by name", async () => {
 });
 
 test("scanThemes ignores invalid theme.json files", async () => {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "nextless-themes-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "coderso-themes-"));
   process.env.THEMES_DIR = tempDir;
 
   await createTheme(tempDir, "broken", { name: "broken" });

@@ -37,7 +37,7 @@ test("buildAssistantUndoManifestItems records delete provenance for created reso
     operation: "create",
     status: "success",
     resourceId: "type-1",
-    adminHref: "/admin/coderso/engine/type-1",
+    adminHref: "/admin/advanced/engine/type-1",
     publicHref: null,
     message: "Content type created.",
   };
@@ -118,7 +118,7 @@ test("buildAssistantUndoManifestItems marks references and non-mutating actions 
     operation: "noop",
     status: "success",
     resourceId: "automotive-workshop",
-    adminHref: "/admin/coderso/solution-kits",
+    adminHref: "/admin/advanced/solution-kits",
     publicHref: null,
     message: "Recommended kit.",
   };

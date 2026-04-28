@@ -46,7 +46,7 @@ export function CustomScreenRowActions({
       <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem asChild>
           <AdminLink
-            href={`/coderso/custom-screens/${encodedId}/entries`}
+            href={`/advanced/custom-screens/${encodedId}/entries`}
             className="w-full"
             prefetch
           >
@@ -56,7 +56,7 @@ export function CustomScreenRowActions({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <AdminLink
-            href={`/coderso/custom-screens/${encodedId}`}
+            href={`/advanced/custom-screens/${encodedId}`}
             className="w-full"
             prefetch
           >

@@ -48,7 +48,7 @@ const resolvePreviewInfo = (slug: string | null) => {
   const path = slug ? (slug.startsWith("/") ? slug : `/${slug}`) : "/";
   const previewPath = path.replace(/^\//, "");
   const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://nextless.local";
+    typeof window !== "undefined" ? window.location.origin : "https://coderso.local";
   return { path, previewUrl: baseUrl, previewPath };
 };
 

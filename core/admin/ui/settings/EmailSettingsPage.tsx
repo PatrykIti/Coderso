@@ -395,7 +395,7 @@ export function EmailSettingsPage() {
                           <Input
                             id="from-email"
                             type="email"
-                            placeholder="hello@nextless.io"
+                            placeholder="hello@coderso.io"
                             value={fromEmail}
                             onChange={(event) => setFromEmail(event.target.value)}
                           />

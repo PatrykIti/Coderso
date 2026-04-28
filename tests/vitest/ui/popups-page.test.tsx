@@ -21,7 +21,7 @@ const createLocalStorage = () => {
 
 test("PopupsListPage renders shell and loading state", () => {
   const html = renderAdminUi(<PopupsListPage />, {
-    path: "/admin/coderso/popups",
+    path: "/admin/advanced/popups",
   });
 
   expect(html).toContain("Popups");
@@ -65,7 +65,7 @@ test("PopupsListPage renders cached popups without loading placeholder", () => {
     );
 
     const html = renderAdminUi(<PopupsListPage />, {
-      path: "/admin/coderso/popups",
+      path: "/admin/advanced/popups",
     });
 
     expect(html).toContain("Cached popup");
@@ -81,7 +81,7 @@ test("PopupsListPage renders cached popups without loading placeholder", () => {
 
 test("PopupEditorPage renders editor controls in create mode", () => {
   const html = renderAdminUi(<PopupEditorPage />, {
-    path: "/admin/coderso/popups/new",
+    path: "/admin/advanced/popups/new",
   });
 
   expect(html).toContain("New popup");

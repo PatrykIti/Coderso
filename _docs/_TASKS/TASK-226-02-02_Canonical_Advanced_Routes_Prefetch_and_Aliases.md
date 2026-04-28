@@ -5,7 +5,7 @@
 **Category:** Admin Routing + Cache + Backward Compatibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-226-02-01
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -18,15 +18,15 @@ warmups, cache docs, media-usage admin hrefs, and route tests.
 
 ## Sub-Tasks
 
-- [ ] Add `/coderso/*` -> `/advanced/*` alias normalization.
-- [ ] Change all canonical route helpers and registry hrefs to `/advanced/*`.
-- [ ] Change SPA route table patterns to `/advanced/*`.
-- [ ] Ensure `AdminLink` and `useAdminRouter().navigate()` canonicalize legacy
+- [x] Add `/coderso/*` -> `/advanced/*` alias normalization.
+- [x] Change all canonical route helpers and registry hrefs to `/advanced/*`.
+- [x] Change SPA route table patterns to `/advanced/*`.
+- [x] Ensure `AdminLink` and `useAdminRouter().navigate()` canonicalize legacy
   aliases before active-state matching.
-- [ ] Update prefetch match keys to `/advanced/*`.
-- [ ] Prove legacy `/admin/coderso/*` prefetch requests hit the same cache
+- [x] Update prefetch match keys to `/advanced/*`.
+- [x] Prove legacy `/admin/coderso/*` prefetch requests hit the same cache
   warmups.
-- [ ] Update route, cache, perf, and docs coverage.
+- [x] Update route, cache, perf, and docs coverage.
 
 ## Files to Change
 

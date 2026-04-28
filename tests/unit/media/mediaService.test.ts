@@ -85,7 +85,7 @@ const storageKeys = [
 beforeAll(async () => {
   if (!hasDb) return;
 
-  tempDir = await mkdtemp(path.join(tmpdir(), "nextless-media-"));
+  tempDir = await mkdtemp(path.join(tmpdir(), "coderso-media-"));
   process.env.MEDIA_DIR = tempDir;
   process.env.MEDIA_BASE_URL = "http://localhost/media";
   process.env.MEDIA_STORAGE = "local";

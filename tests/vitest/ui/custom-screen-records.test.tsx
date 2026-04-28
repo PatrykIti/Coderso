@@ -157,7 +157,7 @@ test("CustomScreenEntriesPage renders cached records", () => {
     seedCache(storage);
 
     const html = renderAdminUi(<CustomScreenEntriesPage />, {
-      path: "/admin/coderso/custom-screens/screen-1/entries",
+      path: "/admin/advanced/custom-screens/screen-1/entries",
     });
 
     expect(html).toContain("Property Catalog Records");
@@ -181,7 +181,7 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
     seedCache(storage);
 
     const html = renderAdminUi(<CustomScreenEntryEditor />, {
-      path: "/admin/coderso/custom-screens/screen-1/entries/entry-1",
+      path: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
     });
 
     expect(html).toContain("Bound fields");
@@ -206,12 +206,12 @@ test("CustomScreenEntriesPage explains collection-only screens and links to clas
     seedCollectionOnlyCache(storage);
 
     const html = renderAdminUi(<CustomScreenEntriesPage />, {
-      path: "/admin/coderso/custom-screens/screen-1/entries",
+      path: "/admin/advanced/custom-screens/screen-1/entries",
     });
 
     expect(html).toContain("Collection-only screen");
-    expect(html).toContain("/admin/coderso/entries/properties/entry-1");
-    expect(html).not.toContain("/admin/coderso/custom-screens/screen-1/entries/entry-1");
+    expect(html).toContain("/admin/advanced/entries/properties/entry-1");
+    expect(html).not.toContain("/admin/advanced/custom-screens/screen-1/entries/entry-1");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

@@ -77,7 +77,7 @@ test("prefetcher skips active route module", async () => {
     let calls = 0;
     const entries: AdminPrefetchEntry[] = [
       {
-        match: "/coderso/engine",
+        match: "/advanced/engine",
         run: () => {
           calls += 1;
         },
@@ -90,7 +90,7 @@ test("prefetcher skips active route module", async () => {
     });
 
     prefetch("/admin/content-types", "/admin", {
-      activeHref: "/admin/coderso/engine?tab=schema",
+      activeHref: "/admin/advanced/engine?tab=schema",
     });
     await flushAsync();
 
@@ -211,7 +211,7 @@ test("default entries prefetch warms content types and all entries", async () =>
 
     try {
       const module = await import("../../../core/admin/utils/adminPrefetch");
-      module.prefetchAdminRoute("/admin/coderso/entries", "/admin", {
+      module.prefetchAdminRoute("/admin/advanced/entries", "/admin", {
         activeHref: "/admin/pages",
       });
       await flushAsync();
@@ -245,7 +245,7 @@ test("default custom screens prefetch warms screens and content type labels", as
 
     try {
       const module = await import("../../../core/admin/utils/adminPrefetch");
-      module.prefetchAdminRoute("/admin/coderso/custom-screens", "/admin", {
+      module.prefetchAdminRoute("/admin/advanced/custom-screens", "/admin", {
         activeHref: "/admin/pages",
       });
       await flushAsync();
@@ -301,7 +301,7 @@ test("default commerce prefetch warms products and collections with cached optio
 
     try {
       const module = await import("../../../core/admin/utils/adminPrefetch");
-      module.prefetchAdminRoute("/admin/coderso/commerce", "/admin", {
+      module.prefetchAdminRoute("/admin/advanced/commerce", "/admin", {
         activeHref: "/admin/pages",
       });
       await flushAsync();

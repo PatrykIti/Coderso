@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    name: "nextless-vitest",
+    name: "coderso-vitest",
     environment: "node",
     include: ["tests/vitest/**/*.{test,spec}.{ts,tsx}"],
     setupFiles: ["tests/setup/vitest.ts"],

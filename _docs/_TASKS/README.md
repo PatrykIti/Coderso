@@ -1,4 +1,4 @@
-# Kanban Tasks - Nextless
+# Kanban Tasks - Coderso
 
 Task board for project work. Keep task files and this board in sync.
 
@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 61 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1297 tasks
+- **Done:** 1310 tasks
 
 ---
 
@@ -38,19 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-226 | Coderso Rebrand and Advanced Admin IA | High | Very Large | Rebrand product surfaces from Nextless to Coderso and move technical module IA from Coderso to Advanced with legacy route aliases |
-| TASK-226-00 | Exhaustive Nextless Occurrence Inventory and Scope Lock | High | Small | Block implementation until every repo-wide Nextless/nextless match is classified, owned, and assigned a disposition |
-| TASK-226-00-01 | Rebrand Occurrence Coverage Table | High | Small | Prepared file/line inventory with category, owner, disposition, and implementation instruction for every current Nextless/nextless match |
-| TASK-226-01 | Product Brand Rename Inventory | High | Large | Rename product defaults, package/copy/docs/tests, and compatibility-sensitive runtime identifiers |
-| TASK-226-01-01 | Package, Runtime Defaults, and Integration Headers | High | Medium | Rename package/runtime defaults, email/form fallbacks, webhook headers, and browser storage keys with compatibility handling |
-| TASK-226-01-02 | Admin UI, Widgets, Docs, and Fixture Copy | High | Large | Rename visible admin/auth/setup/widget/assistant copy and matching fixtures to Coderso |
-| TASK-226-02 | Advanced Admin IA and Route Compatibility | High | Very Large | Make Advanced the admin module group and canonical route namespace while keeping Coderso as product brand |
-| TASK-226-02-01 | Navigation Registry and Group Label Contract | High | Large | Rename IA-owned module registry/group semantics from Coderso to Advanced |
-| TASK-226-02-02 | Canonical Advanced Routes, Prefetch, and Aliases | High | Large | Move canonical paths to `/admin/advanced/*`, preserve `/admin/coderso/*` aliases, and update prefetch/cache coverage |
-| TASK-226-02-03 | Assistant Surface and Module Context Rename | High | Large | Move assistant admin context to Advanced semantics with strict legacy `codersoModule` handling |
-| TASK-226-03 | Validation, Docs, and Closure | Medium | Medium | Close the rebrand/IA rollout with targeted validation, docs, changelog, board, and residual scans |
-| TASK-226-03-01 | Rebrand and IA Regression Matrix | Medium | Medium | Validate lint/types, defaults, routes, prefetch, sidebar, assistant, webhook, and perf/gate coverage |
-| TASK-226-03-02 | Source Docs, Changelog, Board, and Residual Inventory Closure | Medium | Small | Update source docs, changelog, task statuses, board stats, and residual compatibility allowlist |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -145,6 +132,19 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-226 | Coderso Rebrand and Advanced Admin IA | High | Very Large | Done: product surfaces now use Coderso, Advanced is the canonical admin module group/route namespace, legacy aliases/storage/header compatibility is preserved, docs, changelog 757, gates, and residual allowlist are synchronized |
+| TASK-226-00 | Exhaustive Nextless Occurrence Inventory and Scope Lock | High | Small | Done: baseline and final residual scans were captured, with residual matches classified as compatibility or historical evidence |
+| TASK-226-00-01 | Rebrand Occurrence Coverage Table | High | Small | Done: coverage table remains the TASK-226 scan evidence source and excludes itself from residual counts |
+| TASK-226-01 | Product Brand Rename Inventory | High | Large | Done: package metadata, runtime defaults, admin copy, widget defaults, assistant copy, tests, and fixtures now use Coderso |
+| TASK-226-01-01 | Package, Runtime Defaults, and Integration Headers | High | Medium | Done: workspace package names, runtime defaults, email/forms fallbacks, webhook Coderso headers, and legacy migration keys are covered |
+| TASK-226-01-02 | Admin UI, Widgets, Docs, and Fixture Copy | High | Large | Done: visible admin/auth/setup/settings/pages/widget/assistant copy and fixtures now use Coderso with intentional legacy selector allowlist |
+| TASK-226-02 | Advanced Admin IA and Route Compatibility | High | Very Large | Done: Advanced owns the module group, `/admin/advanced/*` is canonical, Posts remains top-level, and `/admin/coderso/*` aliases stay functional |
+| TASK-226-02-01 | Navigation Registry and Group Label Contract | High | Large | Done: `advancedModules.ts`, Advanced feature flags, sidebar group label, custom screen shortcuts, and solution-kit narrowing are aligned |
+| TASK-226-02-02 | Canonical Advanced Routes, Prefetch, and Aliases | High | Large | Done: route table, admin path aliases, prefetch/cache warmups, media usage hrefs, and route docs use canonical Advanced paths |
+| TASK-226-02-03 | Assistant Surface and Module Context Rename | High | Large | Done: assistant runtime snapshot schema v2 uses `advancedModule`, while strict schema validation still accepts legacy v1 `codersoModule` payloads |
+| TASK-226-03 | Validation, Docs, and Closure | Medium | Medium | Done: validation matrix, source docs, residual scans, changelog, task statuses, and board stats are synchronized |
+| TASK-226-03-01 | Rebrand and IA Regression Matrix | Medium | Medium | Done: lint/typecheck, targeted Vitest, Bun route/service/perf tests, and `gates:coderso` pass |
+| TASK-226-03-02 | Source Docs, Changelog, Board, and Residual Inventory Closure | Medium | Small | Done: source docs, changelog, board, and residual compatibility/historical allowlist are updated |
 | TASK-225 | Page Editor Status Badge and Action Locking | High | Small | Done: editor `Published` badge now matches the Pages table emerald styling and save/publish mutations cannot start concurrently |
 | TASK-224 | Page Editor Preview Action Consolidation | High | Small | Done: Pages editor toolbar now exposes `Preview` directly before `Save draft`, while device selection stays inside the runtime preview dialog |
 | TASK-223 | Semantic Release and Docker Image Workflow | High | Medium | Done: semantic-release now parses categorized PR release notes into root CHANGELOG.md, syncs generated versions, and builds/pushes nextless-core Docker images with the release tag |

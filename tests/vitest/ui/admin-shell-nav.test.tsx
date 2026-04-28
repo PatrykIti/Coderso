@@ -33,7 +33,7 @@ const renderSidebar = (
           sections={mapNavSections(sections, "/admin")}
           activeHref={options?.activeHref}
           canAccess={options?.canAccess}
-          groupState={{ coderso: true }}
+          groupState={{ advanced: true }}
         />
       </AdminBasePathProvider>
     </AdminRouterProvider>
@@ -73,22 +73,23 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("SidebarNav renders Coderso group with canonical child links", () => {
+test("SidebarNav renders Advanced group with canonical child links", () => {
   const html = renderSidebar(defaultNavSections, {
-    activeHref: "/admin/coderso/widgets",
+    activeHref: "/admin/advanced/widgets",
   });
 
   expect(html).toContain("Coderso");
+  expect(html).toContain("Advanced");
   expect(html).toContain("Engine");
-  expect(html).toContain("/admin/coderso/engine");
-  expect(html).toContain("/admin/coderso/entries");
-  expect(html).toContain("/admin/coderso/custom-screens");
-  expect(html).toContain("/admin/coderso/widgets");
-  expect(html).toContain("/admin/coderso/forms");
-  expect(html).toContain("/admin/coderso/reviews");
-  expect(html).toContain("/admin/coderso/commerce");
-  expect(html).toContain("/admin/coderso/popups");
-  expect(html).toContain("/admin/coderso/solution-kits");
+  expect(html).toContain("/admin/advanced/engine");
+  expect(html).toContain("/admin/advanced/entries");
+  expect(html).toContain("/admin/advanced/custom-screens");
+  expect(html).toContain("/admin/advanced/widgets");
+  expect(html).toContain("/admin/advanced/forms");
+  expect(html).toContain("/admin/advanced/reviews");
+  expect(html).toContain("/admin/advanced/commerce");
+  expect(html).toContain("/admin/advanced/popups");
+  expect(html).toContain("/admin/advanced/solution-kits");
 });
 
 test("SidebarNav preserves desktop menu scroll position across navigation remounts", () => {
@@ -128,18 +129,18 @@ test("SidebarNav preserves desktop menu scroll position across navigation remoun
   }
 });
 
-test("SidebarNav hides Coderso group when all children are unauthorized", () => {
+test("SidebarNav hides Advanced group when all children are unauthorized", () => {
   const restrictedSections: NavSection[] = [
     {
       title: "Main",
       groups: [
         {
-          id: "coderso",
-          label: "Coderso",
+          id: "advanced",
+          label: "Advanced",
           items: [
             {
               label: "Engine",
-              href: "/admin/coderso/engine",
+              href: "/admin/advanced/engine",
               icon: Database,
               permission: "content:read",
             },
@@ -150,27 +151,27 @@ test("SidebarNav hides Coderso group when all children are unauthorized", () => 
   ];
 
   const html = renderSidebar(restrictedSections, {
-    activeHref: "/admin/coderso/engine",
+    activeHref: "/admin/advanced/engine",
     canAccess: () => false,
   });
 
-  expect(html).not.toContain("Coderso");
-  expect(html).not.toContain("/admin/coderso/engine");
+  expect(html).not.toContain("Advanced");
+  expect(html).not.toContain("/admin/advanced/engine");
 });
 
-test("SidebarNav renders custom screen shortcuts after the Coderso group", () => {
-  const sections = appendNavItemsAfterGroup(defaultNavSections, "coderso", [
+test("SidebarNav renders custom screen shortcuts after the Advanced group", () => {
+  const sections = appendNavItemsAfterGroup(defaultNavSections, "advanced", [
     {
       label: "Catalog",
-      href: "/admin/coderso/custom-screens/screen-1/entries",
+      href: "/admin/advanced/custom-screens/screen-1/entries",
       icon: Database,
     },
   ]);
 
   const html = renderSidebar(sections, {
-    activeHref: "/admin/coderso/custom-screens/screen-1/entries",
+    activeHref: "/admin/advanced/custom-screens/screen-1/entries",
   });
 
   expect(html).toContain("Catalog");
-  expect(html).toContain("/admin/coderso/custom-screens/screen-1/entries");
+  expect(html).toContain("/admin/advanced/custom-screens/screen-1/entries");
 });

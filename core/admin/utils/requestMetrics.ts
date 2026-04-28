@@ -57,11 +57,13 @@ const pushEvent = (event: RequestMetricEvent) => {
 };
 
 const getGlobalScope = () => globalThis as Record<string, unknown>;
+const DEBUG_HANDLE_KEY = "__CODERSO_ADMIN_NET_DEBUG__";
+const LEGACY_DEBUG_HANDLE_KEY = "__NEXTLESS_ADMIN_NET_DEBUG__";
 
 const installDebugHandle = () => {
   const scope = getGlobalScope();
-  if (scope.__NEXTLESS_ADMIN_NET_DEBUG__) return;
-  scope.__NEXTLESS_ADMIN_NET_DEBUG__ = {
+  if (scope[DEBUG_HANDLE_KEY]) return;
+  const debugHandle = {
     get enabled() {
       return isRequestMetricsEnabled();
     },
@@ -74,6 +76,8 @@ const installDebugHandle = () => {
     events: () => getRequestMetricsEvents(),
     snapshot: (windowMs?: number) => getRequestMetricsSnapshot({ windowMs }),
   };
+  scope[DEBUG_HANDLE_KEY] = debugHandle;
+  scope[LEGACY_DEBUG_HANDLE_KEY] = debugHandle;
 };
 
 export const isRequestMetricsEnabled = () => {

@@ -13,6 +13,7 @@ import {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const dbTestTimeoutMs = 15_000;
 
 async function canConnect() {
   try {
@@ -55,10 +56,10 @@ afterAll(async () => {
   for (const key of cleanupKeys) {
     await deleteSetting(key);
   }
-});
+}, dbTestTimeoutMs);
 
 testIfDb("set/get/list/delete settings", async () => {
-  const siteName = `Nextless-${randomUUID()}`;
+  const siteName = `Coderso-${randomUUID()}`;
   await setSetting("site.name", siteName);
   await setSetting("site.locale", "pl-PL");
   await setSetting("site.adminBaseUrl", "https://admin.example.com");
@@ -94,7 +95,7 @@ testIfDb("set/get/list/delete settings", async () => {
   });
 
   const bulk = await setSettings({
-    "site.name": "Nextless Updated",
+    "site.name": "Coderso Updated",
     "site.locale": "en-US",
     "site.adminBaseUrl": null,
     "site.baseUrl": "https://public.example.com",
@@ -105,7 +106,7 @@ testIfDb("set/get/list/delete settings", async () => {
     "posts.editor.mode": "blocks",
     "setup.completed": false,
   });
-  expect(bulk["site.name"]).toBe("Nextless Updated");
+  expect(bulk["site.name"]).toBe("Coderso Updated");
   expect(bulk["site.locale"]).toBe("en-US");
   expect(bulk["site.adminBaseUrl"]).toBeNull();
   expect(bulk["site.publicBaseUrl"]).toBe("https://public.example.com/");
@@ -118,7 +119,7 @@ testIfDb("set/get/list/delete settings", async () => {
 
   await deleteSetting("site.name");
   const defaultName = await getSetting("site.name");
-  expect(defaultName).toBe("Nextless");
+  expect(defaultName).toBe("Coderso");
 });
 
 testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
@@ -167,41 +168,45 @@ testIfDb("rejects duplicate keys after alias normalization in bulk payload", asy
   ).rejects.toThrow("settings_payload_invalid");
 });
 
-testIfDb("assistant settings enforce consistency in persistence layer", async () => {
-  await setSettings({
-    "assistant.enabled": true,
-    "assistant.launcher.avatarEnabled": true,
-    "assistant.launcher.avatarAsset": "https://cdn.example.com/assistant-avatar.png",
-    "assistant.defaultMode": "llm-guide",
-    "assistant.docs.reindexOnBoot": false,
-    "assistant.llm.enabled": true,
-    "assistant.llm.provider": "openai",
-    "assistant.llm.model": "google/gemma-3n-e2b-it:free",
-    "assistant.llm.maxInputTokens": 8192,
-    "assistant.llm.maxOutputTokens": 2048,
-    "assistant.llm.timeoutMs": 20000,
-    "assistant.quotas.requestsPerMinute": 20,
-    "assistant.quotas.requestsPerDay": 1000,
-  });
+testIfDb(
+  "assistant settings enforce consistency in persistence layer",
+  async () => {
+    await setSettings({
+      "assistant.enabled": true,
+      "assistant.launcher.avatarEnabled": true,
+      "assistant.launcher.avatarAsset": "https://cdn.example.com/assistant-avatar.png",
+      "assistant.defaultMode": "llm-guide",
+      "assistant.docs.reindexOnBoot": false,
+      "assistant.llm.enabled": true,
+      "assistant.llm.provider": "openai",
+      "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+      "assistant.llm.maxInputTokens": 8192,
+      "assistant.llm.maxOutputTokens": 2048,
+      "assistant.llm.timeoutMs": 20000,
+      "assistant.quotas.requestsPerMinute": 20,
+      "assistant.quotas.requestsPerDay": 1000,
+    });
 
-  const list = await listSettings();
-  expect(list["assistant.enabled"]).toBe(true);
-  expect(list["assistant.launcher.avatarEnabled"]).toBe(true);
-  expect(list["assistant.launcher.avatarAsset"]).toBe(
-    "https://cdn.example.com/assistant-avatar.png"
-  );
-  expect(list["assistant.defaultMode"]).toBe("llm-guide");
-  expect(list["assistant.llm.provider"]).toBe("openai");
-  await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await expect(setSetting("assistant.llm.provider", "invalid")).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await expect(setSetting("assistant.llm.maxInputTokens", 0)).rejects.toThrow(
-    "settings_value_invalid"
-  );
-});
+    const list = await listSettings();
+    expect(list["assistant.enabled"]).toBe(true);
+    expect(list["assistant.launcher.avatarEnabled"]).toBe(true);
+    expect(list["assistant.launcher.avatarAsset"]).toBe(
+      "https://cdn.example.com/assistant-avatar.png"
+    );
+    expect(list["assistant.defaultMode"]).toBe("llm-guide");
+    expect(list["assistant.llm.provider"]).toBe("openai");
+    await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
+      "settings_value_invalid"
+    );
+    await expect(setSetting("assistant.llm.provider", "invalid")).rejects.toThrow(
+      "settings_value_invalid"
+    );
+    await expect(setSetting("assistant.llm.maxInputTokens", 0)).rejects.toThrow(
+      "settings_value_invalid"
+    );
+  },
+  dbTestTimeoutMs
+);
 
 test("assertAssistantSettingsConsistency accepts docs-only mode without llm", () => {
   expect(() =>

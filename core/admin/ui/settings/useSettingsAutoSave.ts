@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const STORAGE_KEY = "nextless.settings.autosave";
+const STORAGE_KEY = "coderso.settings.autosave";
+const LEGACY_STORAGE_KEY = "nextless.settings.autosave";
 
 export type AutoSaveState = {
   enabled: boolean;
@@ -19,7 +20,9 @@ export type AutoSaveEffectOptions<T> = {
 export function useSettingsAutoSave(): AutoSaveState {
   const [enabled, setEnabled] = useState(() => {
     if (typeof window === "undefined") return false;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (stored === null) return false;
     return stored === "true";
   });
@@ -35,7 +38,7 @@ export function useSettingsAutoSave(): AutoSaveState {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY) return;
+      if (event.key !== STORAGE_KEY && event.key !== LEGACY_STORAGE_KEY) return;
       setEnabled(event.newValue === "true");
     };
     const handleCustom = (event: Event) => {

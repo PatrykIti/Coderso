@@ -81,7 +81,7 @@ beforeEach(async () => {
   process.env.FORM_SUBMIT_NONCE_SECRET =
     originalNonceSecret && originalNonceSecret.trim().length > 0
       ? originalNonceSecret
-      : "nextless_public_booking_nonce_test_secret_32_chars";
+      : "coderso_public_booking_nonce_test_secret_32";
 });
 
 afterAll(async () => {

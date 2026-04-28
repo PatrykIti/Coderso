@@ -35,7 +35,7 @@ export function InspectorPanel() {
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Heading
               </label>
-              <Input defaultValue="Build faster with Nextless" />
+              <Input defaultValue="Build your system with Coderso" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">

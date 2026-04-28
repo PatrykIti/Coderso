@@ -32,7 +32,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Posts Search Actor",
       status: "active",
@@ -121,7 +121,7 @@ const runPostsMediaSearchForProvider = async (provider: LiveProviderRuntime) => 
     const createPostPlan = await planWithLiveProvider({
       provider,
       context: {
-        page: "/admin/coderso/posts",
+        page: "/admin/posts",
         locale: "pl-PL",
         resourceCatalog: {
           schemaVersion: 1,

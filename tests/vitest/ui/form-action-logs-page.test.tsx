@@ -347,7 +347,7 @@ test("FormActionLogsPage loads stats, filters runs, retries failures, refreshes 
     expect(actionLogsState.listCalls.length).toBeGreaterThan(2);
 
     clickByText(view.container, "Back to form");
-    expect(actionLogsState.navigateCalls).toContain("/coderso/forms/form-1");
+    expect(actionLogsState.navigateCalls).toContain("/advanced/forms/form-1");
 
     clickByText(view.container, "Refresh");
     await flush();

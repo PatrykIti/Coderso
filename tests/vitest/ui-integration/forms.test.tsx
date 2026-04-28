@@ -10,7 +10,7 @@ import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouter
 
 test("FormListPage renders list skeleton", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/coderso/forms">
+    <AdminRouterProvider initialPath="/admin/advanced/forms">
       <FormListPage />
     </AdminRouterProvider>
   );
@@ -53,7 +53,7 @@ test("FieldSettingsPanel renders logic and style controls", () => {
 
 test("FormBuilderPage renders runtime preview and action logs actions", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/coderso/forms/form-1">
+    <AdminRouterProvider initialPath="/admin/advanced/forms/form-1">
       <FormBuilderPage />
     </AdminRouterProvider>
   );

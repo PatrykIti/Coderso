@@ -8,9 +8,9 @@ import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouter
 
 test("AdminShell renders navigation", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/coderso/entries">
+    <AdminRouterProvider initialPath="/admin/advanced/entries">
       <AdminBasePathProvider value="/admin">
-        <AdminShell activeHref="/admin/coderso/entries">
+        <AdminShell activeHref="/admin/advanced/entries">
           <div>Content</div>
         </AdminShell>
       </AdminBasePathProvider>

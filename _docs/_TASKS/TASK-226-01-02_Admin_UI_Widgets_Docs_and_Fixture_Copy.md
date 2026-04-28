@@ -5,7 +5,7 @@
 **Category:** Branding + Admin/UI + Widgets + Tests
 **Estimated Effort:** Large
 **Dependencies:** TASK-226-01-01
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -17,13 +17,13 @@ does not move the Advanced module routes; that belongs to `TASK-226-02`.
 
 ## Sub-Tasks
 
-- [ ] Rename visible auth/admin brand copy to Coderso.
-- [ ] Rename setup wizard and settings fallback names to Coderso.
-- [ ] Update starter page/widget copy to Coderso-aligned language.
-- [ ] Rename assistant product copy from Nextless Assistant to Coderso
+- [x] Rename visible auth/admin brand copy to Coderso.
+- [x] Rename setup wizard and settings fallback names to Coderso.
+- [x] Update starter page/widget copy to Coderso-aligned language.
+- [x] Rename assistant product copy from Nextless Assistant to Coderso
   Assistant.
-- [ ] Update docs and test fixtures that assert the renamed copy.
-- [ ] Leave historical changelog references untouched only if
+- [x] Update docs and test fixtures that assert the renamed copy.
+- [x] Leave historical changelog references untouched only if
   `TASK-226-03-02` records them as historical artifacts.
 
 ## Files to Change

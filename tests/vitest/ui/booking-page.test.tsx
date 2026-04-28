@@ -910,7 +910,7 @@ afterEach(() => {
 });
 
 test("BookingPage drives booking flows across resources, services, availability, reservations, slot preview, refresh, and cache bus", async () => {
-  window.history.replaceState({}, "", "/admin/coderso/booking");
+  window.history.replaceState({}, "", "/admin/advanced/booking");
   const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
   const view = mount(<BookingPage />);
 
@@ -1086,7 +1086,7 @@ test("BookingPage drives booking flows across resources, services, availability,
 });
 
 test("BookingPage reports validation errors for invalid schedule, blackout, reservation, and slot preview inputs", async () => {
-  window.history.replaceState({}, "", "/admin/coderso/booking");
+  window.history.replaceState({}, "", "/admin/advanced/booking");
   const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
   const view = mount(<BookingPage />);
 
@@ -1118,7 +1118,7 @@ test("BookingPage reports validation errors for invalid schedule, blackout, rese
 });
 
 test("BookingPage handles cancel flows, reservation-status errors, resource save errors, and empty slot previews", async () => {
-  window.history.replaceState({}, "", "/admin/coderso/booking");
+  window.history.replaceState({}, "", "/admin/advanced/booking");
   const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
   const view = mount(<BookingPage />);
 
@@ -1170,7 +1170,7 @@ test("BookingPage handles cancel flows, reservation-status errors, resource save
 });
 
 test("BookingPage reports delete-service/delete-blackout failures and reservation validation errors", async () => {
-  window.history.replaceState({}, "", "/admin/coderso/booking");
+  window.history.replaceState({}, "", "/admin/advanced/booking");
   const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
   const view = mount(<BookingPage />);
 

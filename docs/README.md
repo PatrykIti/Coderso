@@ -1,4 +1,4 @@
-# Nextless Assistant Documentation
+# Coderso Assistant Documentation
 
 This directory contains the official product documentation corpus used by the
 assistant knowledge base.
@@ -72,7 +72,7 @@ Use this mapping to keep assistant answers deterministic:
 - `screens/`
   Canonical guidance for core admin screens and settings surfaces.
 - `coderso/`
-  Canonical guidance for Coderso modules and their workflows.
+  Canonical guidance for Advanced modules and their workflows.
 - `solution-kits/`
   Applied guidance for each packaged solution kit.
 - `playbooks/`

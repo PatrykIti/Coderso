@@ -83,7 +83,7 @@ const mount = (node: React.ReactNode) => {
 
   React.act(() => {
     root.render(
-      <AdminRouterProvider initialPath="/admin/coderso/posts/post-1">
+      <AdminRouterProvider initialPath="/admin/posts/post-1">
         <AdminBasePathProvider value="/admin">
           {node}
         </AdminBasePathProvider>
@@ -127,7 +127,7 @@ test("PostEditorLayout resolves auto viewport from matchMedia and wires mobile c
   const onDetailsSidebarOpenChange = vi.fn();
   const view = mount(
     <PostEditorLayout
-      activeHref="/admin/coderso/posts"
+      activeHref="/admin/posts"
       content={<div>Canvas</div>}
       secondarySidebar={<div>Secondary panel</div>}
       secondarySidebarOpen
@@ -152,7 +152,7 @@ test("PostEditorLayout resolves auto viewport from matchMedia and wires mobile c
 
   const callbackView = mount(
     <PostEditorLayout
-      activeHref="/admin/coderso/posts"
+      activeHref="/admin/posts"
       content={<div>Canvas</div>}
       secondarySidebar={<div>Secondary panel</div>}
       secondarySidebarOpen
@@ -184,7 +184,7 @@ test("PostEditorLayout resolves auto viewport from matchMedia and wires mobile c
 test("PostEditorLayout renders compact desktop sidebars and keeps content region without optional chrome", () => {
   const view = mount(
     <PostEditorLayout
-      activeHref="/admin/coderso/posts"
+      activeHref="/admin/posts"
       content={<div>Canvas</div>}
       secondarySidebar={<div>Secondary panel</div>}
       secondarySidebarOpen

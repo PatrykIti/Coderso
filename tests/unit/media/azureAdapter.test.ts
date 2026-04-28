@@ -30,7 +30,7 @@ afterAll(() => {
 
 test("Azure adapter supports connection string", () => {
   process.env.AZURE_STORAGE_CONNECTION_STRING =
-    "DefaultEndpointsProtocol=https;AccountName=nextless;AccountKey=key;EndpointSuffix=core.windows.net";
+    "DefaultEndpointsProtocol=https;AccountName=coderso;AccountKey=key;EndpointSuffix=core.windows.net";
   process.env.AZURE_CONTAINER = "media";
   delete process.env.AZURE_ACCOUNT;
   delete process.env.AZURE_KEY;
@@ -38,6 +38,6 @@ test("Azure adapter supports connection string", () => {
 
   const adapter = createAzureAdapter();
   expect(adapter.getPublicUrl("2026/01/file.txt")).toBe(
-    "https://nextless.blob.core.windows.net/media/2026/01/file.txt"
+    "https://coderso.blob.core.windows.net/media/2026/01/file.txt"
   );
 });

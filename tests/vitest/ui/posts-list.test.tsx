@@ -20,7 +20,7 @@ const createLocalStorage = () => {
 
 test("PostsListPage renders shell and loading state", () => {
   const html = renderAdminUi(<PostsListPage />, {
-    path: "/admin/coderso/posts",
+    path: "/admin/posts",
   });
 
   expect(html).toContain("Posts");
@@ -58,7 +58,7 @@ test("PostsListPage renders cached posts without loading placeholder", () => {
     );
 
     const html = renderAdminUi(<PostsListPage />, {
-      path: "/admin/coderso/posts",
+      path: "/admin/posts",
     });
     const normalizedHtml = html.replaceAll("<!-- -->", "");
 

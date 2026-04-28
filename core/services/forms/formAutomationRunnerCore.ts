@@ -232,7 +232,7 @@ const executeEmailAction = async (
   const fromName =
     (config.fromName ? renderTemplateString(config.fromName, context) : null) ??
     settings.from.name ??
-    "Nextless";
+    "Coderso";
 
   const transport = await deps.createEmailTransport({
     host: settings.smtp.host,

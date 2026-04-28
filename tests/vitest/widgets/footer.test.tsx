@@ -103,13 +103,13 @@ test("footer schema accepts legal and social fields", () => {
       data: {
         ...footerDefaults,
         legal: {
-          copyright: "© 2026 Nextless",
+          copyright: "© 2026 Coderso",
           privacy: "/privacy",
           terms: "/terms",
         },
         social: [
-          { type: "x", href: "https://x.com/nextless" },
-          { type: "github", href: "https://github.com/nextless" },
+          { type: "x", href: "https://x.com/coderso" },
+          { type: "github", href: "https://github.com/coderso" },
         ],
       },
     })

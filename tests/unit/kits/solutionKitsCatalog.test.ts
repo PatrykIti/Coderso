@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
-import { CODERSO_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/codersoModules";
+import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
 
 const normalizePageSlug = (value: string) => {
   const trimmed = value.trim();
@@ -67,11 +67,11 @@ test("solution kit resource blueprint keys are unique and internally consistent"
 });
 
 test("solution kit recommended modules stay aligned with known Coderso modules and core blueprint needs", () => {
-  const knownModules = new Set(CODERSO_MODULE_REGISTRY.map((module) => module.id));
+  const knownModules = new Set(ADVANCED_MODULE_REGISTRY.map((module) => module.id));
 
   for (const kit of solutionKitsCatalog) {
     for (const moduleId of kit.recommendedModules) {
-      expect(knownModules.has(moduleId as (typeof CODERSO_MODULE_REGISTRY)[number]["id"])).toBe(true);
+      expect(knownModules.has(moduleId as (typeof ADVANCED_MODULE_REGISTRY)[number]["id"])).toBe(true);
     }
 
     if (kit.resourceBlueprint.contentTypes.length > 0) {

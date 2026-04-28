@@ -52,7 +52,7 @@ afterAll(async () => {
 });
 
 testIfDb("installs plugin from store zip", async () => {
-  runtimeDir = await mkdtemp(path.join(tmpdir(), "nextless-runtime-"));
+  runtimeDir = await mkdtemp(path.join(tmpdir(), "coderso-runtime-"));
 
   const { secretKey, publicKey } = await ed.keygenAsync();
   const publicKeyBase64 = Buffer.from(publicKey).toString("base64");

@@ -5,7 +5,7 @@
 **Category:** Branding + Repo Inventory + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-226
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -29,14 +29,14 @@ TASK-226-01, TASK-226-02, or TASK-226-03 with an unowned row in the inventory.
 
 ## Sub-Tasks
 
-- [ ] TASK-226-00-01: Rebrand Occurrence Coverage Table
-- [ ] Re-run the full repository scan before implementation starts and compare
+- [x] TASK-226-00-01: Rebrand Occurrence Coverage Table
+- [x] Re-run the full repository scan before implementation starts and compare
   it with TASK-226-00-01.
-- [ ] Update only drifted/new inventory rows with category, owner, and
+- [x] Update only drifted/new inventory rows with category, owner, and
   disposition.
-- [ ] Keep every file owned by a TASK-226 implementation leaf or by the final
+- [x] Keep every file owned by a TASK-226 implementation leaf or by the final
   residual allowlist in TASK-226-03-02.
-- [ ] Re-run the same scan after each implementation wave and update the
+- [x] Re-run the same scan after each implementation wave and update the
   remaining-count notes.
 
 ## Required Scan Commands

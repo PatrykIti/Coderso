@@ -18,9 +18,9 @@ test("useAdminRouter throws when provider is missing", () => {
 
 test("useAdminRouter resolves provider path when context exists", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/coderso/forms">
+    <AdminRouterProvider initialPath="/admin/advanced/forms">
       <Probe />
     </AdminRouterProvider>
   );
-  expect(html).toContain("/admin/coderso/forms");
+  expect(html).toContain("/admin/advanced/forms");
 });

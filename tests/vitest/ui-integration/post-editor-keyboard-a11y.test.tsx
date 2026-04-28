@@ -117,7 +117,7 @@ test("post editor regions expose accessibility landmarks", () => {
       detailsSidebarOpen
       viewportMode="desktop"
     />,
-    { path: "/admin/coderso/posts/post-1" }
+    { path: "/admin/posts/post-1" }
   );
 
   expect(html).toContain("aria-label=\"Post editor header\"");

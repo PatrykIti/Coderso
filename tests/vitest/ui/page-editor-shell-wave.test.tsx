@@ -865,7 +865,7 @@ test("PageEditor emits save success toast only after the mutation resolves", asy
 
 test("PageEditor resolves page id from location and surfaces generic preview/template/revision/load failures", async () => {
   pageEditorState.reset();
-  window.history.replaceState({}, "", "/admin/coderso/pages/page-2");
+  window.history.replaceState({}, "", "/admin/advanced/pages/page-2");
   pageEditorState.currentPage = createPage({ id: "page-2", title: "Fallback page" });
   pageEditorState.getPageCached.mockRejectedValueOnce(new Error("load-failed"));
 
@@ -994,7 +994,7 @@ test("PageEditor handles mobile library insert flows, applies page defaults, and
   }
 
   pageEditorState.reset();
-  window.history.replaceState({}, "", "/admin/coderso/settings");
+  window.history.replaceState({}, "", "/admin/advanced/settings");
   const invalidPathView = mount(<PageEditor />);
 
   try {
@@ -1214,7 +1214,7 @@ test("PageEditor handles mobile details, no-page preview/settings guards, and no
   }
 
   pageEditorState.reset();
-  window.history.replaceState({}, "", "/admin/coderso/pages");
+  window.history.replaceState({}, "", "/admin/advanced/pages");
   const noPageView = mount(<PageEditor />);
 
   try {

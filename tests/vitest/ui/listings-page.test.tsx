@@ -23,7 +23,7 @@ const createLocalStorage = () => {
 
 test("ListingListPage renders listings shell and loading state", () => {
   const html = renderAdminUi(<ListingListPage />, {
-    path: "/admin/coderso/listings",
+    path: "/admin/advanced/listings",
   });
 
   expect(html).toContain("Listings");
@@ -67,7 +67,7 @@ test("ListingListPage renders cached queries without loading placeholder", () =>
     );
 
     const html = renderAdminUi(<ListingListPage />, {
-      path: "/admin/coderso/listings",
+      path: "/admin/advanced/listings",
     });
 
     expect(html).toContain("Cached listing query");
@@ -96,7 +96,7 @@ test("ListingListPage keeps cached empty state without loading placeholder", () 
     );
 
     const html = renderAdminUi(<ListingListPage />, {
-      path: "/admin/coderso/listings",
+      path: "/admin/advanced/listings",
     });
 
     expect(html).not.toContain("Loading listing queries");
@@ -113,7 +113,7 @@ test("ListingListPage keeps cached empty state without loading placeholder", () 
 
 test("ListingEditorPage renders query builder panels in create mode", () => {
   const html = renderAdminUi(<ListingEditorPage />, {
-    path: "/admin/coderso/listings/new",
+    path: "/admin/advanced/listings/new",
   });
 
   expect(html).toContain("New listing query");
@@ -127,7 +127,7 @@ test("ListingEditorPage renders query builder panels in create mode", () => {
 
 test("ListingFiltersPage renders preview shell", () => {
   const html = renderAdminUi(<ListingFiltersPage />, {
-    path: "/admin/coderso/filters",
+    path: "/admin/advanced/filters",
   });
 
   expect(html).toContain("Filters");
@@ -140,7 +140,7 @@ test("ListingFiltersPage renders preview shell", () => {
 
 test("ListingSearchPage renders public search preview shell", () => {
   const html = renderAdminUi(<ListingSearchPage />, {
-    path: "/admin/coderso/search",
+    path: "/admin/advanced/search",
   });
 
   expect(html).toContain("Search");

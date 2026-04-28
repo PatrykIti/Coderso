@@ -3,13 +3,15 @@ import type {
   SolutionKitSummary,
 } from "./solutionKitsClient";
 import {
-  CODERSO_MODULE_REGISTRY,
-  type CodersoFeatureFlags,
-  type CodersoModuleId,
-} from "@/ui/navigation/codersoModules";
+  ADVANCED_MODULE_REGISTRY,
+  type AdvancedFeatureFlags,
+  type AdvancedModuleId,
+} from "@/ui/navigation/advancedModules";
 
-const STORAGE_KEY = "nextless.solutionKits.activeKit.v1";
-const EVENT_NAME = "nextless:solution-kit-selection";
+const STORAGE_KEY = "coderso.solutionKits.activeKit.v1";
+const LEGACY_STORAGE_KEY = "nextless.solutionKits.activeKit.v1";
+const EVENT_NAME = "coderso:solution-kit-selection";
+const LEGACY_EVENT_NAME = "nextless:solution-kit-selection";
 
 const solutionKitIds: SolutionKitId[] = [
   "automotive-workshop",
@@ -19,20 +21,25 @@ const solutionKitIds: SolutionKitId[] = [
   "small-ecommerce",
 ];
 
-const codersoModuleIds = new Set<CodersoModuleId>(
-  CODERSO_MODULE_REGISTRY.map((module) => module.id)
+const advancedModuleIds = new Set<AdvancedModuleId>(
+  ADVANCED_MODULE_REGISTRY.map((module) => module.id)
 );
-const codersoModulesById = new Map(CODERSO_MODULE_REGISTRY.map((module) => [module.id, module]));
+const advancedModulesById = new Map(ADVANCED_MODULE_REGISTRY.map((module) => [module.id, module]));
 
 const isSolutionKitId = (value: unknown): value is SolutionKitId =>
   typeof value === "string" && solutionKitIds.includes(value as SolutionKitId);
 
-const isCodersoModuleId = (value: unknown): value is CodersoModuleId =>
-  typeof value === "string" && codersoModuleIds.has(value as CodersoModuleId);
+const isAdvancedModuleId = (value: unknown): value is AdvancedModuleId =>
+  typeof value === "string" && advancedModuleIds.has(value as AdvancedModuleId);
 
 const readStoredValue = () => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw =
+    window.localStorage.getItem(STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (isSolutionKitId(raw) && !window.localStorage.getItem(STORAGE_KEY)) {
+    window.localStorage.setItem(STORAGE_KEY, raw);
+  }
   return isSolutionKitId(raw) ? raw : null;
 };
 
@@ -40,6 +47,11 @@ const emitSelectionChange = (kitId: SolutionKitId | null) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent(EVENT_NAME, {
+      detail: { kitId },
+    })
+  );
+  window.dispatchEvent(
+    new CustomEvent(LEGACY_EVENT_NAME, {
       detail: { kitId },
     })
   );
@@ -65,7 +77,7 @@ export function subscribeActiveSolutionKitId(
   if (typeof window === "undefined") return () => undefined;
 
   const handleStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
+    if (event.key !== STORAGE_KEY && event.key !== LEGACY_STORAGE_KEY) return;
     listener(isSolutionKitId(event.newValue) ? event.newValue : null);
   };
 
@@ -76,21 +88,23 @@ export function subscribeActiveSolutionKitId(
 
   window.addEventListener("storage", handleStorage);
   window.addEventListener(EVENT_NAME, handleCustomEvent);
+  window.addEventListener(LEGACY_EVENT_NAME, handleCustomEvent);
 
   return () => {
     window.removeEventListener("storage", handleStorage);
     window.removeEventListener(EVENT_NAME, handleCustomEvent);
+    window.removeEventListener(LEGACY_EVENT_NAME, handleCustomEvent);
   };
 }
 
 const collectKitModules = (kit: SolutionKitSummary | null) => {
-  if (!kit) return new Set<CodersoModuleId>(["ai-kit-wizard"]);
+  if (!kit) return new Set<AdvancedModuleId>(["ai-kit-wizard"]);
 
-  const modules = new Set<CodersoModuleId>(["ai-kit-wizard"]);
-  const addWithDependencies = (moduleId: CodersoModuleId) => {
+  const modules = new Set<AdvancedModuleId>(["ai-kit-wizard"]);
+  const addWithDependencies = (moduleId: AdvancedModuleId) => {
     if (modules.has(moduleId)) return;
     modules.add(moduleId);
-    const definition = codersoModulesById.get(moduleId);
+    const definition = advancedModulesById.get(moduleId);
     for (const dependency of definition?.dependencies ?? []) {
       addWithDependencies(dependency);
     }
@@ -101,7 +115,7 @@ const collectKitModules = (kit: SolutionKitSummary | null) => {
     ...(kit.manifest?.requiredModules ?? []),
     ...(kit.manifest?.optionalModules ?? []),
   ]
-    .filter(isCodersoModuleId)
+    .filter(isAdvancedModuleId)
     .forEach(addWithDependencies);
 
   if (modules.has("engine") && modules.has("entries") && modules.has("widgets")) {
@@ -111,13 +125,13 @@ const collectKitModules = (kit: SolutionKitSummary | null) => {
   return modules;
 };
 
-export function buildCodersoFeatureFlagsForSolutionKit(
+export function buildAdvancedFeatureFlagsForSolutionKit(
   kit: SolutionKitSummary | null
-): CodersoFeatureFlags {
+): AdvancedFeatureFlags {
   if (!kit) return {};
 
   const enabledModules = collectKitModules(kit);
-  return CODERSO_MODULE_REGISTRY.reduce<CodersoFeatureFlags>((result, module) => {
+  return ADVANCED_MODULE_REGISTRY.reduce<AdvancedFeatureFlags>((result, module) => {
     if (!module.nav) return result;
     result[module.id] = enabledModules.has(module.id);
     return result;

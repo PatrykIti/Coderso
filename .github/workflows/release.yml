@@ -8,7 +8,7 @@ on:
 
 env:
   BUN_VERSION: 1.3.13
-  DOCKER_IMAGE_NAME: nextless-core
+  DOCKER_IMAGE_NAME: coderso-core
 
 jobs:
   semantic-release:
@@ -90,7 +90,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push nextless-core image
+      - name: Build and push coderso-core image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -102,6 +102,6 @@ jobs:
           build-args: |
             APP_VERSION=${{ needs.semantic-release.outputs.version }}
           labels: |
-            org.opencontainers.image.title=nextless-core
+            org.opencontainers.image.title=coderso-core
             org.opencontainers.image.version=${{ needs.semantic-release.outputs.version }}
             org.opencontainers.image.revision=${{ steps.revision.outputs.sha }}

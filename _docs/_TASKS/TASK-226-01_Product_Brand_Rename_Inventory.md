@@ -5,7 +5,7 @@
 **Category:** Branding + Runtime Defaults + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-226
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -29,8 +29,8 @@ localStorage keys, and legacy integration names.
 
 ## Sub-Tasks
 
-- [ ] TASK-226-01-01: Package, Runtime Defaults, and Integration Headers
-- [ ] TASK-226-01-02: Admin UI, Widgets, Docs, and Fixture Copy
+- [x] TASK-226-01-01: Package, Runtime Defaults, and Integration Headers
+- [x] TASK-226-01-02: Admin UI, Widgets, Docs, and Fixture Copy
 
 ## Files to Change
 

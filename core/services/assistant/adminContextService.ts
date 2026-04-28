@@ -40,28 +40,49 @@ const normalizeRoute = (value: string | null | undefined) => {
     : withoutQuery;
 };
 
+const canonicalizeAdminRoute = (route: string | null) => {
+  if (!route) return null;
+  if (route === "/admin/coderso/posts") return "/admin/posts";
+  if (route.startsWith("/admin/coderso/posts/")) {
+    return `/admin/posts${route.slice("/admin/coderso/posts".length)}`;
+  }
+  if (route === "/admin/coderso") return "/admin/advanced";
+  if (route.startsWith("/admin/coderso/")) {
+    return `/admin/advanced${route.slice("/admin/coderso".length)}`;
+  }
+  if (route === "/admin/content-types") return "/admin/advanced/engine";
+  if (route.startsWith("/admin/content-types/")) {
+    return `/admin/advanced/engine${route.slice("/admin/content-types".length)}`;
+  }
+  if (route === "/admin/content") return "/admin/advanced/entries";
+  if (route.startsWith("/admin/content/")) {
+    return `/admin/advanced/entries${route.slice("/admin/content".length)}`;
+  }
+  return route;
+};
+
 const resolveArea = (route: string | null): AssistantAdminContext["area"] => {
   if (!route) return "other";
   if (route === "/admin") return "dashboard";
   if (route.startsWith("/admin/pages")) return "pages";
   if (route.startsWith("/admin/posts")) return "posts";
   if (route.startsWith("/admin/settings")) return "settings";
-  if (route.startsWith("/admin/coderso")) return "coderso";
+  if (route.startsWith("/admin/advanced")) return "advanced";
   return "other";
 };
 
-const resolveCodersoModule = (
+const resolveAdvancedModule = (
   route: string | null
-): AssistantAdminContext["codersoModule"] => {
-  if (!route || !route.startsWith("/admin/coderso")) return null;
-  if (route.startsWith("/admin/coderso/engine")) return "engine";
-  if (route.startsWith("/admin/coderso/entries")) return "entries";
-  if (route.startsWith("/admin/coderso/custom-screens")) return "custom-screens";
-  if (route.startsWith("/admin/coderso/widgets")) return "widgets";
-  if (route.startsWith("/admin/coderso/forms")) return "forms";
-  if (route.startsWith("/admin/coderso/listings")) return "listings";
-  if (route.startsWith("/admin/coderso/booking")) return "booking";
-  if (route.startsWith("/admin/coderso/commerce")) return "commerce";
+): AssistantAdminContext["advancedModule"] => {
+  if (!route || !route.startsWith("/admin/advanced")) return null;
+  if (route.startsWith("/admin/advanced/engine")) return "engine";
+  if (route.startsWith("/admin/advanced/entries")) return "entries";
+  if (route.startsWith("/admin/advanced/custom-screens")) return "custom-screens";
+  if (route.startsWith("/admin/advanced/widgets")) return "widgets";
+  if (route.startsWith("/admin/advanced/forms")) return "forms";
+  if (route.startsWith("/admin/advanced/listings")) return "listings";
+  if (route.startsWith("/admin/advanced/booking")) return "booking";
+  if (route.startsWith("/admin/advanced/commerce")) return "commerce";
   return "other";
 };
 
@@ -165,16 +186,16 @@ const normalizeRuntimeSnapshot = (
   fallbackRoute: string | null
 ): AssistantAdminRuntimeSnapshot | null => {
   if (!value) return null;
-  const route = normalizeRoute(value.route) ?? fallbackRoute;
+  const route = canonicalizeAdminRoute(normalizeRoute(value.route) ?? fallbackRoute);
   const visibleActions = normalizeVisibleActions(value.visibleActions);
   const area = resolveArea(route);
-  const codersoModule = resolveCodersoModule(route);
+  const advancedModule = resolveAdvancedModule(route);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     route,
     activeHref: normalizeHref(value.activeHref) ?? route,
     area,
-    codersoModule,
+    advancedModule,
     selectedResource: normalizeSelectedResource(value.selectedResource),
     visibleActions,
     permissionHints: normalizePermissionHints(value.permissionHints, visibleActions),
@@ -346,7 +367,7 @@ const normalizeActiveSurface = (
 export const buildAssistantAdminContext = (
   input: AssistantActionContext | undefined
 ): AssistantAdminContext => {
-  const route = normalizeRoute(input?.page);
+  const route = canonicalizeAdminRoute(normalizeRoute(input?.page));
   const locale =
     typeof input?.locale === "string" && input.locale.trim().length > 0
       ? input.locale.trim()
@@ -360,6 +381,6 @@ export const buildAssistantAdminContext = (
     activeSurface: normalizeActiveSurface(input?.activeSurface),
     planningState: normalizeAssistantPlanningState(input?.planningState),
     area: resolveArea(route),
-    codersoModule: resolveCodersoModule(route),
+    advancedModule: resolveAdvancedModule(route),
   };
 };

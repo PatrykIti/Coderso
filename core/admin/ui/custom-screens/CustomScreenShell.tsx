@@ -31,7 +31,7 @@ export function CustomScreenShell({
   const resolvedName = name.trim().length > 0 ? name : isCreateMode ? "New screen" : "Untitled";
   return (
     <EditorShell
-      activeHref="/admin/coderso/custom-screens"
+      activeHref="/admin/advanced/custom-screens"
       leftPanel={leftPanel}
       rightPanel={rightPanel}
       rightPanelClassName={rightPanelClassName}

@@ -113,6 +113,10 @@ const publicRoutes = new Set([
   "/preview",
 ]);
 
+const ADMIN_THEME_TOKENS_STORAGE_KEY = "coderso.adminThemeTokens";
+const LEGACY_ADMIN_THEME_TOKENS_STORAGE_KEY = "nextless.adminThemeTokens";
+const ADMIN_THEME_TOKENS_STYLE_ID = "coderso-theme-tokens";
+
 type RouteMatch = {
   element: React.ReactNode;
   params: Record<string, string>;
@@ -176,6 +180,31 @@ const resolveRoute = (path: string, routes: RouteDefinition[]): RouteMatch => {
   }
   return { element: <NotFound />, params: {} };
 };
+
+const readStoredAdminThemeTokens = () => {
+  if (typeof window === "undefined") return DEFAULT_ADMIN_THEME_TOKENS;
+  const cached =
+    window.localStorage.getItem(ADMIN_THEME_TOKENS_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_ADMIN_THEME_TOKENS_STORAGE_KEY);
+  if (!cached) return DEFAULT_ADMIN_THEME_TOKENS;
+  try {
+    const parsed = JSON.parse(cached) as unknown;
+    assertAdminThemeTokens(parsed);
+    if (!window.localStorage.getItem(ADMIN_THEME_TOKENS_STORAGE_KEY)) {
+      window.localStorage.setItem(
+        ADMIN_THEME_TOKENS_STORAGE_KEY,
+        JSON.stringify(parsed)
+      );
+    }
+    return parsed;
+  } catch {
+    return DEFAULT_ADMIN_THEME_TOKENS;
+  }
+};
+
+const AdminThemeTokensStyle = ({ css }: { css: string }) => (
+  <style id={ADMIN_THEME_TOKENS_STYLE_ID}>{css}</style>
+);
 
 const NotFound = () => (
   <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
@@ -399,18 +428,7 @@ export function AdminApp({ path }: AdminAppProps) {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [setupSaving, setSetupSaving] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
-  const [adminThemeTokens, setAdminThemeTokens] = useState(() => {
-    if (typeof window === "undefined") return DEFAULT_ADMIN_THEME_TOKENS;
-    const cached = window.localStorage.getItem("nextless.adminThemeTokens");
-    if (!cached) return DEFAULT_ADMIN_THEME_TOKENS;
-    try {
-      const parsed = JSON.parse(cached) as unknown;
-      assertAdminThemeTokens(parsed);
-      return parsed;
-    } catch {
-      return DEFAULT_ADMIN_THEME_TOKENS;
-    }
-  });
+  const [adminThemeTokens, setAdminThemeTokens] = useState(readStoredAdminThemeTokens);
   const tokenCss = useMemo(
     () => toAdminThemeCssVariables(adminThemeTokens),
     [adminThemeTokens]
@@ -543,37 +561,37 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/seo", element: <SeoManagerPage /> },
       { pattern: "/redirects", element: <RedirectsPage /> },
       { pattern: "/tools/import-export", element: <ImportExportPage /> },
-      { pattern: "/coderso/forms", element: <FormListPage /> },
-      { pattern: "/coderso/forms/:id/action-runs", element: <FormActionLogsPage /> },
-      { pattern: "/coderso/forms/:id", element: <FormBuilderPage /> },
-      { pattern: "/coderso/engine", element: <ContentTypeList /> },
-      { pattern: "/coderso/engine/:id", element: <ContentTypeEditor /> },
-      { pattern: "/coderso/engine/:id/schema", element: <SchemaBuilderPage /> },
-      { pattern: "/coderso/entries", element: <EntryList /> },
-      { pattern: "/coderso/entries/:type/:id", element: <EntryEditor /> },
-      { pattern: "/coderso/custom-screens", element: <CustomScreenListPage /> },
+      { pattern: "/advanced/forms", element: <FormListPage /> },
+      { pattern: "/advanced/forms/:id/action-runs", element: <FormActionLogsPage /> },
+      { pattern: "/advanced/forms/:id", element: <FormBuilderPage /> },
+      { pattern: "/advanced/engine", element: <ContentTypeList /> },
+      { pattern: "/advanced/engine/:id", element: <ContentTypeEditor /> },
+      { pattern: "/advanced/engine/:id/schema", element: <SchemaBuilderPage /> },
+      { pattern: "/advanced/entries", element: <EntryList /> },
+      { pattern: "/advanced/entries/:type/:id", element: <EntryEditor /> },
+      { pattern: "/advanced/custom-screens", element: <CustomScreenListPage /> },
       {
-        pattern: "/coderso/custom-screens/:id/entries/:entryId",
+        pattern: "/advanced/custom-screens/:id/entries/:entryId",
         element: <CustomScreenEntryEditor />,
       },
       {
-        pattern: "/coderso/custom-screens/:id/entries",
+        pattern: "/advanced/custom-screens/:id/entries",
         element: <CustomScreenEntriesPage />,
       },
-      { pattern: "/coderso/custom-screens/:id", element: <CustomScreenEditorPage /> },
-      { pattern: "/coderso/posts", element: <PostsListPage /> },
-      { pattern: "/coderso/posts/:id", element: <PostEditorPage /> },
-      { pattern: "/coderso/listings", element: <ListingListPage /> },
-      { pattern: "/coderso/listings/:id", element: <ListingEditorPage /> },
-      { pattern: "/coderso/filters", element: <ListingFiltersPage /> },
-      { pattern: "/coderso/search", element: <ListingSearchPage /> },
-      { pattern: "/coderso/booking", element: <BookingPage /> },
-      { pattern: "/coderso/reviews", element: <ReviewsModerationPage /> },
-      { pattern: "/coderso/commerce", element: <CommerceListPage /> },
-      { pattern: "/coderso/commerce/:id", element: <CommerceEditorPage /> },
-      { pattern: "/coderso/popups", element: <PopupsListPage /> },
-      { pattern: "/coderso/popups/:id", element: <PopupEditorPage /> },
-      { pattern: "/coderso/solution-kits", element: <SolutionKitsPage /> },
+      { pattern: "/advanced/custom-screens/:id", element: <CustomScreenEditorPage /> },
+      { pattern: "/posts", element: <PostsListPage /> },
+      { pattern: "/posts/:id", element: <PostEditorPage /> },
+      { pattern: "/advanced/listings", element: <ListingListPage /> },
+      { pattern: "/advanced/listings/:id", element: <ListingEditorPage /> },
+      { pattern: "/advanced/filters", element: <ListingFiltersPage /> },
+      { pattern: "/advanced/search", element: <ListingSearchPage /> },
+      { pattern: "/advanced/booking", element: <BookingPage /> },
+      { pattern: "/advanced/reviews", element: <ReviewsModerationPage /> },
+      { pattern: "/advanced/commerce", element: <CommerceListPage /> },
+      { pattern: "/advanced/commerce/:id", element: <CommerceEditorPage /> },
+      { pattern: "/advanced/popups", element: <PopupsListPage /> },
+      { pattern: "/advanced/popups/:id", element: <PopupEditorPage /> },
+      { pattern: "/advanced/solution-kits", element: <SolutionKitsPage /> },
       { pattern: "/pages", element: <PageListPage /> },
       { pattern: "/pages/:id", element: <PageEditor /> },
       { pattern: "/preview", element: <PagePreview /> },
@@ -583,8 +601,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/users", element: <UsersRolesPage /> },
       { pattern: "/roles", element: <PermissionsMatrixPage /> },
       { pattern: "/themes", element: <ThemesPage /> },
-      { pattern: "/coderso/widgets", element: <WidgetLibraryPage /> },
-      { pattern: "/coderso/widgets/templates/:id", element: <WidgetTemplateEditorPage /> },
+      { pattern: "/advanced/widgets", element: <WidgetLibraryPage /> },
+      { pattern: "/advanced/widgets/templates/:id", element: <WidgetTemplateEditorPage /> },
       {
         pattern: "/settings",
         element: (
@@ -694,7 +712,7 @@ export function AdminApp({ path }: AdminAppProps) {
         setAdminThemeTokens(resolved);
         if (typeof window !== "undefined") {
           window.localStorage.setItem(
-            "nextless.adminThemeTokens",
+            ADMIN_THEME_TOKENS_STORAGE_KEY,
             JSON.stringify(resolved)
           );
         }
@@ -822,7 +840,7 @@ export function AdminApp({ path }: AdminAppProps) {
   if (isProtected && authState !== "authenticated") {
     return (
       <>
-        <style id="nextless-theme-tokens">{tokenCss}</style>
+        <AdminThemeTokensStyle css={tokenCss} />
         <Loading />
       </>
     );
@@ -832,7 +850,7 @@ export function AdminApp({ path }: AdminAppProps) {
     return (
       <AdminBasePathProvider value={adminBasePath}>
         <>
-          <style id="nextless-theme-tokens">{tokenCss}</style>
+          <AdminThemeTokensStyle css={tokenCss} />
           <SetupWizard
             initialValues={setupInitialValues}
             onSubmit={completeSetup}
@@ -848,7 +866,7 @@ export function AdminApp({ path }: AdminAppProps) {
     <AdminBasePathProvider value={adminBasePath}>
       <AdminAssistantConfigProvider value={assistantConfig}>
         <>
-          <style id="nextless-theme-tokens">{tokenCss}</style>
+          <AdminThemeTokensStyle css={tokenCss} />
           <Toaster
             position="top-right"
             richColors

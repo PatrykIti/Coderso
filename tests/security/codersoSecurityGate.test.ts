@@ -18,7 +18,7 @@ import {
 } from "../../core/services/booking/bookingSubmissionNonce";
 import { SECURITY_SETTINGS_DEFAULTS } from "../../core/services/settings/securitySettings";
 
-const NONCE_SECRET = "nextless_release_gate_nonce_secret_32";
+const NONCE_SECRET = "coderso_release_gate_nonce_secret_32";
 const NONCE_TTL_MINUTES = "10";
 
 const tamperNonce = (nonce: string) => {

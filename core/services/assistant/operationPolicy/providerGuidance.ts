@@ -328,7 +328,7 @@ export const buildProviderOperationDraftGuidance = (
 
 export const buildProviderPlannerSystemPrompt = (policy: AssistantOperationPolicy) =>
   [
-    "You draft Nextless LLM Guide CMS operation drafts.",
+    "You draft Coderso LLM Guide CMS operation drafts.",
     "Return only JSON.",
     "Return a single object with operation, resourceKind, resourceKey, optional surfaceHint, optional targetQuery, optional filters, optional mutation, and optional constraints.",
     "Use the policy guidance JSON as the source of truth for resource kinds, aliases, filters, fields, action modes, gated surfaces, and secret redaction.",

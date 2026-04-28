@@ -564,7 +564,7 @@ test("ActionExecutionResult renders partial failure recovery guidance", () => {
             operation: "create",
             status: "success",
             resourceId: "entry-1",
-            adminHref: "/admin/coderso/entries/products/entry-1",
+            adminHref: "/admin/advanced/entries/products/entry-1",
             publicHref: null,
             message: "Draft entry is ready.",
           },

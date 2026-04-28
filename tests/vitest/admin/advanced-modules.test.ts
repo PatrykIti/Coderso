@@ -1,33 +1,33 @@
 import { expect, test } from "vitest";
 
 import {
-  CODERSO_MODULE_REGISTRY,
-  buildCodersoNavItems,
-  codersoModulesByTier,
-} from "../../../core/admin/ui/navigation/codersoModules";
+  ADVANCED_MODULE_REGISTRY,
+  buildAdvancedNavItems,
+  advancedModulesByTier,
+} from "../../../core/admin/ui/navigation/advancedModules";
 import {
   appendNavItemsAfterGroup,
   buildCustomScreenShortcutNavItems,
   buildDefaultNavSections,
 } from "../../../core/admin/ui/navigation/sidebarConfig";
-import { buildCodersoFeatureFlagsForSolutionKit } from "../../../core/admin/services/solutionKitSelection";
+import { buildAdvancedFeatureFlagsForSolutionKit } from "../../../core/admin/services/solutionKitSelection";
 
-const ids = new Set(CODERSO_MODULE_REGISTRY.map((module) => module.id));
+const ids = new Set(ADVANCED_MODULE_REGISTRY.map((module) => module.id));
 
-test("Coderso module registry covers v1-v3 catalog", () => {
-  expect(CODERSO_MODULE_REGISTRY).toHaveLength(19);
+test("Advanced module registry covers v1-v3 catalog", () => {
+  expect(ADVANCED_MODULE_REGISTRY).toHaveLength(19);
   expect(ids.has("engine")).toBe(true);
   expect(ids.has("templates")).toBe(true);
   expect(ids.has("membership-portal")).toBe(true);
   expect(ids.has("ai-kit-wizard")).toBe(true);
 
-  expect(codersoModulesByTier("v1")).toHaveLength(7);
-  expect(codersoModulesByTier("v2")).toHaveLength(6);
-  expect(codersoModulesByTier("v3")).toHaveLength(6);
+  expect(advancedModulesByTier("v1")).toHaveLength(7);
+  expect(advancedModulesByTier("v2")).toHaveLength(6);
+  expect(advancedModulesByTier("v3")).toHaveLength(6);
 });
 
-test("buildCodersoNavItems returns stable default navigation contract", () => {
-  const items = buildCodersoNavItems();
+test("buildAdvancedNavItems returns stable default navigation contract", () => {
+  const items = buildAdvancedNavItems();
   expect(items.map((item) => item.label)).toEqual([
     "Engine",
     "Entries",
@@ -51,47 +51,47 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
   expect(items.find((item) => item.label === "Commerce")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Popups")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Solution Kits")?.badge).toBe("Beta");
-  expect(items.some((item) => item.href === "/admin/coderso/listings")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/filters")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/search")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/booking")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/reviews")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/commerce")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/popups")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/custom-screens")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/solution-kits")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/listings")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/filters")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/search")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/booking")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/reviews")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/commerce")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/popups")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/custom-screens")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/solution-kits")).toBe(true);
 });
 
-test("buildCodersoNavItems supports feature-flagged modules", () => {
-  const items = buildCodersoNavItems({
+test("buildAdvancedNavItems supports feature-flagged modules", () => {
+  const items = buildAdvancedNavItems({
     listings: false,
     filters: true,
     search: true,
     widgets: false,
   });
 
-  expect(items.some((item) => item.href === "/admin/coderso/listings")).toBe(false);
-  expect(items.some((item) => item.href === "/admin/coderso/filters")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/search")).toBe(true);
-  expect(items.some((item) => item.href === "/admin/coderso/widgets")).toBe(false);
+  expect(items.some((item) => item.href === "/admin/advanced/listings")).toBe(false);
+  expect(items.some((item) => item.href === "/admin/advanced/filters")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/search")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/widgets")).toBe(false);
 });
 
-test("buildDefaultNavSections composes Coderso group from registry", () => {
+test("buildDefaultNavSections composes Advanced group from registry", () => {
   const sections = buildDefaultNavSections({ appointments: true });
   const main = sections.find((section) => section.title === "Main");
-  const coderso = main?.groups?.find((group) => group.id === "coderso");
+  const advanced = main?.groups?.find((group) => group.id === "advanced");
   const mainLabels = main?.items?.map((item) => item.label) ?? [];
 
-  expect(coderso).toBeDefined();
+  expect(advanced).toBeDefined();
   expect(mainLabels).toEqual(["Dashboard", "Pages", "Posts", "Menus", "Media"]);
-  expect(coderso?.items.some((item) => item.href === "/admin/coderso/appointments")).toBe(
+  expect(advanced?.items.some((item) => item.href === "/admin/advanced/appointments")).toBe(
     true
   );
-  expect(coderso?.items.some((item) => item.href === "/admin/coderso/posts")).toBe(false);
+  expect(advanced?.items.some((item) => item.href === "/admin/posts")).toBe(false);
 });
 
-test("buildDefaultNavSections narrows Coderso group for an active solution kit", () => {
-  const flags = buildCodersoFeatureFlagsForSolutionKit({
+test("buildDefaultNavSections narrows Advanced group for an active solution kit", () => {
+  const flags = buildAdvancedFeatureFlagsForSolutionKit({
     id: "automotive-workshop",
     title: "Automotive Workshop",
     shortDescription: "Workshop starter",
@@ -135,19 +135,19 @@ test("buildDefaultNavSections narrows Coderso group for an active solution kit",
 
   const sections = buildDefaultNavSections(flags);
   const main = sections.find((section) => section.title === "Main");
-  const coderso = main?.groups?.find((group) => group.id === "coderso");
-  const hrefs = coderso?.items.map((item) => item.href) ?? [];
+  const advanced = main?.groups?.find((group) => group.id === "advanced");
+  const hrefs = advanced?.items.map((item) => item.href) ?? [];
 
   expect(hrefs).toEqual([
-    "/admin/coderso/engine",
-    "/admin/coderso/entries",
-    "/admin/coderso/custom-screens",
-    "/admin/coderso/widgets",
-    "/admin/coderso/forms",
-    "/admin/coderso/listings",
-    "/admin/coderso/booking",
-    "/admin/coderso/reviews",
-    "/admin/coderso/solution-kits",
+    "/admin/advanced/engine",
+    "/admin/advanced/entries",
+    "/admin/advanced/custom-screens",
+    "/admin/advanced/widgets",
+    "/admin/advanced/forms",
+    "/admin/advanced/listings",
+    "/admin/advanced/booking",
+    "/admin/advanced/reviews",
+    "/admin/advanced/solution-kits",
   ]);
 });
 
@@ -196,15 +196,15 @@ test("buildCustomScreenShortcutNavItems returns only active sidebar screens", ()
 
   expect(items).toHaveLength(1);
   expect(items[0]?.label).toBe("Catalog");
-  expect(items[0]?.href).toBe("/admin/coderso/custom-screens/screen-b/entries");
+  expect(items[0]?.href).toBe("/admin/advanced/custom-screens/screen-b/entries");
 });
 
-test("appendNavItemsAfterGroup appends shortcut items after Coderso group", () => {
-  const sections = appendNavItemsAfterGroup(buildDefaultNavSections(), "coderso", [
+test("appendNavItemsAfterGroup appends shortcut items after Advanced group", () => {
+  const sections = appendNavItemsAfterGroup(buildDefaultNavSections(), "advanced", [
     {
       label: "Catalog",
-      href: "/admin/coderso/custom-screens/screen-1/entries",
-      icon: CODERSO_MODULE_REGISTRY[2]!.nav!.icon,
+      href: "/admin/advanced/custom-screens/screen-1/entries",
+      icon: ADVANCED_MODULE_REGISTRY[2]!.nav!.icon,
     },
   ]);
   const main = sections.find((section) => section.title === "Main");

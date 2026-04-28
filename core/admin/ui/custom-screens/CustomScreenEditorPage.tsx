@@ -438,7 +438,7 @@ export function CustomScreenEditorPage() {
       if (isCreateMode) {
         const created = await createCustomScreen(payload);
         applyScreen(created);
-        navigate(`/coderso/custom-screens/${encodeURIComponent(created.id)}`);
+        navigate(`/advanced/custom-screens/${encodeURIComponent(created.id)}`);
       } else if (screenId) {
         const updated = await updateCustomScreen(screenId, payload);
         applyScreen(updated);
@@ -632,7 +632,7 @@ export function CustomScreenEditorPage() {
                   className="gap-2"
                   onClick={() =>
                     navigate(
-                      `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries`
+                      `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
                     )
                   }
                 >
@@ -692,7 +692,7 @@ export function CustomScreenEditorPage() {
                 variant="secondary"
                 size="sm"
                 className="gap-2"
-                onClick={() => navigate("/coderso/custom-screens")}
+                onClick={() => navigate("/advanced/custom-screens")}
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to list

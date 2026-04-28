@@ -411,7 +411,7 @@ Update payload (summary):
     "password": "secret"
   },
   "from": {
-    "name": "Nextless",
+    "name": "Coderso",
     "email": "hello@example.com"
   }
 }
@@ -430,7 +430,7 @@ Response (summary):
     "password": { "configured": true }
   },
   "from": {
-    "name": "Nextless",
+    "name": "Coderso",
     "email": "hello@example.com"
   },
   "status": { "configured": true }
@@ -451,7 +451,7 @@ Delivery logs response (summary):
     {
       "id": "log-id",
       "recipient": "dev@example.com",
-      "subject": "Nextless SMTP test",
+      "subject": "Coderso SMTP test",
       "status": "delivered",
       "provider": "smtp",
       "messageId": "mock",
@@ -730,8 +730,8 @@ Editor header action flow (update `TASK-063-11`):
   - `Publish`/`Update`,
   - `Gear` (`Editor settings` dialog),
 - dodatkowe akcje operacyjne (`Outline`, `Details`, `Revisions`, `Focus mode`) pozostaja internal UI controls i nie zmieniaja API kontraktu,
-- focus mode state jest utrzymywany lokalnie (`nextless.posts.editor.focusMode`),
-- gear dialog zapisuje preference state lokalnie (`nextless.posts.editor.preferences.v2`, compatibility read/write `v1`),
+- focus mode state jest utrzymywany lokalnie (`coderso.posts.editor.focusMode`),
+- gear dialog zapisuje preference state lokalnie (`coderso.posts.editor.preferences.v2`, compatibility read/write `v1`),
 - gear dialog synchronizuje preference state w tle przez `PATCH /user-settings/posts.editor.preferences` (local-first fallback),
 - save lifecycle nadal korzysta z istniejących endpointow internal (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`).
 - publish/update success and bounded error feedback is emitted through the
@@ -1134,7 +1134,7 @@ Notes:
 - `schemaVersion` jest wersjonowany (aktualnie `1`).
 - `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
-- lista `/admin/coderso/custom-screens` wzbogaca wiersze o nazwy content type
+- lista `/admin/advanced/custom-screens` wzbogaca wiersze o nazwy content type
   z `contentTypes:list`, ale nie zapisuje denormalizowanych labeli do custom
   screen record.
 - lista pokazuje status sidebar shortcut jako pochodna:
@@ -1159,8 +1159,8 @@ Notes:
   - `GET /content/:type/entries/:id`
   - `PATCH /content/:type/entries/:id`
 - admin UI routes for the workflow:
-  - `/admin/coderso/custom-screens/:screenId/entries`
-  - `/admin/coderso/custom-screens/:screenId/entries/:entryId`
+  - `/admin/advanced/custom-screens/:screenId/entries`
+  - `/admin/advanced/custom-screens/:screenId/entries/:entryId`
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ## Coderso Filters & Search (v2 beta)
@@ -1757,9 +1757,9 @@ Plan response highlights:
 - `settingsPatch` preview (no side effects in this endpoint).
 
 Admin UI note:
-- `selectedKitId` can also be persisted client-side as an admin preference to focus the `Coderso` sidebar on kit-relevant modules.
+- `selectedKitId` can also be persisted client-side as an admin preference to focus the `Advanced` sidebar on kit-relevant modules.
 - This preference is not a dedicated persisted API resource in v1; it is an admin UI concern layered on top of list/detail payloads and kit manifests.
-- Active kit focus expands module dependencies from the Coderso module registry and keeps `custom-screens` visible for content kits that include `engine`, `entries`, and `widgets`.
+- Active kit focus expands module dependencies from the Advanced module registry and keeps `custom-screens` visible for content kits that include `engine`, `entries`, and `widgets`.
 
 Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
@@ -2149,7 +2149,7 @@ Example item:
   "targetId": "page-id",
   "targetTitle": "Homepage",
   "slug": "/",
-  "title": "Homepage | Nextless",
+  "title": "Homepage | Coderso",
   "description": "Meta description text...",
   "canonicalUrl": "https://example.com/",
   "robots": "index,follow",
@@ -2359,7 +2359,7 @@ Export response (bundle):
   "version": 1,
   "exportedAt": "2026-01-30T10:00:00Z",
   "settings": {
-    "site.name": "Nextless",
+    "site.name": "Coderso",
     "site.locale": "en",
     "site.adminBaseUrl": null,
     "site.publicBaseUrl": "https://www.example.com",
@@ -2571,7 +2571,7 @@ Payloady:
 
 ```json
 {
-  "site.name": "Nextless",
+  "site.name": "Coderso",
   "site.locale": "pl-PL",
   "site.adminBaseUrl": "https://cms.example.com",
   "site.publicBaseUrl": "https://www.example.com",
@@ -2892,22 +2892,22 @@ corpus.
 {
   "prompt": "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog",
   "context": {
-    "page": "/admin/coderso/widgets",
+    "page": "/admin/advanced/widgets",
     "locale": "pl-PL",
     "includeResourceCatalog": true,
     "runtimeSnapshot": {
-      "schemaVersion": 1,
-      "route": "/admin/coderso/widgets",
-      "activeHref": "/admin/coderso/widgets",
-      "area": "coderso",
-      "codersoModule": "widgets",
+      "schemaVersion": 2,
+      "route": "/admin/advanced/widgets",
+      "activeHref": "/admin/advanced/widgets",
+      "area": "advanced",
+      "advancedModule": "widgets",
       "selectedResource": null,
       "visibleActions": [
         {
           "id": "widget-template.create",
           "label": "Create widget template",
           "kind": "create",
-          "href": "/admin/coderso/widgets",
+          "href": "/admin/advanced/widgets",
           "requiredPermission": "widgets:write"
         }
       ],
@@ -2955,8 +2955,8 @@ after the policy cutover.
 When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
 For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
 If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.
-When the active admin surface is `Coderso > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
-When the active admin surface is `Coderso > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
+When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
+When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
 Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`. If the server-side resource is missing, active surface context is dropped.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
@@ -3355,7 +3355,7 @@ Przyklad odpowiedzi:
       "url": "https://example.com/webhook",
       "method": "POST",
       "headers": {
-        "X-Source": "nextless"
+        "X-Source": "coderso"
       },
       "timeoutMs": 8000,
       "includeSubmission": true

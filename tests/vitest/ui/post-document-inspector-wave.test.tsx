@@ -283,7 +283,7 @@ test("DocumentInspector keeps advanced fields expanded and routes document callb
         { id: "cat-1", name: "Category One" },
         { id: "cat-2", name: "Category Two" },
       ]}
-      slugDisplay={{ label: "Public URL", value: "https://nextless.test/blog/hello-world", concrete: true }}
+      slugDisplay={{ label: "Public URL", value: "https://coderso.test/blog/hello-world", concrete: true }}
       updatedAt="2026-03-13T09:00:00.000Z"
       scheduledAt={null}
       publishedAt={null}

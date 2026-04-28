@@ -4,42 +4,44 @@
 The admin panel uses a lightweight SPA router to avoid full page reloads between
 internal screens. This reduces loading flashes and keeps cached data warm.
 
-## Coderso IA (TASK-054)
-- Sidebar now includes a single expandable group: `Coderso`.
-- Coderso modules are sourced from registry: `core/admin/ui/navigation/codersoModules.ts`.
-- Active custom screens can also expose direct shortcuts **after** the `Coderso` group:
+## Advanced IA (TASK-226)
+- Sidebar includes a single expandable technical group: `Advanced`.
+- Advanced modules are sourced from registry: `core/admin/ui/navigation/advancedModules.ts`.
+- Active custom screens can also expose direct shortcuts **after** the `Advanced` group:
   - source: `custom_screens`
   - conditions: `status=active` and `showInSidebar=true`
-  - target route: `/admin/coderso/custom-screens/:screenId/entries`
+  - target route: `/admin/advanced/custom-screens/:screenId/entries`
   - label: `sidebarLabel ?? name`
-- Default (enabled) Coderso modules:
-  - `Engine` -> `/admin/coderso/engine`
-  - `Entries` -> `/admin/coderso/entries`
-  - `Widgets` -> `/admin/coderso/widgets`
-  - `Forms` -> `/admin/coderso/forms`
-  - `Posts` -> `/admin/coderso/posts`
-  - editor route: `/admin/coderso/posts/:id` (default `blocks` mode),
+- Default (enabled) Advanced modules:
+  - `Engine` -> `/admin/advanced/engine`
+  - `Entries` -> `/admin/advanced/entries`
+  - `Widgets` -> `/admin/advanced/widgets`
+  - `Forms` -> `/admin/advanced/forms`
+  - `Posts` -> `/admin/posts`
+  - editor route: `/admin/posts/:id` (default `blocks` mode),
   - emergency fallback: `?editor=classic` (legacy entry editor for posts),
   - global setting key: `posts.editor.mode` (`blocks` | `classic`).
 - Tiered catalog (v1-v3) is documented in `_docs/CODERSO_MODULES.md`.
 - Sidebar can expose future modules through feature flags passed to
-  `buildDefaultNavSections(flags)` (`CodersoFeatureFlags`).
+  `buildDefaultNavSections(flags)` (`AdvancedFeatureFlags`).
 - When an active `Solution Kit` is selected in admin UI, `AdminShell` may derive
-  `CodersoFeatureFlags` from the kit and narrow only the `Coderso` group.
-- No active solution kit means the default full `Coderso` group remains visible.
-- Group collapse state is persisted in local storage (`nextless.admin.navGroupState`).
-- On mobile, selecting a Coderso child route closes the drawer automatically.
+  `AdvancedFeatureFlags` from the kit and narrow only the `Advanced` group.
+- No active solution kit means the default full `Advanced` group remains visible.
+- Group collapse state is persisted in local storage (`coderso.admin.navGroupState`)
+  with legacy read fallback from `nextless.admin.navGroupState`.
+- On mobile, selecting an Advanced child route closes the drawer automatically.
 
 ## Route Aliases (Backward Compatibility)
-Legacy bookmarks are still accepted and normalized to canonical Coderso paths:
-- `/admin/content-types` -> `/admin/coderso/engine`
-- `/admin/content` and `/admin/entries` -> `/admin/coderso/entries`
-- `/admin/widgets` -> `/admin/coderso/widgets`
-- `/admin/forms` -> `/admin/coderso/forms`
-- `/admin/posts` -> `/admin/coderso/posts`
+Legacy bookmarks are still accepted and normalized to canonical Advanced paths:
+- `/admin/content-types` -> `/admin/advanced/engine`
+- `/admin/content` and `/admin/entries` -> `/admin/advanced/entries`
+- `/admin/widgets` -> `/admin/advanced/widgets`
+- `/admin/forms` -> `/admin/advanced/forms`
+- `/admin/coderso/*` -> `/admin/advanced/*`
+- `/admin/coderso/posts*` -> `/admin/posts*`
 
 Nested routes are normalized with the same prefix mapping
-(e.g. `/admin/content-types/:id` -> `/admin/coderso/engine/:id`).
+(e.g. `/admin/content-types/:id` -> `/admin/advanced/engine/:id`).
 
 ## What Is SPA vs Full Reload
 ### SPA (client-side)

@@ -40,7 +40,7 @@ type BrandingCardProps = {
 };
 
 const defaultValues = {
-  siteName: "Nextless",
+  siteName: "Coderso",
   siteLocale: "en",
 };
 

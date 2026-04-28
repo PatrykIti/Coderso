@@ -33,9 +33,9 @@ and is ready to shape actual record work. This area is where the screen either:
 - or replaces part of the classic editing experience.
 
 The route family currently includes:
-- `/coderso/custom-screens/:id/entries`
+- `/advanced/custom-screens/:id/entries`
   for the screen-bound records list,
-- `/coderso/custom-screens/:id/entries/:entryId`
+- `/advanced/custom-screens/:id/entries/:entryId`
   for the screen-bound record editor.
 
 The local runtime currently demonstrates the collection-only branch:

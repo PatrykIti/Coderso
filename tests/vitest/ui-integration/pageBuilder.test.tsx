@@ -12,5 +12,5 @@ test("PageEditor renders builder UI", () => {
   expect(html).toContain("Hero Content");
   expect(html).toContain("Page settings");
   expect(html).toContain("History");
-  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Preview");
 });

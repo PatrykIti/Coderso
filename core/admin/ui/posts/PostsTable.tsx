@@ -145,7 +145,7 @@ export function PostsTable({
               <TableCell>
                 <div className="flex flex-col">
                   <AdminLink
-                    href={`/coderso/posts/${encodeURIComponent(post.id)}`}
+                    href={`/posts/${encodeURIComponent(post.id)}`}
                     prefetch
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                     aria-label={`Edit post: ${post.title}`}

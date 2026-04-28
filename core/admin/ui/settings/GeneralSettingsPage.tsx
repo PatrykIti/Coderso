@@ -25,7 +25,7 @@ type GeneralSettingsPageProps = {
 };
 
 export const GENERAL_SETTINGS_DEFAULT_VALUES: GeneralSettingsValues = {
-  siteName: "Nextless",
+  siteName: "Coderso",
   siteLocale: "en",
 };
 

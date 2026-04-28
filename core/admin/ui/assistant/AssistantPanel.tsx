@@ -76,7 +76,9 @@ export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready"
 export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
 
 const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
-const ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
+const ASSISTANT_LAUNCHER_POSITION_KEY = "coderso.assistant.launcher.position";
+const LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY =
+  "nextless.assistant.launcher.position";
 const ASSISTANT_LAUNCHER_SIZE_PX = 56;
 const ASSISTANT_LAUNCHER_MARGIN_PX = 24;
 const ASSISTANT_CONVERSATION_DEFAULT_WIDTH_PX = 380;
@@ -164,11 +166,18 @@ const readLauncherPosition = (): LauncherPosition => {
   const fallback = getDefaultLauncherPosition();
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(ASSISTANT_LAUNCHER_POSITION_KEY);
+    const currentRaw = window.localStorage.getItem(ASSISTANT_LAUNCHER_POSITION_KEY);
+    const legacyRaw = window.localStorage.getItem(
+      LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY
+    );
+    const raw = currentRaw ?? legacyRaw;
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<LauncherPosition>;
     if (typeof parsed.x !== "number" || typeof parsed.y !== "number") {
       return fallback;
+    }
+    if (!currentRaw && legacyRaw) {
+      window.localStorage.setItem(ASSISTANT_LAUNCHER_POSITION_KEY, legacyRaw);
     }
     const { width, height } = getViewportSize();
     return clampLauncherPosition({ x: parsed.x, y: parsed.y }, width, height);

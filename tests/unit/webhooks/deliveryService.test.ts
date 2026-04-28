@@ -39,7 +39,20 @@ testIfDb("deliverWebhook succeeds and records delivery", async () => {
   cleanupIds.push(created.id);
 
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response("ok", { status: 200 });
+  globalThis.fetch = async (_request, init) => {
+    const headers = init?.headers instanceof Headers ? init.headers : null;
+    expect(headers?.get("X-Coderso-Event")).toBe("entry.created");
+    expect(headers?.get("X-Nextless-Event")).toBe("entry.created");
+    expect(headers?.get("X-Coderso-Delivery")).toBeTruthy();
+    expect(headers?.get("X-Nextless-Delivery")).toBeTruthy();
+    if (hasMasterKey) {
+      expect(headers?.get("X-Coderso-Signature")).toBeTruthy();
+      expect(headers?.get("X-Nextless-Signature")).toBeTruthy();
+      expect(headers?.get("X-Coderso-Timestamp")).toBeTruthy();
+      expect(headers?.get("X-Nextless-Timestamp")).toBeTruthy();
+    }
+    return new Response("ok", { status: 200 });
+  };
 
   try {
     const result = await deliverWebhook({

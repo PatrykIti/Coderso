@@ -343,7 +343,7 @@ export function ListingListPage() {
     );
   const handleNew = () => {
     if (activeTab === "queries") {
-      navigate("/coderso/listings/new");
+      navigate("/advanced/listings/new");
       return;
     }
     setTemplateCreateOpen(true);
@@ -351,7 +351,7 @@ export function ListingListPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/listings"
+      activeHref="/admin/advanced/listings"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>

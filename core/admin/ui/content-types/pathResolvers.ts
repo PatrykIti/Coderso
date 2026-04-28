@@ -3,8 +3,10 @@ export const resolveContentTypeIdFromPath = (pathname: string) => {
   const legacyIndex = parts.findIndex((segment) => segment === "content-types");
   if (legacyIndex !== -1) return parts[legacyIndex + 1] ?? null;
 
-  const codersoIndex = parts.findIndex((segment) => segment === "coderso");
-  if (codersoIndex === -1) return null;
-  if (parts[codersoIndex + 1] !== "engine") return null;
-  return parts[codersoIndex + 2] ?? null;
+  const advancedIndex = parts.findIndex(
+    (segment) => segment === "advanced" || segment === "coderso"
+  );
+  if (advancedIndex === -1) return null;
+  if (parts[advancedIndex + 1] !== "engine") return null;
+  return parts[advancedIndex + 2] ?? null;
 };

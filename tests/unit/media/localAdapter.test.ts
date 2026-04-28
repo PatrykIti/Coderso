@@ -31,7 +31,7 @@ function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
 }
 
 test("local adapter stores file and returns url", async () => {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "nextless-media-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "coderso-media-"));
   const previousDir = process.env.MEDIA_DIR;
   const previousBaseUrl = process.env.MEDIA_BASE_URL;
 

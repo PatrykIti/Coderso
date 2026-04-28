@@ -477,15 +477,15 @@ export function CustomScreenEntryEditor() {
 
   const classicEditorHref =
     contentType && entryId
-      ? `/coderso/entries/${encodeURIComponent(contentType.slug)}/${encodeURIComponent(entryId)}`
-      : "/coderso/entries";
+      ? `/advanced/entries/${encodeURIComponent(contentType.slug)}/${encodeURIComponent(entryId)}`
+      : "/advanced/entries";
   const screenRecordsHref =
-    screenId ? `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries` : "/coderso/custom-screens";
+    screenId ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries` : "/advanced/custom-screens";
 
   return (
     <>
       <EditorShell
-        activeHref="/admin/coderso/custom-screens"
+        activeHref="/admin/advanced/custom-screens"
         rightPanel={detailsPanel}
         rightPanelClassName="w-[360px]"
         breadcrumbs={

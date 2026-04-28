@@ -6,7 +6,7 @@ type NavSectionLike = {
   groups?: Array<{ items: RouteItem[] }>;
   itemsAfterGroups?: RouteItem[];
 };
-type CodersoModuleLike = { nav: RouteItem | null };
+type AdvancedModuleLike = { nav: RouteItem | null };
 
 export type AssistantLiveCoverageRow = {
   route: string;
@@ -39,7 +39,7 @@ export const buildLiveCoverageRouteMap = (policy: AssistantOperationPolicy) =>
 
 export const buildAdminNavigationRoutes = (input: {
   navSections: NavSectionLike[];
-  codersoModules: CodersoModuleLike[];
+  advancedModules: AdvancedModuleLike[];
   settingsItems: RouteItem[];
 }) =>
   new Set([
@@ -48,7 +48,7 @@ export const buildAdminNavigationRoutes = (input: {
       ...(section.groups ?? []).flatMap((group) => group.items.map((item) => item.href)),
       ...(section.itemsAfterGroups ?? []).map((item) => item.href),
     ]),
-    ...input.codersoModules.flatMap((module) => (module.nav ? [module.nav.href] : [])),
+    ...input.advancedModules.flatMap((module) => (module.nav ? [module.nav.href] : [])),
     ...input.settingsItems.map((item) => item.href),
   ]);
 

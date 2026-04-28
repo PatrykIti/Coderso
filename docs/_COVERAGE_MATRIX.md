@@ -36,27 +36,27 @@ that the assistant corpus should use.
 | `/tools/import-export` | `docs/screens/import-export.md` |
 | `/store` | `docs/screens/plugin-store.md` |
 | `/store/plugins/:id` | `docs/screens/plugin-details.md` |
-| `/coderso/engine` | `docs/coderso/engine-list-and-content-type-creation.md` |
-| `/coderso/engine/:id`, `/coderso/engine/:id/schema` | `docs/coderso/content-type-editor-and-schema-builder.md` |
-| `/coderso/entries` | `docs/coderso/entries-list-type-selection-and-creation.md` |
-| `/coderso/entries/:type/:id` | `docs/coderso/entry-editor-and-metadata.md` |
-| `/coderso/custom-screens`, `/coderso/custom-screens/:id` | `docs/coderso/custom-screens-list-and-builder.md` |
-| `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screen-records-and-entry-workflow.md` |
-| `/coderso/widgets` | `docs/coderso/widget-library.md` |
-| `/coderso/widgets/templates/:id` | `docs/coderso/widget-template-editor.md` |
-| `/coderso/forms`, `/coderso/forms/:id` | `docs/coderso/forms-list-and-builder.md` |
-| `/coderso/forms/:id/action-runs` | `docs/coderso/form-action-logs.md` |
-| `/coderso/posts` | `docs/coderso/posts-list-and-creation.md` |
-| `/coderso/posts/:id` | `docs/coderso/post-editor-preview-revisions-and-settings.md` |
-| `/coderso/listings`, `/coderso/listings/:id` | `docs/coderso/listings-list-and-editor.md` |
-| `/coderso/filters` | `docs/coderso/listing-filters.md` |
-| `/coderso/search` | `docs/coderso/public-search-preview.md` |
-| `/coderso/booking` | `docs/coderso/booking.md` |
-| `/coderso/commerce` | `docs/coderso/commerce-catalog.md` |
-| `/coderso/commerce/:id` | `docs/coderso/commerce-product-editor.md` |
-| `/coderso/reviews` | `docs/coderso/reviews-moderation.md` |
-| `/coderso/popups`, `/coderso/popups/:id` | `docs/coderso/popups.md` |
-| `/coderso/solution-kits` | `docs/coderso/solution-kits.md` |
+| `/advanced/engine` | `docs/advanced/engine-list-and-content-type-creation.md` |
+| `/advanced/engine/:id`, `/advanced/engine/:id/schema` | `docs/advanced/content-type-editor-and-schema-builder.md` |
+| `/advanced/entries` | `docs/advanced/entries-list-type-selection-and-creation.md` |
+| `/advanced/entries/:type/:id` | `docs/advanced/entry-editor-and-metadata.md` |
+| `/advanced/custom-screens`, `/advanced/custom-screens/:id` | `docs/advanced/custom-screens-list-and-builder.md` |
+| `/advanced/custom-screens/:id/entries`, `/advanced/custom-screens/:id/entries/:entryId` | `docs/advanced/custom-screen-records-and-entry-workflow.md` |
+| `/advanced/widgets` | `docs/advanced/widget-library.md` |
+| `/advanced/widgets/templates/:id` | `docs/advanced/widget-template-editor.md` |
+| `/advanced/forms`, `/advanced/forms/:id` | `docs/advanced/forms-list-and-builder.md` |
+| `/advanced/forms/:id/action-runs` | `docs/advanced/form-action-logs.md` |
+| `/posts` | `docs/posts-list-and-creation.md` |
+| `/posts/:id` | `docs/advanced/post-editor-preview-revisions-and-settings.md` |
+| `/advanced/listings`, `/advanced/listings/:id` | `docs/advanced/listings-list-and-editor.md` |
+| `/advanced/filters` | `docs/advanced/listing-filters.md` |
+| `/advanced/search` | `docs/advanced/public-search-preview.md` |
+| `/advanced/booking` | `docs/advanced/booking.md` |
+| `/advanced/commerce` | `docs/advanced/commerce-catalog.md` |
+| `/advanced/commerce/:id` | `docs/advanced/commerce-product-editor.md` |
+| `/advanced/reviews` | `docs/advanced/reviews-moderation.md` |
+| `/advanced/popups`, `/advanced/popups/:id` | `docs/advanced/popups.md` |
+| `/advanced/solution-kits` | `docs/advanced/solution-kits.md` |
 | Solution kit selection guidance | `docs/playbooks/solution-kit-selection-guide.md` |
 | Automotive workshop applied example | `docs/solution-kits/automotive-workshop.md` |
 | Medical clinic applied example | `docs/solution-kits/medical-clinic.md` |

@@ -49,7 +49,7 @@ const createActor = async () => {
   const [created] = await db
     .insert(users)
     .values({
-      email: `post-editor-${randomUUID()}@nextless.test`,
+      email: `post-editor-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Post Editor",
       status: "active",

@@ -337,22 +337,22 @@ test("assistant action plan route attaches resource catalog context when request
     body: {
       prompt: "potrzebuje katalogu produktow",
       context: {
-        page: "/admin/coderso/widgets",
+        page: "/admin/advanced/widgets",
         locale: "pl-PL",
         includeResourceCatalog: true,
         runtimeSnapshot: {
-          schemaVersion: 1,
-          route: "/admin/coderso/widgets",
-          activeHref: "/admin/coderso/widgets",
-          area: "coderso",
-          codersoModule: "widgets",
+          schemaVersion: 2,
+          route: "/admin/advanced/widgets",
+          activeHref: "/admin/advanced/widgets",
+          area: "advanced",
+          advancedModule: "widgets",
           selectedResource: null,
           visibleActions: [
             {
               id: "widget-template.create",
               label: "Create widget template",
               kind: "create",
-              href: "/admin/coderso/widgets",
+              href: "/admin/advanced/widgets",
               requiredPermission: "widgets:write",
             },
           ],
@@ -376,13 +376,13 @@ test("assistant action plan route attaches resource catalog context when request
       contentTypes: [{ slug: "products" }],
     },
     runtimeSnapshot: {
-      route: "/admin/coderso/widgets",
+      route: "/admin/advanced/widgets",
       visibleActions: [
         {
           id: "widget-template.create",
           label: "Create widget template",
           kind: "create",
-          href: "/admin/coderso/widgets",
+          href: "/admin/advanced/widgets",
           requiredPermission: "widgets:write",
         },
       ],
@@ -467,7 +467,7 @@ test("assistant action plan route rejects unknown context fields", async () => {
       body: {
         prompt: "potrzebuje katalogu produktow",
         context: {
-          page: "/admin/coderso/widgets",
+          page: "/admin/advanced/widgets",
           resourceCatalog: {},
         },
       },
@@ -945,7 +945,7 @@ test("assistant action execute route enforces kit permission for site-kit plans"
             operation: "create",
             status: "success",
             resourceId: "run-1",
-            adminHref: "/admin/coderso/solution-kits",
+            adminHref: "/admin/advanced/solution-kits",
             publicHref: null,
             message: `Actor ${payload.actorId} executed site kit.`,
             details: {

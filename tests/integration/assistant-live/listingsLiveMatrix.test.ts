@@ -49,7 +49,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Listings Actor",
       status: "active",
@@ -149,7 +149,7 @@ const buildListingsContext = async (): Promise<AssistantActionContext> => {
     listListingTemplates(),
   ]);
   return {
-    page: "/admin/coderso/listings",
+    page: "/admin/advanced/listings",
     locale: "pl-PL",
     resourceCatalog: {
       schemaVersion: 1,
@@ -197,11 +197,11 @@ const buildListingsContext = async (): Promise<AssistantActionContext> => {
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
-      route: "/admin/coderso/listings",
-      activeHref: "/admin/coderso/listings",
-      area: "coderso",
-      codersoModule: "listings",
+      schemaVersion: 2,
+      route: "/admin/advanced/listings",
+      activeHref: "/admin/advanced/listings",
+      area: "advanced",
+      advancedModule: "listings",
       selectedResource: null,
       visibleActions: [],
       permissionHints: {

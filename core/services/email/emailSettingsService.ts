@@ -391,7 +391,7 @@ export async function sendTestEmail(to: string) {
     throw new Error("email_not_configured");
   }
 
-  const fromName = settings.from.name ?? "Nextless";
+  const fromName = settings.from.name ?? "Coderso";
   const fromEmail = settings.from.email ?? settings.smtp.user;
   if (!fromEmail) throw new Error("email_not_configured");
 
@@ -403,12 +403,12 @@ export async function sendTestEmail(to: string) {
     password: settings.smtp.password,
   });
 
-  const subject = "Nextless SMTP test";
+  const subject = "Coderso SMTP test";
   const payload = {
     from: `${fromName} <${fromEmail}>`,
     to: trimmed,
     subject,
-    text: "This is a test email from Nextless.",
+    text: "This is a test email from Coderso.",
   };
 
   try {

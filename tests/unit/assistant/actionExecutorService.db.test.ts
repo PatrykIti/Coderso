@@ -163,7 +163,7 @@ const createActor = async () => {
   const [created] = await db
     .insert(users)
     .values({
-      email: `assistant-action-${randomUUID()}@nextless.test`,
+      email: `assistant-action-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Action DB Actor",
       status: "active",

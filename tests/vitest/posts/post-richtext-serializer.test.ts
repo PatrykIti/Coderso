@@ -79,7 +79,7 @@ test("postRichTextToPlainText strips tags and decodes entities", () => {
 });
 
 test("countPostRichTextWords returns deterministic word count", () => {
-  expect(countPostRichTextWords("<p>Hello world from Nextless</p>")).toBe(4);
+  expect(countPostRichTextWords("<p>Hello world from Coderso</p>")).toBe(4);
   expect(countPostRichTextWords("")).toBe(0);
 });
 

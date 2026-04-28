@@ -970,7 +970,7 @@ test("executeAssistantActionPlan creates and reuses draft entry actions", async 
   );
 
   expect(executed.summary.create).toBe(1);
-  expect(executed.results[0]?.adminHref).toBe("/admin/coderso/entries/products/entry-1");
+  expect(executed.results[0]?.adminHref).toBe("/admin/advanced/entries/products/entry-1");
   expect(deps.__state.entries[0]?.authorId).toBe("user-1");
 
   const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
@@ -3594,7 +3594,7 @@ test("executeAssistantActionPlan refines existing house-project catalog without 
   const refinementPlan = planAssistantActions({
     prompt: "dodaj filtr po metrazu i liczbie pokoi",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });

@@ -20,7 +20,7 @@ export function CanvasFrame() {
                 v2.4 released
               </p>
               <h2 className="mt-3 text-3xl font-bold text-foreground">
-                Build faster with Nextless
+                Build your system with Coderso
               </h2>
               <p className="mt-3 text-sm text-muted-foreground">
                 The headless CMS that treats your content like code.

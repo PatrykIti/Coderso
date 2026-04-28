@@ -37,8 +37,10 @@ test("broadcastCacheEvent writes to localStorage when BroadcastChannel is unavai
 
   try {
     broadcastCacheEvent({ key: "pages:list", action: "update" });
-    const stored = storage.data?.get("nextless.admin.cache.event");
+    const stored = storage.data?.get("coderso.admin.cache.event");
+    const legacyStored = storage.data?.get("nextless.admin.cache.event");
     expect(stored).toBeTruthy();
+    expect(legacyStored).toBe(stored);
   } finally {
     if (originalBroadcast === undefined) {
       delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
@@ -121,7 +123,7 @@ test("subscribeCacheEvents handles storage events", () => {
     });
     listeners.forEach((listener) =>
       listener({
-        key: "nextless.admin.cache.event",
+        key: "coderso.admin.cache.event",
         newValue: payload,
       } as StorageEvent)
     );

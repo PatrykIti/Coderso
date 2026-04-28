@@ -103,7 +103,7 @@ afterEach(() => {
 
 test("WidgetLibraryPage preview feedback stays toast-only", () => {
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/widgets">
+    <AdminRouterProvider initialPath="/admin/advanced/widgets">
       <WidgetLibraryPage />
     </AdminRouterProvider>
   );

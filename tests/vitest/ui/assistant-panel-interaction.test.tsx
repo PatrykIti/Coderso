@@ -244,7 +244,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
   });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/widgets">
+    <AdminRouterProvider initialPath="/admin/advanced/widgets">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -294,8 +294,8 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
         context: expect.objectContaining({
           includeResourceCatalog: true,
           runtimeSnapshot: expect.objectContaining({
-            route: "/admin/coderso/widgets",
-            codersoModule: "widgets",
+            route: "/admin/advanced/widgets",
+            advancedModule: "widgets",
           }),
         }),
       })
@@ -359,7 +359,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
   });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/widgets">
+    <AdminRouterProvider initialPath="/admin/advanced/widgets">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -460,7 +460,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
           id: "screen-house",
           label: "House Projects",
           status: "active",
-          adminHref: "/admin/coderso/custom-screens/screen-house",
+          adminHref: "/admin/advanced/custom-screens/screen-house",
         },
       ],
       truncated: false,
@@ -469,7 +469,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
   });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+    <AdminRouterProvider initialPath="/admin/advanced/custom-screens">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -519,8 +519,8 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
         context: expect.objectContaining({
           includeResourceCatalog: true,
           runtimeSnapshot: expect.objectContaining({
-            route: "/admin/coderso/custom-screens",
-            codersoModule: "custom-screens",
+            route: "/admin/advanced/custom-screens",
+            advancedModule: "custom-screens",
           }),
         }),
       })
@@ -564,7 +564,7 @@ test("AssistantPanel keeps docs-only mode on assistant chat route", async () => 
   });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+    <AdminRouterProvider initialPath="/admin/advanced/custom-screens">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -644,7 +644,7 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
   });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/widgets">
+    <AdminRouterProvider initialPath="/admin/advanced/widgets">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -765,7 +765,7 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
     });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+    <AdminRouterProvider initialPath="/admin/advanced/custom-screens">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -857,7 +857,7 @@ test("AssistantPanel starts a new empty conversation from footer action", async 
   });
 
   const view = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+    <AdminRouterProvider initialPath="/admin/advanced/custom-screens">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,
@@ -992,7 +992,7 @@ test("AssistantPanel restores conversation after close and SPA remount", async (
   firstView.cleanup();
 
   const secondView = mount(
-    <AdminRouterProvider initialPath="/admin/coderso/custom-screens">
+    <AdminRouterProvider initialPath="/admin/advanced/custom-screens">
       <AdminAssistantConfigProvider
         value={{
           enabled: true,

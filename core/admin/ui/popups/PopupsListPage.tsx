@@ -80,7 +80,7 @@ export function PopupsListPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/popups"
+      activeHref="/admin/advanced/popups"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>
@@ -94,7 +94,7 @@ export function PopupsListPage() {
           title="Popups"
           description="Manage popup campaigns with triggers, targeting rules, and lifecycle states."
           actions={
-            <Button className="gap-2" onClick={() => navigate("/coderso/popups/new")}>
+            <Button className="gap-2" onClick={() => navigate("/advanced/popups/new")}>
               <Plus className="h-4 w-4" />
               New popup
             </Button>

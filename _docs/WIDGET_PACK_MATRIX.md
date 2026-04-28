@@ -1,6 +1,6 @@
 # Widget Pack Matrix
 
-Coderso module-level pack coverage contract for composite-first delivery.
+Advanced module-level pack coverage contract for composite-first delivery.
 
 ## Minimum Rules
 

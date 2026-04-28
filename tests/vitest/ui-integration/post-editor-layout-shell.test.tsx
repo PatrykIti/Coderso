@@ -6,7 +6,7 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 
 test("PostBlockEditorShell renders region-based layout shell", () => {
   const html = renderAdminUi(<PostBlockEditorShell />, {
-    path: "/admin/coderso/posts/post-1",
+    path: "/admin/posts/post-1",
   });
 
   expect(html).toContain("data-post-editor-region=\"header\"");

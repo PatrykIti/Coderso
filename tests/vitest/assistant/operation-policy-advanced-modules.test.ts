@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "vitest";
 
-import { CODERSO_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/codersoModules";
+import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
 import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
-import { codersoModulePolicies } from "../../../core/services/assistant/operationPolicy/codersoModulePolicies";
+import { advancedModulePolicies } from "../../../core/services/assistant/operationPolicy/advancedModulePolicies";
 import { normalizeAssistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/policySchema";
 import {
   getResourcePolicy,
@@ -27,12 +27,12 @@ const matrixRows = matrix
 
 const matrixByRoute = new Map(matrixRows.map((row) => [row.route, row]));
 
-const codersoRegistryRoutes = CODERSO_MODULE_REGISTRY.flatMap((module) =>
+const codersoRegistryRoutes = ADVANCED_MODULE_REGISTRY.flatMap((module) =>
   module.nav ? [module.nav.href] : []
 );
 
 const expectedRoutes = [
-  "/admin/coderso/posts",
+  "/admin/posts",
   ...codersoRegistryRoutes,
   "/admin/store",
   "/admin/themes",
@@ -47,7 +47,7 @@ const policyByRoute = () => {
   );
 };
 
-test("assistantOperationPolicy maps Coderso module routes to live coverage states", () => {
+test("assistantOperationPolicy maps Advanced module routes to live coverage states", () => {
   const policies = policyByRoute();
 
   for (const route of expectedRoutes) {
@@ -61,7 +61,7 @@ test("assistantOperationPolicy maps Coderso module routes to live coverage state
   }
 });
 
-test("planned Coderso modules are not applicable and never executable", () => {
+test("planned Advanced modules are not applicable and never executable", () => {
   const policy = normalizeAssistantOperationPolicy(assistantOperationPolicy);
 
   for (const key of ["appointments", "mega-menu", "portal", "i18n"]) {
@@ -71,13 +71,13 @@ test("planned Coderso modules are not applicable and never executable", () => {
   }
 });
 
-test("gated Coderso modules do not expose executable mutations", () => {
+test("gated Advanced modules do not expose executable mutations", () => {
   const policy = normalizeAssistantOperationPolicy(assistantOperationPolicy);
 
   for (const key of [
     "post",
     "filters",
-    "coderso-search",
+    "advanced-search",
     "booking",
     "reviews",
     "commerce",
@@ -117,20 +117,20 @@ test("solution kit typed actions remain represented but gated", () => {
   expect(resolveResourcePolicyFromPrompt(assistantOperationPolicy, "site kit starter")).toBe(solutionKit);
 });
 
-test("codersoModulePolicies exports remaining gated route policies", () => {
+test("advancedModulePolicies exports remaining gated route policies", () => {
   const routes = new Set(
-    Object.values(codersoModulePolicies).flatMap((resource) => resource.coverage.routes)
+    Object.values(advancedModulePolicies).flatMap((resource) => resource.coverage.routes)
   );
 
   for (const route of [
-    "/admin/coderso/posts",
-    "/admin/coderso/filters",
-    "/admin/coderso/search",
-    "/admin/coderso/booking",
-    "/admin/coderso/reviews",
-    "/admin/coderso/commerce",
-    "/admin/coderso/popups",
-    "/admin/coderso/solution-kits",
+    "/admin/posts",
+    "/admin/advanced/filters",
+    "/admin/advanced/search",
+    "/admin/advanced/booking",
+    "/admin/advanced/reviews",
+    "/admin/advanced/commerce",
+    "/admin/advanced/popups",
+    "/admin/advanced/solution-kits",
     "/admin/store",
     "/admin/themes",
   ]) {

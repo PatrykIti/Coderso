@@ -65,7 +65,7 @@ type CustomScreenEntriesTableProps = {
 };
 
 const buildClassicEditorHref = (typeSlug: string, entryId: string) =>
-  `/coderso/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entryId)}`;
+  `/advanced/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entryId)}`;
 
 const buildScreenRecordHref = (
   screenId: string,
@@ -75,7 +75,7 @@ const buildScreenRecordHref = (
 ) =>
   mode === "collection-only"
     ? buildClassicEditorHref(typeSlug, entryId)
-    : `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}`;
+    : `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}`;
 
 const resolvePrimaryActionLabel = (
   mode: "collection-only" | "dashboard" | "editor"
@@ -389,7 +389,7 @@ export function CustomScreenEntriesPage() {
     if (!screenId) return;
     if (openAfterCreate) {
       navigate(
-        `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entry.id)}`
+        `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entry.id)}`
       );
       return;
     }
@@ -397,12 +397,12 @@ export function CustomScreenEntriesPage() {
   };
 
   const baseHref = screenId
-    ? `/coderso/custom-screens/${encodeURIComponent(screenId)}`
-    : "/coderso/custom-screens";
+    ? `/advanced/custom-screens/${encodeURIComponent(screenId)}`
+    : "/advanced/custom-screens";
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/custom-screens"
+      activeHref="/admin/advanced/custom-screens"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>

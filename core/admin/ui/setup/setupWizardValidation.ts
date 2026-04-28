@@ -7,7 +7,7 @@ export type SetupWizardValues = {
 };
 
 export const SETUP_WIZARD_DEFAULT_VALUES: SetupWizardValues = {
-  siteName: "Nextless",
+  siteName: "Coderso",
   siteLocale: "en",
   publicBaseUrl: "",
   authSessionTtlDays: "14",

@@ -26,7 +26,7 @@ const entry = {
 
 test("EntryTable renders entry title link from row content type", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/coderso/entries">
+    <AdminRouterProvider initialPath="/admin/advanced/entries">
       <AdminBasePathProvider value="/admin">
         <EntryTable
           entries={[entry]}
@@ -41,5 +41,5 @@ test("EntryTable renders entry title link from row content type", () => {
   );
 
   expect(html).toContain("Edit entry: Hello");
-  expect(html).toContain('href="/admin/coderso/entries/posts/entry-1"');
+  expect(html).toContain('href="/admin/advanced/entries/posts/entry-1"');
 });

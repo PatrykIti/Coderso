@@ -264,7 +264,7 @@ test("PostsTable trims tags to three items and forwards row action callbacks", (
 
   try {
     expect(view.container.querySelector("[data-has-delete='true']")).toBeTruthy();
-    expect(view.container.querySelector("a")?.getAttribute("href")).toBe("/coderso/posts/post-1");
+    expect(view.container.querySelector("a")?.getAttribute("href")).toBe("/posts/post-1");
     expect(view.container.textContent).toContain("news, release, launch");
     expect(view.container.textContent).not.toContain("extra");
 

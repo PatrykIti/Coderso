@@ -62,7 +62,7 @@ export async function installPluginFromStore(name: string, version: string, opti
   const zipBytes = await downloadBytes(meta.files.download);
   assertChecksum(zipBytes, meta.checksum.sha256);
 
-  const tempRoot = await mkdtemp(path.join(tmpdir(), "nextless-plugin-"));
+  const tempRoot = await mkdtemp(path.join(tmpdir(), "coderso-plugin-"));
   const tempDir = path.join(tempRoot, meta.name, meta.version);
 
   await unzipToDirectory(zipBytes, tempDir);

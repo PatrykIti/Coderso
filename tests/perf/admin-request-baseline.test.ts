@@ -35,7 +35,7 @@ test("performance gate: request metrics snapshot p95 stays within budget", () =>
     const close = startRequestMetric({
       path: index % 2 === 0 ? "/content-types" : "/user-settings",
       method: "GET",
-      route: index % 3 === 0 ? "/admin/coderso/entries" : "/admin/pages",
+      route: index % 3 === 0 ? "/admin/advanced/entries" : "/admin/pages",
       startedAt: baseTs + index * 10,
     });
     close({ status: index % 10 === 0 ? 500 : 200, ok: index % 10 !== 0, endedAt: baseTs + index * 10 + 15 });

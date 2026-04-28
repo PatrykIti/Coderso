@@ -15,13 +15,13 @@ zbudowac realne serwisy bez wiedzy technicznej.
 
 ## Posts vs Entries (kiedy czego uzywac)
 
-- `Posts` (`/admin/coderso/posts`) to gotowy workflow redakcyjny pod artykuly/blog:
+- `Posts` (`/admin/posts`) to gotowy workflow redakcyjny pod artykuly/blog:
   - lista wpisow + szybkie akcje publikacji,
   - Gutenberg-like block editor (rich text, inserter, list view, revisions),
   - metadata/SEO/taxonomy jak w klasycznym "Wpisy" (WordPress-like),
   - reserved content type `post` tworzony automatycznie przez system.
   - fallback: `posts.editor.mode=classic` lub awaryjnie `?editor=classic` na trasie edytora.
-- `Entries` (`/admin/coderso/entries`) to workflow generyczny dla Twoich wlasnych typow tresci z Engine
+- `Entries` (`/admin/advanced/entries`) to workflow generyczny dla Twoich wlasnych typow tresci z Engine
   (np. Services, Projects, Team, Testimonials, Products bez checkout).
 
 Praktyczna zasada:

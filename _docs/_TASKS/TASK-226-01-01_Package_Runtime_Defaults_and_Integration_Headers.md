@@ -5,7 +5,7 @@
 **Category:** Branding + Runtime Defaults + Integration Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-226-01
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -21,14 +21,14 @@ using `X-Nextless-*` cannot be deleted without a read/emit compatibility plan.
 
 ## Sub-Tasks
 
-- [ ] Rename package metadata where the package id is product-facing.
-- [ ] Change the default `site.name` from `Nextless` to `Coderso`.
-- [ ] Rename fallback email sender, SMTP test subject, and SMTP test body.
-- [ ] Rename form automation fallback sender.
-- [ ] Add Coderso webhook delivery headers and preserve legacy `X-Nextless-*`
+- [x] Rename package metadata where the package id is product-facing.
+- [x] Change the default `site.name` from `Nextless` to `Coderso`.
+- [x] Rename fallback email sender, SMTP test subject, and SMTP test body.
+- [x] Rename form automation fallback sender.
+- [x] Add Coderso webhook delivery headers and preserve legacy `X-Nextless-*`
   headers during the compatibility window.
-- [ ] Add localStorage key migration for admin theme/nav/sidebar keys.
-- [ ] Update tests and docs for every default changed here.
+- [x] Add localStorage key migration for admin theme/nav/sidebar keys.
+- [x] Update tests and docs for every default changed here.
 
 ## Files to Change
 

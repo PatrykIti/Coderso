@@ -1025,7 +1025,7 @@ test("ListingListPage deletes queries and shows action errors", async () => {
 });
 
 test("ListingEditorPage edits query state, previews normalized payload, discards changes, saves, and refreshes from cache bus", async () => {
-  window.history.replaceState({}, "", "/admin/coderso/listings/query-1");
+  window.history.replaceState({}, "", "/admin/advanced/listings/query-1");
   const { ListingEditorPage } = await import(
     "../../../core/admin/ui/listings/ListingEditorPage"
   );
@@ -1176,7 +1176,7 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
     expect(view.container.textContent).toContain("Remote listing");
 
     clickButtonByText(view.container, "Back to list");
-    expect(listingsState.navigateCalls).toContain("/coderso/listings");
+    expect(listingsState.navigateCalls).toContain("/advanced/listings");
   } finally {
     view.cleanup();
   }
@@ -1187,7 +1187,7 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
     "../../../core/admin/ui/listings/ListingEditorPage"
   );
 
-  window.history.replaceState({}, "", "/admin/coderso/listings/new");
+  window.history.replaceState({}, "", "/admin/advanced/listings/new");
   const createView = mount(<ListingEditorPage />);
 
   try {
@@ -1254,14 +1254,14 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
         fields: expect.arrayContaining(["id", "title"]),
       }),
     });
-    expect(listingsState.navigateCalls).toContain("/coderso/listings/created-query");
+    expect(listingsState.navigateCalls).toContain("/advanced/listings/created-query");
   } finally {
     createView.cleanup();
   }
 
   listingsState.reset();
   listingsState.detailError = listingsState.apiError("Detail failed");
-  window.history.replaceState({}, "", "/admin/coderso/listings/query-1");
+  window.history.replaceState({}, "", "/admin/advanced/listings/query-1");
 
   const errorView = mount(<ListingEditorPage />);
 
@@ -1275,7 +1275,7 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
 });
 
 test("ListingEditorPage reports query-not-found and generic preview failures", async () => {
-  window.history.replaceState({}, "", "/admin/coderso/listings/query-1");
+  window.history.replaceState({}, "", "/admin/advanced/listings/query-1");
   const { ListingEditorPage } = await import(
     "../../../core/admin/ui/listings/ListingEditorPage"
   );
@@ -1294,7 +1294,7 @@ test("ListingEditorPage reports query-not-found and generic preview failures", a
 
   listingsState.reset();
   listingsState.previewQueryError = new Error("boom");
-  window.history.replaceState({}, "", "/admin/coderso/listings/new");
+  window.history.replaceState({}, "", "/admin/advanced/listings/new");
 
   const previewErrorView = mount(<ListingEditorPage />);
 

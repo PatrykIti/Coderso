@@ -45,7 +45,7 @@ test("prefetcher skips active route module", async () => {
     let calls = 0;
     const entries: AdminPrefetchEntry[] = [
       {
-        match: "/coderso/engine",
+        match: "/advanced/engine",
         run: () => {
           calls += 1;
         },
@@ -58,7 +58,7 @@ test("prefetcher skips active route module", async () => {
     });
 
     prefetch("/admin/content-types", "/admin", {
-      activeHref: "/admin/coderso/engine?tab=schema",
+      activeHref: "/admin/advanced/engine?tab=schema",
     });
     await flushAsync();
 

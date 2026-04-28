@@ -84,11 +84,11 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - Prefetch skips entries considered fresh (`freshMs`) and applies cooldown throttling.
 - Prefetch uses a low-priority queue with max parallelism to avoid request bursts.
 - Implemented via `AdminLink` + `prefetchAdminRoute`.
-- `/coderso/listings` prefetch warms both Listings list caches with
+- `/advanced/listings` prefetch warms both Listings list caches with
   `{ force: false }`: saved queries and templates. The list shell hydrates both
   caches immediately, revalidates in the background when cache exists, and uses
   a foreground load only when no cache is present.
-- `/coderso/commerce` prefetch warms both Commerce list caches with
+- `/advanced/commerce` prefetch warms both Commerce list caches with
   `{ force: false }`: products and collections. The Commerce list shell
   hydrates both caches immediately, refreshes product/collection cache-bus
   events in the background, and uses foreground loading only when a required
@@ -298,8 +298,8 @@ Clients update caches and broadcast events on:
 ### Entries list/detail cache note
 
 - Entries first-screen list cache (`entries:list:all`) is the all-content-type
-  list payload for `/admin/coderso/entries`. It is hydrated by
-  `listAllEntriesCached()` and warmed on `/coderso/entries` prefetch together
+  list payload for `/admin/advanced/entries`. It is hydrated by
+  `listAllEntriesCached()` and warmed on `/advanced/entries` prefetch together
   with `contentTypes:list`.
 - Type-scoped caches (`entries:list:<typeSlug>`) remain authoritative for the
   editor, widgets, relation fields, and existing type-scoped clients.
@@ -322,7 +322,7 @@ Clients update caches and broadcast events on:
   - cache present -> `{ force: false, background: true }`,
   - cache missing -> `{ force: true, background: false }`,
   - cache-bus list events -> `{ force: true, background: true }`.
-- `/admin/coderso/custom-screens` prefetch warms both `customScreens:list` and
+- `/admin/advanced/custom-screens` prefetch warms both `customScreens:list` and
   `contentTypes:list` because the first-screen table and filters display
   content-type labels.
 - `contentTypesClient` also uses TTL-backed memory for `contentTypes:list`, so
@@ -345,7 +345,7 @@ Clients update caches and broadcast events on:
   - cache missing -> `{ force: true, background: false }`,
   - cache-bus list events -> hydrate patched cache when available, then
     `{ force: true, background: true }`.
-- `/admin/coderso/forms` prefetch warms `forms:list` with
+- `/admin/advanced/forms` prefetch warms `forms:list` with
   `listFormsCached({ force: false })`; `/admin/forms` is only a legacy alias
   normalized through admin path helpers.
 - `createForm()` and `updateForm()` upsert returned Forms rows into

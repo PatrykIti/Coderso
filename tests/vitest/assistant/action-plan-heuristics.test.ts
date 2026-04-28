@@ -17,7 +17,7 @@ const createContext = (
   activeSurface: null,
   planningState: null,
   area: "other",
-  codersoModule: null,
+  advancedModule: null,
   ...input,
 }) as AssistantAdminContext;
 
@@ -66,11 +66,11 @@ test("resolveContextualRefinementFamily uses runtime snapshot selected resource"
   const family = resolveContextualRefinementFamily(
     createContext({
       runtimeSnapshot: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         route: "/admin/pages/produkty",
         activeHref: "/admin/pages/produkty",
         area: "pages",
-        codersoModule: null,
+        advancedModule: null,
         selectedResource: {
           kind: "page",
           id: "produkty",

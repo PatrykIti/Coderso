@@ -12,7 +12,7 @@ type AuthBrandPanelProps = {
 };
 
 export function AuthBrandPanel({
-  title = "Nextless",
+  title = "Coderso",
   headline = "The future of content management.",
   subtitle =
     "Experience the power of headless flexibility combined with intuitive design.",
@@ -40,7 +40,7 @@ export function AuthBrandPanel({
         <p className="text-lg text-white/70">{subtitle}</p>
       </div>
       <div className="relative z-10 text-sm text-white/60">
-        {footer ?? "© 2024 Nextless Inc."}
+        {footer ?? "© 2024 Coderso Inc."}
       </div>
     </div>
   );

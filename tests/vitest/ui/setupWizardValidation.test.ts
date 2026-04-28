@@ -7,7 +7,7 @@ import {
 } from "../../../core/admin/ui/setup/setupWizardValidation";
 
 const validValues = {
-  siteName: "Nextless",
+  siteName: "Coderso",
   siteLocale: "en",
   publicBaseUrl: "https://www.example.com",
   authSessionTtlDays: "14",
@@ -44,7 +44,7 @@ test("toSetupWizardSettingsPayload maps and normalizes values", () => {
   });
 
   expect(payload).toEqual({
-    "site.name": "Nextless",
+    "site.name": "Coderso",
     "site.locale": "en",
     "site.publicBaseUrl": "https://www.example.com/",
     "auth.sessionTtlDays": 14,

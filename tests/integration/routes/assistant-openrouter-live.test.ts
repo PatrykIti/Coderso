@@ -132,7 +132,7 @@ liveTest(
     apiKey,
     model,
     retryCount: 0,
-    appName: "Nextless LLM Guide Integration Test",
+    appName: "Coderso LLM Guide Integration Test",
   });
 
   for (const item of cases) {
@@ -142,15 +142,15 @@ liveTest(
       providerModel: model,
       llmAvailable: true,
       context: {
-        page: "/admin/coderso/custom-screens",
+        page: "/admin/advanced/custom-screens",
         locale: "pl-PL",
         resourceCatalog: catalog,
         runtimeSnapshot: {
-          schemaVersion: 1,
-          route: "/admin/coderso/custom-screens",
-          activeHref: "/admin/coderso/custom-screens",
-          area: "coderso",
-          codersoModule: "custom-screens",
+          schemaVersion: 2,
+          route: "/admin/advanced/custom-screens",
+          activeHref: "/admin/advanced/custom-screens",
+          area: "advanced",
+          advancedModule: "custom-screens",
           selectedResource: null,
           visibleActions: [],
           permissionHints: {

@@ -117,7 +117,7 @@ function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentPro
             </p>
             <div className="rounded-xl border bg-muted/30 p-4">
               <p className="text-xs text-muted-foreground">
-                {item?.previewUrl ?? "https://nextless.com"}
+                {item?.previewUrl ?? "https://coderso.com"}
                 <span className="text-muted-foreground/70">
                   {item?.previewPath ? ` › ${item.previewPath}` : ""}
                 </span>

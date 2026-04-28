@@ -166,7 +166,7 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
         id: "localDir",
         label: "Storage Root",
         type: "text",
-        placeholder: "/var/www/nextless/uploads",
+        placeholder: "/var/www/coderso/uploads",
         icon: HardDrive,
       },
     ],
@@ -197,7 +197,7 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
         id: "s3Bucket",
         label: "Bucket Name",
         type: "text",
-        placeholder: "nextless-assets",
+        placeholder: "coderso-assets",
         icon: Database,
       },
       {
@@ -233,7 +233,7 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
         id: "azureAccount",
         label: "Account Name",
         type: "text",
-        placeholder: "nextlessstorage",
+        placeholder: "codersostorage",
         icon: Database,
       },
       {

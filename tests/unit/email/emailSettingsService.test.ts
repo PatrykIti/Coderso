@@ -58,7 +58,7 @@ testIfDb("update and fetch email settings", async () => {
       user: "mailer@example.com",
       password: hasMasterKey ? "secret" : undefined,
     },
-    from: { name: "Nextless", email: "hello@example.com" },
+    from: { name: "Coderso", email: "hello@example.com" },
   });
 
   expect(updated.smtp.host).toBe("smtp.example.com");
@@ -84,7 +84,7 @@ testIfDb("send test email records delivery log", async () => {
       user: "mailer@example.com",
       password: hasMasterKey ? "secret" : undefined,
     },
-    from: { name: "Nextless", email: "hello@example.com" },
+    from: { name: "Coderso", email: "hello@example.com" },
   });
 
   if (hasMasterKey) {

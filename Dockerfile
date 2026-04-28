@@ -31,7 +31,7 @@ ARG APP_VERSION=1.0.0
 ENV NODE_ENV=production
 ENV CORE_VERSION=${APP_VERSION}
 
-LABEL org.opencontainers.image.title="nextless-core"
+LABEL org.opencontainers.image.title="coderso-core"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 
 COPY --from=builder --chown=bun:bun /app /app

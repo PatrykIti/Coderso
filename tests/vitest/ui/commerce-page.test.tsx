@@ -21,7 +21,7 @@ const createLocalStorage = () => {
 
 test("CommerceListPage renders shell and loading state", () => {
   const html = renderAdminUi(<CommerceListPage />, {
-    path: "/admin/coderso/commerce",
+    path: "/admin/advanced/commerce",
   });
 
   expect(html).toContain("Commerce");
@@ -79,7 +79,7 @@ test("CommerceListPage renders cached products without loading placeholder", () 
     );
 
     const html = renderAdminUi(<CommerceListPage />, {
-      path: "/admin/coderso/commerce",
+      path: "/admin/advanced/commerce",
     });
 
     expect(html).toContain("Cached product");
@@ -97,7 +97,7 @@ test("CommerceListPage renders cached products without loading placeholder", () 
 
 test("CommerceEditorPage renders product editor controls in create mode", () => {
   const html = renderAdminUi(<CommerceEditorPage />, {
-    path: "/admin/coderso/commerce/new",
+    path: "/admin/advanced/commerce/new",
   });
 
   expect(html).toContain("New product");

@@ -67,7 +67,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
     id: "zapier",
     name: "Zapier",
     description:
-      "Automate workflows by connecting Nextless with 5,000+ popular apps.",
+      "Automate workflows by connecting Coderso with 5,000+ popular apps.",
     category: "Automation",
     scopes: ["events:read", "webhooks:send"],
     fields: [
@@ -176,7 +176,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
         label: "App Name",
         type: "text",
         required: false,
-        placeholder: "Nextless Assistant",
+        placeholder: "Coderso Assistant",
       },
     ],
   },

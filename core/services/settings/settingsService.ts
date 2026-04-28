@@ -47,7 +47,7 @@ const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
 
 const DEFAULT_CONTENT_ROUTES: ContentRouteSetting[] = [];
 const DEFAULT_SETTINGS = {
-  "site.name": "Nextless",
+  "site.name": "Coderso",
   "site.locale": "en",
   "site.adminBaseUrl": null as string | null,
   "site.publicBaseUrl": null as string | null,

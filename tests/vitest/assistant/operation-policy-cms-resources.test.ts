@@ -15,12 +15,12 @@ test("assistantOperationPolicy includes migrated CMS and admin resources", () =>
   expect(Object.keys(policy.resources).sort()).toEqual([
     "access-log",
     "admin-search",
+    "advanced-search",
     "analytics",
     "appointments",
     "audit-log",
     "backup",
     "booking",
-    "coderso-search",
     "commerce",
     "content-type",
     "custom-screen",

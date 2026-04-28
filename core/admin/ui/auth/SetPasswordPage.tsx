@@ -88,14 +88,14 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <LockKeyhole className="h-5 w-5" />
             </span>
-            <span className="text-xl font-semibold">Nextless CMS</span>
+            <span className="text-xl font-semibold">Coderso CMS</span>
           </div>
           <a className="text-sm text-muted-foreground" href="#">
             Need help?
           </a>
         </div>
       }
-      footer={<p className="text-xs text-muted-foreground">© 2024 Nextless CMS.</p>}
+      footer={<p className="text-xs text-muted-foreground">© 2024 Coderso CMS.</p>}
     >
       <Card className="border-border/60 shadow-lg">
         <CardContent className="space-y-6 p-8">

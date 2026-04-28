@@ -24,9 +24,9 @@ import {
 import type { CustomScreenRecord } from "@/services/customScreensClient";
 
 import {
-  buildCodersoNavItems,
-  type CodersoFeatureFlags,
-} from "@/ui/navigation/codersoModules";
+  buildAdvancedNavItems,
+  type AdvancedFeatureFlags,
+} from "@/ui/navigation/advancedModules";
 
 export type NavItem = {
   label: string;
@@ -53,24 +53,24 @@ export type NavSection = {
 };
 
 export const buildDefaultNavSections = (
-  codersoFeatureFlags: CodersoFeatureFlags = {}
+  advancedFeatureFlags: AdvancedFeatureFlags = {}
 ): NavSection[] => [
   {
     title: "Main",
     items: [
       { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { label: "Pages", href: "/admin/pages", icon: FileText },
-      { label: "Posts", href: "/admin/coderso/posts", icon: Newspaper },
+      { label: "Posts", href: "/admin/posts", icon: Newspaper },
       { label: "Menus", href: "/admin/menus", icon: List },
       { label: "Media", href: "/admin/media", icon: Image },
     ],
     groups: [
       {
-        id: "coderso",
-        label: "Coderso",
+        id: "advanced",
+        label: "Advanced",
         icon: Blocks,
         defaultExpanded: true,
-        items: buildCodersoNavItems(codersoFeatureFlags),
+        items: buildAdvancedNavItems(advancedFeatureFlags),
       },
     ],
   },
@@ -118,7 +118,7 @@ export const buildCustomScreenShortcutNavItems = (
     .filter((screen) => screen.status === "active" && screen.showInSidebar === true)
     .map((screen) => ({
       label: screen.sidebarLabel?.trim() || screen.name,
-      href: `/admin/coderso/custom-screens/${encodeURIComponent(screen.id)}/entries`,
+      href: `/admin/advanced/custom-screens/${encodeURIComponent(screen.id)}/entries`,
       icon: LayoutGrid,
       permission: "content:read",
     }))
@@ -142,6 +142,6 @@ export const appendNavItemsAfterGroup = (
 };
 
 export const defaultFooterItems: NavItem[] = [
-  { label: "Docs", href: "https://nextless.dev/docs", icon: FileText },
-  { label: "Support", href: "https://nextless.dev/support", icon: LifeBuoy },
+  { label: "Docs", href: "https://coderso.dev/docs", icon: FileText },
+  { label: "Support", href: "https://coderso.dev/support", icon: LifeBuoy },
 ];

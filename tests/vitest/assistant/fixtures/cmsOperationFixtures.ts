@@ -172,7 +172,7 @@ const baseCatalog = {
 } as unknown as AssistantActionContext["resourceCatalog"];
 
 const baseContext: AssistantActionContext = {
-  page: "/admin/coderso",
+  page: "/admin/advanced",
   locale: "pl-PL",
   resourceCatalog: baseCatalog,
 };
@@ -214,14 +214,14 @@ export const cmsOperationFixtures: CmsOperationFixture[] = [
     name: "entry delete active route",
     prompt: "usun ten wpis",
     context: {
-      page: "/admin/coderso/entries/products/entry-1",
+      page: "/admin/advanced/entries/products/entry-1",
       locale: "pl-PL",
       runtimeSnapshot: {
-        schemaVersion: 1,
-        route: "/admin/coderso/entries/products/entry-1",
-        activeHref: "/admin/coderso/entries/products/entry-1",
-        area: "coderso",
-        codersoModule: "entries",
+        schemaVersion: 2,
+        route: "/admin/advanced/entries/products/entry-1",
+        activeHref: "/admin/advanced/entries/products/entry-1",
+        area: "advanced",
+        advancedModule: "entries",
         selectedResource: { kind: "entry", id: "entry-1" },
         visibleActions: [],
         permissionHints: {

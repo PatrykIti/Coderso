@@ -62,7 +62,7 @@ test("resolver policy applies canonicalized filter values to candidates", () => 
     label: "Screen",
     slug: null,
     status: "active",
-    adminHref: "/admin/coderso/custom-screens/screen-1",
+    adminHref: "/admin/advanced/custom-screens/screen-1",
     details: { showInSidebar: true },
   };
   const hiddenDraft: CmsResolvedTargetCandidate = {

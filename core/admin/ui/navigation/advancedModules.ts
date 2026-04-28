@@ -17,9 +17,9 @@ import {
   Users,
 } from "lucide-react";
 
-export type CodersoModuleTier = "v1" | "v2" | "v3";
+export type AdvancedModuleTier = "v1" | "v2" | "v3";
 
-export type CodersoModuleId =
+export type AdvancedModuleId =
   | "engine"
   | "entries"
   | "custom-screens"
@@ -40,7 +40,7 @@ export type CodersoModuleId =
   | "i18n"
   | "ai-kit-wizard";
 
-export type CodersoOwnerArea =
+export type AdvancedOwnerArea =
   | "content"
   | "design"
   | "forms"
@@ -49,11 +49,11 @@ export type CodersoOwnerArea =
   | "growth"
   | "platform";
 
-export type CodersoModuleLifecycle = "stable" | "preview" | "planned";
+export type AdvancedModuleLifecycle = "stable" | "preview" | "planned";
 
-export type CodersoFeatureFlags = Partial<Record<CodersoModuleId, boolean>>;
+export type AdvancedFeatureFlags = Partial<Record<AdvancedModuleId, boolean>>;
 
-type CodersoNavConfig = {
+type AdvancedNavConfig = {
   href: string;
   icon: LucideIcon;
   defaultEnabled: boolean;
@@ -61,18 +61,18 @@ type CodersoNavConfig = {
   permission?: string;
 };
 
-export type CodersoModuleDefinition = {
-  id: CodersoModuleId;
+export type AdvancedModuleDefinition = {
+  id: AdvancedModuleId;
   label: string;
-  tier: CodersoModuleTier;
-  ownerArea: CodersoOwnerArea;
-  lifecycle: CodersoModuleLifecycle;
+  tier: AdvancedModuleTier;
+  ownerArea: AdvancedOwnerArea;
+  lifecycle: AdvancedModuleLifecycle;
   description: string;
-  dependencies: CodersoModuleId[];
-  nav: CodersoNavConfig | null;
+  dependencies: AdvancedModuleId[];
+  nav: AdvancedNavConfig | null;
 };
 
-type CodersoNavItem = {
+type AdvancedNavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
@@ -80,7 +80,7 @@ type CodersoNavItem = {
   permission?: string;
 };
 
-export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
+export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
   {
     id: "engine",
     label: "Engine",
@@ -90,7 +90,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Content model builder for types, fields, and schema rules.",
     dependencies: [],
     nav: {
-      href: "/admin/coderso/engine",
+      href: "/admin/advanced/engine",
       icon: Database,
       defaultEnabled: true,
     },
@@ -104,7 +104,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Entry management for all Engine-defined content types.",
     dependencies: ["engine"],
     nav: {
-      href: "/admin/coderso/entries",
+      href: "/admin/advanced/entries",
       icon: Layers,
       defaultEnabled: true,
     },
@@ -118,7 +118,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Custom admin screens composed from widgets and content fields.",
     dependencies: ["engine", "entries", "widgets"],
     nav: {
-      href: "/admin/coderso/custom-screens",
+      href: "/admin/advanced/custom-screens",
       icon: LayoutGrid,
       defaultEnabled: true,
       badge: "Beta",
@@ -133,7 +133,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Widget library and reusable block editor experiences.",
     dependencies: [],
     nav: {
-      href: "/admin/coderso/widgets",
+      href: "/admin/advanced/widgets",
       icon: Blocks,
       defaultEnabled: true,
     },
@@ -157,7 +157,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Form builder, form submissions, and embed configurations.",
     dependencies: [],
     nav: {
-      href: "/admin/coderso/forms",
+      href: "/admin/advanced/forms",
       icon: ClipboardList,
       defaultEnabled: true,
     },
@@ -181,7 +181,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Dynamic listing pages and repeatable cards from content queries.",
     dependencies: ["engine", "entries"],
     nav: {
-      href: "/admin/coderso/listings",
+      href: "/admin/advanced/listings",
       icon: LayoutGrid,
       defaultEnabled: true,
       badge: "Beta",
@@ -196,7 +196,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Faceted filtering controls bound to listing/query datasets.",
     dependencies: ["listings"],
     nav: {
-      href: "/admin/coderso/filters",
+      href: "/admin/advanced/filters",
       icon: Filter,
       defaultEnabled: true,
       badge: "Beta",
@@ -211,7 +211,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Scoped search modules with query presets and ranking controls.",
     dependencies: ["listings"],
     nav: {
-      href: "/admin/coderso/search",
+      href: "/admin/advanced/search",
       icon: Search,
       defaultEnabled: true,
       badge: "Beta",
@@ -226,7 +226,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Booking calendars for resources, services, and capacities.",
     dependencies: ["forms", "listings"],
     nav: {
-      href: "/admin/coderso/booking",
+      href: "/admin/advanced/booking",
       icon: Calendar,
       defaultEnabled: true,
       badge: "Beta",
@@ -241,7 +241,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Appointment flows for time-slot service businesses.",
     dependencies: ["booking", "forms"],
     nav: {
-      href: "/admin/coderso/appointments",
+      href: "/admin/advanced/appointments",
       icon: Briefcase,
       defaultEnabled: false,
       badge: "Soon",
@@ -256,7 +256,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Ratings and review moderation tied to listings/services.",
     dependencies: ["forms", "listings"],
     nav: {
-      href: "/admin/coderso/reviews",
+      href: "/admin/advanced/reviews",
       icon: Star,
       defaultEnabled: true,
       badge: "Beta",
@@ -272,7 +272,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Product experiences, checkout integrations, and catalog UI blocks.",
     dependencies: ["listings", "filters"],
     nav: {
-      href: "/admin/coderso/commerce",
+      href: "/admin/advanced/commerce",
       icon: ShoppingCart,
       defaultEnabled: true,
       badge: "Beta",
@@ -288,7 +288,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Engagement overlays with targeting rules and action triggers.",
     dependencies: ["forms", "widgets"],
     nav: {
-      href: "/admin/coderso/popups",
+      href: "/admin/advanced/popups",
       icon: Megaphone,
       defaultEnabled: true,
       badge: "Beta",
@@ -304,7 +304,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Advanced multi-column navigation menu builder.",
     dependencies: ["widgets", "entries"],
     nav: {
-      href: "/admin/coderso/mega-menu",
+      href: "/admin/advanced/mega-menu",
       icon: Menu,
       defaultEnabled: false,
       badge: "Soon",
@@ -319,7 +319,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Logged-in client/member portals with scoped access.",
     dependencies: ["entries", "forms"],
     nav: {
-      href: "/admin/coderso/portal",
+      href: "/admin/advanced/portal",
       icon: Users,
       defaultEnabled: false,
       badge: "Soon",
@@ -334,7 +334,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Locale management and translated content workflows.",
     dependencies: ["entries", "listings"],
     nav: {
-      href: "/admin/coderso/i18n",
+      href: "/admin/advanced/i18n",
       icon: Sparkles,
       defaultEnabled: false,
       badge: "Soon",
@@ -349,7 +349,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     description: "Template kits with AI-assisted setup and guided defaults.",
     dependencies: ["templates", "widgets", "entries"],
     nav: {
-      href: "/admin/coderso/solution-kits",
+      href: "/admin/advanced/solution-kits",
       icon: Sparkles,
       defaultEnabled: true,
       badge: "Beta",
@@ -359,8 +359,8 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
 ];
 
 const isNavEnabled = (
-  module: CodersoModuleDefinition,
-  flags: CodersoFeatureFlags
+  module: AdvancedModuleDefinition,
+  flags: AdvancedFeatureFlags
 ): boolean => {
   if (!module.nav) return false;
   const override = flags[module.id];
@@ -370,10 +370,10 @@ const isNavEnabled = (
   return module.nav.defaultEnabled;
 };
 
-export const buildCodersoNavItems = (
-  flags: CodersoFeatureFlags = {}
-): CodersoNavItem[] =>
-  CODERSO_MODULE_REGISTRY.filter((module) => isNavEnabled(module, flags)).flatMap(
+export const buildAdvancedNavItems = (
+  flags: AdvancedFeatureFlags = {}
+): AdvancedNavItem[] =>
+  ADVANCED_MODULE_REGISTRY.filter((module) => isNavEnabled(module, flags)).flatMap(
     (module) => {
       if (!module.nav) return [];
       return [
@@ -388,5 +388,5 @@ export const buildCodersoNavItems = (
     }
   );
 
-export const codersoModulesByTier = (tier: CodersoModuleTier) =>
-  CODERSO_MODULE_REGISTRY.filter((module) => module.tier === tier);
+export const advancedModulesByTier = (tier: AdvancedModuleTier) =>
+  ADVANCED_MODULE_REGISTRY.filter((module) => module.tier === tier);

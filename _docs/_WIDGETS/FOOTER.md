@@ -82,12 +82,12 @@ Site footer with structured columns, legal strip, and social links.
     }
   ],
   "legal": {
-    "copyright": "© 2026 Nextless",
+    "copyright": "© 2026 Coderso",
     "privacy": "/privacy",
     "terms": "/terms"
   },
   "social": [
-    { "type": "linkedin", "href": "https://linkedin.com/company/nextless" }
+    { "type": "linkedin", "href": "https://linkedin.com/company/coderso" }
   ],
   "layout": {
     "align": "left",

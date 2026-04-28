@@ -4,7 +4,7 @@ import { buildAssistantAdminContext } from "../../../core/services/assistant/adm
 
 test("buildAssistantAdminContext keeps route/module mapping and resource catalog", () => {
   const context = buildAssistantAdminContext({
-    page: "/admin/coderso/widgets/templates/template-1?tab=design",
+    page: "/admin/advanced/widgets/templates/template-1?tab=design",
     locale: "pl-PL",
     resourceCatalog: {
       schemaVersion: 1,
@@ -26,10 +26,10 @@ test("buildAssistantAdminContext keeps route/module mapping and resource catalog
   });
 
   expect(context).toMatchObject({
-    route: "/admin/coderso/widgets/templates/template-1",
+    route: "/admin/advanced/widgets/templates/template-1",
     locale: "pl-PL",
-    area: "coderso",
-    codersoModule: "widgets",
+    area: "advanced",
+    advancedModule: "widgets",
     resourceCatalog: {
       schemaVersion: 1,
     },
@@ -38,13 +38,13 @@ test("buildAssistantAdminContext keeps route/module mapping and resource catalog
 
 test("buildAssistantAdminContext normalizes runtime snapshot as advisory context", () => {
   const context = buildAssistantAdminContext({
-    page: "/admin/coderso/forms/form-1",
+    page: "/admin/advanced/forms/form-1",
     runtimeSnapshot: {
-      schemaVersion: 1,
-      route: "/admin/coderso/forms/form-1?tab=settings",
-      activeHref: "/admin/coderso/forms/form-1",
+      schemaVersion: 2,
+      route: "/admin/advanced/forms/form-1?tab=settings",
+      activeHref: "/admin/advanced/forms/form-1",
       area: "other",
-      codersoModule: null,
+      advancedModule: null,
       selectedResource: {
         kind: "form",
         id: "form-1",
@@ -54,7 +54,7 @@ test("buildAssistantAdminContext normalizes runtime snapshot as advisory context
           id: "form.create",
           label: "Create form",
           kind: "create",
-          href: "/admin/coderso/forms",
+          href: "/admin/advanced/forms",
           requiredPermission: "forms:write",
         },
         {
@@ -74,10 +74,10 @@ test("buildAssistantAdminContext normalizes runtime snapshot as advisory context
   });
 
   expect(context.runtimeSnapshot).toMatchObject({
-    route: "/admin/coderso/forms/form-1",
-    activeHref: "/admin/coderso/forms/form-1",
-    area: "coderso",
-    codersoModule: "forms",
+    route: "/admin/advanced/forms/form-1",
+    activeHref: "/admin/advanced/forms/form-1",
+    area: "advanced",
+    advancedModule: "forms",
     selectedResource: {
       kind: "form",
       id: "form-1",
@@ -93,7 +93,7 @@ test("buildAssistantAdminContext normalizes runtime snapshot as advisory context
       id: "form.create",
       label: "Create form",
       kind: "create",
-      href: "/admin/coderso/forms",
+      href: "/admin/advanced/forms",
       requiredPermission: "forms:write",
     },
   ]);
@@ -101,13 +101,13 @@ test("buildAssistantAdminContext normalizes runtime snapshot as advisory context
 
 test("buildAssistantAdminContext drops unsafe selected resource data", () => {
   const context = buildAssistantAdminContext({
-    page: "/admin/coderso/forms",
+    page: "/admin/advanced/forms",
     runtimeSnapshot: {
-      schemaVersion: 1,
-      route: "/admin/coderso/forms",
-      activeHref: "/admin/coderso/forms",
-      area: "coderso",
-      codersoModule: "forms",
+      schemaVersion: 2,
+      route: "/admin/advanced/forms",
+      activeHref: "/admin/advanced/forms",
+      area: "advanced",
+      advancedModule: "forms",
       selectedResource: {
         kind: "session",
         id: "secret-session",
@@ -201,7 +201,7 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
 
 test("buildAssistantAdminContext normalizes active widget template surface context", () => {
   const context = buildAssistantAdminContext({
-    page: "/admin/coderso/widgets/templates/template-1",
+    page: "/admin/advanced/widgets/templates/template-1",
     activeSurface: {
       kind: "widget-template",
       template: {
@@ -269,7 +269,7 @@ test("buildAssistantAdminContext normalizes active widget template surface conte
 
 test("buildAssistantAdminContext normalizes active custom screen surface context", () => {
   const context = buildAssistantAdminContext({
-    page: "/admin/coderso/custom-screens/screen-1/entries/entry-1",
+    page: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
     activeSurface: {
       kind: "custom-screen",
       screen: {

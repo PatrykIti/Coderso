@@ -12,7 +12,7 @@ import {
 
 const pluginDetails: PluginDetailsData = {
   description:
-    "Supercharge your website's search engine visibility with the SEO Optimizer plugin. This toolkit provides real-time content analysis, automated meta tags, and XML sitemap management inside Nextless CMS.",
+    "Supercharge your website's search engine visibility with the SEO Optimizer plugin. This toolkit provides real-time content analysis, automated meta tags, and XML sitemap management inside Coderso CMS.",
   features: [
     "Dynamic meta title and description templates",
     "Focus keyword analysis and density reports",
@@ -38,7 +38,7 @@ const pluginDetails: PluginDetailsData = {
     },
     {
       label: "Compatibility",
-      value: "Nextless CMS 2.0+",
+      value: "Coderso CMS 2.0+",
       note: "Fully compatible with your version",
     },
     {

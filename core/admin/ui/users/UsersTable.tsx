@@ -24,7 +24,7 @@ const users = [
   {
     id: "sarah",
     name: "Sarah Jenks",
-    email: "sarah@nextless.com",
+    email: "sarah@coderso.com",
     role: "Admin",
     status: "active" as const,
     lastActive: "2 mins ago",
@@ -32,7 +32,7 @@ const users = [
   {
     id: "michael",
     name: "Michael Chen",
-    email: "m.chen@nextless.com",
+    email: "m.chen@coderso.com",
     role: "Editor",
     status: "inactive" as const,
     lastActive: "Yesterday",
@@ -40,7 +40,7 @@ const users = [
   {
     id: "dev-bot",
     name: "Dev Bot",
-    email: "bot@nextless.com",
+    email: "bot@coderso.com",
     role: "API Access",
     status: "active" as const,
     lastActive: "10 mins ago",
@@ -48,7 +48,7 @@ const users = [
   {
     id: "alex",
     name: "Alex Morgan",
-    email: "alex@nextless.com",
+    email: "alex@coderso.com",
     role: "Viewer",
     status: "pending" as const,
     lastActive: "Pending invite",

@@ -75,7 +75,7 @@ testIfDb("openrouter runtime config resolves decrypted secret values", async () 
   const config: Record<string, string | null> = {
     baseUrl: "https://openrouter.ai/api/v1",
     siteUrl: "https://cms.example.com",
-    appName: "Nextless Assistant",
+    appName: "Coderso Assistant",
   };
   if (hasMasterKey) {
     config.apiKey = "sk-or-v1-test";
@@ -88,7 +88,7 @@ testIfDb("openrouter runtime config resolves decrypted secret values", async () 
   expect(runtime).not.toBeNull();
   expect(runtime?.baseUrl).toBe("https://openrouter.ai/api/v1");
   expect(runtime?.siteUrl).toBe("https://cms.example.com");
-  expect(runtime?.appName).toBe("Nextless Assistant");
+  expect(runtime?.appName).toBe("Coderso Assistant");
 
   if (hasMasterKey) {
     expect(runtime?.apiKey).toBe("sk-or-v1-test");

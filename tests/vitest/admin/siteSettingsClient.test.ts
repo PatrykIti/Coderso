@@ -24,7 +24,7 @@ test("getSiteSettings normalizes raw settings payload", async () => {
     calls.push({ input, init });
     return jsonResponse({
       "site.adminBaseUrl": "   ",
-      "site.publicBaseUrl": " https://nextless.test ",
+      "site.publicBaseUrl": " https://coderso.test ",
       "site.adminPath": 42,
       "site.adminRedirectEnabled": "yes",
       "site.homepageId": " homepage ",
@@ -50,7 +50,7 @@ test("getSiteSettings normalizes raw settings payload", async () => {
   try {
     await expect(getSiteSettings()).resolves.toEqual({
       adminBaseUrl: null,
-      publicBaseUrl: "https://nextless.test",
+      publicBaseUrl: "https://coderso.test",
       adminPath: "/admin",
       adminRedirectEnabled: false,
       homepageId: "homepage",
@@ -84,8 +84,8 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
     }
 
     return jsonResponse({
-      "site.adminBaseUrl": "https://admin.nextless.test",
-      "site.publicBaseUrl": "https://public.nextless.test",
+      "site.adminBaseUrl": "https://admin.coderso.test",
+      "site.publicBaseUrl": "https://public.coderso.test",
       "site.adminPath": "/cms",
       "site.adminRedirectEnabled": true,
       "site.homepageId": "home-1",
@@ -106,7 +106,7 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
     resetCsrfToken();
     await expect(
       updateSiteSettings({
-        publicBaseUrl: " https://public.nextless.test ",
+        publicBaseUrl: " https://public.coderso.test ",
         adminBaseUrl: " ",
         adminPath: "/cms",
         adminRedirectEnabled: true,
@@ -124,8 +124,8 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
         ],
       })
     ).resolves.toEqual({
-      adminBaseUrl: "https://admin.nextless.test",
-      publicBaseUrl: "https://public.nextless.test",
+      adminBaseUrl: "https://admin.coderso.test",
+      publicBaseUrl: "https://public.coderso.test",
       adminPath: "/cms",
       adminRedirectEnabled: true,
       homepageId: "home-1",
@@ -148,7 +148,7 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
       "csrf-token"
     );
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
-      "site.publicBaseUrl": "https://public.nextless.test",
+      "site.publicBaseUrl": "https://public.coderso.test",
       "site.adminBaseUrl": null,
       "site.adminPath": "/cms",
       "site.adminRedirectEnabled": true,
@@ -203,7 +203,7 @@ test("updateSiteSettings omits undefined fields and keeps explicit string values
 
 test("post slug helpers derive concrete and fallback route hints", () => {
   const context = resolvePostSlugRouteContext({
-    publicBaseUrl: "https://nextless.test",
+    publicBaseUrl: "https://coderso.test",
     contentRoutes: [
       {
         type: "posts",
@@ -216,7 +216,7 @@ test("post slug helpers derive concrete and fallback route hints", () => {
 
   expect(resolvePostSlugDisplay(context, "launch-post")).toEqual({
     label: "Public URL",
-    value: "https://nextless.test/blog/launch-post",
+    value: "https://coderso.test/blog/launch-post",
     concrete: true,
   });
 
@@ -237,14 +237,14 @@ test("post slug helpers derive concrete and fallback route hints", () => {
   expect(
     resolvePostSlugDisplay(
       {
-        publicBaseUrl: "https://nextless.test",
+        publicBaseUrl: "https://coderso.test",
         detailPathPattern: "/blog/:id",
       },
       "launch-post"
     )
   ).toEqual({
     label: "Route hint",
-    value: "https://nextless.test/blog/:id",
+    value: "https://coderso.test/blog/:id",
     concrete: false,
   });
 });
@@ -252,7 +252,7 @@ test("post slug helpers derive concrete and fallback route hints", () => {
 test("content slug helpers derive generic content route hints", () => {
   const context = resolveContentSlugRouteContext(
     {
-      publicBaseUrl: "https://nextless.test",
+      publicBaseUrl: "https://coderso.test",
       contentRoutes: [
         {
           type: "articles",
@@ -266,14 +266,14 @@ test("content slug helpers derive generic content route hints", () => {
   );
 
   expect(context).toEqual({
-    publicBaseUrl: "https://nextless.test",
+    publicBaseUrl: "https://coderso.test",
     contentTypeSlug: "articles",
     detailPathPattern: "/articles/:slug",
     routeEnabled: true,
   });
   expect(resolveContentSlugDisplay(context, "hello-world")).toEqual({
     label: "Public URL",
-    value: "https://nextless.test/articles/hello-world",
+    value: "https://coderso.test/articles/hello-world",
     concrete: true,
   });
 

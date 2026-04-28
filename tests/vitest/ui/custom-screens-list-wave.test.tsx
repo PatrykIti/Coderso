@@ -585,7 +585,7 @@ test("CustomScreenListPage create drawer submits schema fields and navigates by 
     'Custom screen "Inventory dashboard" created.'
   );
   expect(customScreensState.navigateCalls).toEqual([
-    "/coderso/custom-screens/created-screen",
+    "/advanced/custom-screens/created-screen",
   ]);
 
   await act(async () => root.unmount());

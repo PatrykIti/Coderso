@@ -399,15 +399,15 @@ export const buildCmsOperationDraftFromPrompt = (
 };
 
 const pageHref = (id: string) => `/admin/pages/${encodeURIComponent(id)}`;
-const postHref = (id: string) => `/admin/coderso/posts/${encodeURIComponent(id)}`;
-const customScreenHref = (id: string) => `/admin/coderso/custom-screens/${encodeURIComponent(id)}`;
-const formHref = (id: string) => `/admin/coderso/forms/${encodeURIComponent(id)}`;
-const listingHref = (id: string) => `/admin/coderso/listings/${encodeURIComponent(id)}`;
+const postHref = (id: string) => `/admin/posts/${encodeURIComponent(id)}`;
+const customScreenHref = (id: string) => `/admin/advanced/custom-screens/${encodeURIComponent(id)}`;
+const formHref = (id: string) => `/admin/advanced/forms/${encodeURIComponent(id)}`;
+const listingHref = (id: string) => `/admin/advanced/listings/${encodeURIComponent(id)}`;
 const widgetTemplateHref = (id: string) =>
-  `/admin/coderso/widgets/templates/${encodeURIComponent(id)}`;
+  `/admin/advanced/widgets/templates/${encodeURIComponent(id)}`;
 const mediaHref = (id: string) => `/admin/media/${encodeURIComponent(id)}`;
-const commerceProductHref = (id: string) => `/admin/coderso/commerce/${encodeURIComponent(id)}`;
-const solutionKitHref = (id: string) => `/admin/coderso/solution-kits/${encodeURIComponent(id)}`;
+const commerceProductHref = (id: string) => `/admin/advanced/commerce/${encodeURIComponent(id)}`;
+const solutionKitHref = (id: string) => `/admin/advanced/solution-kits/${encodeURIComponent(id)}`;
 
 const candidate = (input: CmsResolvedTargetCandidate): CmsResolvedTargetCandidate => input;
 
@@ -501,7 +501,7 @@ const candidatesForKind = (
         label: contentType.name,
         slug: contentType.slug,
         status: null,
-        adminHref: `/admin/coderso/engine/${encodeURIComponent(contentType.id)}`,
+        adminHref: `/admin/advanced/engine/${encodeURIComponent(contentType.id)}`,
         details: {
           entryCount: contentType.entryCount,
         },
@@ -516,7 +516,7 @@ const candidatesForKind = (
         label: entry.title,
         slug: entry.slug,
         status: entry.status,
-        adminHref: `/admin/coderso/entries/${encodeURIComponent(entry.typeId)}/${encodeURIComponent(entry.id)}`,
+        adminHref: `/admin/advanced/entries/${encodeURIComponent(entry.typeId)}/${encodeURIComponent(entry.id)}`,
         details: {
           typeId: entry.typeId,
           publishedAt: entry.publishedAt,
@@ -565,7 +565,7 @@ const candidatesForKind = (
         label: template.name,
         slug: template.slug,
         status: template.layout,
-        adminHref: "/admin/coderso/listings",
+        adminHref: "/admin/advanced/listings",
         details: {
           layout: template.layout,
         },
@@ -680,7 +680,7 @@ const candidatesForKind = (
         label: collection.name,
         slug: collection.slug,
         status: "collection",
-        adminHref: "/admin/coderso/commerce",
+        adminHref: "/admin/advanced/commerce",
         details: {
           commerceType: "collection",
           productCount: collection.productCount,

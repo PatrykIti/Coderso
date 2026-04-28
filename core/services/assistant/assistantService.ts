@@ -45,7 +45,7 @@ const DEFAULT_ASSISTANT_QUOTA_LLM_TOKENS_PER_DAY = 0;
 const DEFAULT_ASSISTANT_QUOTA_GLOBAL_LLM_TOKENS_PER_DAY = 0;
 
 const ASSISTANT_LLM_SYSTEM_PROMPT = [
-  "You are Nextless Assistant running in strict RAG mode.",
+  "You are Coderso Assistant running in strict RAG mode.",
   "Only answer using provided documentation snippets.",
   "Do not invent features, settings, or paths outside snippets.",
   "Always cite source snippet numbers like [1], [2].",

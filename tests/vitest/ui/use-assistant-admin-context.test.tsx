@@ -65,16 +65,16 @@ const readContextFromHtml = (html: string) => {
 
 test("useAssistantAdminContext uses AdminRouterContext path and supplied active href", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/coderso/forms/form-1">
-      <SnapshotProbe activeHref="/admin/coderso/forms/form-1" />
+    <AdminRouterProvider initialPath="/admin/advanced/forms/form-1">
+      <SnapshotProbe activeHref="/admin/advanced/forms/form-1" />
     </AdminRouterProvider>
   );
   const context = readContextFromHtml(html);
 
-  expect(context.page).toBe("/admin/coderso/forms/form-1");
+  expect(context.page).toBe("/admin/advanced/forms/form-1");
   expect(context.runtimeSnapshot).toMatchObject({
-    route: "/admin/coderso/forms/form-1",
-    activeHref: "/admin/coderso/forms/form-1",
+    route: "/admin/advanced/forms/form-1",
+    activeHref: "/admin/advanced/forms/form-1",
     selectedResource: {
       kind: "form",
       id: "form-1",
@@ -123,13 +123,13 @@ test("useAssistantAdminContext falls back to browser path without provider", () 
 test("buildAssistantAdminRuntimeSnapshot derives entry and widget-template resources", () => {
   expect(
     buildAssistantAdminRuntimeSnapshot({
-      route: "/admin/coderso/entries/articles/entry-1",
+      route: "/admin/advanced/entries/articles/entry-1",
     }).selectedResource
   ).toEqual({ kind: "entry", id: "entry-1" });
 
   expect(
     buildAssistantAdminRuntimeSnapshot({
-      route: "/admin/coderso/widgets/templates/template-1",
+      route: "/admin/advanced/widgets/templates/template-1",
     }).selectedResource
   ).toEqual({ kind: "widget-template", id: "template-1" });
 });
@@ -259,8 +259,8 @@ test("useAssistantAdminContext includes matching active widget template context"
 
   try {
     const html = renderToString(
-      <AdminRouterProvider initialPath="/admin/coderso/widgets/templates/template-1">
-        <SnapshotProbe activeHref="/admin/coderso/widgets/templates/template-1" />
+      <AdminRouterProvider initialPath="/admin/advanced/widgets/templates/template-1">
+        <SnapshotProbe activeHref="/admin/advanced/widgets/templates/template-1" />
       </AdminRouterProvider>
     );
     const context = readContextFromHtml(html);
@@ -327,8 +327,8 @@ test("useAssistantAdminContext includes active custom screen context on screen r
 
   try {
     const html = renderToString(
-      <AdminRouterProvider initialPath="/admin/coderso/custom-screens/screen-1">
-        <SnapshotProbe activeHref="/admin/coderso/custom-screens/screen-1" />
+      <AdminRouterProvider initialPath="/admin/advanced/custom-screens/screen-1">
+        <SnapshotProbe activeHref="/admin/advanced/custom-screens/screen-1" />
       </AdminRouterProvider>
     );
     const context = readContextFromHtml(html);
@@ -373,8 +373,8 @@ test("useAssistantAdminContext includes custom screen context on record editor r
 
   try {
     const html = renderToString(
-      <AdminRouterProvider initialPath="/admin/coderso/custom-screens/screen-1/entries/entry-1">
-        <SnapshotProbe activeHref="/admin/coderso/custom-screens/screen-1/entries/entry-1" />
+      <AdminRouterProvider initialPath="/admin/advanced/custom-screens/screen-1/entries/entry-1">
+        <SnapshotProbe activeHref="/admin/advanced/custom-screens/screen-1/entries/entry-1" />
       </AdminRouterProvider>
     );
     const context = readContextFromHtml(html);

@@ -96,13 +96,13 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 });
 
 test("updatePackageVersionFile keeps version next to package name", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "nextless-release-notes-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "coderso-release-notes-"));
   const packagePath = path.join(dir, "package.json");
   await writeFile(
     packagePath,
     JSON.stringify(
       {
-        name: "@nextless/example",
+        name: "@coderso/example",
         private: true,
         scripts: { test: "vitest" },
       },
@@ -114,7 +114,7 @@ test("updatePackageVersionFile keeps version next to package name", async () => 
   await releaseNotes.updatePackageVersionFile(packagePath, "1.2.3");
 
   const raw = await readFile(packagePath, "utf8");
-  expect(raw).toContain('"name": "@nextless/example",\n  "version": "1.2.3",');
+  expect(raw).toContain('"name": "@coderso/example",\n  "version": "1.2.3",');
   expect(JSON.parse(raw)).toMatchObject({ version: "1.2.3" });
 });
 
@@ -127,7 +127,7 @@ test("parsePullRequestNumbersFromText supports merge and squash messages", () =>
 });
 
 test("updateTextVersionFile updates CORE_VERSION fallback", async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "nextless-core-version-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "coderso-core-version-"));
   const compatPath = path.join(dir, "compat.ts");
   await writeFile(
     compatPath,

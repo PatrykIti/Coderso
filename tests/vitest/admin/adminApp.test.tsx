@@ -102,7 +102,7 @@ test("AdminApp renders theme tokens during loading state", () => {
       <AdminApp path="/admin/pages" />
     </AdminRouterProvider>
   );
-  expect(html).toContain("nextless-theme-tokens");
+  expect(html).toContain("coderso-theme-tokens");
   expect(html).toContain("Loading...");
 });
 

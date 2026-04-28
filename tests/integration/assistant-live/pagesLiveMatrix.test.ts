@@ -35,7 +35,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Pages Actor",
       status: "active",
@@ -114,11 +114,11 @@ const buildPageContext = async (): Promise<AssistantActionContext> => {
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       route: "/admin/pages",
       activeHref: "/admin/pages",
       area: "other",
-      codersoModule: null,
+      advancedModule: null,
       selectedResource: null,
       visibleActions: [],
       permissionHints: {

@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Routing + Assistant Context
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-226-01
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -22,9 +22,9 @@ path after this task.
 
 ## Sub-Tasks
 
-- [ ] TASK-226-02-01: Navigation Registry and Group Label Contract
-- [ ] TASK-226-02-02: Canonical Advanced Routes, Prefetch, and Aliases
-- [ ] TASK-226-02-03: Assistant Surface and Module Context Rename
+- [x] TASK-226-02-01: Navigation Registry and Group Label Contract
+- [x] TASK-226-02-02: Canonical Advanced Routes, Prefetch, and Aliases
+- [x] TASK-226-02-03: Assistant Surface and Module Context Rename
 
 ## Files to Change
 

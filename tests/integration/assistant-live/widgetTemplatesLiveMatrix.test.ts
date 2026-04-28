@@ -39,7 +39,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Widget Templates Actor",
       status: "active",
@@ -122,8 +122,8 @@ const buildWidgetTemplateContext = async (
   const activeLayout = activeTemplate?.settings.layout;
   return {
     page: activeTemplate
-      ? `/admin/coderso/widgets/templates/${activeTemplate.id}`
-      : "/admin/coderso/widgets",
+      ? `/admin/advanced/widgets/templates/${activeTemplate.id}`
+      : "/admin/advanced/widgets",
     locale: "pl-PL",
     resourceCatalog: {
       schemaVersion: 1,
@@ -158,13 +158,13 @@ const buildWidgetTemplateContext = async (
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       route: activeTemplate
-        ? `/admin/coderso/widgets/templates/${activeTemplate.id}`
-        : "/admin/coderso/widgets",
-      activeHref: "/admin/coderso/widgets",
-      area: "coderso",
-      codersoModule: "widgets",
+        ? `/admin/advanced/widgets/templates/${activeTemplate.id}`
+        : "/admin/advanced/widgets",
+      activeHref: "/admin/advanced/widgets",
+      area: "advanced",
+      advancedModule: "widgets",
       selectedResource: activeTemplate ? { kind: "widget-template", id: activeTemplate.id } : null,
       visibleActions: [],
       permissionHints: {

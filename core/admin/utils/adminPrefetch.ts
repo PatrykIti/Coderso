@@ -168,7 +168,7 @@ const defaultEntries: AdminPrefetchEntry[] = [
     run: () => listPagesCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/widgets",
+    match: "/advanced/widgets",
     run: () =>
       Promise.all([
         listWidgetCatalogCached(prefetchWarmupOptions),
@@ -177,11 +177,11 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/coderso/engine",
+    match: "/advanced/engine",
     run: () => listContentTypesCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/entries",
+    match: "/advanced/entries",
     run: () =>
       Promise.all([
         listContentTypesCached(prefetchWarmupOptions),
@@ -189,7 +189,7 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/coderso/custom-screens",
+    match: "/advanced/custom-screens",
     run: () =>
       Promise.all([
         listCustomScreensCached(prefetchWarmupOptions),
@@ -197,11 +197,11 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/coderso/forms",
+    match: "/advanced/forms",
     run: () => listFormsCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/listings",
+    match: "/advanced/listings",
     run: () =>
       Promise.all([
         listListingQueriesCached(prefetchWarmupOptions),
@@ -209,15 +209,15 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/coderso/filters",
+    match: "/advanced/filters",
     run: () => listListingQueriesCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/search",
+    match: "/advanced/search",
     run: () => listListingQueriesCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/booking",
+    match: "/advanced/booking",
     run: () =>
       Promise.all([
         listBookingResourcesCached(prefetchWarmupOptions),
@@ -227,7 +227,7 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/coderso/commerce",
+    match: "/advanced/commerce",
     run: () =>
       Promise.all([
         listCommerceProductsCached(prefetchWarmupOptions),
@@ -235,15 +235,15 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/coderso/popups",
+    match: "/advanced/popups",
     run: () => listPopupsCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/reviews",
+    match: "/advanced/reviews",
     run: () => listReviewsCached(prefetchWarmupOptions),
   },
   {
-    match: "/coderso/solution-kits",
+    match: "/advanced/solution-kits",
     run: () =>
       Promise.all([
         listSolutionKitsCached(prefetchWarmupOptions),

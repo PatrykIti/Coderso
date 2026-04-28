@@ -2,7 +2,9 @@ import { useMemo } from "react";
 
 import {
   resolveAdminBasePath,
+  resolveAdminRoutePath,
   stripAdminBasePath,
+  withAdminBasePath,
 } from "@/utils/adminPaths";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import type {
@@ -19,7 +21,7 @@ type AssistantAdminContextOptions = {
   activeHref?: string | null;
 };
 
-type RuntimeSurface = Pick<AssistantAdminRuntimeSnapshot, "area" | "codersoModule">;
+type RuntimeSurface = Pick<AssistantAdminRuntimeSnapshot, "area" | "advancedModule">;
 
 const actionKindValues = new Set<AssistantAdminRuntimeActionKind>([
   "navigate",
@@ -38,6 +40,13 @@ const normalizePath = (value: string | null | undefined) => {
   const trimmed = withoutQuery.trim();
   if (!trimmed) return null;
   return trimmed.length > 1 && trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+};
+
+const canonicalizeAdminRoute = (route: string | null) => {
+  if (!route) return null;
+  const basePath = resolveAdminBasePath(route);
+  const relative = stripAdminBasePath(route, basePath);
+  return withAdminBasePath(basePath, resolveAdminRoutePath(relative));
 };
 
 const readBrowserPath = () => {
@@ -76,29 +85,29 @@ const activeSurfaceMatchesRoute = (
 };
 
 const resolveSurface = (route: string | null): RuntimeSurface => {
-  if (!route) return { area: "other", codersoModule: null };
-  if (route === "/admin") return { area: "dashboard", codersoModule: null };
-  if (route.startsWith("/admin/pages")) return { area: "pages", codersoModule: null };
-  if (route.startsWith("/admin/posts")) return { area: "posts", codersoModule: null };
-  if (route.startsWith("/admin/settings")) return { area: "settings", codersoModule: null };
-  if (!route.startsWith("/admin/coderso")) return { area: "other", codersoModule: null };
-  if (route.startsWith("/admin/coderso/engine")) return { area: "coderso", codersoModule: "engine" };
-  if (route.startsWith("/admin/coderso/entries")) return { area: "coderso", codersoModule: "entries" };
-  if (route.startsWith("/admin/coderso/custom-screens")) {
-    return { area: "coderso", codersoModule: "custom-screens" };
+  if (!route) return { area: "other", advancedModule: null };
+  if (route === "/admin") return { area: "dashboard", advancedModule: null };
+  if (route.startsWith("/admin/pages")) return { area: "pages", advancedModule: null };
+  if (route.startsWith("/admin/posts")) return { area: "posts", advancedModule: null };
+  if (route.startsWith("/admin/settings")) return { area: "settings", advancedModule: null };
+  if (!route.startsWith("/admin/advanced")) return { area: "other", advancedModule: null };
+  if (route.startsWith("/admin/advanced/engine")) return { area: "advanced", advancedModule: "engine" };
+  if (route.startsWith("/admin/advanced/entries")) return { area: "advanced", advancedModule: "entries" };
+  if (route.startsWith("/admin/advanced/custom-screens")) {
+    return { area: "advanced", advancedModule: "custom-screens" };
   }
-  if (route.startsWith("/admin/coderso/widgets")) return { area: "coderso", codersoModule: "widgets" };
-  if (route.startsWith("/admin/coderso/forms")) return { area: "coderso", codersoModule: "forms" };
-  if (route.startsWith("/admin/coderso/listings")) return { area: "coderso", codersoModule: "listings" };
-  if (route.startsWith("/admin/coderso/booking")) return { area: "coderso", codersoModule: "booking" };
-  if (route.startsWith("/admin/coderso/commerce")) return { area: "coderso", codersoModule: "commerce" };
-  return { area: "coderso", codersoModule: "other" };
+  if (route.startsWith("/admin/advanced/widgets")) return { area: "advanced", advancedModule: "widgets" };
+  if (route.startsWith("/admin/advanced/forms")) return { area: "advanced", advancedModule: "forms" };
+  if (route.startsWith("/admin/advanced/listings")) return { area: "advanced", advancedModule: "listings" };
+  if (route.startsWith("/admin/advanced/booking")) return { area: "advanced", advancedModule: "booking" };
+  if (route.startsWith("/admin/advanced/commerce")) return { area: "advanced", advancedModule: "commerce" };
+  return { area: "advanced", advancedModule: "other" };
 };
 
 const routeSegments = (route: string | null) => {
   if (!route) return [];
   const basePath = resolveAdminBasePath(route);
-  const relative = stripAdminBasePath(route, basePath);
+  const relative = resolveAdminRoutePath(stripAdminBasePath(route, basePath));
   return relative.split("/").filter(Boolean);
 };
 
@@ -127,7 +136,7 @@ const selectedResourceFromRoute = (
   if (segments[0] === "seo" && segments[1]) {
     return { kind: "seo-document", id: safeDecode(segments[1]) ?? segments[1] };
   }
-  if (segments[0] !== "coderso") return null;
+  if (segments[0] !== "advanced") return null;
   if (segments[1] === "engine" && segments[2]) {
     return { kind: "content-type", id: safeDecode(segments[2]) ?? segments[2] };
   }
@@ -194,21 +203,21 @@ const actionsForRoute = (
       }));
     }
   }
-  if (surface.area === "coderso" && surface.codersoModule === "engine") {
+  if (surface.area === "advanced" && surface.advancedModule === "engine") {
     actions.push(action({
       id: "content-type.create",
       label: "Create content type",
       kind: "create",
-      href: "/admin/coderso/engine",
+      href: "/admin/advanced/engine",
       requiredPermission: "content:write",
     }));
   }
-  if (surface.area === "coderso" && surface.codersoModule === "entries") {
+  if (surface.area === "advanced" && surface.advancedModule === "entries") {
     actions.push(action({
       id: "entry.create",
       label: "Create entry",
       kind: "create",
-      href: "/admin/coderso/entries",
+      href: "/admin/advanced/entries",
       requiredPermission: "content:write",
     }));
     if (selectedResource?.kind === "entry") {
@@ -221,57 +230,57 @@ const actionsForRoute = (
       }));
     }
   }
-  if (surface.area === "coderso" && surface.codersoModule === "custom-screens") {
+  if (surface.area === "advanced" && surface.advancedModule === "custom-screens") {
     actions.push(action({
       id: "custom-screen.create",
       label: "Create custom screen",
       kind: "create",
-      href: "/admin/coderso/custom-screens",
+      href: "/admin/advanced/custom-screens",
       requiredPermission: "content:write",
     }));
   }
-  if (surface.area === "coderso" && surface.codersoModule === "forms") {
+  if (surface.area === "advanced" && surface.advancedModule === "forms") {
     actions.push(action({
       id: "form.create",
       label: "Create form",
       kind: "create",
-      href: "/admin/coderso/forms",
+      href: "/admin/advanced/forms",
       requiredPermission: "forms:write",
     }));
   }
-  if (surface.area === "coderso" && surface.codersoModule === "listings") {
+  if (surface.area === "advanced" && surface.advancedModule === "listings") {
     actions.push(action({
       id: "listing.create",
       label: "Create listing",
       kind: "create",
-      href: "/admin/coderso/listings",
+      href: "/admin/advanced/listings",
       requiredPermission: "content:write",
     }));
   }
-  if (surface.area === "coderso" && surface.codersoModule === "widgets") {
+  if (surface.area === "advanced" && surface.advancedModule === "widgets") {
     actions.push(action({
       id: "widget-template.create",
       label: "Create widget template",
       kind: "create",
-      href: "/admin/coderso/widgets",
+      href: "/admin/advanced/widgets",
       requiredPermission: "widgets:write",
     }));
   }
-  if (surface.area === "coderso" && surface.codersoModule === "booking") {
+  if (surface.area === "advanced" && surface.advancedModule === "booking") {
     actions.push(action({
       id: "booking.configure",
       label: "Configure booking",
       kind: "configure",
-      href: "/admin/coderso/booking",
+      href: "/admin/advanced/booking",
       requiredPermission: "booking:write",
     }));
   }
-  if (surface.area === "coderso" && surface.codersoModule === "commerce") {
+  if (surface.area === "advanced" && surface.advancedModule === "commerce") {
     actions.push(action({
       id: "commerce.configure",
       label: "Configure commerce",
       kind: "configure",
-      href: "/admin/coderso/commerce",
+      href: "/admin/advanced/commerce",
       requiredPermission: "commerce:write",
     }));
   }
@@ -291,8 +300,8 @@ export const buildAssistantAdminRuntimeSnapshot = (input: {
   route?: string | null;
   activeHref?: string | null;
 }): AssistantAdminRuntimeSnapshot => {
-  const route = normalizePath(input.route ?? null);
-  const activeHref = normalizePath(input.activeHref ?? route);
+  const route = canonicalizeAdminRoute(normalizePath(input.route ?? null));
+  const activeHref = canonicalizeAdminRoute(normalizePath(input.activeHref ?? route));
   const selectedResource = selectedResourceFromRoute(route);
   const visibleActions = actionsForRoute(route, selectedResource);
   const requiredForVisibleActions = [
@@ -305,7 +314,7 @@ export const buildAssistantAdminRuntimeSnapshot = (input: {
   const surface = resolveSurface(route);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     route,
     activeHref,
     ...surface,
@@ -343,7 +352,7 @@ export const useAssistantAdminContext = (
 
   return useMemo(
     () => ({
-      page: normalizePath(route) ?? undefined,
+      page: canonicalizeAdminRoute(normalizePath(route)) ?? undefined,
       locale: readBrowserLocale(),
       runtimeSnapshot,
       activeSurface: resolvedActiveSurface,

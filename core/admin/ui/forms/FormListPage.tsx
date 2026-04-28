@@ -143,7 +143,7 @@ export function FormListPage() {
       if (created) {
         formListToasts.success("create", { targetLabel: created.name });
         if (shouldOpenAfterCreate) {
-          navigate(`/coderso/forms/${encodeURIComponent(created.id)}`);
+          navigate(`/advanced/forms/${encodeURIComponent(created.id)}`);
           return;
         }
       }
@@ -157,11 +157,11 @@ export function FormListPage() {
   };
 
   const handleEdit = (id: string) => {
-    navigate(`/coderso/forms/${encodeURIComponent(id)}`);
+    navigate(`/advanced/forms/${encodeURIComponent(id)}`);
   };
 
   const handleActionLogs = (id: string) => {
-    navigate(`/coderso/forms/${encodeURIComponent(id)}/action-runs`);
+    navigate(`/advanced/forms/${encodeURIComponent(id)}/action-runs`);
   };
 
   const handleSetStatus = async (
@@ -270,7 +270,7 @@ export function FormListPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/forms"
+      activeHref="/admin/advanced/forms"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Content</span>

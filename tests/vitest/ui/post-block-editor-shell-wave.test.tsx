@@ -266,7 +266,7 @@ vi.mock("@/services/taxonomyClient", () => ({
 vi.mock("@/services/siteSettingsClient", () => ({
   getSiteSettings: vi.fn(async () => ({
     adminBaseUrl: null,
-    publicBaseUrl: "https://nextless.test",
+    publicBaseUrl: "https://coderso.test",
     adminPath: "/admin",
     adminRedirectEnabled: false,
     homepageId: null,
@@ -891,7 +891,7 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
   postShellState.editor.error = null;
   postShellState.editor.autosaveError = null;
 
-  window.localStorage.setItem("nextless.posts.editor.layout.v1", "{invalid");
+  window.localStorage.setItem("coderso.posts.editor.layout.v1", "{invalid");
 
   Object.defineProperty(window, "confirm", {
     configurable: true,
@@ -910,8 +910,8 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
     });
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    expect(window.localStorage.getItem("nextless.posts.editor.focusMode")).toBe("1");
-    expect(window.localStorage.getItem("nextless.posts.editor.layout.v1")).toBeNull();
+    expect(window.localStorage.getItem("coderso.posts.editor.focusMode")).toBe("1");
+    expect(window.localStorage.getItem("coderso.posts.editor.layout.v1")).toBeNull();
 
     act(() => {
       buttons.find((button) => button.textContent === "move-to-trash")?.click();
@@ -964,14 +964,14 @@ test("PostBlockEditorShell persists focus-restore layout values while focus mode
     });
 
     expect(
-      JSON.parse(window.localStorage.getItem("nextless.posts.editor.layout.v1") ?? "{}")
+      JSON.parse(window.localStorage.getItem("coderso.posts.editor.layout.v1") ?? "{}")
     ).toMatchObject({
       secondarySidebar: "list-view",
       detailsOpen: false,
       detailsTab: "block",
       leftRailMode: "list-view",
     });
-    expect(window.localStorage.getItem("nextless.posts.editor.focusMode")).toBe("1");
+    expect(window.localStorage.getItem("coderso.posts.editor.focusMode")).toBe("1");
   } finally {
     view.cleanup();
     window.localStorage.clear();
@@ -994,7 +994,7 @@ test("PostBlockEditorShell seeds layout hook options from stored layout and focu
   postShellState.preferences.initialPreferences.defaultInspectorTab = "block" as never;
   postShellState.preferences.initialPreferences.restoreLastSidebarsState = true;
   window.localStorage.setItem(
-    "nextless.posts.editor.layout.v1",
+    "coderso.posts.editor.layout.v1",
     JSON.stringify({
       secondarySidebar: null,
       detailsOpen: false,
@@ -1157,7 +1157,7 @@ test("PostBlockEditorShell tolerates malformed stored layout fields and falls ba
 
   postShellState.preferences.initialPreferences.defaultInspectorTab = "post" as never;
   window.localStorage.setItem(
-    "nextless.posts.editor.layout.v1",
+    "coderso.posts.editor.layout.v1",
     JSON.stringify({
       secondarySidebar: "bad-value",
       detailsOpen: "bad",

@@ -27,7 +27,8 @@ export type AssistantConversationSnapshot = {
   assistantMode: AssistantMode | null;
 };
 
-const STORAGE_KEY = "nextless.assistant.conversation.state";
+const STORAGE_KEY = "coderso.assistant.conversation.state";
+const LEGACY_STORAGE_KEY = "nextless.assistant.conversation.state";
 const SCHEMA_VERSION = 1;
 const MAX_MESSAGES = 40;
 const MAX_TEXT_LENGTH = 2_000;
@@ -92,18 +93,24 @@ const normalizeSafeObject = <T>(value: unknown): T | null => {
 export const readAssistantConversationState = (): AssistantConversationSnapshot | null => {
   if (!canUseStorage()) return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const currentRaw = window.localStorage.getItem(STORAGE_KEY);
+    const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    const raw = currentRaw ?? legacyRaw;
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!isRecord(parsed) || parsed.schemaVersion !== SCHEMA_VERSION) return null;
     const expiresAt = typeof parsed.expiresAt === "string" ? Date.parse(parsed.expiresAt) : NaN;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       return null;
     }
     const messages = Array.isArray(parsed.messages)
       ? parsed.messages.map(normalizeEntry).filter((entry): entry is PersistedAssistantEntry => Boolean(entry)).slice(-MAX_MESSAGES)
       : [];
+    if (!currentRaw && legacyRaw) {
+      window.localStorage.setItem(STORAGE_KEY, legacyRaw);
+    }
     return {
       messages,
       activePlan: normalizePlan(parsed.activePlan),
@@ -142,4 +149,5 @@ export const writeAssistantConversationState = (snapshot: AssistantConversationS
 export const clearAssistantConversationState = () => {
   if (!canUseStorage()) return;
   window.localStorage.removeItem(STORAGE_KEY);
+  window.localStorage.removeItem(LEGACY_STORAGE_KEY);
 };

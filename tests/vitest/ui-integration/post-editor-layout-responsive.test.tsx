@@ -19,7 +19,7 @@ test("PostEditorLayout renders desktop sidebars in-region", () => {
       editorDensity="compact"
       viewportMode="desktop"
     />,
-    { path: "/admin/coderso/posts/post-1" }
+    { path: "/admin/posts/post-1" }
   );
 
   expect(html).toContain("data-post-editor-region=\"secondary-sidebar\"");
@@ -40,7 +40,7 @@ test("PostEditorLayout renders sidebars as sheets on mobile", () => {
       detailsSidebarOpen
       viewportMode="mobile"
     />,
-    { path: "/admin/coderso/posts/post-1" }
+    { path: "/admin/posts/post-1" }
   );
 
   expect(html).not.toContain("data-post-editor-region=\"secondary-sidebar\"");
@@ -61,7 +61,7 @@ test("PostEditorLayout hides desktop sidebars in focus mode", () => {
       focusMode
       viewportMode="desktop"
     />,
-    { path: "/admin/coderso/posts/post-1" }
+    { path: "/admin/posts/post-1" }
   );
 
   expect(html).not.toContain("data-post-editor-region=\"secondary-sidebar\"");

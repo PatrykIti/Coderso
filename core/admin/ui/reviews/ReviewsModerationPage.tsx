@@ -92,7 +92,7 @@ export function ReviewsModerationPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/reviews"
+      activeHref="/admin/advanced/reviews"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>

@@ -38,7 +38,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Menu SEO Actor",
       status: "active",
@@ -162,11 +162,11 @@ const buildContext = async (): Promise<AssistantActionContext> => {
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       route: "/admin/menus",
       activeHref: "/admin/menus",
       area: "other",
-      codersoModule: null,
+      advancedModule: null,
       selectedResource: null,
       visibleActions: [],
       permissionHints: {

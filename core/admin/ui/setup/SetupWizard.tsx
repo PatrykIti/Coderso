@@ -155,7 +155,7 @@ export function SetupWizard({
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, siteName: event.target.value }))
                     }
-                    placeholder="Nextless"
+                    placeholder="Coderso"
                     disabled={isSaving}
                   />
                 </div>

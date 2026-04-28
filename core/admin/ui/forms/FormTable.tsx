@@ -132,7 +132,7 @@ export function FormTable({
               <TableCell>
                 <div className="flex flex-col">
                   <AdminLink
-                    href={`/coderso/forms/${encodeURIComponent(form.id)}`}
+                    href={`/advanced/forms/${encodeURIComponent(form.id)}`}
                     prefetch
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                     aria-label={`Edit form: ${form.name}`}

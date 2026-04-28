@@ -27,7 +27,7 @@ export function ImportExportPage() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `nextless-export-${bundle.exportedAt}.json`;
+      anchor.download = `coderso-export-${bundle.exportedAt}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (err) {

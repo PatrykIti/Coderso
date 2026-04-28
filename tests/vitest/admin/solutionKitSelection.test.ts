@@ -3,7 +3,7 @@
 import { expect, test, beforeEach, vi } from "vitest";
 
 import {
-  buildCodersoFeatureFlagsForSolutionKit,
+  buildAdvancedFeatureFlagsForSolutionKit,
   getActiveSolutionKitId,
   setActiveSolutionKitId,
   subscribeActiveSolutionKitId,
@@ -38,8 +38,8 @@ test("subscribeActiveSolutionKitId reacts to same-tab updates", () => {
   }
 });
 
-test("buildCodersoFeatureFlagsForSolutionKit keeps solution kits visible and expands screen/dependency modules", () => {
-  const flags = buildCodersoFeatureFlagsForSolutionKit({
+test("buildAdvancedFeatureFlagsForSolutionKit keeps solution kits visible and expands screen/dependency modules", () => {
+  const flags = buildAdvancedFeatureFlagsForSolutionKit({
     id: "services-directory",
     title: "Services Directory",
     shortDescription: "Directory starter",
@@ -95,8 +95,8 @@ test("buildCodersoFeatureFlagsForSolutionKit keeps solution kits visible and exp
   expect(flags["custom-screens"]).toBe(true);
 });
 
-test("buildCodersoFeatureFlagsForSolutionKit enables dependencies from the module registry", () => {
-  const flags = buildCodersoFeatureFlagsForSolutionKit({
+test("buildAdvancedFeatureFlagsForSolutionKit enables dependencies from the module registry", () => {
+  const flags = buildAdvancedFeatureFlagsForSolutionKit({
     id: "small-ecommerce",
     title: "Small E-commerce",
     shortDescription: "Shop starter",

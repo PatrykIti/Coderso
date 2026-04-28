@@ -174,8 +174,8 @@ Gdy zaznaczysz wpisy na liscie:
   - content type: fetched labels plus stable missing-`contentTypeId` fallback
     options for legacy or deleted content types.
 - Rows keep Custom Screens domain columns and routes:
-  - `Screen` links to `/admin/coderso/custom-screens/:id`,
-  - `Records` links to `/admin/coderso/custom-screens/:id/entries`,
+  - `Screen` links to `/admin/advanced/custom-screens/:id`,
+  - `Records` links to `/admin/advanced/custom-screens/:id/entries`,
   - columns show active/draft status, content type, capability mode, derived
     sidebar shortcut state, and updated date.
 - Sidebar shortcut display is derived, not persisted:
@@ -201,18 +201,18 @@ Gdy zaznaczysz wpisy na liscie:
 ## Forms parity
 
 - Forms list follows the Pages first-screen pattern at canonical route
-  `/admin/coderso/forms`: `AdminShell`, `PageHeader`, compact `New`, filter
+  `/admin/advanced/forms`: `AdminShell`, `PageHeader`, compact `New`, filter
   strip, table card, inline selected-row bulk controls, shared pagination
   footer, token-backed confirmations, and shared list-action toasts.
 - `/admin/forms` remains a legacy alias through shared admin path helpers; new
-  list/editor/action-log links use `/admin/coderso/forms`.
+  list/editor/action-log links use `/admin/advanced/forms`.
 - Filters are Forms-specific:
   - search by form name, slug, or description,
   - status: `All`, `Published`, `Draft`, `Archived`,
   - access: `All`, `Public`, `Internal`.
 - Rows keep Forms domain columns and routes:
-  - `Form` links to `/admin/coderso/forms/:id`,
-  - `Action logs` opens `/admin/coderso/forms/:id/action-runs`,
+  - `Form` links to `/admin/advanced/forms/:id`,
+  - `Action logs` opens `/admin/advanced/forms/:id/action-runs`,
   - columns show status, submission access, and updated date.
 - Row actions are limited to `Edit`, `Action logs`, `Publish`,
   `Move to draft`, `Archive`, and `Delete`. Duplicate, Runtime Preview, and
@@ -237,10 +237,10 @@ Gdy zaznaczysz wpisy na liscie:
 ## Listings parity
 
 - Listings list follows the Pages first-screen pattern at
-  `/admin/coderso/listings` while preserving two tab-scoped resources:
+  `/admin/advanced/listings` while preserving two tab-scoped resources:
   `Queries` and `Templates`.
 - The header `New` action is active-tab scoped:
-  - Queries navigates to `/admin/coderso/listings/new` through the shared admin
+  - Queries navigates to `/admin/advanced/listings/new` through the shared admin
     router.
   - Templates opens the controlled listing-template create dialog.
 - Filters are Listings-specific:
@@ -265,10 +265,10 @@ Gdy zaznaczysz wpisy na liscie:
 ## Commerce parity
 
 - Commerce list follows the Pages first-screen pattern at
-  `/admin/coderso/commerce` while preserving the product-first catalog
+  `/admin/advanced/commerce` while preserving the product-first catalog
   contract.
 - Header `New` opens the existing product editor route
-  `/admin/coderso/commerce/new`; TASK-216 does not add a collection manager or
+  `/admin/advanced/commerce/new`; TASK-216 does not add a collection manager or
   replace the product editor with a drawer.
 - Filters are Commerce-specific:
   - search by product title, slug, or excerpt,

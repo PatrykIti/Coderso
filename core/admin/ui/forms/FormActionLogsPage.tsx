@@ -138,7 +138,7 @@ export function FormActionLogsPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/forms"
+      activeHref="/admin/advanced/forms"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Content</span>
@@ -161,7 +161,7 @@ export function FormActionLogsPage() {
                 variant="outline"
                 onClick={() => {
                   if (!formId) return;
-                  navigate(`/coderso/forms/${encodeURIComponent(formId)}`);
+                  navigate(`/advanced/forms/${encodeURIComponent(formId)}`);
                 }}
               >
                 Back to form

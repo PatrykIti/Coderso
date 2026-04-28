@@ -397,12 +397,12 @@ test("CommerceListPage routes New, updates lifecycle, and confirms row delete", 
   try {
     clickByText(view.container, "New");
     expect(commercePageState.navigate).toHaveBeenCalledWith(
-      "/coderso/commerce/new"
+      "/advanced/commerce/new"
     );
 
     clickByText(view.container, "edit-product:Oak Desk");
     expect(commercePageState.navigate).toHaveBeenCalledWith(
-      "/coderso/commerce/product-1"
+      "/advanced/commerce/product-1"
     );
 
     clickByText(view.container, "publish-product:Oak Desk");

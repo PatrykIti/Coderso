@@ -1,5 +1,5 @@
 {
-  "name": "@nextless/store",
+  "name": "@coderso/store",
   "version": "1.0.0",
   "scripts": {
     "dev": "echo store dev",

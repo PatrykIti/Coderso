@@ -13,11 +13,11 @@ const schema = {
 };
 
 test("validate accepts valid payload", () => {
-  expect(() => validate(schema, { name: "Nextless", count: 2 })).not.toThrow();
+  expect(() => validate(schema, { name: "Coderso", count: 2 })).not.toThrow();
 });
 
 test("validate rejects unknown fields", () => {
-  expect(() => validate(schema, { name: "Nextless", extra: true })).toThrow(
+  expect(() => validate(schema, { name: "Coderso", extra: true })).toThrow(
     "Invalid payload"
   );
 });

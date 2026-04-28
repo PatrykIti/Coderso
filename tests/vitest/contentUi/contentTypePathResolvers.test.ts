@@ -8,16 +8,22 @@ test("resolveContentTypeIdFromPath handles legacy route", () => {
   );
 });
 
-test("resolveContentTypeIdFromPath handles coderso canonical routes", () => {
-  expect(resolveContentTypeIdFromPath("/admin/coderso/engine/type-1")).toBe(
+test("resolveContentTypeIdFromPath handles advanced canonical routes", () => {
+  expect(resolveContentTypeIdFromPath("/admin/advanced/engine/type-1")).toBe(
     "type-1"
   );
   expect(
-    resolveContentTypeIdFromPath("/admin/coderso/engine/type-1/schema")
+    resolveContentTypeIdFromPath("/admin/advanced/engine/type-1/schema")
   ).toBe("type-1");
 });
 
+test("resolveContentTypeIdFromPath handles legacy coderso aliases", () => {
+  expect(resolveContentTypeIdFromPath("/admin/coderso/engine/type-1")).toBe(
+    "type-1"
+  );
+});
+
 test("resolveContentTypeIdFromPath returns null for unrelated paths", () => {
-  expect(resolveContentTypeIdFromPath("/admin/coderso/forms/form-1")).toBeNull();
+  expect(resolveContentTypeIdFromPath("/admin/advanced/forms/form-1")).toBeNull();
   expect(resolveContentTypeIdFromPath("/admin/pages/page-1")).toBeNull();
 });

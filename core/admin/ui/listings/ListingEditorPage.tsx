@@ -307,7 +307,7 @@ export function ListingEditorPage() {
           query: created.query,
           selectedTemplateId,
         });
-        navigate(`/coderso/listings/${encodeURIComponent(created.id)}`);
+        navigate(`/advanced/listings/${encodeURIComponent(created.id)}`);
       } else if (listingId) {
         const updated = await updateListingQuery(listingId, payload);
         listingQueryToasts.success("update", { targetLabel: updated.name });
@@ -355,7 +355,7 @@ export function ListingEditorPage() {
 
   if (isLoading) {
     return (
-      <AdminShell activeHref="/admin/coderso/listings">
+      <AdminShell activeHref="/admin/advanced/listings">
         <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
           Loading listing query...
         </div>
@@ -365,7 +365,7 @@ export function ListingEditorPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/listings"
+      activeHref="/admin/advanced/listings"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>
@@ -389,7 +389,7 @@ export function ListingEditorPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => navigate("/coderso/listings")}>
+            <Button variant="outline" className="gap-2" onClick={() => navigate("/advanced/listings")}>
               <ArrowLeft className="h-4 w-4" />
               Back to list
             </Button>

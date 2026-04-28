@@ -37,8 +37,10 @@ import { usePostEditorPreferences } from "./hooks/usePostEditorPreferences";
 import { usePostEditorShortcuts } from "./hooks/usePostEditorShortcuts";
 import { useFocusReturn } from "./hooks/useFocusReturn";
 
-const FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
-const LAYOUT_STORAGE_KEY = "nextless.posts.editor.layout.v1";
+const FOCUS_MODE_STORAGE_KEY = "coderso.posts.editor.focusMode";
+const LEGACY_FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
+const LAYOUT_STORAGE_KEY = "coderso.posts.editor.layout.v1";
+const LEGACY_LAYOUT_STORAGE_KEY = "nextless.posts.editor.layout.v1";
 const TAXONOMY_LOAD_ERROR_COPY = "Could not load categories.";
 
 const postEditorActionToasts = createAdminActionToastAdapter({
@@ -104,7 +106,9 @@ const resolveInitialLayoutState = (
   if (!preferences.restoreLastSidebarsState) return fallback;
   if (typeof window === "undefined") return fallback;
 
-  const raw = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+  const raw =
+    window.localStorage.getItem(LAYOUT_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY);
   if (!raw) return fallback;
   try {
     const parsed = JSON.parse(raw);
@@ -124,6 +128,10 @@ const resolveInitialLayoutState = (
         ? parsed.leftRailMode
         : fallback.leftRailMode;
 
+    if (!window.localStorage.getItem(LAYOUT_STORAGE_KEY)) {
+      window.localStorage.setItem(LAYOUT_STORAGE_KEY, raw);
+    }
+
     return {
       secondarySidebar,
       detailsOpen,
@@ -131,6 +139,8 @@ const resolveInitialLayoutState = (
       leftRailMode,
     };
   } catch {
+    window.localStorage.removeItem(LAYOUT_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY);
     return fallback;
   }
 };
@@ -138,7 +148,10 @@ const resolveInitialLayoutState = (
 const resolveInitialFocusMode = (preferences: PostEditorPreferences) => {
   if (preferences.focusModeOnOpen) return true;
   if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(FOCUS_MODE_STORAGE_KEY) === "1";
+  return (
+    window.localStorage.getItem(FOCUS_MODE_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_FOCUS_MODE_STORAGE_KEY)
+  ) === "1";
 };
 
 // TASK-063-11 UX contract anchor:
@@ -208,6 +221,7 @@ export function PostBlockEditorShell() {
     if (typeof window === "undefined") return;
     if (!preferences.restoreLastSidebarsState) {
       window.localStorage.removeItem(LAYOUT_STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY);
       return;
     }
 
@@ -220,15 +234,14 @@ export function PostBlockEditorShell() {
         ? layout.state.focusRestore?.detailsOpen ?? layout.state.detailsOpen
         : layout.state.detailsOpen;
 
-    window.localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({
-        secondarySidebar,
-        detailsOpen,
-        detailsTab: layout.state.detailsTab,
-        leftRailMode: layout.state.leftRailMode,
-      })
-    );
+    const serialized = JSON.stringify({
+      secondarySidebar,
+      detailsOpen,
+      detailsTab: layout.state.detailsTab,
+      leftRailMode: layout.state.leftRailMode,
+    });
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, serialized);
+    window.localStorage.setItem(LEGACY_LAYOUT_STORAGE_KEY, serialized);
   }, [
     layout.state.detailsOpen,
     layout.state.detailsTab,
@@ -241,10 +254,9 @@ export function PostBlockEditorShell() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(
-      FOCUS_MODE_STORAGE_KEY,
-      layout.focusMode ? "1" : "0"
-    );
+    const serialized = layout.focusMode ? "1" : "0";
+    window.localStorage.setItem(FOCUS_MODE_STORAGE_KEY, serialized);
+    window.localStorage.setItem(LEGACY_FOCUS_MODE_STORAGE_KEY, serialized);
   }, [layout.focusMode]);
 
   useEffect(() => {

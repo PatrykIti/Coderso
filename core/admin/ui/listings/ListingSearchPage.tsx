@@ -57,7 +57,7 @@ export function ListingSearchPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/search"
+      activeHref="/admin/advanced/search"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>

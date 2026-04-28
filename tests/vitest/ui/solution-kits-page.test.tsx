@@ -20,7 +20,7 @@ const createLocalStorage = () => {
 
 test("SolutionKitsPage renders shell and guided wizard controls", () => {
   const html = renderAdminUi(<SolutionKitsPage />, {
-    path: "/admin/coderso/solution-kits",
+    path: "/admin/advanced/solution-kits",
   });
 
   expect(html).toContain("Solution Kits");
@@ -53,7 +53,7 @@ test("SolutionKitsPage renders cached cards without loading placeholder", () => 
     );
 
     const html = renderAdminUi(<SolutionKitsPage />, {
-      path: "/admin/coderso/solution-kits",
+      path: "/admin/advanced/solution-kits",
     });
 
     expect(html).toContain("Automotive Workshop");

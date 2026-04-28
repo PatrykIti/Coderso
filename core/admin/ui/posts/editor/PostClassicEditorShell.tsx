@@ -389,7 +389,7 @@ export function PostClassicEditorShell() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/posts"
+      activeHref="/admin/posts"
       showSearch={false}
       contentClassName="p-0 overflow-hidden"
       breadcrumbs={

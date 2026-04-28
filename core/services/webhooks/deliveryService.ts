@@ -15,6 +15,11 @@ export type WebhookDeliveryResult = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const setWebhookHeader = (headers: Headers, name: string, value: string) => {
+  headers.set(`X-Coderso-${name}`, value);
+  headers.set(`X-Nextless-${name}`, value);
+};
+
 export type WebhookDeliveryInput = {
   webhookId: string;
   event: string;
@@ -47,17 +52,15 @@ export async function deliverWebhook(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     attempts = attempt;
-    const headers = new Headers({
-      "Content-Type": "application/json",
-      "X-Nextless-Event": input.event,
-      "X-Nextless-Delivery": delivery.id,
-      "X-Nextless-Attempt": String(attempt),
-    });
+    const headers = new Headers({ "Content-Type": "application/json" });
+    setWebhookHeader(headers, "Event", input.event);
+    setWebhookHeader(headers, "Delivery", delivery.id);
+    setWebhookHeader(headers, "Attempt", String(attempt));
 
     if (webhook.secret) {
       const signature = createWebhookSignature(webhook.secret, payload);
-      headers.set("X-Nextless-Signature", signature.signature);
-      headers.set("X-Nextless-Timestamp", signature.timestamp);
+      setWebhookHeader(headers, "Signature", signature.signature);
+      setWebhookHeader(headers, "Timestamp", signature.timestamp);
     }
 
     try {
@@ -117,4 +120,3 @@ export async function deliverWebhook(
     deliveryId: delivery.id,
   };
 }
-

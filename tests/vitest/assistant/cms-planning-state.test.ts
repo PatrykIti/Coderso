@@ -31,14 +31,14 @@ test("buildAssistantPlanningStateFromPlan creates bounded candidate memory", () 
           label: `House Projects ${index + 1}`,
           slug: null,
           status: "active",
-          adminHref: `/admin/coderso/custom-screens/screen-${index + 1}`,
+          adminHref: `/admin/advanced/custom-screens/screen-${index + 1}`,
         })),
         truncated: true,
       },
       actions: [],
     },
     {
-      route: "/admin/coderso/custom-screens",
+      route: "/admin/advanced/custom-screens",
       nowMs: Date.parse("2026-04-17T10:00:00.000Z"),
       ttlMs: 60_000,
     }
@@ -47,7 +47,7 @@ test("buildAssistantPlanningStateFromPlan creates bounded candidate memory", () 
   expect(state).toMatchObject({
     schemaVersion: 1,
     sourcePlanId: "plan-cms-custom-screen-inspect",
-    route: "/admin/coderso/custom-screens",
+    route: "/admin/advanced/custom-screens",
     resourceKind: "custom-screen",
     query: "House Projects",
   });
@@ -98,7 +98,7 @@ test("buildCmsOperationDraftFromPlanningState resolves Polish follow-up selectio
     {
       schemaVersion: 1,
       sourcePlanId: "plan-1",
-      route: "/admin/coderso/custom-screens",
+      route: "/admin/advanced/custom-screens",
       resourceKind: "custom-screen",
       operation: "inspect",
       query: "House Projects",

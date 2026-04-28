@@ -5,7 +5,7 @@
 **Category:** Branding + Admin/UI + Routing + Assistant Context
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-054, TASK-220
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -146,11 +146,11 @@ reason, and removal condition.
 
 ## Sub-Tasks
 
-- [ ] TASK-226-00: Exhaustive Nextless Occurrence Inventory and Scope Lock
-- [ ] TASK-226-00-01: Rebrand Occurrence Coverage Table
-- [ ] TASK-226-01: Product Brand Rename Inventory
-- [ ] TASK-226-02: Advanced Admin IA and Route Compatibility
-- [ ] TASK-226-03: Validation, Docs, and Closure
+- [x] TASK-226-00: Exhaustive Nextless Occurrence Inventory and Scope Lock
+- [x] TASK-226-00-01: Rebrand Occurrence Coverage Table
+- [x] TASK-226-01: Product Brand Rename Inventory
+- [x] TASK-226-02: Advanced Admin IA and Route Compatibility
+- [x] TASK-226-03: Validation, Docs, and Closure
 
 ## Implementation Order
 

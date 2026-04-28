@@ -6,7 +6,7 @@ import { mapCmsOperationToActionPlan } from "../../../core/services/assistant/cm
 import { normalizeCmsOperationDraft } from "../../../core/services/assistant/cmsOperationDraftSchema";
 
 const context = buildAssistantAdminContext({
-  page: "/admin/coderso",
+  page: "/admin/advanced",
   locale: "pl-PL",
   resourceCatalog: {
     schemaVersion: 1,

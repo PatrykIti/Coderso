@@ -16,8 +16,10 @@ type BroadcastChannelLike = {
   close: () => void;
 };
 
-const CHANNEL_NAME = "nextless.admin.cache";
-const STORAGE_EVENT_KEY = "nextless.admin.cache.event";
+const CHANNEL_NAME = "coderso.admin.cache";
+const LEGACY_CHANNEL_NAME = "nextless.admin.cache";
+const STORAGE_EVENT_KEY = "coderso.admin.cache.event";
+const LEGACY_STORAGE_EVENT_KEY = "nextless.admin.cache.event";
 const localHandlers = new Set<CacheEventHandler>();
 
 const cacheBusId = (() => {
@@ -32,9 +34,16 @@ const getBroadcastChannel = (): BroadcastChannelLike | null => {
   return new BroadcastChannel(CHANNEL_NAME);
 };
 
+const getLegacyBroadcastChannel = (): BroadcastChannelLike | null => {
+  if (typeof BroadcastChannel === "undefined") return null;
+  return new BroadcastChannel(LEGACY_CHANNEL_NAME);
+};
+
 const emitStorageEvent = (event: CacheEvent) => {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(STORAGE_EVENT_KEY, JSON.stringify(event));
+  const serialized = JSON.stringify(event);
+  localStorage.setItem(STORAGE_EVENT_KEY, serialized);
+  localStorage.setItem(LEGACY_STORAGE_EVENT_KEY, serialized);
 };
 
 const parseEvent = (payload: unknown): CacheEvent | null => {
@@ -52,6 +61,9 @@ export const broadcastCacheEvent = (input: Omit<CacheEvent, "ts" | "sourceId">) 
   const channel = getBroadcastChannel();
   if (channel) {
     channel.postMessage(event);
+    const legacyChannel = getLegacyBroadcastChannel();
+    legacyChannel?.postMessage(event);
+    legacyChannel?.close();
     channel.close();
   } else {
     emitStorageEvent(event);
@@ -65,21 +77,31 @@ export const subscribeCacheEvents = (handler: CacheEventHandler) => {
   localHandlers.add(handler);
   const channel = getBroadcastChannel();
   if (channel) {
+    const legacyChannel = getLegacyBroadcastChannel();
     const listener = (event: MessageEvent) => {
       const parsed = parseEvent(event.data);
       if (!parsed || parsed.sourceId === cacheBusId) return;
       handler(parsed);
     };
     channel.addEventListener("message", listener);
+    legacyChannel?.addEventListener("message", listener);
     return () => {
       localHandlers.delete(handler);
       channel.removeEventListener("message", listener);
+      legacyChannel?.removeEventListener("message", listener);
       channel.close();
+      legacyChannel?.close();
     };
   }
 
   const storageListener = (event: StorageEvent) => {
-    if (event.key !== STORAGE_EVENT_KEY || !event.newValue) return;
+    if (
+      event.key !== STORAGE_EVENT_KEY &&
+      event.key !== LEGACY_STORAGE_EVENT_KEY
+    ) {
+      return;
+    }
+    if (!event.newValue) return;
     try {
       const parsed = parseEvent(JSON.parse(event.newValue));
       if (!parsed || parsed.sourceId === cacheBusId) return;

@@ -36,7 +36,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Entries Actor",
       status: "active",
@@ -116,8 +116,8 @@ const buildContentContext = async (
   const contentTypes = await listContentTypes();
   const route =
     input?.activeEntryId && input.activeContentTypeSlug
-      ? `/admin/coderso/entries/${input.activeContentTypeSlug}/${input.activeEntryId}`
-      : "/admin/coderso/engine";
+      ? `/admin/advanced/entries/${input.activeContentTypeSlug}/${input.activeEntryId}`
+      : "/admin/advanced/engine";
   return {
     page: route,
     locale: "pl-PL",
@@ -146,11 +146,11 @@ const buildContentContext = async (
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       route,
       activeHref: route,
-      area: "coderso",
-      codersoModule: "entries",
+      area: "advanced",
+      advancedModule: "entries",
       selectedResource: input?.activeEntryId
         ? { kind: "entry", id: input.activeEntryId }
         : null,

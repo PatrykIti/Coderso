@@ -1,6 +1,6 @@
 # Release Process
 
-Nextless releases are automated by GitHub Actions and semantic-release.
+Coderso releases are automated by GitHub Actions and semantic-release.
 
 ## Pull Request Notes
 
@@ -46,8 +46,8 @@ the generated release tag and builds the runtime image from `Dockerfile`.
 The image is pushed to GHCR as:
 
 ```text
-ghcr.io/<owner>/nextless-core:<version>
-ghcr.io/<owner>/nextless-core:latest
+ghcr.io/<owner>/coderso-core:<version>
+ghcr.io/<owner>/coderso-core:latest
 ```
 
 The Docker build also receives `APP_VERSION=<version>`, and the runtime image

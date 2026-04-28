@@ -112,7 +112,7 @@ export function ListingQueryTable({
               <TableCell>
                 <div className="flex flex-col gap-1">
                   <AdminLink
-                    href={`/coderso/listings/${encodeURIComponent(item.id)}`}
+                    href={`/advanced/listings/${encodeURIComponent(item.id)}`}
                     prefetch
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                     aria-label={`Edit listing query: ${item.name}`}
@@ -149,7 +149,7 @@ export function ListingQueryTable({
                   <DropdownMenuContent align="end" className="w-36">
                     <DropdownMenuItem asChild>
                       <AdminLink
-                        href={`/coderso/listings/${encodeURIComponent(item.id)}`}
+                        href={`/advanced/listings/${encodeURIComponent(item.id)}`}
                         className="w-full"
                         prefetch
                       >

@@ -10,7 +10,7 @@ const noop = () => undefined;
 test("SettingsPage renders tokens editor and actions", () => {
   const html = renderAdminUi(
     <SettingsPage
-      values={{ siteName: "Nextless", siteLocale: "en" }}
+      values={{ siteName: "Coderso", siteLocale: "en" }}
       tokens={{}}
       onSave={noop}
       onResetTokens={noop}
@@ -24,7 +24,7 @@ test("SettingsPage renders tokens editor and actions", () => {
 test("GeneralSettingsPage renders form actions", () => {
   const html = renderAdminUi(
     <GeneralSettingsPage
-      values={{ siteName: "Nextless", siteLocale: "en" }}
+      values={{ siteName: "Coderso", siteLocale: "en" }}
       onSave={noop}
     />
   );

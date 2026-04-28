@@ -35,7 +35,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Screens Actor",
       status: "active",
@@ -116,8 +116,8 @@ const buildScreenContext = async (
   ]);
   return {
     page: activeScreen
-      ? `/admin/coderso/custom-screens/${activeScreen.id}`
-      : "/admin/coderso/custom-screens",
+      ? `/admin/advanced/custom-screens/${activeScreen.id}`
+      : "/admin/advanced/custom-screens",
     locale: "pl-PL",
     resourceCatalog: {
       schemaVersion: 1,
@@ -153,13 +153,13 @@ const buildScreenContext = async (
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       route: activeScreen
-        ? `/admin/coderso/custom-screens/${activeScreen.id}`
-        : "/admin/coderso/custom-screens",
-      activeHref: "/admin/coderso/custom-screens",
-      area: "coderso",
-      codersoModule: "custom-screens",
+        ? `/admin/advanced/custom-screens/${activeScreen.id}`
+        : "/admin/advanced/custom-screens",
+      activeHref: "/admin/advanced/custom-screens",
+      area: "advanced",
+      advancedModule: "custom-screens",
       selectedResource: activeScreen ? { kind: "custom-screen", id: activeScreen.id } : null,
       visibleActions: [],
       permissionHints: {

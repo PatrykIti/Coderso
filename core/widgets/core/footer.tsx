@@ -164,7 +164,7 @@ export const footerDefaults: FooterData = {
       ],
     },
   ],
-  legal: { copyright: "© 2026 Nextless", privacy: "/privacy", terms: "/terms" },
+  legal: { copyright: "© 2026 Coderso", privacy: "/privacy", terms: "/terms" },
   social: [
     { type: "twitter", href: "https://twitter.com" },
     { type: "linkedin", href: "https://linkedin.com" },

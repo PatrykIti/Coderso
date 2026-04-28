@@ -17,7 +17,7 @@ import { EmailLogsDrawer } from "../../../core/admin/ui/settings/EmailLogsDrawer
 
 const accessLog: AccessLogItem = {
   id: "log-1",
-  user: { name: "Admin", detail: "admin@nextless.io" },
+  user: { name: "Admin", detail: "admin@coderso.io" },
   ipAddress: "192.168.1.1",
   device: { label: "Chrome / macOS", icon: Monitor },
   timestamp: { date: "Jan 28", time: "09:00" },
@@ -146,7 +146,7 @@ test("AccessLogDetailsDrawer renders log info", () => {
   );
 
   expect(html).toContain("Access Log Details");
-  expect(html).toContain("admin@nextless.io");
+  expect(html).toContain("admin@coderso.io");
 });
 
 test("WidgetDetailsDrawer renders widget name", () => {

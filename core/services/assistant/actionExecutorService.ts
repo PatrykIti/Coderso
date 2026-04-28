@@ -322,7 +322,7 @@ const collectListingResourceReferences = async (
         containerType: "widget-template",
         containerId: template.id,
         containerName: template.name,
-        adminHref: `/admin/coderso/widgets/templates/${encodeURIComponent(template.id)}`,
+        adminHref: `/admin/advanced/widgets/templates/${encodeURIComponent(template.id)}`,
       });
     }
   }
@@ -2753,7 +2753,7 @@ const executeContentTypeAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: "/admin/coderso/engine",
+    adminHref: "/admin/advanced/engine",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -2782,7 +2782,7 @@ const executeContentTypeDeleteAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: deleted.id,
-    adminHref: "/admin/coderso/engine",
+    adminHref: "/admin/advanced/engine",
     publicHref: null,
     message: `Deleted content type "${deleted.name}".`,
   };
@@ -2835,8 +2835,8 @@ const executeCustomScreenAction = async (
     status: "success" as const,
     resourceId: record?.id ?? null,
     adminHref: record
-      ? `/admin/coderso/custom-screens/${encodeURIComponent(record.id)}/entries`
-      : "/admin/coderso/custom-screens",
+      ? `/admin/advanced/custom-screens/${encodeURIComponent(record.id)}/entries`
+      : "/admin/advanced/custom-screens",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -2873,7 +2873,7 @@ const executeCustomScreenDeleteAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: deleted.id,
-    adminHref: "/admin/coderso/custom-screens",
+    adminHref: "/admin/advanced/custom-screens",
     publicHref: null,
     message: `Deleted custom screen "${deleted.name}".`,
   };
@@ -2917,7 +2917,7 @@ const executeCustomScreenUpdateAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: updated.id,
-    adminHref: `/admin/coderso/custom-screens/${encodeURIComponent(updated.id)}/entries`,
+    adminHref: `/admin/advanced/custom-screens/${encodeURIComponent(updated.id)}/entries`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -2964,7 +2964,7 @@ const executeCustomScreenWidgetPatchAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: updated.id,
-    adminHref: `/admin/coderso/custom-screens/${encodeURIComponent(updated.id)}/entries`,
+    adminHref: `/admin/advanced/custom-screens/${encodeURIComponent(updated.id)}/entries`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3019,7 +3019,7 @@ const executeListingQueryAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3055,7 +3055,7 @@ const executeListingQueryDeleteAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: deleted.id,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message: `Deleted listing query "${existing.name}".`,
   };
@@ -3093,7 +3093,7 @@ const executeListingQueryFiltersPatchAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3146,7 +3146,7 @@ const executeListingQueryUpdateAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record.id,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3184,7 +3184,7 @@ const executeListingTemplateAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3228,7 +3228,7 @@ const executeListingTemplateDeleteAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: deleted.id,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message: `Deleted listing template "${deleted.name}".`,
   };
@@ -3266,7 +3266,7 @@ const executeListingTemplateCardPatchAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3317,7 +3317,7 @@ const executeListingTemplateUpdateAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record.id,
-    adminHref: "/admin/coderso/listings",
+    adminHref: "/admin/advanced/listings",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3410,7 +3410,7 @@ const executeFormAutomationAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: `/admin/coderso/forms/${encodeURIComponent(action.input.formId)}`,
+    adminHref: `/admin/advanced/forms/${encodeURIComponent(action.input.formId)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3457,7 +3457,7 @@ const executeFormAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: form.id,
-    adminHref: `/admin/coderso/forms/${encodeURIComponent(form.id)}`,
+    adminHref: `/admin/advanced/forms/${encodeURIComponent(form.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3498,7 +3498,7 @@ const executeFormDeleteAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: deleted.id,
-    adminHref: "/admin/coderso/forms",
+    adminHref: "/admin/advanced/forms",
     publicHref: null,
     message: `Deleted form "${deleted.name}".`,
   };
@@ -3535,7 +3535,7 @@ const executeFormArchiveAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: archived.id,
-    adminHref: `/admin/coderso/forms/${encodeURIComponent(archived.id)}`,
+    adminHref: `/admin/advanced/forms/${encodeURIComponent(archived.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3573,7 +3573,7 @@ const executeFormUpdateAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: updated.id,
-    adminHref: `/admin/coderso/forms/${encodeURIComponent(updated.id)}`,
+    adminHref: `/admin/advanced/forms/${encodeURIComponent(updated.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3619,8 +3619,8 @@ const executeEntryUpsertDraftAction = async (
     status: "success" as const,
     resourceId: record?.id ?? null,
     adminHref: record
-      ? `/admin/coderso/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(record.id)}`
-      : "/admin/coderso/entries",
+      ? `/admin/advanced/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(record.id)}`
+      : "/admin/advanced/entries",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3657,8 +3657,8 @@ const executeEntryDeleteAction = async (
     status: "success" as const,
     resourceId: deleted.id,
     adminHref: action.input.contentTypeSlug
-      ? `/admin/coderso/entries/${encodeURIComponent(action.input.contentTypeSlug)}`
-      : "/admin/coderso/entries",
+      ? `/admin/advanced/entries/${encodeURIComponent(action.input.contentTypeSlug)}`
+      : "/admin/advanced/entries",
     publicHref: null,
     message: `Deleted entry "${deleted.title}".`,
   };
@@ -3716,8 +3716,8 @@ const executeEntryUpdateAction = async (
     status: "success" as const,
     resourceId: metadata.id,
     adminHref: action.input.contentTypeSlug
-      ? `/admin/coderso/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(metadata.id)}`
-      : "/admin/coderso/entries",
+      ? `/admin/advanced/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(metadata.id)}`
+      : "/admin/advanced/entries",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -3991,7 +3991,7 @@ const executeMediaReferenceAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: "/admin/coderso/entries",
+    adminHref: "/admin/advanced/entries",
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -4230,7 +4230,7 @@ const executeWidgetTemplateDeleteAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: deleted.id,
-    adminHref: "/admin/coderso/widgets",
+    adminHref: "/admin/advanced/widgets",
     publicHref: null,
     message: `Deleted widget template "${deleted.name}".`,
   };
@@ -4279,7 +4279,7 @@ const executeWidgetTemplateUpdateAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: updated.id,
-    adminHref: `/admin/coderso/widgets/templates/${encodeURIComponent(updated.id)}`,
+    adminHref: `/admin/advanced/widgets/templates/${encodeURIComponent(updated.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -4331,7 +4331,7 @@ const executeWidgetTemplateBlockPatchAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: updated.id,
-    adminHref: `/admin/coderso/widgets/templates/${encodeURIComponent(updated.id)}`,
+    adminHref: `/admin/advanced/widgets/templates/${encodeURIComponent(updated.id)}`,
     publicHref: null,
     message:
       preview.operation === "noop"
@@ -4354,7 +4354,7 @@ const executeSiteKitRecommendAction = async (
     operation: preview.operation,
     status: "success",
     resourceId: plan.selectedKitId,
-    adminHref: "/admin/coderso/solution-kits",
+    adminHref: "/admin/advanced/solution-kits",
     publicHref: null,
     message: `Recommended ${plan.selectedKitTitle} for the requested setup.`,
     details: {
@@ -4395,7 +4395,7 @@ const executeSiteKitInstallAction = async (
     operation: preview.operation,
     status: "success",
     resourceId: execution.execution.run.id,
-    adminHref: "/admin/coderso/solution-kits",
+    adminHref: "/admin/advanced/solution-kits",
     publicHref: null,
     message: `Site kit ${execution.selectedKitTitle} finished with ${execution.validation.status} validation status.`,
     details: {
@@ -4422,7 +4422,7 @@ const executeSiteKitValidateAction = async (
     operation: preview.operation,
     status: "success",
     resourceId: action.input.runId,
-    adminHref: "/admin/coderso/solution-kits",
+    adminHref: "/admin/advanced/solution-kits",
     publicHref: null,
     message: `Site kit run validation finished with ${validation.status} status.`,
     details: {

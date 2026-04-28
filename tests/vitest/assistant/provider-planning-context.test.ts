@@ -129,15 +129,15 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
       },
     ],
     context: {
-      page: "/admin/coderso/entries",
+      page: "/admin/advanced/entries",
       locale: "pl-PL",
       resourceCatalog,
       runtimeSnapshot: {
-        schemaVersion: 1,
-        route: "/admin/coderso/entries",
-        activeHref: "/admin/coderso/entries",
-        area: "coderso",
-        codersoModule: "entries",
+        schemaVersion: 2,
+        route: "/admin/advanced/entries",
+        activeHref: "/admin/advanced/entries",
+        area: "advanced",
+        advancedModule: "entries",
         selectedResource: {
           kind: "content-type",
           id: "ct-products",
@@ -147,7 +147,7 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
             id: "entry.create",
             label: "Create entry",
             kind: "create",
-            href: "/admin/coderso/entries",
+            href: "/admin/advanced/entries",
             requiredPermission: "content:write",
           },
         ],
@@ -164,11 +164,11 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
     schemaVersion: 1,
     prompt: "Create a product catalog",
     locale: "pl-PL",
-    route: "/admin/coderso/entries",
+    route: "/admin/advanced/entries",
     runtime: {
-      route: "/admin/coderso/entries",
-      area: "coderso",
-      codersoModule: "entries",
+      route: "/admin/advanced/entries",
+      area: "advanced",
+      advancedModule: "entries",
       selectedResource: {
         kind: "content-type",
         id: "ct-products",
@@ -206,7 +206,7 @@ test("buildProviderPlanningPromptPackage includes redacted active surface summar
   const prompt = buildProviderPlanningPromptPackage({
     prompt: "Edit current template block",
     context: {
-      page: "/admin/coderso/widgets/templates/template-1",
+      page: "/admin/advanced/widgets/templates/template-1",
       activeSurface: {
         kind: "widget-template",
         template: {
@@ -358,11 +358,11 @@ test("buildProviderPlanningPromptPackage redacts secret-like prompt data", () =>
     context: {
       locale: "en",
       runtimeSnapshot: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         route: "/admin/settings",
         activeHref: "/admin/settings",
         area: "settings",
-        codersoModule: null,
+        advancedModule: null,
         selectedResource: null,
         visibleActions: [
           {

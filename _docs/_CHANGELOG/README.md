@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 757 | 2026-04-28 | TASK-226 Coderso rebrand and Advanced admin IA | Branding/Admin IA |
 | 756 | 2026-04-27 | TASK-225 page editor status badge and action locking | CMS Pages/Admin UI |
 | 755 | 2026-04-27 | TASK-224 page editor preview action consolidation | CMS Pages/Admin UI |
 | 754 | 2026-04-27 | TASK-223 semantic release and Docker workflow | Release Engineering/CI |

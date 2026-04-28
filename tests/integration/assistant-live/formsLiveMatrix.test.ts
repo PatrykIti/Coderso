@@ -35,7 +35,7 @@ const createActor = async (prefix: string) => {
   const [actor] = await db
     .insert(users)
     .values({
-      email: `${prefix}-${randomUUID()}@nextless.test`,
+      email: `${prefix}-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Assistant Live Forms Actor",
       status: "active",
@@ -77,7 +77,7 @@ const buildFormsContext = async (): Promise<AssistantActionContext> => {
   const { listForms } = await loadForms();
   const forms = await listForms();
   return {
-    page: "/admin/coderso/forms",
+    page: "/admin/advanced/forms",
     locale: "pl-PL",
     resourceCatalog: {
       schemaVersion: 1,
@@ -105,11 +105,11 @@ const buildFormsContext = async (): Promise<AssistantActionContext> => {
       warnings: [],
     },
     runtimeSnapshot: {
-      schemaVersion: 1,
-      route: "/admin/coderso/forms",
-      activeHref: "/admin/coderso/forms",
-      area: "coderso",
-      codersoModule: "forms",
+      schemaVersion: 2,
+      route: "/admin/advanced/forms",
+      activeHref: "/admin/advanced/forms",
+      area: "advanced",
+      advancedModule: "forms",
       selectedResource: null,
       visibleActions: [],
       permissionHints: {

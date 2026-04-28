@@ -150,7 +150,7 @@ export function CommerceTable({
                 <TableCell>
                   <div className="flex flex-col gap-1">
                     <AdminLink
-                      href={`/coderso/commerce/${encodeURIComponent(item.id)}`}
+                      href={`/advanced/commerce/${encodeURIComponent(item.id)}`}
                       prefetch
                       className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                       aria-label={`Edit product: ${item.title}`}

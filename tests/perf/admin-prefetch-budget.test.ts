@@ -42,8 +42,8 @@ test("performance gate: admin prefetch request count stays within budget per hov
       { match: "/menus", run: () => void (calls += 1) },
       { match: "/media", run: () => void (calls += 1) },
       { match: "/themes", run: () => void (calls += 1) },
-      { match: "/coderso/entries", run: () => void (calls += 1) },
-      { match: "/coderso/forms", run: () => void (calls += 1) },
+      { match: "/advanced/entries", run: () => void (calls += 1) },
+      { match: "/advanced/forms", run: () => void (calls += 1) },
     ];
 
     const prefetch = createAdminPrefetcher(entries, {
@@ -59,8 +59,8 @@ test("performance gate: admin prefetch request count stays within budget per hov
       prefetch("/admin/menus", "/admin", { activeHref: "/admin/pages" });
       prefetch("/admin/media", "/admin", { activeHref: "/admin/pages" });
       prefetch("/admin/themes", "/admin", { activeHref: "/admin/pages" });
-      prefetch("/admin/coderso/entries", "/admin", { activeHref: "/admin/pages" });
-      prefetch("/admin/coderso/forms", "/admin", { activeHref: "/admin/pages" });
+      prefetch("/admin/advanced/entries", "/admin", { activeHref: "/admin/pages" });
+      prefetch("/admin/advanced/forms", "/admin", { activeHref: "/admin/pages" });
     }
 
     await flushAsync();

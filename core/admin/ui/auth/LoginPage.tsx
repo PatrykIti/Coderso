@@ -94,7 +94,7 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Layers className="h-5 w-5" />
           </span>
-          <span className="text-2xl font-semibold">Nextless</span>
+          <span className="text-2xl font-semibold">Coderso</span>
           <Badge variant="secondary">CMS</Badge>
         </div>
       }

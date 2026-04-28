@@ -8,16 +8,17 @@ import { AdminLink } from "@/ui/shared/AdminLink";
 import type { NavItem, NavSection } from "@/ui/navigation/sidebarConfig";
 import { isAdminHrefActive } from "@/utils/adminPaths";
 
-const SIDEBAR_SCROLL_STORAGE_KEY = "nextless.admin.sidebarScrollTop";
+const SIDEBAR_SCROLL_STORAGE_KEY = "coderso.admin.sidebarScrollTop";
+const LEGACY_SIDEBAR_SCROLL_STORAGE_KEY = "nextless.admin.sidebarScrollTop";
 
 const defaultBrand = (
   <div className="flex items-center gap-3 px-2">
     <div className="h-9 w-9 rounded-lg bg-[var(--admin-button-primary-bg)] text-[var(--admin-button-primary-text)] flex items-center justify-center font-semibold">
-      N
+      C
     </div>
     <div className="flex flex-col">
       <span className="text-sm font-semibold text-[var(--admin-sidebar-active-text)]">
-        Nextless
+        Coderso
       </span>
       <span className="text-xs text-[var(--admin-sidebar-text)]">Admin Panel</span>
     </div>
@@ -71,7 +72,9 @@ export function SidebarNav({
     if (!shouldPersistScroll || typeof window === "undefined") return;
     const nav = navRef.current;
     if (!nav) return;
-    const stored = window.sessionStorage.getItem(SIDEBAR_SCROLL_STORAGE_KEY);
+    const stored =
+      window.sessionStorage.getItem(SIDEBAR_SCROLL_STORAGE_KEY) ??
+      window.sessionStorage.getItem(LEGACY_SIDEBAR_SCROLL_STORAGE_KEY);
     if (!stored) return;
     const scrollTop = Number.parseInt(stored, 10);
     if (!Number.isFinite(scrollTop) || scrollTop < 0) return;

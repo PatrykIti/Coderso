@@ -10,10 +10,10 @@ import {
 } from "../../../core/admin/ui/posts/PostEditorPage";
 
 const postEditorPageState = vi.hoisted(() => ({
-  path: "/admin/coderso/posts/post-1",
+  path: "/admin/posts/post-1",
   getSetting: vi.fn(async () => ({ value: null as unknown })),
   reset() {
-    this.path = "/admin/coderso/posts/post-1";
+    this.path = "/admin/posts/post-1";
     this.getSetting.mockReset();
     this.getSetting.mockResolvedValue({ value: null });
   },
@@ -85,7 +85,7 @@ test("PostEditorPage renders block editor shell by default", () => {
 
 test("PostEditorPage supports query override for classic editor", () => {
   postEditorPageState.reset();
-  postEditorPageState.path = "/admin/coderso/posts/post-1?editor=classic";
+  postEditorPageState.path = "/admin/posts/post-1?editor=classic";
   const view = mount(<PostEditorPage />);
 
   try {
@@ -122,13 +122,13 @@ test("PostEditorPage resolves classic mode from settings and falls back to block
 });
 
 test("resolvePostEditorMode prioritizes query override over settings", () => {
-  expect(resolvePostEditorMode("/admin/coderso/posts/post-1?editor=classic", "blocks")).toBe(
+  expect(resolvePostEditorMode("/admin/posts/post-1?editor=classic", "blocks")).toBe(
     "classic"
   );
-  expect(resolvePostEditorMode("/admin/coderso/posts/post-1", "classic")).toBe(
+  expect(resolvePostEditorMode("/admin/posts/post-1", "classic")).toBe(
     "classic"
   );
-  expect(resolvePostEditorMode("/admin/coderso/posts/post-1", "invalid")).toBe(
+  expect(resolvePostEditorMode("/admin/posts/post-1", "invalid")).toBe(
     "blocks"
   );
 });

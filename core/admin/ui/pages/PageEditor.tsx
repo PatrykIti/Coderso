@@ -71,7 +71,7 @@ const defaultBlocks: Block[] = [
     ...heroBlockDefaults,
     data: {
       ...(heroBlockDefaults.data ?? {}),
-      headline: "Build faster with Nextless",
+      headline: "Build your system with Coderso",
     },
   }),
   createBlock("compare-timeline"),

@@ -5,7 +5,7 @@
 **Category:** Admin Navigation + IA
 **Estimated Effort:** Large
 **Dependencies:** TASK-226-02
-**Status:** To Do
+**Status:** Done - 2026-04-28
 
 ---
 
@@ -18,15 +18,15 @@ placement, and solution-kit sidebar narrowing.
 
 ## Sub-Tasks
 
-- [ ] Rename the module registry file or exports from Coderso-specific IA names
+- [x] Rename the module registry file or exports from Coderso-specific IA names
   to Advanced-specific IA names.
-- [ ] Keep module labels friendly: `Engine`, `Entries`, `Screens`, `Widgets`,
+- [x] Keep module labels friendly: `Engine`, `Entries`, `Screens`, `Widgets`,
   `Forms`, etc.
-- [ ] Change sidebar group id from `coderso` to `advanced`.
-- [ ] Change sidebar group label from `Coderso` to `Advanced`.
-- [ ] Update custom-screen shortcuts to append after the Advanced group.
-- [ ] Update solution-kit feature flags to narrow Advanced modules only.
-- [ ] Keep product-level `CodersoPluginManifest` and release-gate names only if
+- [x] Change sidebar group id from `coderso` to `advanced`.
+- [x] Change sidebar group label from `Coderso` to `Advanced`.
+- [x] Update custom-screen shortcuts to append after the Advanced group.
+- [x] Update solution-kit feature flags to narrow Advanced modules only.
+- [x] Keep product-level `CodersoPluginManifest` and release-gate names only if
   they clearly refer to the Coderso platform, not the sidebar group.
 
 ## Files to Change

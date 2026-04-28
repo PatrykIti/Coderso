@@ -14,7 +14,7 @@ const writeTemplate = async (dir: string, relativePath: string) => {
 };
 
 test("resolveTemplate prefers theme templates", async () => {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "nextless-theme-resolve-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "coderso-theme-resolve-"));
   const themeRoot = path.join(tempDir, "themes", "minimal");
   const pluginsRoot = path.join(tempDir, "plugins");
   const coreTemplates = path.join(tempDir, "core-templates");
@@ -36,7 +36,7 @@ test("resolveTemplate prefers theme templates", async () => {
 });
 
 test("resolveTemplate falls back to plugin views and caches result", async () => {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "nextless-theme-resolve-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "coderso-theme-resolve-"));
   const themeRoot = path.join(tempDir, "themes", "minimal");
   const pluginsRoot = path.join(tempDir, "plugins");
   const coreTemplates = path.join(tempDir, "core-templates");
@@ -59,7 +59,7 @@ test("resolveTemplate falls back to plugin views and caches result", async () =>
 });
 
 test("resolveTemplateOr404 returns core 404 when missing", async () => {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "nextless-theme-resolve-"));
+  const tempDir = await mkdtemp(path.join(tmpdir(), "coderso-theme-resolve-"));
   const coreTemplates = path.join(tempDir, "core-templates");
   const fallback = await writeTemplate(coreTemplates, "404.tsx");
 

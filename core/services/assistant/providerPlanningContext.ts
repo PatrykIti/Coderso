@@ -44,7 +44,7 @@ export type AssistantProviderPlanningPromptPackage = {
     route: string | null;
     activeHref: string | null;
     area: string;
-    codersoModule: string | null;
+    advancedModule: string | null;
     selectedResource: { kind: string; id: string } | null;
     visibleActions: Array<{
       id: string;
@@ -189,7 +189,7 @@ const buildRuntime = (snapshot: AssistantAdminRuntimeSnapshot | null) => {
     route: snapshot.route,
     activeHref: snapshot.activeHref,
     area: snapshot.area,
-    codersoModule: snapshot.codersoModule,
+    advancedModule: snapshot.advancedModule,
     selectedResource: snapshot.selectedResource,
     visibleActions: snapshot.visibleActions.map((action) => ({
       id: redactAssistantText(action.id, 120),

@@ -519,7 +519,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
 
   try {
     expect(view.container.textContent).toContain("Contact");
-    expect(view.container.innerHTML).toContain("/coderso/forms/form-1");
+    expect(view.container.innerHTML).toContain("/advanced/forms/form-1");
     expect(view.container.textContent).toContain("Public");
     expect(view.container.textContent).toContain("Required");
 

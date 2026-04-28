@@ -869,7 +869,7 @@ test("FormListPage creates, refreshes fallback, confirms row actions, and report
     expect(view.container.textContent).toContain("Forms");
     expect(view.container.textContent).toContain("Contact");
     expect(view.container.querySelector("[data-active-href]")?.getAttribute("data-active-href")).toBe(
-      "/admin/coderso/forms"
+      "/admin/advanced/forms"
     );
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
@@ -886,7 +886,7 @@ test("FormListPage creates, refreshes fallback, confirms row actions, and report
       status: "draft",
       description: "Created from drawer",
     });
-    expect(formsPageState.navigateCalls).toContain("/coderso/forms/created-form");
+    expect(formsPageState.navigateCalls).toContain("/advanced/forms/created-form");
     expect(formsPageState.toastSuccess).toHaveBeenCalledWith(
       'Form "Created form" created.'
     );
@@ -904,9 +904,9 @@ test("FormListPage creates, refreshes fallback, confirms row actions, and report
       buttons().find((button) => button.textContent === "publish-form-row")?.click();
     });
     await flush();
-    expect(formsPageState.navigateCalls).toContain("/coderso/forms/form-1");
+    expect(formsPageState.navigateCalls).toContain("/advanced/forms/form-1");
     expect(formsPageState.navigateCalls).toContain(
-      "/coderso/forms/form-1/action-runs"
+      "/advanced/forms/form-1/action-runs"
     );
     expect(formsPageState.updateFormCalls).toContainEqual({
       id: "form-1",
@@ -1080,7 +1080,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
 
     clickByText(view.container, "Action logs");
     expect(formsPageState.navigateCalls).toContain(
-      "/coderso/forms/form-1/action-runs"
+      "/advanced/forms/form-1/action-runs"
     );
   } finally {
     Object.defineProperty(window, "confirm", {

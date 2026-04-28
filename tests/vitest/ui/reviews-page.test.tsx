@@ -20,7 +20,7 @@ const createLocalStorage = () => {
 
 test("ReviewsModerationPage renders shell and loading state", () => {
   const html = renderAdminUi(<ReviewsModerationPage />, {
-    path: "/admin/coderso/reviews",
+    path: "/admin/advanced/reviews",
   });
 
   expect(html).toContain("Reviews");
@@ -61,7 +61,7 @@ test("ReviewsModerationPage renders cached reviews", () => {
     );
 
     const html = renderAdminUi(<ReviewsModerationPage />, {
-      path: "/admin/coderso/reviews",
+      path: "/admin/advanced/reviews",
     });
 
     expect(html).toContain("Alice");

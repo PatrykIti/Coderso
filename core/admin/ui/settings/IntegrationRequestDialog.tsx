@@ -60,7 +60,7 @@ export function IntegrationRequestDialog({
           <div>
             <DialogTitle>Request New Integration</DialogTitle>
             <DialogDescription>
-              Tell us which service you want to connect with Nextless.
+              Tell us which service you want to connect with Coderso.
             </DialogDescription>
           </div>
           <Button

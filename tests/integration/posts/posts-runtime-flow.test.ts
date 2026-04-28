@@ -44,7 +44,7 @@ const createActor = async () => {
   const [created] = await db
     .insert(users)
     .values({
-      email: `posts-runtime-${randomUUID()}@nextless.test`,
+      email: `posts-runtime-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Posts Runtime Actor",
       status: "active",

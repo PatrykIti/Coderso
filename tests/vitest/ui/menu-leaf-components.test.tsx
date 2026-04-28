@@ -100,7 +100,7 @@ vi.mock("@/ui/menus/MenuItemForm", () => ({
             label: "Support",
             linkType: "url",
             pageId: "",
-            href: "https://nextless.test/support",
+            href: "https://coderso.test/support",
             parentId: "parent-1",
             visibility: "logged_in",
             badgeLabel: "New",
@@ -377,7 +377,7 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
       label: "Support",
       linkType: "url",
       pageId: "",
-      href: "https://nextless.test/support",
+      href: "https://coderso.test/support",
       parentId: "parent-1",
       settings: {
         visibility: "logged_in",

@@ -81,7 +81,7 @@ export function PopupTable({ items, emptyMessage, onStatusChange, onDelete }: Po
               <TableCell className="py-6 pl-6">
                 <div className="flex flex-col gap-1">
                   <AdminLink
-                    href={`/coderso/popups/${encodeURIComponent(item.id)}`}
+                    href={`/advanced/popups/${encodeURIComponent(item.id)}`}
                     prefetch
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                     aria-label={`Edit popup: ${item.name}`}
@@ -118,7 +118,7 @@ export function PopupTable({ items, emptyMessage, onStatusChange, onDelete }: Po
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem asChild>
-                      <AdminLink href={`/coderso/popups/${encodeURIComponent(item.id)}`} className="w-full" prefetch>
+                      <AdminLink href={`/advanced/popups/${encodeURIComponent(item.id)}`} className="w-full" prefetch>
                         <Pencil className="h-4 w-4" />
                         Edit
                       </AdminLink>

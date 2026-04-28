@@ -131,7 +131,7 @@ liveTest(
       providerModel: model,
       llmAvailable: true,
       context: {
-        page: "/admin/coderso/custom-screens",
+        page: "/admin/advanced/custom-screens",
         locale: "pl-PL",
         resourceCatalog: catalog,
       },

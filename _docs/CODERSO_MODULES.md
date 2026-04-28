@@ -1,14 +1,16 @@
-# Coderso Modules Catalog
+# Advanced Modules Catalog
 
-Source of truth for Coderso module scope, tiering, and navigation rollout.
+Source of truth for Advanced module scope, tiering, and navigation rollout.
+The file name is retained for historical links; the current IA label is
+`Advanced`, while `Coderso` is the product brand.
 
 ## Registry Contract
-- Runtime registry lives in `core/admin/ui/navigation/codersoModules.ts`.
+- Runtime registry lives in `core/admin/ui/navigation/advancedModules.ts`.
 - Every module defines:
   - `id`, `label`, `tier`, `ownerArea`, `lifecycle`
   - `description`, `dependencies`
   - optional `nav` config (`href`, `icon`, `defaultEnabled`, `badge`)
-- Sidebar group `Coderso` is generated from registry via `buildCodersoNavItems(flags)`.
+- Sidebar group `Advanced` is generated from registry via `buildAdvancedNavItems(flags)`.
 
 ## Tier Overview
 
@@ -49,7 +51,7 @@ Note:
 ## Navigation Rollout Rules
 1. `defaultEnabled=true` modules appear in sidebar by default.
 2. `defaultEnabled=false` modules are hidden unless enabled by feature flags.
-3. Feature flags are passed as `CodersoFeatureFlags` to `buildDefaultNavSections(flags)`.
+3. Feature flags are passed as `AdvancedFeatureFlags` to `buildDefaultNavSections(flags)`.
 4. Planned modules should keep badge `Soon` when exposed before full delivery.
 
 ## Feature Flag Example
@@ -74,14 +76,14 @@ const sections = buildDefaultNavSections({
 - 054-07-02 done: source adapters (`entries/posts/users/taxonomies`) and allowlisted execution plan with deterministic filter/sort/pagination.
 - 054-07-03 done: `listing_templates` DB model + migration + normalized template CRUD service.
 - 054-07-04 done: Listings API routes + saved query persistence (`listing_queries`) + preview wiring.
-- 054-07-05 done: Admin UI query builder + template manager + Coderso navigation/routing/prefetch exposure (`Beta`).
+- 054-07-05 done: Admin UI query builder + template manager + Advanced navigation/routing/prefetch exposure (`Beta`).
 - 054-07-06 done: Runtime integration for `contentList` and `entryTeaser` with new `legacy|listing` source mode + listing query/template binding.
 - 054-07-07 done: Conditional visibility + dynamic binding (`eq/neq/in/contains/exists/gt/gte/lt/lte`) with runtime-safe row evaluation and template binding editor UX.
 - 054-07-08 done: QA matrix closed (unit/integration/runtime back-compat), API/architecture docs finalized.
 - 054-08 done: Filters/Search suite delivered:
   - `listing-filters` + `search-box` widgets (SSR/runtime URL sync),
   - `/admin/api/filters/preview` + `/api/search`,
-  - Coderso Filters/Search pages and nav exposure (`Beta`),
+  - Advanced Filters/Search pages and nav exposure (`Beta`),
   - full tests for filter engine/search index/runtime/widget layers.
 - 054-09 done: Forms automation + runtime UX delivered:
   - action contract + runner (`email`, `webhook`, `entry_sync`, `redirect`, `success_message`),
@@ -96,7 +98,7 @@ const sections = buildDefaultNavSections({
   - runtime widgets + access modes + QA/docs closure.
 - 054-11 done: Commerce suite delivered:
   - domain contract + DB schema + service/query engine + admin API RBAC,
-  - Coderso Commerce list/editor UI with cache/prefetch,
+  - Advanced Commerce list/editor UI with cache/prefetch,
   - runtime widgets (`product-gallery`, `product-compare`, `product-table`) with SSR hydration,
   - checkout/cart adapter registry with plugin extension hook (`commerce:checkout:adapters`).
 - 054-12 done: Engagement suite delivered:
@@ -107,7 +109,7 @@ const sections = buildDefaultNavSections({
 - 054-13-01 done: Solution Kits foundation delivered:
   - deterministic kit catalog with five starter verticals,
   - planner engine (`/solution-kits/plan`) with transparent steps and settings patch preview,
-  - Coderso navigation/module activation for `Solution Kits` (`Beta`) with internal RBAC route surface.
+  - Advanced navigation/module activation for `Solution Kits` (`Beta`) with internal RBAC route surface.
 - 054-13-05 done: AI Site Wizard guided flow delivered:
   - `AiSiteWizard` multi-step UX (`profile -> goals -> recommendation -> review -> execute`),
   - review-stage execution step editing (`enabledStepIds`) before apply,
@@ -142,7 +144,7 @@ const sections = buildDefaultNavSections({
   - block-level options remain in `Details`,
   - primary template builder actions now live in the sticky canvas area instead of shell topbar.
 - 054-30 done: Solution Kits module audit and sidebar gating delivered:
-  - active solution kit can now focus the `Coderso` sidebar through derived feature flags,
+  - active solution kit can now focus the `Advanced` sidebar through derived feature flags,
   - kit module lists were audited against actual blueprint capabilities,
   - `Solution Kits` details and AI wizard now explain required/recommended/optional module scope more clearly.
 - 054-15 done: Plugin contract and package manifest delivered:
@@ -155,22 +157,22 @@ const sections = buildDefaultNavSections({
   - registry-level pack status + validator (`listModulePackStatus`, `validateModulePackMatrix`),
   - widget library module filter ordering and labels now pack-aware (`Ready`, `Needs coverage`).
 - 054-10-05 done: Booking Admin UI delivered:
-  - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
-  - Coderso sidebar Booking module enabled as `Beta`,
+  - `/admin/advanced/booking` screen with resources/services/availability/reservations/slot preview tabs,
+  - Advanced sidebar Booking module enabled as `Beta`,
   - admin cache + route prefetch support for booking section.
 - 054-22 done: Custom Screens module delivered:
-  - screen builder route (`/admin/coderso/custom-screens/:id`) now supports widget-to-field bindings and bound preview,
-  - dedicated records routes (`/admin/coderso/custom-screens/:screenId/entries*`) reuse existing entries domain while hiding classic Entries from the main workflow,
-  - active screens can opt into direct left-menu shortcuts rendered after the `Coderso` group (`showInSidebar`, optional `sidebarLabel`),
+  - screen builder route (`/admin/advanced/custom-screens/:id`) now supports widget-to-field bindings and bound preview,
+  - dedicated records routes (`/admin/advanced/custom-screens/:screenId/entries*`) reuse existing entries domain while hiding classic Entries from the main workflow,
+  - active screens can opt into direct left-menu shortcuts rendered after the `Advanced` group (`showInSidebar`, optional `sidebarLabel`),
   - classic Entries fallback remains available for metadata/publish operations outside the scoped custom-screen editor.
 - 054-23 done: Custom Screens follow-up delivered:
   - widget registry gained surface scoping (`page-builder`, `widget-library`, `custom-screen-builder`),
   - `Screens` now uses dedicated admin screen widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) plus explicit shared layout primitives,
-  - `Coderso/Widgets` and template/page flows hide screen-only widgets,
+  - `Advanced/Widgets` and template/page flows hide screen-only widgets,
   - custom screen responses expose derived `collection-only | dashboard | editor` capabilities,
   - builder preview and records workflow now explain incomplete setups instead of falling through to blank or confusing states.
 - 055 done: Posts module delivered:
-  - dedicated `Posts` list + editor routes (`/admin/coderso/posts`, `/admin/coderso/posts/:id`),
+  - dedicated `Posts` list + editor routes (`/admin/posts`, `/admin/posts/:id`),
   - internal API aliases (`/admin/api/posts*`) on top of reserved `post` content type,
   - editor workflow parity with entries/pages (publish, preview, metadata, duplicate, delete).
 - 057 done: Gutenberg-like Posts editor finalized:
@@ -218,12 +220,12 @@ const sections = buildDefaultNavSections({
   - right details tabs are fixed to `Post` / `Block` and switch context on selection,
   - media/interactive placeholders in canvas are clickable and route users to block settings context,
   - header right actions follow contract `Preview`, `Publish`, `Gear` (`Editor settings` modal),
-  - editor preferences persist locally (`nextless.posts.editor.preferences.v1`).
+  - editor preferences persist locally (`coderso.posts.editor.preferences.v2`, with legacy fallback for `nextless.posts.editor.preferences.v1`).
 - 063-12 done: Final reference parity closure:
   - right inspector flow matches template contract with progressive disclosure (`Advanced` collapsed) and `Danger zone` action,
   - `Move to trash` uses existing delete endpoint and redirects to `/admin/posts`,
   - gear modal upgraded to grouped editor UX settings (density/hints/default tab/restore sidebars),
-  - preferences persistence is local-first (`nextless.posts.editor.preferences.v2`, compatibility `v1`) with background sync to user setting `posts.editor.preferences`,
+  - preferences persistence is local-first (`coderso.posts.editor.preferences.v2`, compatibility `v1`) with background sync to user setting `posts.editor.preferences`,
   - focus mode now restores previous panel snapshot deterministically after exit.
 - 063-07 done: Details inspector tabs + preferences:
   - `PostDetailsSidebar` owns `Post/Block` tabs with no-selection fallback,

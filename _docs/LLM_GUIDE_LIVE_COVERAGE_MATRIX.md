@@ -21,27 +21,27 @@ Coverage states:
 |---|---|---|---|---|
 | /admin | Dashboard | live-gated | TASK-184-12 | Dashboard prompts stay non-executable/read-only. |
 | /admin/pages | Pages | live-execute | TASK-184-02 | Page create/search/update/delete/safety live matrix. |
-| /admin/coderso/posts | Posts | live-gated | TASK-184-10 | Direct post mutations stay gated until typed post actions exist. |
+| /admin/posts | Posts | live-gated | TASK-184-10 | Direct post mutations stay gated until typed post actions exist. |
 | /admin/menus | Menus | live-read-only | TASK-184-08 | List-first Menus surface; choose a menu before entering the editor. |
 | /admin/menus/:id | Menus Editor | live-execute | TASK-184-08 | Route-selected menu item inspect/update/delete live matrix after choosing a menu from `/admin/menus`. |
 | /admin/media | Media | live-execute | TASK-184-08 | Existing media references execute; upload prompts stay gated. |
-| /admin/coderso/engine | Engine | live-execute | TASK-184-03 | Content type inspect/delete safety live matrix. |
-| /admin/coderso/entries | Entries | live-execute | TASK-184-03 | Active entry update/delete live matrix. |
-| /admin/coderso/custom-screens | Screens | live-execute | TASK-184-04 | Custom screen search/update/delete live matrix. |
-| /admin/coderso/widgets | Widgets | live-execute | TASK-184-07 | Widget template inspect/update/block patch/delete live matrix. |
-| /admin/coderso/forms | Forms | live-execute | TASK-184-05 | Form create/search/update/archive/delete/safety live matrix. |
-| /admin/coderso/listings | Listings | live-execute | TASK-184-06 | Listing query/template inspect/update/delete live matrix. |
-| /admin/coderso/filters | Filters | live-gated | TASK-184-11 | Filter/search module prompts stay non-executable unless covered by listing typed actions. |
-| /admin/coderso/search | Coderso Search | live-gated | TASK-184-11 | Search module prompts stay non-executable without dedicated typed actions. |
-| /admin/coderso/booking | Booking | live-gated | TASK-184-11 | Booking setup remains gated until booking action adapters exist. |
-| /admin/coderso/appointments | Appointments | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
-| /admin/coderso/reviews | Reviews | live-gated | TASK-184-11 | Destructive review prompts stay non-executable. |
-| /admin/coderso/commerce | Commerce | live-gated | TASK-184-11 | Checkout/payment prompts stay gated. |
-| /admin/coderso/popups | Popups | live-gated | TASK-184-11 | Popup create prompts stay non-executable until typed actions exist. |
-| /admin/coderso/mega-menu | Mega Menu | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
-| /admin/coderso/portal | Portal | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
-| /admin/coderso/i18n | Multilingual | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
-| /admin/coderso/solution-kits | Solution Kits | live-gated | TASK-184-11 | Solution kit prompts without installed-kit context stay gated. |
+| /admin/advanced/engine | Engine | live-execute | TASK-184-03 | Content type inspect/delete safety live matrix. |
+| /admin/advanced/entries | Entries | live-execute | TASK-184-03 | Active entry update/delete live matrix. |
+| /admin/advanced/custom-screens | Screens | live-execute | TASK-184-04 | Custom screen search/update/delete live matrix. |
+| /admin/advanced/widgets | Widgets | live-execute | TASK-184-07 | Widget template inspect/update/block patch/delete live matrix. |
+| /admin/advanced/forms | Forms | live-execute | TASK-184-05 | Form create/search/update/archive/delete/safety live matrix. |
+| /admin/advanced/listings | Listings | live-execute | TASK-184-06 | Listing query/template inspect/update/delete live matrix. |
+| /admin/advanced/filters | Filters | live-gated | TASK-184-11 | Filter/search module prompts stay non-executable unless covered by listing typed actions. |
+| /admin/advanced/search | Advanced Search | live-gated | TASK-184-11 | Search module prompts stay non-executable without dedicated typed actions. |
+| /admin/advanced/booking | Booking | live-gated | TASK-184-11 | Booking setup remains gated until booking action adapters exist. |
+| /admin/advanced/appointments | Appointments | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
+| /admin/advanced/reviews | Reviews | live-gated | TASK-184-11 | Destructive review prompts stay non-executable. |
+| /admin/advanced/commerce | Commerce | live-gated | TASK-184-11 | Checkout/payment prompts stay gated. |
+| /admin/advanced/popups | Popups | live-gated | TASK-184-11 | Popup create prompts stay non-executable until typed actions exist. |
+| /admin/advanced/mega-menu | Mega Menu | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
+| /admin/advanced/portal | Portal | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
+| /admin/advanced/i18n | Multilingual | not-applicable | TASK-184-16 | Planned/disabled module; no runtime route coverage claimed. |
+| /admin/advanced/solution-kits | Solution Kits | live-gated | TASK-184-11 | Solution kit prompts without installed-kit context stay gated. |
 | /admin/store | Plugin Store | live-gated | TASK-184-12 | Plugin install/remove prompts stay non-executable without typed contracts. |
 | /admin/themes | Admin UI Theme | live-gated | TASK-184-12 | Theme mutation prompts stay non-executable without typed contracts. |
 | /admin/search | Search | live-read-only | TASK-184-10 | Admin Search service smoke covers media; posts are not indexed by current global search. |

@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import {
+  POST_EDITOR_PREFERENCES_LEGACY_CURRENT_STORAGE_KEY,
   POST_EDITOR_PREFERENCES_LEGACY_STORAGE_KEY,
   POST_EDITOR_PREFERENCES_STORAGE_KEY,
   resolveStoredPostEditorPreferences,
@@ -48,6 +49,28 @@ test("resolveStoredPostEditorPreferences prefers v2 preferences over legacy v1",
   expect(result.hasStoredValue).toBe(true);
 });
 
+test("resolveStoredPostEditorPreferences migrates legacy v2 preferences", () => {
+  const storage = createStorage({
+    [POST_EDITOR_PREFERENCES_LEGACY_CURRENT_STORAGE_KEY]: JSON.stringify({
+      version: 2,
+      focusModeOnOpen: true,
+      compactSidePanels: false,
+      showOutlineHints: true,
+      editorDensity: "comfortable",
+      showKeyboardHints: false,
+      defaultInspectorTab: "post",
+      restoreLastSidebarsState: false,
+    }),
+  });
+
+  const result = resolveStoredPostEditorPreferences(storage);
+  expect(result.preferences.focusModeOnOpen).toBe(true);
+  expect(result.hasStoredValue).toBe(true);
+  expect(storage.getItem(POST_EDITOR_PREFERENCES_STORAGE_KEY)).toContain(
+    "\"version\":2"
+  );
+});
+
 test("resolveStoredPostEditorPreferences uses legacy v1 when v2 is invalid", () => {
   const storage = createStorage({
     [POST_EDITOR_PREFERENCES_STORAGE_KEY]: "{invalid json",
@@ -66,4 +89,7 @@ test("resolveStoredPostEditorPreferences uses legacy v1 when v2 is invalid", () 
   expect(result.preferences.focusModeOnOpen).toBe(true);
   expect(result.preferences.compactSidePanels).toBe(true);
   expect(result.hasStoredValue).toBe(true);
+  expect(storage.getItem(POST_EDITOR_PREFERENCES_STORAGE_KEY)).toContain(
+    "\"version\":2"
+  );
 });

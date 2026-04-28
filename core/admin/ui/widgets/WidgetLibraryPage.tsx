@@ -1012,7 +1012,7 @@ export function WidgetLibraryPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/widgets"
+      activeHref="/admin/advanced/widgets"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Widgets</span>

@@ -1,4 +1,6 @@
-# Nextless
+# Coderso
+
+Coderso - The modular CMS platform.
 
 ## Index
 

@@ -193,7 +193,7 @@ const createPublishedPageWithDraft = async () => {
 
 const requestPublicPath = (path: string) =>
   handlePublicRequest(
-    new Request(`http://public.nextless.test${path}`, {
+    new Request(`http://public.coderso.test${path}`, {
       headers: {
         "user-agent": "pages-runtime-test",
         "x-forwarded-for": `127.0.0.${Math.floor(Math.random() * 200) + 1}`,

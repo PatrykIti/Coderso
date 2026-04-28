@@ -133,7 +133,7 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
     prompt:
       "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -157,7 +157,7 @@ test("planAssistantActions returns docs guidance plan for non-actionable docs pr
   const plan = planAssistantActions({
     prompt: "gdzie zmienie kolory hero widgetu?",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -327,12 +327,12 @@ test("planAssistantActions reuses planning state for follow-up target selection"
   const plan = planAssistantActions({
     prompt: "usun te dwa pierwsze",
     context: {
-      page: "/admin/coderso/custom-screens",
+      page: "/admin/advanced/custom-screens",
       locale: "pl-PL",
       planningState: {
         schemaVersion: 1,
         sourcePlanId: "plan-cms-custom-screen-inspect",
-        route: "/admin/coderso/custom-screens",
+        route: "/admin/advanced/custom-screens",
         resourceKind: "custom-screen",
         operation: "inspect",
         query: "House Projects",
@@ -531,7 +531,7 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
   const plan = planAssistantActions({
     prompt: "usun dwa ekrany w screens o prefixie 'House Projects' w tytule ekranu",
     context: {
-      page: "/admin/coderso/custom-screens/screen-1/entries",
+      page: "/admin/advanced/custom-screens/screen-1/entries",
       locale: "pl-PL",
       includeResourceCatalog: true,
       resourceCatalog: {
@@ -861,7 +861,7 @@ test("planAssistantActions builds widget template delete plan from active templa
   const plan = planAssistantActions({
     prompt: "usun ten widget template Contact CTA",
     context: {
-      page: "/admin/coderso/widgets/templates/template-1",
+      page: "/admin/advanced/widgets/templates/template-1",
       locale: "pl-PL",
       activeSurface: {
         kind: "widget-template",
@@ -905,7 +905,7 @@ test("planAssistantActions asks for active widget template context before templa
   const plan = planAssistantActions({
     prompt: "usun widget template Contact CTA",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -919,7 +919,7 @@ test("planAssistantActions builds widget template update plan from active templa
   const plan = planAssistantActions({
     prompt: "zmien nazwe widget template na 'Contact CTA Updated'",
     context: {
-      page: "/admin/coderso/widgets/templates/template-1",
+      page: "/admin/advanced/widgets/templates/template-1",
       locale: "pl-PL",
       activeSurface: {
         kind: "widget-template",
@@ -962,7 +962,7 @@ test("planAssistantActions builds widget template block patch plan from selected
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku widget template na 'New headline'",
     context: {
-      page: "/admin/coderso/widgets/templates/template-1",
+      page: "/admin/advanced/widgets/templates/template-1",
       locale: "pl-PL",
       activeSurface: {
         kind: "widget-template",
@@ -1042,7 +1042,7 @@ test("planAssistantActions builds custom screen update plan from active screen c
   const plan = planAssistantActions({
     prompt: "zmien nazwe custom screen na 'Projects Admin'",
     context: {
-      page: "/admin/coderso/custom-screens/screen-1/builder",
+      page: "/admin/advanced/custom-screens/screen-1/builder",
       locale: "pl-PL",
       activeSurface: {
         kind: "custom-screen",
@@ -1086,7 +1086,7 @@ test("planAssistantActions builds custom screen widget patch plan from selected 
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku custom screen na 'New headline'",
     context: {
-      page: "/admin/coderso/custom-screens/screen-1/builder",
+      page: "/admin/advanced/custom-screens/screen-1/builder",
       locale: "pl-PL",
       activeSurface: {
         kind: "custom-screen",
@@ -1141,14 +1141,14 @@ test("planAssistantActions builds entry delete plan from active entry route", ()
   const plan = planAssistantActions({
     prompt: "usun ten wpis",
     context: {
-      page: "/admin/coderso/entries/products/entry-1",
+      page: "/admin/advanced/entries/products/entry-1",
       locale: "pl-PL",
       runtimeSnapshot: {
-        schemaVersion: 1,
-        route: "/admin/coderso/entries/products/entry-1",
-        activeHref: "/admin/coderso/entries/products/entry-1",
-        area: "coderso",
-        codersoModule: "entries",
+        schemaVersion: 2,
+        route: "/admin/advanced/entries/products/entry-1",
+        activeHref: "/admin/advanced/entries/products/entry-1",
+        area: "advanced",
+        advancedModule: "entries",
         selectedResource: { kind: "entry", id: "entry-1" },
         visibleActions: [],
         permissionHints: {
@@ -1180,7 +1180,7 @@ test("planAssistantActions builds content type delete plan from resource catalog
   const plan = planAssistantActions({
     prompt: "usun content type 'products'",
     context: {
-      page: "/admin/coderso/engine",
+      page: "/admin/advanced/engine",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1228,7 +1228,7 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
   const plan = planAssistantActions({
     prompt: "usun content type 'products'",
     context: {
-      page: "/admin/coderso/engine",
+      page: "/admin/advanced/engine",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1268,14 +1268,14 @@ test("planAssistantActions builds listing query delete plan from active listing 
   const plan = planAssistantActions({
     prompt: "usun ten listing query",
     context: {
-      page: "/admin/coderso/listings/query-1",
+      page: "/admin/advanced/listings/query-1",
       locale: "pl-PL",
       runtimeSnapshot: {
-        schemaVersion: 1,
-        route: "/admin/coderso/listings/query-1",
-        activeHref: "/admin/coderso/listings/query-1",
-        area: "coderso",
-        codersoModule: "listings",
+        schemaVersion: 2,
+        route: "/admin/advanced/listings/query-1",
+        activeHref: "/admin/advanced/listings/query-1",
+        area: "advanced",
+        advancedModule: "listings",
         selectedResource: { kind: "listing-query", id: "query-1" },
         visibleActions: [],
         permissionHints: {
@@ -1336,7 +1336,7 @@ test("planAssistantActions builds listing template delete plan from exact slug",
   const plan = planAssistantActions({
     prompt: "usun listing template 'products-grid'",
     context: {
-      page: "/admin/coderso/listings",
+      page: "/admin/advanced/listings",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1388,7 +1388,7 @@ test("planAssistantActions asks for exact listing query when name is ambiguous",
   const plan = planAssistantActions({
     prompt: "usun listing query 'Products Catalog Query'",
     context: {
-      page: "/admin/coderso/listings",
+      page: "/admin/advanced/listings",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1447,7 +1447,7 @@ test("planAssistantActions builds listing query update plan from exact target", 
   const plan = planAssistantActions({
     prompt: "zmien limit listing query 'Products Catalog Query' na 24",
     context: {
-      page: "/admin/coderso/listings",
+      page: "/admin/advanced/listings",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1493,14 +1493,14 @@ test("planAssistantActions builds form delete plan from active form route", () =
   const plan = planAssistantActions({
     prompt: "usun ten formularz",
     context: {
-      page: "/admin/coderso/forms/form-1",
+      page: "/admin/advanced/forms/form-1",
       locale: "pl-PL",
       runtimeSnapshot: {
-        schemaVersion: 1,
-        route: "/admin/coderso/forms/form-1",
-        activeHref: "/admin/coderso/forms/form-1",
-        area: "coderso",
-        codersoModule: "forms",
+        schemaVersion: 2,
+        route: "/admin/advanced/forms/form-1",
+        activeHref: "/admin/advanced/forms/form-1",
+        area: "advanced",
+        advancedModule: "forms",
         selectedResource: { kind: "form", id: "form-1" },
         visibleActions: [],
         permissionHints: {
@@ -1556,7 +1556,7 @@ test("planAssistantActions builds form archive plan from exact slug", () => {
   const plan = planAssistantActions({
     prompt: "zarchiwizuj formularz 'lead-capture'",
     context: {
-      page: "/admin/coderso/forms",
+      page: "/admin/advanced/forms",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1605,7 +1605,7 @@ test("planAssistantActions asks for exact form when name is ambiguous", () => {
   const plan = planAssistantActions({
     prompt: "usun formularz 'Lead Capture'",
     context: {
-      page: "/admin/coderso/forms",
+      page: "/admin/advanced/forms",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -1943,7 +1943,7 @@ test("planAssistantActions routes non-house-project setup prompts into generic n
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -1958,7 +1958,7 @@ test("planAssistantActions builds product inquiry catalog for catalog plus form 
   const plan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z formularzem zapytania",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -1982,7 +1982,7 @@ test("planAssistantActions returns needs-input for checkout/payment prompts", ()
   const plan = planAssistantActions({
     prompt: "potrzebuje sklep z checkoutem koszykiem i platnosciami",
     context: {
-      page: "/admin/coderso/commerce",
+      page: "/admin/advanced/commerce",
       locale: "pl-PL",
     },
   });
@@ -1997,7 +1997,7 @@ test("planAssistantActions builds ready portfolio and services plans for routed 
   const portfolioPlan = planAssistantActions({
     prompt: "stworz portfolio projektow dla agencji architektonicznej",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -2011,7 +2011,7 @@ test("planAssistantActions builds ready portfolio and services plans for routed 
   const servicesPlan = planAssistantActions({
     prompt: "potrzebuje katalogu uslug dla firmy sprzatajacej",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -2025,7 +2025,7 @@ test("planAssistantActions builds ready lead capture site plan", () => {
   const plan = planAssistantActions({
     prompt: "potrzebuje strony kontaktowej z formularzem kontaktowym do zbierania leadow",
     context: {
-      page: "/admin/coderso/forms",
+      page: "/admin/advanced/forms",
       locale: "pl-PL",
     },
   });
@@ -2040,7 +2040,7 @@ test("planAssistantActions returns gated needs-input plan for booking service pr
   const plan = planAssistantActions({
     prompt: "potrzebuje strony z rezerwacja online i kalendarzem wizyt",
     context: {
-      page: "/admin/coderso/booking",
+      page: "/admin/advanced/booking",
       locale: "pl-PL",
     },
   });
@@ -2071,7 +2071,7 @@ test("planAssistantActions inspects posts from resource catalog", () => {
   const plan = planAssistantActions({
     prompt: "pokaz mi wszystkie posty",
     context: {
-      page: "/admin/coderso/posts",
+      page: "/admin/posts",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -2304,7 +2304,7 @@ test("planAssistantActions gates direct post mutation prompts", () => {
   const plan = planAssistantActions({
     prompt: "utworz post blogowy o tytule Test",
     context: {
-      page: "/admin/coderso/posts",
+      page: "/admin/posts",
       locale: "pl-PL",
     },
   });
@@ -2329,7 +2329,7 @@ test("planAssistantActions builds ready refinement plan for house-project filter
   const plan = planAssistantActions({
     prompt: "dodaj filtr po metrazu i liczbie pokoi",
     context: {
-      page: "/admin/coderso/widgets",
+      page: "/admin/advanced/widgets",
       locale: "pl-PL",
     },
   });
@@ -2396,7 +2396,7 @@ test("planAssistantActions accepts enriched resource catalog context without DB 
   const plan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
     context: {
-      page: "/admin/coderso/engine",
+      page: "/admin/advanced/engine",
       locale: "pl-PL",
       includeResourceCatalog: true,
       resourceCatalog: {
@@ -2698,7 +2698,7 @@ test("planAssistantActionsWithProviderDraft recovers explicit form create fields
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/forms",
+      page: "/admin/advanced/forms",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -2749,7 +2749,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/forms",
+      page: "/admin/advanced/forms",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -2866,7 +2866,7 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive actions
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/forms",
+      page: "/admin/advanced/forms",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -2962,7 +2962,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied listing templ
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/listings",
+      page: "/admin/advanced/listings",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -3022,7 +3022,7 @@ test("planAssistantActionsWithProviderDraft coerces prompt-implied listing query
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/listings",
+      page: "/admin/advanced/listings",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -3075,7 +3075,7 @@ test("planAssistantActions reads listing query limit outside quoted target names
   const plan = planAssistantActions({
     prompt: 'Zmien limit listing query "Query 716" na 24',
     context: {
-      page: "/admin/coderso/listings",
+      page: "/admin/advanced/listings",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -3146,7 +3146,7 @@ test("planAssistantActionsWithProviderDraft recovers active widget template bloc
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/widgets/templates/template-1",
+      page: "/admin/advanced/widgets/templates/template-1",
       locale: "pl-PL",
       activeSurface: {
         kind: "widget-template",
@@ -3212,7 +3212,7 @@ test("planAssistantActionsWithProviderDraft recovers active widget template dele
     llmAvailable: true,
     provider,
     context: {
-      page: "/admin/coderso/widgets/templates/template-1",
+      page: "/admin/advanced/widgets/templates/template-1",
       locale: "pl-PL",
       activeSurface: {
         kind: "widget-template",
@@ -3248,7 +3248,7 @@ test("planAssistantActions builds explicit media reference attach plan", () => {
   const plan = planAssistantActions({
     prompt: 'Podlacz mediaId "media-1" do entryId "entry-1" field "heroImage"',
     context: {
-      page: "/admin/coderso/entries/products/entry-1",
+      page: "/admin/advanced/entries/products/entry-1",
       locale: "pl-PL",
     },
   });

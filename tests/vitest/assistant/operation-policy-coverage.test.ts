@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { CODERSO_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/codersoModules";
+import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
 import { buildDefaultNavSections } from "../../../core/admin/ui/navigation/sidebarConfig";
 import { settingsSidebarItems } from "../../../core/admin/ui/settings/SettingsSidebar";
 import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
@@ -14,7 +14,7 @@ import {
 test("operation policy coverage covers every admin navigation route", () => {
   const routes = buildAdminNavigationRoutes({
     navSections: buildDefaultNavSections(),
-    codersoModules: CODERSO_MODULE_REGISTRY,
+    advancedModules: ADVANCED_MODULE_REGISTRY,
     settingsItems: settingsSidebarItems,
   });
 
@@ -38,7 +38,7 @@ test("operation policy coverage rows have stable route state and task metadata",
         task: "TASK-184-15",
       }),
       expect.objectContaining({
-        route: "/admin/coderso/appointments",
+        route: "/admin/advanced/appointments",
         coverage: "not-applicable",
         task: "TASK-184-16",
       }),

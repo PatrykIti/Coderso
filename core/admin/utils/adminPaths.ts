@@ -62,19 +62,20 @@ const splitPathSuffix = (href: string) => {
 };
 
 const aliasPrefixes: Array<{ from: string; to: string }> = [
-  { from: "/content-types", to: "/coderso/engine" },
-  { from: "/entries", to: "/coderso/entries" },
-  { from: "/content", to: "/coderso/entries" },
-  { from: "/widgets", to: "/coderso/widgets" },
-  { from: "/forms", to: "/coderso/forms" },
-  { from: "/posts", to: "/coderso/posts" },
-  { from: "/custom-screens", to: "/coderso/custom-screens" },
-  { from: "/listings", to: "/coderso/listings" },
-  { from: "/booking", to: "/coderso/booking" },
-  { from: "/reviews", to: "/coderso/reviews" },
-  { from: "/commerce", to: "/coderso/commerce" },
-  { from: "/popups", to: "/coderso/popups" },
-  { from: "/solution-kits", to: "/coderso/solution-kits" },
+  { from: "/coderso/posts", to: "/posts" },
+  { from: "/coderso", to: "/advanced" },
+  { from: "/content-types", to: "/advanced/engine" },
+  { from: "/entries", to: "/advanced/entries" },
+  { from: "/content", to: "/advanced/entries" },
+  { from: "/widgets", to: "/advanced/widgets" },
+  { from: "/forms", to: "/advanced/forms" },
+  { from: "/custom-screens", to: "/advanced/custom-screens" },
+  { from: "/listings", to: "/advanced/listings" },
+  { from: "/booking", to: "/advanced/booking" },
+  { from: "/reviews", to: "/advanced/reviews" },
+  { from: "/commerce", to: "/advanced/commerce" },
+  { from: "/popups", to: "/advanced/popups" },
+  { from: "/solution-kits", to: "/advanced/solution-kits" },
 ];
 
 export const resolveAdminRoutePath = (path: string) => {

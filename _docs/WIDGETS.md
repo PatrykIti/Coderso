@@ -136,7 +136,7 @@ Zasady:
 - public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
 - screen-only widgets naleza do `custom-screen-builder`,
 - tylko jawnie dopuszczone prymitywy layoutowe moga byc wspoldzielone miedzy wszystkimi surface'ami,
-- `Coderso/Widgets` pokazuje tylko surface `widget-library`,
+- `Advanced/Widgets` pokazuje tylko surface `widget-library`,
 - `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
 
 Uwaga:
@@ -146,7 +146,7 @@ Uwaga:
 
 ## Widget Library Admin UX
 
-`/admin/coderso/widgets` follows the shared Pages-style list contract:
+`/admin/advanced/widgets` follows the shared Pages-style list contract:
 - `All Items` opens by default in table view.
 - The old library rail is represented by one section dropdown in the filter bar:
   `All Items`, `Favorites`, `Templates`, `All Widgets`, `Layout`, `Content`,

@@ -31,7 +31,7 @@ import {
 import {
   getActiveSolutionKitId,
   subscribeActiveSolutionKitId,
-  buildCodersoFeatureFlagsForSolutionKit,
+  buildAdvancedFeatureFlagsForSolutionKit,
 } from "@/services/solutionKitSelection";
 import {
   getCachedSolutionKits,
@@ -42,7 +42,8 @@ import {
 import { cacheKeys } from "@/services/cachePolicy";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
-const NAV_GROUP_STATE_KEY = "nextless.admin.navGroupState";
+const NAV_GROUP_STATE_KEY = "coderso.admin.navGroupState";
+const LEGACY_NAV_GROUP_STATE_KEY = "nextless.admin.navGroupState";
 
 const collectDefaultGroupState = (sections: NavSection[]) => {
   const defaults: Record<string, boolean> = {};
@@ -52,6 +53,30 @@ const collectDefaultGroupState = (sections: NavSection[]) => {
     }
   }
   return defaults;
+};
+
+const normalizeStoredGroupState = (value: unknown): Record<string, boolean> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const parsed = value as Record<string, unknown>;
+  const normalized: Record<string, boolean> = {};
+  for (const [key, item] of Object.entries(parsed)) {
+    if (typeof item !== "boolean") continue;
+    normalized[key === "coderso" ? "advanced" : key] = item;
+  }
+  return normalized;
+};
+
+const readStoredNavGroupState = () => {
+  if (typeof window === "undefined") return null;
+  const stored =
+    window.localStorage.getItem(NAV_GROUP_STATE_KEY) ??
+    window.localStorage.getItem(LEGACY_NAV_GROUP_STATE_KEY);
+  if (!stored) return null;
+  try {
+    return normalizeStoredGroupState(JSON.parse(stored) as unknown);
+  } catch {
+    return null;
+  }
 };
 
 type AdminShellProps = {
@@ -97,15 +122,15 @@ export function AdminShell({
     [activeSolutionKitId, solutionKits]
   );
   const solutionKitFlags = useMemo(
-    () => buildCodersoFeatureFlagsForSolutionKit(activeSolutionKit),
+    () => buildAdvancedFeatureFlagsForSolutionKit(activeSolutionKit),
     [activeSolutionKit]
   );
   const baseNavSections = useMemo(
     () => navSections ?? buildDefaultNavSections(solutionKitFlags),
     [navSections, solutionKitFlags]
   );
-  const hasCodersoGroup = useMemo(
-    () => baseNavSections.some((section) => section.groups?.some((group) => group.id === "coderso")),
+  const hasAdvancedGroup = useMemo(
+    () => baseNavSections.some((section) => section.groups?.some((group) => group.id === "advanced")),
     [baseNavSections]
   );
   const navGroupDefaults = useMemo(
@@ -113,56 +138,50 @@ export function AdminShell({
     [baseNavSections]
   );
   const [navGroupState, setNavGroupState] = useState<Record<string, boolean>>(() => {
-    if (typeof window === "undefined") return navGroupDefaults;
-    const stored = window.localStorage.getItem(NAV_GROUP_STATE_KEY);
+    const stored = readStoredNavGroupState();
     if (!stored) return navGroupDefaults;
-    try {
-      const parsed = JSON.parse(stored) as Record<string, boolean>;
-      return {
-        ...navGroupDefaults,
-        ...parsed,
-      };
-    } catch {
-      return navGroupDefaults;
-    }
+    return {
+      ...navGroupDefaults,
+      ...stored,
+    };
   });
 
   useEffect(() => {
-    if (!hasCodersoGroup) return;
+    if (!hasAdvancedGroup) return;
     listCustomScreensCached()
       .then((items) => setCustomScreens(items))
       .catch(() => undefined);
-  }, [hasCodersoGroup]);
+  }, [hasAdvancedGroup]);
 
   useEffect(() => {
-    if (!hasCodersoGroup) return;
+    if (!hasAdvancedGroup) return;
     listSolutionKitsCached()
       .then((items) => setSolutionKits(items))
       .catch(() => undefined);
-  }, [hasCodersoGroup]);
+  }, [hasAdvancedGroup]);
 
   useEffect(() => {
-    if (!hasCodersoGroup) return undefined;
+    if (!hasAdvancedGroup) return undefined;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.customScreensList) return;
       listCustomScreensCached({ force: true })
         .then((items) => setCustomScreens(items))
         .catch(() => undefined);
     });
-  }, [hasCodersoGroup]);
+  }, [hasAdvancedGroup]);
 
   useEffect(() => {
-    if (!hasCodersoGroup) return undefined;
+    if (!hasAdvancedGroup) return undefined;
     return subscribeActiveSolutionKitId((kitId) => {
       setActiveSolutionKitId(kitId);
     });
-  }, [hasCodersoGroup]);
+  }, [hasAdvancedGroup]);
 
   const navSectionsWithCustomScreens = useMemo(
     () =>
       appendNavItemsAfterGroup(
         baseNavSections,
-        "coderso",
+        "advanced",
         buildCustomScreenShortcutNavItems(customScreens)
       ),
     [baseNavSections, customScreens]

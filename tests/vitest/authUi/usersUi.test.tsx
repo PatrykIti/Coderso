@@ -16,7 +16,7 @@ const users: UserSummary[] = [
   {
     id: "admin-user",
     name: "Admin User",
-    email: "admin@nextless.com",
+    email: "admin@coderso.com",
     roleIds: ["admin"],
     status: "active",
     lastActive: "Just now",

@@ -103,7 +103,7 @@ const createActor = async () => {
   const [created] = await db
     .insert(users)
     .values({
-      email: `legacy-post-author-${randomUUID()}@nextless.test`,
+      email: `legacy-post-author-${randomUUID()}@coderso.test`,
       passwordHash: `hash-${randomUUID()}`,
       name: "Legacy Post Author",
       status: "active",

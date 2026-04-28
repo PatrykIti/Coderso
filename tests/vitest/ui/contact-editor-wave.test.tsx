@@ -509,7 +509,7 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
     setInputValue(findInputByPlaceholder(view.container, "+1 555 123 456"), "+48 222 333 444");
     setInputValue(
       findInputByPlaceholder(view.container, "hello@example.com"),
-      "hello@nextless.dev"
+      "hello@coderso.dev"
     );
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "123 Market Street"),
@@ -550,7 +550,7 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
     expect(latestValue.form?.submitLabel).toBe("Talk to us");
     expect(latestValue.contact).toMatchObject({
       phone: "+48 222 333 444",
-      email: "hello@nextless.dev",
+      email: "hello@coderso.dev",
       address: "Nowy Swiat 10",
       hours: "24/7 support",
     });

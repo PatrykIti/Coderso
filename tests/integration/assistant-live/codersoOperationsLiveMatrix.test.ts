@@ -11,7 +11,7 @@ const providers = createEnabledLiveProviderRuntimes();
 const testIfLive = providers.length > 0 ? test : test.skip;
 
 const context = {
-  page: "/admin/coderso",
+  page: "/admin/advanced",
   locale: "pl-PL",
   resourceCatalog: {
     schemaVersion: 1,
@@ -48,7 +48,7 @@ const runOperationsMatrixForProvider = async (provider: LiveProviderRuntime) => 
 };
 
 testIfLive(
-  "assistant live providers keep unsupported Coderso operation modules gated",
+  "assistant live providers keep unsupported Advanced operation modules gated",
   async () => {
     for (const provider of providers) {
       await runOperationsMatrixForProvider(provider);

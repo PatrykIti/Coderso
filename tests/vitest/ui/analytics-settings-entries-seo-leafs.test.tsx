@@ -492,7 +492,7 @@ test("settings leaf components forward copy, field changes, and revoke actions",
       buttons.find((button) => button.getAttribute("aria-label") === "Close API key dialog")?.click();
       buttons.find((button) => button.textContent === "Done")?.click();
 
-      setInputValue(inputs[1], "smtp.nextless.test");
+      setInputValue(inputs[1], "smtp.coderso.test");
       setInputValue(inputs[2], "465");
       setSelectValue(selects[0], "ssl-tls");
       (inputs[3] as HTMLInputElement | null | undefined)?.click();
@@ -504,7 +504,7 @@ test("settings leaf components forward copy, field changes, and revoke actions",
 
     expect(writeText).toHaveBeenCalledWith("secret-value");
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(onHostChange).toHaveBeenCalledWith("smtp.nextless.test");
+    expect(onHostChange).toHaveBeenCalledWith("smtp.coderso.test");
     expect(onPortChange).toHaveBeenCalledWith("465");
     expect(onSecureChange).toHaveBeenCalledWith(true);
     expect(onTogglePassword).toHaveBeenCalledWith(true);
@@ -660,7 +660,7 @@ test("seo table renders empty row and edit action", () => {
           metaTitle: "Landing",
           metaDescription: "Landing description",
           keywords: ["landing"],
-          previewUrl: "https://nextless.test/landing",
+          previewUrl: "https://coderso.test/landing",
           previewPath: "/landing",
           analysisStatus: "passed",
           analysisNotes: [],
@@ -675,7 +675,7 @@ test("seo table renders empty row and edit action", () => {
           metaTitle: "Pricing",
           metaDescription: "Pricing description",
           keywords: ["pricing"],
-          previewUrl: "https://nextless.test/pricing",
+          previewUrl: "https://coderso.test/pricing",
           previewPath: "/pricing",
           analysisStatus: "attention",
           analysisNotes: ["Missing OG image"],

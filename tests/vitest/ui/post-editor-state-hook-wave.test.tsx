@@ -127,7 +127,7 @@ const hookState = vi.hoisted(() => {
   };
 
   const state = {
-    path: "/admin/coderso/posts/post-1?editor=writing",
+    path: "/admin/posts/post-1?editor=writing",
     cachedPost: null as PostDetail | null,
     fetchedPost: null as PostDetail | null,
     restoredPost: null as PostDetail | null,
@@ -187,7 +187,7 @@ const hookState = vi.hoisted(() => {
     },
     reset() {
       listeners.clear();
-      state.path = "/admin/coderso/posts/post-1?editor=writing";
+      state.path = "/admin/posts/post-1?editor=writing";
       state.cachedPost = null;
       state.fetchedPost = null;
       state.restoredPost = null;
@@ -590,7 +590,7 @@ test("usePostEditorState helper exports normalize writing-flow documents and syn
 });
 
 test("usePostEditorState reports missing post id without fetching", async () => {
-  hookState.path = "/admin/coderso/settings";
+  hookState.path = "/admin/advanced/settings";
 
   const view = mountHook();
   try {
@@ -606,7 +606,7 @@ test("usePostEditorState reports missing post id without fetching", async () => 
 });
 
 test("usePostEditorState decodes post ids from the route and treats /posts without an id as missing", async () => {
-  hookState.path = "/admin/coderso/posts/post%202?editor=writing#details";
+  hookState.path = "/admin/posts/post%202?editor=writing#details";
   hookState.fetchedPost = hookState.createPost("post 2");
 
   const resolvedView = mountHook();
@@ -620,7 +620,7 @@ test("usePostEditorState decodes post ids from the route and treats /posts witho
   }
 
   hookState.reset();
-  hookState.path = "/admin/coderso/posts";
+  hookState.path = "/admin/posts";
 
   const missingView = mountHook();
   try {

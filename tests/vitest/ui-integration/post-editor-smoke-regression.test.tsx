@@ -7,7 +7,7 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 
 test("post editor smoke: blocks mode renders canonical editor layout", () => {
   const html = renderAdminUi(<PostEditorPage />, {
-    path: "/admin/coderso/posts/post-1",
+    path: "/admin/posts/post-1",
   });
 
   expect(html).toContain("Editor settings");
@@ -17,7 +17,7 @@ test("post editor smoke: blocks mode renders canonical editor layout", () => {
 
 test("post editor smoke: classic override route still opens legacy editor", () => {
   const html = renderAdminUi(<PostEditorPage />, {
-    path: "/admin/coderso/posts/post-1?editor=classic",
+    path: "/admin/posts/post-1?editor=classic",
   });
 
   expect(html).toContain("Enter post title...");
@@ -27,7 +27,7 @@ test("post editor smoke: classic override route still opens legacy editor", () =
 
 test("post editor smoke: shell action controls stay visible", () => {
   const html = renderAdminUi(<PostBlockEditorShell />, {
-    path: "/admin/coderso/posts/post-1",
+    path: "/admin/posts/post-1",
   });
 
   expect(html).toContain("Revisions");

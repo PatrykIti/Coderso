@@ -31,7 +31,7 @@ const catalog: StoreCatalogItem[] = [
   },
   {
     id: "analytics",
-    name: "Nextless Analytics",
+    name: "Coderso Analytics",
     description: "Privacy-focused analytics dashboard inside the CMS.",
     status: "official",
     tags: ["analytics", "insights"],
@@ -76,7 +76,7 @@ const installedSeed: InstalledPlugin[] = [
     permissions: ["content:read", "content:write"],
   },
   {
-    name: "Nextless Analytics",
+    name: "Coderso Analytics",
     version: "3.1.2",
     status: "enabled",
     enabled: true,

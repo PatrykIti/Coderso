@@ -305,7 +305,7 @@ vi.mock("@/services/userSettingsClient", () => ({
 vi.mock("@/services/siteSettingsClient", () => ({
   getSiteSettings: vi.fn(async () => ({
     adminBaseUrl: null,
-    publicBaseUrl: "https://nextless.test",
+    publicBaseUrl: "https://coderso.test",
     adminPath: "/admin",
     adminRedirectEnabled: false,
     homepageId: null,
@@ -701,7 +701,7 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
         onOpenAfterCreateChange={onOpenAfterCreateChange}
         error="Post error"
         slugRouteContext={{
-          publicBaseUrl: "https://nextless.test",
+          publicBaseUrl: "https://coderso.test",
           detailPathPattern: "/blog/:slug",
         }}
       />
@@ -738,7 +738,7 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
       buttons.find((button) => button.textContent === "Create Post")?.click();
     });
 
-    expect(view.container.textContent).toContain("https://nextless.test/blog/release-notes");
+    expect(view.container.textContent).toContain("https://coderso.test/blog/release-notes");
 
     act(() => {
       toggles[1]?.click();
@@ -1422,7 +1422,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
       { force: true, background: true },
       { force: true, background: true },
     ]);
-    expect(pagePostState.navigateCalls).not.toContain("/coderso/posts/created-post");
+    expect(pagePostState.navigateCalls).not.toContain("/posts/created-post");
     expect(
       view.container
         .querySelector("[data-has-open-change='true']")
@@ -1659,7 +1659,7 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
       await flushMicrotasks();
     });
 
-    expect(pagePostState.navigateCalls).toContain("/coderso/posts/created-post");
+    expect(pagePostState.navigateCalls).toContain("/posts/created-post");
     expect(pagePostState.toastSuccess).toHaveBeenCalledWith(
       'Post "Launch Memo" created.'
     );
@@ -1784,8 +1784,8 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     expect(pagePostState.previewUrlCalls).toContain("https://preview.test/post");
     expect(pagePostState.navigateCalls).toContain("/pages/page-1");
     expect(pagePostState.navigateCalls).toContain("/pages/duplicated-page");
-    expect(pagePostState.navigateCalls).toContain("/coderso/posts/post-1");
-    expect(pagePostState.navigateCalls).toContain("/coderso/posts/duplicated-post");
+    expect(pagePostState.navigateCalls).toContain("/posts/post-1");
+    expect(pagePostState.navigateCalls).toContain("/posts/duplicated-post");
     expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Page published.");
     expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Page unpublished.");
     expect(pagePostState.toastSuccess).toHaveBeenCalledWith("Page deleted.");

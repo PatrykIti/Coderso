@@ -87,7 +87,7 @@ export const formPolicy: AssistantResourcePolicy = {
   kind: "form",
   label: "Forms",
   aliases: ["form", "forms", "formularz", "formularze", "formularza"],
-  routes: ["/admin/coderso/forms"],
+  routes: ["/admin/advanced/forms"],
   operations: ["inspect", "find", "create", "update", "delete", "archive"],
   readPermissions: ["forms:read"],
   executePermissions: ["forms:write"],
@@ -156,7 +156,7 @@ export const formPolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-05",
-    routes: ["/admin/coderso/forms"],
+    routes: ["/admin/advanced/forms"],
     notes: "Form create/search/update/archive/delete/safety live matrix.",
   },
 };
@@ -172,7 +172,7 @@ export const listingQueryPolicy: AssistantResourcePolicy = {
     "zapytanie listingowe",
     "kwerenda listingowa",
   ],
-  routes: ["/admin/coderso/listings"],
+  routes: ["/admin/advanced/listings"],
   operations: ["inspect", "find", "create", "update", "delete", "refine"],
   readPermissions: ["content:read"],
   executePermissions: ["content:write"],
@@ -213,7 +213,7 @@ export const listingQueryPolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-06",
-    routes: ["/admin/coderso/listings", "/admin/coderso/filters", "/admin/coderso/search"],
+    routes: ["/admin/advanced/listings", "/admin/advanced/filters", "/admin/advanced/search"],
     notes: "Listing query inspect/update/delete and filter patch policy.",
   },
 };
@@ -229,7 +229,7 @@ export const listingTemplatePolicy: AssistantResourcePolicy = {
     "template listingu",
     "template listingowy",
   ],
-  routes: ["/admin/coderso/listings"],
+  routes: ["/admin/advanced/listings"],
   operations: ["inspect", "find", "create", "update", "delete", "refine"],
   readPermissions: ["content:read"],
   executePermissions: ["content:write"],
@@ -271,7 +271,7 @@ export const listingTemplatePolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-06",
-    routes: ["/admin/coderso/listings"],
+    routes: ["/admin/advanced/listings"],
     notes: "Listing template inspect/update/delete and card patch policy.",
   },
 };
@@ -290,7 +290,7 @@ export const contentTypePolicy: AssistantResourcePolicy = {
     "model tresci",
     "model treści",
   ],
-  routes: ["/admin/coderso/engine"],
+  routes: ["/admin/advanced/engine"],
   operations: ["inspect", "find", "create", "update", "delete"],
   readPermissions: ["content:read"],
   executePermissions: ["content:write"],
@@ -326,7 +326,7 @@ export const contentTypePolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-03",
-    routes: ["/admin/coderso/engine"],
+    routes: ["/admin/advanced/engine"],
     notes: "Content type inspect and zero-entry delete live matrix.",
   },
 };
@@ -335,7 +335,7 @@ export const entryPolicy: AssistantResourcePolicy = {
   kind: "entry",
   label: "Entries",
   aliases: ["entry", "entries", "record", "records", "wpis", "wpisy", "rekord", "rekordy"],
-  routes: ["/admin/coderso/entries"],
+  routes: ["/admin/advanced/entries"],
   operations: ["inspect", "find", "create", "update", "delete", "publish"],
   readPermissions: ["content:read"],
   executePermissions: ["content:write", "content:publish"],
@@ -405,7 +405,7 @@ export const entryPolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-03",
-    routes: ["/admin/coderso/entries"],
+    routes: ["/admin/advanced/entries"],
     notes: "Active entry update/delete and draft creation policy.",
   },
 };
@@ -423,7 +423,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
     "ekranow",
     "ekranów",
   ],
-  routes: ["/admin/coderso/custom-screens"],
+  routes: ["/admin/advanced/custom-screens"],
   operations: ["inspect", "find", "create", "update", "delete"],
   readPermissions: ["content:read"],
   executePermissions: ["content:write"],
@@ -489,7 +489,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-04",
-    routes: ["/admin/coderso/custom-screens"],
+    routes: ["/admin/advanced/custom-screens"],
   },
 };
 
@@ -509,7 +509,7 @@ export const widgetTemplatePolicy: AssistantResourcePolicy = {
     "templates",
     "szablon",
   ],
-  routes: ["/admin/coderso/widgets"],
+  routes: ["/admin/advanced/widgets"],
   operations: ["inspect", "find", "create", "update", "delete"],
   readPermissions: ["widgets:read"],
   executePermissions: ["widgets:write"],
@@ -540,7 +540,7 @@ export const widgetTemplatePolicy: AssistantResourcePolicy = {
   coverage: {
     state: "live-execute",
     task: "TASK-184-07",
-    routes: ["/admin/coderso/widgets"],
+    routes: ["/admin/advanced/widgets"],
   },
 };
 

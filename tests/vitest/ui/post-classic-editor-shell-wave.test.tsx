@@ -60,7 +60,7 @@ const classicState = vi.hoisted(() => {
   const state = {
     apiError,
     createPost,
-    path: "/admin/coderso/posts/post-1?editor=classic",
+    path: "/admin/posts/post-1?editor=classic",
     cachedPost: null as PostDetail | null,
     fetchedPost: null as PostDetail | null,
     nextGetError: null as unknown,
@@ -77,7 +77,7 @@ const classicState = vi.hoisted(() => {
     navigateCalls: [] as string[],
     reset() {
       listeners.clear();
-      state.path = "/admin/coderso/posts/post-1?editor=classic";
+      state.path = "/admin/posts/post-1?editor=classic";
       state.cachedPost = null;
       state.fetchedPost = null;
       state.nextGetError = null;
@@ -474,7 +474,7 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
     "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
   );
 
-  classicState.path = "/admin/coderso/posts/post%201?editor=classic";
+  classicState.path = "/admin/posts/post%201?editor=classic";
   classicState.cachedPost = classicState.createPost("post 1");
   classicState.fetchedPost = classicState.createPost("post 1", "draft", {
     title: "Remote classic post",
@@ -594,7 +594,7 @@ test("PostClassicEditorShell handles publish/update branches, preview failure, a
     title: "Published post",
     slug: "published-post",
   });
-  classicState.path = "/admin/coderso/posts/post-2?editor=classic";
+  classicState.path = "/admin/posts/post-2?editor=classic";
   classicState.nextPreviewError = classicState.apiError("Preview failed");
 
   const view = mount(<PostClassicEditorShell />);
@@ -648,7 +648,7 @@ test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and met
     title: "Post three",
     slug: "post-three",
   });
-  classicState.path = "/admin/coderso/posts/post-3?editor=classic";
+  classicState.path = "/admin/posts/post-3?editor=classic";
 
   const view = mount(<PostClassicEditorShell />);
 
@@ -708,7 +708,7 @@ test("PostClassicEditorShell handles missing post ids, generic preview failures,
     "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
   );
 
-  classicState.path = "/admin/coderso/settings";
+  classicState.path = "/admin/advanced/settings";
 
   const missingIdView = mount(<PostClassicEditorShell />);
 
@@ -733,7 +733,7 @@ test("PostClassicEditorShell handles missing post ids, generic preview failures,
     slug: "initial-slug",
   });
   classicState.fetchedPost = classicState.cachedPost;
-  classicState.path = "/admin/coderso/posts/post-4?editor=classic";
+  classicState.path = "/admin/posts/post-4?editor=classic";
   classicState.nextPreviewError = new Error("preview crashed");
 
   const genericPreviewView = mount(<PostClassicEditorShell />);

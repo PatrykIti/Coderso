@@ -61,7 +61,7 @@ test("assistant conversation state persists bounded safe state", () => {
     planningState: {
       schemaVersion: 1,
       sourcePlanId: "plan-cms-custom-screen-inspect",
-      route: "/admin/coderso/custom-screens",
+      route: "/admin/advanced/custom-screens",
       resourceKind: "custom-screen",
       operation: "inspect",
       query: "Screens",

@@ -21,7 +21,7 @@ const createLocalStorage = () => {
 
 test("CustomScreenListPage renders shell and loading state", () => {
   const html = renderAdminUi(<CustomScreenListPage />, {
-    path: "/admin/coderso/custom-screens",
+    path: "/admin/advanced/custom-screens",
   });
 
   expect(html).toContain("Custom Screens");
@@ -59,7 +59,7 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
     );
 
     const html = renderAdminUi(<CustomScreenListPage />, {
-      path: "/admin/coderso/custom-screens",
+      path: "/admin/advanced/custom-screens",
     });
 
     expect(html).toContain("Cached screen");
@@ -77,7 +77,7 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
 
 test("CustomScreenEditorPage renders builder controls in create mode", () => {
   const html = renderAdminUi(<CustomScreenEditorPage />, {
-    path: "/admin/coderso/custom-screens/new",
+    path: "/admin/advanced/custom-screens/new",
   });
 
   expect(html).toContain("Create screen");
@@ -95,7 +95,7 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
 
 test("CustomScreenListPage renders list shell", () => {
   const html = renderAdminUi(<CustomScreenListPage />, {
-    path: "/admin/coderso/custom-screens",
+    path: "/admin/advanced/custom-screens",
   });
 
   expect(html).toContain("Custom Screens");
@@ -104,7 +104,7 @@ test("CustomScreenListPage renders list shell", () => {
 
 test("CustomScreenEditorPage renders builder canvas and save action", () => {
   const html = renderAdminUi(<CustomScreenEditorPage />, {
-    path: "/admin/coderso/custom-screens/new",
+    path: "/admin/advanced/custom-screens/new",
   });
 
   expect(html).toContain("Create screen");

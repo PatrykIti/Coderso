@@ -36,70 +36,78 @@ test("resolveAdminHref preserves external urls", () => {
   );
 });
 
-test("resolveAdminRoutePath aliases legacy paths to coderso", () => {
-  expect(resolveAdminRoutePath("/content-types")).toBe("/coderso/engine");
+test("resolveAdminRoutePath aliases legacy paths to advanced", () => {
+  expect(resolveAdminRoutePath("/content-types")).toBe("/advanced/engine");
   expect(resolveAdminRoutePath("/content-types/type-1/schema")).toBe(
-    "/coderso/engine/type-1/schema"
+    "/advanced/engine/type-1/schema"
   );
-  expect(resolveAdminRoutePath("/entries")).toBe("/coderso/entries");
+  expect(resolveAdminRoutePath("/entries")).toBe("/advanced/entries");
   expect(resolveAdminRoutePath("/entries/articles/entry-1")).toBe(
-    "/coderso/entries/articles/entry-1"
+    "/advanced/entries/articles/entry-1"
   );
   expect(resolveAdminRoutePath("/widgets/templates/new")).toBe(
-    "/coderso/widgets/templates/new"
+    "/advanced/widgets/templates/new"
   );
-  expect(resolveAdminRoutePath("/forms/form-1")).toBe("/coderso/forms/form-1");
+  expect(resolveAdminRoutePath("/forms/form-1")).toBe("/advanced/forms/form-1");
   expect(resolveAdminRoutePath("/custom-screens")).toBe(
-    "/coderso/custom-screens"
+    "/advanced/custom-screens"
   );
   expect(resolveAdminRoutePath("/custom-screens/screen-1")).toBe(
-    "/coderso/custom-screens/screen-1"
+    "/advanced/custom-screens/screen-1"
   );
   expect(resolveAdminRoutePath("/listings/query-1")).toBe(
-    "/coderso/listings/query-1"
+    "/advanced/listings/query-1"
   );
-  expect(resolveAdminRoutePath("/booking")).toBe("/coderso/booking");
+  expect(resolveAdminRoutePath("/booking")).toBe("/advanced/booking");
   expect(resolveAdminRoutePath("/booking/resources")).toBe(
-    "/coderso/booking/resources"
+    "/advanced/booking/resources"
   );
-  expect(resolveAdminRoutePath("/reviews")).toBe("/coderso/reviews");
+  expect(resolveAdminRoutePath("/reviews")).toBe("/advanced/reviews");
   expect(resolveAdminRoutePath("/reviews/review-1")).toBe(
-    "/coderso/reviews/review-1"
+    "/advanced/reviews/review-1"
   );
-  expect(resolveAdminRoutePath("/commerce")).toBe("/coderso/commerce");
+  expect(resolveAdminRoutePath("/commerce")).toBe("/advanced/commerce");
   expect(resolveAdminRoutePath("/commerce/product-1")).toBe(
-    "/coderso/commerce/product-1"
+    "/advanced/commerce/product-1"
   );
-  expect(resolveAdminRoutePath("/popups")).toBe("/coderso/popups");
+  expect(resolveAdminRoutePath("/popups")).toBe("/advanced/popups");
   expect(resolveAdminRoutePath("/popups/popup-1")).toBe(
-    "/coderso/popups/popup-1"
+    "/advanced/popups/popup-1"
   );
   expect(resolveAdminRoutePath("/solution-kits")).toBe(
-    "/coderso/solution-kits"
+    "/advanced/solution-kits"
   );
-  expect(resolveAdminRoutePath("/coderso/widgets")).toBe("/coderso/widgets");
+  expect(resolveAdminRoutePath("/advanced/widgets")).toBe("/advanced/widgets");
+  expect(resolveAdminRoutePath("/coderso/widgets")).toBe("/advanced/widgets");
+  expect(resolveAdminRoutePath("/coderso/widgets/templates/template-1")).toBe(
+    "/advanced/widgets/templates/template-1"
+  );
+  expect(resolveAdminRoutePath("/coderso/posts/post-1")).toBe("/posts/post-1");
 });
 
 test("resolveAdminHref canonicalizes admin links", () => {
   expect(resolveAdminHref("/admin", "/admin/content-types")).toBe(
-    "/admin/coderso/engine"
+    "/admin/advanced/engine"
   );
   expect(resolveAdminHref("/admin", "/forms/abc")).toBe(
-    "/admin/coderso/forms/abc"
+    "/admin/advanced/forms/abc"
   );
   expect(resolveAdminHref("/admin", "/widgets?view=templates")).toBe(
-    "/admin/coderso/widgets?view=templates"
+    "/admin/advanced/widgets?view=templates"
   );
   expect(resolveAdminHref("/admin", "/custom-screens")).toBe(
-    "/admin/coderso/custom-screens"
+    "/admin/advanced/custom-screens"
   );
-  expect(resolveAdminHref("/admin", "/listings")).toBe("/admin/coderso/listings");
-  expect(resolveAdminHref("/admin", "/booking")).toBe("/admin/coderso/booking");
-  expect(resolveAdminHref("/admin", "/reviews")).toBe("/admin/coderso/reviews");
-  expect(resolveAdminHref("/admin", "/commerce")).toBe("/admin/coderso/commerce");
-  expect(resolveAdminHref("/admin", "/popups")).toBe("/admin/coderso/popups");
+  expect(resolveAdminHref("/admin", "/listings")).toBe("/admin/advanced/listings");
+  expect(resolveAdminHref("/admin", "/booking")).toBe("/admin/advanced/booking");
+  expect(resolveAdminHref("/admin", "/reviews")).toBe("/admin/advanced/reviews");
+  expect(resolveAdminHref("/admin", "/commerce")).toBe("/admin/advanced/commerce");
+  expect(resolveAdminHref("/admin", "/popups")).toBe("/admin/advanced/popups");
   expect(resolveAdminHref("/admin", "/solution-kits")).toBe(
-    "/admin/coderso/solution-kits"
+    "/admin/advanced/solution-kits"
+  );
+  expect(resolveAdminHref("/admin", "/admin/coderso/widgets")).toBe(
+    "/admin/advanced/widgets"
   );
 });
 
@@ -107,22 +115,22 @@ test("isAdminHrefActive checks canonical and nested matches", () => {
   expect(
     isAdminHrefActive(
       "/admin",
-      "/admin/coderso/engine",
+      "/admin/advanced/engine",
       "/admin/content-types/type-1"
     )
   ).toBe(true);
   expect(
     isAdminHrefActive(
       "/admin",
-      "/admin/coderso/forms",
-      "/admin/coderso/forms/form-1"
+      "/admin/advanced/forms",
+      "/admin/advanced/forms/form-1"
     )
   ).toBe(true);
   expect(
     isAdminHrefActive(
       "/admin",
-      "/admin/coderso/widgets",
-      "/admin/coderso/forms"
+      "/admin/advanced/widgets",
+      "/admin/advanced/forms"
     )
   ).toBe(false);
 });

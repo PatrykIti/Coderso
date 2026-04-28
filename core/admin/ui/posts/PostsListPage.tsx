@@ -264,7 +264,7 @@ export function PostsListPage() {
       });
       postListToasts.success("create", { targetLabel: post.title });
       if (payload.openAfterCreate) {
-        navigate(`/coderso/posts/${encodeURIComponent(post.id)}`);
+        navigate(`/posts/${encodeURIComponent(post.id)}`);
         return;
       }
       await refresh({ force: true, background: true });
@@ -277,7 +277,7 @@ export function PostsListPage() {
   };
 
   const handleEdit = (id: string) => {
-    navigate(`/coderso/posts/${encodeURIComponent(id)}`);
+    navigate(`/posts/${encodeURIComponent(id)}`);
   };
 
   const handlePreview = async (id: string) => {
@@ -325,7 +325,7 @@ export function PostsListPage() {
     setBulkFeedback(null);
     try {
       const clone = await duplicatePost(id);
-      navigate(`/coderso/posts/${encodeURIComponent(clone.id)}`);
+      navigate(`/posts/${encodeURIComponent(clone.id)}`);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);

@@ -102,7 +102,7 @@ export async function listMediaUsage(
       context: `${entry.typeName ?? "Content"} entry`,
       targetId: entry.id,
       targetSlug: entry.slug,
-      adminHref: `/coderso/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`,
+      adminHref: `/advanced/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`,
     });
   }
 
@@ -128,7 +128,7 @@ export async function listMediaUsage(
       context: "Post content",
       targetId: post.id,
       targetSlug: post.slug,
-      adminHref: `/coderso/posts/${encodeURIComponent(post.id)}`,
+      adminHref: `/posts/${encodeURIComponent(post.id)}`,
     });
   }
 
@@ -157,7 +157,7 @@ export async function listMediaUsage(
       context: "Commerce product",
       targetId: product.id,
       targetSlug: product.slug,
-      adminHref: `/coderso/commerce/${encodeURIComponent(product.id)}`,
+      adminHref: `/advanced/commerce/${encodeURIComponent(product.id)}`,
     });
   }
 

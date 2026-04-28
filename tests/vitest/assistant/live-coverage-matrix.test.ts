@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { expect, test } from "vitest";
 
 import { buildDefaultNavSections } from "../../../core/admin/ui/navigation/sidebarConfig";
-import { CODERSO_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/codersoModules";
+import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
 import { settingsSidebarItems } from "../../../core/admin/ui/settings/SettingsSidebar";
 import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
 import {
@@ -32,7 +32,7 @@ const policyRoutes = buildLiveCoverageRouteMap(assistantOperationPolicy);
 test("LLM Guide live coverage matrix includes every admin nav route", () => {
   const expected = buildAdminNavigationRoutes({
     navSections: buildDefaultNavSections(),
-    codersoModules: CODERSO_MODULE_REGISTRY,
+    advancedModules: ADVANCED_MODULE_REGISTRY,
     settingsItems: settingsSidebarItems,
   });
 

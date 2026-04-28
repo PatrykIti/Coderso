@@ -75,7 +75,7 @@ export type AssistantActionContext = {
   siteKit?: AssistantSiteKitPlanInput;
   includeResourceCatalog?: boolean;
   resourceCatalog?: AssistantResourceCatalogSnapshot;
-  runtimeSnapshot?: AssistantAdminRuntimeSnapshot;
+  runtimeSnapshot?: AssistantActionRuntimeSnapshot;
   activeSurface?: AssistantActiveSurfaceContext | null;
   planningState?: AssistantPlanningState | null;
 };
@@ -108,16 +108,31 @@ export type AssistantAdminRuntimePermissionHints = {
   reason: "frontend_user_has_no_permissions" | "server_enriched" | "not_available";
 };
 
-export type AssistantAdminRuntimeSnapshot = {
+export type AssistantAdminRuntimeSnapshotLegacy = {
   schemaVersion: 1;
   route: string | null;
   activeHref: string | null;
-  area: AssistantAdminContext["area"];
-  codersoModule: AssistantAdminContext["codersoModule"];
+  area: "dashboard" | "pages" | "posts" | "coderso" | "settings" | "other";
+  codersoModule: AssistantAdminContext["advancedModule"];
   selectedResource: AssistantAdminRuntimeSelectedResource | null;
   visibleActions: AssistantAdminRuntimeVisibleAction[];
   permissionHints: AssistantAdminRuntimePermissionHints;
 };
+
+export type AssistantAdminRuntimeSnapshot = {
+  schemaVersion: 2;
+  route: string | null;
+  activeHref: string | null;
+  area: AssistantAdminContext["area"];
+  advancedModule: AssistantAdminContext["advancedModule"];
+  selectedResource: AssistantAdminRuntimeSelectedResource | null;
+  visibleActions: AssistantAdminRuntimeVisibleAction[];
+  permissionHints: AssistantAdminRuntimePermissionHints;
+};
+
+export type AssistantActionRuntimeSnapshot =
+  | AssistantAdminRuntimeSnapshot
+  | AssistantAdminRuntimeSnapshotLegacy;
 
 export type AssistantActiveSurfaceBlockSummary = {
   id: string;
@@ -195,8 +210,8 @@ export type AssistantAdminContext = {
   runtimeSnapshot: AssistantAdminRuntimeSnapshot | null;
   activeSurface: AssistantActiveSurfaceContext | null;
   planningState: AssistantPlanningState | null;
-  area: "dashboard" | "pages" | "posts" | "coderso" | "settings" | "other";
-  codersoModule:
+  area: "dashboard" | "pages" | "posts" | "advanced" | "settings" | "other";
+  advancedModule:
     | "engine"
     | "entries"
     | "custom-screens"

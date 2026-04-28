@@ -196,7 +196,7 @@ export const heroSchema = {
 };
 
 export const heroDefaults: HeroData = {
-  headline: "Build faster with Nextless",
+  headline: "Build your system with Coderso",
   subhead: "Launch modern sites without rebuilding the app.",
   body: "",
   primaryCta: { label: "Get started", href: "#" },

@@ -33,7 +33,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     name: "provider CMS operation draft inspection",
     prompt: "sprawdz jakie ekrany customowe sa widoczne",
     context: {
-      page: "/admin/coderso/custom-screens",
+      page: "/admin/advanced/custom-screens",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -82,7 +82,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     name: "provider broad destructive operation asks for target clarification",
     prompt: "usun customowe ekrany",
     context: {
-      page: "/admin/coderso/custom-screens",
+      page: "/admin/advanced/custom-screens",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -174,7 +174,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     name: "provider fenced CMS operation draft inspection",
     prompt: "sprawdz jakie ekrany customowe sa widoczne",
     context: {
-      page: "/admin/coderso/custom-screens",
+      page: "/admin/advanced/custom-screens",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -227,7 +227,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     name: "provider repaired CMS operation draft inspection",
     prompt: "sprawdz jakie ekrany customowe sa widoczne",
     context: {
-      page: "/admin/coderso/custom-screens",
+      page: "/admin/advanced/custom-screens",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,
@@ -282,7 +282,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     name: "provider uses surface hint for Screens instead of target query",
     prompt: "no a jakies sa opublikowane w sekcji Screens?",
     context: {
-      page: "/admin/coderso/custom-screens",
+      page: "/admin/advanced/custom-screens",
       locale: "pl-PL",
       resourceCatalog: {
         schemaVersion: 1,

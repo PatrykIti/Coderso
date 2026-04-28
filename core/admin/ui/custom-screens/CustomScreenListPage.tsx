@@ -224,7 +224,7 @@ export function CustomScreenListPage() {
       const created = await createCustomScreen(createPayload);
       customScreenListToasts.success("create", { targetLabel: created.name });
       if (payload.openAfterCreate) {
-        navigate(`/coderso/custom-screens/${encodeURIComponent(created.id)}`);
+        navigate(`/advanced/custom-screens/${encodeURIComponent(created.id)}`);
         return;
       }
       await refreshScreens();
@@ -340,7 +340,7 @@ export function CustomScreenListPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/custom-screens"
+      activeHref="/admin/advanced/custom-screens"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>

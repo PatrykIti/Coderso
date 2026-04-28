@@ -158,7 +158,7 @@ export function ListingFiltersPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/filters"
+      activeHref="/admin/advanced/filters"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>
