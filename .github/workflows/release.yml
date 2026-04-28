@@ -24,10 +24,20 @@ jobs:
       version: ${{ steps.release-metadata.outputs.version }}
       git_tag: ${{ steps.release-metadata.outputs.git_tag }}
     steps:
+      - name: Create semantic-release GitHub App token
+        id: semantic-release-app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.SEMANTIC_RELEASE_APP_ID }}
+          private-key: ${{ secrets.SEMANTIC_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ steps.semantic-release-app-token.outputs.token }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -39,7 +49,8 @@ jobs:
 
       - name: Run semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.semantic-release-app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.semantic-release-app-token.outputs.token }}
         run: bun run release:semantic
 
       - name: Export release metadata
@@ -63,10 +74,20 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Create semantic-release GitHub App token
+        id: semantic-release-app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.SEMANTIC_RELEASE_APP_ID }}
+          private-key: ${{ secrets.SEMANTIC_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Checkout release tag
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.semantic-release.outputs.git_tag }}
+          token: ${{ steps.semantic-release-app-token.outputs.token }}
 
       - name: Set image tags
         id: image
@@ -88,6 +109,8 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
+          # Package publishing stays on the workflow token; branch bypass is
+          # handled by the GitHub App token used for release git/API work.
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push coderso-core image

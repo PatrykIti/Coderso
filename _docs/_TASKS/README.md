@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1310 tasks
+- **Done:** 1311 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-227 | Semantic Release GitHub App Authentication | High | Small | Done: semantic-release checkout/API auth now uses the bypass-approved GitHub App token from repository secrets, while GHCR publish remains package-scoped to the workflow token |
 | TASK-226 | Coderso Rebrand and Advanced Admin IA | High | Very Large | Done: product surfaces now use Coderso, Advanced is the canonical admin module group/route namespace, legacy aliases/storage/header compatibility is preserved, docs, changelog 757, gates, and residual allowlist are synchronized |
 | TASK-226-00 | Exhaustive Nextless Occurrence Inventory and Scope Lock | High | Small | Done: baseline and final residual scans were captured, with residual matches classified as compatibility or historical evidence |
 | TASK-226-00-01 | Rebrand Occurrence Coverage Table | High | Small | Done: coverage table remains the TASK-226 scan evidence source and excludes itself from residual counts |

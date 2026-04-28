@@ -73,7 +73,10 @@ runtime Docker image with the same version tag.
 - Visibility: internal CI/CD workflow plus public GitHub release artifacts when
   the repository publishes releases.
 - Auth model:
-  - semantic-release uses `GITHUB_TOKEN`;
+  - semantic-release uses the GitHub App token from `SEMANTIC_RELEASE_APP_ID`
+    and `SEMANTIC_RELEASE_APP_PRIVATE_KEY` as of TASK-227;
+  - semantic-release checkout also uses the GitHub App token so release
+    commits/tags are pushed by the bypass-approved app identity;
   - Docker publishing uses `GITHUB_TOKEN` against GHCR.
 - RBAC:
   - `contents: write` for release commits/tags/releases;
