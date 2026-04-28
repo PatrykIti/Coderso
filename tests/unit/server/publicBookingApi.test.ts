@@ -29,7 +29,8 @@ import {
 } from "../../../core/services/settings/securitySettings";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
-const testIfDb = hasDb ? test : test.skip;
+const testIfDb = hasDb ? test.serial : test.skip;
+const DB_TEST_TIMEOUT_MS = 30_000;
 
 const originalNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
 const createdApiKeyIds: string[] = [];
@@ -150,7 +151,7 @@ testIfDb("public booking slots endpoint returns available slots", async () => {
   const payload = (await response?.json()) as { items: Array<{ startsAt: string }> };
   expect(payload.items.length).toBeGreaterThan(0);
   expect(payload.items[0]?.startsAt).toContain("2030-01-18T09:00:00.000Z");
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("public booking slots endpoint requires runtime token", async () => {
   const resource = await createBookingResource({
@@ -194,7 +195,7 @@ testIfDb("public booking slots endpoint requires runtime token", async () => {
   expect(response?.status).toBe(400);
   const payload = (await response?.json()) as { error: { code: string } };
   expect(payload.error.code).toBe("form_nonce_required");
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("internal booking slots endpoint requires auth or API key", async () => {
   const resource = await createBookingResource({
@@ -241,7 +242,7 @@ testIfDb("internal booking slots endpoint requires auth or API key", async () =>
   expect(response?.status).toBe(401);
   const payload = (await response?.json()) as { error: { code: string } };
   expect(payload.error.code).toBe("auth_required");
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("internal booking slots endpoint allows API key with booking.submit", async () => {
   const resource = await createBookingResource({
@@ -299,7 +300,7 @@ testIfDb("internal booking slots endpoint allows API key with booking.submit", a
 
   expect(response).not.toBeNull();
   expect(response?.status).toBe(200);
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("internal booking reservation endpoint requires auth or API key", async () => {
   const resource = await createBookingResource({
@@ -363,7 +364,7 @@ testIfDb("internal booking reservation endpoint requires auth or API key", async
   expect(response?.status).toBe(401);
   const payload = (await response?.json()) as { error: { code: string } };
   expect(payload.error.code).toBe("auth_required");
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("internal booking reservation endpoint allows API key without nonce", async () => {
   const resource = await createBookingResource({
@@ -437,7 +438,7 @@ testIfDb("internal booking reservation endpoint allows API key without nonce", a
   expect(response?.status).toBe(200);
   const payload = (await response?.json()) as { id: string };
   expect(payload.id).toBeTruthy();
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("public booking reservation endpoint rejects invalid nonce", async () => {
   const resource = await createBookingResource({
@@ -502,7 +503,7 @@ testIfDb("public booking reservation endpoint rejects invalid nonce", async () =
   expect(response?.status).toBe(400);
   const payload = (await response?.json()) as { error: { code: string } };
   expect(payload.error.code).toBe("form_nonce_invalid");
-});
+}, DB_TEST_TIMEOUT_MS);
 
 testIfDb("public booking reservation endpoint creates reservation with valid nonce", async () => {
   const resource = await createBookingResource({
@@ -573,4 +574,4 @@ testIfDb("public booking reservation endpoint creates reservation with valid non
   expect(payload.id).toBeTruthy();
   expect(payload.customerName).toBe("Jane Doe");
   expect(payload.runtime.successMessage).toBe("Appointment booked successfully.");
-});
+}, DB_TEST_TIMEOUT_MS);

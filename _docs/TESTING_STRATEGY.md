@@ -252,7 +252,8 @@ bun --cwd core lint:types
 bun test tests/integration tests/perf tests/security
 vitest run --config vitest.config.ts
 vitest run --config vitest.config.ts --coverage
-bun scripts/run-bun-coverage-baseline.ts
+bun scripts/run-bun-lane.ts --test
+bun scripts/run-bun-lane.ts --coverage
 bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage/bun-full tests/integration tests/perf tests/security
 ```
 
@@ -261,14 +262,20 @@ Current script split:
 ```json
 {
   "test": "bun run test:bun && bun run test:vitest",
-  "test:bun": "bun test tests/integration tests/perf tests/security",
+  "test:bun": "bun test tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",
   "test:vitest": "vitest run",
   "test:coverage": "bun scripts/run-vitest-coverage.ts",
-  "test:coverage:bun": "bun scripts/run-bun-coverage-baseline.ts",
+  "test:bun:lane": "bun scripts/run-bun-lane.ts --test",
+  "test:coverage:bun": "bun scripts/run-bun-lane.ts --coverage",
   "test:coverage:bun:full": "bun test --coverage tests/integration tests/perf tests/security",
   "test:coverage:all": "bun run test:coverage && bun run test:coverage:bun"
 }
 ```
+
+The CI workflow mirrors the split: `vitest-lane` runs Vitest tests and Vitest
+coverage, while `bun-lane` runs curated Bun tests first and then Bun coverage.
+`DATABASE_URL` is optional for `bun-lane`; DB-backed route suites join the lane
+when the secret is configured and remain skipped by the lane helper otherwise.
 
 Opt-in live assistant matrix:
 

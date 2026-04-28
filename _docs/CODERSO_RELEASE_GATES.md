@@ -79,6 +79,9 @@ DB-backed commands currently include:
 Without `DATABASE_URL`, those commands are marked as skipped in the JSON report
 with `skipReason: "database_url_missing"`. When `DATABASE_URL` is configured,
 the DB-backed suites own their existing connection checks and cleanup behavior.
+DB-backed suites that share mutable tables must run serially or isolate fixtures
+so CI does not delete data from another in-flight test on the same test
+database.
 
 ## CI and Local Security Gate (SAST/SCA/Secrets/CVE)
 

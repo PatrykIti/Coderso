@@ -63,6 +63,8 @@ Automated CI gate blocks PRs on critical/high findings:
 - SCA/CVE: Bun audit plus Trivy filesystem lockfile scans (`.trivyignore` for time-boxed exceptions).
 - Misconfiguration: Trivy config scan for Docker/IaC-style files.
 - Secrets: Trivy filesystem secret scan plus Gitleaks history and worktree scans (`.gitleaks.toml` allowlist config).
+- SARIF uploads use `github/codeql-action/upload-sarif@v4` and require
+  `actions: read`, `contents: read`, and `security-events: write` permissions.
 
 Local runbook:
 ```bash

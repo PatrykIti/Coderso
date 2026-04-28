@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 762 | 2026-04-28 | TASK-231 CI security and release gate fixes | CI/CD Security |
+| 761 | 2026-04-28 | TASK-230 Bun testing lane workflow contract | CI/CD Testing |
 | 760 | 2026-04-28 | TASK-229 Coderso release gates optional DB checks | CI/CD Release Gates |
 | 759 | 2026-04-28 | TASK-228 security gate Trivy Action pin repair | CI/CD Security |
 | 758 | 2026-04-28 | TASK-227 semantic release GitHub App authentication | Release Engineering/CI Security |

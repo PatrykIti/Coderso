@@ -1,3 +1,5 @@
+import path from "node:path";
+
 const routeSuites = [
   "tests/integration/routes/accessLogs.test.ts",
   "tests/integration/routes/adminRoles.test.ts",
@@ -52,8 +54,27 @@ const baselineSuites = [
   "tests/perf/admin-prefetch-budget.test.ts",
 ];
 
+type Mode = "test" | "coverage" | "all";
+
+const repoRoot = path.resolve(import.meta.dir, "..");
+const logPrefix = "[bun-lane]";
+
+const parseMode = (argv: string[]): Mode => {
+  if (argv.length === 0) return "all";
+  if (argv.length !== 1) throw new Error(`invalid_args:${argv.join(",")}`);
+
+  const [arg] = argv;
+  if (arg === "--test") return "test";
+  if (arg === "--coverage") return "coverage";
+  if (arg === "--all") return "all";
+  throw new Error(`unknown_arg:${arg}`);
+};
+
+const mode = parseMode(Bun.argv.slice(2));
+
 async function canRunSuite(suite: string) {
   const proc = Bun.spawn(["bun", "test", suite], {
+    cwd: repoRoot,
     stdout: "ignore",
     stderr: "ignore",
   });
@@ -67,28 +88,42 @@ for (const suite of routeSuites) {
   if (await canRunSuite(suite)) {
     stableRouteSuites.push(suite);
   } else {
-    console.warn(`[bun-coverage-baseline] skipping env-dependent route suite: ${suite}`);
+    console.warn(`${logPrefix} skipping env-dependent route suite: ${suite}`);
   }
 }
 
-const proc = Bun.spawn(
-  [
-    "bun",
-    "test",
+const laneSuites = [...stableRouteSuites, ...baselineSuites];
+
+console.log(
+  `${logPrefix} selected ${stableRouteSuites.length} route suites and ${baselineSuites.length} baseline suites`
+);
+
+const runBunTest = async (title: string, args: string[]) => {
+  console.log(`${logPrefix} ${title}`);
+  const proc = Bun.spawn(["bun", "test", ...args], {
+    cwd: repoRoot,
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    process.exit(exitCode);
+  }
+};
+
+if (mode === "test" || mode === "all") {
+  await runBunTest("running Bun lane tests", laneSuites);
+}
+
+if (mode === "coverage" || mode === "all") {
+  await runBunTest("running Bun lane coverage", [
     "--coverage",
     "--coverage-reporter=text",
     "--coverage-reporter=lcov",
     "--coverage-dir=coverage/bun",
-    ...stableRouteSuites,
-    ...baselineSuites,
-  ],
-  {
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  }
-);
-
-process.exit(await proc.exited);
+    ...laneSuites,
+  ]);
+}
 
 export {};

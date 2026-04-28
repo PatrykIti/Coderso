@@ -26,7 +26,8 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(workflow).toContain("trivy");
   expect(workflow).toContain("aquasecurity/trivy-action@v0.36.0");
   expect(workflow).toContain("gitleaks");
-  expect(workflow).toContain("upload-sarif");
+  expect(workflow).toContain("actions: read");
+  expect(workflow).toContain("github/codeql-action/upload-sarif@v4");
   expect(workflow).toContain("--error");
   expect(workflow).toContain('exit-code: "1"');
   expect(workflow).toContain('scanners: "vuln,secret,misconfig"');
