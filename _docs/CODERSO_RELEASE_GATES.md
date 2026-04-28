@@ -96,6 +96,11 @@ Additional CI and local security gates are enforced via:
 - `scripts/run-security-scan.ts` (local scanner matrix runner)
 
 CI blocks PRs on critical/high findings and uploads SARIF reports for auditability.
+Trivy in CI intentionally separates SARIF collection from blocking behavior:
+the SARIF step runs with `exit-code: "0"` and `limit-severities-for-sarif:
+true`, then a final table-output Trivy step runs with `exit-code: "1"` for
+HIGH/CRITICAL findings. This keeps Code Scanning uploadable and still gives
+reviewers readable failing output in the workflow log.
 Local `bun run scan:security` runs advisory SAST, dependency, misconfiguration,
 filesystem secret, Git-history secret, and worktree secret scans without stopping
 after the first finding. Local `bun run scan:security:strict` uses the same

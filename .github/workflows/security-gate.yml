@@ -52,17 +52,18 @@ jobs:
         with:
           sarif_file: semgrep.sarif
 
-      - name: Run Trivy (SCA/CVE)
+      - name: Generate Trivy SARIF (SCA/CVE)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           format: sarif
           output: trivy.sarif
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           scanners: "vuln,secret,misconfig"
+          limit-severities-for-sarif: true
           skip-dirs: "_docs,node_modules,dist,build,.next,.git"
 
       - name: Upload Trivy SARIF
@@ -81,6 +82,19 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gitleaks.sarif
+
+      - name: Run Trivy (Blocking Gate)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          scanners: "vuln,secret,misconfig"
+          skip-dirs: "_docs,node_modules,dist,build,.next,.git"
+          skip-setup-trivy: true
 
       - name: Upload security gate artifacts
         if: always()

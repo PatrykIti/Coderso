@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 765 | 2026-04-28 | TASK-234 security gate Trivy SARIF and blocking output | CI/CD Security |
 | 764 | 2026-04-28 | TASK-233 root README marketing and agents index | Documentation/Branding |
 | 763 | 2026-04-28 | TASK-232 reliability gate slow DB timeout hardening | CI/CD Reliability |
 | 762 | 2026-04-28 | TASK-231 CI security and release gate fixes | CI/CD Security |
