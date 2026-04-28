@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>2FA Authentication - Nextless CMS</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1317ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101122",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col text-[#0f172a] dark:text-white">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e2e8f0] dark:border-b-[#1e293b] bg-white dark:bg-[#1e293b] px-6 lg:px-10 py-4 shadow-sm z-10">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined !text-[24px]">grid_view</span>
+</div>
+<h2 class="text-[#0f172a] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] font-display">Nextless CMS</h2>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<div class="hidden sm:flex gap-3">
+<button class="flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-[#f1f5f9] hover:bg-[#e2e8f0] dark:bg-[#334155] dark:hover:bg-[#475569] text-[#64748b] dark:text-white transition-colors">
+<span class="material-symbols-outlined !text-[20px]">notifications</span>
+</button>
+<button class="flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-[#f1f5f9] hover:bg-[#e2e8f0] dark:bg-[#334155] dark:hover:bg-[#475569] text-[#64748b] dark:text-white transition-colors">
+<span class="material-symbols-outlined !text-[20px]">settings</span>
+</button>
+</div>
+<div class="flex items-center gap-3 border-l border-[#e2e8f0] dark:border-[#334155] pl-6">
+<span class="text-sm font-medium text-[#0f172a] dark:text-white hidden md:block">Jane Doe</span>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 ring-2 ring-white dark:ring-[#1e293b] shadow-sm" data-alt="User profile picture of a woman with glasses smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBLaWBmHwH9Qyw3aDhTUTTjpF1esh6XqZGypQMHkOalKbMLKg4Bv5OcTe-XR8JQnbSJn02GXI0HEh8ZOuuLLtd1qA3QRHAgGF8ZSTiiF7LyeeR6dCieReAN9hY4Xa90bwwdHnpyt3vBFaZuW9jBfU-DQygX0y72esJef1eiIxuPb4-WkQV5-OqP6goa1_IRtFaFBxYNzo-bu2AZb5um6Y_lQ9z_0liOqEJdwZV-AmT3n_LOQTY9GcQx3rHDUvpSFe7lhZ-P9aDAwQI");'></div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+<!-- Central Card -->
+<div class="w-full max-w-[640px] bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm border border-[#e2e8f0] dark:border-[#334155] overflow-hidden">
+<!-- Header Section -->
+<div class="px-8 pt-10 pb-6 text-center">
+<div class="mx-auto bg-primary/10 size-16 rounded-2xl flex items-center justify-center mb-6 text-primary">
+<span class="material-symbols-outlined !text-[32px]">lock_person</span>
+</div>
+<h1 class="text-[#0f172a] dark:text-white text-3xl font-bold leading-tight tracking-[-0.02em] font-display mb-2">Two-factor authentication</h1>
+<p class="text-[#64748b] dark:text-[#94a3b8] text-base font-normal">Secure your Nextless CMS account with an authenticator app.</p>
+</div>
+<!-- Steps Container -->
+<div class="px-8 sm:px-12 pb-10 space-y-10">
+<!-- Step 1: Scan QR -->
+<div class="flex flex-col items-center space-y-4">
+<div class="flex items-center gap-2 text-sm font-medium text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+<span class="flex items-center justify-center size-5 bg-primary text-white text-xs rounded-full">1</span>
+<span>Scan QR Code</span>
+</div>
+<p class="text-center text-sm text-[#64748b] dark:text-[#94a3b8] max-w-xs mx-auto">
+                        Use an app like Google Authenticator or Authy to scan the QR code below.
+                    </p>
+<div class="p-4 bg-white border border-[#e2e8f0] rounded-xl shadow-sm">
+<!-- QR Code Placeholder -->
+<div class="size-48 bg-[#f8fafc] rounded-lg flex items-center justify-center overflow-hidden relative">
+<div class="absolute inset-0 bg-[url('https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=Example')] bg-cover bg-center opacity-90 contrast-125" data-alt="QR code for two factor authentication setup"></div>
+</div>
+</div>
+</div>
+<!-- Step 2: Enter Code -->
+<div class="flex flex-col items-center space-y-4">
+<div class="flex items-center gap-2 text-sm font-medium text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+<span class="flex items-center justify-center size-5 bg-primary text-white text-xs rounded-full">2</span>
+<span>Enter Verification Code</span>
+</div>
+<div class="w-full max-w-sm">
+<label class="sr-only">Verification Code</label>
+<div class="flex gap-2 sm:gap-4 justify-center">
+<!-- Input Boxes -->
+<input class="flex h-14 w-12 text-center rounded-lg border border-[#cbd5e1] dark:border-[#475569] bg-white dark:bg-[#0f172a] text-[#0f172a] dark:text-white text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" inputmode="numeric" maxlength="1" pattern="[0-9]*" type="text"/>
+<input class="flex h-14 w-12 text-center rounded-lg border border-[#cbd5e1] dark:border-[#475569] bg-white dark:bg-[#0f172a] text-[#0f172a] dark:text-white text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" inputmode="numeric" maxlength="1" pattern="[0-9]*" type="text"/>
+<input class="flex h-14 w-12 text-center rounded-lg border border-[#cbd5e1] dark:border-[#475569] bg-white dark:bg-[#0f172a] text-[#0f172a] dark:text-white text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" inputmode="numeric" maxlength="1" pattern="[0-9]*" type="text"/>
+<!-- Separator -->
+<div class="flex items-center justify-center text-[#cbd5e1] font-bold text-xl">-</div>
+<input class="flex h-14 w-12 text-center rounded-lg border border-[#cbd5e1] dark:border-[#475569] bg-white dark:bg-[#0f172a] text-[#0f172a] dark:text-white text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" inputmode="numeric" maxlength="1" pattern="[0-9]*" type="text"/>
+<input class="flex h-14 w-12 text-center rounded-lg border border-[#cbd5e1] dark:border-[#475569] bg-white dark:bg-[#0f172a] text-[#0f172a] dark:text-white text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" inputmode="numeric" maxlength="1" pattern="[0-9]*" type="text"/>
+<input class="flex h-14 w-12 text-center rounded-lg border border-[#cbd5e1] dark:border-[#475569] bg-white dark:bg-[#0f172a] text-[#0f172a] dark:text-white text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" inputmode="numeric" maxlength="1" pattern="[0-9]*" type="text"/>
+</div>
+</div>
+<button class="w-full max-w-sm mt-4 bg-primary hover:bg-[#0f13c4] text-white font-display font-medium rounded-lg h-12 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-primary/25">
+<span class="material-symbols-outlined !text-[20px]">check_circle</span>
+                        Verify &amp; Enable
+                    </button>
+</div>
+</div>
+<!-- Recovery Codes Section -->
+<div class="bg-[#f8fafc] dark:bg-[#1e293b]/50 border-t border-[#e2e8f0] dark:border-[#334155] p-8">
+<div class="flex flex-col gap-6">
+<div class="flex items-start gap-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+<div class="text-amber-600 dark:text-amber-400 mt-0.5">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-amber-900 dark:text-amber-200 font-display">Save your recovery codes</h4>
+<p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                                If you lose access to your device, you can use these backup codes to access your account. Keep them in a safe place.
+                            </p>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-[#0f172a] dark:text-white font-bold font-display">Recovery Codes</h3>
+<div class="flex gap-2">
+<button class="text-xs font-medium text-[#64748b] dark:text-[#94a3b8] hover:text-primary dark:hover:text-white flex items-center gap-1 px-2 py-1.5 hover:bg-[#f1f5f9] dark:hover:bg-[#334155] rounded transition-colors">
+<span class="material-symbols-outlined !text-[16px]">content_copy</span> Copy
+                                </button>
+<button class="text-xs font-medium text-[#64748b] dark:text-[#94a3b8] hover:text-primary dark:hover:text-white flex items-center gap-1 px-2 py-1.5 hover:bg-[#f1f5f9] dark:hover:bg-[#334155] rounded transition-colors">
+<span class="material-symbols-outlined !text-[16px]">download</span> Download
+                                </button>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8]">X8Y2-99L1</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8]">M4K2-11OP</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8]">Q2Z9-44R3</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8]">A7B3-88C1</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8] blur-[2px] select-none cursor-default">••••-••••</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8] blur-[2px] select-none cursor-default">••••-••••</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8] blur-[2px] select-none cursor-default">••••-••••</div>
+<div class="font-mono text-sm bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#334155] rounded px-3 py-2 text-center text-[#64748b] dark:text-[#94a3b8] blur-[2px] select-none cursor-default">••••-••••</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="mt-8 flex gap-6 text-sm text-[#94a3b8]">
+<a class="hover:text-primary transition-colors" href="#">Help Center</a>
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+</div>
+</main>
+</body></html>

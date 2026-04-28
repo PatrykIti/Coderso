@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO Manager - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+        .google-preview-title {
+            color: #1a0dab;
+            font-family: arial, sans-serif;
+            font-size: 20px;
+            line-height: 1.3;
+        }
+        .google-preview-url {
+            color: #202124;
+            font-family: arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.3;
+        }
+        .google-preview-desc {
+            color: #4d5156;
+            font-family: arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.58;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">dataset</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl bg-primary/10 text-primary transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">search_check</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDKCNnFKFH9yDtOewFBR2BSZnUqn4Z4I_zD-ZCi1Jl-JiuSIF2wuYXL0ElbnXFZ2Lvco_mavyGzAU8Uz4cZkQJPeVRtx5_QY7WGplrot5y6C9vHbBeuXpYjnEkLEETQTIQ2WxjF1lJeaC3MhAObfbOxTMDPLr5bzvKmZ0b3TI8_JAhzU4fb1quRBDmlMMV5u3PsVeaQ0ZwlkPxCY_HeyNmStez2PH2bmuIc5_ltv9bCYLPLQtGIEI7Rmc73nZlOdYY8pY1Ru-m_Yb0');"></div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-3">
+<h1 class="text-xl font-display font-bold text-slate-900 dark:text-white">SEO Manager</h1>
+<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold rounded uppercase">Global Scan: 88%</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden md:block">
+<input class="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm w-64 focus:ring-primary/20" placeholder="Search pages..." type="text"/>
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
+</div>
+<button class="px-5 py-2.5 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">travel_explore</span>
+                Run Full Audit
+            </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<div class="max-w-6xl mx-auto">
+<div class="bg-white dark:bg-[#15202b] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 font-display">Page Title</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 font-display">SEO Score</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 font-display">Meta Desc</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 font-display">Social Preview</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 font-display text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="bg-blue-50/30 dark:bg-primary/5 ring-1 ring-inset ring-primary/20">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Homepage</span>
+<span class="text-[11px] text-slate-400">/index.html</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-green-500 h-full w-[92%]"></div>
+</div>
+<span class="text-xs font-bold text-green-600">92</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 text-[10px] font-bold rounded uppercase">Optimized</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex -space-x-2">
+<span class="material-symbols-outlined text-[20px] text-blue-500 bg-white dark:bg-slate-800 rounded-full p-0.5 border border-slate-100 dark:border-slate-700">social_leaderboard</span>
+<span class="material-symbols-outlined text-[20px] text-sky-400 bg-white dark:bg-slate-800 rounded-full p-0.5 border border-slate-100 dark:border-slate-700">share</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary font-bold text-xs hover:underline">Editing...</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Services Page</span>
+<span class="text-[11px] text-slate-400">/services/overview</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-yellow-500 h-full w-[65%]"></div>
+</div>
+<span class="text-xs font-bold text-yellow-600">65</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 text-[10px] font-bold rounded uppercase">Too Short</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex -space-x-2">
+<span class="material-symbols-outlined text-[20px] text-slate-300">error</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Contact Us</span>
+<span class="text-[11px] text-slate-400">/contact</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-red-500 h-full w-[32%]"></div>
+</div>
+<span class="text-xs font-bold text-red-600">32</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 text-[10px] font-bold rounded uppercase">Missing</span>
+</td>
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-[20px] text-slate-300">hide_image</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 z-50 pointer-events-none">
+<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto"></div>
+<div class="absolute inset-y-0 right-0 w-full max-w-lg bg-white dark:bg-[#15202b] shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col pointer-events-auto">
+<div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+</div>
+<h3 class="font-display font-bold text-lg text-slate-900 dark:text-white">Quick SEO Edit</h3>
+</div>
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+<div class="space-y-4">
+<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400 font-display">Search Engine Preview</h4>
+<div class="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="google-preview-url mb-1">https://nextless.com <span class="text-slate-400">› homepage</span></div>
+<div class="google-preview-title mb-1 hover:underline cursor-pointer">Modern CMS for Next.js Developers | Nextless</div>
+<div class="google-preview-desc">Build faster with Nextless CMS. A modern, headless content management system optimized for speed, SEO, and developer experience. Start for free today.</div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-sm font-bold font-display text-slate-700 dark:text-slate-300">Meta Title</label>
+<span class="text-[10px] font-medium text-green-600">58 / 60 characters</span>
+</div>
+<input class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary placeholder:text-slate-400 dark:text-white" type="text" value="Modern CMS for Next.js Developers | Nextless"/>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-sm font-bold font-display text-slate-700 dark:text-slate-300">Meta Description</label>
+<span class="text-[10px] font-medium text-slate-400">148 / 160 characters</span>
+</div>
+<textarea class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary placeholder:text-slate-400 dark:text-white resize-none" rows="4">Build faster with Nextless CMS. A modern, headless content management system optimized for speed, SEO, and developer experience. Start for free today.</textarea>
+</div>
+<div class="space-y-3">
+<label class="text-sm font-bold font-display text-slate-700 dark:text-slate-300">Focus Keywords</label>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                                Headless CMS <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</span>
+<span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                                Next.js <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</span>
+<button class="px-3 py-1.5 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-400 hover:text-primary hover:border-primary transition-colors">
+                                + Add Keyword
+                            </button>
+</div>
+</div>
+</div>
+<div class="p-4 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-900/30">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-green-600 text-[20px]">check_circle</span>
+<h5 class="text-xs font-bold text-green-700 dark:text-green-400 uppercase">Analysis Passed</h5>
+</div>
+<ul class="text-[11px] space-y-1 text-green-600/80 dark:text-green-500/80 list-disc pl-4">
+<li>Keyword found in Title and Meta Description</li>
+<li>Optimal length for both Title and Description</li>
+<li>Fast loading time detected for this page</li>
+</ul>
+</div>
+</div>
+<div class="p-6 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+<button class="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold font-display text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-colors">Discard</button>
+<button class="flex-1 px-4 py-3 bg-primary text-white rounded-xl text-sm font-bold font-display shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                    Update SEO
+                </button>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

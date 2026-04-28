@@ -1,0 +1,242 @@
+# TASK-017: Store Client and Update Policy
+# FileName: TASK-017_Store_Client_and_Update_Policy.md
+
+**Priority:** High
+**Category:** Core/Store
+**Estimated Effort:** Large
+**Dependencies:** TASK-015
+**Status:** Done (2026-01-27)
+
+---
+
+## Overview
+
+Implement the core-side store client, signature verification, and update
+policy. Default update policy is `auto-security` with manual updates for
+normal releases.
+
+**Goals:**
+- Fetch plugin metadata and revocations.
+- Verify signatures and checksums.
+- Download, unpack, and switch plugin versions safely.
+
+---
+
+## Architecture
+
+```
+core/store/
+  client.ts
+  verifier.ts
+  downloader.ts
+  updater.ts
+core/plugins/
+  installService.ts
+
+tests/unit/store/
+  verifier.test.ts
+  updater.test.ts
+```
+
+## Commands (if needed)
+
+```bash
+# core
+bun add @noble/ed25519 canonicalize fflate
+```
+
+---
+
+## Sub-Tasks
+
+### TASK-017-01_Store_client
+
+**Status:** Done (2026-01-27)
+
+Endpoints:
+- `GET /plugins`
+- `GET /plugins/:name`
+- `GET /plugins/:name/versions/:version/metadata`
+- `GET /plugins/:name/versions/:version/metadata.sig`
+- `GET /plugins/:name/versions/:version/download`
+- `GET /revocations.json`
+
+Rules:
+- Use timeouts and retries (exponential backoff).
+- Cache metadata for short TTL (e.g. 5 min).
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/client.ts` | HTTP client + responses |
+
+Client sketch:
+
+```ts
+export async function fetchMetadata(name: string, version: string) {
+  return fetchJson(`${STORE_URL}/plugins/${name}/versions/${version}/metadata`);
+}
+```
+
+---
+
+### TASK-017-02_Signature_and_checksum_verification
+
+**Status:** Done (2026-01-27)
+
+- Verify ed25519 signature for `metadata.json`.
+- Verify SHA256 checksum for ZIP.
+- Verify `coreVersion` and `apiVersion` compatibility before install.
+
+Example:
+
+```ts
+const metaBytes = canonicalizeJson(metadata);
+verifyEd25519(metaBytes, signature, storePublicKey);
+verifySha256(zipBytes, metadata.checksum.sha256);
+```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/verifier.ts` | signature + checksum helpers |
+
+Verifier sketch:
+
+```ts
+export function verifyMetadata(meta, sig, key) {
+  const payload = canonicalizeJson(meta);
+  return verifyEd25519(payload, sig, key);
+}
+```
+
+---
+
+### TASK-017-03_Install_and_update_flow
+
+**Status:** Done (2026-01-27)
+
+- Download ZIP to temp.
+- Unpack into `plugins-runtime/<name>/<version>`.
+- Atomically switch active version.
+- Store integrity metadata in registry.
+- Validate required files exist (`dist/server.mjs`, optional `dist/client.mjs`).
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/downloader.ts` | download + unzip |
+| `core/store/updater.ts` | install/update logic |
+| `core/plugins/installService.ts` | integrate with registry |
+
+Downloader sketch:
+
+```ts
+await downloadToFile(url, tmpZip);
+await unzip(tmpZip, targetDir);
+```
+
+Atomic switch sketch:
+
+```ts
+const nextDir = path.join(PLUGINS_DIR, name, version);
+await fs.rename(nextDir, activeDir);
+```
+
+Install service sketch:
+
+```ts
+export async function installPlugin(name: string, version: string) {
+  const meta = await fetchMetadata(name, version);
+  await verify(meta);
+  await downloadAndUnpack(meta);
+  await registerPlugin(meta);
+}
+```
+
+---
+
+### TASK-017-04_Update_policy
+
+**Status:** Done (2026-01-27)
+
+- Default: `auto-security`.
+- Auto-apply only releases with `release.type=security`.
+- Normal releases require manual confirm in admin.
+- Record update source (auto vs manual) in audit logs.
+
+Policy sketch:
+
+```ts
+if (release.type !== "security" && policy === "auto-security") return { skipped: true };
+```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/updater.ts` | policy checks |
+
+---
+
+### TASK-017-05_Revocation_checks
+
+**Status:** Done (2026-01-27)
+
+- Pull `revocations.json` on interval (e.g. hourly).
+- Disable revoked plugins and surface warning in admin.
+- Emit audit event when revoked.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/client.ts` | revocation fetch |
+| `core/plugins/installService.ts` | disable revoked |
+
+---
+
+## Testing Requirements
+
+- [ ] `tests/unit/store/verifier.test.ts` rejects invalid signature.
+- [ ] `tests/unit/store/updater.test.ts` handles auto-security policy.
+- [ ] `tests/integration/store/install.test.ts` installs plugin from ZIP.
+- [ ] `tests/integration/store/revocations.test.ts` disables revoked plugin.
+
+---
+
+## New Files to Create
+
+- `core/store/client.ts`
+- `core/store/verifier.ts`
+- `core/store/downloader.ts`
+- `core/store/updater.ts`
+- `core/plugins/installService.ts`
+- `tests/unit/store/verifier.test.ts`
+- `tests/unit/store/updater.test.ts`
+- `tests/integration/store/install.test.ts`
+- `tests/integration/store/revocations.test.ts`
+
+---
+
+## Documentation Updates Required
+
+- `_docs/STORE_SPEC.md` (verification details if changed).
+- `_docs/ARCHITECTURE.md` (update policy default).
+- `_docs/CMS_API.md` (install/update endpoints behavior).
+
+---
+
+## Changelog Entry (planned)
+
+- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-store-client-and-updates.md`
+- Notes: store client and update policy.
+
+---
+
+## Additional Docs
+
+- `_docs/SECURITY_SPEC.md`

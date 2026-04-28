@@ -1,0 +1,402 @@
+import type { WidgetBlock } from "../../../widgets/types";
+import type { ListingFacetConfig } from "../../search/filterContract";
+import type {
+  AssistantActionPlan,
+  AssistantIntentFamily,
+  AssistantPromptKind,
+  AssistantPlannedAction,
+} from "../actionPlanTypes";
+
+type CatalogScreenFieldValue = {
+  id: string;
+  label: string;
+  helper: string;
+  tone: "default" | "strong" | "muted";
+  field: string;
+};
+
+export type CatalogFamilyPreset = {
+  key: string;
+  intentId: string;
+  title: string;
+  summary: string;
+  answerIntro: string;
+  contentTypeSlug: string;
+  contentTypeName: string;
+  catalogPageSlug: string;
+  catalogHiddenListPath: string;
+  detailPath: string;
+  listingQueryName: string;
+  listingTemplateSlug: string;
+  listingTemplateName: string;
+  customScreenName: string;
+  introTitle: string;
+  introBody: string;
+  ctaLabel: string;
+  contentSchema: Record<string, unknown>;
+  listingTemplateConfig: Record<string, unknown>;
+  screen: {
+    eyebrow: string;
+    subtitle: string;
+    description: string;
+    badge: string;
+    leftTitle: string;
+    rightTitle: string;
+    leftGroupTitle: string;
+    leftGroupDescription: string;
+    rightGroupTitle: string;
+    rightGroupDescription: string;
+    leftFields: CatalogScreenFieldValue[];
+    rightFields: CatalogScreenFieldValue[];
+  };
+  assumptions: string[];
+  refinement: {
+    defaultFilterTitle: string;
+    defaultFilterDescription: string;
+    defaultSearchPlaceholder: string;
+    availableFacets: ListingFacetConfig[];
+  };
+};
+
+const createBlock = (
+  id: string,
+  type: string,
+  data: Record<string, unknown>,
+  options?: {
+    variant?: string;
+    slots?: Record<string, WidgetBlock[]>;
+  }
+): WidgetBlock => ({
+  id,
+  type,
+  ...(options?.variant ? { variant: options.variant } : {}),
+  data,
+  ...(options?.slots ? { slots: options.slots } : {}),
+});
+
+const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] => [
+  createBlock(`${preset.key}-header`, "screen-record-header", {
+    eyebrow: preset.screen.eyebrow,
+    title: "Record overview",
+    subtitle: preset.screen.subtitle,
+    description: preset.screen.description,
+    badge: preset.screen.badge,
+    align: "start",
+  }),
+  createBlock(
+    `${preset.key}-columns`,
+    "screen-two-column",
+    {
+      leftTitle: preset.screen.leftTitle,
+      rightTitle: preset.screen.rightTitle,
+      gap: "md",
+    },
+    {
+      variant: "aside",
+      slots: {
+        left: [
+          createBlock(
+            `${preset.key}-left-group`,
+            "screen-field-group",
+            {
+              title: preset.screen.leftGroupTitle,
+              description: preset.screen.leftGroupDescription,
+            },
+            {
+              slots: {
+                content: preset.screen.leftFields.map((field) =>
+                  createBlock(`${preset.key}-${field.id}`, "screen-field-value", {
+                    label: field.label,
+                    value: "0",
+                    helper: field.helper,
+                    tone: field.tone,
+                  })
+                ),
+              },
+            }
+          ),
+        ],
+        right: [
+          createBlock(
+            `${preset.key}-right-group`,
+            "screen-field-group",
+            {
+              title: preset.screen.rightGroupTitle,
+              description: preset.screen.rightGroupDescription,
+            },
+            {
+              slots: {
+                content: preset.screen.rightFields.map((field) =>
+                  createBlock(`${preset.key}-${field.id}`, "screen-field-value", {
+                    label: field.label,
+                    value: field.tone === "muted" ? "status" : "0",
+                    helper: field.helper,
+                    tone: field.tone,
+                  })
+                ),
+              },
+            }
+          ),
+        ],
+      },
+    }
+  ),
+];
+
+const buildScreenBindings = (preset: CatalogFamilyPreset) => [
+  {
+    id: `binding-${preset.key}-header-title`,
+    widgetId: `${preset.key}-header`,
+    propPath: "title",
+    field: "title",
+    mode: "read",
+  },
+  {
+    id: `binding-${preset.key}-header-subtitle`,
+    widgetId: `${preset.key}-header`,
+    propPath: "subtitle",
+    field: "summary",
+    mode: "read",
+  },
+  {
+    id: `binding-${preset.key}-header-badge`,
+    widgetId: `${preset.key}-header`,
+    propPath: "badge",
+    field: "projectStatus",
+    mode: "read",
+  },
+  ...preset.screen.leftFields.map((field) => ({
+    id: `binding-${preset.key}-${field.id}`,
+    widgetId: `${preset.key}-${field.id}`,
+    propPath: "value",
+    field: field.field,
+    mode: "read",
+  })),
+  ...preset.screen.rightFields.map((field) => ({
+    id: `binding-${preset.key}-${field.id}`,
+    widgetId: `${preset.key}-${field.id}`,
+    propPath: "value",
+    field: field.field,
+    mode: "read",
+  })),
+];
+
+export const buildCatalogFamilyPlan = (
+  preset: CatalogFamilyPreset,
+  options?: {
+    promptKind?: AssistantPromptKind;
+    intentFamily?: AssistantIntentFamily;
+  }
+): AssistantActionPlan => {
+  const actions: AssistantPlannedAction[] = [
+    {
+      id: `content-route-${preset.key}`,
+      type: "setting.content-route.upsert",
+      title: `Register public detail route for ${preset.contentTypeName.toLowerCase()}`,
+      description:
+        "Add public entry routes so listing cards can open a working detail page.",
+      input: {
+        typeSlug: preset.contentTypeSlug,
+        listPath: preset.catalogHiddenListPath,
+        detailPath: preset.detailPath,
+        enabled: true,
+      },
+    },
+    {
+      id: `content-type-${preset.key}`,
+      type: "content-type.upsert",
+      title: `Create the ${preset.contentTypeName.toLowerCase()} content model`,
+      description:
+        "Provision structured fields for summaries, media, specs, pricing, and status.",
+      input: {
+        slug: preset.contentTypeSlug,
+        name: preset.contentTypeName,
+        schema: preset.contentSchema,
+      },
+    },
+    {
+      id: `custom-screen-${preset.key}`,
+      type: "custom-screen.upsert",
+      title: `Create a dedicated ${preset.customScreenName} admin screen`,
+      description:
+        "Add a sidebar shortcut and a dedicated records surface for reviewing key catalog data.",
+      input: {
+        name: preset.customScreenName,
+        contentTypeSlug: preset.contentTypeSlug,
+        status: "active",
+        showInSidebar: true,
+        sidebarLabel: preset.customScreenName,
+        blocks: buildScreenBlocks(preset) as unknown as Array<Record<string, unknown>>,
+        bindings: buildScreenBindings(preset) as unknown as Array<Record<string, unknown>>,
+      },
+    },
+    {
+      id: `listing-query-${preset.key}`,
+      type: "listing-query.upsert",
+      title: "Create a listing query for the catalog",
+      description: "Prepare a reusable query for published catalog entries.",
+      input: {
+        name: preset.listingQueryName,
+        description: `Published ${preset.contentTypeName.toLowerCase()} used by the public catalog page.`,
+        contentTypeSlug: preset.contentTypeSlug,
+        fields: [
+          "id",
+          "title",
+          "slug",
+          "status",
+          "updatedAt",
+          "data.summary",
+          "data.heroImage",
+          ...Array.from(
+            new Set(
+              [
+                ...preset.screen.leftFields.map((field) => `data.${field.field}`),
+                ...preset.screen.rightFields.map((field) => `data.${field.field}`),
+              ].filter((field) => field !== "data.projectStatus")
+            )
+          ),
+          "data.projectStatus",
+        ],
+        includeDrafts: false,
+        limit: 24,
+        sort: [{ field: "title", dir: "asc" }],
+      },
+    },
+    {
+      id: `listing-template-${preset.key}`,
+      type: "listing-template.upsert",
+      title: "Create a grid listing template for catalog cards",
+      description:
+        "Define which catalog fields appear in cards and how they are formatted.",
+      input: {
+        name: preset.listingTemplateName,
+        slug: preset.listingTemplateSlug,
+        description: `Grid card layout for ${preset.contentTypeName.toLowerCase()} listings.`,
+        layout: "grid",
+        config: preset.listingTemplateConfig,
+      },
+    },
+    {
+      id: `page-${preset.key}`,
+      type: "page.upsert",
+      title: `Create the public ${preset.contentTypeName.toLowerCase()} catalog page`,
+      description:
+        "Publish a public landing page that renders the listing query through the content-list widget.",
+      input: {
+        title: preset.introTitle,
+        slug: preset.catalogPageSlug,
+        status: "published",
+        listingQueryName: preset.listingQueryName,
+        listingTemplateSlug: preset.listingTemplateSlug,
+        introTitle: preset.introTitle,
+        introBody: preset.introBody,
+        ctaLabel: preset.ctaLabel,
+      },
+    },
+  ];
+
+  return {
+    id: `plan-${preset.key}`,
+    status: "ready",
+    intentId: preset.intentId,
+    promptKind: options?.promptKind ?? "setup_request",
+    intentFamily: options?.intentFamily ?? "catalog_showcase",
+    title: preset.title,
+    answer: [
+      preset.answerIntro,
+      "",
+      "Planned resources:",
+      `1. A structured content type for ${preset.contentTypeName.toLowerCase()}.`,
+      `2. A dedicated ${preset.customScreenName} admin screen in the sidebar.`,
+      "3. A listing query and grid template for catalog cards.",
+      `4. A published catalog page at ${preset.catalogPageSlug}.`,
+      "5. Public detail routes for each catalog entry.",
+    ].join("\n"),
+    summary: preset.summary,
+    confidence: 0.91,
+    assumptions: [...preset.assumptions],
+    questions: [],
+    actions,
+  };
+};
+
+type CatalogFamilyRefinementOptions = {
+  promptKind?: AssistantPromptKind;
+  intentFamily?: AssistantIntentFamily;
+  refinementId: string;
+  title: string;
+  answer: string;
+  summary: string;
+  assumptions?: string[];
+  extraActions?: AssistantPlannedAction[];
+  pageOverrides?: Partial<{
+    title: string;
+    slug: string;
+    status: "draft" | "published";
+    listingQueryName: string;
+    listingTemplateSlug: string;
+    introTitle: string;
+    introBody: string;
+    ctaLabel: string;
+    contentListStyle: {
+      columns?: "1" | "2" | "3";
+      cardStyle?: "outlined" | "elevated" | "minimal";
+    };
+    listingFilters: {
+      title: string;
+      description: string;
+      autoApply: boolean;
+      showSearch: boolean;
+      searchPlaceholder: string;
+      searchLabel: string;
+      applyLabel: string;
+      facets: Array<Record<string, unknown>>;
+    } | null;
+    formEmbed: {
+      formName: string;
+      title: string;
+      description: string;
+      submitLabel: string;
+      successMessage: string;
+    } | null;
+  }>;
+};
+
+export const buildCatalogFamilyRefinementPlan = (
+  preset: CatalogFamilyPreset,
+  options: CatalogFamilyRefinementOptions
+): AssistantActionPlan => {
+  const pageAction: AssistantPlannedAction = {
+    id: `page-${preset.key}-${options.refinementId}`,
+    type: "page.upsert",
+    title: options.title,
+    description:
+      "Refine the existing catalog page and reuse the current listing query/template instead of creating duplicates.",
+    input: {
+      title: preset.introTitle,
+      slug: preset.catalogPageSlug,
+      status: "published",
+      listingQueryName: preset.listingQueryName,
+      listingTemplateSlug: preset.listingTemplateSlug,
+      introTitle: preset.introTitle,
+      introBody: preset.introBody,
+      ctaLabel: preset.ctaLabel,
+      ...(options.pageOverrides ?? {}),
+    },
+  };
+
+  return {
+    id: `plan-${preset.key}-${options.refinementId}`,
+    status: "ready",
+    intentId: `${preset.intentId}-${options.refinementId}`,
+    promptKind: options.promptKind ?? "refinement_request",
+    intentFamily: options.intentFamily ?? "catalog_showcase",
+    title: options.title,
+    answer: options.answer,
+    summary: options.summary,
+    confidence: 0.84,
+    assumptions: [...(options.assumptions ?? [])],
+    questions: [],
+    actions: [...(options.extraActions ?? []), pageAction],
+  };
+};

@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["core/admin/*"]
+    },
+    "types": ["node"]
+  },
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "scripts/**/*.ts",
+    "scripts/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx"
+  ],
+  "exclude": [
+    "core",
+    "store",
+    "tests/integration/store",
+    "tests/unit/store",
+    "_docs",
+    "node_modules",
+    "dist",
+    "coverage",
+    "plugins-runtime"
+  ]
+}

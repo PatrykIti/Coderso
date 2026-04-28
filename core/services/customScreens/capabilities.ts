@@ -1,0 +1,54 @@
+import type { WidgetBlock } from "../../widgets/types";
+
+import type { CustomScreenBinding } from "./customScreenSchemas";
+
+export type CustomScreenMode = "collection-only" | "dashboard" | "editor";
+
+export type CustomScreenCapabilities = {
+  mode: CustomScreenMode;
+  hasBlocks: boolean;
+  hasBindings: boolean;
+  hasReadableBindings: boolean;
+  hasWritableBindings: boolean;
+  supportsDedicatedPreview: boolean;
+  supportsDedicatedEditor: boolean;
+  bindingCounts: {
+    total: number;
+    readable: number;
+    writable: number;
+  };
+};
+
+export function resolveCustomScreenCapabilities(input: {
+  blocks?: WidgetBlock[] | null;
+  bindings?: CustomScreenBinding[] | null;
+}): CustomScreenCapabilities {
+  const blocks = Array.isArray(input.blocks) ? input.blocks : [];
+  const bindings = Array.isArray(input.bindings) ? input.bindings : [];
+  const readable = bindings.filter((binding) => binding.mode !== "write").length;
+  const writable = bindings.filter((binding) => binding.mode !== "read").length;
+  const hasBlocks = blocks.length > 0;
+  const hasBindings = bindings.length > 0;
+  const hasReadableBindings = readable > 0;
+  const hasWritableBindings = writable > 0;
+
+  let mode: CustomScreenMode = "collection-only";
+  if (hasBlocks && (hasReadableBindings || hasWritableBindings)) {
+    mode = hasWritableBindings ? "editor" : "dashboard";
+  }
+
+  return {
+    mode,
+    hasBlocks,
+    hasBindings,
+    hasReadableBindings,
+    hasWritableBindings,
+    supportsDedicatedPreview: hasBlocks && hasReadableBindings,
+    supportsDedicatedEditor: mode === "editor",
+    bindingCounts: {
+      total: bindings.length,
+      readable,
+      writable,
+    },
+  };
+}

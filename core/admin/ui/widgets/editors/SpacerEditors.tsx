@@ -1,0 +1,372 @@
+import { type ReactNode } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+
+import {
+  normalizeSpacerData,
+  resolveSpacerCssHeight,
+  resolveSpacerVariant,
+  spacerDefaults,
+  spacerHeightCssValueMap,
+  spacerHeightTokens,
+  type SpacerData,
+  type SpacerHeightToken,
+  type SpacerVariantId,
+} from "../../../../widgets/core/spacer";
+import type { WidgetEditorProps } from "../../../../widgets/types";
+
+const variantOptions: Array<{
+  id: SpacerVariantId;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "responsive",
+    label: "Responsive",
+    description: "Independent height per breakpoint for precise rhythm tuning.",
+  },
+  {
+    id: "fixed",
+    label: "Fixed",
+    description: "Single height shared across desktop, tablet and mobile.",
+  },
+];
+
+const heightTokenOptions = spacerHeightTokens.map((token) => ({
+  id: token,
+  label: `${token} (${spacerHeightCssValueMap[token]})`,
+}));
+
+const isSpacerHeightToken = (value: string): value is SpacerHeightToken =>
+  spacerHeightTokens.includes(value as SpacerHeightToken);
+
+function normalizeValue(value: SpacerData, variant: string): SpacerData {
+  return normalizeSpacerData(value, variant);
+}
+
+function updateValue(
+  value: SpacerData,
+  variant: string,
+  onChange: (next: SpacerData) => void,
+  updater: (current: SpacerData) => SpacerData
+) {
+  const current = normalizeValue(value, variant);
+  const next = updater(current);
+  onChange(normalizeValue(next, variant));
+}
+
+function updateHeight(
+  value: SpacerData,
+  variant: string,
+  onChange: (next: SpacerData) => void,
+  patch: Partial<NonNullable<SpacerData["height"]>>
+) {
+  updateValue(value, variant, onChange, (current) => ({
+    ...current,
+    height: {
+      ...current.height,
+      ...patch,
+    },
+  }));
+}
+
+function updateMeta(
+  value: SpacerData,
+  variant: string,
+  onChange: (next: SpacerData) => void,
+  patch: Partial<Pick<SpacerData, "showGuideInEditor">>
+) {
+  updateValue(value, variant, onChange, (current) => ({
+    ...current,
+    ...patch,
+  }));
+}
+
+function EditorSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </p>
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function VariantCards({
+  value,
+  onChange,
+}: {
+  value: SpacerVariantId;
+  onChange?: (next: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {variantOptions.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange?.(option.id)}
+          className={cn(
+            "w-full rounded-lg border p-3 text-left transition",
+            value === option.id
+              ? "border-primary bg-primary/5"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <div className="flex w-full items-start justify-between gap-2">
+            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
+              {value === option.id ? "Selected" : "Pick"}
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DiagnosticsSnapshot({ value }: { value: SpacerData }) {
+  return (
+    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
+}
+
+function HeightField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const token = isSpacerHeightToken(value) ? value : "custom";
+
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <p className="text-sm font-medium">{label}</p>
+      <Select
+        value={token}
+        onValueChange={(next) => {
+          if (next === "custom") return;
+          onChange(next);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Quick token" />
+        </SelectTrigger>
+        <SelectContent>
+          {heightTokenOptions.map((option) => (
+            <SelectItem key={`${label}-${option.id}`} value={option.id}>
+              {option.label}
+            </SelectItem>
+          ))}
+          <SelectItem value="custom">Custom px</SelectItem>
+        </SelectContent>
+      </Select>
+      <Input
+        value={isSpacerHeightToken(value) ? "" : value}
+        placeholder="e.g. 48px"
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <p className="text-xs text-muted-foreground">
+        Token or px value. Resolved: {resolveSpacerCssHeight(value)}
+      </p>
+    </div>
+  );
+}
+
+function ResponsiveHeights({
+  value,
+  variant,
+  onChange,
+}: {
+  value: SpacerData;
+  variant: string;
+  onChange: (next: SpacerData) => void;
+}) {
+  const normalized = normalizeValue(value, variant);
+  const height = normalized.height ?? spacerDefaults.height!;
+  const resolvedVariant = resolveSpacerVariant(variant);
+
+  return (
+    <div className="space-y-3">
+      <HeightField
+        label="Desktop height"
+        value={height.desktop ?? "16"}
+        onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
+      />
+      {resolvedVariant === "responsive" ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <HeightField
+            label="Tablet height"
+            value={height.tablet ?? "12"}
+            onChange={(next) => updateHeight(value, variant, onChange, { tablet: next })}
+          />
+          <HeightField
+            label="Mobile height"
+            value={height.mobile ?? "8"}
+            onChange={(next) => updateHeight(value, variant, onChange, { mobile: next })}
+          />
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Fixed mode uses desktop height for tablet and mobile.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function SpacerWizardEditor({
+  value,
+  onChange,
+  variant,
+  onVariantChange,
+}: WidgetEditorProps<SpacerData>) {
+  const normalized = normalizeValue(value, variant);
+  const height = normalized.height ?? spacerDefaults.height!;
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Spacer mode</p>
+        <Select value={resolveSpacerVariant(variant)} onValueChange={(next) => onVariantChange?.(next)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            {variantOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <HeightField
+        label="Desktop height"
+        value={height.desktop ?? "16"}
+        onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
+      />
+
+      <div className="rounded-md border p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Show guide in editor</p>
+            <p className="text-xs text-muted-foreground">
+              Displays spacer label overlay in runtime preview only.
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(normalized.showGuideInEditor)}
+            onCheckedChange={(checked) =>
+              updateMeta(value, variant, onChange, { showGuideInEditor: checked })
+            }
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SpacerVisualEditor({
+  value,
+  onChange,
+  variant,
+  onVariantChange,
+}: WidgetEditorProps<SpacerData>) {
+  const normalized = normalizeValue(value, variant);
+
+  return (
+    <div className="space-y-4">
+      <EditorSection
+        title="Variant and responsive behavior"
+        description="Choose fixed or responsive spacer mode."
+      >
+        <VariantCards value={resolveSpacerVariant(variant)} onChange={onVariantChange} />
+      </EditorSection>
+
+      <EditorSection
+        title="Responsive heights"
+        description="Control spacer height per breakpoint with token or px values."
+      >
+        <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
+      </EditorSection>
+
+      <EditorSection
+        title="Editor guide"
+        description="Optional helper label visible in preview environments."
+      >
+        <div className="rounded-md border p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Show guide in editor</p>
+              <p className="text-xs text-muted-foreground">
+                Helps identify spacer size while composing templates.
+              </p>
+            </div>
+            <Switch
+              checked={Boolean(normalized.showGuideInEditor)}
+              onCheckedChange={(checked) =>
+                updateMeta(value, variant, onChange, { showGuideInEditor: checked })
+              }
+            />
+          </div>
+        </div>
+      </EditorSection>
+    </div>
+  );
+}
+
+export function SpacerAdvancedEditor({
+  value,
+  onChange,
+  variant,
+}: WidgetEditorProps<SpacerData>) {
+  const normalized = normalizeValue(value, variant);
+
+  return (
+    <div className="space-y-4">
+      <EditorSection
+        title="Technical height tokens"
+        description="Direct token/px editing for desktop, tablet and mobile heights."
+      >
+        <ResponsiveHeights value={value} variant="responsive" onChange={onChange} />
+      </EditorSection>
+
+      <EditorSection
+        title="Raw payload snapshot"
+        description="Runtime-oriented JSON view of normalized data."
+      >
+        <DiagnosticsSnapshot value={normalized} />
+      </EditorSection>
+    </div>
+  );
+}

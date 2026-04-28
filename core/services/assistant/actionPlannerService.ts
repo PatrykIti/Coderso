@@ -1,0 +1,1086 @@
+import type {
+  AssistantActionContext,
+  AssistantActionPlan,
+  AssistantIntentFamily,
+  AssistantPromptKind,
+  AssistantPlanQuestion,
+  AssistantSiteKitPlanInput,
+} from "./actionPlanTypes";
+import type { AssistantProvider } from "./providers/providerTypes";
+import { buildAssistantAdminContext } from "./adminContextService";
+import { normalizeAssistantActionPlan } from "./actionPlanSchema";
+import {
+  classifyAssistantPrompt,
+  includesAny,
+  normalizeAssistantPlannerPrompt,
+  resolveContextualRefinementFamily,
+} from "./actionPlanHeuristics";
+import {
+  buildProviderPlanningPromptPackage,
+  type AssistantProviderPlanningEvidence,
+} from "./providerPlanningContext";
+import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPolicy";
+import { buildProviderPlannerSystemPrompt } from "./operationPolicy/providerGuidance";
+import {
+  hasDestructiveActions,
+  hasActionCountMismatchWithPolicy,
+  hasDestructiveCountMismatchWithPolicy,
+  hasPromptDestructiveIntentMismatchWithPolicy,
+  hasPromptImpliedFieldMismatchWithPolicy,
+  isBroadDestructivePromptWithPolicy,
+} from "./operationPolicy/safetyPolicy";
+import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
+import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
+import { buildBookingServiceNeedsInputPlan } from "./blueprints/bookingServiceBlueprint";
+import { buildEditorialContentHubPlan } from "./blueprints/editorialContentHubBlueprint";
+import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
+import {
+  buildProductCheckoutNeedsInputPlan,
+  buildProductInquiryCatalogPlan,
+} from "./blueprints/productInquiryBlueprint";
+import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
+import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
+import {
+  CATALOG_FAMILY_PRESETS,
+  PORTFOLIO_PROJECTS_PRESET,
+  PRODUCT_CATALOG_PRESET,
+  SERVICES_DIRECTORY_PRESET,
+} from "./blueprints/catalogFamilyPresets";
+import {
+  buildCmsOperationDraftFromPrompt,
+  type CmsResolvedTargetCandidate,
+  resolveCmsOperationTargets,
+} from "./cmsTargetResolver";
+import { mapCmsOperationToActionPlan } from "./cmsOperationActionMapper";
+import {
+  type CmsOperationDraft,
+  buildCmsOperationDraftJsonSchema,
+  normalizeCmsOperationDraft,
+  normalizeCmsOperationDraftWithPolicy,
+} from "./cmsOperationDraftSchema";
+import {
+  getResolverResourcePolicyForDraft,
+  inferFiltersFromPromptWithPolicy,
+  resolveFieldIntentWithPolicy,
+} from "./operationPolicy/resolverPolicy";
+import {
+  chooseProviderResponseContract,
+  resolveModelCapabilityProfile,
+} from "./modelCapabilities";
+import { buildCmsOperationDraftFromPlanningState } from "./cmsPlanningState";
+
+export {
+  classifyAssistantPrompt,
+  isLikelyGuidePlanningPrompt,
+  isLikelyHouseProjectsCatalogPrompt,
+} from "./actionPlanHeuristics";
+export { buildProviderPlanningPromptPackage } from "./providerPlanningContext";
+
+const filterKeywords = [
+  "filtr",
+  "filter",
+  "filters",
+  "facets",
+  "filtrowanie",
+];
+
+const layoutKeywords = [
+  "layout",
+  "uklad",
+  "układ",
+  "cards",
+  "karty",
+  "kart",
+  "grid",
+  "siatka",
+  "compact",
+  "minimal",
+];
+
+const priceKeywords = ["cena", "cene", "cenę", "cenie", "price", "pricing"];
+const statusKeywords = ["status", "statuses"];
+const inquiryKeywords = ["formularz", "form", "zapytania", "inquiry", "quote", "lead"];
+const checkoutKeywords = [
+  "checkout",
+  "payment",
+  "payments",
+  "cart",
+  "koszyk",
+  "platnosc",
+  "płatność",
+  "platnosci",
+  "płatności",
+];
+
+const buildReadyPlanForIntentFamily = (
+  intentFamily: AssistantIntentFamily,
+  options: {
+    promptKind: AssistantPromptKind;
+    intentFamily: AssistantIntentFamily;
+    normalizedPrompt?: string;
+  }
+) => {
+  switch (intentFamily) {
+    case "catalog_showcase":
+      return buildHouseProjectsCatalogPlan(options);
+    case "product_catalog":
+      if (includesAny(options.normalizedPrompt ?? "", checkoutKeywords)) {
+        return buildProductCheckoutNeedsInputPlan({ promptKind: options.promptKind });
+      }
+      if (includesAny(options.normalizedPrompt ?? "", inquiryKeywords)) {
+        return buildProductInquiryCatalogPlan(options);
+      }
+      return buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, options);
+    case "portfolio_projects":
+      return buildCatalogFamilyPlan(PORTFOLIO_PROJECTS_PRESET, options);
+    case "services_directory":
+      return buildCatalogFamilyPlan(SERVICES_DIRECTORY_PRESET, options);
+    case "lead_capture_site":
+      return buildLeadCaptureSitePlan({ promptKind: options.promptKind });
+    case "booking_service":
+      return buildBookingServiceNeedsInputPlan({ promptKind: options.promptKind });
+    case "editorial_content_hub":
+      return buildEditorialContentHubPlan({ promptKind: options.promptKind });
+    default:
+      return null;
+  }
+};
+
+const buildRefinementPlanForIntentFamily = (
+  prompt: string,
+  intentFamily: AssistantIntentFamily,
+  options: {
+    promptKind: AssistantPromptKind;
+    intentFamily: AssistantIntentFamily;
+    normalizedPrompt?: string;
+  }
+) => {
+  const preset = CATALOG_FAMILY_PRESETS[intentFamily as keyof typeof CATALOG_FAMILY_PRESETS];
+  if (!preset) return null;
+
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  const selectedFacets = preset.refinement.availableFacets.filter((facet) => {
+    const label = facet.label.toLowerCase();
+    const field = facet.field?.toLowerCase() ?? "";
+    if (intentFamily === "catalog_showcase") {
+      if (label.includes("area") || field.includes("aream2")) {
+        return includesAny(normalizedPrompt, ["metraz", "metraż", "area"]);
+      }
+      if (label.includes("rooms") || field.includes("rooms")) {
+        return includesAny(normalizedPrompt, ["pokoi", "rooms"]);
+      }
+    }
+    if (intentFamily === "product_catalog") {
+      if (field.includes("category")) {
+        return includesAny(normalizedPrompt, ["category", "kategoria"]);
+      }
+      if (field.includes("price")) {
+        return includesAny(normalizedPrompt, priceKeywords);
+      }
+    }
+    if (intentFamily === "services_directory") {
+      if (field.includes("responsetimehours")) {
+        return includesAny(normalizedPrompt, ["response time", "czas odpowiedzi"]);
+      }
+      if (field.includes("servicetype")) {
+        return includesAny(normalizedPrompt, ["service type", "typ uslugi", "typ usługi"]);
+      }
+    }
+    if (intentFamily === "portfolio_projects") {
+      if (field.includes("deliveryyear")) {
+        return includesAny(normalizedPrompt, ["delivery year", "rok realizacji"]);
+      }
+      if (field.includes("clientname")) {
+        return includesAny(normalizedPrompt, ["client", "klient"]);
+      }
+    }
+    if (field.includes("projectstatus")) {
+      return includesAny(normalizedPrompt, statusKeywords);
+    }
+    return false;
+  });
+
+  const includeFilters =
+    includesAny(normalizedPrompt, filterKeywords) || selectedFacets.length > 0;
+  const includeLayoutUpdate = includesAny(normalizedPrompt, layoutKeywords);
+  const includeStatusOrPrice =
+    includesAny(normalizedPrompt, statusKeywords) ||
+    includesAny(normalizedPrompt, priceKeywords);
+
+  if (!includeFilters && !includeLayoutUpdate && !includeStatusOrPrice) {
+    const includeForm =
+      includesAny(normalizedPrompt, ["formularz", "form", "zapytania", "inquiry", "quote"]);
+    if (!includeForm) return null;
+
+    return buildCatalogFamilyRefinementPlan(preset, {
+      promptKind: options.promptKind,
+      intentFamily: options.intentFamily,
+      refinementId: "inquiry-form",
+      title: `Add Inquiry Form to ${preset.title}`,
+      answer: `I can add an inquiry form to the existing ${preset.title.toLowerCase()} setup without creating duplicate catalog resources.`,
+      summary:
+        "Create an inquiry form and embed it on the existing catalog page while reusing the current listing/query resources.",
+      assumptions: [
+        "The inquiry form is public and captures contact details plus message.",
+        "The form is embedded on the existing catalog page through the current page action family.",
+      ],
+      extraActions: [
+        {
+          id: `form-${preset.key}-inquiry`,
+          type: "form.upsert",
+          title: `Create ${preset.title} inquiry form`,
+          description:
+            "Create or update a public inquiry form that can be embedded on the catalog page.",
+          input: {
+            name: `${preset.title} Inquiry`,
+            slug: `${preset.key}-inquiry`,
+            status: "published",
+            description: `Inquiry form for ${preset.title.toLowerCase()}.`,
+            successMessage: "Thanks. We will contact you shortly.",
+            submissionAccess: "public",
+            fields: [
+              {
+                type: "text",
+                label: "Full name",
+                name: "full_name",
+                required: true,
+                orderIndex: 0,
+              },
+              {
+                type: "email",
+                label: "Email",
+                name: "email",
+                required: true,
+                orderIndex: 1,
+              },
+              {
+                type: "phone",
+                label: "Phone",
+                name: "phone",
+                required: false,
+                orderIndex: 2,
+              },
+              {
+                type: "textarea",
+                label: "Message",
+                name: "message",
+                required: true,
+                orderIndex: 3,
+              },
+            ],
+          },
+        },
+      ],
+      pageOverrides: {
+        formEmbed: {
+          formName: `${preset.title} Inquiry`,
+          title: `Ask about ${preset.title.toLowerCase()}`,
+          description: "Send a question and we will follow up with details.",
+          submitLabel: "Send inquiry",
+          successMessage: "Thanks. We will contact you shortly.",
+        },
+      },
+    });
+  }
+
+  const facets = [
+    {
+      id: "sort",
+      kind: "sort",
+      label: "Sort",
+      sortOptions: [
+        {
+          value: "title:asc",
+          label: "Title A-Z",
+          field: "title",
+          dir: "asc",
+        },
+        {
+          value: "updatedAt:desc",
+          label: "Newest first",
+          field: "updatedAt",
+          dir: "desc",
+        },
+      ],
+    },
+    ...(selectedFacets.length > 0
+      ? selectedFacets
+      : includeFilters
+        ? preset.refinement.availableFacets
+        : []),
+  ];
+
+  return buildCatalogFamilyRefinementPlan(preset, {
+    promptKind: options.promptKind,
+    intentFamily: options.intentFamily,
+    refinementId: "refinement",
+    title: `Refine ${preset.title}`,
+    answer: `I can refine the existing ${preset.title.toLowerCase()} setup without creating duplicate resources.`,
+    summary:
+      "Update the existing catalog page and keep the current listing/query resources instead of provisioning a second setup.",
+    assumptions: [
+      "The refinement flow reuses the canonical preset resource keys for this catalog family.",
+      "Missing refinement facets fall back to the family defaults when the prompt only asks for generic filtering.",
+    ],
+    pageOverrides: {
+      ...(includeLayoutUpdate
+        ? {
+            contentListStyle: {
+              columns: "2",
+              cardStyle: "minimal",
+            },
+          }
+        : {}),
+      ...(includeFilters
+        ? {
+            listingFilters: {
+              title: preset.refinement.defaultFilterTitle,
+              description: preset.refinement.defaultFilterDescription,
+              autoApply: true,
+              showSearch: true,
+              searchPlaceholder: preset.refinement.defaultSearchPlaceholder,
+              searchLabel: "Search",
+              applyLabel: "Apply filters",
+              facets: facets as Array<Record<string, unknown>>,
+            },
+          }
+        : {}),
+    },
+  });
+};
+
+const buildClarifyingPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  classification: {
+    promptKind: AssistantPromptKind;
+    intentFamily: AssistantIntentFamily;
+  }
+): AssistantActionPlan => {
+  const questions: AssistantPlanQuestion[] = [
+    {
+      id: "catalog-domain",
+      label: "What structured catalog should I create?",
+      description:
+        "For example: house projects, real estate offers, products, or service packages.",
+      required: true,
+    },
+    {
+      id: "admin-surface",
+      label: "Should I create a dedicated admin screen for managing records?",
+      description:
+        "I can use Coderso Entries only, or also add a Custom Screen shortcut in the sidebar.",
+      required: false,
+    },
+  ];
+
+  const routeHint = context.route
+    ? `Current admin route: ${context.route}.`
+    : "No active admin route was provided.";
+
+  return {
+    id: "plan-needs-input",
+    status: "needs_input",
+    intentId:
+      classification.intentFamily === "unknown"
+        ? "generic-guide-needs-input"
+        : `${classification.intentFamily}-needs-input`,
+    promptKind: classification.promptKind,
+    intentFamily: classification.intentFamily,
+    title: "Need more guidance before planning",
+    answer: [
+      "I can generate a structured Coderso setup, but this prompt is still too open for safe execution.",
+      "",
+      routeHint,
+      "",
+      "Please clarify the type of catalog you want me to create, or describe the business surface more concretely.",
+    ].join("\n"),
+    summary: "The prompt does not yet map cleanly to a safe typed setup plan.",
+    confidence: 0.35,
+    assumptions: [
+      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+    ],
+    questions,
+    actions: [],
+  };
+};
+
+const buildDocsGuidancePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan => {
+  const routeHint = context.route
+    ? `Current admin route: ${context.route}.`
+    : "No active admin route was provided.";
+  return {
+    id: "plan-docs-guidance",
+    status: "ready",
+    intentId: "docs-guidance",
+    responseKind: "docs",
+    promptKind: "docs_question",
+    intentFamily: "unknown",
+    title: "Documentation guidance",
+    answer: [
+      "This looks like a documentation or how-to question rather than a CMS operation.",
+      "",
+      routeHint,
+      "",
+      "Ask what you want me to inspect, change, create, delete, or configure if this should become a reviewed LLM Guide plan.",
+    ].join("\n"),
+    summary: "The prompt is classified as non-mutating documentation guidance.",
+    confidence: 0.62,
+    assumptions: [
+      "LLM Guide did not plan a mutation for this prompt.",
+      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+    ],
+    questions: [],
+    actions: [],
+  };
+};
+
+const describeCmsTargetQuery = (draft: CmsOperationDraft) =>
+  draft.targetQuery?.exactName ??
+  draft.targetQuery?.prefix ??
+  draft.targetQuery?.slug ??
+  draft.targetQuery?.text ??
+  null;
+
+const toInspectionCandidates = (candidates: CmsResolvedTargetCandidate[]) =>
+  candidates.slice(0, 10).map((candidate) => ({
+    kind: candidate.kind,
+    id: candidate.id,
+    label: candidate.label,
+    slug: candidate.slug,
+    status: candidate.status,
+    adminHref: candidate.adminHref,
+  }));
+
+const buildGenericCmsInspectionPlan = (
+  prompt: string,
+  draft: CmsOperationDraft,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  if (draft.operation !== "inspect" && draft.operation !== "find") return null;
+  const resolution = resolveCmsOperationTargets(draft, context);
+  const candidates = toInspectionCandidates(resolution.candidates);
+  const query = describeCmsTargetQuery(draft);
+  const matchStatus =
+    resolution.status === "unsupported"
+      ? "unsupported"
+      : resolution.status === "no_match"
+        ? "no_match"
+        : resolution.status === "ambiguous"
+          ? "ambiguous"
+          : "matched";
+  const candidateLines =
+    candidates.length > 0
+      ? candidates
+          .map((candidate) => {
+            const slug = candidate.slug ? ` (${candidate.slug})` : "";
+            const status = candidate.status ? ` - ${candidate.status}` : "";
+            return `- ${candidate.label}${slug}${status}`;
+          })
+          .join("\n")
+      : "No matching CMS resources were found.";
+
+  return {
+    id: `plan-cms-${draft.resourceKind}-inspect`,
+    status: "ready",
+    intentId: "cms-resource-inspect",
+    responseKind: "inspection",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    inspection: {
+      kind: "resource-candidates",
+      operation: draft.operation,
+      resourceKind: draft.resourceKind,
+      matchStatus,
+      query,
+      candidates,
+      truncated: resolution.candidates.length > candidates.length,
+    },
+    title: "CMS resource inspection",
+    answer: [
+      query
+        ? `I searched ${draft.resourceKind} resources for "${query}".`
+        : `I searched visible ${draft.resourceKind} resources.`,
+      "",
+      candidateLines,
+    ].join("\n"),
+    summary:
+      candidates.length > 0
+        ? `Found ${resolution.candidates.length} ${draft.resourceKind} candidate(s).`
+        : `No ${draft.resourceKind} candidates matched the request.`,
+    confidence:
+      resolution.status === "exact"
+        ? 0.84
+        : resolution.status === "candidates"
+          ? 0.72
+          : 0.58,
+    assumptions: [
+      "Inspection uses trusted active context and server-side resource catalog summaries.",
+      "No changes are planned for this read-only response.",
+      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+    ],
+    questions: [],
+    actions: [],
+  };
+};
+
+const buildGenericCmsInspectionOperationPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const draft = buildCmsOperationDraftFromPrompt(prompt, context);
+  if (!draft) return null;
+  return buildGenericCmsInspectionPlan(prompt, draft, context);
+};
+
+const buildGenericCmsPlanningStateFollowUpPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const draft = buildCmsOperationDraftFromPlanningState(prompt, context.planningState);
+  if (!draft) return null;
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan) return inspectionPlan;
+  return mapCmsOperationToActionPlan({ prompt, draft, context });
+};
+
+const buildGenericCmsOperationPlanFromDraft = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  draft: CmsOperationDraft
+): AssistantActionPlan | null => {
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan) return inspectionPlan;
+  return mapCmsOperationToActionPlan({ prompt, draft, context });
+};
+
+const cloneSiteKitPlanInput = (
+  input: AssistantSiteKitPlanInput
+): AssistantSiteKitPlanInput => ({
+  businessType: input.businessType,
+  goals: [...input.goals],
+  locale: input.locale,
+  region: input.region ?? null,
+  siteName: input.siteName ?? null,
+  preferredKitId: input.preferredKitId ?? null,
+  selectedKitId: input.selectedKitId ?? null,
+  enabledStepIds: input.enabledStepIds ? [...input.enabledStepIds] : undefined,
+});
+
+const buildSiteKitActionPlan = (
+  siteKit: AssistantSiteKitPlanInput
+): AssistantActionPlan => {
+  const requested = cloneSiteKitPlanInput(siteKit);
+  const preview = buildGuidedSiteBuilderPlanResult(requested);
+  const resolvedInput: AssistantSiteKitPlanInput = {
+    ...requested,
+    selectedKitId: preview.selectedKitId,
+    enabledStepIds: [...preview.enabledStepIds],
+  };
+
+  return {
+    id: `plan-site-kit-${preview.selectedKitId}`,
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: `${preview.selectedKitTitle} Site Kit`,
+    answer: `I can prepare the ${preview.selectedKitTitle} site kit through the shared LLM Guide action flow.`,
+    summary:
+      "Recommend the matching site kit, dry-run the selected steps, then execute the kit installer through typed assistant actions.",
+    confidence: preview.plan.confidence / 100,
+    assumptions: [
+      "The AI Site Wizard is a guided entry point into the same LLM Guide action engine.",
+      "Selected kit steps stay editable before execution and are applied through the solution kit installer.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `site-kit-recommend-${preview.selectedKitId}`,
+        type: "site-kit.recommend",
+        title: `Recommend ${preview.selectedKitTitle}`,
+        description:
+          "Select the most relevant site kit from the business type, goals, locale, and optional preferred kit.",
+        input: {
+          ...resolvedInput,
+          preview,
+        },
+      },
+      {
+        id: `site-kit-install-${preview.selectedKitId}`,
+        type: "site-kit.install",
+        title: `Install ${preview.selectedKitTitle}`,
+        description:
+          "Apply the selected site kit steps through the shared solution kit installer.",
+        input: {
+          ...resolvedInput,
+          continueOnError: true,
+          preview,
+        },
+      },
+    ],
+  };
+};
+
+export type AssistantActionPlanInput = {
+  prompt: string;
+  context?: AssistantActionContext;
+};
+
+export type AssistantProviderDraftPlanInput = AssistantActionPlanInput & {
+  provider?: AssistantProvider | null;
+  providerModel?: string | null;
+  llmAvailable?: boolean;
+  evidence?: AssistantProviderPlanningEvidence[];
+  limits?: {
+    maxInputTokens?: number;
+    maxOutputTokens?: number;
+    timeoutMs?: number;
+  };
+};
+
+const providerPlannerSystemPrompt = buildProviderPlannerSystemPrompt(assistantOperationPolicy);
+
+const parseProviderDraftJson = (value: string) => {
+  const trimmed = value.trim();
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    if (fenced?.[1]) return JSON.parse(fenced[1]) as unknown;
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as unknown;
+    }
+    throw new Error("provider_draft_json_invalid");
+  }
+};
+
+const buildProviderRequestLimits = (
+  limits: AssistantProviderDraftPlanInput["limits"] | undefined
+) => ({
+  maxInputTokens: Math.max(1, Math.floor(limits?.maxInputTokens ?? 4_000)),
+  maxOutputTokens: Math.max(1, Math.floor(limits?.maxOutputTokens ?? 1_500)),
+  timeoutMs: Math.max(1_000, Math.floor(limits?.timeoutMs ?? 15_000)),
+});
+
+const tryPlanProviderCmsOperationDraft = (
+  input: AssistantProviderDraftPlanInput,
+  draft: unknown
+) => {
+  const context = buildAssistantAdminContext(input.context);
+  try {
+    const operationDraft = applyPromptImpliedDraftHintsWithPolicy(
+      input.prompt,
+      normalizeCmsOperationDraftWithPolicy(draft, assistantOperationPolicy)
+    );
+    const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft);
+    if (!plan) return null;
+    return normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        providerId: input.provider?.id ?? null,
+      },
+      assumptions: [
+        ...plan.assumptions,
+        "Provider draft was validated locally before target resolution.",
+      ],
+    });
+  } catch {
+    return null;
+  }
+};
+
+const hasFilterField = (draft: CmsOperationDraft, field: string) =>
+  draft.filters?.some((filter) => filter.field === field) ?? false;
+
+const findPromptFieldPolicy = (
+  normalizedPrompt: string,
+  resourcePolicy: ReturnType<typeof getResolverResourcePolicyForDraft>
+) => {
+  if (!resourcePolicy) return null;
+  return Object.values(resourcePolicy.fields)
+    .map((field) => {
+      const bestAliasLength = [field.field, ...field.aliases]
+        .map((alias) => normalizeAssistantPlannerPrompt(alias))
+        .filter((alias) => alias && includesAny(normalizedPrompt, [alias]))
+        .reduce((best, alias) => Math.max(best, alias.length), 0);
+      return bestAliasLength > 0 ? { field, score: bestAliasLength } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .sort((left, right) => right.score - left.score)[0]?.field ?? null;
+};
+
+const coercePolicyMutationValue = (
+  value: string | number | boolean | null | undefined,
+  valueType: string | undefined
+) => {
+  if (valueType === "number" && typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return Number(value.trim());
+  }
+  if (valueType === "boolean" && typeof value === "string") {
+    const normalized = normalizeAssistantPlannerPrompt(value);
+    if (["true", "yes", "tak", "show", "pokaz", "pokaż"].includes(normalized)) return true;
+    if (["false", "no", "nie", "hide", "ukryj"].includes(normalized)) return false;
+  }
+  return value;
+};
+
+const applyPromptImpliedDraftHintsWithPolicy = (
+  prompt: string,
+  draft: CmsOperationDraft
+): CmsOperationDraft => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  const resourcePolicy = getResolverResourcePolicyForDraft(draft);
+  const inferredFilters = inferFiltersFromPromptWithPolicy(normalizedPrompt, resourcePolicy)
+    .filter((filter) => !hasFilterField(draft, filter.field));
+  const promptFieldPolicy = findPromptFieldPolicy(normalizedPrompt, resourcePolicy);
+  const inferredFieldIntent =
+    draft.operation === "update" && draft.mutation?.value !== undefined
+      ? draft.mutation.patch
+        ? draft.mutation.fieldIntent
+        : promptFieldPolicy?.field ?? draft.mutation.fieldIntent ?? resolveFieldIntentWithPolicy(normalizedPrompt, resourcePolicy)
+      : draft.mutation?.fieldIntent;
+  const fieldPolicy = inferredFieldIntent && resourcePolicy
+    ? Object.values(resourcePolicy.fields).find((field) => field.field === inferredFieldIntent)
+    : null;
+  const mutation = draft.mutation
+    ? {
+        ...draft.mutation,
+        ...(inferredFieldIntent ? { fieldIntent: inferredFieldIntent } : {}),
+        ...(draft.mutation.value !== undefined
+          ? { value: coercePolicyMutationValue(draft.mutation.value, fieldPolicy?.valueType) }
+          : {}),
+      }
+    : undefined;
+  return normalizeCmsOperationDraftWithPolicy(
+    {
+      ...draft,
+      ...(inferredFilters.length > 0
+        ? { filters: [...(draft.filters ?? []), ...inferredFilters] }
+        : {}),
+      ...(mutation ? { mutation } : {}),
+    },
+    assistantOperationPolicy
+  );
+};
+
+const buildProviderLocalRecoveryPlan = (
+  input: AssistantProviderDraftPlanInput,
+) => {
+  const context = buildAssistantAdminContext(input.context);
+  const policyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+  const plan = policyPlan
+    ? policyPlan
+    : planAssistantActions({
+        prompt: input.prompt,
+        context: input.context,
+      });
+  const hasRecoveredActions = plan.status === "ready" && plan.actions.length > 0;
+  const hasRecoveredInspection =
+    plan.responseKind === "inspection" && (plan.inspection?.candidates.length ?? 0) > 0;
+  if (!hasRecoveredActions && !hasRecoveredInspection) return null;
+  return normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      planner: "provider",
+      providerDraftUsed: false,
+      providerId: input.provider?.id ?? null,
+    },
+    assumptions: [
+      ...plan.assumptions,
+      "Provider draft was rejected or unsafe.",
+      "Local policy planning recovered the safe typed plan or inspection result without reusing provider payload.",
+    ],
+  });
+};
+
+const buildLocalPolicyOperationPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  const readOnlyPrompt = includesAny(normalizedPrompt, [
+    "pokaz",
+    "pokaż",
+    "znajdz",
+    "znajdź",
+    "find",
+    "search",
+    "show",
+    "jakie",
+    "ktore",
+    "które",
+  ]);
+  const rawDraft = buildCmsOperationDraftFromPrompt(prompt, context);
+  if (!rawDraft) return null;
+  const policyAdjustedDraft = applyPromptImpliedDraftHintsWithPolicy(prompt, rawDraft);
+  const draft =
+    policyAdjustedDraft.operation === "update" &&
+    readOnlyPrompt &&
+    !policyAdjustedDraft.mutation
+      ? normalizeCmsOperationDraft({
+          ...policyAdjustedDraft,
+          operation: "inspect",
+          constraints: {
+            destructive: false,
+            requiresConfirmation: false,
+          },
+        })
+      : policyAdjustedDraft;
+  const hasExplicitTarget = Boolean(
+    draft.targetQuery?.exactName ||
+      draft.targetQuery?.slug ||
+      draft.targetQuery?.prefix ||
+      draft.targetQuery?.text ||
+      draft.targetQuery?.active ||
+      (Array.isArray(draft.mutation?.patch?.items) && draft.mutation.patch.items.length > 0) ||
+      draft.operation === "delete" ||
+      draft.operation === "archive" ||
+      draft.resourceKind === "post" ||
+      draft.resourceKind === "media" ||
+      draft.resourceKind === "settings-surface" ||
+      (draft.filters && draft.filters.length > 0)
+  );
+  if (
+    (draft.operation === "delete" || draft.operation === "archive") &&
+    isBroadDestructivePromptWithPolicy(prompt) &&
+    !(draft.filters && draft.filters.length > 0)
+  ) {
+    return {
+      id: `plan-cms-${draft.resourceKey ?? draft.resourceKind}-${draft.operation}-broad-blocked`,
+      status: "needs_input",
+      intentId: `cms-${draft.resourceKey ?? draft.resourceKind}-${draft.operation}-broad-blocked`,
+      responseKind: "needs_input",
+      promptKind: "refinement_request",
+      intentFamily: "unknown",
+      title: "Broad destructive operation needs exact targets",
+      answer:
+        "I cannot plan a broad destructive CMS operation without exact trusted targets and explicit expected counts.",
+      summary: "Broad destructive prompt was blocked before action planning.",
+      confidence: 0.48,
+      assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+      questions: [
+        {
+          id: "cms-destructive-targets",
+          label: "Which exact resources should I change?",
+          description: "Provide exact names, filters, and expected count before destructive actions.",
+          required: true,
+        },
+      ],
+      actions: [],
+    };
+  }
+  if (!hasExplicitTarget) return null;
+  const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
+  if (inspectionPlan && (inspectionPlan.inspection?.candidates.length ?? 0) > 0) {
+    return inspectionPlan;
+  }
+  const mutationPlan = mapCmsOperationToActionPlan({ prompt, draft, context });
+  if (
+    mutationPlan?.responseKind === "action_plan" ||
+    mutationPlan?.responseKind === "gated" ||
+    mutationPlan?.status === "needs_input"
+  ) {
+    return mutationPlan;
+  }
+  return null;
+};
+
+const withProviderPlannerMetadata = (
+  plan: AssistantActionPlan,
+  input: AssistantProviderDraftPlanInput
+) =>
+  normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      planner: "provider",
+      providerDraftUsed: true,
+      providerId: input.provider?.id ?? null,
+    },
+    assumptions: [
+      ...plan.assumptions,
+      "Provider path used deterministic local policy routing or recovery.",
+    ],
+  });
+
+export const planAssistantActions = (
+  input: AssistantActionPlanInput
+): AssistantActionPlan => {
+  const context = buildAssistantAdminContext(input.context);
+  if (input.context?.siteKit) {
+    return normalizeAssistantActionPlan(buildSiteKitActionPlan(input.context.siteKit));
+  }
+
+  const classification = classifyAssistantPrompt(input.prompt);
+  const intentFamily =
+    classification.promptKind === "refinement_request"
+      ? resolveContextualRefinementFamily(context, classification.intentFamily)
+      : classification.intentFamily;
+  const routedClassification = { ...classification, intentFamily };
+  if (!classification.normalizedPrompt) {
+    return normalizeAssistantActionPlan(
+      buildClarifyingPlan(input.prompt, context, routedClassification)
+    );
+  }
+
+  if (classification.promptKind !== "setup_request") {
+    const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
+    if (planningStatePlan) return normalizeAssistantActionPlan(planningStatePlan);
+    const genericInspectionPlan = buildGenericCmsInspectionOperationPlan(input.prompt, context);
+    if (genericInspectionPlan) return normalizeAssistantActionPlan(genericInspectionPlan);
+    const draft = buildCmsOperationDraftFromPrompt(input.prompt, context);
+    const preferBlueprintRefinement =
+      classification.promptKind === "refinement_request" &&
+      intentFamily !== "unknown" &&
+      draft?.resourceKind === "form" &&
+      draft.operation === "create";
+    if (!preferBlueprintRefinement) {
+      const genericMutationPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+      if (genericMutationPlan) {
+        return normalizeAssistantActionPlan(genericMutationPlan);
+      }
+    }
+  }
+  if (classification.promptKind === "docs_question") {
+    return normalizeAssistantActionPlan(buildDocsGuidancePlan(input.prompt, context));
+  }
+  const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+  if (setupPolicyPlan) return normalizeAssistantActionPlan(setupPolicyPlan);
+
+  if (
+    classification.promptKind === "setup_request" &&
+    intentFamily !== "unknown"
+  ) {
+    const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
+      promptKind: classification.promptKind,
+      intentFamily,
+      normalizedPrompt: classification.normalizedPrompt,
+    });
+    if (readyPlan) return normalizeAssistantActionPlan(readyPlan);
+  }
+
+  if (
+    classification.promptKind === "refinement_request" &&
+    intentFamily !== "unknown"
+  ) {
+    const refinementPlan = buildRefinementPlanForIntentFamily(
+      input.prompt,
+      intentFamily,
+      {
+        promptKind: classification.promptKind,
+        intentFamily,
+      }
+    );
+    if (refinementPlan) return normalizeAssistantActionPlan(refinementPlan);
+  }
+
+  return normalizeAssistantActionPlan(
+    buildClarifyingPlan(input.prompt, context, routedClassification)
+  );
+};
+
+export const planAssistantActionsWithProviderDraft = async (
+  input: AssistantProviderDraftPlanInput
+): Promise<AssistantActionPlan> => {
+  const context = buildAssistantAdminContext(input.context);
+  const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
+  if (planningStatePlan) return withProviderPlannerMetadata(planningStatePlan, input);
+  if (isBroadDestructivePromptWithPolicy(input.prompt)) {
+    return planAssistantActions(input);
+  }
+  const localPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+  if (
+    localPolicyPlan &&
+    ((localPolicyPlan.responseKind === "action_plan" && localPolicyPlan.actions.length > 0) ||
+      (localPolicyPlan.responseKind === "inspection" &&
+        (localPolicyPlan.inspection?.candidates.length ?? 0) > 0))
+  ) {
+    return normalizeAssistantActionPlan({
+      ...localPolicyPlan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: false,
+        providerId: input.provider?.id ?? null,
+      },
+    });
+  }
+
+  if (!input.llmAvailable || !input.provider) {
+    return planAssistantActions(input);
+  }
+
+  try {
+    const promptPackage = buildProviderPlanningPromptPackage({
+      prompt: input.prompt,
+      context: input.context,
+      evidence: input.evidence,
+    });
+    const response = await input.provider.complete({
+      systemPrompt: providerPlannerSystemPrompt,
+      userMessage: JSON.stringify(promptPackage),
+      snippets: [],
+      ...chooseProviderResponseContract(
+        resolveModelCapabilityProfile({
+          provider: input.provider.id,
+          model: input.providerModel ?? "",
+        }),
+        {
+          name: "cms_operation_draft",
+          schema: buildCmsOperationDraftJsonSchema(assistantOperationPolicy),
+          strict: true,
+        }
+      ),
+      limits: buildProviderRequestLimits(input.limits),
+    });
+    const draft = parseProviderDraftJson(response.text);
+    const operationPlan = tryPlanProviderCmsOperationDraft(input, draft);
+    if (operationPlan) {
+      if (
+        operationPlan.responseKind === "inspection" &&
+        (operationPlan.inspection?.candidates.length ?? 0) === 0
+      ) {
+        const localInspection = buildGenericCmsInspectionOperationPlan(input.prompt, context);
+        if (localInspection && (localInspection.inspection?.candidates.length ?? 0) > 0) {
+          return withProviderPlannerMetadata(localInspection, input);
+        }
+        const recoveredPlan = buildProviderLocalRecoveryPlan(input);
+        if (recoveredPlan) return recoveredPlan;
+      }
+      if (
+        operationPlan.status === "needs_input" ||
+        (operationPlan.actions.length === 0 &&
+          operationPlan.responseKind !== "inspection" &&
+          operationPlan.responseKind !== "docs")
+      ) {
+        const recoveredPlan = buildProviderLocalRecoveryPlan(input);
+        if (recoveredPlan) return recoveredPlan;
+      }
+      if (isBroadDestructivePromptWithPolicy(input.prompt) && hasDestructiveActions(operationPlan)) {
+        return planAssistantActions(input);
+      }
+      if (hasDestructiveCountMismatchWithPolicy(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
+      if (hasActionCountMismatchWithPolicy(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
+      if (hasPromptDestructiveIntentMismatchWithPolicy(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
+      if (hasPromptImpliedFieldMismatchWithPolicy(input.prompt, operationPlan)) {
+        return planAssistantActions(input);
+      }
+      return operationPlan;
+    }
+    return planAssistantActions(input);
+  } catch {
+    return planAssistantActions(input);
+  }
+};

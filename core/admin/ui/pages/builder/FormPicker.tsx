@@ -1,0 +1,94 @@
+import { Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useForms } from "@/ui/forms/hooks/useForms";
+
+const statusBadgeMap: Record<string, string> = {
+  published: "Published",
+  draft: "Draft",
+  archived: "Archived",
+};
+
+type FormPickerProps = {
+  onAdd: (form: { id: string; name: string }) => void;
+};
+
+export function FormPicker({ onAdd }: FormPickerProps) {
+  const { items: forms, isLoading, error } = useForms();
+  const [query, setQuery] = useState("");
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredForms = useMemo(() => {
+    if (!normalizedQuery) return forms;
+    return forms.filter((form) => {
+      const haystack = [form.name, form.description, form.slug]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [normalizedQuery, forms]);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="shrink-0 border-b p-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Find forms..."
+            className="pl-9"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      </div>
+      <ScrollArea className="min-h-0 flex-1 p-4">
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+              Loading forms...
+            </div>
+          ) : null}
+          {error ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+          {!isLoading && !error && filteredForms.length === 0 ? (
+            <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+              No forms match this search.
+            </div>
+          ) : null}
+          {filteredForms.map((form) => (
+            <div key={form.id} className="rounded-lg border bg-background p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold">{form.name}</p>
+                    <Badge variant={form.status === "published" ? "default" : "outline"}>
+                      {statusBadgeMap[form.status] ?? form.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {form.description ?? "No description yet."}
+                  </p>
+                </div>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  onClick={() => onAdd({ id: form.id, name: form.name })}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}

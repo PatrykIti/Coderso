@@ -1,0 +1,102 @@
+name: Bug report
+description: Report reproducible Coderso behavior that is broken or unexpected.
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not include secrets, tokens, database
+        URLs, private keys, customer data, or private security details.
+        Security vulnerabilities must be reported privately through
+        SECURITY.md, not through a public issue.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and pull requests.
+          required: true
+        - label: I checked the relevant documentation in README.md, AGENTS.md, or _docs/.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Beginner UI
+        - Advanced UI
+        - Admin API
+        - Public route
+        - Runtime
+        - Plugin system
+        - Release automation
+        - Testing or CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide exact commands, URLs, input data, or UI steps.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include only what is relevant.
+      placeholder: |
+        - OS:
+        - Bun version:
+        - Node version:
+        - Browser:
+        - Database provider:
+        - Branch, commit, or release:
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or failing output
+      description: Redact secrets and private data before posting.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: validation
+    attributes:
+      label: Local validation
+      description: Commands or checks you already ran, with results.
+      placeholder: |
+        - bun --cwd core lint: ...
+        - bun test ...: ...
+    validations:
+      required: false

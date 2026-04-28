@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Content Entries - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#1392ec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101a22",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"],
+              "body": ["Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .action-row:hover .row-actions {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">dataset</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl bg-primary/10 text-primary transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">group</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC55A6dPgY0H86erfiDX6UiBOyGLsSdsuERelS-YnxCp853o4Y3eBFOW9ZjxgWhEMSFCIOe5U0eNrk_kogQ9UiFK9b4gkOCgLTY4mEJODV91LeOjMCaqb4r_ln4ct5he44Ei4Z7b7oWC3azZpeBhZUh2SgGmL1IdYLBJ0gZ-J0VIHu_knpKzpsV6JAEtIybl1dXQ9ne_VhCyt528t4EZz7_gYVjpJTQcNkJX7zjMuhtg441YJ-FaITLfob2zyzJ3VhNvevdfDLXWcU');"></div>
+</div>
+</div>
+</aside>
+<aside class="w-72 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-20">
+<div class="p-6">
+<h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 font-display mb-6">Content Types</h2>
+<div class="relative mb-6">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-lg">search</span>
+<input class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-none rounded-lg text-sm text-slate-900 dark:text-white focus:ring-1 focus:ring-primary placeholder:text-slate-400" placeholder="Search types..." type="text"/>
+</div>
+<div class="space-y-1">
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary">description</span>
+<span class="text-sm font-medium font-display">Blog Posts</span>
+</div>
+<span class="text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 font-bold">124</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">shopping_bag</span>
+<span class="text-sm font-medium font-display">Products</span>
+</div>
+<span class="text-xs text-slate-400">42</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">person_outline</span>
+<span class="text-sm font-medium font-display">Authors</span>
+</div>
+<span class="text-xs text-slate-400">8</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">tag</span>
+<span class="text-sm font-medium font-display">Categories</span>
+</div>
+<span class="text-xs text-slate-400">12</span>
+</a>
+</div>
+</div>
+<div class="mt-auto p-6">
+<button class="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 hover:border-primary hover:text-primary transition-all font-display text-sm font-medium">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                New Collection
+            </button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-3">
+<h1 class="text-xl font-display font-bold text-slate-900 dark:text-white">Blog Posts</h1>
+<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-[10px] rounded uppercase font-bold text-slate-500 tracking-wider">Entries</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-lg mr-2">
+<button class="p-1.5 rounded-md bg-white dark:bg-slate-700 shadow-sm text-primary">
+<span class="material-symbols-outlined text-[20px]">view_list</span>
+</button>
+<button class="p-1.5 rounded-md text-slate-400 hover:text-slate-600">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+</button>
+</div>
+<button class="px-5 py-2.5 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                    Create New
+                </button>
+</div>
+</header>
+<div class="px-8 py-4 bg-white/50 dark:bg-[#15202b]/50 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest font-display">Filters:</span>
+<select class="pl-3 pr-8 py-1.5 bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-display text-slate-700 dark:text-slate-300 focus:ring-primary cursor-pointer">
+<option>All Status</option>
+<option>Published</option>
+<option>Draft</option>
+<option>Scheduled</option>
+</select>
+<select class="pl-3 pr-8 py-1.5 bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-display text-slate-700 dark:text-slate-300 focus:ring-primary cursor-pointer">
+<option>All Authors</option>
+<option>Sarah Jenks</option>
+<option>Michael Chen</option>
+</select>
+<select class="pl-3 pr-8 py-1.5 bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-display text-slate-700 dark:text-slate-300 focus:ring-primary cursor-pointer">
+<option>Any Date</option>
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+</select>
+</div>
+<div class="ml-auto flex items-center gap-2">
+<button class="text-xs text-slate-500 hover:text-primary font-medium font-display transition-colors">Clear All</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto p-8">
+<div class="bg-white dark:bg-[#15202b] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+<tr>
+<th class="w-12 px-6 py-4">
+<input class="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary dark:bg-slate-800" type="checkbox"/>
+</th>
+<th class="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-display">Title</th>
+<th class="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-display">Status</th>
+<th class="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-display">Author</th>
+<th class="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-display">Last Updated</th>
+<th class="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider font-display text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="action-row hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+<td class="px-6 py-4">
+<input class="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">Mastering Headless CMS Architecture</span>
+<span class="text-xs text-slate-400 font-display">/blog/mastering-headless-cms</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50">
+                                    Published
+                                </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCHIhS_va0QEMO97s0Uixi4WPEkZrj89j0khDLBwTVMwcewAgPB9pDoeAAsas0k73II_Fv3FAlzfZ30LmnfRHiCI99adkxcjCzk1xJMsxaUhnxvRi-01c3Xt51UKBlbJGMTJBfeoGnxtbAvnHr5cI52IALBbxgrFsx-w90VZhUa0dcTbVKy6lcA2AJskaremZYaCVRTjNM99RDz3xfoJg84hBKY3rjKnHs6I04StLcfZSrWDDbs3NJ5W0V8QxHbeBCqfcgOausVpuQ');"></div>
+<span class="text-sm text-slate-600 dark:text-slate-400 font-medium">Sarah Jenks</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-slate-500">2 hours ago</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="row-actions opacity-0 transition-opacity flex justify-end gap-2">
+<button class="p-1.5 text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1.5 text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+</div>
+</td>
+</tr>
+<tr class="action-row hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+<td class="px-6 py-4">
+<input class="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">New Plugin System Announcement</span>
+<span class="text-xs text-slate-400 font-display">/blog/plugin-system-v2</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                    Draft
+                                </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC55A6dPgY0H86erfiDX6UiBOyGLsSdsuERelS-YnxCp853o4Y3eBFOW9ZjxgWhEMSFCIOe5U0eNrk_kogQ9UiFK9b4gkOCgLTY4mEJODV91LeOjMCaqb4r_ln4ct5he44Ei4Z7b7oWC3azZpeBhZUh2SgGmL1IdYLBJ0gZ-J0VIHu_knpKzpsV6JAEtIybl1dXQ9ne_VhCyt528t4EZz7_gYVjpJTQcNkJX7zjMuhtg441YJ-FaITLfob2zyzJ3VhNvevdfDLXWcU');"></div>
+<span class="text-sm text-slate-600 dark:text-slate-400 font-medium">Admin User</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-slate-500">Oct 22, 2023</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="row-actions opacity-0 transition-opacity flex justify-end gap-2">
+<button class="p-1.5 text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1.5 text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+</div>
+</td>
+</tr>
+<tr class="action-row hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+<td class="px-6 py-4">
+<input class="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">Top 10 Frontend Trends in 2024</span>
+<span class="text-xs text-slate-400 font-display">/blog/frontend-trends-2024</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                    Scheduled
+                                </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">MC</div>
+<span class="text-sm text-slate-600 dark:text-slate-400 font-medium">Michael Chen</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-slate-500">Oct 19, 2023</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="row-actions opacity-0 transition-opacity flex justify-end gap-2">
+<button class="p-1.5 text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1.5 text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+<button class="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<span class="text-sm text-slate-500 font-display">Showing <span class="font-bold text-slate-700 dark:text-slate-300">1-3</span> of 124 entries</span>
+<div class="flex gap-2">
+<button class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

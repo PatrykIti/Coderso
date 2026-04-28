@@ -1,0 +1,148 @@
+# TASK-190-01: Blueprint Capability Manifest and Registry
+# FileName: TASK-190-01_Blueprint_Capability_Manifest_and_Registry.md
+
+**Priority:** High
+**Category:** Assistant/Core + Blueprint Architecture
+**Estimated Effort:** Large
+**Dependencies:** TASK-190
+**Status:** To Do
+
+---
+
+## Overview
+
+Introduce a declarative capability manifest for every blueprint or blueprint
+fragment. This is the base layer for all future composition. Before the planner
+can mix blueprint fragments, each fragment must declare what it provides, what it
+requires, what resources it touches, what permissions it needs, and what must
+stay gated.
+
+Business value:
+- Product teams can add future blueprint fragments without hardcoding every
+  prompt combination.
+- The assistant can reason about capabilities instead of only selecting one
+  preset.
+- Review UI and tests can explain why a module was selected.
+- The registry can describe both current executable setup fragments and
+  future/gated fragments without pretending that unfinished domains already
+  execute today.
+
+## Sub-Tasks
+
+- `TASK-190-01-01_Capability_Types_Normalizer_and_Invariants.md`
+- `TASK-190-01-02_Migrate_Current_Blueprints_to_Capability_Registry.md`
+
+## Architecture
+
+New owner files:
+
+- `core/services/assistant/blueprints/blueprintCapabilityTypes.ts`
+- `core/services/assistant/blueprints/blueprintCapabilitySchema.ts`
+- `core/services/assistant/blueprints/blueprintCapabilityRegistry.ts`
+- `tests/vitest/assistant/blueprint-capability-schema.test.ts`
+- `tests/vitest/assistant/blueprint-capability-registry.test.ts`
+
+Manifest sketch:
+
+```ts
+export type BlueprintCapability = {
+  id: string;
+  version: 1;
+  label: string;
+  family: string;
+  provides: BlueprintProvide[];
+  requires: BlueprintRequirement[];
+  resources: BlueprintResourceContribution[];
+  pageSections: BlueprintPageSectionContribution[];
+  adminSurfaces: BlueprintAdminContribution[];
+  gated: BlueprintGatedContribution[];
+  merge: BlueprintMergePolicy;
+};
+```
+
+Resource/surface kinds must include first-class detail templates:
+
+```ts
+type BlueprintResourceKind =
+  | "content-type"
+  | "entry"
+  | "custom-screen"
+  | "listing-query"
+  | "listing-template"
+  | "page"
+  | "detail-page"
+  | "media"
+  | "form"
+  | "menu"
+  | "seo"
+  | "widget-template"
+  | "site-kit";
+```
+
+UI labels may call this resource "Detail Template", but the technical
+resource/action kind is `detail-page`.
+
+`media` is a first-class resource kind for media-library assets and references.
+It does not allow manifests to carry raw files, upload bytes, signed URLs, or
+provider-authored media payloads. A media contribution may describe required
+gallery/hero/content/widget references and must map to existing media owner
+seams, for example `media.reference.attach` for entry targets or page/widget
+owner actions that store existing media ids in normalized widget data.
+
+Content-model relations stay owned by the existing schema/field contract in the
+content domain. If a capability contributes relation behavior, it does so
+through content-schema field metadata handled by the schema merge/validation
+leaves, not as a standalone `BlueprintResourceKind`.
+
+If the registry carries `site-kit` metadata, it describes the existing explicit
+site-kit entrypoint owned by the current site-builder flow. It does not imply
+that blueprint composition can silently subsume or blend the site-kit path as a
+parallel setup router.
+
+## Acceptance Criteria
+
+1. Every current business blueprint has manifest metadata.
+2. Manifest validation rejects unknown keys and unsafe resource declarations.
+3. Registry can list capabilities by family, provide type, resource type, and
+   gated/executable mode.
+4. Registry supports `detail-page` resources and `public-detail-page`
+   capabilities as first-class metadata, including future/gated contributions
+   that are not part of today's executable packs yet.
+5. Registry supports `media` resources as reference-only metadata and rejects
+   raw upload/file payload declarations.
+6. No current generated action output changes in this task.
+
+## Security Contract
+
+- Visibility: internal planner metadata only.
+- Auth model: no route changes.
+- RBAC: manifests declare required permissions but do not grant permissions.
+- CSRF: not applicable; no endpoint changes.
+- Rate-limit bucket: unchanged.
+- Reject-unknown validation: capability manifests use strict normalization.
+- Anti-abuse: manifests cannot declare arbitrary actions; actions must map to
+  current action families or explicit gated contributions.
+- Public-write hardening: manifests may describe forms but cannot bypass form
+  nonce/captcha/access contracts.
+- Secret handling: manifests cannot contain secret values.
+
+## Testing Requirements
+
+- Vitest manifest normalization tests.
+- Registry snapshot tests for current blueprint packs.
+- `detail-page` resource kind and `public-detail-page` provide kind are accepted.
+- `media` resource kind accepts reference-only media-library contributions and
+  rejects raw upload/file payload declarations.
+- Invariant tests:
+  - stable ids,
+  - no duplicate capability ids,
+  - no executable action type outside `actionRegistry`,
+  - future detail-page contributions for current packs stay gated/latent until
+    the detail-page runtime/action slices land,
+  - gated domains remain gated.
+
+## Documentation Updates Required
+
+- `_docs/ARCHITECTURE.md`
+- `_docs/ASSISTANT_SITE_BUILDER.md`
+- `_docs/_TASKS/README.md`

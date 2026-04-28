@@ -1,0 +1,237 @@
+.post-runtime-richtext::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.post-runtime-richtext img,
+.post-runtime-image {
+  max-width: 100%;
+  height: auto;
+}
+
+.post-runtime-richtext img[data-wrap="none"],
+.post-image-layout.post-image-wrap-none {
+  float: none;
+  display: block;
+  margin-inline: auto;
+}
+
+.post-runtime-richtext img[data-wrap="left"],
+.post-image-layout.post-image-wrap-left {
+  float: left;
+}
+
+.post-runtime-richtext img[data-wrap="right"],
+.post-image-layout.post-image-wrap-right {
+  float: right;
+}
+
+.post-runtime-richtext img[data-width="25"],
+.post-image-layout.post-image-width-25 {
+  width: 25%;
+}
+
+.post-runtime-richtext img[data-width="33"],
+.post-image-layout.post-image-width-33 {
+  width: 33%;
+}
+
+.post-runtime-richtext img[data-width="50"],
+.post-image-layout.post-image-width-50 {
+  width: 50%;
+}
+
+.post-runtime-richtext img[data-width="66"],
+.post-image-layout.post-image-width-66 {
+  width: 66%;
+}
+
+.post-runtime-richtext img[data-width="100"],
+.post-image-layout.post-image-width-100 {
+  width: 100%;
+}
+
+.post-runtime-richtext img[data-margin="sm"],
+.post-image-layout.post-image-margin-sm {
+  margin-bottom: 0.5rem;
+}
+
+.post-runtime-richtext img[data-margin="md"],
+.post-image-layout.post-image-margin-md {
+  margin-bottom: 1rem;
+}
+
+.post-runtime-richtext img[data-margin="lg"],
+.post-image-layout.post-image-margin-lg {
+  margin-bottom: 1.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="left"][data-margin="sm"],
+.post-image-layout.post-image-wrap-left.post-image-margin-sm {
+  margin-right: 0.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="left"][data-margin="md"],
+.post-image-layout.post-image-wrap-left.post-image-margin-md {
+  margin-right: 1rem;
+}
+
+.post-runtime-richtext img[data-wrap="left"][data-margin="lg"],
+.post-image-layout.post-image-wrap-left.post-image-margin-lg {
+  margin-right: 1.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="right"][data-margin="sm"],
+.post-image-layout.post-image-wrap-right.post-image-margin-sm {
+  margin-left: 0.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="right"][data-margin="md"],
+.post-image-layout.post-image-wrap-right.post-image-margin-md {
+  margin-left: 1rem;
+}
+
+.post-runtime-richtext img[data-wrap="right"][data-margin="lg"],
+.post-image-layout.post-image-wrap-right.post-image-margin-lg {
+  margin-left: 1.5rem;
+}
+
+.post-runtime-blocks ul,
+.post-runtime-blocks ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.post-runtime-blocks ul {
+  list-style: disc;
+}
+
+.post-runtime-blocks ol {
+  list-style: decimal;
+}
+
+.post-runtime-blocks li {
+  margin: 0.25rem 0;
+}
+
+.post-runtime-blocks pre:not([class]) {
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #f8fafc);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.5rem;
+}
+
+.post-runtime-blocks code {
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #f8fafc);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.9em;
+}
+
+.post-runtime-blocks pre code {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+.post-runtime-blocks s {
+  text-decoration: line-through;
+}
+
+.post-runtime-blocks [data-font="sans"] {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.post-runtime-blocks [data-font="serif"] {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.post-runtime-blocks [data-font="mono"] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+.post-runtime-blocks [data-text-scale="sm"] {
+  font-size: 1rem;
+}
+
+.post-runtime-blocks [data-text-scale="md"] {
+  font-size: 1.125rem;
+}
+
+.post-runtime-blocks [data-text-scale="lg"] {
+  font-size: 1.25rem;
+}
+
+.post-runtime-blocks [data-text-scale="xl"] {
+  font-size: 1.5rem;
+}
+
+.post-runtime-blocks h1,
+.post-runtime-blocks h2,
+.post-runtime-blocks h3,
+.post-runtime-blocks h4,
+.post-runtime-blocks h5,
+.post-runtime-blocks h6 {
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 1rem 0 0.4rem;
+}
+
+.post-runtime-blocks h1 {
+  font-size: 2.25rem;
+}
+
+.post-runtime-blocks h2 {
+  font-size: 1.875rem;
+}
+
+.post-runtime-blocks h3 {
+  font-size: 1.5rem;
+}
+
+.post-runtime-blocks h4 {
+  font-size: 1.25rem;
+}
+
+.post-runtime-blocks h5 {
+  font-size: 1.125rem;
+}
+
+.post-runtime-blocks h6 {
+  font-size: 1rem;
+}
+
+.post-runtime-blocks blockquote {
+  border-left: 3px solid var(--color-border, #e2e8f0);
+  margin: 0.75rem 0;
+  padding-left: 1rem;
+  color: color-mix(in oklab, var(--color-text, #0f172a) 70%, transparent);
+  font-style: italic;
+}
+
+.post-runtime-blocks blockquote > *:first-child {
+  margin-top: 0;
+}
+
+.post-runtime-blocks blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .post-runtime-richtext img[data-wrap],
+  .post-image-layout {
+    float: none !important;
+    width: 100% !important;
+    margin-inline: 0 !important;
+    margin-bottom: 1rem !important;
+  }
+}

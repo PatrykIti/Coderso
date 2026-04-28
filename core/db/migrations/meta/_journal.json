@@ -1,0 +1,377 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1769372008829,
+      "tag": "0000_good_beyonder",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769374397128,
+      "tag": "0001_productive_jazinda",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769375695210,
+      "tag": "0002_ambitious_gamora",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769409654686,
+      "tag": "0003_cynical_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769410824386,
+      "tag": "0004_chunky_reaper",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769425870647,
+      "tag": "0005_nosy_swordsman",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769512754517,
+      "tag": "0006_search_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769513648664,
+      "tag": "0007_audit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769515660026,
+      "tag": "0008_plugins_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769546829798,
+      "tag": "0009_auth_reset_and_csrf",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769625432913,
+      "tag": "0010_dear_psynapse",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1769697955008,
+      "tag": "0011_themes",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1769721449060,
+      "tag": "0012_admin_themes",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1769808201693,
+      "tag": "0013_seo_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1769811079324,
+      "tag": "0014_cultured_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1769813731027,
+      "tag": "0015_loud_frank_castle",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1769845561479,
+      "tag": "0016_roles_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1769849179617,
+      "tag": "0017_stormy_mattie_franklin",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1769851890473,
+      "tag": "0018_tough_punisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1769858885161,
+      "tag": "0019_giant_giant_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1769860785679,
+      "tag": "0020_flashy_eternity",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1769861955560,
+      "tag": "0021_graceful_vapor",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1769863324768,
+      "tag": "0022_safe_zemo",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1769868157894,
+      "tag": "0023_awesome_groot",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1769874235862,
+      "tag": "0024_brief_bucky",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1769893089496,
+      "tag": "0025_reflective_prodigy",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1769896556928,
+      "tag": "0026_sparkling_shuri",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1769932997434,
+      "tag": "0027_young_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1770017716019,
+      "tag": "0028_sparkling_molten_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1770036744975,
+      "tag": "0029_amused_the_hunter",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1770118162777,
+      "tag": "0030_widget_template_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1770194513813,
+      "tag": "0031_taxonomy_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1770451200000,
+      "tag": "0032_widget_template_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1770671008879,
+      "tag": "0033_assistant_docs_kb",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1771191111874,
+      "tag": "0034_user_email_encryption",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1771342226145,
+      "tag": "0035_form_submission_fallbacks",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1771343824709,
+      "tag": "0036_forms_submission_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1771398490195,
+      "tag": "0037_listing_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1771398742520,
+      "tag": "0038_listing_queries",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1771418322624,
+      "tag": "0039_forms_automation_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1771424797168,
+      "tag": "0040_forms_runtime_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1771440702347,
+      "tag": "0041_booking_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1771515785969,
+      "tag": "0042_jazzy_kid_colt",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1771526929197,
+      "tag": "0043_parched_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1771537648430,
+      "tag": "0044_solution_kits_installs",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1771746279946,
+      "tag": "0045_posts_decoupled",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1772622699000,
+      "tag": "0046_custom_screens",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1772763811283,
+      "tag": "0047_page_revision_autosave_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1772780387576,
+      "tag": "0048_custom_screen_sidebar_shortcuts",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1775991688308,
+      "tag": "0049_assistant_action_executions",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1776021718514,
+      "tag": "0050_first_mikhail_rasputin",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1776939710950,
+      "tag": "0051_rainy_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1776975841769,
+      "tag": "0052_lumpy_stellaris",
+      "breakpoints": true
+    }
+  ]
+}

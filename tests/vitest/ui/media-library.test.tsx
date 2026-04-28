@@ -1,0 +1,222 @@
+// @vitest-environment happy-dom
+
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, expect, test } from "vitest";
+import { renderAdminUi } from "../../utils/adminRouterRender";
+
+import {
+  clearMediaCache,
+  type MediaRecord,
+} from "../../../core/admin/services/mediaClient";
+import { MediaLibraryPage } from "../../../core/admin/ui/media/MediaLibraryPage";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { broadcastCacheEvent } from "../../../core/admin/utils/cacheBus";
+import { invalidateUserSettingsCache } from "../../../core/admin/services/userSettingsClient";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
+const userSettingsResponse = {
+  "pages.openAfterCreate": false,
+  "media.openAfterUpload": false,
+  "widgets.favorites": [],
+  "widgets.hero.presets": [],
+  "posts.editor.preferences": {},
+  "assistant.mode": null,
+  "assistant.ui.enabled": true,
+  "assistant.ui.avatarEnabled": false,
+  "assistant.ui.avatarAsset": null,
+};
+
+const mediaRecord = (overrides: Partial<MediaRecord> = {}): MediaRecord => ({
+  id: overrides.id ?? "media-1",
+  key: overrides.key ?? "key-1",
+  url: overrides.url ?? "https://example.com/a.jpg",
+  type: overrides.type ?? "image",
+  mimeType: overrides.mimeType ?? "image/jpeg",
+  size: overrides.size ?? 1234,
+  width: overrides.width ?? 100,
+  height: overrides.height ?? 100,
+  alt: overrides.alt ?? null,
+  title: overrides.title ?? "Cached asset",
+  caption: overrides.caption ?? null,
+  originalName: overrides.originalName ?? "a.jpg",
+  createdAt: overrides.createdAt ?? "2026-02-15T00:00:00.000Z",
+  createdBy: overrides.createdBy ?? null,
+});
+
+const writeMediaCache = (rows: MediaRecord[]) => {
+  window.localStorage.setItem(
+    cacheKeys.mediaList,
+    JSON.stringify({ value: rows, savedAt: Date.now() })
+  );
+};
+
+const flushEffects = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
+const mountMediaLibrary = () => {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(
+      <AdminRouterProvider initialPath="/admin/media">
+        <MediaLibraryPage />
+      </AdminRouterProvider>
+    );
+  });
+
+  return {
+    container,
+    cleanup: () => {
+      act(() => {
+        root.unmount();
+      });
+      container.remove();
+    },
+  };
+};
+
+afterEach(() => {
+  clearMediaCache();
+  invalidateUserSettingsCache();
+  window.localStorage.clear();
+});
+
+test("MediaLibraryPage renders toolbar and grid", () => {
+  const html = renderAdminUi(<MediaLibraryPage />);
+
+  expect(html).toContain("Media Library");
+  expect(html).toContain("Media settings");
+  expect(html).toContain("Upload New");
+});
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+test("MediaLibraryPage renders cached media without loading", () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    storage.setItem(
+      cacheKeys.mediaList,
+      JSON.stringify({
+        value: [
+          {
+            id: "media-1",
+            url: "https://example.com/a.jpg",
+            type: "image",
+            name: "Example",
+            originalName: "a.jpg",
+            mimeType: "image/jpeg",
+            size: 1234,
+            createdAt: "2026-02-15T00:00:00.000Z",
+            updatedAt: "2026-02-15T00:00:00.000Z",
+            meta: {},
+          },
+        ],
+        savedAt: Date.now(),
+      })
+    );
+
+    const html = renderAdminUi(<MediaLibraryPage />);
+    expect(html).toContain("Media Library");
+    expect(html).not.toContain("Loading assets");
+  } finally {
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("MediaLibraryPage route entry reuses fresh media cache without fetching media", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  writeMediaCache([mediaRecord({ title: "Cached hero" })]);
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/user-settings")) {
+      return jsonResponse(userSettingsResponse);
+    }
+    if (String(input).endsWith("/media")) {
+      return jsonResponse([mediaRecord({ title: "Network hero" })]);
+    }
+    return jsonResponse({});
+  };
+
+  const view = mountMediaLibrary();
+  try {
+    await flushEffects();
+
+    expect(view.container.textContent).toContain("Cached hero");
+    expect(
+      calls.filter((call) => String(call.input) === "/admin/api/media")
+    ).toHaveLength(0);
+  } finally {
+    view.cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("MediaLibraryPage applies media update events from storage without fetching media", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  writeMediaCache([mediaRecord({ title: "Before update" })]);
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/user-settings")) {
+      return jsonResponse(userSettingsResponse);
+    }
+    if (String(input).endsWith("/media")) {
+      return jsonResponse([mediaRecord({ title: "Network update" })]);
+    }
+    return jsonResponse({});
+  };
+
+  const view = mountMediaLibrary();
+  try {
+    await flushEffects();
+    writeMediaCache([mediaRecord({ title: "Storage update" })]);
+
+    act(() => {
+      broadcastCacheEvent({ key: cacheKeys.mediaList, action: "update" });
+    });
+
+    expect(view.container.textContent).toContain("Storage update");
+    expect(
+      calls.filter((call) => String(call.input) === "/admin/api/media")
+    ).toHaveLength(0);
+  } finally {
+    view.cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});

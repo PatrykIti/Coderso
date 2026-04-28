@@ -1,0 +1,50 @@
+name: Documentation issue
+description: Report missing, unclear, stale, or inconsistent documentation.
+title: "docs: "
+labels: ["documentation", "triage"]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and pull requests.
+          required: true
+        - label: I checked whether the behavior is documented elsewhere.
+          required: true
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      description: File path, URL, section title, or page name.
+      placeholder: README.md, AGENTS.md, _docs/...
+    validations:
+      required: true
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Issue type
+      options:
+        - Missing documentation
+        - Unclear documentation
+        - Stale documentation
+        - Incorrect documentation
+        - Broken link
+        - Formatting or typo
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What should be fixed?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_change
+    attributes:
+      label: Suggested change
+      description: Optional wording, structure, or source-of-truth reference.
+    validations:
+      required: false

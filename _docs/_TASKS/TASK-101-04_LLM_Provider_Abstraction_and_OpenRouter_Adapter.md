@@ -1,0 +1,132 @@
+# TASK-101-04: LLM Provider Abstraction and OpenRouter Adapter
+# FileName: TASK-101-04_LLM_Provider_Abstraction_and_OpenRouter_Adapter.md
+
+**Priority:** Medium  
+**Category:** Core/Assistant + Integrations  
+**Estimated Effort:** Medium  
+**Dependencies:** TASK-101-01, TASK-101-03, TASK-042  
+**Status:** Done (2026-02-09)
+
+---
+
+## Overview
+
+Dodajemy opcjonalny tryb `llm-rag` przez warstwe provider abstraction.
+Pierwsza implementacja: OpenRouter.
+
+Zasada: LLM nigdy nie dziala bez retrieval snippets z docs.
+Zrodla snippets pochodza z backendu wybranego przez assistant (`filesystem` lub `db`).
+
+---
+
+## Provider Contract
+
+```ts
+type AssistantProviderRequest = {
+  systemPrompt: string;
+  userMessage: string;
+  snippets: Array<{ path: string; heading: string; content: string }>;
+  limits: {
+    maxInputTokens: number;
+    maxOutputTokens: number;
+    timeoutMs: number;
+  };
+};
+
+type AssistantProviderResponse = {
+  text: string;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
+  providerRequestId?: string;
+};
+```
+
+---
+
+## OpenRouter Requirements
+
+- API key z settings/secrets, nie z frontendu.
+- Model konfigurujacy z settings, np. `gemma-3n-2b`.
+- Guardrails:
+  - max token caps,
+  - timeout,
+  - retries (max 1),
+  - fallback do `docs-only` przy bledzie.
+
+---
+
+## Implementation Checklist
+
+| File | Action | Notes |
+| --- | --- | --- |
+| `core/services/assistant/providers/providerTypes.ts` | new | provider interface |
+| `core/services/assistant/providers/openRouterProvider.ts` | new | OpenRouter adapter |
+| `core/services/assistant/providers/index.ts` | new | provider resolver |
+| `core/services/assistant/assistantService.ts` | update | llm-rag path + fallback |
+| `tests/unit/assistant/openRouterProvider.test.ts` | new | adapter tests |
+| `tests/unit/assistant/assistantService.test.ts` | update | llm fallback tests |
+
+---
+
+## Safety Rules
+
+1. Prompt template wymusza cytowanie zrodel.
+2. Odpowiedz bez zrodel -> oznacz `confidence` low + fallback hint.
+3. Brak klucza providera -> natychmiast fallback `docs-only`.
+4. Provider errors logowane bez wycieku klucza/token payloadu.
+5. Brak snippets z retrieval -> bez wywolania providera, fallback `docs-only`.
+
+---
+
+## Testing Requirements
+
+- Unit: provider maps request/response correctly.
+- Unit: timeout and non-200 response handled.
+- Unit: fallback path invoked when provider fails.
+- Integration (mock): llm-rag returns answer + sources + usage.
+
+---
+
+## Documentation Updates Required
+
+- `_docs/INTEGRATIONS.md` (OpenRouter config)
+- `_docs/SECURITY_SPEC.md` (secret handling + redaction)
+- `_docs/CMS_API.md` (chat response fields: usage/provider)
+
+---
+
+## Changelog Entry
+
+- `_docs/_CHANGELOG/201-2026-02-09-assistant-openrouter-adapter.md`
+
+---
+
+## Implementation Notes (Done)
+
+- Added provider abstraction contracts in:
+  - `core/services/assistant/providers/providerTypes.ts`
+- Added OpenRouter adapter with:
+  - timeout guard (`AbortController`)
+  - retry-once for retryable failures
+  - strict response parsing to normalized `text + usage + providerRequestId`
+  - file: `core/services/assistant/providers/openRouterProvider.ts`
+- Added provider resolver:
+  - `core/services/assistant/providers/index.ts`
+  - resolves OpenRouter runtime credentials from encrypted Integrations config
+- Added OpenRouter integration definition in:
+  - `core/services/integrations/registry.ts`
+- Added runtime config reader for integrations secrets:
+  - `core/services/integrations/integrationsService.ts` (`getIntegrationRuntimeConfig`)
+- Updated assistant orchestration:
+  - `core/services/assistant/assistantService.ts`
+  - `llm-rag` now attempts provider call with docs snippets
+  - hard fallback to `docs-only` on provider missing/failure/no-snippets
+  - includes `llm` metadata in chat result on successful provider response
+- Added/updated tests:
+  - `tests/unit/assistant/openRouterProvider.test.ts`
+  - `tests/unit/assistant/providerResolver.test.ts`
+  - `tests/unit/assistant/assistantService.test.ts`
+  - `tests/unit/integrations/integrationsService.test.ts`

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Widget Template Editor - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#14b8a6", // Teal accent highlight
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0a0f14",
+                        "card-dark": "#15202b",
+                        "border-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+        .canvas-grid {
+            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .glow-teal {
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-300 overflow-hidden h-screen w-full flex flex-col">
+<header class="h-16 bg-card-dark border-b border-border-dark flex items-center justify-between px-6 shrink-0 z-30">
+<div class="flex items-center gap-6 flex-1">
+<div class="flex items-center gap-2 text-xs font-display tracking-wide text-slate-500">
+<span>Widgets</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span>Templates</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-slate-300">New Template</span>
+<div class="ml-4 px-2 py-0.5 bg-slate-800 border border-slate-700 rounded-full text-[10px] uppercase font-bold text-slate-400">Draft</div>
+</div>
+<div class="h-8 w-px bg-border-dark hidden md:block"></div>
+<div class="flex flex-col max-w-md">
+<input class="bg-transparent border-none p-0 text-white font-display font-bold text-lg focus:ring-0 w-full placeholder:text-slate-700" placeholder="Template Name" type="text" value="New Marketing Template"/>
+<input class="bg-transparent border-none p-0 text-slate-500 text-xs focus:ring-0 w-full placeholder:text-slate-700" placeholder="Add description..." type="text" value="Standard layout for conversion landing pages"/>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-slate-400 hover:text-white transition-colors text-xs font-bold font-display flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                Preview
+            </button>
+<button class="px-4 py-2 text-slate-400 hover:text-white transition-colors text-xs font-bold font-display">
+                Discard
+            </button>
+<button class="px-5 py-2 bg-primary text-background-dark rounded-xl font-bold font-display text-xs hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+                Save Template
+            </button>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden relative">
+<aside class="w-72 bg-card-dark border-r border-border-dark flex flex-col h-full z-20 overflow-hidden">
+<div class="p-4 border-b border-border-dark">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+<input class="w-full bg-slate-900/50 border border-border-dark rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-slate-600" placeholder="Search widgets..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+<div>
+<h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Categories</h3>
+<div class="space-y-1">
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-800/50 text-white text-xs font-medium border border-border-dark">
+<span class="material-symbols-outlined text-lg text-primary">category</span>
+                            All Widgets
+                        </button>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/30 text-xs transition-all">
+<span class="material-symbols-outlined text-lg">view_quilt</span>
+                            Hero Sections
+                        </button>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/30 text-xs transition-all">
+<span class="material-symbols-outlined text-lg">grid_on</span>
+                            Layout Grids
+                        </button>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/30 text-xs transition-all">
+<span class="material-symbols-outlined text-lg">call_to_action</span>
+                            Interactive
+                        </button>
+</div>
+</div>
+<div>
+<h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Draggable Items</h3>
+<div class="grid grid-cols-1 gap-3">
+<div class="bg-slate-900 border border-border-dark rounded-xl p-3 cursor-grab hover:border-primary/50 transition-colors group">
+<div class="aspect-video bg-slate-800 rounded-lg mb-2 overflow-hidden border border-slate-700 flex items-center justify-center">
+<img alt="Hero" class="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAv0fsP04YzL_wJbxHCl_SF6OiSBljUIoTKPoZn5nVV6FZ-TVBKuOm5dDWp1QyVdxs9UbTZqsv-MShrDePQ3UPmEExtHZPSmddh8Hxg4LUMUGqcP5gZ1lJ-YhTo24mPpEa-m9F6Cw5GLk5P86sj9bIh0fJU5jUYC6YN_pTi4gWcZ1QMYqtAeCoL-9vESeLrX012OgYRvCnJ99Cweo2CDq8JyAARna-bUZ2bg1VAYjM5wdkUYq5uBuWv-0hcFAgJZBXWQ4YfWjGIZXQ"/>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-medium text-slate-300">Modern Hero</span>
+<span class="material-symbols-outlined text-slate-600 text-lg">drag_indicator</span>
+</div>
+</div>
+<div class="bg-slate-900 border border-border-dark rounded-xl p-3 cursor-grab hover:border-primary/50 transition-colors group">
+<div class="aspect-video bg-slate-800 rounded-lg mb-2 overflow-hidden border border-slate-700 flex items-center justify-center">
+<img alt="Grid" class="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc2DBbjfVGgpGrqMnQSfqvMlyhtANkbzFBpkUcjfSYmGVFpTfNIgXs_fcBXyrKqNOZQMNNvarTz7FqgMOIf6opr0jGORLZ-egCL0QyKI_pocs0qXAiXgywMiEMqzO9_7ImiQbx-7oc9T5wkbft1Y57tkLxZXP0WFDHxTj6sOQcqZAMltBE2UN_aM3K7mYVK_lmblNZiTu-1VXmxvVHe1zE5IgOy5w04fOpK9cEsdiMcuikz-y0UKX0lXwtcTTEEhhSxtR4FpachXc"/>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-medium text-slate-300">Feature Grid</span>
+<span class="material-symbols-outlined text-slate-600 text-lg">drag_indicator</span>
+</div>
+</div>
+<div class="bg-slate-900 border border-border-dark rounded-xl p-3 cursor-grab hover:border-primary/50 transition-colors group">
+<div class="aspect-video bg-slate-800 rounded-lg mb-2 overflow-hidden border border-slate-700 flex items-center justify-center">
+<img alt="Form" class="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQzIugHKDSt6BGFYmPPltrAikkujOZuKsEa2naT4JsGBwXT5wJOE1HgY3I1EtcZm9RlVipqJ89DUSckMFOby-ClziS5UHuLHy8PVk_IHuKgPIK30oQqopIa3wo-tjWpqUgYfu81TU-aLrO25-eo_uM8kwevCReH_TdI9q3eUVekMonqg-SFcrvjBUGkBrVtwev8Ugua3MNHT0-ZEepZzK1wW0FKrUruYcdtC8XmeC6QHi4rwFk-MqTSRxfRdsAvqSSMzN_uRAI5mU"/>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-medium text-slate-300">Contact Form</span>
+<span class="material-symbols-outlined text-slate-600 text-lg">drag_indicator</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 canvas-grid relative overflow-auto p-12 flex items-center justify-center">
+<div class="max-w-2xl w-full border-2 border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center justify-center text-center bg-background-dark/30 backdrop-blur-sm">
+<div class="w-20 h-20 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined text-4xl">add_circle</span>
+</div>
+<h2 class="text-2xl font-display font-bold text-white mb-3">Build your template</h2>
+<p class="text-slate-500 max-w-xs mx-auto">Drag widgets from the library here to build a reusable template layout.</p>
+<div class="mt-8 flex gap-3">
+<div class="px-4 py-2 bg-slate-800/50 rounded-lg border border-border-dark text-[10px] font-bold uppercase tracking-wider text-slate-400">Section 1</div>
+<div class="px-4 py-2 border-2 border-dashed border-primary/20 rounded-lg text-[10px] font-bold uppercase tracking-wider text-primary/40">Drop Target</div>
+</div>
+</div>
+</main>
+<aside class="w-80 bg-card-dark border-l border-border-dark flex flex-col h-full z-20">
+<div class="flex border-b border-border-dark shrink-0">
+<button class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-primary border-b-2 border-primary">Wizard</button>
+<button class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300">Visual</button>
+<button class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300">Advanced</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+<div>
+<h3 class="text-xs font-bold font-display text-white mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">auto_awesome_mosaic</span>
+                        Layout
+                    </h3>
+<div class="space-y-4">
+<div>
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Display Mode</label>
+<div class="grid grid-cols-2 gap-2">
+<button class="p-2 rounded-xl bg-slate-900 border border-primary/40 text-primary flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-xl">splitscreen</span>
+<span class="text-[10px]">Stacked</span>
+</button>
+<button class="p-2 rounded-xl bg-slate-900 border border-border-dark text-slate-500 flex flex-col items-center gap-1 hover:border-slate-700">
+<span class="material-symbols-outlined text-xl">view_column</span>
+<span class="text-[10px]">Parallel</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div>
+<h3 class="text-xs font-bold font-display text-white mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">space_bar</span>
+                        Spacing
+                    </h3>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between mb-2">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Padding</label>
+<span class="text-xs text-slate-300 font-mono">48px</span>
+</div>
+<input class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary" type="range"/>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Section Gap</label>
+<span class="text-xs text-slate-300 font-mono">24px</span>
+</div>
+<input class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary" type="range"/>
+</div>
+</div>
+</div>
+<div>
+<h3 class="text-xs font-bold font-display text-white mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">palette</span>
+                        Colors
+                    </h3>
+<div class="grid grid-cols-4 gap-2">
+<div class="aspect-square rounded-lg bg-primary border border-white/20 cursor-pointer ring-2 ring-primary ring-offset-2 ring-offset-card-dark"></div>
+<div class="aspect-square rounded-lg bg-indigo-500 border border-white/20 cursor-pointer"></div>
+<div class="aspect-square rounded-lg bg-rose-500 border border-white/20 cursor-pointer"></div>
+<div class="aspect-square rounded-lg bg-amber-500 border border-white/20 cursor-pointer"></div>
+<div class="aspect-square rounded-lg bg-slate-100 border border-white/20 cursor-pointer"></div>
+<div class="aspect-square rounded-lg bg-slate-900 border border-white/20 cursor-pointer"></div>
+<div class="aspect-square rounded-lg border-2 border-dashed border-slate-700 flex items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined text-xs">add</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-dark bg-slate-900/30">
+<button class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold font-display text-xs transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">history</span>
+                    Revision History
+                </button>
+</div>
+</aside>
+</div>
+<div class="fixed bottom-6 right-6 md:hidden flex flex-col gap-3 z-50">
+<button class="h-12 w-12 bg-card-dark border border-border-dark rounded-full shadow-2xl flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">widgets</span>
+</button>
+<button class="h-12 w-12 bg-primary text-background-dark rounded-full shadow-2xl flex items-center justify-center">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+
+</body></html>

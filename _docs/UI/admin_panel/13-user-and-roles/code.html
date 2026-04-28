@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Users &amp; Roles - Nextless CMS</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#1392ec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101a22",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"],
+              "body": ["Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        /* Custom Switch Toggle */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #1392ec;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #1392ec;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<!-- Sidebar -->
+<aside class="w-64 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-20 hidden md:flex">
+<div class="p-6 flex items-center gap-3">
+<div class="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">dataset</span>
+</div>
+<h1 class="font-display font-bold text-lg tracking-tight text-slate-900 dark:text-white">Nextless CMS</h1>
+</div>
+<nav class="flex-1 px-4 flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium font-display">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">article</span>
+<span class="text-sm font-medium font-display">Content</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">perm_media</span>
+<span class="text-sm font-medium font-display">Media</span>
+</a>
+<div class="my-2 border-t border-slate-100 dark:border-slate-800"></div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<span class="text-sm font-bold font-display">Users &amp; Roles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium font-display">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Top Navigation -->
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-10">
+<div class="flex items-center gap-2 text-slate-500 text-sm font-display">
+<span class="hover:text-slate-900 dark:hover:text-white cursor-pointer">Settings</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-slate-900 dark:text-white font-medium">Users &amp; Roles</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white dark:border-[#15202b]"></span>
+</button>
+<button class="p-2 text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="flex items-center gap-3 border-l border-slate-200 dark:border-slate-700 pl-4">
+<div class="h-9 w-9 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700" data-alt="Logged in user avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC55A6dPgY0H86erfiDX6UiBOyGLsSdsuERelS-YnxCp853o4Y3eBFOW9ZjxgWhEMSFCIOe5U0eNrk_kogQ9UiFK9b4gkOCgLTY4mEJODV91LeOjMCaqb4r_ln4ct5he44Ei4Z7b7oWC3azZpeBhZUh2SgGmL1IdYLBJ0gZ-J0VIHu_knpKzpsV6JAEtIybl1dXQ9ne_VhCyt528t4EZz7_gYVjpJTQcNkJX7zjMuhtg441YJ-FaITLfob2zyzJ3VhNvevdfDLXWcU');"></div>
+<div class="hidden md:flex flex-col">
+<span class="text-sm font-bold font-display text-slate-900 dark:text-white">Admin User</span>
+<span class="text-xs text-slate-500 font-display">admin@nextless.com</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content Scroll Area -->
+<div class="flex-1 overflow-y-auto overflow-x-hidden p-6 lg:p-10 relative">
+<div class="max-w-[1200px] mx-auto flex flex-col h-full">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+<div>
+<h1 class="text-3xl font-display font-bold text-slate-900 dark:text-white mb-1">Users &amp; Roles</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-display">Manage team access, roles, and platform permissions.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-display font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add_moderator</span>
+                            Create Role
+                        </button>
+<button class="px-4 py-2 bg-primary text-white rounded-lg font-display font-bold text-sm shadow-sm hover:bg-primary/90 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+                            Invite User
+                        </button>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex flex-col md:flex-row gap-4 mb-6 p-1">
+<div class="relative flex-1 max-w-md">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">search</span>
+<input class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:font-display" placeholder="Search users by name or email..." type="text"/>
+</div>
+<div class="w-full md:w-48">
+<div class="relative">
+<select class="w-full pl-3 pr-10 py-2.5 bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none font-display cursor-pointer">
+<option>All Roles</option>
+<option>Admin</option>
+<option>Editor</option>
+<option>Viewer</option>
+</select>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="w-full md:w-48">
+<div class="relative">
+<select class="w-full pl-3 pr-10 py-2.5 bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none font-display cursor-pointer">
+<option>All Status</option>
+<option>Active</option>
+<option>Inactive</option>
+<option>Pending</option>
+</select>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Table Container -->
+<div class="bg-white dark:bg-[#15202b] rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col overflow-hidden">
+<div class="overflow-x-auto flex-1">
+<table class="w-full min-w-[800px]">
+<thead class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+<tr>
+<th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 font-display uppercase tracking-wider">User</th>
+<th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 font-display uppercase tracking-wider">Role</th>
+<th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 font-display uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 font-display uppercase tracking-wider">Last Active</th>
+<th class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 font-display uppercase tracking-wider">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-l-primary">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-cover bg-center" data-alt="Sarah Jenks avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCHIhS_va0QEMO97s0Uixi4WPEkZrj89j0khDLBwTVMwcewAgPB9pDoeAAsas0k73II_Fv3FAlzfZ30LmnfRHiCI99adkxcjCzk1xJMsxaUhnxvRi-01c3Xt51UKBlbJGMTJBfeoGnxtbAvnHr5cI52IALBbxgrFsx-w90VZhUa0dcTbVKy6lcA2AJskaremZYaCVRTjNM99RDz3xfoJg84hBKY3rjKnHs6I04StLcfZSrWDDbs3NJ5W0V8QxHbeBCqfcgOausVpuQ');"></div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">Sarah Jenks</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-display">sarah@nextless.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 font-display border border-purple-200 dark:border-purple-800">
+                                            Admin
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-2 w-2 rounded-full bg-emerald-500"></div>
+<span class="text-sm text-slate-700 dark:text-slate-300 font-display">Active</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-display">
+                                        2 mins ago
+                                    </td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-cover bg-center" data-alt="Michael Chen avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAEhtOxuJUts4rbJ0bmhaMbBaZ38YWgNPOFaK-kYBDHEi7476k3ea8lQsQLI975s53xldUKReWJExz1idmPwaiLBtPzM7FhW-h0TcjequrnY6bAj_CN5Pp3p7RkD-5-rkn9Un3kAsGE_XBdQhJnXeXNxtbDUve7FYNX0J8rvEeW2ub05eo42ttFWWUP1Vqdhx3u0hAoBOqoFIttDiuoPaLsKYCQuiVXmD1EUXXuBqhxMdLCO9mcGwLi2Xx53H-qHfc8m9mYuM5zACg');"></div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">Michael Chen</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-display">m.chen@nextless.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-display border border-blue-200 dark:border-blue-800">
+                                            Editor
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<span class="text-sm text-slate-500 dark:text-slate-400 font-display">Inactive</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-display">
+                                        Yesterday
+                                    </td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
+<span class="material-symbols-outlined text-lg">smart_toy</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">Dev Bot</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-display">bot@nextless.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 font-display border border-slate-200 dark:border-slate-600">
+                                            API Access
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-2 w-2 rounded-full bg-emerald-500"></div>
+<span class="text-sm text-slate-700 dark:text-slate-300 font-display">Active</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-display">
+                                        Now
+                                    </td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-cover bg-center" data-alt="Tom Baker avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAD-o2CH_XNgSpLOpBg_Nn2pdYjcLBhfPJ31Vf_96UhrbPlwunkuNe9jLp7L3_LTj6cNHDUSTo9V00345JJO_x5ItPMe48ZZFdqJ6Vu1TVqdBN0Wi4uwhuyuesTlhGLbbzyAPsmVi61PTj59ZAyPBYKUAYy_OXESx9cim74AEh9_UEIorqv5dulHY7NT9pAH5yuduaPckE95MTHqtiaZPt0JuCqPaY4sErLbJAHdRe6rq12isJg4mAmFbdb38OTkwVhU8kClPpLanQ');"></div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-white font-display">Tom Baker</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-display">tom@nextless.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 font-display border border-amber-200 dark:border-amber-800">
+                                            Viewer
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<span class="text-sm text-slate-500 dark:text-slate-400 font-display">Inactive</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-display">
+                                        Last week
+                                    </td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+<span class="text-sm text-slate-500 font-display">Showing 1 to 4 of 24 users</span>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50">Previous</button>
+<button class="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Backdrop -->
+<div class="fixed inset-0 bg-slate-900/20 backdrop-blur-[1px] z-30 transition-opacity"></div>
+<!-- Right Side Drawer -->
+<div class="absolute right-0 top-0 h-full w-[400px] bg-white dark:bg-[#15202b] shadow-2xl z-40 border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-in-out">
+<!-- Drawer Header -->
+<div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+<h3 class="text-lg font-bold font-display text-slate-900 dark:text-white">User Details</h3>
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Drawer Content -->
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8">
+<!-- Profile Section -->
+<div class="flex flex-col items-center text-center gap-3">
+<div class="relative group">
+<div class="h-24 w-24 rounded-full bg-cover bg-center border-4 border-slate-50 dark:border-slate-800 shadow-md" data-alt="Sarah Jenks large avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB9xzgaqOfDQrbYXtznL7L-VFD7WYcMRerVGqk7fokXE_ZUK221U85PclZg3El-J6HGfoci8tKzNncuoQYrYn-LiLw41ZHs8i14gvKsDXbMS22zuvWfO3r47q5NWqz3GCkkEYEKEdN-eHxy1fOBv1mhQtWKOwz0aknoUMoFTl4JUhOz8dwG1bKWyl74sVE4n2yvHN1UzgI35IclZCqrx3FKJRYZ9JlYZmOkHLsrUtHkthKlRtYmQVbDULq_TUZB2lW1ilVwgqpKF0s');"></div>
+<button class="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full shadow-sm hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+<div>
+<h2 class="text-xl font-bold font-display text-slate-900 dark:text-white">Sarah Jenks</h2>
+<span class="text-sm text-slate-500 font-display">Admin Role</span>
+</div>
+</div>
+<!-- Form Fields -->
+<div class="space-y-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold text-slate-500 uppercase tracking-wider font-display">Full Name</label>
+<input class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-display" type="text" value="Sarah Jenks"/>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold text-slate-500 uppercase tracking-wider font-display">Email Address</label>
+<input class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-display" type="email" value="sarah@nextless.com"/>
+</div>
+</div>
+<!-- Permissions Matrix -->
+<div>
+<h4 class="text-sm font-bold font-display text-slate-900 dark:text-white mb-4">Permissions Summary</h4>
+<div class="space-y-6">
+<!-- Content Group -->
+<div class="space-y-3">
+<h5 class="text-xs font-semibold text-slate-500 font-display flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">article</span> Content Management
+                            </h5>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-100 dark:border-slate-700">
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium font-display text-slate-700 dark:text-slate-300">Create Posts</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300 transition-all duration-300" id="toggle1" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer" for="toggle1"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium font-display text-slate-700 dark:text-slate-300">Publish Content</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300 transition-all duration-300" id="toggle2" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer" for="toggle2"></label>
+</div>
+</div>
+</div>
+</div>
+<!-- Site Group -->
+<div class="space-y-3">
+<h5 class="text-xs font-semibold text-slate-500 font-display flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">settings</span> System Access
+                            </h5>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-100 dark:border-slate-700">
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium font-display text-slate-700 dark:text-slate-300">User Management</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300 transition-all duration-300" id="toggle3" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer" for="toggle3"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium font-display text-slate-700 dark:text-slate-300">Billing &amp; Finance</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300 transition-all duration-300" id="toggle4" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer" for="toggle4"></label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Footer -->
+<div class="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#1a2633] shrink-0">
+<div class="flex gap-3">
+<button class="flex-1 py-2.5 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-colors shadow-sm">Save Changes</button>
+<button class="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium font-display text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">Reset</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,222 @@
+import React from "react";
+import type { ComponentType } from "react";
+import { expect, test } from "vitest";
+import { renderToString } from "react-dom/server";
+
+import {
+  FooterAdvancedEditor,
+  FooterVisualEditor,
+  FooterWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/FooterEditors";
+import {
+  createFooterWidget,
+  footerDefaults,
+  FooterBlock,
+  resolveFooterColumnsForVariant,
+  type FooterData,
+} from "../../../core/widgets/core/footer";
+import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
+import { normalizeWidgetBlock } from "../../../core/widgets/validator";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
+import { resolveEditableFooterColumns } from "../../../core/admin/ui/widgets/editors/FooterEditors";
+
+const StubEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
+const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
+
+test("footer renders defaults", () => {
+  const html = renderToString(
+    <FooterBlock data={footerDefaults} variant="columns-2" />
+  );
+
+  expect(html).toContain("Company");
+  expect(html).toContain("Resources");
+  expect(html).toContain("Privacy");
+});
+
+test("footer resolves columns deterministically by variant", () => {
+  const expanded = resolveFooterColumnsForVariant(
+    [
+      {
+        title: "Only one",
+        links: [{ label: "Home", href: "/" }],
+      },
+    ],
+    "columns-3"
+  );
+  const minimal = resolveFooterColumnsForVariant(footerDefaults.columns, "minimal");
+
+  expect(expanded).toHaveLength(3);
+  expect(expanded[0]?.title).toBe("Only one");
+  expect(expanded[2]?.title).toBe("Product");
+  expect(minimal).toHaveLength(1);
+});
+
+test("footer editor keeps hidden columns while editing active variant", () => {
+  const columns = resolveEditableFooterColumns(
+    {
+      ...footerDefaults,
+      columns: [
+        { title: "One", links: [] },
+        { title: "Two", links: [] },
+        { title: "Three", links: [] },
+      ],
+    },
+    "columns-2"
+  );
+
+  expect(columns).toHaveLength(3);
+  expect(columns[2]?.title).toBe("Three");
+});
+
+test("footer widget exposes slot definitions", () => {
+  const widget = createFooterWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(widget.slots).toEqual([
+    { id: "column-1", label: "Column 1" },
+    { id: "column-2", label: "Column 2" },
+    { id: "column-3", label: "Column 3" },
+    { id: "bottom", label: "Bottom Strip" },
+  ]);
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("footer schema accepts legal and social fields", () => {
+  clearWidgets();
+  registerWidget(
+    createFooterWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "footer-1",
+      type: "footer",
+      variant: "columns-3",
+      data: {
+        ...footerDefaults,
+        legal: {
+          copyright: "© 2026 Coderso",
+          privacy: "/privacy",
+          terms: "/terms",
+        },
+        social: [
+          { type: "x", href: "https://x.com/coderso" },
+          { type: "github", href: "https://github.com/coderso" },
+        ],
+      },
+    })
+  ).not.toThrow();
+});
+
+test("footer renders column and bottom slots", () => {
+  clearWidgets();
+  registerWidget(
+    createFooterWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+  registerWidget({
+    type: "badge",
+    title: "Badge",
+    description: "Simple marker",
+    category: "content",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: { label: "Badge" },
+    editor: {
+      wizard: StubUnknownEditor,
+      visual: StubUnknownEditor,
+      advanced: StubUnknownEditor,
+    },
+    render: ({ data }) => <span>{String((data as { label?: string }).label ?? "Badge")}</span>,
+  });
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "footer-with-slots",
+        type: "footer",
+        variant: "columns-2",
+        data: footerDefaults,
+        slots: {
+          "column-1": [
+            {
+              id: "slot-column-1",
+              type: "badge",
+              data: { label: "Column widget" },
+            },
+          ],
+          bottom: [
+            {
+              id: "slot-bottom",
+              type: "badge",
+              data: { label: "Bottom widget" },
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Column widget");
+  expect(html).toContain("Bottom widget");
+});
+
+test("footer visual editor renders section-based IA", () => {
+  const html = renderToString(
+    <FooterVisualEditor
+      value={footerDefaults}
+      onChange={() => undefined}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Columns and links");
+  expect(html).toContain("Legal strip");
+  expect(html).toContain("Social links and icon style");
+  expect(html).toContain("Colors and borders");
+  expect(html).toContain("Typography and spacing");
+  expect(html).toContain("Slots overview and insertion hints");
+});
+
+test("footer advanced editor keeps technical-only scope", () => {
+  const html = renderToString(
+    <FooterAdvancedEditor
+      value={footerDefaults}
+      onChange={() => undefined}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Layout tokens");
+  expect(html).not.toContain("Columns and links");
+  expect(html).not.toContain("Legal strip");
+});
+
+test("footer wizard keeps quick setup scope", () => {
+  const html = renderToString(
+    <FooterWizardEditor
+      value={footerDefaults}
+      onChange={() => undefined}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Columns quick setup");
+  expect(html).toContain("Legal basics");
+  expect(html).toContain("Social basics");
+});

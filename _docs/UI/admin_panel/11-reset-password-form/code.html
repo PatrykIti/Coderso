@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reset Password - Nextless CMS</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Noto+Sans:wght@300..700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0e92f1",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111518] dark:text-white antialiased">
+<div class="relative flex min-h-screen w-full flex-col items-center justify-center p-4">
+<!-- Logo / Brand Header -->
+<div class="mb-8 flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-[24px]">layers</span>
+</div>
+<span class="text-xl font-bold tracking-tight text-[#111518] dark:text-white">Nextless CMS</span>
+</div>
+<!-- Main Card -->
+<div class="w-full max-w-[480px] overflow-hidden rounded-xl bg-white dark:bg-[#1a2632] shadow-[0_4px_24px_rgba(0,0,0,0.04)] dark:shadow-none border border-transparent dark:border-white/5">
+<div class="p-8 md:p-10">
+<!-- Header Section -->
+<div class="mb-8 text-center">
+<h1 class="mb-2 text-2xl font-bold tracking-tight text-[#111518] dark:text-white sm:text-3xl">Reset password</h1>
+<p class="text-base text-[#60798a] dark:text-slate-400 font-body">Recover access to your Nextless account</p>
+</div>
+<!-- Info Banner -->
+<div class="mb-6 flex items-start gap-3 rounded-lg bg-primary/10 p-4 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined shrink-0 text-[20px] mt-0.5">info</span>
+<p class="text-sm font-medium font-body leading-relaxed">Enter your email to receive instructions. We'll send you a secure link to create a new password.</p>
+</div>
+<!-- Form -->
+<form action="#" class="flex flex-col gap-6" onsubmit="event.preventDefault();">
+<!-- Email Input -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold text-[#111518] dark:text-white font-display" for="email">Email address</label>
+<div class="relative">
+<input class="form-input block w-full rounded-xl border border-[#dbe1e6] dark:border-slate-600 bg-white dark:bg-[#1a2632] px-4 py-3.5 text-base text-[#111518] dark:text-white placeholder-[#60798a] dark:placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all font-body" id="email" placeholder="name@company.com" type="email"/>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+<span class="material-symbols-outlined text-[#60798a] text-[20px]">mail</span>
+</div>
+</div>
+<p class="text-xs text-[#60798a] dark:text-slate-400 font-body">Enter the email address associated with your account</p>
+</div>
+<!-- Actions -->
+<div class="flex flex-col gap-4 mt-2">
+<button class="flex w-full cursor-pointer items-center justify-center rounded-xl bg-primary hover:bg-primary/90 transition-colors h-12 px-5 text-white text-base font-bold leading-normal tracking-[0.015em] shadow-sm">
+<span class="truncate">Send reset link</span>
+</button>
+<button class="group flex w-full cursor-pointer items-center justify-center rounded-xl h-10 px-4 bg-transparent text-[#60798a] hover:text-[#111518] dark:text-slate-400 dark:hover:text-white transition-colors gap-2 text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-1">arrow_back</span>
+<span class="truncate">Back to login</span>
+</button>
+</div>
+</form>
+</div>
+<!-- Footer Security Note -->
+<div class="bg-[#fcfdfd] dark:bg-white/5 border-t border-[#f0f2f4] dark:border-white/5 p-4 text-center">
+<div class="flex items-center justify-center gap-2 text-xs font-medium text-[#60798a] dark:text-slate-400 font-body">
+<span class="material-symbols-outlined text-[14px] filled">lock</span>
+<span>For security reasons, this link will expire in 1 hour</span>
+</div>
+</div>
+</div>
+<!-- Bottom Links -->
+<div class="mt-8 flex gap-6 text-sm font-medium text-[#60798a] dark:text-slate-500 font-body">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary transition-colors" href="#">Help Center</a>
+</div>
+</div>
+</body></html>

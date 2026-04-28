@@ -1,0 +1,84 @@
+name: Feature request
+description: Propose a product, platform, or developer workflow improvement.
+title: "feat: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep requests focused on the user or developer outcome. Coderso should
+        stay simple on the surface and powerful underneath.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and pull requests.
+          required: true
+        - label: I checked README.md, AGENTS.md, and relevant _docs/ contracts.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Pages
+        - Posts
+        - Media
+        - Menus
+        - Forms
+        - Settings
+        - Advanced
+        - Engine
+        - Entries
+        - Screens
+        - Widgets
+        - Plugins
+        - Runtime
+        - SDK
+        - Store
+        - Release automation
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: user_level
+    attributes:
+      label: Primary user level
+      options:
+        - Beginner user
+        - Advanced user
+        - Developer
+        - Operator or maintainer
+        - Mixed
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or developer problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed workflow
+      description: Describe the ideal behavior or flow.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds or other approaches.
+    validations:
+      required: false
+  - type: textarea
+    id: docs
+    attributes:
+      label: Documentation or task impact
+      description: List docs, tasks, changelog, or public contract updates that may be needed.
+    validations:
+      required: false

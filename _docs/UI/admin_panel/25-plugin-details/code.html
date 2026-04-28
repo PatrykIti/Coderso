@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Plugin Details - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+        .toggle-checkbox:checked {
+            @apply right-0 border-primary;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            @apply bg-primary;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">dataset</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">group</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl bg-primary/10 text-primary transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">extension</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC6Tsbkis-_CxUEuwWqymbOvLl6s14MMxToCwexrJQ6h4_bnfdIkidex18skrWS-S-bAHVOkVSXVhbX8K7_agljXmiSc-Nq-XejbRL7yXmetXpPcQCHhDZ7L-XqLQrO5m8eeGUVY3qGQbcxJ8N17QN1MSa4UkmON25AcuOYaQwwwhBCfZhpgmGsDGja5YR585oohdx_oQwr-3I-cJML8zyqaHiKnGtnVZ_8-XkOSN0WBKqQb314uWLyzWaPPp9BHifZWnFf6G3sSsQ');"></div>
+</div>
+</div>
+</aside>
+<aside class="w-72 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-20">
+<div class="p-6">
+<div class="flex items-center gap-2 mb-8 cursor-pointer text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+<span class="text-sm font-bold uppercase tracking-widest font-display">Plugins</span>
+</div>
+<h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 font-display mb-6 px-3">Installed</h2>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white group" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary">analytics</span>
+<span class="text-sm font-medium font-display">SEO Optimizer</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">image_search</span>
+<span class="text-sm font-medium font-display">Media Compressor</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">translate</span>
+<span class="text-sm font-medium font-display">Auto Translate</span>
+</a>
+<div class="pt-4 pb-2 px-3">
+<div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">store</span>
+<span class="text-sm font-medium font-display">Marketplace</span>
+</a>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 px-8 pt-8 shrink-0 z-10">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-primary border border-blue-100 dark:border-blue-800/50">
+<span class="material-symbols-outlined text-[36px]">analytics</span>
+</div>
+<div>
+<div class="flex items-center gap-3 mb-1">
+<h1 class="text-2xl font-display font-bold text-slate-900 dark:text-white">SEO Optimizer</h1>
+<span class="px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full uppercase border border-green-200/50 dark:border-green-800/50">Enabled</span>
+</div>
+<p class="text-sm text-slate-500">v2.4.1 • by <span class="text-slate-900 dark:text-slate-300 font-medium">Digital Labs</span></p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+<span class="text-sm font-display font-bold text-slate-700 dark:text-slate-300">Auto-update</span>
+<div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer outline-none" id="toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-300 cursor-pointer" for="toggle"></label>
+</div>
+</div>
+<button class="px-5 py-2.5 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-xl font-bold font-display text-sm hover:bg-red-100 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">delete_outline</span>
+                        Uninstall
+                    </button>
+</div>
+</div>
+<div class="flex gap-8 border-b border-transparent">
+<button class="pb-4 text-sm font-bold font-display text-primary border-b-2 border-primary">Overview</button>
+<button class="pb-4 text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Permissions</button>
+<button class="pb-4 text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Changelog</button>
+<button class="pb-4 text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Settings</button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<div class="max-w-5xl mx-auto grid grid-cols-3 gap-8">
+<div class="col-span-2 space-y-8">
+<section class="bg-white dark:bg-[#15202b] p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<h3 class="text-lg font-display font-bold text-slate-900 dark:text-white mb-4">Description</h3>
+<div class="space-y-4 text-slate-600 dark:text-slate-400 leading-relaxed">
+<p>Supercharge your website's search engine visibility with the SEO Optimizer plugin. This comprehensive tool provides real-time content analysis, automated meta-tag generation, and XML sitemap management directly within Nextless CMS.</p>
+<p>Key features include:</p>
+<ul class="list-disc pl-5 space-y-2">
+<li>Dynamic meta title and description templates</li>
+<li>Focus keyword analysis and density reports</li>
+<li>Social media open graph (OG) preview and editing</li>
+<li>Automatic canonical URL generation</li>
+<li>Advanced redirection manager (301, 302, 307)</li>
+</ul>
+</div>
+</section>
+<section class="bg-white dark:bg-[#15202b] p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<h3 class="text-lg font-display font-bold text-slate-900 dark:text-white mb-6">Screenshots</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="aspect-video bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 group cursor-pointer">
+<img alt="Screenshot 1" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsMl1mJ54Yr-cXtbwsuD1nLW-uLplNitLRPBvM0o8gen2yAwB7Suab99CNGRxgaJB7dfrkTZDDk6AKTyi964cwJ0WtzEzxr-ATkcB7VeX6niFSmYW9CrvdXgjXUTH-Y2ltGDqeGvRQJNq3-lBxz0phDc2wfY5ZtoAUMS8QuwqJvwPWIQYl-X6k2yuWyxRy2v31elPlWDRPcdpJS7SftCz6IAtUing-1xcym4KHcNmbydGSvVtPeKKjvN1z7UT7-3_ZZfg5B_jf_Mc"/>
+</div>
+<div class="aspect-video bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 group cursor-pointer">
+<img alt="Screenshot 2" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmoFvJVt6SgdKhyEnzgnwUKIQMKAoE4_82XQ_pjg5oOI_9Ni_88_4x2C5B3AHxVbgelRm0IK7D-tSbCaubo0us5sBBOmPTA7cD5OnTVbWfSWFE1QZcxWP8FpPC4ISbOLQLUidqLh480C08h6Mv9gp6yZJ552eCmhK9SvFHvoh7QSxHpgYiSjpOfZSprbxVilBP15Bk7HEB3Lw032voiCcN7izfEJsIDaXMQzKXAgzZrq6mrOzL1npITtS-XN_N-qaSmv-AWgSeeJ8"/>
+</div>
+</div>
+</section>
+</div>
+<div class="space-y-6">
+<div class="bg-white dark:bg-[#15202b] p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<h4 class="text-sm font-bold font-display uppercase tracking-widest text-slate-400 mb-6">Plugin Information</h4>
+<div class="space-y-6">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-slate-400">person</span>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tight">Author</p>
+<p class="text-sm font-medium text-slate-900 dark:text-white">Digital Labs Inc.</p>
+<a class="text-xs text-primary hover:underline" href="#">View website</a>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-slate-400">check_circle</span>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tight">Compatibility</p>
+<p class="text-sm font-medium text-slate-900 dark:text-white">Nextless CMS 2.0+</p>
+<p class="text-[10px] text-green-500">Fully compatible with your version</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-slate-400">calendar_today</span>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tight">Installed on</p>
+<p class="text-sm font-medium text-slate-900 dark:text-white">October 24, 2023</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-slate-400">lock</span>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tight">License</p>
+<p class="text-sm font-medium text-slate-900 dark:text-white">MIT License</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-primary/5 border border-primary/20 p-6 rounded-2xl">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-primary">info</span>
+<h4 class="text-sm font-bold font-display text-primary">Support</h4>
+</div>
+<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">Need help with this plugin? Visit the official support documentation or contact the developer.</p>
+<button class="w-full py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold font-display text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors">
+                            Documentation
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

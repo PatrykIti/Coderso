@@ -1,0 +1,135 @@
+# TASK-208-03-01: Menus Create Row Lifecycle Toasts
+# FileName: TASK-208-03-01_Menus_Create_Row_Lifecycle_Toasts.md
+
+**Priority:** High
+**Category:** CMS Menus + Admin/UI
+**Estimated Effort:** Medium
+**Dependencies:** TASK-208-03, TASK-208-01
+**Status:** Done (2026-04-24)
+
+---
+
+## Overview
+
+Add shared top-right toast feedback for Menus list create, row publish, row
+unpublish, and confirmed row delete.
+
+## Sub-Tasks
+
+No child task files.
+
+## Implementation Checklist
+
+- Import the shared list-action toast helper from
+  `core/admin/ui/shared/listActionToasts.ts`.
+- Define a Menus adapter/config for menu singular/plural labels, action copy,
+  and fallback errors.
+- Handle create success in `handleCreate` after `createMenu` succeeds and the
+  list is updated.
+- For create failure, either:
+  - catch in `handleCreate`, call the shared error-toast helper, and rethrow
+    `new Error(message)` so `MenuCreateDialog` keeps the create-local error
+    copy; do not also write the create failure into the list-level `error`
+    state, because that state renders under the list-level `Unable to load
+    menus` alert; or
+  - emit through the same shared helper from `MenuCreateDialog` catch if the
+    dialog remains the owner of normalized failure copy.
+  Top-right error toasts are only for rejected `createMenu` mutations/API
+  failures. Local dialog validation such as an empty menu name remains inline-only
+  and must not emit a floating toast.
+- Add success/error toasts in `handlePublish`, `handleUnpublish`, and confirmed
+  `runDelete`.
+- Do not change `/admin/menus` list-first routing.
+- Keep the current list ownership: `handleCreate` updates local `items`,
+  lifecycle/delete paths call the existing client and refresh the list, and
+  `MenuCreateDialog` keeps the local dialog error. The shared toast helper
+  supplies normalized messages only.
+
+## Pseudocode
+
+```tsx
+const menusToast = createListActionToastAdapter({
+  resourceSingular: "menu",
+  resourcePlural: "menus",
+  actions: {
+    create: { success: ({ label }) => `Menu "${label}" created.`, fallbackError: "Failed to create menu." },
+    publish: { success: "Menu published.", fallbackError: "Failed to publish menu." },
+    unpublish: { success: "Menu moved to draft.", fallbackError: "Failed to move menu to draft." },
+    delete: { success: "Menu deleted.", fallbackError: "Failed to delete menu." },
+  },
+});
+
+const handleCreate = async (payload) => {
+  try {
+    const created = await createMenu(payload);
+    setItems((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
+    menusToast.success("create", { label: created.name });
+    return created;
+  } catch (error) {
+    const message = menusToast.errorMessage(error, "create");
+    menusToast.error(message);
+    throw new Error(message);
+  }
+};
+
+const handlePublish = async (id: string) => {
+  try {
+    await publishMenu(id);
+    await refresh({ force: true, background: true });
+    menusToast.success("publish");
+  } catch (error) {
+    const message = menusToast.errorMessage(error, "publish");
+    setError(message);
+    menusToast.error(message);
+  }
+};
+```
+
+Confirmed delete:
+
+```tsx
+const runDelete = async (id: string) => {
+  try {
+    await deleteMenu(id);
+    await refresh({ force: true, background: true });
+    setPendingDeleteId(null);
+    menusToast.success("delete");
+  } catch (error) {
+    const message = menusToast.errorMessage(error, "delete");
+    setError(message);
+    menusToast.error(message);
+  }
+};
+```
+
+## Testing Requirements
+
+- `tests/vitest/ui/menu-list-page-actions.test.tsx`
+  - add a `sonner` mock,
+  - assert create success and failure toasts,
+  - current coverage stubs `MenuCreateDialog`; extend that mock to exercise the
+    `onCreate` success and rejected paths for the parent/list branch,
+  - update `tests/vitest/ui/menu-leaf-components.test.tsx` for the real
+    `MenuCreateDialog` branch: rejected `onCreate` must keep local dialog error
+    feedback and emit the adapter-backed top-right error toast; empty-name
+    validation must remain inline-only with no top-right toast,
+  - keep list-page create assertions scoped to the parent/list branch; the real
+    dialog validation proof belongs to `menu-leaf-components.test.tsx`,
+  - assert row publish/unpublish success and failure toasts,
+  - assert row delete toast only appears after confirmation.
+
+## Documentation Updates Required in This Round
+
+- `_docs/CONTENT_LIST_UX.md`
+  - Menus list section: create/publish/unpublish/delete top-right toasts.
+- `_docs/_TASKS/TASK-208-03*.md`
+  - status and validation notes.
+
+## Acceptance Criteria
+
+1. Menus list create and row lifecycle actions toast on success/error.
+2. `MenuCreateDialog` still renders local validation/API error feedback, and
+   validation-only errors do not emit floating toasts.
+3. Row delete toast fires only after confirmed mutation completion.
+4. Generic error normalization and action copy live in the shared helper/adapter,
+   not as duplicated Menus-only helpers.

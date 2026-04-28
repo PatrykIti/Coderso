@@ -1,0 +1,99 @@
+# TASK-170-03-03: Form, Page, and Listing Patch Executor Adapters
+# FileName: TASK-170-03-03_Form_Page_Listing_Patch_Executor_Adapters.md
+
+**Priority:** High  
+**Category:** Core/Assistant + Coderso Surfaces  
+**Estimated Effort:** Large  
+**Dependencies:** TASK-170-03, TASK-170-01-03, TASK-170-03-01  
+**Status:** Done (2026-04-12)
+
+---
+
+## Overview
+
+Implement non-destructive patch adapters for form automation, page widget patches, listing query filters, and listing template card configuration.
+
+## Sub-Tasks
+
+- `TASK-170-03-03-01_Listing_Query_Filters_Patch_Executor_Adapter.md`
+- `TASK-170-03-03-02_Listing_Template_Card_Patch_Executor_Adapter.md`
+- `TASK-170-03-03-03_Page_Widget_Patch_Executor_Adapter.md`
+- `TASK-170-03-03-04_Form_Automation_Upsert_Executor_Adapter.md`
+- `TASK-170-03-03-05_Form_Page_Listing_Patch_Adapters_Docs_Tests_and_Closure.md`
+
+## Pseudocode
+
+```ts
+const current = await loadTarget(action.input.target);
+const next = applyAssistantPatch(current, action.input.patch, {
+  rejectUnknownFields: true,
+  preserveUnknownLegacyBlocks: true,
+});
+
+if (isDeepEqual(current, next)) return noopResult();
+return saveThroughDomainService(next);
+```
+
+## Files to Change
+
+- `core/services/assistant/actionPlanTypes.ts`
+- `core/services/assistant/actionPlanSchema.ts`
+- `core/services/assistant/actionRegistry.ts`
+- `core/services/assistant/actionFamilyContracts.ts`
+- `core/services/assistant/actionExecutorService.ts`
+- `core/services/forms/formActionsService.ts` or `formAutomationRunnerCore` only through reusable helpers
+- `core/services/pages/pageService.ts`
+- `core/services/content/listingQueriesService.ts`
+- `core/services/content/listingTemplatesService.ts`
+- widget/listing contract modules that own defaults/normalizers
+- targeted Vitest/Bun tests
+
+## Security Contract
+
+- Visibility: internal only.
+- Auth model: admin session.
+- RBAC: `forms:read/write`, `content:read/write`, and `content:publish` where page publication changes are included.
+- CSRF: existing action endpoint CSRF.
+- Rate-limit bucket: `assistant`.
+- Reject-unknown validation: unsupported widget types, listing fields, and automation action configs are rejected.
+- Anti-abuse: public forms must keep existing nonce/captcha/access evaluator behavior; no new public endpoint.
+- Idempotency: patches must be deterministic and replay-safe.
+- Secret handling: no integration secrets, webhook secrets, form submissions, or secret-like settings in preview/result metadata.
+
+## Testing Requirements
+
+- Vitest:
+  - pure patch helper coverage if extracted,
+  - unknown widget/field rejection.
+- Bun:
+  - executor tests for each patch action,
+  - public runtime acceptance for generated page/listing/form output where runtime surface changes.
+
+## Documentation Updates Required
+
+- `_docs/ARCHITECTURE.md`
+- `_docs/CMS_API.md`
+- `_docs/SECURITY_SPEC.md`
+- `_docs/WIDGET_PACK_MATRIX.md` if widget pack readiness changes
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md` and changelog entry when completed
+
+## Acceptance Criteria
+
+1. Patch actions are deterministic and non-destructive.
+2. Public form hardening is preserved.
+3. Runtime-facing changes have Bun acceptance coverage.
+
+## Progress Notes
+
+- 2026-04-12: Split patch adapter work into listing query filters, listing template card, page widget, form automation, and closure leaves before implementation.
+- 2026-04-12: Completed `TASK-170-03-03-01`; `listing-query.filters.patch` now patches existing listing query filters without rewriting unrelated query config.
+- 2026-04-12: Completed `TASK-170-03-03-02`; `listing-template.card.patch` now patches card config without rewriting unrelated template config.
+- 2026-04-12: Completed `TASK-170-03-03-03`; `page.widget.patch` now upserts one top-level widget block while preserving unrelated blocks.
+- 2026-04-12: Completed `TASK-170-03-03-04`; `form.automation.upsert` now upserts safe non-webhook form actions through existing form action services.
+
+## Completion Notes (2026-04-12)
+
+- Listing query filters, listing template card, page widget, and safe form automation patch actions are executable.
+- Webhook form automation remains intentionally unsupported until secret-handling semantics are explicit.
+- Closure docs/changelog/task board sync completed in `TASK-170-03-03-05`.

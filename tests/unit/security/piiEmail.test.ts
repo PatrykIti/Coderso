@@ -1,0 +1,69 @@
+import { expect, test } from "bun:test";
+
+import {
+  buildEmailFields,
+  decryptEmail,
+  hashEmail,
+  encryptEmail,
+  normalizeEmail,
+  parseEncryptedEmail,
+  resolveEmailValue,
+} from "../../../core/services/security/piiEmail";
+
+process.env.PII_HASH_KEY ||= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.PII_ENC_KEY ||= "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+
+test("buildEmailFields hashes and encrypts email", () => {
+  const fields = buildEmailFields("User@Example.com");
+  expect(fields.emailHash).toHaveLength(64);
+  expect(fields.emailEncrypted).toBeTruthy();
+  const resolved = resolveEmailValue({ emailEncrypted: fields.emailEncrypted });
+  expect(resolved).toBe("user@example.com");
+});
+
+test("encryptEmail and decryptEmail roundtrip", () => {
+  const payload = encryptEmail("User@Example.com");
+  expect(decryptEmail(payload)).toBe("user@example.com");
+});
+
+test("decryptEmail rejects malformed or truncated auth tags", () => {
+  const payload = encryptEmail("user@example.com");
+  expect(() =>
+    decryptEmail({
+      ...payload,
+      tag: Buffer.alloc(8).toString("base64"),
+    })
+  ).toThrow("encrypted_email_invalid");
+
+  expect(() =>
+    decryptEmail({
+      ...payload,
+      tag: Buffer.alloc(16, 1).toString("base64"),
+    })
+  ).toThrow();
+});
+
+test("decryptEmail rejects malformed IVs", () => {
+  const payload = encryptEmail("user@example.com");
+  expect(() =>
+    decryptEmail({
+      ...payload,
+      iv: Buffer.alloc(8).toString("base64"),
+    })
+  ).toThrow("encrypted_email_invalid");
+});
+
+test("hashEmail is deterministic for normalized email", () => {
+  const first = hashEmail(normalizeEmail("USER@Example.com"));
+  const second = hashEmail("user@example.com");
+  expect(first).toBe(second);
+});
+
+test("resolveEmailValue falls back to plain email", () => {
+  const email = "plain@example.com";
+  expect(resolveEmailValue({ email })).toBe(email);
+});
+
+test("parseEncryptedEmail returns null for invalid payload", () => {
+  expect(parseEncryptedEmail("not-json")).toBeNull();
+});

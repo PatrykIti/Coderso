@@ -1,0 +1,26 @@
+# Widgets Index (v1)
+
+- `SECTION.md` - Section layout wrapper
+- `TEMPLATE_SECTION.md` - Template section (widget templates)
+- `GRID_COLUMNS.md` - Grid/columns layout primitive
+- `STACK.md` - Flow layout primitive
+- `SPLIT_LAYOUT.md` - Two-pane layout primitive
+- `SPACER.md` - Vertical spacing primitive
+- `DIVIDER.md` - Visual separator primitive
+- `HERO.md` - Hero section
+- `TIMELINE.md` - Timeline (proces bez dat)
+- `COMPARE_TIMELINE.md` - Compare timeline (porownanie dwoch procesow)
+- `NEWSLETTER.md` - Newsletter signup
+- `CONTACT.md` - Kontakt
+- `FAQ.md` - FAQ accordion
+- `CTA_BANNER.md` - CTA banner
+- `LOGO_CLOUD.md` - Logo cloud
+- `GALLERY_MOSAIC.md` - Gallery mosaic
+- `STATS_KPI.md` - Stats KPI
+- `TEAM.md` - Team
+- `RICH_TEXT_SECTION.md` - Rich text section
+- `CONTENT_LIST.md` - Dynamic content list
+- `POSTS_FEED.md` - Dynamic posts feed (latest/featured/category/manual)
+- `ENTRY_TEASER.md` - Dynamic single-entry teaser
+- `NAVIGATION.md` - Menu/Nawigacja
+- `FOOTER.md` - Stopka

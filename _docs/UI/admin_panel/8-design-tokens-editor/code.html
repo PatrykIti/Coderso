@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Design Tokens Editor - Nextless CMS</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#15202b] px-6 py-3 shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary flex items-center justify-center rounded-lg bg-primary/10">
+<span class="material-symbols-outlined text-2xl">grid_view</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Nextless</h2>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium leading-normal" href="#">Content</a>
+<a class="text-slate-900 dark:text-white text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 ring-2 ring-slate-100 dark:ring-slate-800" data-alt="User avatar profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBGZJJpeMomcEj3JQBTRp-OENeAgOyeLW7uYoHLomDCdFWNdGiF-qeIjpeMH_R4AsIN9Gri_0Xofpow4SFm93CGtReRolOCFVWOs_JYA3SP1UAW5r7dhapN-DPYteLtn_QdbGm-oL8iZkESeH69mYafy7IGQCvaOc-aVWGl9N66G-awGa1sj7CSfVSyoKM3D9VgrFagx4vj3VOgUursWqa1DTYPOMLdZ3eceqEDzOfSgB2FP3KNucakmOcbGSDcLF_HsuIrO_VIi7A");'></div>
+</div>
+</header>
+<!-- Main Layout Container -->
+<div class="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
+<!-- Sidebar Navigation (Simplified for Context) -->
+<aside class="hidden lg:flex flex-col w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#15202b] p-4 shrink-0">
+<div class="flex flex-col gap-1">
+<div class="px-3 py-2 text-xs font-semibold uppercase text-slate-400 tracking-wider mb-2">Settings</div>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span> General
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-lg transition-colors text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">palette</span> Design Tokens
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">dns</span> Data Model
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span> Team
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">api</span> API Keys
+                </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full bg-background-light dark:bg-background-dark overflow-hidden">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-[#15202b]/50 backdrop-blur-sm shrink-0">
+<div class="flex flex-col gap-1">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+<a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Settings</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-slate-900 dark:text-white font-medium">Design Tokens</span>
+</div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Theme Configuration</h1>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+<span class="material-symbols-outlined text-[20px]">restart_alt</span>
+<span class="hidden sm:inline">Reset Defaults</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span class="hidden sm:inline">Export JSON</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm shadow-primary/20 transition-all text-sm font-bold tracking-wide">
+<span class="material-symbols-outlined text-[20px]">save</span>
+                        Save Changes
+                    </button>
+</div>
+</div>
+<!-- Editor Split View -->
+<div class="flex flex-col lg:flex-row h-full overflow-hidden">
+<!-- Left Pane: JSON Editor -->
+<div class="w-full lg:w-[450px] xl:w-[500px] flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1318]">
+<div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#101a22]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">code</span>
+<span class="text-xs font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">theme.json</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="flex size-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium ml-1">Valid</span>
+</div>
+</div>
+<div class="flex-1 overflow-auto p-0 relative group">
+<!-- Line Numbers (Simulated) -->
+<div class="absolute left-0 top-0 bottom-0 w-8 bg-slate-50 dark:bg-[#101a22] border-r border-slate-100 dark:border-slate-800 flex flex-col items-end pt-4 pr-2 gap-[2px] select-none text-slate-300 dark:text-slate-700 font-mono text-sm leading-6">
+<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span>
+</div>
+<!-- Code Content -->
+<textarea class="w-full h-full resize-none bg-transparent border-0 focus:ring-0 pl-12 pt-4 pr-4 font-mono text-sm leading-6 text-slate-700 dark:text-slate-300 outline-none selection:bg-primary/20" spellcheck="false">{
+  "colors": {
+    "primary": "#1392ec",
+    "secondary": "#64748b",
+    "destructive": "#ef4444",
+    "background": "#ffffff",
+    "foreground": "#0f172a"
+  },
+  "spacing": {
+    "base": "0.25rem",
+    "container": "1280px"
+  },
+  "typography": {
+    "fontFamily": "Space Grotesk",
+    "baseSize": "16px",
+    "lineHeight": "1.5"
+  },
+  "borders": {
+    "radius": "0.5rem",
+    "width": "1px"
+  },
+  "shadows": {
+    "card": "0 1px 3px 0 rgb(0 0 0 / 0.1)"
+  }
+}</textarea>
+</div>
+</div>
+<!-- Right Pane: Live Preview -->
+<div class="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-[#15202b]/50 overflow-hidden">
+<!-- Preview Tabs -->
+<div class="flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#15202b]">
+<button class="px-4 py-3 text-sm font-medium text-primary border-b-2 border-primary">All Components</button>
+<button class="px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent transition-colors">Typography</button>
+<button class="px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent transition-colors">Buttons</button>
+<button class="px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent transition-colors">Forms</button>
+</div>
+<!-- Scrollable Preview Area -->
+<div class="flex-1 overflow-y-auto p-8">
+<div class="max-w-4xl mx-auto space-y-10">
+<!-- Typography Section -->
+<section>
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-slate-400">type_specimen</span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Typography Scale</h3>
+</div>
+<div class="bg-white dark:bg-[#101a22] p-8 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+<div>
+<h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">Heading 1 - The quick brown fox</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-mono">text-4xl / font-bold / Space Grotesk</p>
+</div>
+<hr class="border-slate-100 dark:border-slate-800"/>
+<div>
+<h2 class="text-3xl font-semibold text-slate-900 dark:text-white mb-2">Heading 2 - Jumps over the lazy dog</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-mono">text-3xl / font-semibold</p>
+</div>
+<hr class="border-slate-100 dark:border-slate-800"/>
+<div>
+<p class="text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                                            Body Text - Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
+                                        </p>
+</div>
+</div>
+</section>
+<!-- Interactive Elements Section -->
+<section>
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-slate-400">touch_app</span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Interactive Elements</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Buttons Card -->
+<div class="bg-white dark:bg-[#101a22] p-8 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4 items-start">
+<h4 class="text-sm font-medium text-slate-500 mb-2">Buttons</h4>
+<div class="flex flex-wrap gap-3">
+<button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30">Primary</button>
+<button class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Secondary</button>
+<button class="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Outline</button>
+<button class="px-4 py-2 text-slate-600 dark:text-slate-400 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Ghost</button>
+</div>
+<div class="flex flex-wrap gap-3 mt-2">
+<button class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors shadow-sm shadow-red-500/30">Destructive</button>
+<button class="px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors">Tinted</button>
+</div>
+</div>
+<!-- Forms Card -->
+<div class="bg-white dark:bg-[#101a22] p-8 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+<h4 class="text-sm font-medium text-slate-500 mb-2">Input Fields</h4>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[20px]">mail</span>
+<input class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400" type="email" value="hello@nextless.com"/>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded focus:ring-primary focus:ring-offset-0" type="checkbox"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Remember me</span>
+</label>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">Off</span>
+<div class="w-11 h-6 bg-primary rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+<span class="text-sm text-slate-900 dark:text-white font-medium">On</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Component Surface Section -->
+<section>
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-slate-400">layers</span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Component Surface</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Simple Card -->
+<div class="col-span-1 bg-white dark:bg-[#101a22] rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
+<div class="h-32 bg-slate-100 dark:bg-slate-800 w-full relative overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="Abstract geometric blue pattern background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAkJ71Mht7RVQtfUDCpzuId85e9stf-OHcSwo-tStTYNX7jo97u1IilB91Dh9likJjKCi48g29Jkgy7XAI6WwBeEEr2oWOZGZra8LMUTH3OSE-wtRGlr4qj75OkacUrbvW-EnTfHCm83kanV5b0Yk7B26uwKrggKDU2j-InAMEJvLfWanBqj8eO0ER8Bu2PjLhpSwKkUbVKMU7ehAqV3shSSL1g6ln6JWBTbqQF9hAcqLJvry3Rryl1qw5gxCwIMsOR7UmSAQVjh7M');"></div>
+</div>
+<div class="p-5">
+<div class="flex items-center gap-2 mb-2">
+<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-[10px] font-bold uppercase tracking-wider">News</span>
+<span class="text-xs text-slate-400">2 min read</span>
+</div>
+<h4 class="font-bold text-slate-900 dark:text-white mb-2">Design Systems 101</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">Learn how to build scalable UI libraries using tokens and components.</p>
+</div>
+</div>
+<!-- Alert / Notification -->
+<div class="col-span-1 md:col-span-2 space-y-4">
+<!-- Success Alert -->
+<div class="flex gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-lg">
+<span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 shrink-0">check_circle</span>
+<div>
+<h5 class="text-sm font-bold text-emerald-800 dark:text-emerald-300">Update Successful</h5>
+<p class="text-sm text-emerald-600 dark:text-emerald-400 mt-1">Your design tokens have been deployed to production.</p>
+</div>
+</div>
+<!-- Info Card with Avatar -->
+<div class="flex items-start gap-4 p-5 bg-white dark:bg-[#101a22] border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm">
+<div class="size-10 rounded-full bg-cover bg-center shrink-0" data-alt="Portrait of a team member" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBnKFhNnABzYWEjn0a8pwnZoEMuaLNxkpY6uykFHekJk7Kvn949r4GKQT6gKLOCtKzEJkbnJxU0VXenQE8z3GZIX1SDqpl73HGYHrHkhN57KYgRcXks5WLIsdvnbcmjz_Ed4ZcAK3Z7w6mHwqxMQXKBnEESxcKRWLhmlaK6n8ySW9hCMEmd6xdfIHNkBJzRxHwKvK7dku1TVrc4B7qldbqDzlDKFvbj-rRE_VLXoIuVEo6olVnAcoa_mZBqiQ7fuRCwgLboRoVun6c');"></div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<h5 class="text-sm font-bold text-slate-900 dark:text-white">Sarah Connor</h5>
+<p class="text-xs text-slate-500 dark:text-slate-400">Product Designer</p>
+</div>
+<span class="text-xs text-slate-400">1h ago</span>
+</div>
+<p class="text-sm text-slate-600 dark:text-slate-300 mt-2">
+                                                    I've updated the primary color variable to match the new brand guidelines. Please review the changes when you have a moment.
+                                                </p>
+<div class="flex gap-2 mt-3">
+<button class="text-xs font-medium text-primary hover:text-primary/80">Reply</button>
+<button class="text-xs font-medium text-slate-500 hover:text-slate-700">Dismiss</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Spacer for bottom scrolling -->
+<div class="h-10"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,44 @@
+# Docs Index
+
+- `ARCHITECTURE.md` - architecture and system rules
+- `CMS_SPEC.md` - CMS scope and overview
+- `CMS_API.md` - admin API endpoints
+- `ASSISTANT_GUIDE.md` - assistant and AI site wizard flows
+- `ASSISTANT_SITE_BUILDER.md` - guided site builder contract (`plan -> actions -> execute -> validate`)
+- `CODERSO_RELEASE_GATES.md` - mandatory Coderso release gates and CI automation contract
+- `CONTENT_FIELDS.md` - content field types, layout, and configuration
+- `CONTENT_EDITOR_UX.md` - content editor helper texts and tooltips
+- `CONTENT_LIST_UX.md` - content list filters and bulk actions
+- `CONTENT_MODELING_COOKBOOK.md` - practical content modeling recipes
+- `CONTENT_TYPES_SPEC.md` - collections and content types
+- `CONTENT_RELATIONS.md` - relation fields and entry linking
+- `DATA_MODEL.md` - database schema overview
+- `DESIGN_TOKENS.md` - design tokens and theming
+- `MEDIA_SPEC.md` - media storage and uploads
+- `INTEGRATIONS.md` - integrations registry and runtime/security rules
+- `PAGE_MODEL.md` - page builder JSON model
+- `SOLUTION_KITS.md` - solution kits catalog and installer contract
+- `TEMPLATE_CONTRACTS.md` - template seed/install and rollback contract
+- `PREVIEW_SPEC.md` - draft preview flow
+- `ORM_SPEC.md` - ORM choice and configuration
+- `AUTH_SPEC.md` - authentication and sessions
+- `ADMIN_CACHE.md` - admin cache layer policy and behavior
+- `ADMIN_CACHE_MAP.md` - admin cache route map
+- `RBAC_SPEC.md` - roles and permissions
+- `RELEASE_PROCESS.md` - semantic-release, PR release notes, and Docker image publishing
+- `THEMES_SPEC.md` - themes and theme profiles
+- `SEARCH_SPEC.md` - search and indexing
+- `AUDIT_SPEC.md` - audit logs
+- `SECURITY_SPEC.md` - baseline security middleware
+- `SITE_RUNTIME.md` - public/admin runtime behavior
+- `SDK_SPEC.md` - plugin SDK contract
+- `STORE_SPEC.md` - store + security pipeline
+- `STORE_API.md` - store endpoint contract and metadata flow
+- `TESTING_STRATEGY.md` - target hybrid testing model (`Bun runtime kernel` + `Vitest pure TS/UI`)
+- `WIDGETS.md` - core widgets and configuration model
+- `WIDGETS_COMPOSITE_STRATEGY.md` - composite-first widget delivery model
+- `WIDGET_PACK_MATRIX.md` - module pack coverage matrix and validation rules
+- `CODERSO_PLUGIN_CONTRACT.md` - plugin manifest and runtime contribution contract
+- `_WIDGETS/README.md` - widgets index and per-widget docs
+- `_TASKS/README.md` - tasks index
+- `_CHANGELOG/README.md` - changelog index

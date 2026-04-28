@@ -1,0 +1,3 @@
+# Add temporary allowlist entries with expiry and reason.
+# Example:
+# CVE-2024-12345 # expires: 2026-06-30 reason: waiting for upstream fix

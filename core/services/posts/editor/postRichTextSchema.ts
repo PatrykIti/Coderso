@@ -1,0 +1,59 @@
+export const POST_RICH_TEXT_ALLOWED_TAGS = [
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "mark",
+  "a",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "code",
+  "pre",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "span",
+  "img",
+] as const;
+
+export const POST_RICH_TEXT_SELF_CLOSING_TAGS = ["br", "img"] as const;
+
+export const POST_RICH_TEXT_ALIGNMENT_VALUES = ["left", "center", "right"] as const;
+export const POST_RICH_TEXT_FONT_FAMILY_VALUES = ["sans", "serif", "mono"] as const;
+export const POST_RICH_TEXT_TEXT_SCALE_VALUES = ["sm", "md", "lg", "xl"] as const;
+
+export type PostRichTextAllowedTag = (typeof POST_RICH_TEXT_ALLOWED_TAGS)[number];
+export type PostRichTextAlignment = (typeof POST_RICH_TEXT_ALIGNMENT_VALUES)[number];
+export type PostRichTextFontFamily = (typeof POST_RICH_TEXT_FONT_FAMILY_VALUES)[number];
+export type PostRichTextTextScale = (typeof POST_RICH_TEXT_TEXT_SCALE_VALUES)[number];
+
+export const postRichTextAllowedTagSet = new Set<string>(POST_RICH_TEXT_ALLOWED_TAGS);
+export const postRichTextSelfClosingTagSet = new Set<string>(
+  POST_RICH_TEXT_SELF_CLOSING_TAGS
+);
+export const postRichTextAlignmentSet = new Set<string>(POST_RICH_TEXT_ALIGNMENT_VALUES);
+export const postRichTextFontFamilySet = new Set<string>(POST_RICH_TEXT_FONT_FAMILY_VALUES);
+export const postRichTextTextScaleSet = new Set<string>(POST_RICH_TEXT_TEXT_SCALE_VALUES);
+
+export const POST_RICH_TEXT_BLOCK_TAGS = [
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "blockquote",
+  "pre",
+] as const;
+
+export const postRichTextBlockTagSet = new Set<string>(POST_RICH_TEXT_BLOCK_TAGS);

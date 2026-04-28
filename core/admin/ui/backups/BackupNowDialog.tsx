@@ -1,0 +1,80 @@
+import { CloudUpload, X } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+
+type BackupNowDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreate: () => Promise<boolean>;
+  isSubmitting: boolean;
+};
+
+export function BackupNowDialog({
+  open,
+  onOpenChange,
+  onCreate,
+  isSubmitting,
+}: BackupNowDialogProps) {
+  const handleCreate = async () => {
+    const ok = await onCreate();
+    if (ok) onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
+        <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b px-6 py-4 text-left">
+          <div>
+            <DialogTitle>Create Backup Now</DialogTitle>
+            <DialogDescription>
+              Select what should be included in the on-demand backup.
+            </DialogDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onOpenChange(false)}
+            aria-label="Close backup dialog"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </DialogHeader>
+        <div className="space-y-3 px-6 py-5">
+          {[
+            { id: "db", label: "Database snapshot", checked: true },
+            { id: "media", label: "Media assets", checked: true },
+            { id: "configs", label: "Settings & tokens", checked: false },
+          ].map((item) => (
+            <label key={item.id} className="flex items-center gap-2 text-sm">
+              <Checkbox defaultChecked={item.checked} />
+              <span>{item.label}</span>
+            </label>
+          ))}
+        </div>
+        <Separator />
+        <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button className="gap-2" onClick={handleCreate} disabled={isSubmitting}>
+            <CloudUpload className="h-4 w-4" />
+            {isSubmitting ? "Starting..." : "Start Backup"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
