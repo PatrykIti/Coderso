@@ -24,6 +24,7 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   const workflow = readFile(".github/workflows/security-gate.yml");
   expect(workflow).toContain("semgrep");
   expect(workflow).toContain("trivy");
+  expect(workflow).toContain("aquasecurity/trivy-action@v0.36.0");
   expect(workflow).toContain("gitleaks");
   expect(workflow).toContain("upload-sarif");
   expect(workflow).toContain("--error");

@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1311 tasks
+- **Done:** 1312 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-228 | Security Gate Trivy Action Pin Repair | High | Small | Done: security gate now uses the documented `aquasecurity/trivy-action@v0.36.0` pin and the config test asserts the resolvable action reference |
 | TASK-227 | Semantic Release GitHub App Authentication | High | Small | Done: semantic-release checkout/API auth now uses the bypass-approved GitHub App token from repository secrets, while GHCR publish remains package-scoped to the workflow token |
 | TASK-226 | Coderso Rebrand and Advanced Admin IA | High | Very Large | Done: product surfaces now use Coderso, Advanced is the canonical admin module group/route namespace, legacy aliases/storage/header compatibility is preserved, docs, changelog 757, gates, and residual allowlist are synchronized |
 | TASK-226-00 | Exhaustive Nextless Occurrence Inventory and Scope Lock | High | Small | Done: baseline and final residual scans were captured, with residual matches classified as compatibility or historical evidence |
