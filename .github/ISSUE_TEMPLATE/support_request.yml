@@ -1,0 +1,70 @@
+name: Support request
+description: Ask for help with setup, usage, development, or repository workflow.
+title: "support: "
+labels: ["support", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for non-security support. Security vulnerabilities must be
+        reported privately through SECURITY.md.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues, pull requests, and documentation.
+          required: true
+        - label: I removed secrets, tokens, database URLs, private keys, and customer data.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Support topic
+      options:
+        - Installation or setup
+        - Local development
+        - Database or migrations
+        - Admin UI
+        - Runtime behavior
+        - Plugins
+        - Tests or CI
+        - Release automation
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do you need help with?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you already tried
+      description: Include commands, docs, or examples you already checked.
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        - OS:
+        - Bun version:
+        - Branch, commit, or release:
+        - Database provider:
+    validations:
+      required: false

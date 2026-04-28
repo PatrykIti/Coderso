@@ -10,6 +10,55 @@ Follow these rules when working in this repo:
 - Fix lint/typecheck warnings (e.g., `any`) instead of ignoring; treat as potential security risks.
 - Documentation may be in Polish, but code, code comments, and coding style must be in English.
 
+## Repo Index
+
+Start here for contributor and agent context.
+
+Root project docs:
+
+- `README.md` - public Coderso product overview
+- `CONTRIBUTING.md` - contributor workflow and pull request expectations
+- `CODE_OF_CONDUCT.md` - community standards and enforcement
+- `SUPPORT.md` - support request routing and triage expectations
+- `SECURITY.md` - private vulnerability reporting policy
+- `LICENSE.md` - Apache-2.0 license
+- `.github/ISSUE_TEMPLATE/` - public issue forms and security contact links
+- `.github/PULL_REQUEST_TEMPLATE.md` - pull request summary, validation, and
+  release notes template
+
+Primary docs live in `_docs/`:
+
+- `AGENTS.md` - agent guidelines
+- `_docs/ARCHITECTURE.md` - core architecture and system rules
+- `_docs/CMS_SPEC.md` - CMS scope and overview
+- `_docs/CMS_API.md` - admin API endpoints
+- `_docs/CONTENT_TYPES_SPEC.md` - collections and content types
+- `_docs/DATA_MODEL.md` - database schema overview
+- `_docs/DESIGN_TOKENS.md` - design tokens and theming
+- `_docs/MEDIA_SPEC.md` - media storage and uploads
+- `_docs/PAGE_MODEL.md` - page builder JSON model
+- `_docs/PREVIEW_SPEC.md` - draft preview flow
+- `_docs/ORM_SPEC.md` - ORM choice and configuration
+- `_docs/AUTH_SPEC.md` - authentication and sessions
+- `_docs/RBAC_SPEC.md` - roles and permissions
+- `_docs/RELEASE_PROCESS.md` - semantic-release, PR release notes, and Docker image publishing
+- `_docs/THEMES_SPEC.md` - themes and theme profiles
+- `_docs/SEARCH_SPEC.md` - search and indexing
+- `_docs/AUDIT_SPEC.md` - audit logs
+- `_docs/SECURITY_SPEC.md` - baseline security middleware
+- `_docs/README.md` - docs index
+- `_docs/SDK_SPEC.md` - plugin SDK contract
+- `_docs/STORE_SPEC.md` - store + security pipeline
+- `_docs/TESTING_STRATEGY.md` - target hybrid testing model for Bun runtime and Vitest coverage lanes
+- `_docs/WIDGETS.md` - core widgets and configuration model
+- `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
+- `_docs/_TASKS/README.md` - tasks index
+- `_docs/_CHANGELOG/README.md` - changelog index
+
+Testing docs:
+
+- `tests/README.md` - current runner ownership and test command surface
+
 ## Task Workflow (Mandatory)
 
 - Before starting any task, review:

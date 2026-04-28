@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1316 tasks
+- **Done:** 1317 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-233 | Root README Marketing and Agents Index | Medium | Small | Done: repository index moved to `AGENTS.md` and root `README.md` is now an English Coderso marketing overview |
 | TASK-232 | Reliability Gate Slow DB Timeout Hardening | High | Small | Done: solution kit install reliability tests now use remote-DB-safe test and cleanup timeouts |
 | TASK-231 | CI Security and Release Gate Fixes | High | Small | Done: security gate SARIF upload now has `actions: read` and CodeQL upload v4, while DB-backed public booking smoke tests use a remote-DB-safe timeout |
 | TASK-230 | Bun Testing Lane Workflow Contract | High | Small | Done: testing workflow now exposes `bun-lane`, runs curated Bun tests before Bun coverage, and keeps optional DB route suites secret-gated |
