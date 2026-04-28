@@ -27,6 +27,10 @@ Gate ownership follows product architecture:
 - Vitest is the target runner for pure TS/admin/UI coverage lanes that do not depend on Bun runtime primitives.
 
 Release gates must not weaken runtime guarantees just to normalize tooling.
+DB-backed smoke checks are optional inside the release-gate runner: when
+`DATABASE_URL` is present they execute, and when it is absent they are reported
+as skipped while pure lint, UI, performance, security, and catalog checks still
+run. Do not import `core/db/client` in pure gate tests just to read defaults.
 
 ## Gate Matrix
 
@@ -57,8 +61,24 @@ These values are enforced by `tests/perf/codersoPerformanceGate.test.ts`.
 
 Additional security suites are executed in gate runner:
 - `tests/unit/security/rateLimit.test.ts`
-- `tests/unit/forms/submissionNonce.test.ts`
+- `tests/vitest/forms/submissionNonce.test.ts`
+- `tests/unit/server/publicBookingApi.test.ts` when `DATABASE_URL` is available
+
+## Optional DB-Backed Checks
+
+The release gate workflow passes `DATABASE_URL` from the repository secret when
+available. This is useful for a maintained Render test database, but the gate
+contract does not require a database to be available for every PR.
+
+DB-backed commands currently include:
+
 - `tests/unit/server/publicBookingApi.test.ts`
+- `tests/unit/kits/installService.test.ts`
+- `tests/integration/store/revocations.test.ts`
+
+Without `DATABASE_URL`, those commands are marked as skipped in the JSON report
+with `skipReason: "database_url_missing"`. When `DATABASE_URL` is configured,
+the DB-backed suites own their existing connection checks and cleanup behavior.
 
 ## CI and Local Security Gate (SAST/SCA/Secrets/CVE)
 

@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 
-import { db } from "../../db/client";
 import { settings } from "../../db/schema";
 import {
   decryptSecret,
@@ -122,6 +121,13 @@ export type SecuritySettingsUpdate = {
 };
 
 const SECURITY_SETTINGS_KEY = "security.settings";
+
+let dbPromise: Promise<typeof import("../../db/client").db> | null = null;
+
+const getDb = async () => {
+  dbPromise ??= import("../../db/client").then((module) => module.db);
+  return dbPromise;
+};
 
 const RATE_LIMIT_BUCKETS: RateLimitBucket[] = [
   "auth",
@@ -684,6 +690,7 @@ export function resetSecuritySettingsCache() {
 
 export async function getSecuritySettings(): Promise<SecuritySettings> {
   if (cachedSettings) return cachedSettings;
+  const db = await getDb();
   const [row] = await db
     .select({ value: settings.value, updatedAt: settings.updatedAt })
     .from(settings)
@@ -707,6 +714,7 @@ export async function setSecuritySettings(update: SecuritySettingsUpdate) {
   assertBotProtectionConfig(merged);
   const now = new Date();
   const stored = toStoredSettings(merged);
+  const db = await getDb();
 
   await db
     .insert(settings)
@@ -728,6 +736,7 @@ export async function setSecuritySettingsPublic(update: SecuritySettingsUpdate) 
 
 export async function getSecuritySettingsUpdatedAt() {
   if (cachedUpdatedAt) return cachedUpdatedAt;
+  const db = await getDb();
   const [row] = await db
     .select({ updatedAt: settings.updatedAt })
     .from(settings)

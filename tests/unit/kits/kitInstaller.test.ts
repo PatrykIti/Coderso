@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { getSolutionKitFromCatalog } from "../../../core/services/kits/solutionKitsCatalog";
-import { buildTemplateSeedsForKit } from "../../../core/services/kits/kitInstaller";
+import { buildTemplateSeedsForKit } from "../../../core/services/kits/kitTemplateSeeds";
 
 test("buildTemplateSeedsForKit derives unique seeds from page templates", () => {
   const kit = getSolutionKitFromCatalog("automotive-workshop");

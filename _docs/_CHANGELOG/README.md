@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 760 | 2026-04-28 | TASK-229 Coderso release gates optional DB checks | CI/CD Release Gates |
 | 759 | 2026-04-28 | TASK-228 security gate Trivy Action pin repair | CI/CD Security |
 | 758 | 2026-04-28 | TASK-227 semantic release GitHub App authentication | Release Engineering/CI Security |
 | 757 | 2026-04-28 | TASK-226 Coderso rebrand and Advanced admin IA | Branding/Admin IA |

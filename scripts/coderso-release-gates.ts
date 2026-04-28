@@ -6,6 +6,7 @@ type GateId = "functional" | "ux" | "performance" | "security" | "reliability";
 type GateCommand = {
   title: string;
   cmd: string[];
+  requiresDatabaseUrl?: boolean;
 };
 
 type GateDefinition = {
@@ -19,6 +20,8 @@ type CommandResult = {
   cmd: string[];
   exitCode: number;
   durationMs: number;
+  skipped?: boolean;
+  skipReason?: string;
 };
 
 type GateResult = {
@@ -95,14 +98,31 @@ const GATES: GateDefinition[] = [
         cmd: ["bun", "test", "tests/security/codersoSecurityGate.test.ts"],
       },
       {
-        title: "Rate-limit and nonce contracts",
+        title: "Rate-limit contracts",
         cmd: [
           "bun",
           "test",
           "tests/unit/security/rateLimit.test.ts",
-          "tests/unit/forms/submissionNonce.test.ts",
+        ],
+      },
+      {
+        title: "Form nonce contracts",
+        cmd: [
+          "bun",
+          "run",
+          "test:vitest",
+          "--",
+          "tests/vitest/forms/submissionNonce.test.ts",
+        ],
+      },
+      {
+        title: "Public booking API DB security smoke",
+        cmd: [
+          "bun",
+          "test",
           "tests/unit/server/publicBookingApi.test.ts",
         ],
+        requiresDatabaseUrl: true,
       },
     ],
   },
@@ -111,20 +131,30 @@ const GATES: GateDefinition[] = [
     description: "Install/upgrade/rollback paths do not crash and stay recoverable.",
     commands: [
       {
-        title: "Installer reliability",
+        title: "Installer catalog reliability",
+        cmd: ["bun", "test", "tests/unit/kits/kitInstaller.test.ts"],
+      },
+      {
+        title: "Solution kit install DB reliability",
+        cmd: ["bun", "test", "tests/unit/kits/installService.test.ts"],
+        requiresDatabaseUrl: true,
+      },
+      {
+        title: "Store revocation DB reliability",
         cmd: [
           "bun",
           "test",
-          "tests/unit/kits/installService.test.ts",
-          "tests/unit/kits/kitInstaller.test.ts",
           "tests/integration/store/revocations.test.ts",
         ],
+        requiresDatabaseUrl: true,
       },
     ],
   },
 ];
 
 const VALID_IDS = new Set<GateId>(GATES.map((gate) => gate.id));
+
+const hasDatabaseUrl = () => (process.env.DATABASE_URL ?? "").trim().length > 0;
 
 const parseArgs = (argv: string[]) => {
   const selected = new Set<GateId>();
@@ -167,6 +197,19 @@ const parseArgs = (argv: string[]) => {
 
 const runCommand = async (command: GateCommand): Promise<CommandResult> => {
   const startedAt = performance.now();
+
+  if (command.requiresDatabaseUrl && !hasDatabaseUrl()) {
+    process.stdout.write("Skipped: DATABASE_URL is not configured for this DB-backed check.\n");
+    return {
+      title: command.title,
+      cmd: command.cmd,
+      exitCode: 0,
+      durationMs: performance.now() - startedAt,
+      skipped: true,
+      skipReason: "database_url_missing",
+    };
+  }
+
   const proc = Bun.spawn({
     cmd: command.cmd,
     stdout: "pipe",

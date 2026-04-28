@@ -22,6 +22,8 @@ jobs:
       CODERSO_PERF_LISTING_P95_CACHED_MS: "300"
       CODERSO_PERF_LISTING_P95_COLD_MS: "900"
       CODERSO_PERF_ADMIN_NAV_P95_MS: "150"
+      # DB-backed smoke checks run when this secret is available; pure gates
+      # still execute and report skipped DB checks when it is absent.
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Checkout

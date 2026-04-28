@@ -53,8 +53,8 @@ Mandatory baseline verified by gate suite:
 
 Related gate suites executed by runner:
 - `tests/unit/security/rateLimit.test.ts`
-- `tests/unit/forms/submissionNonce.test.ts`
-- `tests/unit/server/publicBookingApi.test.ts`
+- `tests/vitest/forms/submissionNonce.test.ts`
+- `tests/unit/server/publicBookingApi.test.ts` when `DATABASE_URL` is available
 
 ### CI and Local Security Gate (SAST/SCA/Secrets/CVE)
 
