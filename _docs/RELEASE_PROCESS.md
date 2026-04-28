@@ -32,6 +32,11 @@ GitHub release API calls therefore run as the bypass-approved semantic-release
 GitHub App, not as the default repository workflow token. The token request is
 scoped to the current repository through `owner` and `repositories`.
 
+The workflow pins Node through `actions/setup-node` before running
+semantic-release. `semantic-release@25` requires Node `^22.14.0 || >=24.10.0`,
+so CI uses `NODE_VERSION=22.14.0` and verifies `node --version` before
+installing dependencies and running `bun run release:semantic`.
+
 Then stage 1 runs `bun run release:semantic`, which:
 
 - calculates the next SemVer tag from conventional commits;
@@ -67,3 +72,23 @@ sets `CORE_VERSION` plus OCI labels to the same value.
 
 GHCR publishing still uses the workflow `GITHUB_TOKEN` with `packages: write`
 because package publishing does not require branch-protection bypass.
+
+## Local Validation
+
+Run the release config and workflow contract tests before changing release
+automation:
+
+```bash
+bun test tests/unit/release
+```
+
+For a deeper smoke test, run semantic-release in dry-run mode on a supported
+Node runtime:
+
+```bash
+./node_modules/.bin/semantic-release --dry-run --no-ci
+```
+
+The dry-run contacts GitHub to inspect remote branches and PR metadata. On a
+non-release branch it should pass runtime/plugin loading and stop at the
+expected branch guard because releases are configured for `main` only.
