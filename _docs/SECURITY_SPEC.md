@@ -65,6 +65,9 @@ Automated CI gate blocks PRs on critical/high findings:
 - Secrets: Trivy filesystem secret scan plus Gitleaks history and worktree scans (`.gitleaks.toml` allowlist config).
 - SARIF uploads use `github/codeql-action/upload-sarif@v4` and require
   `actions: read`, `contents: read`, and `security-events: write` permissions.
+- Gitleaks Action v2 is configured through environment variables, not `with`
+  inputs. CI sets `GITHUB_TOKEN`, `GITLEAKS_CONFIG=.gitleaks.toml`, disables PR
+  comments, and leaves the action SARIF artifact upload enabled.
 - Trivy CI uses two action invocations: a non-blocking SARIF generation step
   with `exit-code: "0"` and `limit-severities-for-sarif: true`, followed by a
   blocking table-output gate with `exit-code: "1"` for HIGH/CRITICAL findings.
