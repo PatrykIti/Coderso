@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1315 tasks
+- **Done:** 1316 tasks
 
 ---
 
@@ -132,7 +132,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-231 | CI Security and Release Gate Fixes | High | Small | Done: security gate SARIF upload now has `actions: read` and CodeQL upload v4, while DB-backed public booking smoke tests run serially with a remote-DB-safe timeout |
+| TASK-232 | Reliability Gate Slow DB Timeout Hardening | High | Small | Done: solution kit install reliability tests now use remote-DB-safe test and cleanup timeouts |
+| TASK-231 | CI Security and Release Gate Fixes | High | Small | Done: security gate SARIF upload now has `actions: read` and CodeQL upload v4, while DB-backed public booking smoke tests use a remote-DB-safe timeout |
 | TASK-230 | Bun Testing Lane Workflow Contract | High | Small | Done: testing workflow now exposes `bun-lane`, runs curated Bun tests before Bun coverage, and keeps optional DB route suites secret-gated |
 | TASK-229 | Coderso Release Gates Optional DB Checks | High | Small | Done: pure release gates now run without `DATABASE_URL`, DB-backed commands are explicit skips when the secret is absent, and CI still uses the secret when configured |
 | TASK-228 | Security Gate Trivy Action Pin Repair | High | Small | Done: security gate now uses the documented `aquasecurity/trivy-action@v0.36.0` pin and the config test asserts the resolvable action reference |

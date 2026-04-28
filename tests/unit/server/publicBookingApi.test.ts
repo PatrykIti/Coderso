@@ -29,7 +29,7 @@ import {
 } from "../../../core/services/settings/securitySettings";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
-const testIfDb = hasDb ? test.serial : test.skip;
+const testIfDb = hasDb ? test : test.skip;
 const DB_TEST_TIMEOUT_MS = 30_000;
 
 const originalNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;

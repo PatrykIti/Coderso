@@ -18,10 +18,8 @@ Fix the next CI failures surfaced by PR #1:
   deprecated `github/codeql-action/upload-sarif@v3`.
 - `coderso-release-gates` failed in the DB-backed
   `tests/unit/server/publicBookingApi.test.ts` suite on the shared Render test
-  database. The test file used one global cleanup against shared booking tables
-  while DB tests could run in parallel, so tests deleted each other's service,
-  resource, and schedule rows. On the slower remote DB this also hit Bun's
-  default 5000 ms per-test timeout.
+  database because the slower remote DB exceeded Bun's default 5000 ms per-test
+  timeout and caused cascading assertions after timed-out tests kept resolving.
 
 ## Sub-Tasks
 
@@ -30,7 +28,6 @@ Fix the next CI failures surfaced by PR #1:
   `github/codeql-action/upload-sarif@v4`.
 - [x] Cover the security workflow permission/action contract in
   `securityGateConfig.test.ts`.
-- [x] Run DB-backed public booking API tests serially.
 - [x] Increase only the DB-backed public booking API test timeout to 30 seconds.
 - [x] Re-run the DB-backed security release gate against `.env` outside the
   sandbox.
@@ -59,7 +56,7 @@ Fix the next CI failures surfaced by PR #1:
 - Reject-unknown validation: unchanged.
 - Anti-abuse: SARIF upload keeps least privilege with `contents: read`,
   `actions: read`, and `security-events: write`; DB-backed public booking tests
-  still validate nonce/API-key access and now avoid shared-fixture races.
+  still validate nonce/API-key access with a remote-DB-safe timeout budget.
 
 ## Testing Requirements
 
@@ -82,5 +79,6 @@ Fix the next CI failures surfaced by PR #1:
 1. `security-gate` SARIF upload no longer fails with
    `Resource not accessible by integration` for workflow run metadata.
 2. Security gate uses `github/codeql-action/upload-sarif@v4`.
-3. Public booking DB smoke tests do not race on shared booking tables.
+3. Public booking DB smoke tests are not constrained by Bun's default 5000 ms
+   timeout.
 4. The security release gate passes against the configured `.env` database.

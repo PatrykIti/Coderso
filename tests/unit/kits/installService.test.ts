@@ -29,7 +29,8 @@ const hasDb =
   (await canConnect()) &&
   (await hasTable("solution_kit_install_runs"));
 const testIfDb = hasDb ? test : test.skip;
-const dbTestTimeoutMs = 20_000;
+const dbHookTimeoutMs = 60_000;
+const dbTestTimeoutMs = 90_000;
 
 async function canConnect() {
   try {
@@ -123,11 +124,11 @@ const cleanup = async () => {
 
 beforeEach(async () => {
   await cleanup();
-});
+}, dbHookTimeoutMs);
 
 afterAll(async () => {
   await cleanup();
-});
+}, dbHookTimeoutMs);
 
 const buildDefinition = (seed: string): SolutionKitDefinition => ({
   id: "automotive-workshop",

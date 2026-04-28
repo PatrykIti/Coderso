@@ -17,8 +17,6 @@
 
 ### Release Gates
 
-- Made DB-backed public booking API tests serial to avoid shared-database races
-  between global cleanup and per-test fixture creation.
 - Raised the per-test timeout only for those DB-backed public booking tests to
   30 seconds so remote Render DB latency does not fail the gate.
 

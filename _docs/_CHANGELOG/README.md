@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 763 | 2026-04-28 | TASK-232 reliability gate slow DB timeout hardening | CI/CD Reliability |
 | 762 | 2026-04-28 | TASK-231 CI security and release gate fixes | CI/CD Security |
 | 761 | 2026-04-28 | TASK-230 Bun testing lane workflow contract | CI/CD Testing |
 | 760 | 2026-04-28 | TASK-229 Coderso release gates optional DB checks | CI/CD Release Gates |
