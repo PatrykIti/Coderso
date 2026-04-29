@@ -156,7 +156,7 @@ testIfDb("content entry metadata publish requires publish permission", async () 
     })
     .returning();
   const type = await createContentType({
-    name: "Route Stories",
+    name: `Route Stories ${randomUUID()}`,
     slug: `route-stories-${randomUUID()}`,
     schema: {
       type: "object",
@@ -197,7 +197,7 @@ testIfDb("content entry duplicate route returns a draft clone", async () => {
   });
 
   const type = await createContentType({
-    name: "Route Docs",
+    name: `Route Docs ${randomUUID()}`,
     slug: `route-docs-${randomUUID()}`,
     schema: {
       type: "object",

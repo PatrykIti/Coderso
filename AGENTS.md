@@ -120,6 +120,7 @@ Testing docs:
   - SDK/shared contracts,
   - widget/content logic that does not depend on runtime Bun APIs.
 - A suite is not Bun-free if importing its production module immediately triggers DB/settings/runtime coupling. Refactor the production module first instead of forcing the test into Vitest with brittle mocks.
+- DB-backed tests must create uniquely scoped fixtures and clean up only the rows they created or explicitly own. Do not truncate or delete whole domain tables from shared test databases; each suite must remain independent and only exercise its own contract.
 - Introduce new lane changes additively first and keep the existing command surface green while migrating ownership.
 - Prefer `tests/vitest/*` for Bun-free suites by default. Use `tests/vitest/ui-integration/*` for Bun-free integration render flows.
 - Do not migrate runtime tests to Vitest only to improve coverage numbers.
