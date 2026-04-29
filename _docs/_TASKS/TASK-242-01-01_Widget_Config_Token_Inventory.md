@@ -96,9 +96,9 @@ split.
 
 | Surface | Source refs | Fields | Owner |
 |---|---|---|---|
-| `hero` | `core/widgets/core/hero.tsx:125-166`, `221-287`, `320-455`, `541` | `layout.maxWidth`, `layout.contentWidth`, `headlineSize`, `subheadSize`, `bodySize`, `borderRadius`, `mediaRadius`, `primaryButtonSize`, `secondaryButtonSize` | TASK-242-03-02 |
-| `navigation` | `core/widgets/core/navigation.tsx:184-202`, `236-256`, `366-387` | `layout.maxWidth`, `layout.paddingY`, `layout.itemGap`, `style.fontSize` | TASK-242-02-01, TASK-242-03-02 |
-| `footer` | `core/widgets/core/footer.tsx:119-136`, `192-210`, `332-391` | `layout.maxWidth`, `layout.columnGap`, `layout.sectionPaddingY`, `style.fontSize` | TASK-242-02-01, TASK-242-03-02 |
+| `hero` | `core/widgets/core/hero.tsx:125-166`, `221-287`, `320-455`, `541` | `borderRadius`, `mediaRadius` owned by TASK-242-02-01; `layout.maxWidth`, `layout.contentWidth`, `headlineSize`, `subheadSize`, `bodySize`, `primaryButtonSize`, `secondaryButtonSize` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
+| `navigation` | `core/widgets/core/navigation.tsx:184-202`, `236-256`, `366-387` | `layout.paddingY`, `layout.itemGap` owned by TASK-242-02-01; `layout.maxWidth`, `style.fontSize` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
+| `footer` | `core/widgets/core/footer.tsx:119-136`, `192-210`, `332-391` | `layout.columnGap`, `layout.sectionPaddingY` owned by TASK-242-02-01; `layout.maxWidth`, `style.fontSize` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
 | `stack` | `core/widgets/core/stack.tsx:11-26`, `108-166`, `208-260` | responsive `gap` tokens, legacy `"0"` alias | TASK-242-02-01 |
 | `splitLayout` | `core/widgets/core/splitLayout.tsx:13-57`, `118-191`, `247` | `gap`, legacy `"0"` alias | TASK-242-02-01 |
 | `gridColumns` | `core/widgets/core/gridColumns.tsx:26-36`, `217-254`, `331-497` | `gapX`, `gapY`, `columnPadding`; `columnRadius` already has `none` | TASK-242-02-01 |
@@ -108,7 +108,7 @@ split.
 | `statsKpi` | `core/widgets/core/statsKpi.tsx:7-96`, `35`, `162`, `240-376` | `style.spacing` | TASK-242-02-02 |
 | `featureGrid` | `core/widgets/core/featureGrid.tsx:7-123`, `53-72`, `261-428` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
 | `contentList` | `core/widgets/core/contentList.tsx:21-154`, `266`, `328`, `377-646` | `style.gap` | TASK-242-02-02 |
-| `postsFeed` | `core/widgets/core/postsFeed.tsx:149`, `228`, `333` | `style.gap` through content-list normalization | TASK-242-02-02 |
+| `postsFeed` | `core/widgets/core/postsFeed.tsx:149`, `228`, `333` | local `style.gap` schema/type/normalizer plus `mapPostsFeedToContentListData()` handoff to content-list rendering | TASK-242-02-02 |
 | `entryTeaser` | `core/widgets/core/entryTeaser.tsx:9-110`, `204-210`, `268-523` | `style.spacing`, `style.radius` | TASK-242-02-02 |
 | `galleryMosaic` | `core/widgets/core/galleryMosaic.tsx:7-95`, `44-50`, `162-474` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
 | `ctaBanner` | `core/widgets/core/ctaBanner.tsx:7-112`, `46-54`, `178-339` | `style.padding`; `style.radius` already has `none` | TASK-242-02-02 |
@@ -118,11 +118,16 @@ split.
 | `testimonials` | `core/widgets/core/testimonials.tsx:6-92`, `43`, `155`, `238-372` | `style.spacing` | TASK-242-02-02 |
 | `contact` | `core/widgets/core/contact.tsx:8-180`, `59-82`, `219-327` | `style.spacing` | TASK-242-02-02 |
 | `newsletter` | `core/widgets/core/newsletter.tsx:6-99`, `31`, `135`, `178-251` | `style.spacing` | TASK-242-02-02 |
-| `formEmbed` | `core/widgets/core/formEmbed.tsx:210-224`, `80-112`, `265`, `501-538` | `layout.width`, `layout.spacing`, `style.radius`, `style.inputSize` | TASK-242-02-02, TASK-242-03-02 |
-| `logoCloud` | `core/widgets/core/logoCloud.tsx:6-92`, `35-42`, `134`, `214-354` | `style.logoHeight`, `style.gap` | TASK-242-02-02, TASK-242-03-02 |
-| `richTextSection` | `core/widgets/core/richTextSection.tsx:13-16`, `148-160`, `58-76`, `229`, `405-561` | `style.fontScale`, `style.spacing`; keep `options.maxWidth="full"` as existing no-limit width unless reclassified | TASK-242-02-02, TASK-242-03-02 |
-| `timeline` | `core/widgets/core/timeline.tsx:8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `layout.spacing`, `style.titleSize`, `style.descriptionSize`; keep marker/line size structural unless reclassified | TASK-242-02-02, TASK-242-03-02 |
-| `compareTimeline` | `core/widgets/core/compareTimeline.tsx:7-12`, `165`, `187-189`, `365`, `597`, `608-610` | `trackSpacing`, `trackLabelSize`, `stepLabelSize`, `segmentLabelSize` | TASK-242-02-02, TASK-242-03-02 |
+| `formEmbed` | `core/widgets/core/formEmbed.tsx:210-224`, `80-112`, `265`, `501-538` | `layout.spacing`, `style.radius` owned by TASK-242-02-02; `layout.width`, `style.inputSize` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
+| `logoCloud` | `core/widgets/core/logoCloud.tsx:6-92`, `35-42`, `134`, `214-354` | `style.gap` owned by TASK-242-02-02; `style.logoHeight` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
+| `richTextSection` | `core/widgets/core/richTextSection.tsx:13-16`, `148-160`, `58-76`, `229`, `405-561` | `style.spacing` owned by TASK-242-02-02; `style.fontScale` owned by TASK-242-03-02; keep `options.maxWidth="full"` as existing no-limit width unless reclassified | TASK-242-02-02, TASK-242-03-02 |
+| `timeline` | `core/widgets/core/timeline.tsx:8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `layout.spacing` owned by TASK-242-02-02; `style.titleSize`, `style.descriptionSize` owned by TASK-242-03-02; keep marker/line size structural unless reclassified | TASK-242-02-02, TASK-242-03-02 |
+| `compareTimeline` | `core/widgets/core/compareTimeline.tsx:7-12`, `165`, `187-189`, `365`, `597`, `608-610` | `trackSpacing` owned by TASK-242-02-02; `trackLabelSize`, `stepLabelSize`, `segmentLabelSize` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
+
+When a widget file appears in multiple owner rows, implement each field group in
+the named runtime leaf and leave the admin editor option exposure to
+TASK-242-03-01. Do not use one leaf to opportunistically edit the other leaf's
+runtime token family unless resolving an already-landed merge conflict.
 
 ### Editor and Test Owners
 
@@ -154,7 +159,7 @@ split.
 | `logoCloud` | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx:54-61`, `512-642` | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx:433`, `548`, `605` | TASK-242-03-01 |
 | `richTextSection` | `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx:56-75`, `524-876` | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx:350`, `535`, `647` | TASK-242-03-01 |
 | `timeline` | `core/admin/ui/widgets/editors/TimelineEditors.tsx:73-110`, `705-751` | `tests/vitest/ui/timeline-editor-wave.test.tsx:385`, `581` | TASK-242-03-01 |
-| `compareTimeline` | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx:50`, `932`, `1000` | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx:387`, `585`, `734` | TASK-242-03-01 |
+| `compareTimeline` | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx:52-54`, `841-907` for `trackLabelSizes`, `stepLabelSizes`, `segmentLabelSizes` | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx:519-528`, `569-571`; keep broader spacing assertions around `387`, `585`, `734` when `trackSpacing` changes | TASK-242-03-01 |
 
 ### Runtime Widget Test Owners
 
@@ -173,7 +178,7 @@ files only for surfaces that already live there.
 | `gridColumns` | `tests/vitest/widgets/gridColumns.test.tsx` |
 | `divider` | `tests/vitest/widgets/divider.test.tsx` |
 | `spacer` | `tests/vitest/widgets/spacer.test.tsx` |
-| `screenTwoColumn` | `tests/vitest/widgets/screenWidgets.test.tsx`; add `tests/vitest/ui/screen-two-column-editor-wave.test.tsx` for editor select coverage |
+| `screenTwoColumn` | `tests/vitest/widgets/screenWidgets.test.tsx` |
 | `statsKpi` | `tests/vitest/widgets/statsKpi.test.tsx` |
 | `featureGrid` | `tests/vitest/widgets/featureGrid.test.tsx` |
 | `contentList` | `tests/unit/widgets/contentList.test.tsx` |
@@ -206,15 +211,20 @@ files only for surfaces that already live there.
 | `_docs/_WIDGETS/GRID_COLUMNS.md` | `29`, `43`, `57-58`, `82-83` | document gap and padding `none` behavior |
 | `_docs/_WIDGETS/DIVIDER.md` | `38`, `43` | document margin `none` / `"0"` compatibility |
 | `_docs/_WIDGETS/SPACER.md` | scan before edit | document responsive height `none` / `"0"` compatibility |
+| `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md` | file missing today | create per-widget doc, add it to `_docs/_WIDGETS/README.md`, and document `gap="none"` behavior |
 | `_docs/_WIDGETS/STATS_KPI.md` | `39`, `50`, `78` | document spacing `none` behavior |
+| `_docs/_WIDGETS/FEATURE_GRID.md` | file missing today | create per-widget doc, add it to `_docs/_WIDGETS/README.md`, and document gap `none` behavior plus radius no-op coverage |
 | `_docs/_WIDGETS/CONTENT_LIST.md` | `88` | document card/list gap `none` behavior |
 | `_docs/_WIDGETS/ENTRY_TEASER.md` | `38`, `84-85` | document spacing and radius `none` behavior |
 | `_docs/_WIDGETS/GALLERY_MOSAIC.md` | `50`, `79-80` | document gap `none` behavior and radius no-op coverage |
 | `_docs/_WIDGETS/CTA_BANNER.md` | `30`, `46`, `68-69` | document padding `none` behavior and radius no-op coverage |
+| `_docs/_WIDGETS/PRICING_PLANS.md` | file missing today | create per-widget doc, add it to `_docs/_WIDGETS/README.md`, and document spacing `none` behavior plus radius no-op coverage |
 | `_docs/_WIDGETS/FAQ.md` | `15`, `34`, `52`, `83` | document spacing `none` behavior |
 | `_docs/_WIDGETS/TEAM.md` | `48-49`, `80`, `83` | document gap `none` behavior and radius no-op coverage |
+| `_docs/_WIDGETS/TESTIMONIALS.md` | file missing today | create per-widget doc, add it to `_docs/_WIDGETS/README.md`, and document spacing `none` behavior |
 | `_docs/_WIDGETS/CONTACT.md` | `60`, `89`, `106` | document spacing `none` behavior |
 | `_docs/_WIDGETS/NEWSLETTER.md` | `40`, `55`, `82` | document spacing `none` behavior |
+| `_docs/_WIDGETS/FORM_EMBED.md` | file missing today | create per-widget doc, add it to `_docs/_WIDGETS/README.md`, and document width, spacing, radius, and input-size `none` behavior |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | `48`, `73`, `76` | document logo height and gap `none` behavior |
 | `_docs/_WIDGETS/RICH_TEXT_SECTION.md` | `54`, `87`, `91`, `95` | document font scale and spacing `none`; keep `maxWidth="full"` note if unchanged |
 | `_docs/_WIDGETS/TIMELINE.md` | `34`, `70` | document spacing and label-size `none` behavior |

@@ -1,6 +1,6 @@
-# TASK-242-02-02: Content, Form, Timeline, and Screen Widget None Tokens
+# TASK-242-02-02: Content, Form, Timeline, and Composite Widget None Tokens
 
-# FileName: TASK-242-02-02_Content_Form_Timeline_and_Screen_Widget_None_Tokens.md
+# FileName: TASK-242-02-02_Content_Form_Timeline_and_Composite_Widget_None_Tokens.md
 
 **Priority:** High
 **Category:** Content Widgets + Runtime Render
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Add `none` to content, form, timeline, and screen widget visual spacing/radius
+Add `none` to content, form, timeline, and composite widget visual spacing/radius
 tokens. These widgets currently expose `sm`/`md`/`lg`/`xl` style options but
 often cannot disable the preset.
 
@@ -40,11 +40,10 @@ often cannot disable the preset.
 - `core/widgets/core/richTextSection.tsx`
 - `core/widgets/core/timeline.tsx`
 - `core/widgets/core/compareTimeline.tsx`
-- `core/widgets/core/screenTwoColumn.tsx`
 - corresponding runtime widget test files in `tests/vitest/widgets/` or the
   existing Bun-owned `tests/unit/widgets/` suite for that surface.
-- editor files and editor-wave tests are owned by TASK-242-03-01 unless the
-  same implementation chunk intentionally includes that leaf too.
+- editor files and editor-wave tests are owned by TASK-242-03-01. This leaf must
+  not require editor select changes to be considered complete.
 
 ## Required Changes
 
@@ -67,7 +66,20 @@ often cannot disable the preset.
 | `richTextSection` | `style.spacing` | zero rich text spacing |
 | `timeline` | `layout.spacing` | zero step spacing |
 | `compareTimeline` | `layout.trackSpacing` | zero track spacing |
-| `screenTwoColumn` | `gap` | zero column gap |
+
+## Ownership Boundaries
+
+- This leaf owns runtime/schema/type/normalizer/render changes for content,
+  form, timeline, and composite widget spacing/gap/padding/radius fields.
+- `screenTwoColumn.gap` is intentionally excluded here because TASK-242-02-01
+  owns screen layout gaps with the other layout/container widgets.
+- Typography label-size fields, width presets, logo height, input size, and
+  button size runtime changes are owned by TASK-242-03-02.
+- Admin editor select options for all fields approved by TASK-242 are owned by
+  TASK-242-03-01 after the relevant runtime leaves have landed.
+- For `postsFeed`, update the local schema/type/normalizer first, then verify
+  the value flows through `mapPostsFeedToContentListData()` into the shared
+  content-list renderer. Do not rely on content-list normalization alone.
 
 ## Security Contract
 
@@ -108,6 +120,8 @@ function resolveWidgetSpacing(value: unknown): WidgetSpacing {
   `tests/vitest/widgets/*` for Bun-free widget render/normalizer tests and keep
   existing `tests/unit/widgets/contentList.test.tsx`,
   `postsFeedWidget.test.tsx`, and `entryTeaser.test.tsx` in Bun.
+- Run the Bun-owned runtime suites explicitly when those surfaces are touched:
+  `bun test tests/unit/widgets/contentList.test.tsx tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/widgets/entryTeaser.test.tsx`.
 - Do not update focused editor-wave suites in this leaf; editor option
   visibility and interactions are owned by TASK-242-03-01.
 - `bun --cwd core lint`
@@ -121,7 +135,8 @@ function resolveWidgetSpacing(value: unknown): WidgetSpacing {
 
 ## Acceptance Criteria
 
-1. Content/form/timeline widgets expose `none` for all off-capable visual
-   spacing and radius tokens.
+1. Content/form/timeline widget schemas, normalizers, and renderers support
+   `none` for all approved spacing and radius tokens.
 2. Defaults stay unchanged for new widgets.
 3. Invalid token behavior stays strict.
+4. Editor select visibility remains deferred to TASK-242-03-01.

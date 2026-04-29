@@ -19,7 +19,7 @@ numeric zero tokens.
 ## Sub-Tasks
 
 - [ ] TASK-242-02-01: Flow Layout and Container Widget None Tokens
-- [ ] TASK-242-02-02: Content, Form, Timeline, and Screen Widget None Tokens
+- [ ] TASK-242-02-02: Content, Form, Timeline, and Composite Widget None Tokens
 
 ## Security Contract
 

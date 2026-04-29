@@ -65,6 +65,11 @@ set includes, but is not limited to:
 Also run any touched widget runtime suites that cover normalizers or render
 output. Most current widget render suites are in `tests/vitest/widgets/*`; keep
 existing `tests/unit/widgets/*` runs only for surfaces that already live there.
+For the current Bun-owned widget suites in scope, run:
+
+```bash
+bun test tests/unit/widgets/contentList.test.tsx tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/widgets/entryTeaser.test.tsx
+```
 
 ## Security Contract
 
@@ -99,6 +104,9 @@ for (const changedWidget of changedWidgets) {
 
 - `_docs/WIDGETS.md`
 - impacted `_docs/_WIDGETS/*.md`
+- Create missing per-widget docs for touched surfaces that do not currently
+  have one (`FEATURE_GRID`, `PRICING_PLANS`, `TESTIMONIALS`, `FORM_EMBED`,
+  `SCREEN_TWO_COLUMN`) and add them to `_docs/_WIDGETS/README.md`.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - matching TASK-242 changelog entry.

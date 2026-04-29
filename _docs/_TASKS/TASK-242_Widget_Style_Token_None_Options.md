@@ -98,6 +98,18 @@ current execution map before touching code. If code shifts before
 implementation starts, refresh the line references there with `rg` and keep the
 same owner split.
 
+Runtime ownership is intentionally split by token family:
+
+- TASK-242-02-01 and TASK-242-02-02 own spacing, gap, padding, and radius
+  schema/type/normalizer/render changes.
+- TASK-242-03-02 owns typography, max-width/content-width, logo height, input
+  size, and button size schema/type/normalizer/render changes.
+- TASK-242-03-01 owns editor select exposure for every approved `none` token
+  after the relevant runtime leaf has landed.
+
+Do not use one leaf to opportunistically edit another leaf's runtime token
+family. This keeps tests, review, and merge conflict handling scoped.
+
 ## Sub-Tasks
 
 - [ ] TASK-242-01: Widget Token Audit and None Semantics
@@ -154,8 +166,9 @@ Docs and board:
     values into class strings.
 - Compatibility:
   - saved legacy values must continue to render;
-  - legacy `"0"` spacing values may normalize to `none` only when that does not
-    change visible output.
+  - legacy `"0"` spacing values must keep their current observable normalized
+    value and `data-*` marker contract unless a field-specific leaf documents
+    and tests a safe canonicalization to `none`.
 
 ## Implementation Order
 
@@ -182,10 +195,13 @@ const spacingClassMap: Record<WidgetSpacing, string> = {
 };
 
 function resolveSpacing(value: unknown, fallback: WidgetSpacing): WidgetSpacing {
-  if (value === "0") return "none";
   return spacingTokens.includes(value as WidgetSpacing) ? (value as WidgetSpacing) : fallback;
 }
 ```
+
+For token families that already expose `"0"` as a saved value, add `none` as a
+parallel alias and map both values to the same zero output unless a field-specific
+leaf explicitly documents that canonicalizing `"0"` to `none` is safe.
 
 For optional class presets such as typography size:
 

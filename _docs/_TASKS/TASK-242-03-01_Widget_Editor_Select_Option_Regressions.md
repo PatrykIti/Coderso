@@ -70,6 +70,11 @@ editor option array and focused wave suite to the owning widget surface.
 - Keep existing labels for numeric zero only when `"0"` remains a legacy or
   technical option. Prefer showing `None` instead of a product-facing `0` where
   both would mean the same thing.
+- Do not expose raw generated labels such as `Gap none`, `Radius none`, or
+  `Text none`. If an editor builds options directly from an exported runtime
+  token array, update that option-label builder in the same runtime leaf that
+  adds `none`, or land this editor leaf immediately before merging the runtime
+  leaf.
 
 ## Security Contract
 
@@ -107,6 +112,8 @@ const spacingOptions: Array<{ id: WidgetSpacing; label: string }> = [
 
 - Update `findSelectByOptions` / `findSelectsByOptions` expectations to include
   `none`.
+- Cover generated option-label helpers when a runtime token array is reused by
+  an editor, so the user-facing label stays exactly `None`.
 - Add at least one interaction per major editor family proving selecting `none`
   reaches `onChange`.
 - Add focused `ScreenEditors.tsx` coverage for `screenTwoColumn.gap`; the

@@ -15,7 +15,9 @@
 Add `none` to off-capable typography, size, logo/input/button, and width
 controls, then expose all new `none` values in widget editor select controls.
 
-This subtask owns the editor-facing UX for the full TASK-242 rollout.
+This subtask owns typography/width/size runtime changes plus the editor-facing
+UX for the full TASK-242 rollout. Spacing, gap, padding, and radius runtime
+changes stay owned by TASK-242-02 leaves.
 
 ## Sub-Tasks
 
@@ -35,6 +37,11 @@ This subtask owns the editor-facing UX for the full TASK-242 rollout.
 - `core/admin/ui/widgets/editors/*.tsx`
 - `tests/vitest/ui/*editor-wave.test.tsx`
 
+Runtime file edits in this parent are limited to typography, max-width/content
+width, logo height, input size, and button size. Editor files may expose every
+approved `none` option from TASK-242 after the runtime leaf that owns the field
+has landed.
+
 ## Required Changes
 
 | Widget | Fields | `none` behavior |
@@ -49,6 +56,10 @@ This subtask owns the editor-facing UX for the full TASK-242 rollout.
 | `compareTimeline` | `trackLabelSize`, `stepLabelSize`, `segmentLabelSize` | no forced label text-size class |
 | `formEmbed` | `layout.width`, `style.inputSize` | no forced width/input size preset when safe |
 | `logoCloud` | `style.logoHeight` | no forced logo height class |
+
+Spacing, gap, padding, and radius fields that appear in these same widget files
+are intentionally out of scope here and remain in TASK-242-02-01 or
+TASK-242-02-02.
 
 ## Security Contract
 

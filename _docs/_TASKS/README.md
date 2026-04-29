@@ -87,10 +87,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-242-01-02 | None Token Semantics and Compatibility Helpers | High | Small | Technical leaf: define `none` behavior, legacy `"0"` compatibility, and helper ownership |
 | TASK-242-02 | Layout, Spacing, Gap, Padding, and Radius None Rollout | High | Large | Add `none` to layout-facing spacing, gap, padding, and radius widget contracts |
 | TASK-242-02-01 | Flow Layout and Container Widget None Tokens | High | Medium | Technical leaf: stack, split layout, divider, spacer, grid columns, hero, navigation, footer, and screen gaps |
-| TASK-242-02-02 | Content, Form, Timeline, and Screen Widget None Tokens | High | Large | Technical leaf: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens |
-| TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Add `none` to off-capable typography, size, width, logo/input/button controls and editors |
+| TASK-242-02-02 | Content, Form, Timeline, and Composite Widget None Tokens | High | Large | Technical leaf: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens |
+| TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Add `none` to typography/width/logo/input/button runtime tokens and expose all approved options in editors |
 | TASK-242-03-01 | Widget Editor Select Option Regressions | High | Medium | Technical leaf: expose `None` in widget selects and update editor-wave coverage |
-| TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Technical leaf: runtime/schema support for typography, width, logo, input, and button `none` tokens |
+| TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Technical leaf: runtime/schema support for typography, width, logo height, input, and button `none` tokens; spacing/radius stay in TASK-242-02 |
 | TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Final validation, widget docs, changelog, and board sync |
 | TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Technical leaf: focused test matrix, docs examples, changelog, and task closure |
 | TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Align Menus editor header actions, lifecycle publish, Location guidance, and handle-based drag/drop with current admin editor patterns |

@@ -31,7 +31,24 @@ logic.
 | typography size/font scale | render no widget-specific text-size class and let surrounding/default CSS inherit |
 | button/input size | remove the size preset class only if the control still remains usable |
 | logo height | render without a forced logo height/max-height class |
-| legacy `"0"` tokens | accept and render as `none` or as the existing zero output without breaking saved data |
+| legacy `"0"` tokens | accept and render the same zero output as `none` without breaking saved data |
+
+## Compatibility Rules
+
+- Keep existing defaults unchanged. New widgets must still normalize to the same
+  default token they use today unless the saved data explicitly contains
+  `none`.
+- Preserve legacy `"0"` values as accepted input for fields that already expose
+  `"0"` in schema/type contracts today.
+- Do not blindly canonicalize `"0"` to `none` in normalized widget data when a
+  current renderer exposes the normalized token through `data-*` markers or tests
+  assert the exact normalized value. In that case, add `none` as a parallel alias
+  that renders the same zero output while leaving saved `"0"` data readable.
+- Canonicalize `"0"` to `none` only for a local helper when tests prove the
+  normalized data/marker contract is not observable, or when the task explicitly
+  updates the docs and tests to record that compatibility decision.
+- Reject or safely fall back for every other unknown token. Do not pass arbitrary
+  user strings into class names.
 
 ## Files to Change
 
@@ -60,9 +77,30 @@ const tokenValues = ["none", "sm", "md", "lg"] as const;
 type TokenValue = (typeof tokenValues)[number];
 
 function resolveToken(value: unknown, fallback: TokenValue): TokenValue {
-  if (value === "0") return "none";
   return tokenValues.includes(value as TokenValue) ? (value as TokenValue) : fallback;
 }
+```
+
+Zero-compatible local helper shape:
+
+```ts
+const gapTokens = ["none", "0", "1", "2", "3", "4", "6", "8"] as const;
+type GapToken = (typeof gapTokens)[number];
+
+function resolveGapToken(value: unknown, fallback: GapToken): GapToken {
+  return gapTokens.includes(value as GapToken) ? (value as GapToken) : fallback;
+}
+
+const gapClassMap: Record<GapToken, string> = {
+  none: "gap-0",
+  "0": "gap-0",
+  "1": "gap-1",
+  "2": "gap-2",
+  "3": "gap-3",
+  "4": "gap-4",
+  "6": "gap-6",
+  "8": "gap-8",
+};
 ```
 
 Optional shared helper shape if repeated across many widgets:
@@ -79,6 +117,11 @@ export function resolveEnumToken<T extends string>(
 }
 ```
 
+Only pass `{ "0": "none" }` as an alias when that canonicalization is explicitly
+safe for the field. For current zero-token contracts such as stack, split layout,
+divider, and spacer, prefer adding `none` to the token set and mapping both
+`none` and `"0"` to zero output.
+
 ## Testing Requirements
 
 - Unit coverage for any shared helper if added.
@@ -93,6 +136,8 @@ export function resolveEnumToken<T extends string>(
 ## Acceptance Criteria
 
 1. `none` semantics are consistent across token families.
-2. Legacy saved `"0"` values keep rendering the same output.
+2. Legacy saved `"0"` values keep rendering the same output and keep their
+   normalized/marker contract unless a leaf explicitly documents a safe
+   canonicalization.
 3. Invalid values still fall back or reject according to the current contract.
 4. No arbitrary class-name passthrough is introduced.
