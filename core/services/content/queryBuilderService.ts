@@ -133,6 +133,27 @@ const normalizeFieldPath = (value: string, context: "field" | "sort" | "filter")
   return normalized;
 };
 
+const getSafeFieldSegments = (
+  value: string,
+  context: "field" | "sort" | "filter" | "execution"
+) => {
+  const normalized = value.trim();
+  const segments = normalized.split(".");
+  const hasInvalidSegment = segments.some(
+    (segment) => segment.length === 0 || reservedFieldSegments.has(segment)
+  );
+
+  if (normalized.length === 0 || hasInvalidSegment) {
+    throw new ApiError(
+      "listing_query_invalid_field",
+      `Invalid ${context} path "${value}"`,
+      400
+    );
+  }
+
+  return segments;
+};
+
 const normalizeFilterValue = (
   value: ListingFilterValue | undefined
 ): ListingFilterValue | undefined => {
@@ -337,10 +358,13 @@ const clampNumber = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
 const readFieldValue = (row: ListingSourceRow, field: string): unknown => {
-  const segments = field.split(".");
+  const segments = getSafeFieldSegments(field, "execution");
   let current: unknown = row;
   for (const segment of segments) {
     if (!current || typeof current !== "object" || Array.isArray(current)) {
+      return undefined;
+    }
+    if (!hasOwn(current, segment)) {
       return undefined;
     }
     current = (current as Record<string, unknown>)[segment];
@@ -349,11 +373,17 @@ const readFieldValue = (row: ListingSourceRow, field: string): unknown => {
 };
 
 const setFieldValue = (target: ListingSourceRow, field: string, value: unknown) => {
-  const segments = field.split(".");
+  const segments = getSafeFieldSegments(field, "execution");
   let current: Record<string, unknown> = target;
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index];
-    if (!segment) return;
+    if (reservedFieldSegments.has(segment)) {
+      throw new ApiError(
+        "listing_query_invalid_field",
+        `Invalid execution path "${field}"`,
+        400
+      );
+    }
     const isLast = index === segments.length - 1;
     if (isLast) {
       current[segment] = value;

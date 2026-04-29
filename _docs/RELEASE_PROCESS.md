@@ -2,6 +2,21 @@
 
 Coderso releases are automated by GitHub Actions and semantic-release.
 
+## Required Repository Secrets
+
+Repository CI/CD expects these GitHub Actions secrets:
+
+- `DATABASE_URL` - PostgreSQL test database used by `Coderso PR Gates`.
+  The PR workflow runs `bun run db:migrate` before tests, so changing this
+  secret to a clean database is supported as long as the database is disposable
+  CI infrastructure.
+- `SEMANTIC_RELEASE_APP_ID` - GitHub App id for semantic-release.
+- `SEMANTIC_RELEASE_APP_PRIVATE_KEY` - GitHub App private key for
+  semantic-release release commits, tags, and GitHub releases.
+
+Do not point `DATABASE_URL` at production data. PR checks are allowed to mutate
+the configured test database through migrations and DB-backed test fixtures.
+
 ## Pull Request Notes
 
 Every pull request should keep the default release-note block and fill only the

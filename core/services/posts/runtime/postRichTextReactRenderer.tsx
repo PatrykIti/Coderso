@@ -5,6 +5,7 @@ import {
   postRichTextAllowedTagSet,
   postRichTextSelfClosingTagSet,
 } from "../editor/postRichTextSchema";
+import { decodeHtmlEntities } from "../editor/postRichTextHtmlUtils";
 
 type RichTextNode =
   | string
@@ -32,21 +33,6 @@ const richTextAttributeNames = new Set([
   "width",
   "height",
 ]);
-
-const decodeHtmlEntities = (value: string) =>
-  value
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
-      String.fromCodePoint(Number.parseInt(hex, 16))
-    )
-    .replace(/&#([0-9]+);/g, (_, decimal: string) =>
-      String.fromCodePoint(Number.parseInt(decimal, 10))
-    );
 
 const parseAttributes = (rawAttrs: string) => {
   const attrs: Record<string, string> = {};

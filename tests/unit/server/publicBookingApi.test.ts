@@ -14,8 +14,8 @@ import {
 } from "../../../core/db/schema";
 import { handlePublicBookingApi } from "../../../core/server/publicBookingApi";
 import {
-  createBookingResource,
-  createBookingService,
+  createBookingResource as createBookingResourceBase,
+  createBookingService as createBookingServiceBase,
   previewBookingSlots,
   setBookingSchedules,
   setBookingServiceResources,
@@ -34,6 +34,8 @@ const DB_TEST_TIMEOUT_MS = 30_000;
 
 const originalNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
 const createdApiKeyIds: string[] = [];
+const createdResourceIds: string[] = [];
+const createdServiceIds: string[] = [];
 
 async function canConnect() {
   try {
@@ -46,16 +48,49 @@ async function canConnect() {
 
 const cleanup = async () => {
   if (!hasDb) return;
-  await db.delete(bookings);
-  await db.delete(bookingBlackouts);
-  await db.delete(bookingSchedules);
-  await db.delete(bookingServiceResources);
-  await db.delete(bookingServices);
-  await db.delete(bookingResources);
+  const resourceIds = [...new Set(createdResourceIds)];
+  const serviceIds = [...new Set(createdServiceIds)];
+
+  if (resourceIds.length > 0) {
+    await db.delete(bookings).where(inArray(bookings.resourceId, resourceIds));
+    await db.delete(bookingBlackouts).where(inArray(bookingBlackouts.resourceId, resourceIds));
+    await db.delete(bookingSchedules).where(inArray(bookingSchedules.resourceId, resourceIds));
+    await db
+      .delete(bookingServiceResources)
+      .where(inArray(bookingServiceResources.resourceId, resourceIds));
+    await db.delete(bookingResources).where(inArray(bookingResources.id, resourceIds));
+    createdResourceIds.length = 0;
+  }
+
+  if (serviceIds.length > 0) {
+    await db.delete(bookings).where(inArray(bookings.serviceId, serviceIds));
+    await db
+      .delete(bookingServiceResources)
+      .where(inArray(bookingServiceResources.serviceId, serviceIds));
+    await db.delete(bookingServices).where(inArray(bookingServices.id, serviceIds));
+    createdServiceIds.length = 0;
+  }
+
   if (createdApiKeyIds.length > 0) {
     await db.delete(apiKeys).where(inArray(apiKeys.id, [...new Set(createdApiKeyIds)]));
     createdApiKeyIds.length = 0;
   }
+};
+
+const createBookingResource = async (
+  input: Parameters<typeof createBookingResourceBase>[0]
+) => {
+  const resource = await createBookingResourceBase(input);
+  createdResourceIds.push(resource.id);
+  return resource;
+};
+
+const createBookingService = async (
+  input: Parameters<typeof createBookingServiceBase>[0]
+) => {
+  const service = await createBookingServiceBase(input);
+  createdServiceIds.push(service.id);
+  return service;
 };
 
 const toDateString = (date: Date) => {
@@ -78,7 +113,6 @@ const getSecurity = (): SecuritySettings => ({
 });
 
 beforeEach(async () => {
-  await cleanup();
   process.env.FORM_SUBMIT_NONCE_SECRET =
     originalNonceSecret && originalNonceSecret.trim().length > 0
       ? originalNonceSecret

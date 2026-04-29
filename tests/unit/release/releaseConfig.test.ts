@@ -20,12 +20,16 @@ const expectPath = (relativePath: string) => {
   expect(existsSync(path.join(root, relativePath))).toBe(true);
 };
 
-const tuplePlugin = (name: string) => {
+const tuplePlugin = (name: string): [string, Record<string, unknown>] => {
   const plugin = config.plugins.find(
     (entry): entry is [string, Record<string, unknown>] =>
       Array.isArray(entry) && entry[0] === name
   );
-  expect(plugin).toBeDefined();
+
+  if (!plugin) {
+    throw new Error(`Missing semantic-release plugin: ${name}`);
+  }
+
   return plugin;
 };
 

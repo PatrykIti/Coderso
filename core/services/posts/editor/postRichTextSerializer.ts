@@ -1,24 +1,19 @@
 import { sanitizePostRichTextHtml } from "./postRichTextSanitizer";
 import { postRichTextAllowedTagSet } from "./postRichTextSchema";
+import { escapeHtml, htmlToPlainText } from "./postRichTextHtmlUtils";
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-
-const decodeHtmlEntities = (value: string) =>
-  value
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-
-const stripHtmlTags = (value: string) => value.replace(/<[^>]+>/g, " ");
+const postRichTextPlainTextBlockTags = new Set([
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "blockquote",
+  "li",
+  "pre",
+]);
 
 const richTextAliasTagSet = new Set(["b", "i", "div"]);
 
@@ -69,10 +64,7 @@ export function deserializePostRichText(value: unknown): string {
 export function postRichTextToPlainText(value: unknown): string {
   const html = serializePostRichText(value);
   if (!html) return "";
-  const text = decodeHtmlEntities(stripHtmlTags(html))
-    .replace(/\s+/g, " ")
-    .trim();
-  return text;
+  return htmlToPlainText(html, postRichTextPlainTextBlockTags);
 }
 
 export function countPostRichTextWords(value: unknown): number {

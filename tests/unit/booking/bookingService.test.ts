@@ -1,6 +1,6 @@
-import { afterAll, beforeEach, expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import {
@@ -12,10 +12,10 @@ import {
   bookingServices,
 } from "../../../core/db/schema";
 import {
-  createBookingBlackout,
-  createBookingReservation,
-  createBookingResource,
-  createBookingService,
+  createBookingBlackout as createBookingBlackoutBase,
+  createBookingReservation as createBookingReservationBase,
+  createBookingResource as createBookingResourceBase,
+  createBookingService as createBookingServiceBase,
   previewBookingSlots,
   setBookingSchedules,
   setBookingServiceResources,
@@ -31,6 +31,11 @@ const testIfDbWithOptions = testIfDb as unknown as (
   options: { timeout: number }
 ) => void;
 
+const createdResourceIds: string[] = [];
+const createdServiceIds: string[] = [];
+const createdBookingIds: string[] = [];
+const createdBlackoutIds: string[] = [];
+
 async function canConnect() {
   try {
     await db.execute(sql`select 1`);
@@ -42,12 +47,78 @@ async function canConnect() {
 
 const cleanup = async () => {
   if (!hasDb) return;
-  await db.delete(bookings);
-  await db.delete(bookingBlackouts);
-  await db.delete(bookingSchedules);
-  await db.delete(bookingServiceResources);
-  await db.delete(bookingServices);
-  await db.delete(bookingResources);
+  const bookingIds = [...new Set(createdBookingIds)];
+  const blackoutIds = [...new Set(createdBlackoutIds)];
+  const resourceIds = [...new Set(createdResourceIds)];
+  const serviceIds = [...new Set(createdServiceIds)];
+
+  if (bookingIds.length > 0) {
+    await db.delete(bookings).where(inArray(bookings.id, bookingIds));
+    createdBookingIds.length = 0;
+  }
+
+  if (resourceIds.length > 0) {
+    await db.delete(bookings).where(inArray(bookings.resourceId, resourceIds));
+  }
+
+  if (serviceIds.length > 0) {
+    await db.delete(bookings).where(inArray(bookings.serviceId, serviceIds));
+  }
+
+  if (blackoutIds.length > 0) {
+    await db.delete(bookingBlackouts).where(inArray(bookingBlackouts.id, blackoutIds));
+    createdBlackoutIds.length = 0;
+  }
+
+  if (resourceIds.length > 0) {
+    await db.delete(bookingBlackouts).where(inArray(bookingBlackouts.resourceId, resourceIds));
+    await db.delete(bookingSchedules).where(inArray(bookingSchedules.resourceId, resourceIds));
+    await db
+      .delete(bookingServiceResources)
+      .where(inArray(bookingServiceResources.resourceId, resourceIds));
+    await db.delete(bookingResources).where(inArray(bookingResources.id, resourceIds));
+    createdResourceIds.length = 0;
+  }
+
+  if (serviceIds.length > 0) {
+    await db
+      .delete(bookingServiceResources)
+      .where(inArray(bookingServiceResources.serviceId, serviceIds));
+    await db.delete(bookingServices).where(inArray(bookingServices.id, serviceIds));
+    createdServiceIds.length = 0;
+  }
+};
+
+const createBookingResource = async (
+  input: Parameters<typeof createBookingResourceBase>[0]
+) => {
+  const resource = await createBookingResourceBase(input);
+  createdResourceIds.push(resource.id);
+  return resource;
+};
+
+const createBookingService = async (
+  input: Parameters<typeof createBookingServiceBase>[0]
+) => {
+  const service = await createBookingServiceBase(input);
+  createdServiceIds.push(service.id);
+  return service;
+};
+
+const createBookingReservation = async (
+  input: Parameters<typeof createBookingReservationBase>[0]
+) => {
+  const booking = await createBookingReservationBase(input);
+  if (booking) createdBookingIds.push(booking.id);
+  return booking;
+};
+
+const createBookingBlackout = async (
+  input: Parameters<typeof createBookingBlackoutBase>[0]
+) => {
+  const blackout = await createBookingBlackoutBase(input);
+  if (blackout) createdBlackoutIds.push(blackout.id);
+  return blackout;
 };
 
 const toDateString = (date: Date) => {
@@ -56,10 +127,6 @@ const toDateString = (date: Date) => {
   const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
-
-beforeEach(async () => {
-  await cleanup();
-});
 
 afterAll(async () => {
   await cleanup();

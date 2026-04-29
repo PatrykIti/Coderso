@@ -54,6 +54,27 @@ set -a && source .env && set +a
 Do not commit local secrets, `.env` files, database URLs, provider keys, or
 private credentials.
 
+## Repository Secrets For CI
+
+Coderso PR checks are intentionally repository-secret backed. Pull requests must
+run against a maintained PostgreSQL test database, and the CI preflight applies
+Drizzle migrations before the test lanes start.
+
+Required repository secrets:
+
+- `DATABASE_URL` - PostgreSQL connection string for PR gates. The database must
+  be disposable test infrastructure, never production data.
+- `SEMANTIC_RELEASE_APP_ID` - GitHub App id used by the release workflow on
+  `main`.
+- `SEMANTIC_RELEASE_APP_PRIVATE_KEY` - private key for the semantic-release
+  GitHub App. The app must have repository access and branch-policy bypass for
+  release commits/tags.
+
+The repository-provided `GITHUB_TOKEN` is still used where GitHub Actions
+requires it, such as code-scanning uploads, Gitleaks PR scanning, and GHCR
+package publishing. Do not add a personal access token unless a task explicitly
+requires one.
+
 ## Development Workflow
 
 - Prefer a dedicated branch or worktree for non-trivial changes.

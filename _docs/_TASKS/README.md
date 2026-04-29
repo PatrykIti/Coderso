@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 48 tasks
-- **In Progress:** 32 tasks
-- **Done:** 1321 tasks
+- **In Progress:** 38 tasks
+- **Done:** 1320 tasks
 
 ---
 
@@ -93,6 +93,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-237 | GitHub CodeQL Security Findings Remediation | High | Large | In progress: local remediation implemented and validated; final GitHub CodeQL closure waits for PR checks |
+| TASK-237-01 | Workflow Least-Privilege Permissions | High | Small | In progress: explicit read-only workflow permissions and regression coverage added; awaiting GitHub CodeQL verification |
+| TASK-237-02 | Listing Query Path Hardening | High | Small | In progress: listing projection path guards and prototype-pollution regression coverage added; awaiting GitHub CodeQL verification |
+| TASK-237-03 | Video Embed Host Validation | High | Medium | In progress: shared exact YouTube host validation added for runtime and editor preview; awaiting GitHub CodeQL verification |
+| TASK-237-04 | Rich Text Sanitizer and Entity Hardening | High | Large | In progress: shared rich-text utilities and sanitizer/entity refactor implemented; awaiting GitHub CodeQL verification |
+| TASK-237-05 | CodeQL Verification, Docs, and Closure | High | Medium | In progress: local Bun/Vitest/lint/typecheck/audit/scanner validation passed; PR CodeQL alert re-query and changelog closure remain |
 | TASK-220 | ESLint 9 React Hooks Compiler Cleanup | High | Large | Fix the 113 React Hooks/Compiler lint findings surfaced by the full `eslint-plugin-react-hooks` recommended preset |
 | TASK-220-01 | Baseline, Rule Policy, and Contributor Guardrails | High | Medium | Lock the ESLint 9 hooks baseline, rule policy, and contributor guidance before implementation |
 | TASK-220-01-01 | Lint Inventory and Rule Ownership | High | Small | Keep a reproducible JSON/grouped inventory and assign every finding to one implementation leaf |

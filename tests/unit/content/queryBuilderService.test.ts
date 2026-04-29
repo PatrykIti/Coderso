@@ -44,6 +44,23 @@ const expectApiErrorCode = (run: () => unknown, expectedCode: string) => {
   }
 };
 
+const expectAsyncApiErrorCode = async (
+  run: () => Promise<unknown>,
+  expectedCode: string
+) => {
+  let captured: unknown;
+  try {
+    await run();
+  } catch (error) {
+    captured = error;
+  }
+
+  expect(captured).toBeInstanceOf(ApiError);
+  if (captured instanceof ApiError) {
+    expect(captured.code).toBe(expectedCode);
+  }
+};
+
 test("parseListingQuery normalizes values and source config", () => {
   const parsed = parseListingQuery(buildEntriesQuery());
   expect(parsed.sourceConfig.contentTypeId).toBe("type-post");
@@ -73,6 +90,34 @@ test("parseListingQuery rejects unsafe field segments", () => {
   const query = buildEntriesQuery();
   query.fields = ["id", "__proto__.polluted"];
   expectApiErrorCode(() => parseListingQuery(query), "listing_query_invalid_field");
+});
+
+test("executeListingQuery guards projection paths against prototype pollution", async () => {
+  const query = buildEntriesQuery();
+  query.fields = ["__proto__.polluted"];
+
+  await expectAsyncApiErrorCode(
+    () =>
+      executeListingQuery(query, {
+        rowsResolver: async () => [{ id: "entry-1", title: "Entry" }],
+      }),
+    "listing_query_invalid_field"
+  );
+
+  expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+});
+
+test("executeListingQuery still projects safe nested fields", async () => {
+  const query = buildEntriesQuery();
+  query.fields = ["data.seo.title"];
+
+  const result = await executeListingQuery(query, {
+    rowsResolver: async () => [
+      { id: "entry-1", status: "published", data: { seo: { title: "SEO title" } } },
+    ],
+  });
+
+  expect(result.rows).toEqual([{ id: "entry-1", data: { seo: { title: "SEO title" } } }]);
 });
 
 test("parseListingQuery rejects value for exists operator", () => {

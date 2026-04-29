@@ -27,10 +27,10 @@ Gate ownership follows product architecture:
 - Vitest is the target runner for pure TS/admin/UI coverage lanes that do not depend on Bun runtime primitives.
 
 Release gates must not weaken runtime guarantees just to normalize tooling.
-DB-backed smoke checks are optional inside the release-gate runner: when
-`DATABASE_URL` is present they execute, and when it is absent they are reported
-as skipped while pure lint, UI, performance, security, and catalog checks still
-run. Do not import `core/db/client` in pure gate tests just to read defaults.
+The local release-gate runner can still mark DB-backed checks as skipped when
+`DATABASE_URL` is absent, but repository PR gates require the secret. CI prepares
+the configured test database with Drizzle migrations before any test lane starts.
+Do not import `core/db/client` in pure gate tests just to read defaults.
 
 ## Gate Matrix
 
@@ -64,11 +64,12 @@ Additional security suites are executed in gate runner:
 - `tests/vitest/forms/submissionNonce.test.ts`
 - `tests/unit/server/publicBookingApi.test.ts` when `DATABASE_URL` is available
 
-## Optional DB-Backed Checks
+## DB-Backed Checks
 
-The release gate workflow passes `DATABASE_URL` from the repository secret when
-available. This is useful for a maintained Render test database, but the gate
-contract does not require a database to be available for every PR.
+The `Coderso PR Gates` workflow passes `DATABASE_URL` from the repository secret
+and runs `bun run db:migrate` in `database-preflight` before the test lanes.
+This lets maintainers point CI at a fresh test database by changing one
+repository secret; migrations prepare the schema before DB-backed suites run.
 
 DB-backed commands currently include:
 
@@ -76,9 +77,11 @@ DB-backed commands currently include:
 - `tests/unit/kits/installService.test.ts`
 - `tests/integration/store/revocations.test.ts`
 
-Without `DATABASE_URL`, those commands are marked as skipped in the JSON report
-with `skipReason: "database_url_missing"`. When `DATABASE_URL` is configured,
-the DB-backed suites own their existing connection checks and cleanup behavior.
+Without `DATABASE_URL`, local runner commands mark those checks as skipped in the
+JSON report with `skipReason: "database_url_missing"`. In CI, missing
+`DATABASE_URL` fails the preflight before downstream jobs start. When
+`DATABASE_URL` is configured, the DB-backed suites own their existing connection
+checks and cleanup behavior.
 DB-backed suites that share mutable tables must run serially or isolate fixtures
 so CI does not delete data from another in-flight test on the same test
 database.
@@ -89,7 +92,7 @@ databases.
 ## CI and Local Security Gate (SAST/SCA/Secrets/CVE)
 
 Additional CI and local security gates are enforced via:
-- `.github/workflows/security-gate.yml`
+- `.github/workflows/coderso-pr-gates.yml`
 - `.semgrep.yml` (local SAST rules + registry packs)
 - `.gitleaks.toml` (secrets scanning config)
 - `.trivyignore` (time-boxed allowlist for CVEs)
@@ -113,9 +116,14 @@ matrix as a release-style fail-fast gate.
 ## CI Integration
 
 Workflow:
-- `.github/workflows/coderso-release-gates.yml`
+- `.github/workflows/coderso-pr-gates.yml`
 
-Runs on pull requests and manual dispatch, then uploads gate report artifact.
+Runs on pull requests and manual dispatch:
+
+1. `database-preflight` verifies `DATABASE_URL` and applies migrations.
+2. `vitest-lane` and `bun-lane` run in parallel.
+3. `security-gate` runs Semgrep, Trivy, Gitleaks, and SARIF uploads.
+4. `coderso-release-gates` runs last and uploads the release-gate report.
 
 ## Usage
 

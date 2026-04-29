@@ -49,6 +49,7 @@ import {
   serializePostRichText,
 } from "../../../../services/posts/editor/postRichTextSerializer";
 import { renderPostRichTextHtml } from "../../../../services/posts/runtime/postRichTextReactRenderer";
+import { toYoutubeEmbedUrl } from "../../../../services/posts/shared/videoEmbed";
 import {
   createWritingCanvasContentFromEditorHtml,
   serializeWritingCanvasContentToHtml,
@@ -149,26 +150,6 @@ const sanitizeEmbedUrl = (value: unknown) => {
   return null;
 };
 
-const parseYoutubeId = (value: string) => {
-  try {
-    const parsed = new URL(value);
-    const host = parsed.hostname.toLowerCase();
-    if (host.includes("youtube.com")) {
-      const videoId = parsed.searchParams.get("v");
-      if (videoId) return videoId;
-      const split = parsed.pathname.split("/").filter(Boolean);
-      return split[1] ?? split[0] ?? null;
-    }
-    if (host.includes("youtu.be")) {
-      const [id] = parsed.pathname.split("/").filter(Boolean);
-      return id ?? null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
-
 const parseVimeoId = (value: string) => {
   try {
     const parsed = new URL(value);
@@ -199,8 +180,7 @@ const resolveEmbedSrc = (provider: string, url: unknown) => {
   const safeUrl = sanitizeEmbedUrl(url);
   if (!safeUrl) return null;
   if (provider === "youtube") {
-    const id = parseYoutubeId(safeUrl);
-    return id ? `https://www.youtube.com/embed/${encodeURIComponent(id)}` : null;
+    return toYoutubeEmbedUrl(safeUrl);
   }
   if (provider === "vimeo") {
     const id = parseVimeoId(safeUrl);

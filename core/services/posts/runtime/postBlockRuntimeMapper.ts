@@ -14,6 +14,7 @@ import {
   type PostImageWidth,
   type PostImageWrap,
 } from "../postImageWrapLayout";
+import { toYoutubeEmbedUrl } from "../shared/videoEmbed";
 
 type ReadMediaById = typeof import("../../media/mediaService").getMediaById;
 
@@ -65,12 +66,6 @@ const sanitizeClassName = (value: unknown) => {
   return tokens.length > 0 ? tokens.join(" ") : undefined;
 };
 
-const stripHtml = (value: string) =>
-  value
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
 const truncate = (value: string, maxLength: number) => {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength).trimEnd()}...`;
@@ -96,26 +91,6 @@ const sanitizeEmbedUrl = (value: unknown) => {
   if (!trimmed) return null;
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
-  }
-  return null;
-};
-
-const parseYoutubeId = (value: string) => {
-  try {
-    const parsed = new URL(value);
-    const host = parsed.hostname.toLowerCase();
-    if (host.includes("youtube.com")) {
-      const videoId = parsed.searchParams.get("v");
-      if (videoId) return videoId;
-      const split = parsed.pathname.split("/").filter(Boolean);
-      return split[1] ?? split[0] ?? null;
-    }
-    if (host.includes("youtu.be")) {
-      const [id] = parsed.pathname.split("/").filter(Boolean);
-      return id ?? null;
-    }
-  } catch {
-    return null;
   }
   return null;
 };
@@ -149,8 +124,7 @@ const parseLoomId = (value: string) => {
 const resolveEmbedSrc = (provider: string, url: string | null) => {
   if (!url) return null;
   if (provider === "youtube") {
-    const id = parseYoutubeId(url);
-    return id ? `https://www.youtube.com/embed/${encodeURIComponent(id)}` : null;
+    return toYoutubeEmbedUrl(url);
   }
   if (provider === "vimeo") {
     const id = parseVimeoId(url);
@@ -1073,7 +1047,7 @@ export function resolvePostRuntimeExcerpt(
   ];
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;
-    const plain = stripHtml(candidate);
+    const plain = postRichTextToPlainText(candidate);
     if (!plain) continue;
     return truncate(plain, normalizedMax);
   }
