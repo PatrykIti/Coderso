@@ -59,6 +59,9 @@ name reads like a geographic/location field to non-technical users.
   - `PATCH /menus/:id`
   - `GET /menus/:id`
 - Menu summary includes `location: string | null`.
+- The current `POST /menus` route schema requires the `location` property, but
+  accepts `string | null`. The admin create dialog may let users leave Location
+  empty, and the client serializes that as explicit `location: null`.
 - `menus.location` is unique when set.
 - `getMenuWithItemsByLocation(location)` trims/normalizes the supplied slot and
   fetches the matching menu.
@@ -125,6 +128,8 @@ Route/service verification shape:
 
 ```ts
 test("menus route accepts nullable location and rejects unknown fields", async () => {
+  // Preserve current route compatibility: create payloads include explicit
+  // location even when the UI field is empty.
   await postMenu({ name: "Footer", location: null });
   await patchMenu(menuId, { location: "footer" });
   await expectPatchMenu(menuId, { location: "footer", unsafe: true }).rejects.toMatchObject({
@@ -173,3 +178,6 @@ test("navigation uses published menu location fallback only", async () => {
 4. Existing nullable string API payloads remain compatible.
 5. Docs no longer imply Location is limited to a hard-coded enum unless code
    actually enforces one.
+6. If the implementer decides to make `location` optional on `POST /menus`, the
+   route schema, API docs, client tests, and integration tests are updated in
+   the same leaf.

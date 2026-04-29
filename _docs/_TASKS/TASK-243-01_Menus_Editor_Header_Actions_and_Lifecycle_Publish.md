@@ -30,7 +30,9 @@ publish action.
   - move `Discard` and `Save changes` into `PageHeader.actions`;
   - add lifecycle status badge and `Publish` / `Move to Draft` action;
   - extend editor menu state to include `status` and `publishedAt`;
-  - centralize save/publish mutation flow.
+  - centralize save/publish mutation flow;
+  - preserve the current own-mutation cache-event suppression or replace it
+    with an equivalent in-flight guarded subscription path.
 - `core/admin/services/menusClient.ts`
   - reuse `publishMenu`, `moveMenuToDraft`, and `updateMenu`;
   - add no new client method unless the editor needs a small typed wrapper.
@@ -51,6 +53,11 @@ publish action.
 - `MenuEditorPage` currently tracks only `id`, `name`, `location`, and
   `createdAt` in `originalMenu`, so lifecycle state must be added before UI can
   render status or publish from the editor.
+- `updateMenu()` broadcasts `menus:list` and `menus:detail:<id>` cache events.
+- `replaceMenuItems()` clears and broadcasts `menus:detail:<id>`.
+- The current editor increments `skipNextDetailRefreshCountRef` before its own
+  writes so cacheBus detail events from the same save do not look like remote
+  updates. Any refactor must keep that behavior.
 
 ## Security Contract
 
@@ -87,6 +94,19 @@ toasts, and in-flight protection stay consistent:
 const mutationInFlightRef = useRef(false);
 const [pendingAction, setPendingAction] = useState<"save" | "publish" | "draft" | null>(null);
 
+async function runOwnDetailMutation<T>(operation: () => Promise<T>) {
+  skipNextDetailRefreshCountRef.current += 1;
+  try {
+    return await operation();
+  } catch (err) {
+    skipNextDetailRefreshCountRef.current = Math.max(
+      0,
+      skipNextDetailRefreshCountRef.current - 1
+    );
+    throw err;
+  }
+}
+
 async function persistMenuEditorState(options?: {
   nextStatus?: MenuSummary["status"];
   successMessage?: string;
@@ -110,15 +130,25 @@ async function persistMenuEditorState(options?: {
       name: menuName,
       location: menuLocation,
       originalMenu,
-      nextStatus: options?.nextStatus,
     });
 
+    // Save editable draft state first. Do not publish until metadata and item
+    // tree writes have both succeeded, because runtime navigation can render a
+    // published menu immediately.
     if (metadataPatch) {
-      await updateMenu(menuId, metadataPatch);
+      await runOwnDetailMutation(() => updateMenu(menuId, metadataPatch));
     }
 
     if (isDirty) {
-      await replaceMenuItems(menuId, buildMenuItemsPayload(items));
+      await runOwnDetailMutation(() =>
+        replaceMenuItems(menuId, buildMenuItemsPayload(items))
+      );
+    }
+
+    if (options?.nextStatus) {
+      await runOwnDetailMutation(() =>
+        updateMenu(menuId, { status: options.nextStatus })
+      );
     }
 
     await loadMenu(menuId, {
@@ -139,6 +169,18 @@ async function persistMenuEditorState(options?: {
     mutationInFlightRef.current = false;
     setPendingAction(null);
   }
+}
+```
+
+The cacheBus detail subscription must continue to ignore own writes:
+
+```ts
+if (skipNextDetailRefreshCountRef.current > 0 || mutationInFlightRef.current) {
+  skipNextDetailRefreshCountRef.current = Math.max(
+    0,
+    skipNextDetailRefreshCountRef.current - 1
+  );
+  return;
 }
 ```
 
@@ -210,8 +252,11 @@ Keep refresh only in contextual recovery:
   - header contains `Discard`, `Save changes`, status badge, and `Publish` for
     a draft menu;
   - clicking `Publish` with unsaved metadata calls `updateMenu` with metadata
-    and `status: "published"`;
+    first, saves item changes, then sends `status: "published"` last;
+  - if item save fails after metadata save, `status: "published"` is not sent;
   - rapid save/publish clicks do not start two mutations.
+  - publish/save cache events from the same editor mutation do not show the
+    `Updated in another tab` alert.
 - `tests/vitest/ui/menu-editor-validation.test.ts`
   - update helper coverage if item payload building is extracted.
 - `bun --cwd core lint`

@@ -98,6 +98,7 @@ Source seams reviewed on 2026-04-29:
      and child/nest drop intents;
    - support natural nesting by dropping onto a row or dragging right into the
      nest intent preview;
+   - add a keyboard-accessible reorder path rather than making DnD pointer-only;
    - preserve cycle prevention and root drop behavior.
 
 ## Non-Goals
@@ -217,5 +218,7 @@ Reference surfaces:
 5. Drag starts only from the visible grip handle.
 6. The full row is a reliable drop target, with visible before/after/child
    feedback and deterministic nesting.
-7. Cycle prevention, root moves, dirty-state tracking, cache invalidation, and
+7. Keyboard users can reorder menu items through the chosen accessible reorder
+   contract.
+8. Cycle prevention, root moves, dirty-state tracking, cache invalidation, and
    existing item validation keep working.

@@ -37,16 +37,69 @@ contract work together without regressing the list-first Menus flow.
 
 ## Security Contract
 
-- Visibility: documentation and validation only.
-- Auth model: no auth behavior changes in this closure leaf.
-- RBAC: no RBAC behavior changes in this closure leaf.
-- CSRF: no CSRF behavior changes in this closure leaf.
-- Rate-limit bucket: no rate-limit behavior changes in this closure leaf.
-- Reject-unknown validation: confirm existing tests still prove strict Menus
-  payload handling if route/service code changed in the family.
-- Anti-abuse: confirm no new public write path was introduced.
+- Visibility:
+  - no new endpoints in this closure leaf;
+  - inherited internal admin routes remain `/admin/api/menus*`;
+  - inherited public runtime navigation reads remain read-only.
+- Auth model:
+  - authenticated admin session / admin API key where supported by the shared
+    admin stack for admin Menus writes;
+  - public runtime reads stay on existing site/widget rendering paths.
+- RBAC:
+  - unchanged `menus:read` / `menus:write`.
+- CSRF:
+  - unchanged for admin `PATCH /menus/:id` and `PUT /menus/:id/items`;
+  - nonce, HMAC/signature, and reCAPTCHA are not applicable because this family
+    adds no public write endpoint.
+- Rate-limit bucket:
+  - unchanged admin read/write buckets.
+- Reject-unknown validation:
+  - confirm strict Menus payload validation remains covered if route/service
+    code changed in the family.
+- Anti-abuse:
+  - confirm no public write path was introduced;
+  - confirm drag/drop remains local draft state until explicit save/publish;
+  - confirm docs do not instruct users to enter secrets or arbitrary class/script
+    values into Location.
 
-## Validation Matrix
+## Implementation Pseudocode
+
+```ts
+async function closeTask243() {
+  const vitestResult = await run(
+    "bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts"
+  );
+  if (!vitestResult.ok) throw new Error("Stop closure and fix TASK-243 regressions.");
+
+  if (routeServiceRuntimeBehaviorChanged) {
+    const bunResult = await run(
+      "set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts tests/unit/navigation/navigationRuntimeResolver.test.ts"
+    );
+    if (!bunResult.ok) throw new Error("Stop closure and fix Menus route/service/runtime regressions.");
+  }
+
+  await run("bun --cwd core lint");
+  await run("bun --cwd core lint:types");
+  await run("git diff --check");
+  await run("bun run gates:coderso");
+
+  updateDocs([
+    "docs/screens/menus.md",
+    "_docs/DATA_MODEL.md",
+    "_docs/CONTENT_LIST_UX.md",
+    "_docs/ADMIN_CACHE.md",
+  ]);
+  addChangelogEntry("menus-editor-action-location-drag-parity");
+  markTaskFamilyDone(["TASK-243", "TASK-243-01", "TASK-243-02", "TASK-243-03", "TASK-243-04"]);
+  recomputeTaskBoardStats();
+}
+```
+
+If any required suite is blocked by missing DB/env, record the exact command,
+error, and rerun requirement in the task completion notes instead of marking the
+coverage as green.
+
+## Testing Requirements
 
 Run targeted suites first:
 
@@ -104,9 +157,11 @@ bun run gates:coderso
 13. Publish the menu from the editor.
 14. Reload the editor and confirm structure, Location, and status persisted.
 
-## Documentation Requirements
+## Documentation Updates Required
 
 - `docs/screens/menus.md`
+  - fix stale list-screen copy that still mentions list `Refresh` / `New Menu`;
+    the current list contract uses compact `New` and no primary list `Refresh`;
   - remove instructions that point users to header `Back to menus` / `Refresh`;
   - document header `Discard`, `Save changes`, and `Publish`;
   - update drag instructions to say the grip is the drag handle;

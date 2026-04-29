@@ -31,13 +31,19 @@ Current problems:
 ## Files to Change
 
 - `core/admin/ui/menus/MenuItemRow.tsx`
-  - make the grip a real draggable button/handle;
+  - make the grip a real draggable button/handle, as a sibling of the
+    open-details button instead of a nested button;
   - remove `draggable` from the whole select/open-details button;
-  - keep row selection and edit/delete actions clickable.
+  - keep row selection and edit/delete actions clickable;
+  - add keyboard-accessible reorder controls or grip keyboard handling.
 - `core/admin/ui/menus/MenuTree.tsx`
   - make the full row a drop target;
   - resolve explicit `before`, `after`, and `child` intents;
-  - render visible drop previews for each intent;
+  - render `before` and `after` drop previews at the tree level so parent rows
+    with children show the marker in the final visual position;
+  - render child/nesting preview on the target row;
+  - resolve drop intent again on `drop` or read it from a ref so React state
+    flush timing cannot apply a stale hover intent;
   - preserve top/bottom root drop zones.
 - `core/admin/ui/menus/MenuEditorPage.tsx`
   - update move helpers and dirty-state behavior for the expanded drop intent;
@@ -83,10 +89,16 @@ Expected behavior:
   at the target's current parent level.
 - Dropping on the row center, or on the explicit nested preview, makes the
   dragged item the last child of the target.
-- Dragging horizontally right while hovering a row should bias the preview to
-  `child`.
+- Dragging horizontally right while hovering the center band should bias the
+  preview to `child`. Top and bottom before/after zones win over horizontal
+  movement so the contract stays deterministic.
 - Dragging onto root top/bottom zones moves the item to root start/end.
 - Dragging a parent into its own descendant remains blocked.
+- Keyboard users can reorder without pointer drag through either:
+  - grip-focused `Space` to grab, arrow keys to choose before/after/root/child
+    intent, `Enter` to drop, and `Escape` to cancel; or
+  - explicit row actions for move up, move down, indent, and outdent.
+  The implementation may choose either pattern, but it must be tested.
 
 ## Implementation Pseudocode
 
@@ -105,9 +117,9 @@ export function resolveMenuDropIntent(input: {
   const topZone = input.rect.height * 0.25;
   const bottomZone = input.rect.height * 0.75;
 
-  if (offsetX > threshold) return "child";
   if (offsetY < topZone) return "before";
   if (offsetY > bottomZone) return "after";
+  if (offsetX > threshold) return "child";
   return "child";
 }
 ```
@@ -186,12 +198,61 @@ export function moveMenuItems(
 }
 ```
 
-Render intent feedback:
+Render intent feedback from `MenuTree`, not only inside `MenuItemRow`:
 
 ```tsx
-{isDragTarget && dropIntent === "before" ? <DropLine label="Drop before" /> : null}
-{isDragTarget && dropIntent === "child" ? <ChildDropPreview label={`Drop inside ${label}`} /> : null}
-{isDragTarget && dropIntent === "after" ? <DropLine label="Drop after" /> : null}
+const renderTree = (items: MenuItemDisplay[], depth: number): ReactElement[] =>
+  items.flatMap((item) => {
+    const isTarget = hoverId === item.id && dragId !== null;
+    const children = item.children?.length
+      ? renderTree(item.children, depth + 1)
+      : [];
+
+    return [
+      isTarget && hoverIntent === "before" ? (
+        <DropLine key={`${item.id}:before`} label="Drop before" />
+      ) : null,
+      <MenuItemRow
+        key={item.id}
+        item={item}
+        depth={depth}
+        isDragTarget={isTarget}
+        dropIntent={isTarget && hoverIntent === "child" ? "child" : null}
+      />,
+      ...children,
+      isTarget && hoverIntent === "after" ? (
+        <DropLine key={`${item.id}:after`} label="Drop after" />
+      ) : null,
+    ].filter(Boolean);
+  });
+```
+
+Resolve drop intent at drop time as well as hover time:
+
+```ts
+const latestHoverIntentRef = useRef<MenuDropIntent>("child");
+
+onDragOver={(hovered, event) => {
+  if (!dragId) return;
+  const intent = resolveMenuDropIntent({
+    clientX: event.clientX,
+    clientY: event.clientY,
+    rect: event.currentTarget.getBoundingClientRect(),
+  });
+  latestHoverIntentRef.current = intent;
+  setHoverId(hovered.id);
+  setHoverIntent(intent);
+}}
+
+onDrop={(target, event) => {
+  if (!dragId || dragId === target.id) return;
+  const intent = resolveMenuDropIntent({
+    clientX: event.clientX,
+    clientY: event.clientY,
+    rect: event.currentTarget.getBoundingClientRect(),
+  }) ?? latestHoverIntentRef.current;
+  onMove(dragId, target.id, intent);
+}}
 ```
 
 ## Error Handling
@@ -208,9 +269,17 @@ Render intent feedback:
 - `tests/vitest/ui/menu-item-row.test.tsx`
   - grip has `draggable="true"` and `aria-label="Drag <label>"`;
   - open-details button is not draggable;
+  - grip keyboard reorder affordance or explicit move buttons are reachable by
+    keyboard;
   - edit/delete buttons still exist.
 - `tests/vitest/ui/menu-tree.test.tsx`
-  - row renders before/after/child drop feedback;
+  - use happy-dom/event-driven coverage, not only static SSR snapshots;
+  - fire `dragstart` from the handle;
+  - fire `dragover` and `drop` with explicit `left`, `top`, and `height` rects
+    for top, center, bottom, and right-offset cases;
+  - row renders before/after/child drop feedback in the final visual position;
+  - `onDrop` uses the resolved drop event intent, not a stale render-state
+    intent;
   - root drop zones remain available while dragging.
 - `tests/vitest/ui/menu-editor-validation.test.ts`
   - `resolveMenuDropIntent` maps top/bottom/center/right offsets correctly;
@@ -218,6 +287,9 @@ Render intent feedback:
   - `moveMenuItems(..., "after")` inserts after target;
   - `moveMenuItems(..., "child")` appends as child;
   - cycle prevention still returns the original items.
+- Existing `tests/vitest/ui/menu-leaf-components.test.tsx` drag mocks must be
+  updated to provide `left`, `top`, and `height` in `getBoundingClientRect()` if
+  they keep exercising DnD behavior.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -233,4 +305,5 @@ Render intent feedback:
 3. Full item rows accept drops reliably, not only a small lower strip.
 4. Before/after/child previews are visible and match the final move.
 5. Dragging right over a row offers a predictable child/nesting intent.
-6. Cycle prevention and root moves still work.
+6. Keyboard users can reorder via the chosen keyboard contract.
+7. Cycle prevention and root moves still work.
