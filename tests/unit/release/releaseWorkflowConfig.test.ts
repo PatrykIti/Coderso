@@ -23,6 +23,15 @@ test("semantic release workflow pins a supported Node runtime", () => {
   expect(releaseIndex).toBeGreaterThan(setupNodeIndex);
 });
 
+test("release Docker image tags normalize the GHCR repository to lowercase", () => {
+  const workflow = readFile(".github/workflows/release.yml");
+
+  expect(workflow).toContain('owner="$(printf \'%s\' "${GITHUB_REPOSITORY_OWNER}" | tr \'[:upper:]\' \'[:lower:]\')"');
+  expect(workflow).toContain('image_name="$(printf \'%s\' "${DOCKER_IMAGE_NAME}" | tr \'[:upper:]\' \'[:lower:]\')"');
+  expect(workflow).toContain('image="ghcr.io/${owner}/${image_name}"');
+  expect(workflow).not.toContain('image="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${DOCKER_IMAGE_NAME}"');
+});
+
 test("semantic release package version requires Node 22.14 or newer", () => {
   const pkg = JSON.parse(readFile("package.json")) as {
     devDependencies: Record<string, string>;
