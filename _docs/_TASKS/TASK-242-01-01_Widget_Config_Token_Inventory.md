@@ -27,7 +27,7 @@ truth.
 | Core definitions | `core/widgets/core/*.tsx` |
 | Admin editors | `core/admin/ui/widgets/editors/*.tsx` |
 | UI tests | `tests/vitest/ui/*editor-wave.test.tsx` |
-| Widget render tests | `tests/unit/widgets/*.test.tsx` |
+| Widget render tests | `tests/vitest/widgets/*.test.tsx`; existing `tests/unit/widgets/*.test.tsx` only where current coverage already lives |
 | Docs | `_docs/WIDGETS.md`, `_docs/_WIDGETS/*.md` |
 
 ## Required Classification
@@ -155,6 +155,43 @@ split.
 | `richTextSection` | `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx:56-75`, `524-876` | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx:350`, `535`, `647` | TASK-242-03-01 |
 | `timeline` | `core/admin/ui/widgets/editors/TimelineEditors.tsx:73-110`, `705-751` | `tests/vitest/ui/timeline-editor-wave.test.tsx:385`, `581` | TASK-242-03-01 |
 | `compareTimeline` | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx:50`, `932`, `1000` | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx:387`, `585`, `734` | TASK-242-03-01 |
+
+### Runtime Widget Test Owners
+
+Use the current runner ownership from `tests/README.md` and `vitest.config.ts`.
+Most pure widget render/normalizer coverage is Bun-free and belongs in
+`tests/vitest/widgets/*`. Keep the existing Bun-owned `tests/unit/widgets/*`
+files only for surfaces that already live there.
+
+| Surface | Runtime/render test owner |
+|---|---|
+| `hero` | `tests/vitest/widgets/hero.test.tsx` |
+| `navigation` | `tests/vitest/widgets/navigation.test.tsx` |
+| `footer` | `tests/vitest/widgets/footer.test.tsx` |
+| `stack` | `tests/vitest/widgets/stack.test.tsx` |
+| `splitLayout` | `tests/vitest/widgets/splitLayout.test.tsx` |
+| `gridColumns` | `tests/vitest/widgets/gridColumns.test.tsx` |
+| `divider` | `tests/vitest/widgets/divider.test.tsx` |
+| `spacer` | `tests/vitest/widgets/spacer.test.tsx` |
+| `screenTwoColumn` | `tests/vitest/widgets/screenWidgets.test.tsx`; add `tests/vitest/ui/screen-two-column-editor-wave.test.tsx` for editor select coverage |
+| `statsKpi` | `tests/vitest/widgets/statsKpi.test.tsx` |
+| `featureGrid` | `tests/vitest/widgets/featureGrid.test.tsx` |
+| `contentList` | `tests/unit/widgets/contentList.test.tsx` |
+| `postsFeed` | `tests/unit/widgets/postsFeedWidget.test.tsx` |
+| `entryTeaser` | `tests/unit/widgets/entryTeaser.test.tsx` |
+| `galleryMosaic` | `tests/vitest/widgets/galleryMosaic.test.tsx` |
+| `ctaBanner` | `tests/vitest/widgets/ctaBanner.test.tsx` |
+| `pricingPlans` | `tests/vitest/widgets/pricingPlans.test.tsx` |
+| `faqAccordion` | `tests/vitest/widgets/faqAccordion.test.tsx` |
+| `team` | `tests/vitest/widgets/team.test.tsx` |
+| `testimonials` | `tests/vitest/widgets/testimonials.test.tsx` |
+| `contact` | `tests/vitest/widgets/contact.test.tsx` |
+| `newsletter` | `tests/vitest/widgets/newsletter.test.tsx` |
+| `formEmbed` | `tests/vitest/widgets/formEmbed.test.tsx` |
+| `logoCloud` | `tests/vitest/widgets/logoCloud.test.tsx` |
+| `richTextSection` | `tests/vitest/widgets/richTextSection.test.tsx` |
+| `timeline` | `tests/vitest/widgets/timeline.test.tsx` |
+| `compareTimeline` | `tests/vitest/widgets/compareTimeline.test.tsx` |
 
 ### Documentation Owners
 

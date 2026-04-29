@@ -30,8 +30,11 @@ current configuration forces spacing, padding, or radius.
 - `core/widgets/core/hero.tsx`
 - `core/widgets/core/navigation.tsx`
 - `core/widgets/core/footer.tsx`
-- corresponding editor files under `core/admin/ui/widgets/editors/`
-- focused tests under `tests/vitest/ui/` and `tests/unit/widgets/`
+- runtime widget tests under `tests/vitest/widgets/`
+- existing `tests/unit/widgets/` suites only if a touched surface already lives
+  there
+- editor files and editor-wave tests are owned by TASK-242-03-01 unless the
+  same implementation chunk intentionally includes that leaf too
 
 ## Required Changes
 
@@ -83,10 +86,14 @@ const gapClassMap: Record<GapToken, string> = {
 
 ## Testing Requirements
 
-- Update existing editor-wave select assertions for stack, split layout, grid
-  columns, hero, navigation, and footer.
 - Add render/normalizer assertions for at least one `none` value per widget.
 - Keep legacy `"0"` assertions for stack, split layout, divider, and spacer.
+- Update runtime widget suites such as `tests/vitest/widgets/stack.test.tsx`,
+  `splitLayout.test.tsx`, `divider.test.tsx`, `spacer.test.tsx`,
+  `gridColumns.test.tsx`, `screenWidgets.test.tsx`, `hero.test.tsx`,
+  `navigation.test.tsx`, and `footer.test.tsx` as applicable.
+- Do not update editor-wave select assertions in this leaf; editor option
+  visibility and interactions are owned by TASK-242-03-01.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

@@ -52,7 +52,10 @@ Editor files under `core/admin/ui/widgets/editors/`, especially:
 - `DividerEditors.tsx`
 - `SpacerEditors.tsx`
 
-Tests under `tests/vitest/ui/` matching those editor files.
+Tests under `tests/vitest/ui/` matching those editor files. `ScreenEditors.tsx`
+currently has no focused screen-two-column editor-wave suite, so add
+`tests/vitest/ui/screen-two-column-editor-wave.test.tsx` unless an equivalent
+focused suite exists by implementation time.
 
 Use the line-level editor and test inventory in
 `TASK-242-01-01_Widget_Config_Token_Inventory.md` before editing. It maps each
@@ -106,6 +109,9 @@ const spacingOptions: Array<{ id: WidgetSpacing; label: string }> = [
   `none`.
 - Add at least one interaction per major editor family proving selecting `none`
   reaches `onChange`.
+- Add focused `ScreenEditors.tsx` coverage for `screenTwoColumn.gap`; the
+  current runtime suite is `tests/vitest/widgets/screenWidgets.test.tsx`, but
+  it does not cover the admin select.
 - Keep mode coverage: if a control exists in both Visual and Advanced, test both
   when existing suites already cover both modes.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/<touched-suite>.test.tsx`

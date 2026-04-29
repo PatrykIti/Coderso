@@ -37,6 +37,7 @@ close the task family with changelog and board synchronization.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
+- `bun run gates:coderso`
 - `bun run precommit` before manual commit, unless the configured commit hook
   runs it automatically.
 

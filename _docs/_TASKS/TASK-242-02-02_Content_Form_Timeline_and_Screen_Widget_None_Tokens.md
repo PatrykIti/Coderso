@@ -41,7 +41,10 @@ often cannot disable the preset.
 - `core/widgets/core/timeline.tsx`
 - `core/widgets/core/compareTimeline.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
-- corresponding editor and test files.
+- corresponding runtime widget test files in `tests/vitest/widgets/` or the
+  existing Bun-owned `tests/unit/widgets/` suite for that surface.
+- editor files and editor-wave tests are owned by TASK-242-03-01 unless the
+  same implementation chunk intentionally includes that leaf too.
 
 ## Required Changes
 
@@ -98,11 +101,15 @@ function resolveWidgetSpacing(value: unknown): WidgetSpacing {
 
 ## Testing Requirements
 
-- Update focused editor-wave suites for every touched widget editor.
 - Add render assertions for `data-*` markers where present, such as
   `data-stats-kpi-spacing`, `data-gallery-mosaic-gap`,
   `data-cta-banner-padding`, and similar markers.
-- Add normalizer tests where the widget already has unit coverage.
+- Add normalizer tests in the current owner suite for each widget. Use
+  `tests/vitest/widgets/*` for Bun-free widget render/normalizer tests and keep
+  existing `tests/unit/widgets/contentList.test.tsx`,
+  `postsFeedWidget.test.tsx`, and `entryTeaser.test.tsx` in Bun.
+- Do not update focused editor-wave suites in this leaf; editor option
+  visibility and interactions are owned by TASK-242-03-01.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

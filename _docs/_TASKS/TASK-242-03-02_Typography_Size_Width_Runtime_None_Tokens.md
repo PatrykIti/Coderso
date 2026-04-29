@@ -126,14 +126,14 @@ Update or add render/normalizer tests before the editor-only assertions land:
 
 | Surface | Test owner |
 |---|---|
-| hero runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/hero-editor-wave.test.tsx:810`, `1151` |
-| navigation runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/navigation-editor-wave.test.tsx:1049`, `1276`, `1335` |
-| footer runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/footer-editor-wave.test.tsx:203`, `427` |
-| rich text runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/rich-text-section-editor-wave.test.tsx:350`, `647` |
-| timeline runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/timeline-editor-wave.test.tsx:385`, `581` |
-| compare timeline runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/compare-timeline-editor-wave.test.tsx:387`, `585` |
-| form embed runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/form-embed-editor-wave.test.tsx:404`, `542` |
-| logo cloud runtime normalization/render | add focused coverage under `tests/unit/widgets/*.test.tsx`; editor behavior later in `tests/vitest/ui/logo-cloud-editor-wave.test.tsx:433`, `548`, `605` |
+| hero runtime normalization/render | `tests/vitest/widgets/hero.test.tsx`; editor behavior later in `tests/vitest/ui/hero-editor-wave.test.tsx:810`, `1151` |
+| navigation runtime normalization/render | `tests/vitest/widgets/navigation.test.tsx`; editor behavior later in `tests/vitest/ui/navigation-editor-wave.test.tsx:1049`, `1276`, `1335` |
+| footer runtime normalization/render | `tests/vitest/widgets/footer.test.tsx`; editor behavior later in `tests/vitest/ui/footer-editor-wave.test.tsx:203`, `427` |
+| rich text runtime normalization/render | `tests/vitest/widgets/richTextSection.test.tsx`; editor behavior later in `tests/vitest/ui/rich-text-section-editor-wave.test.tsx:350`, `647` |
+| timeline runtime normalization/render | `tests/vitest/widgets/timeline.test.tsx`; editor behavior later in `tests/vitest/ui/timeline-editor-wave.test.tsx:385`, `581` |
+| compare timeline runtime normalization/render | `tests/vitest/widgets/compareTimeline.test.tsx`; editor behavior later in `tests/vitest/ui/compare-timeline-editor-wave.test.tsx:387`, `585` |
+| form embed runtime normalization/render | `tests/vitest/widgets/formEmbed.test.tsx`; editor behavior later in `tests/vitest/ui/form-embed-editor-wave.test.tsx:404`, `542` |
+| logo cloud runtime normalization/render | `tests/vitest/widgets/logoCloud.test.tsx`; editor behavior later in `tests/vitest/ui/logo-cloud-editor-wave.test.tsx:433`, `548`, `605` |
 
 Run:
 
@@ -144,7 +144,8 @@ git diff --check
 ```
 
 Also run focused widget tests touched by the implementation. Use Vitest only
-for Bun-free editor/UI assertions.
+for Bun-free widget runtime and editor/UI assertions; keep Bun only for existing
+Bun-owned widget suites.
 
 ## Documentation Updates Required
 

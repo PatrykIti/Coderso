@@ -27,6 +27,7 @@ At minimum run:
 bun --cwd core lint
 bun --cwd core lint:types
 git diff --check
+bun run gates:coderso
 ```
 
 Run focused Vitest suites for every touched widget editor. The expected suite
@@ -56,11 +57,14 @@ set includes, but is not limited to:
 - `tests/vitest/ui/rich-text-section-editor-wave.test.tsx`
 - `tests/vitest/ui/timeline-editor-wave.test.tsx`
 - `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`
+- `tests/vitest/ui/screen-two-column-editor-wave.test.tsx` once added for
+  `ScreenEditors.tsx`
 - `tests/vitest/ui/spacer-editor-wave.test.tsx`
 - `tests/vitest/ui/divider-editor-wave.test.tsx`
 
-Also run any touched `tests/unit/widgets/*.test.tsx` suites that cover
-normalizers or render output.
+Also run any touched widget runtime suites that cover normalizers or render
+output. Most current widget render suites are in `tests/vitest/widgets/*`; keep
+existing `tests/unit/widgets/*` runs only for surfaces that already live there.
 
 ## Security Contract
 

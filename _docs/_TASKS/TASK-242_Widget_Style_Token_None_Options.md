@@ -119,7 +119,9 @@ Admin widget editors:
 Tests:
 
 - `tests/vitest/ui/*editor-wave.test.tsx`
-- `tests/unit/widgets/*.test.tsx`
+- `tests/vitest/widgets/*.test.tsx`
+- existing `tests/unit/widgets/*.test.tsx` suites only where current coverage is
+  already Bun-owned
 
 Docs and board:
 
@@ -199,12 +201,16 @@ const fontSizeClassMap: Record<WidgetFontSize, string> = {
 ## Testing Requirements
 
 - Focused Vitest editor tests for every touched editor select.
-- Unit/widget render tests proving `none` produces no forced class or a zero
-  spacing class, depending on field semantics.
+- Widget render tests in the correct current lane proving `none` produces no
+  forced class or a zero spacing class, depending on field semantics. Most
+  Bun-free widget render/normalizer suites live under `tests/vitest/widgets/*`;
+  keep existing Bun-owned `tests/unit/widgets/*` suites only for surfaces that
+  already use that lane.
 - Schema/normalizer tests proving `none` is accepted and bogus values still
   fall back or reject as they do today.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso` during final closure
 - `git diff --check`
 
 ## Documentation Updates Required
