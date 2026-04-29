@@ -41,6 +41,9 @@ name reads like a geographic/location field to non-technical users.
   - only touch if published-menu lookup by location is proven wrong.
 - `tests/vitest/ui/menu-editor-shell-wave.test.tsx`
   - cover user-facing guidance.
+- `tests/vitest/validation/menuSchemas.test.ts`
+  - cover `POST /menus` with `location: null`, missing `location`, and
+    unknown payload fields so the current schema contract is explicit.
 - `tests/integration/routes/menus.test.ts`
   - cover create/update nullable and non-null location if missing.
 - `tests/unit/menus/menuService.test.ts`
@@ -72,7 +75,8 @@ name reads like a geographic/location field to non-technical users.
 
 - Visibility: internal admin Menus editor and public runtime navigation read.
 - Auth model:
-  - editor writes use existing authenticated admin session;
+  - editor writes use existing authenticated admin session / admin API key
+    where supported by the shared admin stack;
   - runtime reads are public rendering reads through existing site/widget flow.
 - RBAC: existing `menus:read` / `menus:write`.
 - CSRF: unchanged for admin `PATCH /menus/:id`.
@@ -82,6 +86,8 @@ name reads like a geographic/location field to non-technical users.
   - unknown route payload fields remain rejected.
 - Anti-abuse:
   - no public write path;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because this leaf
+    introduces no public write endpoint;
   - Location guidance must not invite arbitrary script/CSS/class-name input;
   - runtime must keep draft menus hidden from public navigation.
 
@@ -152,9 +158,22 @@ test("navigation uses published menu location fallback only", async () => {
 });
 ```
 
+## Error Handling
+
+- Empty editor input serializes as `location: null`, not an omitted property,
+  while the current create schema still requires the `location` key.
+- Invalid or duplicate locations must surface the existing mapped API error
+  without raw database details or stack traces.
+- Unknown payload fields must remain strict validation errors.
+- Draft, missing, or empty menus in runtime navigation must keep the existing
+  fallback to manual/default links instead of rendering partial menu data.
+- If payload schema behavior changes, update route registration/error coverage
+  in the same leaf rather than relying only on UI tests.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/validation/menuSchemas.test.ts`
 - If route/service/runtime behavior is touched:
   - `set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts tests/unit/navigation/navigationRuntimeResolver.test.ts`
 - `bun --cwd core lint`
@@ -167,6 +186,8 @@ test("navigation uses published menu location fallback only", async () => {
 - `_docs/CMS_API.md` only if payload behavior changes
 - `docs/screens/menus.md`
 - `_docs/_TASKS/README.md` on status changes
+- Changelog coverage is completed by the TASK-243-04 family entry and must
+  list `TASK-243-02`.
 
 ## Acceptance Criteria
 

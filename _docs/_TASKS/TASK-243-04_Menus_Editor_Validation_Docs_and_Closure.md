@@ -67,7 +67,7 @@ contract work together without regressing the list-first Menus flow.
 ```ts
 async function closeTask243() {
   const vitestResult = await run(
-    "bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts"
+    "bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/validation/menuSchemas.test.ts"
   );
   if (!vitestResult.ok) throw new Error("Stop closure and fix TASK-243 regressions.");
 
@@ -110,7 +110,8 @@ bun run test:vitest -- \
   tests/vitest/ui/menu-tree.test.tsx \
   tests/vitest/ui/menu-item-row.test.tsx \
   tests/vitest/ui/menu-leaf-components.test.tsx \
-  tests/vitest/admin/menusClient.test.ts
+  tests/vitest/admin/menusClient.test.ts \
+  tests/vitest/validation/menuSchemas.test.ts
 ```
 
 Run Bun suites if any route, service, runtime resolver, or location payload
@@ -164,6 +165,8 @@ bun run gates:coderso
     the current list contract uses compact `New` and no primary list `Refresh`;
   - remove instructions that point users to header `Back to menus` / `Refresh`;
   - document header `Discard`, `Save changes`, and `Publish`;
+  - update Basic, Instruction, and Checklist sections for Draft/Published,
+    Publish, Move to Draft, and the safe save-items-then-publish lifecycle;
   - update drag instructions to say the grip is the drag handle;
   - explain before/after/child drop behavior;
   - explain Location as a theme/runtime slot and the published-menu dependency.

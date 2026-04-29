@@ -134,6 +134,7 @@ Test owners:
 - `tests/vitest/ui/menu-item-row.test.tsx`
 - `tests/vitest/ui/menu-leaf-components.test.tsx`
 - `tests/vitest/admin/menusClient.test.ts`
+- `tests/vitest/validation/menuSchemas.test.ts`
 - `tests/integration/routes/menus.test.ts`
 - `tests/unit/menus/menuService.test.ts`
 - `tests/unit/navigation/navigationRuntimeResolver.test.ts`
@@ -157,6 +158,8 @@ Reference surfaces:
 - CSRF:
   - unchanged; `PATCH /menus/:id` and `PUT /menus/:id/items` remain CSRF
     protected through the admin client.
+  - nonce, HMAC/signature, and reCAPTCHA are not applicable because this task
+    adds no public write endpoint.
 - Rate-limit bucket:
   - unchanged admin read/write buckets.
 - Reject-unknown validation:
@@ -183,7 +186,7 @@ Reference surfaces:
 ## Testing Requirements
 
 - Focused Vitest:
-  - `bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts`
+  - `bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/validation/menuSchemas.test.ts`
 - Bun route/service/runtime tests if location or lifecycle route/service code is
   touched:
   - `set -a && source .env && set +a && bun test tests/integration/routes/menus.test.ts tests/unit/menus/menuService.test.ts tests/unit/navigation/navigationRuntimeResolver.test.ts`

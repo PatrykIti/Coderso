@@ -62,7 +62,8 @@ publish action.
 ## Security Contract
 
 - Visibility: internal admin Menus editor.
-- Auth model: unchanged authenticated admin session.
+- Auth model: unchanged authenticated admin session / admin API key where
+  supported by the shared admin stack.
 - RBAC: existing `menus:write`.
 - CSRF: unchanged `updateMenu` / `publishMenu` / `moveMenuToDraft` CSRF path.
 - Rate-limit bucket: unchanged admin write bucket.
@@ -70,6 +71,8 @@ publish action.
   `status`, `name`, and `location` fields accepted by `PATCH /menus/:id`.
 - Anti-abuse: no public write endpoint, no raw server error stack display, and
   no concurrent publish/save races.
+- Nonce, signature/HMAC, and reCAPTCHA are not applicable because this leaf
+  introduces no public write endpoint.
 
 ## Implementation Pseudocode
 
@@ -113,7 +116,13 @@ async function persistMenuEditorState(options?: {
 }) {
   if (!menuId || mutationInFlightRef.current) return;
   mutationInFlightRef.current = true;
-  setPendingAction(options?.nextStatus === "published" ? "publish" : "save");
+  setPendingAction(
+    options?.nextStatus === "published"
+      ? "publish"
+      : options?.nextStatus === "draft"
+        ? "draft"
+        : "save"
+  );
   setError(null);
 
   const validation = validateMenuItemsPayload(items);
@@ -254,7 +263,7 @@ Keep refresh only in contextual recovery:
   - clicking `Publish` with unsaved metadata calls `updateMenu` with metadata
     first, saves item changes, then sends `status: "published"` last;
   - if item save fails after metadata save, `status: "published"` is not sent;
-  - rapid save/publish clicks do not start two mutations.
+  - rapid save/publish clicks do not start two mutations;
   - publish/save cache events from the same editor mutation do not show the
     `Updated in another tab` alert.
 - `tests/vitest/ui/menu-editor-validation.test.ts`
@@ -267,6 +276,8 @@ Keep refresh only in contextual recovery:
 - `docs/screens/menus.md`
 - `_docs/CONTENT_LIST_UX.md`
 - `_docs/_TASKS/README.md` on status changes.
+- Changelog coverage is completed by the TASK-243-04 family entry and must
+  list `TASK-243-01`.
 
 ## Acceptance Criteria
 

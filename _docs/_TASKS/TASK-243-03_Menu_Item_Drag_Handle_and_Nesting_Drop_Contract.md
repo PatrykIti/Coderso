@@ -41,10 +41,16 @@ Current problems:
   - resolve explicit `before`, `after`, and `child` intents;
   - render `before` and `after` drop previews at the tree level so parent rows
     with children show the marker in the final visual position;
+  - make tree-level drop markers first-class drop targets with explicit
+    `{ targetId, intent }` callbacks, not passive markup that can swallow drop
+    events;
   - render child/nesting preview on the target row;
   - resolve drop intent again on `drop` or read it from a ref so React state
     flush timing cannot apply a stale hover intent;
   - preserve top/bottom root drop zones.
+- `core/admin/ui/menus/menuDnD.ts`
+  - own the pure `MenuDropIntent` type and `resolveMenuDropIntent` helper so
+    UI components and tests do not depend on private component functions.
 - `core/admin/ui/menus/MenuEditorPage.tsx`
   - update move helpers and dirty-state behavior for the expanded drop intent;
   - preserve cycle prevention.
@@ -60,7 +66,8 @@ Current problems:
 ## Security Contract
 
 - Visibility: internal admin Menus editor only.
-- Auth model: unchanged authenticated admin session.
+- Auth model: unchanged authenticated admin session / admin API key where
+  supported by the shared admin stack.
 - RBAC: unchanged `menus:write` on eventual save.
 - CSRF: unchanged; drag-and-drop only mutates local draft state until
   `Save changes` / `Publish`.
@@ -71,6 +78,8 @@ Current problems:
   - prevent parent/child cycles client-side before save;
   - server-side menu item validation remains authoritative;
   - drag events must not serialize sensitive data beyond the dragged item id.
+- Nonce, signature/HMAC, and reCAPTCHA are not applicable because this leaf
+  introduces no public write endpoint.
 
 ## Drop Contract
 
@@ -94,15 +103,15 @@ Expected behavior:
   movement so the contract stays deterministic.
 - Dragging onto root top/bottom zones moves the item to root start/end.
 - Dragging a parent into its own descendant remains blocked.
-- Keyboard users can reorder without pointer drag through either:
-  - grip-focused `Space` to grab, arrow keys to choose before/after/root/child
-    intent, `Enter` to drop, and `Escape` to cancel; or
-  - explicit row actions for move up, move down, indent, and outdent.
-  The implementation may choose either pattern, but it must be tested.
+- Keyboard users reorder through explicit row actions computed in `MenuTree`:
+  move up, move down, indent, and outdent. Actions must expose disabled states
+  when a move is impossible and must be passed to `MenuItemRow` as typed props
+  instead of making the row rediscover sibling/index context.
 
 ## Implementation Pseudocode
 
-Extract pure intent resolution so it is easy to test:
+Extract pure intent resolution to `core/admin/ui/menus/menuDnD.ts` so it is
+easy to test and reuse:
 
 ```ts
 export function resolveMenuDropIntent(input: {
@@ -172,7 +181,10 @@ export function moveMenuItems(
   if (!dragItem || !targetItem) return items;
 
   const nextParentId = intent === "child" ? targetItem.id : targetItem.parentId ?? null;
-  if (nextParentId === dragId || collectRecordDescendants(items, dragId).has(nextParentId)) {
+  if (
+    nextParentId === dragId ||
+    (nextParentId && collectRecordDescendants(items, dragId).has(nextParentId))
+  ) {
     return items;
   }
 
@@ -198,7 +210,71 @@ export function moveMenuItems(
 }
 ```
 
-Render intent feedback from `MenuTree`, not only inside `MenuItemRow`:
+Pass concrete keyboard actions from `MenuTree` into each row:
+
+```ts
+type MenuKeyboardAction = {
+  id: "move-up" | "move-down" | "indent" | "outdent";
+  label: string;
+  disabled: boolean;
+  onSelect: () => void;
+};
+
+function buildKeyboardActions(input: {
+  item: MenuItemDisplay;
+  siblings: MenuItemDisplay[];
+  previousSibling?: MenuItemDisplay;
+  nextSibling?: MenuItemDisplay;
+  parent?: MenuItemDisplay;
+  onMove: (dragId: string, targetId: string, intent: MenuDropIntent) => void;
+}): MenuKeyboardAction[] {
+  return [
+    {
+      id: "move-up",
+      label: "Move up",
+      disabled: !input.previousSibling,
+      onSelect: () => {
+        if (input.previousSibling) {
+          input.onMove(input.item.id, input.previousSibling.id, "before");
+        }
+      },
+    },
+    {
+      id: "move-down",
+      label: "Move down",
+      disabled: !input.nextSibling,
+      onSelect: () => {
+        if (input.nextSibling) {
+          input.onMove(input.item.id, input.nextSibling.id, "after");
+        }
+      },
+    },
+    {
+      id: "indent",
+      label: "Indent",
+      disabled: !input.previousSibling,
+      onSelect: () => {
+        if (input.previousSibling) {
+          input.onMove(input.item.id, input.previousSibling.id, "child");
+        }
+      },
+    },
+    {
+      id: "outdent",
+      label: "Outdent",
+      disabled: !input.parent,
+      onSelect: () => {
+        if (input.parent) {
+          input.onMove(input.item.id, input.parent.id, "after");
+        }
+      },
+    },
+  ];
+}
+```
+
+Render intent feedback from `MenuTree`, not only inside `MenuItemRow`, and make
+drop markers first-class drop targets:
 
 ```tsx
 const renderTree = (items: MenuItemDisplay[], depth: number): ReactElement[] =>
@@ -210,7 +286,14 @@ const renderTree = (items: MenuItemDisplay[], depth: number): ReactElement[] =>
 
     return [
       isTarget && hoverIntent === "before" ? (
-        <DropLine key={`${item.id}:before`} label="Drop before" />
+        <DropLine
+          key={`${item.id}:before`}
+          label="Drop before"
+          targetId={item.id}
+          intent="before"
+          onDragOverIntent={handleMarkerDragOver}
+          onDropIntent={handleMarkerDrop}
+        />
       ) : null,
       <MenuItemRow
         key={item.id}
@@ -221,7 +304,14 @@ const renderTree = (items: MenuItemDisplay[], depth: number): ReactElement[] =>
       />,
       ...children,
       isTarget && hoverIntent === "after" ? (
-        <DropLine key={`${item.id}:after`} label="Drop after" />
+        <DropLine
+          key={`${item.id}:after`}
+          label="Drop after"
+          targetId={item.id}
+          intent="after"
+          onDragOverIntent={handleMarkerDragOver}
+          onDropIntent={handleMarkerDrop}
+        />
       ) : null,
     ].filter(Boolean);
   });
@@ -269,14 +359,18 @@ onDrop={(target, event) => {
 - `tests/vitest/ui/menu-item-row.test.tsx`
   - grip has `draggable="true"` and `aria-label="Drag <label>"`;
   - open-details button is not draggable;
-  - grip keyboard reorder affordance or explicit move buttons are reachable by
-    keyboard;
+  - explicit move up, move down, indent, and outdent actions are reachable by
+    keyboard and expose disabled states;
   - edit/delete buttons still exist.
 - `tests/vitest/ui/menu-tree.test.tsx`
+  - use `// @vitest-environment happy-dom` and mount the real tree for DnD
+    behavior;
   - use happy-dom/event-driven coverage, not only static SSR snapshots;
   - fire `dragstart` from the handle;
   - fire `dragover` and `drop` with explicit `left`, `top`, and `height` rects
     for top, center, bottom, and right-offset cases;
+  - drop onto before/after marker elements for an item with children and prove
+    the marker itself invokes the expected `{ targetId, intent }` move;
   - row renders before/after/child drop feedback in the final visual position;
   - `onDrop` uses the resolved drop event intent, not a stale render-state
     intent;
@@ -287,6 +381,7 @@ onDrop={(target, event) => {
   - `moveMenuItems(..., "after")` inserts after target;
   - `moveMenuItems(..., "child")` appends as child;
   - cycle prevention still returns the original items.
+  - before/after moves against a descendant target are also no-ops.
 - Existing `tests/vitest/ui/menu-leaf-components.test.tsx` drag mocks must be
   updated to provide `left`, `top`, and `height` in `getBoundingClientRect()` if
   they keep exercising DnD behavior.
@@ -297,6 +392,8 @@ onDrop={(target, event) => {
 
 - `docs/screens/menus.md`
 - `_docs/_TASKS/README.md` on status changes
+- Changelog coverage is completed by the TASK-243-04 family entry and must
+  list `TASK-243-03`.
 
 ## Acceptance Criteria
 
