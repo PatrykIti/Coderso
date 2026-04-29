@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 60 tasks
+- **To Do:** 65 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1358 tasks
 
@@ -93,6 +93,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Technical leaf: runtime/schema support for typography, width, logo, input, and button `none` tokens |
 | TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Final validation, widget docs, changelog, and board sync |
 | TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Technical leaf: focused test matrix, docs examples, changelog, and task closure |
+| TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Align Menus editor header actions, lifecycle publish, Location guidance, and handle-based drag/drop with current admin editor patterns |
+| TASK-243-01 | Menus Editor Header Actions and Lifecycle Publish | High | Medium | Technical leaf: remove header Back/Refresh, move Discard/Save/Publish into editor actions, and add lifecycle-safe publish flow |
+| TASK-243-02 | Menus Location Contract and Editor Guidance | High | Medium | Technical leaf: verify nullable theme-slot Location behavior and make editor/docs guidance clear |
+| TASK-243-03 | Menu Item Drag Handle and Nesting Drop Contract | High | Large | Technical leaf: make the grip the only drag handle and add deterministic before/after/child drop intents |
+| TASK-243-04 | Menus Editor Validation, Docs, and Closure | Medium | Medium | Technical leaf: targeted tests, manual QA checklist, docs, changelog, and board closure |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
