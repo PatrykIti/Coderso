@@ -51,6 +51,30 @@ test("PR gates prepare the CI database before test lanes", () => {
   expect(releaseGates).toContain("needs: security-gate");
 });
 
+test("PR gates pin supported Bun and Node runtimes", () => {
+  const workflow = readWorkflow();
+  const runtimeJobs = [
+    "database-preflight",
+    "vitest-lane",
+    "bun-lane",
+    "coderso-release-gates",
+  ].map((job) => getJobBlock(workflow, job));
+
+  expect(workflow).toContain("BUN_VERSION: 1.3.13");
+  expect(workflow).toContain("NODE_VERSION: 22.14.0");
+  expect(workflow).not.toContain("bun-version: 1.3.6");
+
+  for (const job of runtimeJobs) {
+    expect(job).toContain("oven-sh/setup-bun@v2");
+    expect(job).toContain("bun-version: ${{ env.BUN_VERSION }}");
+    expect(job).toContain("actions/setup-node@v4");
+    expect(job).toContain("node-version: ${{ env.NODE_VERSION }}");
+    expect(job).toContain("Verify CI runtime");
+    expect(job).toContain("node --version");
+    expect(job).toContain("bun --version");
+  }
+});
+
 test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   const workflow = readWorkflow();
   const securityGate = getJobBlock(workflow, "security-gate");

@@ -70,6 +70,9 @@ The `Coderso PR Gates` workflow passes `DATABASE_URL` from the repository secret
 and runs `bun run db:migrate` in `database-preflight` before the test lanes.
 This lets maintainers point CI at a fresh test database by changing one
 repository secret; migrations prepare the schema before DB-backed suites run.
+Runtime jobs in that workflow pin `BUN_VERSION=1.3.13` and
+`NODE_VERSION=22.14.0`, verify both versions in logs, and avoid relying on the
+GitHub runner's default Node runtime.
 
 DB-backed commands currently include:
 

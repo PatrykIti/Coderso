@@ -17,7 +17,9 @@ with explicit least-privilege permissions.
 
 The consolidated workflow must prepare the CI database first, run Vitest and Bun
 lanes in parallel, then run security scanning before the final Coderso release
-gates. Only the security job receives `security-events: write` for SARIF upload.
+gates. Runtime jobs must pin `BUN_VERSION=1.3.13` and
+`NODE_VERSION=22.14.0` instead of relying on runner defaults. Only the security
+job receives `security-events: write` for SARIF upload.
 
 ## File Inventory
 
@@ -35,6 +37,7 @@ gates. Only the security job receives `security-events: write` for SARIF upload.
 - [ ] Run `vitest-lane` and `bun-lane` in parallel after preflight.
 - [ ] Run `security-gate` after both lanes and scope `security-events: write` to that job.
 - [ ] Run `coderso-release-gates` only after security scanning passes.
+- [ ] Pin Bun and Node through workflow-level `BUN_VERSION` and `NODE_VERSION`.
 - [ ] Add YAML/text regression coverage for the permission and job-order contract.
 - [ ] Verify the workflow file still parses and keeps existing scanner/test/report steps.
 
@@ -52,11 +55,22 @@ on:
 permissions:
   contents: read
 
+env:
+  BUN_VERSION: 1.3.13
+  NODE_VERSION: 22.14.0
+
 jobs:
   database-preflight:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: node --version && bun --version
       - run: bun install --frozen-lockfile
       - run: test -n "${DATABASE_URL:-}"
       - run: bun run db:migrate
@@ -89,6 +103,10 @@ expect(workflow).not.toContain("contents: write");
 expect(workflow).not.toContain("actions: write");
 expect(workflow).toContain("database-preflight:");
 expect(workflow).toContain("bun run db:migrate");
+expect(workflow).toContain("BUN_VERSION: 1.3.13");
+expect(workflow).toContain("NODE_VERSION: 22.14.0");
+expect(workflow).toContain("actions/setup-node@v4");
+expect(workflow).toContain("bun-version: ${{ env.BUN_VERSION }}");
 expect(workflow).toContain("security-events: write");
 ```
 
@@ -140,3 +158,6 @@ the test pure Bun so it can run without GitHub credentials.
 - 2026-04-29: Consolidated testing, security, and release-gate PR workflows into
   `.github/workflows/coderso-pr-gates.yml` with DB migration preflight,
   lane/security/release gate ordering, and scoped SARIF permissions.
+- 2026-04-29: Updated PR gate runtime pins to Bun 1.3.13 and Node 22.14.0, with
+  regression coverage so CI does not fall back to the runner's default Node 20
+  or the old Bun 1.3.6 pin.

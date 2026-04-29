@@ -278,7 +278,9 @@ then `vitest-lane` runs Vitest tests and Vitest coverage while `bun-lane` runs
 curated Bun tests first and then Bun coverage. The local Bun lane helper can
 still skip env-dependent route suites when `DATABASE_URL` is unavailable, but
 repository PR gates require the secret so clean CI databases can be migrated
-before DB-backed suites run.
+before DB-backed suites run. Runtime jobs pin `BUN_VERSION=1.3.13` and
+`NODE_VERSION=22.14.0`; do not rely on the runner's default Node 20 for CI
+test or migration execution.
 
 Opt-in live assistant matrix:
 

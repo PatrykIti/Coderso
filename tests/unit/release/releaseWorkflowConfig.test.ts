@@ -10,11 +10,14 @@ const readFile = (relativePath: string) =>
 test("semantic release workflow pins a supported Node runtime", () => {
   const workflow = readFile(".github/workflows/release.yml");
 
+  expect(workflow).toContain("BUN_VERSION: 1.3.13");
   expect(workflow).toContain("NODE_VERSION: 22.14.0");
+  expect(workflow).toContain("bun-version: ${{ env.BUN_VERSION }}");
   expect(workflow).toContain("actions/setup-node@v4");
   expect(workflow).toContain("node-version: ${{ env.NODE_VERSION }}");
   expect(workflow).toContain("Verify release runtime");
   expect(workflow).toContain("node --version");
+  expect(workflow).toContain("bun --version");
 
   const setupNodeIndex = workflow.indexOf("Setup Node");
   const releaseIndex = workflow.indexOf("Run semantic-release");

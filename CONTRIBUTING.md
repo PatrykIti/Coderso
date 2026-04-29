@@ -75,6 +75,14 @@ requires it, such as code-scanning uploads, Gitleaks PR scanning, and GHCR
 package publishing. Do not add a personal access token unless a task explicitly
 requires one.
 
+CI runtime pins:
+
+- Bun: `1.3.13`
+- Node.js: `22.14.0`
+
+Keep PR gates and release automation on the same runtime pins unless a task
+updates the contract and regression tests together.
+
 ## Development Workflow
 
 - Prefer a dedicated branch or worktree for non-trivial changes.
