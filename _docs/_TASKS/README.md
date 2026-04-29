@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 59 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1358 tasks
 
@@ -81,6 +81,17 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Technical leaf: authoring guide plus redacted composer diagnostics/observability |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
+| TASK-242 | Widget Style Token None Options | High | Large | Add `none` off switches to off-capable widget visual tokens across schemas, renderers, editors, tests, and docs |
+| TASK-242-01 | Widget Token Audit and None Semantics | High | Medium | Lock widget token inventory and define where `none` is allowed before implementation |
+| TASK-242-01-01 | Widget Config Token Inventory | High | Small | Technical leaf: classify visual, legacy-zero, already-none, and structural widget token fields |
+| TASK-242-01-02 | None Token Semantics and Compatibility Helpers | High | Small | Technical leaf: define `none` behavior, legacy `"0"` compatibility, and helper ownership |
+| TASK-242-02 | Layout, Spacing, Gap, Padding, and Radius None Rollout | High | Large | Add `none` to layout-facing spacing, gap, padding, and radius widget contracts |
+| TASK-242-02-01 | Flow Layout and Container Widget None Tokens | High | Medium | Technical leaf: stack, split layout, divider, spacer, grid columns, hero, navigation, footer, and screen gaps |
+| TASK-242-02-02 | Content, Form, Timeline, and Screen Widget None Tokens | High | Large | Technical leaf: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens |
+| TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Add `none` to off-capable typography, size, width, logo/input/button controls and editors |
+| TASK-242-03-01 | Widget Editor Select Option Regressions | High | Medium | Technical leaf: expose `None` in widget selects and update editor-wave coverage |
+| TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Final validation, widget docs, changelog, and board sync |
+| TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Technical leaf: focused test matrix, docs examples, changelog, and task closure |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |

@@ -8,4 +8,8 @@ plugins-runtime
 core/db/migrations
 db/migrations
 .tmp
-_docs/_CHANGELOG/README.md
+
+# Markdown docs, task boards, PR templates, and architecture examples are
+# hand-formatted. Prettier rewrites pipe tables and structural examples into
+# noisy diffs that are harder to review.
+*.md
