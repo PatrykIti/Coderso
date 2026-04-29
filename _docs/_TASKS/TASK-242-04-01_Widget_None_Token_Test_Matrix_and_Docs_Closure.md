@@ -15,6 +15,10 @@
 Run and record the final validation for TASK-242, then close the docs, changelog,
 and board state.
 
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
 ## Validation Matrix
 
 At minimum run:

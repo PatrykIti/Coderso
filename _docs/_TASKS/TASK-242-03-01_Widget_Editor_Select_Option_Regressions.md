@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widget Editors + Tests
 **Estimated Effort:** Medium
-**Dependencies:** TASK-242-02, TASK-242-03
+**Dependencies:** TASK-242-02, TASK-242-03, TASK-242-03-02
 **Status:** To Do
 
 ---
@@ -15,6 +15,10 @@
 Update widget editor option arrays and regression tests so every approved
 `none` token is visible in Wizard, Visual, and Advanced modes where the field is
 editable.
+
+## Sub-Tasks
+
+- None. This is an execution leaf.
 
 ## Files to Change
 
@@ -49,6 +53,10 @@ Editor files under `core/admin/ui/widgets/editors/`, especially:
 - `SpacerEditors.tsx`
 
 Tests under `tests/vitest/ui/` matching those editor files.
+
+Use the line-level editor and test inventory in
+`TASK-242-01-01_Widget_Config_Token_Inventory.md` before editing. It maps each
+editor option array and focused wave suite to the owning widget surface.
 
 ## Editor UX Rules
 

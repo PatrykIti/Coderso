@@ -76,6 +76,28 @@ Explicit exclusions unless product scope changes:
 - `textTransform`, because it already has semantic `none`;
 - media type fields, because they already use `none` as a content mode.
 
+## Execution Readiness Review
+
+Reviewed on 2026-04-29 against the current repository state.
+
+The TASK-242 family is granular enough for implementation:
+
+- umbrella scope is tracked in this file;
+- semantic audit is owned by TASK-242-01 and TASK-242-01-01;
+- runtime/schema rollout is split into layout/composite leaves under
+  TASK-242-02, with typography/width/size runtime work isolated under
+  TASK-242-03-02;
+- editor select regressions are isolated under TASK-242-03-01;
+- validation, docs, changelog, and board closure are isolated under
+  TASK-242-04-01.
+
+The implementation inventory with exact source files, current line references,
+editor owners, test owners, and documentation owners lives in
+`TASK-242-01-01_Widget_Config_Token_Inventory.md`. Treat that leaf as the
+current execution map before touching code. If code shifts before
+implementation starts, refresh the line references there with `rg` and keep the
+same owner split.
+
 ## Sub-Tasks
 
 - [ ] TASK-242-01: Widget Token Audit and None Semantics

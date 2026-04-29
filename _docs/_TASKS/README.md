@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 59 tasks
+- **To Do:** 60 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1358 tasks
 
@@ -90,6 +90,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-242-02-02 | Content, Form, Timeline, and Screen Widget None Tokens | High | Large | Technical leaf: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens |
 | TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Add `none` to off-capable typography, size, width, logo/input/button controls and editors |
 | TASK-242-03-01 | Widget Editor Select Option Regressions | High | Medium | Technical leaf: expose `None` in widget selects and update editor-wave coverage |
+| TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Technical leaf: runtime/schema support for typography, width, logo, input, and button `none` tokens |
 | TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Final validation, widget docs, changelog, and board sync |
 | TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Technical leaf: focused test matrix, docs examples, changelog, and task closure |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |

@@ -16,6 +16,10 @@ Define the runtime meaning of `none` for each visual token family and decide
 whether local helpers or a small shared helper should own repeated compatibility
 logic.
 
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
 ## Required Semantics
 
 | Token family | `none` behavior |

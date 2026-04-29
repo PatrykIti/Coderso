@@ -16,6 +16,10 @@ Create a checked inventory of widget schema enums and editor option arrays that
 look like visual tokens. Use the current code, not only docs, as the source of
 truth.
 
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
 ## Inventory Owners
 
 | Owner group | Files to inspect |
@@ -80,6 +84,107 @@ Explicitly exclude unless product scope changes:
   value;
 - `textTransform`, media `type`, and background media `type`, because they
   already use semantic `none`.
+
+## Current Code Reference Inventory
+
+Reviewed on 2026-04-29. Line references are current for the checked-out
+`feature/tasks` branch. If another branch changes these files before
+implementation starts, refresh only the line references and keep the ownership
+split.
+
+### Runtime and Schema Owners
+
+| Surface | Source refs | Fields | Owner |
+|---|---|---|---|
+| `hero` | `core/widgets/core/hero.tsx:125-166`, `221-287`, `320-455`, `541` | `layout.maxWidth`, `layout.contentWidth`, `headlineSize`, `subheadSize`, `bodySize`, `borderRadius`, `mediaRadius`, `primaryButtonSize`, `secondaryButtonSize` | TASK-242-03-02 |
+| `navigation` | `core/widgets/core/navigation.tsx:184-202`, `236-256`, `366-387` | `layout.maxWidth`, `layout.paddingY`, `layout.itemGap`, `style.fontSize` | TASK-242-02-01, TASK-242-03-02 |
+| `footer` | `core/widgets/core/footer.tsx:119-136`, `192-210`, `332-391` | `layout.maxWidth`, `layout.columnGap`, `layout.sectionPaddingY`, `style.fontSize` | TASK-242-02-01, TASK-242-03-02 |
+| `stack` | `core/widgets/core/stack.tsx:11-26`, `108-166`, `208-260` | responsive `gap` tokens, legacy `"0"` alias | TASK-242-02-01 |
+| `splitLayout` | `core/widgets/core/splitLayout.tsx:13-57`, `118-191`, `247` | `gap`, legacy `"0"` alias | TASK-242-02-01 |
+| `gridColumns` | `core/widgets/core/gridColumns.tsx:26-36`, `217-254`, `331-497` | `gapX`, `gapY`, `columnPadding`; `columnRadius` already has `none` | TASK-242-02-01 |
+| `divider` | `core/widgets/core/divider.tsx:5-42`, `133-159` | `marginTop`, `marginBottom`, legacy `"0"` alias; keep `width` structural | TASK-242-02-01 |
+| `spacer` | `core/widgets/core/spacer.tsx:5-39`, `104`, `152` | responsive `height`, legacy `"0"` alias | TASK-242-02-01 |
+| `screenTwoColumn` | `core/widgets/core/screenTwoColumn.tsx:13-32`, `42-92` | `gap` | TASK-242-02-01 |
+| `statsKpi` | `core/widgets/core/statsKpi.tsx:7-96`, `35`, `162`, `240-376` | `style.spacing` | TASK-242-02-02 |
+| `featureGrid` | `core/widgets/core/featureGrid.tsx:7-123`, `53-72`, `261-428` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
+| `contentList` | `core/widgets/core/contentList.tsx:21-154`, `266`, `328`, `377-646` | `style.gap` | TASK-242-02-02 |
+| `postsFeed` | `core/widgets/core/postsFeed.tsx:149`, `228`, `333` | `style.gap` through content-list normalization | TASK-242-02-02 |
+| `entryTeaser` | `core/widgets/core/entryTeaser.tsx:9-110`, `204-210`, `268-523` | `style.spacing`, `style.radius` | TASK-242-02-02 |
+| `galleryMosaic` | `core/widgets/core/galleryMosaic.tsx:7-95`, `44-50`, `162-474` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
+| `ctaBanner` | `core/widgets/core/ctaBanner.tsx:7-112`, `46-54`, `178-339` | `style.padding`; `style.radius` already has `none` | TASK-242-02-02 |
+| `pricingPlans` | `core/widgets/core/pricingPlans.tsx:9-108`, `48-54`, `172-559` | `style.spacing`; `style.radius` already has `none` | TASK-242-02-02 |
+| `faqAccordion` | `core/widgets/core/faqAccordion.tsx:6-92`, `35`, `140`, `229-325` | `style.spacing` | TASK-242-02-02 |
+| `team` | `core/widgets/core/team.tsx:7-124`, `43-63`, `187-553` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
+| `testimonials` | `core/widgets/core/testimonials.tsx:6-92`, `43`, `155`, `238-372` | `style.spacing` | TASK-242-02-02 |
+| `contact` | `core/widgets/core/contact.tsx:8-180`, `59-82`, `219-327` | `style.spacing` | TASK-242-02-02 |
+| `newsletter` | `core/widgets/core/newsletter.tsx:6-99`, `31`, `135`, `178-251` | `style.spacing` | TASK-242-02-02 |
+| `formEmbed` | `core/widgets/core/formEmbed.tsx:210-224`, `80-112`, `265`, `501-538` | `layout.width`, `layout.spacing`, `style.radius`, `style.inputSize` | TASK-242-02-02, TASK-242-03-02 |
+| `logoCloud` | `core/widgets/core/logoCloud.tsx:6-92`, `35-42`, `134`, `214-354` | `style.logoHeight`, `style.gap` | TASK-242-02-02, TASK-242-03-02 |
+| `richTextSection` | `core/widgets/core/richTextSection.tsx:13-16`, `148-160`, `58-76`, `229`, `405-561` | `style.fontScale`, `style.spacing`; keep `options.maxWidth="full"` as existing no-limit width unless reclassified | TASK-242-02-02, TASK-242-03-02 |
+| `timeline` | `core/widgets/core/timeline.tsx:8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `layout.spacing`, `style.titleSize`, `style.descriptionSize`; keep marker/line size structural unless reclassified | TASK-242-02-02, TASK-242-03-02 |
+| `compareTimeline` | `core/widgets/core/compareTimeline.tsx:7-12`, `165`, `187-189`, `365`, `597`, `608-610` | `trackSpacing`, `trackLabelSize`, `stepLabelSize`, `segmentLabelSize` | TASK-242-02-02, TASK-242-03-02 |
+
+### Editor and Test Owners
+
+| Surface | Editor refs | Focused test refs | Owner |
+|---|---|---|---|
+| `hero` | `core/admin/ui/widgets/editors/HeroEditors.tsx:105-140`, `1035-1583` | `tests/vitest/ui/hero-editor-wave.test.tsx:810`, `1151` | TASK-242-03-01 |
+| `navigation` | `core/admin/ui/widgets/editors/NavigationEditors.tsx:69-78`, `1177-1354` | `tests/vitest/ui/navigation-editor-wave.test.tsx:1049`, `1276`, `1335` | TASK-242-03-01 |
+| `footer` | `core/admin/ui/widgets/editors/FooterEditors.tsx:32-57`, `663-826` | `tests/vitest/ui/footer-editor-wave.test.tsx:203`, `427` | TASK-242-03-01 |
+| `stack` | `core/admin/ui/widgets/editors/StackEditors.tsx:55`, `244-403` | `tests/vitest/ui/stack-editor-wave.test.tsx:171`, `321`, `419` | TASK-242-03-01 |
+| `splitLayout` | `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx:60`, `250`, `393`, `536` | `tests/vitest/ui/split-layout-editor-wave.test.tsx:299`, `361`, `455` | TASK-242-03-01 |
+| `gridColumns` | `core/admin/ui/widgets/editors/GridColumnsEditors.tsx:62-88`, `517-892` | `tests/vitest/ui/grid-columns-editor-wave.test.tsx:350`, `485`, `617`, `778` | TASK-242-03-01 |
+| `divider` | `core/admin/ui/widgets/editors/DividerEditors.tsx:60` | `tests/vitest/ui/divider-editor-wave.test.tsx:223`, `344` | TASK-242-03-01 |
+| `spacer` | `core/admin/ui/widgets/editors/SpacerEditors.tsx:45`, `184` | `tests/vitest/ui/spacer-editor-wave.test.tsx:346`, `415`, `559` | TASK-242-03-01 |
+| `screenTwoColumn` | `core/admin/ui/widgets/editors/ScreenEditors.tsx:339`, `385` | add or extend current screen editor coverage if no focused suite exists | TASK-242-03-01 |
+| `statsKpi` | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:59`, `586`, `657` | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx:378`, `521`, `650` | TASK-242-03-01 |
+| `featureGrid` | `core/admin/ui/widgets/editors/FeatureGridEditors.tsx:55-74`, `457`, `692-794` | `tests/vitest/ui/feature-grid-editor-wave.test.tsx:265`, `517`, `626` | TASK-242-03-01 |
+| `contentList` | `core/admin/ui/widgets/editors/ContentListEditors.tsx:92`, `610` | `tests/vitest/ui/content-list-editor-wave.test.tsx:472`, `713`, `996` | TASK-242-03-01 |
+| `postsFeed` | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx:70`, `448-459` | `tests/vitest/ui/posts-feed-editor-wave.test.tsx:293`, `643`; legacy coverage in `tests/vitest/ui/widget-editors-wave-1.test.tsx:435` | TASK-242-03-01 |
+| `entryTeaser` | `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx:79-86`, `925-945` | `tests/vitest/ui/entry-teaser-editor-wave.test.tsx:478`, `753`, `915` | TASK-242-03-01 |
+| `galleryMosaic` | `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx:63-69`, `673-771` | `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx:364`, `498`, `606` | TASK-242-03-01 |
+| `ctaBanner` | `core/admin/ui/widgets/editors/CtaBannerEditors.tsx:57-65`, `503-524` | `tests/vitest/ui/cta-banner-editor-wave.test.tsx:413`, `537`, `634` | TASK-242-03-01 |
+| `pricingPlans` | `core/admin/ui/widgets/editors/PricingPlansEditors.tsx:54-60`, `852-935` | `tests/vitest/ui/pricing-plans-editor-wave.test.tsx:374`, `577`, `745` | TASK-242-03-01 |
+| `faqAccordion` | `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx:52`, `618`, `720` | `tests/vitest/ui/faq-accordion-editor-wave.test.tsx:427`, `589`, `665` | TASK-242-03-01 |
+| `team` | `core/admin/ui/widgets/editors/TeamEditors.tsx:63-69`, `757-863` | `tests/vitest/ui/team-editor-wave.test.tsx:335`, `500`, `768` | TASK-242-03-01 |
+| `testimonials` | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx:52`, `442`, `678` | `tests/vitest/ui/testimonials-editor-wave.test.tsx:357`, `532`, `813` | TASK-242-03-01 |
+| `contact` | `core/admin/ui/widgets/editors/ContactEditors.tsx:38`, `695` | `tests/vitest/ui/contact-editor-wave.test.tsx:399`, `571`, `790` | TASK-242-03-01 |
+| `newsletter` | `core/admin/ui/widgets/editors/NewsletterEditors.tsx:48`, `551`, `623` | `tests/vitest/ui/newsletter-editor-wave.test.tsx:451`, `607`, `703` | TASK-242-03-01 |
+| `formEmbed` | `core/admin/ui/widgets/editors/FormEmbedEditors.tsx:30-56`, `76-92`, `396-586` | `tests/vitest/ui/form-embed-editor-wave.test.tsx:404`, `542`, `641` | TASK-242-03-01 |
+| `logoCloud` | `core/admin/ui/widgets/editors/LogoCloudEditors.tsx:54-61`, `512-642` | `tests/vitest/ui/logo-cloud-editor-wave.test.tsx:433`, `548`, `605` | TASK-242-03-01 |
+| `richTextSection` | `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx:56-75`, `524-876` | `tests/vitest/ui/rich-text-section-editor-wave.test.tsx:350`, `535`, `647` | TASK-242-03-01 |
+| `timeline` | `core/admin/ui/widgets/editors/TimelineEditors.tsx:73-110`, `705-751` | `tests/vitest/ui/timeline-editor-wave.test.tsx:385`, `581` | TASK-242-03-01 |
+| `compareTimeline` | `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx:50`, `932`, `1000` | `tests/vitest/ui/compare-timeline-editor-wave.test.tsx:387`, `585`, `734` | TASK-242-03-01 |
+
+### Documentation Owners
+
+| File | Current refs | Update needed |
+|---|---|---|
+| `_docs/WIDGETS.md` | `77`, `188-189`, `406`, `421`, `435` | add global `none` semantics for visual tokens, legacy `"0"` compatibility, and structural exclusions |
+| `_docs/_WIDGETS/HERO.md` | `45-46`, `75-80` | document width, typography, button, and radius `none` behavior |
+| `_docs/_WIDGETS/NAVIGATION.md` | `50`, `66`, `138-154` | document max width, padding, item gap, and font-size `none` behavior |
+| `_docs/_WIDGETS/FOOTER.md` | `46`, `55-56`, `68-69`, `95`, `108` | document max width, column gap, section padding, and font-size `none` behavior |
+| `_docs/_WIDGETS/STACK.md` | `27`, `40`, `45`, `50`, `65` | document responsive gap `none` and legacy `"0"` alias |
+| `_docs/_WIDGETS/SPLIT_LAYOUT.md` | `28`, `42`, `58`, `74` | document `gap="none"` behavior |
+| `_docs/_WIDGETS/GRID_COLUMNS.md` | `29`, `43`, `57-58`, `82-83` | document gap and padding `none` behavior |
+| `_docs/_WIDGETS/DIVIDER.md` | `38`, `43` | document margin `none` / `"0"` compatibility |
+| `_docs/_WIDGETS/SPACER.md` | scan before edit | document responsive height `none` / `"0"` compatibility |
+| `_docs/_WIDGETS/STATS_KPI.md` | `39`, `50`, `78` | document spacing `none` behavior |
+| `_docs/_WIDGETS/CONTENT_LIST.md` | `88` | document card/list gap `none` behavior |
+| `_docs/_WIDGETS/ENTRY_TEASER.md` | `38`, `84-85` | document spacing and radius `none` behavior |
+| `_docs/_WIDGETS/GALLERY_MOSAIC.md` | `50`, `79-80` | document gap `none` behavior and radius no-op coverage |
+| `_docs/_WIDGETS/CTA_BANNER.md` | `30`, `46`, `68-69` | document padding `none` behavior and radius no-op coverage |
+| `_docs/_WIDGETS/FAQ.md` | `15`, `34`, `52`, `83` | document spacing `none` behavior |
+| `_docs/_WIDGETS/TEAM.md` | `48-49`, `80`, `83` | document gap `none` behavior and radius no-op coverage |
+| `_docs/_WIDGETS/CONTACT.md` | `60`, `89`, `106` | document spacing `none` behavior |
+| `_docs/_WIDGETS/NEWSLETTER.md` | `40`, `55`, `82` | document spacing `none` behavior |
+| `_docs/_WIDGETS/LOGO_CLOUD.md` | `48`, `73`, `76` | document logo height and gap `none` behavior |
+| `_docs/_WIDGETS/RICH_TEXT_SECTION.md` | `54`, `87`, `91`, `95` | document font scale and spacing `none`; keep `maxWidth="full"` note if unchanged |
+| `_docs/_WIDGETS/TIMELINE.md` | `34`, `70` | document spacing and label-size `none` behavior |
+| `_docs/_WIDGETS/COMPARE_TIMELINE.md` | `40` | document track spacing and label-size `none` behavior |
+| `_docs/_WIDGETS/POSTS_FEED.md` | `70` | document inherited content-list gap `none` behavior |
+| `_docs/_TASKS/README.md` | TASK-242 rows | keep new TASK-242-03-02 row and status counts synchronized |
+| `_docs/_CHANGELOG/README.md` | next changelog number on closure | add TASK-242 changelog entry only when implementation closes |
 
 ## Pseudocode
 

@@ -15,6 +15,10 @@
 Add or alias `none` for layout primitives and shell/container widgets where the
 current configuration forces spacing, padding, or radius.
 
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
 ## Files to Change
 
 - `core/widgets/core/stack.tsx`

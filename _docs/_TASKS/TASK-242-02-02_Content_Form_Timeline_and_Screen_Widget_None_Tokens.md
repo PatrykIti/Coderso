@@ -16,6 +16,10 @@ Add `none` to content, form, timeline, and screen widget visual spacing/radius
 tokens. These widgets currently expose `sm`/`md`/`lg`/`xl` style options but
 often cannot disable the preset.
 
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
 ## Files to Change
 
 - `core/widgets/core/statsKpi.tsx`
