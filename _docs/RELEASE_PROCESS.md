@@ -67,6 +67,10 @@ ghcr.io/<owner>/coderso-core:<version>
 ghcr.io/<owner>/coderso-core:latest
 ```
 
+The workflow lowercases the GHCR owner and image name before calling
+`docker/build-push-action`, because Docker image repository names must be
+lowercase even when the GitHub owner contains uppercase characters.
+
 The Docker build also receives `APP_VERSION=<version>`, and the runtime image
 sets `CORE_VERSION` plus OCI labels to the same value.
 

@@ -103,7 +103,9 @@ jobs:
       - name: Set image tags
         id: image
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${DOCKER_IMAGE_NAME}"
+          owner="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          image_name="$(printf '%s' "${DOCKER_IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          image="ghcr.io/${owner}/${image_name}"
           echo "name=${image}" >> "$GITHUB_OUTPUT"
           echo "version_tag=${image}:${{ needs.semantic-release.outputs.version }}" >> "$GITHUB_OUTPUT"
           echo "latest_tag=${image}:latest" >> "$GITHUB_OUTPUT"

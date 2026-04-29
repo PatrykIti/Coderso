@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 32 tasks
-- **Done:** 1320 tasks
+- **Done:** 1321 tasks
 
 ---
 
@@ -132,6 +132,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-237 | GHCR Docker Image Lowercase Tag Normalization | High | Small | Done: release workflow now lowercases GHCR owner/image before Docker build-push so mixed-case GitHub owners do not create invalid image tags |
 | TASK-236 | Semantic Release Node Runtime Pin | High | Small | Done: release workflow now installs Node 22.14.0 before semantic-release and has regression coverage for the runtime contract |
 | TASK-235 | Security Gate Gitleaks Action v2 Contract | High | Small | Done: Gitleaks Action v2 now uses env-based config, gets `GITHUB_TOKEN` for PR scans, and no longer passes unsupported inputs |
 | TASK-234 | Security Gate Trivy SARIF and Blocking Output | High | Small | Done: Trivy now uploads severity-limited SARIF without failing early, then runs a separate table-output blocking gate for HIGH/CRITICAL findings |
