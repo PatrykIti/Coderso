@@ -9,9 +9,13 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
+    "format:staged": "bun scripts/format-staged.ts",
+    "precommit": "bun run format:staged && bun run precommit:check",
+    "precommit:check": "bun --cwd core lint && bun --cwd core lint:types && bun --cwd store lint && ./node_modules/.bin/tsc -p packages/sdk/tsconfig.json --noEmit && tsc -p tsconfig.json --noEmit",
     "lint": "bun run lint:core && bun run lint:repo",
     "lint:core": "bun --cwd core lint && bun --cwd core lint:types",
     "lint:repo": "bun run lint:repo:types",
@@ -84,6 +88,7 @@
     "globals": "^17.5.0",
     "happy-dom": "^20.9.0",
     "minimatch": "^3.1.5",
+    "prettier": "^3.8.3",
     "semantic-release": "^25.0.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"

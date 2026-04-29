@@ -15,11 +15,11 @@ fixed, and disclosed responsibly.
 Until public release channels are formalized, security support targets the
 current default branch and actively maintained release branches.
 
-| Version | Supported |
-| --- | --- |
-| `main` / current default branch | Yes |
-| Active release branches | Yes, when declared by maintainers |
-| Older tags or inactive branches | Best effort |
+| Version                         | Supported                         |
+| ------------------------------- | --------------------------------- |
+| `main` / current default branch | Yes                               |
+| Active release branches         | Yes, when declared by maintainers |
+| Older tags or inactive branches | Best effort                       |
 
 ## Reporting a Vulnerability
 
@@ -31,7 +31,7 @@ repository.
 You can also email the maintainers at:
 
 ```text
-security@example.com
+security@coderso.dev
 ```
 
 Replace this address with the official Coderso security contact before public

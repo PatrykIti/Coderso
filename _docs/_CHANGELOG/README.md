@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 769 | 2026-04-29 | Pre-commit formatting and lint hook | Developer Tooling |
 | 768 | 2026-04-29 | TASK-237 GHCR Docker image lowercase tag normalization | Release Engineering/CI |
 | 767 | 2026-04-28 | TASK-236 semantic release Node runtime pin | Release Engineering/CI |
 | 766 | 2026-04-28 | TASK-235 security gate Gitleaks Action v2 contract | CI/CD Security |

@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+
+if [ "${CODERSO_SKIP_PRECOMMIT:-}" = "1" ]; then
+  echo "Skipping Coderso pre-commit hook because CODERSO_SKIP_PRECOMMIT=1"
+  exit 0
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "bun is required to run the Coderso pre-commit hook." >&2
+  exit 1
+fi
+
+bun run precommit

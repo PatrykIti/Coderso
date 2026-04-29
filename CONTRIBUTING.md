@@ -124,6 +124,31 @@ package publishing.
 
 Do not add a personal access token unless a task explicitly requires one.
 
+## Pre-commit Checks
+
+This repository uses a committed Git hook directory:
+
+```bash
+bun run prepare
+```
+
+The hook runs before `git commit` and executes:
+
+```bash
+bun run precommit
+```
+
+The pre-commit command formats supported staged files with Prettier, stages the
+formatted result, then runs lint and type checks. It does not run unit,
+integration, security, performance, or release-gate tests; those remain manual
+or CI-owned validation lanes.
+
+If you need to bypass the local hook for an exceptional commit, use:
+
+```bash
+CODERSO_SKIP_PRECOMMIT=1 git commit
+```
+
 ## Development Workflow
 
 - Prefer a dedicated branch or worktree for non-trivial changes.
