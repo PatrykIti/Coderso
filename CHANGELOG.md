@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.0.3] - 2026-04-29
+### Changed
+- No categorized release notes were provided.
 ## [1.0.2] - 2026-04-29
 ### Added
 - TASK-237 remediation documentation for GitHub CodeQL security findings.
