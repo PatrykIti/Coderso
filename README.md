@@ -340,3 +340,9 @@ A platform where non-technical users can manage real websites comfortably, while
 ## License
 
 Apache-2.0
+
+---
+
+## Contact
+
+Email: hello@coderso.dev

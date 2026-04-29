@@ -25,6 +25,8 @@ through the least public channel that fits the issue.
 Beginner questions are welcome. If something feels confusing, that is useful
 feedback for the project.
 
+Email: support@coderso.dev
+
 ## Before Opening a Request
 
 Before opening a request, please try to:
