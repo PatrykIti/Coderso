@@ -113,12 +113,12 @@ split.
 | `galleryMosaic` | `core/widgets/core/galleryMosaic.tsx:7-95`, `44-50`, `162-474` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
 | `ctaBanner` | `core/widgets/core/ctaBanner.tsx:7-112`, `46-54`, `178-339` | `style.padding`; `style.radius` already has `none` | TASK-242-02-02 |
 | `pricingPlans` | `core/widgets/core/pricingPlans.tsx:9-108`, `48-54`, `172-559` | `style.spacing`; `style.radius` already has `none` | TASK-242-02-02 |
-| `faqAccordion` | `core/widgets/core/faqAccordion.tsx:6-92`, `35`, `140`, `229-325` | `style.spacing` | TASK-242-02-02 |
+| `faqAccordion` | `core/widgets/core/faqAccordion.tsx:6-92`, `35-41`, `140`, `229-326` | `style.spacing`; compact variant currently bypasses the padding map at render time | TASK-242-02-02 |
 | `team` | `core/widgets/core/team.tsx:7-124`, `43-63`, `187-553` | `style.gap`; `style.radius` already has `none` | TASK-242-02-02 |
 | `testimonials` | `core/widgets/core/testimonials.tsx:6-92`, `43`, `155`, `238-372` | `style.spacing` | TASK-242-02-02 |
 | `contact` | `core/widgets/core/contact.tsx:8-180`, `59-82`, `219-327` | `style.spacing` | TASK-242-02-02 |
 | `newsletter` | `core/widgets/core/newsletter.tsx:6-99`, `31`, `135`, `178-251` | `style.spacing` | TASK-242-02-02 |
-| `formEmbed` | `core/widgets/core/formEmbed.tsx:210-224`, `80-112`, `265`, `501-538` | `layout.spacing`, `style.radius` owned by TASK-242-02-02; `layout.width`, `style.inputSize` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
+| `formEmbed` | `core/widgets/core/formEmbed.tsx:80-112`, `210-224`, `265-283`, `523-525`, `538-545`, `551`, `613-644`, `657`, `669`, `681` | `layout.spacing`, `style.radius` owned by TASK-242-02-02; `layout.width`, `style.inputSize` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
 | `logoCloud` | `core/widgets/core/logoCloud.tsx:6-92`, `35-42`, `134`, `214-354` | `style.gap` owned by TASK-242-02-02; `style.logoHeight` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
 | `richTextSection` | `core/widgets/core/richTextSection.tsx:13-16`, `148-160`, `58-80`, `229`, `405-561` | `style.spacing` owned by TASK-242-02-02; `style.fontScale` and `style.lineHeight` owned by TASK-242-03-02; keep `options.maxWidth="full"` as existing no-limit width unless reclassified | TASK-242-02-02, TASK-242-03-02 |
 | `timeline` | `core/widgets/core/timeline.tsx:8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `layout.spacing` owned by TASK-242-02-02; `style.titleSize`, `style.descriptionSize` owned by TASK-242-03-02; keep marker/line size structural unless reclassified | TASK-242-02-02, TASK-242-03-02 |

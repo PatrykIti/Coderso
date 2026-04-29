@@ -35,7 +35,7 @@ TASK-242-02-02.
 | `core/widgets/core/richTextSection.tsx` | `13-16`, `148-160`, `58-80`, `229`, `405-561` | `style.fontScale`, `style.lineHeight`; keep `options.maxWidth="full"` as the existing no-limit width switch |
 | `core/widgets/core/timeline.tsx` | `8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `style.titleSize`, `style.descriptionSize`; keep marker/line sizes out unless TASK-242-01 reclassifies them |
 | `core/widgets/core/compareTimeline.tsx` | `7-12`, `165`, `187-189`, `365`, `597`, `608-610` | `style.trackLabelSize`, `style.stepLabelSize`, `style.segmentLabelSize` |
-| `core/widgets/core/formEmbed.tsx` | `210-224`, `80-112`, `265`, `501-538` | `layout.width`, `style.inputSize` |
+| `core/widgets/core/formEmbed.tsx` | `80-112`, `210-224`, `265-283`, `523-525`, `538-545`, `613-644` | `layout.width`, `style.inputSize` |
 | `core/widgets/core/logoCloud.tsx` | `6-7`, `89-92`, `35-42`, `134`, `214-354` | `style.logoHeight` |
 
 Line refs are current as of 2026-04-29. Refresh them with `rg` if another

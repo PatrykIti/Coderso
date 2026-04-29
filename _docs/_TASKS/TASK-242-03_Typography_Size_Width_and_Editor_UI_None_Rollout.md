@@ -21,8 +21,8 @@ changes stay owned by TASK-242-02 leaves.
 
 ## Sub-Tasks
 
-- [ ] TASK-242-03-01: Widget Editor Select Option Regressions
 - [ ] TASK-242-03-02: Typography, Size, Width Runtime None Tokens
+- [ ] TASK-242-03-01: Widget Editor Select Option Regressions
 
 ## Files to Change
 

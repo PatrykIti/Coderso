@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widget QA + Docs
 **Estimated Effort:** Small
-**Dependencies:** TASK-242-04
+**Dependencies:** TASK-242-02, TASK-242-03
 **Status:** To Do
 
 ---

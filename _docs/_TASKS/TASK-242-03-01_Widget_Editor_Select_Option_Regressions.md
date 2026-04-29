@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widget Editors + Tests
 **Estimated Effort:** Medium
-**Dependencies:** TASK-242-02, TASK-242-03, TASK-242-03-02
+**Dependencies:** TASK-242-02, TASK-242-03-02
 **Status:** To Do
 
 ---
