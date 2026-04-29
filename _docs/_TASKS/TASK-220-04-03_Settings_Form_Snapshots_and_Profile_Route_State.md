@@ -5,7 +5,7 @@
 **Category:** Settings + Route-Derived State
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-04
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ reset by explicit load/open transitions, not repaired after render.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/seo/SeoManagerPage.tsx | 119 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSelectedId(null);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/settings/AssistantSettingsPage.tsx | 91 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setForm(normalizeValues(values));` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/settings/GeneralSettingsPage.tsx | 56 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setForm(normalizeValues(values));` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |

@@ -5,7 +5,7 @@
 **Category:** Admin Lists + Selection State
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-03-01
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ handlers or explicit list model helpers rather than repaired after render.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/commerce/CommerceListPage.tsx | 155 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSelectedIds((prev) => {` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/content-types/ContentTypeList.tsx | 211 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSelectedIds((prev) => {` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/custom-screens/CustomScreenListPage.tsx | 108 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refreshContentTypes(` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
@@ -82,11 +82,7 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 ## Pseudocode
 
 ```ts
-const visibleIds = useMemo(() => resolveVisibleIds(rows, filters, page), [
-  rows,
-  filters,
-  page,
-]);
+const visibleIds = useMemo(() => resolveVisibleIds(rows, filters, page), [rows, filters, page]);
 
 const selectedIds = useMemo(
   () => trimSelection(selectionState.ids, visibleIds),

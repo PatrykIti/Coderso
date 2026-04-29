@@ -5,7 +5,7 @@
 **Category:** Pages Editor + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-05, TASK-220-03-03
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ inserted-block scroll behavior and dirty-state protection must remain intact.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/pages/PageEditor.tsx | 484 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setPendingScrollBlockId(null);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/pages/PageEditor.tsx | 517 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setPageId(resolved);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/pages/PageEditor.tsx | 525 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `applyPage(cachedDetail, { preserveSelection: true });` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |

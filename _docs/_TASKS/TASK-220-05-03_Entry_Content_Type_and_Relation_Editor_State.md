@@ -5,7 +5,7 @@
 **Category:** Entries + Content Types + React Compiler
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-05, TASK-220-03-03
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ memoization for editor checklists.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/content-types/ContentTypeEditor.tsx | 153 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `applyContentType(cachedType);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/content-types/ContentTypeEditor.tsx | 191 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setRelationTargets(cached.map((type) => ({ slug: type.slug, name: type.name })));` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/content-types/ContentTypeEditor.tsx | 207 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSelectedFieldId(null);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
@@ -70,7 +70,7 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 const availableTabIds = useMemo(() => tabGroups.map((tab) => tab.id), [tabGroups]);
 const activeTab = availableTabIds.includes(requestedTab)
   ? requestedTab
-  : availableTabIds[0] ?? "main";
+  : (availableTabIds[0] ?? "main");
 ```
 
 ## Testing Requirements

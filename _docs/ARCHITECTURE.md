@@ -77,16 +77,17 @@ Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:
 Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona
 przez `setup.completed=true`.
 
-## Coderso admin IA (TASK-054)
+## Advanced admin IA (TASK-054)
 
-- W admin sidebar jest jeden nadrzedny modul: `Coderso`.
+- W admin sidebar jest jeden nadrzedny modul techniczny: `Advanced`.
+- `Coderso` pozostaje nazwa produktu; nie jest nazwa grupy nawigacyjnej.
 - Domyslne moduly v1 (widoczne w sidebar):
   - `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
   - `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
   - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z widgetow dla danych entry.
   - `Widgets` (`/admin/advanced/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/advanced/forms`) - lista i edytor formularzy.
-- `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Coderso`.
+- `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Advanced`.
   - **TASK-059 (done):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
   - UI editor posts jest odciety od `EntryEditor` (`TASK-059-04`): classic fallback realizuje `PostClassicEditorShell`, a `EntryEditor` jest entries-only,
   - runtime/listings/search source `posts` sa odciete od `content_entries` (`TASK-059-05`): public routes i listing query source `posts` czytaja dedykowane `posts` storage,
@@ -809,7 +810,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `AdminShell` wyprowadza z niego `AdvancedFeatureFlags`,
   - active kit focus rozwija dependency graph z `ADVANCED_MODULE_REGISTRY`,
   - kity z `engine`, `entries` i `widgets` nie ukrywaja `Screens` (`custom-screens`),
-  - gating dotyczy tylko grupy `Coderso`; top-level `Main/Tools/Admin` pozostaja bez zmian,
+  - gating dotyczy tylko grupy `Advanced`; top-level `Main/Tools/Admin` pozostaja bez zmian,
   - `Solution Kits` pozostaje widoczne niezaleznie od aktywnego kitu.
 - Install engine foundation (service + DB):
   - `solution_kit_install_runs` trzyma execution context (`dry_run|apply|rollback`, status, summary),
@@ -856,6 +857,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ### 1) Kontekst systemu (prod)
 
+```text
 [Browser]
    |
    v
@@ -869,6 +871,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
    ^
    |
 [Store API] (list, download, signature, revocation)
+```
 
 ### 2) Build pipeline
 
@@ -940,6 +943,7 @@ Client:
 
 ## Struktura repozytorium (docelowa)
 
+```text
 /core
   /server               (Bun HTTP, SSR, routing)
   /admin                (Admin app)
@@ -982,6 +986,7 @@ Admin UI themes:
 
 /data
   plugins.db
+```
 
 ---
 
@@ -1004,13 +1009,19 @@ Core nie kompiluje pluginow w runtime.
 Format: ZIP
 
 Wymagane pliki:
+
+```text
 /plugin.json
 /dist/server.mjs          (ESM, server runtime)
 /dist/client.mjs          (ESM, admin/editor UI)
 /dist/style.css           (CSS pluginu)
+```
 
 Opcjonalne:
+
+```text
 /public/                  (statyczne assety pluginu)
+```
 
 Wymagania build:
 - ESM, bez TS/TSX w runtime.
@@ -1029,6 +1040,7 @@ Wymagania build:
 
 ## Manifest pluginu (plugin.json)
 
+```json
 {
   "id": "seo-boost",
   "name": "seo-boost",
@@ -1065,6 +1077,7 @@ Wymagania build:
     "sha256": "..."
   }
 }
+```
 
 Weryfikacja:
 - core normalizuje aliasy legacy:
@@ -1215,12 +1228,14 @@ Edytor oparty o JSON schema.
 
 Plugin rejestruje blok:
 
+```ts
 registerBlock({
   type: "seo/meta",
   schema,
   render,
   editor
 })
+```
 
 Blok pojawia sie natychmiast w CMS.
 

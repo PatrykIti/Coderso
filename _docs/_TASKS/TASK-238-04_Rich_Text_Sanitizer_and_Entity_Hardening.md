@@ -1,11 +1,11 @@
-# TASK-237-04: Rich Text Sanitizer and Entity Hardening
-# FileName: TASK-237-04_Rich_Text_Sanitizer_and_Entity_Hardening.md
+# TASK-238-04: Rich Text Sanitizer and Entity Hardening
+# FileName: TASK-238-04_Rich_Text_Sanitizer_and_Entity_Hardening.md
 
 **Priority:** High
 **Category:** Security + Rich Text + Widgets
 **Estimated Effort:** Large
-**Dependencies:** TASK-237
-**Status:** In Progress (2026-04-29)
+**Dependencies:** TASK-238
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -25,7 +25,7 @@ the shared rich-text helpers and keep the existing product behavior stable.
 ## File Inventory
 
 | File | Lines | Alert(s) | Current Issue | Required Change |
-|------|-------|----------|---------------|-----------------|
+|---|---|---|---|---|
 | `core/services/posts/editor/postRichTextSerializer.ts` | 4-21 | 14 | Local `escapeHtml`, chained `decodeHtmlEntities`, and broad `stripHtmlTags`. | Move entity encode/decode/plain-text extraction into shared tested helpers. |
 | `core/services/posts/runtime/postRichTextReactRenderer.tsx` | 36-49 | 15 | Runtime renderer has its own chained `decodeHtmlEntities`. | Reuse shared single-pass entity decoder. |
 | `core/admin/ui/posts/editor/blocks/blockTransforms.ts` | 26-33, 47-51 | 13, 2 | Local chained decoder and broad tag stripping before list/plain-text conversion. | Reuse shared plain-text extraction so block transforms do not sanitize through broad tag regexes. |
@@ -75,12 +75,18 @@ const htmlEntityMap: Record<string, string> = {
 export const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => {
     switch (char) {
-      case "&": return "&amp;";
-      case "<": return "&lt;";
-      case ">": return "&gt;";
-      case '"': return "&quot;";
-      case "'": return "&#39;";
-      default: return char;
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return char;
     }
   });
 
@@ -314,10 +320,10 @@ Add focused tests for the exact payloads that CodeQL flagged:
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-237_GitHub_CodeQL_Security_Findings_Remediation.md`
+- `_docs/_TASKS/TASK-238_GitHub_CodeQL_Security_Findings_Remediation.md`
 - `_docs/SECURITY_SPEC.md` if sanitizer policy or scanner exception policy
   changes.
-- Changelog entry on TASK-237 closure.
+- Changelog entry on TASK-238 closure.
 
 ## Acceptance Criteria
 
@@ -332,5 +338,5 @@ Add focused tests for the exact payloads that CodeQL flagged:
 
 - 2026-04-29: Added shared rich-text HTML utilities, replaced duplicated
   entity helpers and broad sanitizer/tag-filter regexes in the CodeQL alert
-  owners, and updated focused Vitest coverage. Awaiting GitHub CodeQL PR
-  verification before closure.
+  owners, and updated focused Vitest coverage. GitHub CodeQL verification is
+  clean as part of TASK-238 closure.

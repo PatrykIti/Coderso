@@ -5,7 +5,7 @@
 **Category:** Tooling + Process + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-220
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 

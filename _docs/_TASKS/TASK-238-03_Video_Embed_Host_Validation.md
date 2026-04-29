@@ -1,11 +1,11 @@
-# TASK-237-03: Video Embed Host Validation
-# FileName: TASK-237-03_Video_Embed_Host_Validation.md
+# TASK-238-03: Video Embed Host Validation
+# FileName: TASK-238-03_Video_Embed_Host_Validation.md
 
 **Priority:** High
 **Category:** Security + Posts Runtime
 **Estimated Effort:** Medium
-**Dependencies:** TASK-237
-**Status:** In Progress (2026-04-29)
+**Dependencies:** TASK-238
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -21,7 +21,7 @@ Runtime rendering and admin preview must use the same exact parser.
 ## File Inventory
 
 | File | Lines | Current Issue | Required Change |
-|------|-------|---------------|-----------------|
+|---|---|---|---|
 | `core/services/posts/runtime/postBlockRuntimeMapper.ts` | 103-116 | Runtime parser trusts substring host matches. | Replace with shared pure helper using exact host/subdomain checks. |
 | `core/admin/ui/posts/editor/PostEditorCanvas.tsx` | 152-165 | Editor preview duplicates the same unsafe parser. | Import the shared helper instead of duplicating parser logic. |
 | `tests/vitest/posts/post-block-runtime-renderer.test.tsx` | 160-185 | Existing positive YouTube coverage only. | Add malicious host negatives and keep positive watch/shorts/embed cases. |
@@ -53,14 +53,10 @@ const isHostOrSubdomain = (host: string, rootHost: string) => {
   const normalizedHost = host.toLowerCase();
   const normalizedRoot = rootHost.toLowerCase();
 
-  return (
-    normalizedHost === normalizedRoot ||
-    normalizedHost.endsWith(`.${normalizedRoot}`)
-  );
+  return normalizedHost === normalizedRoot || normalizedHost.endsWith(`.${normalizedRoot}`);
 };
 
-const readFirstPathSegment = (pathname: string) =>
-  pathname.split("/").filter(Boolean)[0] ?? "";
+const readFirstPathSegment = (pathname: string) => pathname.split("/").filter(Boolean)[0] ?? "";
 
 export const parseYoutubeVideoId = (value: string): string | null => {
   let url: URL;
@@ -119,12 +115,15 @@ test("youtube embed parser rejects substring lookalike hosts", () => {
 });
 
 test("youtube embed parser keeps supported trusted hosts", () => {
-  expect(toYoutubeEmbedUrl("https://youtube.com/watch?v=abc"))
-    .toBe("https://www.youtube.com/embed/abc");
-  expect(toYoutubeEmbedUrl("https://www.youtube.com/shorts/short-id"))
-    .toBe("https://www.youtube.com/embed/short-id");
-  expect(toYoutubeEmbedUrl("https://youtu.be/short-id"))
-    .toBe("https://www.youtube.com/embed/short-id");
+  expect(toYoutubeEmbedUrl("https://youtube.com/watch?v=abc")).toBe(
+    "https://www.youtube.com/embed/abc"
+  );
+  expect(toYoutubeEmbedUrl("https://www.youtube.com/shorts/short-id")).toBe(
+    "https://www.youtube.com/embed/short-id"
+  );
+  expect(toYoutubeEmbedUrl("https://youtu.be/short-id")).toBe(
+    "https://www.youtube.com/embed/short-id"
+  );
 });
 ```
 
@@ -155,8 +154,8 @@ copy, or provider-specific URL handling.
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-237_GitHub_CodeQL_Security_Findings_Remediation.md`
-- Changelog entry on TASK-237 closure.
+- `_docs/_TASKS/TASK-238_GitHub_CodeQL_Security_Findings_Remediation.md`
+- Changelog entry on TASK-238 closure.
 
 ## Acceptance Criteria
 
@@ -168,5 +167,5 @@ copy, or provider-specific URL handling.
 ## Progress Notes
 
 - 2026-04-29: Added shared YouTube embed parser with exact host/subdomain
-  checks and runtime/editor regression coverage. Awaiting GitHub CodeQL PR
-  verification before closure.
+  checks and runtime/editor regression coverage. GitHub CodeQL verification is
+  clean as part of TASK-238 closure.

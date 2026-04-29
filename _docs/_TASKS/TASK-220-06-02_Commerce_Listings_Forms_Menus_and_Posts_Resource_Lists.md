@@ -5,7 +5,7 @@
 **Category:** Resource Lists + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-06, TASK-220-03-02
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -21,7 +21,7 @@ unless a listed primary file requires a direct integration update.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/commerce/CommerceEditorPage.tsx | 109 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setIsLoading((current) => current && !isCreateMode);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/forms/FormActionLogsPage.tsx | 72 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refresh().catch(() => undefined);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/menus/MenuEditorPage.tsx | 479 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setOriginalMenu(null);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |

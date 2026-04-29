@@ -1,11 +1,11 @@
-# TASK-237-02: Listing Query Path Hardening
-# FileName: TASK-237-02_Listing_Query_Path_Hardening.md
+# TASK-238-02: Listing Query Path Hardening
+# FileName: TASK-238-02_Listing_Query_Path_Hardening.md
 
 **Priority:** High
 **Category:** Security + Content Services
 **Estimated Effort:** Small
-**Dependencies:** TASK-237
-**Status:** In Progress (2026-04-29)
+**Dependencies:** TASK-238
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -22,7 +22,7 @@ execution layer is protected even if a future caller bypasses normalization.
 ## File Inventory
 
 | File | Lines | Current Issue | Required Change |
-|------|-------|---------------|-----------------|
+|---|---|---|---|
 | `core/services/content/queryBuilderService.ts` | 74, 105-118 | Reserved segment set exists only in normalization. | Reuse one safe path helper for normalization, read, and write paths. |
 | `core/services/content/queryBuilderService.ts` | 339-366 | `readFieldValue` and `setFieldValue` traverse arbitrary path strings. | Validate each path segment before reading/writing; never assign to `__proto__`, `prototype`, or `constructor`. |
 | `core/services/content/queryBuilderService.ts` | 536 | Projection calls `setFieldValue(projected, field, ...)`. | Keep projection behavior for safe nested fields, reject unsafe paths before mutation. |
@@ -45,10 +45,7 @@ Shared field-path guard:
 ```ts
 const reservedFieldSegments = new Set(["__proto__", "prototype", "constructor"]);
 
-const splitSafeFieldPath = (
-  value: string,
-  context: "field" | "sort" | "filter" | "execution"
-) => {
+const splitSafeFieldPath = (value: string, context: "field" | "sort" | "filter" | "execution") => {
   const normalized = value.trim();
   const segments = normalized.split(".");
 
@@ -57,18 +54,13 @@ const splitSafeFieldPath = (
   );
 
   if (!normalized || invalidSegment) {
-    throw new ApiError(
-      "listing_query_invalid_field",
-      `Invalid ${context} path "${value}"`,
-      400
-    );
+    throw new ApiError("listing_query_invalid_field", `Invalid ${context} path "${value}"`, 400);
   }
 
   return segments;
 };
 
-const normalizeFieldPath = (value, context) =>
-  splitSafeFieldPath(value, context).join(".");
+const normalizeFieldPath = (value, context) => splitSafeFieldPath(value, context).join(".");
 ```
 
 Read/write helper shape:
@@ -91,11 +83,7 @@ const readFieldValue = (row: ListingSourceRow, field: string): unknown => {
   return current;
 };
 
-const setFieldValue = (
-  target: ListingSourceRow,
-  field: string,
-  value: unknown
-) => {
+const setFieldValue = (target: ListingSourceRow, field: string, value: unknown) => {
   const segments = splitSafeFieldPath(field, "execution");
   let current: Record<string, unknown> = target;
 
@@ -156,10 +144,9 @@ test("executeListingQuery still projects safe nested fields", async () => {
     fields: ["seo.title"],
   };
 
-  const result = await executeListingQuery(
-    query,
-    { rowsResolver: async () => [{ id: "entry-1", seo: { title: "SEO" } }] }
-  );
+  const result = await executeListingQuery(query, {
+    rowsResolver: async () => [{ id: "entry-1", seo: { title: "SEO" } }],
+  });
 
   expect(result.rows[0]).toEqual({ id: "entry-1", seo: { title: "SEO" } });
 });
@@ -193,8 +180,8 @@ implementation changes public behavior or execution-plan shape.
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-237_GitHub_CodeQL_Security_Findings_Remediation.md`
-- Changelog entry on TASK-237 closure.
+- `_docs/_TASKS/TASK-238_GitHub_CodeQL_Security_Findings_Remediation.md`
+- Changelog entry on TASK-238 closure.
 
 ## Acceptance Criteria
 
@@ -206,5 +193,5 @@ implementation changes public behavior or execution-plan shape.
 ## Progress Notes
 
 - 2026-04-29: Added execution-time safe path guards for listing read/write
-  helpers plus Bun regression coverage. Awaiting GitHub CodeQL PR verification
-  before closure.
+  helpers plus Bun regression coverage. GitHub CodeQL verification is clean as
+  part of TASK-238 closure.

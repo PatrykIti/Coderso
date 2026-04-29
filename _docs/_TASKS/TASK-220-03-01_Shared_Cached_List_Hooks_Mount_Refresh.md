@@ -5,7 +5,7 @@
 **Category:** Admin Cache + Hooks
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-03
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -21,7 +21,7 @@ background work without synchronous state repair.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/commerce/hooks/useCommerceCatalog.ts | 107 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refreshProducts(` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/custom-screens/hooks/useCustomScreens.ts | 62 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refresh(resolveListMountRefreshOptions(hasInitialCache)).catch(() => undefined);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/forms/hooks/useForms.ts | 55 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refresh(resolveFormsListMountRefreshOptions(hasInitialCache)).catch(() => undefined);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |

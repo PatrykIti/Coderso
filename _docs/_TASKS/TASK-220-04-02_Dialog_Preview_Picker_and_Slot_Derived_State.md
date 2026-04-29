@@ -5,7 +5,7 @@
 **Category:** Admin Dialogs + Derived State
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-04
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ computed from props/options at initialization or reducer transitions.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/forms/FormRuntimePreviewDialog.tsx | 111 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setValues(buildInitialValues(fields));` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/forms/FormRuntimePreviewDialog.tsx | 137 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setCurrentStep(maxStep);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/listings/ListingFiltersPage.tsx | 63 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSelectedListingQueryId(items[0]!.id);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |

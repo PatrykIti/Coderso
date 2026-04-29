@@ -5,7 +5,7 @@
 **Category:** Process + Admin/UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-220-01
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -48,6 +48,7 @@ only edit it if the guidance drifts from the TASK-220 remediation contract.
 
 ```md
 For admin React/UI work under ESLint 9 and React Hooks Compiler rules:
+
 - do not weaken the full hooks recommended preset,
 - do not use effects to repair state derived from props/state,
 - keep external-system synchronization in subscriptions or async callbacks,

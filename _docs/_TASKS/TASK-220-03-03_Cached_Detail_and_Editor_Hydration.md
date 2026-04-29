@@ -5,7 +5,7 @@
 **Category:** Admin Cache + Editors
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-03-01
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -21,7 +21,7 @@ dirty editor state.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/custom-screens/CustomScreenEditorPage.tsx | 337 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setIsLoading(false);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx | 314 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setScreen(cachedScreen);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/forms/FormBuilderPage.tsx | 326 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `applyDetail(cached);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
@@ -78,10 +78,14 @@ const [editorState, dispatch] = useReducer(
   initEditorState
 );
 
-useEffect(() => subscribeCacheEvents((event) => {
-  if (!matchesDetail(event, routeId)) return;
-  void refreshDetail({ background: true, allowDirty: false });
-}), [routeId, refreshDetail]);
+useEffect(
+  () =>
+    subscribeCacheEvents((event) => {
+      if (!matchesDetail(event, routeId)) return;
+      void refreshDetail({ background: true, allowDirty: false });
+    }),
+  [routeId, refreshDetail]
+);
 ```
 
 ## Testing Requirements

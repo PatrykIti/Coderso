@@ -5,7 +5,7 @@
 **Category:** Docs + Changelog + Task Board
 **Estimated Effort:** Small
 **Dependencies:** TASK-220-07-01
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -17,11 +17,11 @@ source-of-truth docs touched by the React Hooks Compiler cleanup.
 
 ## Sub-Tasks
 
-- [ ] Move TASK-220 family files to `Done (YYYY-MM-DD)` after validation.
-- [ ] Add `_docs/_CHANGELOG/<next>-YYYY-MM-DD-task-220-eslint-9-react-hooks-compiler-cleanup.md`.
-- [ ] Update `_docs/_CHANGELOG/README.md`.
-- [ ] Update `_docs/_TASKS/README.md` counts and Done table.
-- [ ] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache
+- [x] Move TASK-220 family files to `Done (YYYY-MM-DD)` after validation.
+- [x] Add `_docs/_CHANGELOG/771-2026-04-29-task-220-eslint-9-react-hooks-compiler-cleanup.md`.
+- [x] Update `_docs/_CHANGELOG/README.md`.
+- [x] Update `_docs/_TASKS/README.md` counts and Done table.
+- [x] Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache
   behavior changed during implementation.
 
 ## Files to Change
@@ -75,3 +75,10 @@ source-of-truth docs touched by the React Hooks Compiler cleanup.
 2. Changelog captures dependency context, lint-rule policy, implementation
    summary, and validation evidence.
 3. No stale To Do rows remain for completed TASK-220 leaves.
+
+## Progress Notes
+
+- 2026-04-29: Closed the TASK-220 family after lint/type checks passed and the
+  DB-backed `entryService` timeout blocker was rerun successfully outside the
+  sandbox. No admin cache source-of-truth docs needed additional contract
+  changes for this closure pass.
