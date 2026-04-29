@@ -73,6 +73,9 @@ Automated CI gate blocks PRs on critical/high findings:
   blocking table-output gate with `exit-code: "1"` for HIGH/CRITICAL findings.
   This keeps Code Scanning uploads available while making failing findings
   visible in the Actions log.
+- CI security scanning runs inside `.github/workflows/coderso-pr-gates.yml`
+  after the Vitest and Bun lanes pass, and before the final Coderso release
+  gates job.
 
 Local runbook:
 ```bash

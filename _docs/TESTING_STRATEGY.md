@@ -272,10 +272,13 @@ Current script split:
 }
 ```
 
-The CI workflow mirrors the split: `vitest-lane` runs Vitest tests and Vitest
-coverage, while `bun-lane` runs curated Bun tests first and then Bun coverage.
-`DATABASE_URL` is optional for `bun-lane`; DB-backed route suites join the lane
-when the secret is configured and remain skipped by the lane helper otherwise.
+The `Coderso PR Gates` CI workflow mirrors the split after a database preflight:
+`database-preflight` verifies `DATABASE_URL` and applies Drizzle migrations,
+then `vitest-lane` runs Vitest tests and Vitest coverage while `bun-lane` runs
+curated Bun tests first and then Bun coverage. The local Bun lane helper can
+still skip env-dependent route suites when `DATABASE_URL` is unavailable, but
+repository PR gates require the secret so clean CI databases can be migrated
+before DB-backed suites run.
 
 Opt-in live assistant matrix:
 

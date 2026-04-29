@@ -12,77 +12,84 @@
 ## Overview
 
 Fix CodeQL `actions/missing-workflow-permissions` alerts for the testing and
-Coderso release-gate workflows by adding explicit least-privilege permissions.
+Coderso release-gate workflows by moving PR checks into one ordered workflow
+with explicit least-privilege permissions.
 
-The affected workflows run tests and upload artifacts only. They should not
-receive implicit broad token permissions.
+The consolidated workflow must prepare the CI database first, run Vitest and Bun
+lanes in parallel, then run security scanning before the final Coderso release
+gates. Only the security job receives `security-events: write` for SARIF upload.
 
 ## File Inventory
 
 | File | GitHub Alert Lines | Current Issue | Required Change |
 |------|--------------------|---------------|-----------------|
-| `.github/workflows/testing-lanes.yml` | 18, 58 | Jobs have no explicit `permissions`, so CodeQL flags implicit token scope. | Add top-level or per-job `permissions: contents: read`; add only extra scopes that a concrete step requires. |
-| `.github/workflows/coderso-release-gates.yml` | 17 | Release-gate job has no explicit `permissions`. | Add top-level or job-level `permissions: contents: read`; artifact upload should not require write scopes. |
-| `tests/unit/security/securityGateConfig.test.ts` or new `tests/unit/security/workflowPermissions.test.ts` | New coverage | Existing security workflow tests do not cover these two workflow permission contracts. | Add regression assertions that both workflows define explicit read-only permissions. |
+| `.github/workflows/testing-lanes.yml` | 18, 58 | Jobs have no explicit `permissions`, so CodeQL flags implicit token scope. | Replace with `.github/workflows/coderso-pr-gates.yml` and inherit top-level `contents: read`. |
+| `.github/workflows/coderso-release-gates.yml` | 17 | Release-gate job has no explicit `permissions`. | Replace with final `coderso-release-gates` job in the unified workflow. |
+| `.github/workflows/security-gate.yml` | Existing scanner gate | Security scanning was isolated from the testing/release gate order. | Move scanner steps into the unified workflow after test lanes and before release gates. |
+| `tests/unit/security/securityGateConfig.test.ts` | New coverage | Existing security workflow tests do not cover unified workflow ordering, DB preflight, and scoped permissions. | Add regression assertions for preflight, `needs` graph, scanner wiring, and permissions. |
 
 ## Sub-Tasks
 
-- [ ] Add explicit read-only permissions to `.github/workflows/testing-lanes.yml`.
-- [ ] Add explicit read-only permissions to `.github/workflows/coderso-release-gates.yml`.
-- [ ] Add YAML/text regression coverage for the permission contract.
-- [ ] Verify the workflow files still parse and keep existing triggers/steps.
+- [ ] Replace separate PR check workflows with `.github/workflows/coderso-pr-gates.yml`.
+- [ ] Add `database-preflight` that requires `DATABASE_URL` and runs `bun run db:migrate`.
+- [ ] Run `vitest-lane` and `bun-lane` in parallel after preflight.
+- [ ] Run `security-gate` after both lanes and scope `security-events: write` to that job.
+- [ ] Run `coderso-release-gates` only after security scanning passes.
+- [ ] Add YAML/text regression coverage for the permission and job-order contract.
+- [ ] Verify the workflow file still parses and keeps existing scanner/test/report steps.
 
 ## Implementation Pseudocode
 
 Workflow shape:
 
 ```yaml
-name: Testing Lanes
+name: Coderso PR Gates
 
 on:
   pull_request:
-  push:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  database-preflight:
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - run: bun install --frozen-lockfile
+      - run: test -n "${DATABASE_URL:-}"
+      - run: bun run db:migrate
+
   vitest-lane:
-    # existing runner, checkout, setup, install, test, and artifact steps
+    needs: database-preflight
+
   bun-lane:
-    # existing runner, checkout, setup, install, test, coverage, and artifact steps
-```
+    needs: database-preflight
 
-```yaml
-name: Coderso Release Gates
+  security-gate:
+    needs: [vitest-lane, bun-lane]
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
-on:
-  pull_request:
-  push:
-
-permissions:
-  contents: read
-
-jobs:
   coderso-release-gates:
-    # existing checkout, Bun setup, install, gate run, and report artifact upload
+    needs: security-gate
 ```
 
 Regression-test shape:
 
 ```ts
-const workflow = readText(".github/workflows/testing-lanes.yml");
+const workflow = readText(".github/workflows/coderso-pr-gates.yml");
 
 expect(workflow).toContain("permissions:");
 expect(workflow).toContain("contents: read");
 expect(workflow).not.toContain("contents: write");
 expect(workflow).not.toContain("actions: write");
-
-const releaseGates = readText(".github/workflows/coderso-release-gates.yml");
-
-expect(releaseGates).toContain("permissions:");
-expect(releaseGates).toContain("contents: read");
-expect(releaseGates).not.toContain("security-events: write");
+expect(workflow).toContain("database-preflight:");
+expect(workflow).toContain("bun run db:migrate");
+expect(workflow).toContain("security-events: write");
 ```
 
 If a future step needs extra permission, the test should assert only that exact
@@ -91,14 +98,16 @@ scope and the task/changelog must explain why it is required.
 ## Security Contract
 
 - Visibility: CI workflow token scope only.
-- Auth model: GitHub Actions `GITHUB_TOKEN`; no new secrets.
+- Auth model: GitHub Actions `GITHUB_TOKEN`; `DATABASE_URL` repository secret
+  for CI database migration/test access.
 - RBAC: reduce implicit token access to explicit minimum.
 - CSRF: not applicable.
 - Rate-limit bucket: not applicable.
 - Reject-unknown validation: not applicable.
-- Anti-abuse: do not add write scopes to testing or release-gate workflows
+- Anti-abuse: do not add write scopes to testing or release-gate jobs
   unless a concrete action requires them and the task documents why.
-- Secret handling: no new workflow secrets and no new secret logging.
+- Secret handling: `DATABASE_URL` must be consumed only from repository secrets
+  and never logged. It must point to disposable CI test infrastructure.
 
 ## Testing Requirements
 
@@ -128,3 +137,6 @@ the test pure Bun so it can run without GitHub credentials.
 
 - 2026-04-29: Added explicit `contents: read` workflow permissions and Bun
   regression coverage. Awaiting GitHub CodeQL PR verification before closure.
+- 2026-04-29: Consolidated testing, security, and release-gate PR workflows into
+  `.github/workflows/coderso-pr-gates.yml` with DB migration preflight,
+  lane/security/release gate ordering, and scoped SARIF permissions.

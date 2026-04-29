@@ -92,7 +92,7 @@ GitHub evidence capture shape:
 open_codeql_alerts="$(
   gh api -H 'Accept: application/vnd.github+json' \
     '/repos/PatrykIti/Coderso/code-scanning/alerts?state=open&per_page=100' \
-    --jq '.[] | select(.most_recent_instance.location.path | test("testing-lanes|coderso-release-gates|queryBuilderService|postBlockRuntimeMapper|PostEditorCanvas|postRichText|richTextSection|renderer.test")) | [.number, (.rule.security_severity_level // .rule.severity), .rule.id, .most_recent_instance.location.path, .most_recent_instance.location.start_line] | @tsv'
+    --jq '.[] | select(.most_recent_instance.location.path | test("coderso-pr-gates|testing-lanes|coderso-release-gates|queryBuilderService|postBlockRuntimeMapper|PostEditorCanvas|postRichText|richTextSection|renderer.test")) | [.number, (.rule.security_severity_level // .rule.severity), .rule.id, .most_recent_instance.location.path, .most_recent_instance.location.start_line] | @tsv'
 )"
 
 if [ -n "$open_codeql_alerts" ]; then
