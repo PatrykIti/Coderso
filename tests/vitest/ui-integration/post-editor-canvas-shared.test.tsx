@@ -218,6 +218,12 @@ test("PostEditorCanvas renders embed previews for supported providers and falls 
             attrs: { provider: "youtube", url: "notaurl" },
             content: null,
           },
+          {
+            id: "embed-lookalike",
+            type: "embed",
+            attrs: { provider: "youtube", url: "https://youtube.com.evil.test/watch?v=bad" },
+            content: null,
+          },
         ],
       }}
       title="Embeds"
@@ -235,6 +241,7 @@ test("PostEditorCanvas renders embed previews for supported providers and falls 
   expect(html).toContain("https://player.vimeo.com/video/54321");
   expect(html).toContain("https://www.loom.com/embed/demo-id");
   expect(html).toContain("https://example.com/embed/demo");
+  expect(html).not.toContain("https://www.youtube.com/embed/bad");
   expect(html).toContain("data-post-editor-media-placeholder=\"embed\"");
   expect(html).toContain("Click to configure embed URL");
 });

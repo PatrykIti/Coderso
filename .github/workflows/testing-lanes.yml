@@ -13,6 +13,9 @@ on:
       - "bun.lock"
       - ".github/workflows/testing-lanes.yml"
 
+permissions:
+  contents: read
+
 jobs:
   vitest-lane:
     runs-on: ubuntu-latest

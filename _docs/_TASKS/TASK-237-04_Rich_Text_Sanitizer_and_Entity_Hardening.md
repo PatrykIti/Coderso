@@ -5,7 +5,7 @@
 **Category:** Security + Rich Text + Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-237
-**Status:** To Do
+**Status:** In Progress (2026-04-29)
 
 ---
 
@@ -327,3 +327,10 @@ Add focused tests for the exact payloads that CodeQL flagged:
 3. Allowed current rich-text markup remains compatible.
 4. Unsafe tags, event attributes, and unsafe URLs remain blocked.
 5. The renderer test no longer uses a broad HTML comment/tag filtering regex.
+
+## Progress Notes
+
+- 2026-04-29: Added shared rich-text HTML utilities, replaced duplicated
+  entity helpers and broad sanitizer/tag-filter regexes in the CodeQL alert
+  owners, and updated focused Vitest coverage. Awaiting GitHub CodeQL PR
+  verification before closure.

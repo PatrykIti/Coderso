@@ -6,6 +6,7 @@ import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../../services/posts/editor/postRichTextSerializer";
+import { htmlToTextLines } from "../../../../../services/posts/editor/postRichTextHtmlUtils";
 import {
   createWritingCanvasContentFromEditorHtml,
   serializeWritingCanvasContentToHtml,
@@ -23,14 +24,18 @@ const TRANSFORMABLE_BLOCK_TYPES: PostBlockType[] = [
 
 const transformableSet = new Set<PostBlockType>(TRANSFORMABLE_BLOCK_TYPES);
 
-const decodeHtmlEntities = (value: string) =>
-  value
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+const textLineBlockTags = new Set([
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "blockquote",
+  "li",
+  "pre",
+]);
 
 const toTextLines = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -44,15 +49,7 @@ const toTextLines = (value: unknown): string[] => {
   const serialized = serializePostRichText(value);
   if (!serialized) return [];
 
-  const lineBreakAware = serialized
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|h1|h2|h3|h4|h5|h6|blockquote|li|pre)>/gi, "\n");
-
-  const plain = decodeHtmlEntities(lineBreakAware.replace(/<[^>]+>/g, ""));
-  return plain
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return htmlToTextLines(serialized, textLineBlockTags);
 };
 
 const resolveAttrsForTarget = (targetType: PostBlockType): Record<string, unknown> => {

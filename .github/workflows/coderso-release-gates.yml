@@ -12,6 +12,9 @@ on:
       - "bun.lock"
       - ".github/workflows/coderso-release-gates.yml"
 
+permissions:
+  contents: read
+
 jobs:
   coderso-release-gates:
     runs-on: ubuntu-latest

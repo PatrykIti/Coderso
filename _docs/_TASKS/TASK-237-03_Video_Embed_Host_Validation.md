@@ -5,7 +5,7 @@
 **Category:** Security + Posts Runtime
 **Estimated Effort:** Medium
 **Dependencies:** TASK-237
-**Status:** To Do
+**Status:** In Progress (2026-04-29)
 
 ---
 
@@ -164,3 +164,9 @@ copy, or provider-specific URL handling.
 2. Runtime and editor preview use one shared URL parsing contract.
 3. Trusted YouTube URLs still render expected embed URLs.
 4. Lookalike or substring-only hosts do not render as trusted embeds.
+
+## Progress Notes
+
+- 2026-04-29: Added shared YouTube embed parser with exact host/subdomain
+  checks and runtime/editor regression coverage. Awaiting GitHub CodeQL PR
+  verification before closure.

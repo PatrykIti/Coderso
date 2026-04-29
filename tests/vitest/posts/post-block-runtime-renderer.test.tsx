@@ -184,6 +184,37 @@ test("mapPostDocumentForRuntime resolves image media id and embed providers", as
   expect(html).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
 });
 
+test("mapPostDocumentForRuntime rejects youtube lookalike hosts", async () => {
+  const mapped = await mapPostDocumentForRuntime({
+    version: 1,
+    blocks: [
+      {
+        id: "embed-1",
+        type: "embed",
+        attrs: {
+          provider: "youtube",
+          url: "https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ",
+        },
+        content: null,
+      },
+      {
+        id: "embed-2",
+        type: "embed",
+        attrs: {
+          provider: "youtube",
+          url: "https://notyoutube.com/watch?v=abc123",
+        },
+        content: null,
+      },
+    ],
+    meta: {},
+  });
+
+  const html = renderToString(<PostBlockRuntimeRenderer document={mapped} />);
+  expect(html).not.toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
+  expect(html).not.toContain("https://www.youtube.com/embed/abc123");
+});
+
 test("mapPostDocumentForRuntime renders dedicated media blocks safely", async () => {
   const mediaRecords = {
     "video-1": {

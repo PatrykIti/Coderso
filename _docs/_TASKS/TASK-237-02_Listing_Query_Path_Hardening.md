@@ -5,7 +5,7 @@
 **Category:** Security + Content Services
 **Estimated Effort:** Small
 **Dependencies:** TASK-237
-**Status:** To Do
+**Status:** In Progress (2026-04-29)
 
 ---
 
@@ -202,3 +202,9 @@ implementation changes public behavior or execution-plan shape.
 2. Unsafe object path segments cannot be read or written by listing execution.
 3. Safe nested projection behavior stays compatible.
 4. Tests prove `Object.prototype` is not polluted.
+
+## Progress Notes
+
+- 2026-04-29: Added execution-time safe path guards for listing read/write
+  helpers plus Bun regression coverage. Awaiting GitHub CodeQL PR verification
+  before closure.

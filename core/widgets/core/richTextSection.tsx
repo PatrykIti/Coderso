@@ -1,5 +1,12 @@
 import type { CSSProperties, ComponentType } from "react";
 
+import {
+  dangerousHtmlContentTagSet,
+  escapeHtml,
+  htmlToPlainText,
+  parseHtmlAttributes,
+  sanitizeHtmlWithPolicy,
+} from "../../services/posts/editor/postRichTextHtmlUtils";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type RichTextSectionVariantId = "single-column" | "two-column" | "article";
@@ -247,15 +254,10 @@ export const resolveRichTextSectionVariant = (
   return "single-column";
 };
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+const headingTextBlockTags = new Set(["h2", "h3", "h4", "span", "strong", "em"]);
 
-const stripHtmlTags = (value: string) => value.replace(/<[^>]+>/g, "").trim();
+const extractHeadingText = (value: string) =>
+  htmlToPlainText(value, headingTextBlockTags);
 
 const slugifyHeading = (value: string, fallbackIndex: number) => {
   const normalized = value
@@ -273,17 +275,7 @@ const sanitizeAnchorHref = (value: string | undefined) => {
 };
 
 const parseAttributes = (rawAttrs: string) => {
-  const attributes = new Map<string, string>();
-  const regex = /([a-zA-Z0-9:-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
-
-  for (const match of rawAttrs.matchAll(regex)) {
-    const key = match[1]?.toLowerCase();
-    if (!key) continue;
-    const value = match[3] ?? match[4] ?? match[5] ?? "";
-    attributes.set(key, value);
-  }
-
-  return attributes;
+  return parseHtmlAttributes(rawAttrs);
 };
 
 const sanitizeTagAttributes = (tagName: string, rawAttrs: string) => {
@@ -309,31 +301,12 @@ const sanitizeTagAttributes = (tagName: string, rawAttrs: string) => {
 export function sanitizeRichTextHtml(rawHtml: string | undefined): string {
   if (typeof rawHtml !== "string" || rawHtml.trim().length === 0) return "";
 
-  let html = rawHtml
-    .replace(/\u0000/g, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(
-      /<\s*(script|style|iframe|object|embed|link|meta|base|form|input|button|textarea|select|svg|math)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,
-      ""
-    )
-    .replace(
-      /<\s*(script|style|iframe|object|embed|link|meta|base|form|input|button|textarea|select|svg|math)[^>]*\/?\s*>/gi,
-      ""
-    );
-
-  html = html.replace(/<\/?([a-zA-Z0-9-]+)([^>]*)>/g, (match, rawTag, rawAttrs) => {
-    const tag = String(rawTag).toLowerCase();
-    const isClosing = match.startsWith("</");
-
-    if (!allowedTagSet.has(tag)) return "";
-    if (isClosing) return `</${tag}>`;
-    if (selfClosingTagSet.has(tag)) return `<${tag}>`;
-
-    const attrs = sanitizeTagAttributes(tag, String(rawAttrs));
-    return `<${tag}${attrs}>`;
+  return sanitizeHtmlWithPolicy(rawHtml, {
+    allowedTags: allowedTagSet,
+    selfClosingTags: selfClosingTagSet,
+    dropContentTags: dangerousHtmlContentTagSet,
+    sanitizeAttributes: sanitizeTagAttributes,
   });
-
-  return html.trim();
 }
 
 export const normalizeRichTextBlockCount = (value: number) => {
@@ -408,7 +381,7 @@ const injectHeadingAnchors = (html: string) => {
     /<h([2-4])>([\s\S]*?)<\/h\1>/gi,
     (_, rawLevel: string, rawContent: string) => {
       const level = Number(rawLevel) as 2 | 3 | 4;
-      const label = stripHtmlTags(rawContent);
+      const label = extractHeadingText(rawContent);
       if (label.length === 0) {
         headingIndex += 1;
         return `<h${level}>${rawContent}</h${level}>`;

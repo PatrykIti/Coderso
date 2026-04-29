@@ -5,7 +5,7 @@
 **Category:** Security + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-237-01, TASK-237-02, TASK-237-03, TASK-237-04
-**Status:** To Do
+**Status:** In Progress (2026-04-29)
 
 ---
 
@@ -203,3 +203,9 @@ gh api -H 'Accept: application/vnd.github+json' \
 4. Secret scanning remains clean.
 5. Dependabot state is checked and explicitly recorded.
 6. Task board statistics are synchronized.
+
+## Progress Notes
+
+- 2026-04-29: Local targeted Bun/Vitest, lint, typecheck, Bun audit, Semgrep,
+  Trivy, and Gitleaks validation passed. GitHub CodeQL verification remains
+  pending until PR checks run on the branch.

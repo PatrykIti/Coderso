@@ -522,12 +522,31 @@ const insertHtmlAtCursor = (html: string) => {
   return true;
 };
 
-const stripInlineFormatting = (html: string) =>
-  sanitizePostRichTextHtml(html)
-    .replace(/<\s*(strong|em|u|s|mark|code|span)\b[^>]*>/gi, "")
-    .replace(/<\s*\/\s*(strong|em|u|s|mark|code|span)\s*>/gi, "")
-    .replace(/<\s*a\b[^>]*>/gi, "")
-    .replace(/<\s*\/\s*a\s*>/gi, "");
+const inlineFormattingSelector = "strong, em, u, s, mark, code, span, a";
+
+const unwrapInlineFormattingElement = (element: Element) => {
+  const parent = element.parentNode;
+  if (!parent) return;
+
+  while (element.firstChild) {
+    parent.insertBefore(element.firstChild, element);
+  }
+  parent.removeChild(element);
+};
+
+const stripInlineFormatting = (html: string) => {
+  const sanitized = sanitizePostRichTextHtml(html);
+  if (typeof document === "undefined") return sanitized;
+
+  const container = document.createElement("div");
+  container.innerHTML = sanitized;
+
+  for (const element of Array.from(container.querySelectorAll(inlineFormattingSelector))) {
+    unwrapInlineFormattingElement(element);
+  }
+
+  return sanitizePostRichTextHtml(container.innerHTML);
+};
 
 export const clearFormattingInBlocks = (blocks: readonly HTMLElement[]) => {
   for (const block of blocks) {

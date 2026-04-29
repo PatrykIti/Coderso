@@ -65,3 +65,16 @@ test("security package scripts run layered local scanner coverage", () => {
   expect(pkg.scripts["scan:gitleaks"]).toContain("scan:gitleaks:worktree");
   expect(pkg.scripts["scan:sbom"]).toContain("cyclonedx");
 });
+
+test("testing and release gate workflows use explicit read-only permissions", () => {
+  const testingLanes = readFile(".github/workflows/testing-lanes.yml");
+  const releaseGates = readFile(".github/workflows/coderso-release-gates.yml");
+
+  for (const workflow of [testingLanes, releaseGates]) {
+    expect(workflow).toContain("permissions:");
+    expect(workflow).toContain("contents: read");
+    expect(workflow).not.toContain("contents: write");
+    expect(workflow).not.toContain("actions: write");
+    expect(workflow).not.toContain("security-events: write");
+  }
+});

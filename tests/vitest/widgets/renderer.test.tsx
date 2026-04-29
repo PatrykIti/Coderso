@@ -1,7 +1,7 @@
 import React from "react";
 import type { ComponentType } from "react";
 import { expect, test } from "vitest";
-import { renderToString } from "react-dom/server";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
@@ -167,7 +167,7 @@ test("renderer respects visibility disabled", () => {
     })
   );
 
-  const html = renderToString(
+  const html = renderToStaticMarkup(
     <WidgetRenderer
       block={{
         id: "hero-1",
@@ -372,9 +372,8 @@ test("renderer passes slots to widget render", () => {
     },
   };
 
-  const html = renderToString(<WidgetRenderer block={block} />);
-  const normalizedHtml = html.replace(/<!--.*?-->/g, "");
-  expect(normalizedHtml).toContain("Slots:1");
+  const html = renderToStaticMarkup(<WidgetRenderer block={block} />);
+  expect(html).toContain("Slots:1");
 });
 
 test("renderer outputs section variant and region markers", () => {
@@ -559,7 +558,7 @@ test("renderer outputs spacer markers", () => {
   expect(html).toContain('data-spacer-desktop="24"');
   expect(html).toContain('data-spacer-tablet="64px"');
   expect(html).toContain('data-spacer-mobile="12"');
-  expect(html.replace(/<!-- -->/g, "")).toContain("Spacer 6rem");
+  expect(html).toContain("--spacer-desktop-height:6rem");
 });
 
 test("renderer outputs divider markers", () => {

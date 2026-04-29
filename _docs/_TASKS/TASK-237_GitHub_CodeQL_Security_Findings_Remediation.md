@@ -5,7 +5,7 @@
 **Category:** Security + CodeQL + CI
 **Estimated Effort:** Large
 **Dependencies:** TASK-217, TASK-231, TASK-234, TASK-235
-**Status:** To Do
+**Status:** In Progress (2026-04-29)
 
 ---
 
@@ -164,3 +164,8 @@ the PR `security-gate` workflow provide final Semgrep/Trivy/Gitleaks evidence.
 
 - 2026-04-29: Created task family from live GitHub CodeQL inventory on
   `fix/security-issues`.
+- 2026-04-29: Implemented local remediation for workflow permissions, listing
+  query path guards, YouTube host validation, and rich-text sanitizer/entity
+  handling. Local targeted Bun/Vitest, lint, typecheck, Bun audit, Semgrep,
+  Trivy, and Gitleaks validation passed; final GitHub CodeQL closure remains
+  pending PR checks.

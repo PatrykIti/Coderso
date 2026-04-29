@@ -5,7 +5,7 @@
 **Category:** Security + CI
 **Estimated Effort:** Small
 **Dependencies:** TASK-237
-**Status:** To Do
+**Status:** In Progress (2026-04-29)
 
 ---
 
@@ -123,3 +123,8 @@ the test pure Bun so it can run without GitHub credentials.
 2. Testing and release-gate workflows declare explicit minimum permissions.
 3. No new write permission is introduced.
 4. Regression tests fail if the explicit permissions are removed.
+
+## Progress Notes
+
+- 2026-04-29: Added explicit `contents: read` workflow permissions and Bun
+  regression coverage. Awaiting GitHub CodeQL PR verification before closure.
