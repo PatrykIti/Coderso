@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin UI + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-196, TASK-200, TASK-208
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -66,10 +66,10 @@ Source seams reviewed on 2026-04-29:
 
 ## Sub-Tasks
 
-- [ ] TASK-243-01: Menus Editor Header Actions and Lifecycle Publish
-- [ ] TASK-243-02: Menus Location Contract and Editor Guidance
-- [ ] TASK-243-03: Menu Item Drag Handle and Nesting Drop Contract
-- [ ] TASK-243-04: Menus Editor Validation, Docs, and Closure
+- [x] TASK-243-01: Menus Editor Header Actions and Lifecycle Publish
+- [x] TASK-243-02: Menus Location Contract and Editor Guidance
+- [x] TASK-243-03: Menu Item Drag Handle and Nesting Drop Contract
+- [x] TASK-243-04: Menus Editor Validation, Docs, and Closure
 
 ## Scope
 

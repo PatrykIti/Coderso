@@ -5,7 +5,7 @@
 **Category:** QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-243-01, TASK-243-02, TASK-243-03
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -193,3 +193,10 @@ bun run gates:coderso
 4. Menus docs describe the final editor actions, Location behavior, and DnD
    behavior.
 5. Task board statistics and changelog index are synchronized.
+
+## Completion Notes
+
+- Done on 2026-04-29.
+- Added changelog entry `777-2026-04-29-menus-editor-action-location-drag-parity.md`.
+- Targeted Vitest coverage was added for editor lifecycle, location schema,
+  DnD intent resolution, row affordances, and tree event behavior.

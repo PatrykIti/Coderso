@@ -152,7 +152,9 @@ Note (v2+):
 `menus`
 - id (uuid, pk)
 - name
-- location (primary|footer)
+- location (nullable string theme/runtime slot key, e.g. primary or footer)
+- status (draft|published)
+- published_at (nullable)
 - created_at
 
 `menu_items`
@@ -165,7 +167,9 @@ Note (v2+):
 - parent_id (fk menu_items, nullable)
 
 Zasady:
-- `menus.location` unikalny, gdy ustawiony (np. primary, footer).
+- `menus.location` unikalny, gdy ustawiony; wartosc jest slot key uzywanym
+  przez theme/runtime navigation, nie zamknietym enumem.
+- Runtime navigation uzywa tylko menu ze statusem `published`.
 - `menu_items` musi miec dokladnie jedno z `href` lub `page_id`.
 - `parent_id` referencjonuje element w tym samym menu.
 

@@ -1629,6 +1629,8 @@ Create menu payload:
 
 `status` is optional and must be `draft` or `published`. New menus default to
 `draft`; existing menus are migrated as `published` for runtime compatibility.
+`location` is a nullable theme/runtime slot key such as `primary` or `footer`;
+create payloads include the key explicitly and may set it to `null`.
 
 Update menu payload:
 

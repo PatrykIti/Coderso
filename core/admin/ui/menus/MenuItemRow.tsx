@@ -1,25 +1,50 @@
 import type { DragEvent } from "react";
-import { AlertTriangle, GripVertical, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  GripVertical,
+  IndentDecrease,
+  IndentIncrease,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { MenuDropIntent } from "@/ui/menus/menuDnD";
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
+
+export type MenuKeyboardAction = {
+  id: "move-up" | "move-down" | "indent" | "outdent";
+  label: string;
+  disabled: boolean;
+  onSelect: () => void;
+};
 
 type MenuItemRowProps = {
   item: MenuItemDisplay;
   depth?: number;
   active?: boolean;
   isDragTarget?: boolean;
-  dropIntent?: "sibling" | "child" | null;
+  dropIntent?: MenuDropIntent | null;
+  keyboardActions?: MenuKeyboardAction[];
   onEdit?: (item: MenuItemDisplay) => void;
   onDelete?: (item: MenuItemDisplay) => void;
   onSelect?: (item: MenuItemDisplay, eventTimeStamp: number) => void;
-  onDragStart?: (item: MenuItemDisplay, event: DragEvent<HTMLElement>) => void;
-  onDragEnd?: (event: DragEvent<HTMLElement>) => void;
+  onDragStart?: (item: MenuItemDisplay, event: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd?: (event: DragEvent<HTMLButtonElement>) => void;
   onDrop?: (item: MenuItemDisplay, event: DragEvent<HTMLDivElement>) => void;
   onDragOver?: (item: MenuItemDisplay, event: DragEvent<HTMLDivElement>) => void;
+};
+
+const keyboardActionIcons: Record<MenuKeyboardAction["id"], typeof ArrowUp> = {
+  "move-up": ArrowUp,
+  "move-down": ArrowDown,
+  indent: IndentIncrease,
+  outdent: IndentDecrease,
 };
 
 export function MenuItemRow({
@@ -28,6 +53,7 @@ export function MenuItemRow({
   active,
   isDragTarget,
   dropIntent,
+  keyboardActions = [],
   onEdit,
   onDelete,
   onSelect,
@@ -39,15 +65,13 @@ export function MenuItemRow({
   const label = item.label || "Untitled";
   const settings = normalizeMenuItemSettings(item.settings);
   const hasMetadataBadge = Boolean(settings.badge);
-  const hasRestrictedVisibility =
-    Boolean(settings.visibility) && settings.visibility !== "all";
-  const nestedHint =
-    depth > 0 && item.parentLabel ? `Sub-item of ${item.parentLabel}` : null;
+  const hasRestrictedVisibility = Boolean(settings.visibility) && settings.visibility !== "all";
+  const nestedHint = depth > 0 && item.parentLabel ? `Sub-item of ${item.parentLabel}` : null;
   const toneClass =
     settings.badge?.tone === "accent"
       ? "border-sky-200 bg-sky-500/10 text-sky-700"
-        : settings.badge?.tone === "success"
-          ? "border-emerald-200 bg-emerald-500/10 text-emerald-700"
+      : settings.badge?.tone === "success"
+        ? "border-emerald-200 bg-emerald-500/10 text-emerald-700"
         : settings.badge?.tone === "warning"
           ? "border-[var(--admin-state-warning)] bg-card text-[var(--admin-state-warning)]"
           : settings.badge?.tone === "danger"
@@ -61,6 +85,7 @@ export function MenuItemRow({
         isDragTarget && "border-primary/50 ring-2 ring-primary/10"
       )}
       data-menu-depth={depth}
+      data-menu-row-id={item.id}
       onDragOver={(event) => {
         event.preventDefault();
         onDragOver?.(item, event);
@@ -73,8 +98,24 @@ export function MenuItemRow({
     >
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
+        className="my-3 flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         draggable
+        aria-label={`Drag ${label}`}
+        title={`Drag ${label}`}
+        data-menu-drag-handle={item.id}
+        onDragStart={(event) => {
+          event.dataTransfer.setData("text/plain", item.id);
+          event.dataTransfer.effectAllowed = "move";
+          onDragStart?.(item, event);
+        }}
+        onDragEnd={(event) => onDragEnd?.(event)}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
+        draggable={false}
         aria-label={`Open menu item details for ${label}`}
         title={
           nestedHint
@@ -88,24 +129,11 @@ export function MenuItemRow({
             onSelect?.(item, event.timeStamp);
           }
         }}
-        onDragStart={(event) => {
-          event.dataTransfer.setData("text/plain", item.id);
-          event.dataTransfer.effectAllowed = "move";
-          onDragStart?.(item, event);
-        }}
-        onDragEnd={(event) => onDragEnd?.(event)}
       >
-        <div
-          className="pointer-events-none flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground cursor-grab active:cursor-grabbing"
-          aria-hidden="true"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
         <div
           className={cn(
             "pointer-events-none flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground",
-            item.status === "error" &&
-              "border border-destructive bg-card text-destructive"
+            item.status === "error" && "border border-destructive bg-card text-destructive"
           )}
         >
           {item.status === "error" ? (
@@ -120,8 +148,8 @@ export function MenuItemRow({
             {settings.description
               ? settings.description
               : item.pageTitle
-              ? `Page: ${item.pageTitle}`
-              : item.href || "Missing link"}
+                ? `Page: ${item.pageTitle}`
+                : item.href || "Missing link"}
           </div>
           {nestedHint ? (
             <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -133,15 +161,14 @@ export function MenuItemRow({
             <div className="mt-1 text-[11px] font-medium text-primary">
               {dropIntent === "child"
                 ? "Drop as sub-menu"
-                : "Drop at the same level"}
+                : dropIntent === "before"
+                  ? "Drop before this item"
+                  : "Drop after this item"}
             </div>
           ) : null}
         </div>
         {hasMetadataBadge ? (
-          <Badge
-            variant="outline"
-            className={cn("pointer-events-none", toneClass)}
-          >
+          <Badge variant="outline" className={cn("pointer-events-none", toneClass)}>
             {settings.badge?.label}
           </Badge>
         ) : null}
@@ -160,6 +187,25 @@ export function MenuItemRow({
         ) : null}
       </button>
       <div className="flex items-center gap-1 py-3 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
+        {keyboardActions.map((action) => {
+          const Icon = keyboardActionIcons[action.id];
+          return (
+            <Button
+              key={action.id}
+              variant="ghost"
+              size="icon"
+              aria-label={`${action.label} ${label}`}
+              title={`${action.label} ${label}`}
+              disabled={action.disabled}
+              onClick={(event) => {
+                event.stopPropagation();
+                action.onSelect();
+              }}
+            >
+              <Icon className="h-4 w-4" />
+            </Button>
+          );
+        })}
         <Button
           variant={active ? "secondary" : "ghost"}
           size="icon"

@@ -47,8 +47,9 @@ test("MenuEditorPage renders route-selected editor shell without cross-menu swit
     });
 
     expect(html).toContain("Main Navigation");
-    expect(html).toContain("Back to menus");
-    expect(html).toContain("Location");
+    expect(html).not.toContain("Back to menus");
+    expect(html).toContain("Theme location");
+    expect(html).toContain("Move to Draft");
     expect(html).not.toContain("Active menu");
     expect(html).not.toContain("New Menu");
   } finally {

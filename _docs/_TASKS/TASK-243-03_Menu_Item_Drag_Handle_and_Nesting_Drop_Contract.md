@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin UI + UX + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-243
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -404,3 +404,12 @@ onDrop={(target, event) => {
 5. Dragging right over a row offers a predictable child/nesting intent.
 6. Keyboard users can reorder via the chosen keyboard contract.
 7. Cycle prevention and root moves still work.
+
+## Completion Notes
+
+- Done on 2026-04-29.
+- `menuDnD.ts` now owns the pure drop-intent helper; `MenuTree` handles
+  before/after/child intents, first-class drop markers, root drops, and row
+  keyboard reorder actions.
+- `MenuItemRow` now uses the visible grip as the only drag source and keeps the
+  open-details button non-draggable.

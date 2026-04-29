@@ -312,5 +312,8 @@ Gdy zaznaczysz wpisy na liscie:
 - Menus persist whole-menu lifecycle state via `draft` / `published`.
   Existing menus migrate as `published` so public navigation does not disappear;
   new menus default to `draft`.
+- The route-selected Menus editor mirrors lifecycle parity: header actions own
+  `Discard`, `Save changes`, and `Publish` / `Move to Draft`; publishing saves
+  valid pending metadata and item changes before switching runtime visibility.
 - Menus list uses the shared admin pagination footer after filtering and keeps
   header selection scoped to the current visible page.

@@ -104,12 +104,17 @@ Storage:
 
 ## Menus
 
-- menu locations (np. `primary`, `footer`).
+- menu locations jako nullable theme/runtime slot keys (np. `primary`,
+  `footer`), bez zamknietego enumu.
+- menu lifecycle `draft` / `published`; runtime navigation uzywa tylko
+  opublikowanych menu.
 - menu items z nestingiem.
 - menu item moze wskazywac na page lub URL.
 - Admin UI jest list-first:
   - `/admin/menus` pokazuje liste menu i create entrypoint,
   - `/admin/menus/:id` edytuje tylko jedno wybrane menu.
+  - edytor pokazuje `Discard`, `Save changes`, oraz `Publish` /
+    `Move to Draft` dla aktualnie wybranego menu.
 
 ---
 

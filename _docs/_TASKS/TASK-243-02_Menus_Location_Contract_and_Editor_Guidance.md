@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin UI + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-243
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -202,3 +202,12 @@ test("navigation uses published menu location fallback only", async () => {
 6. If the implementer decides to make `location` optional on `POST /menus`, the
    route schema, API docs, client tests, and integration tests are updated in
    the same leaf.
+
+## Completion Notes
+
+- Done on 2026-04-29.
+- The editor now labels the field as `Theme location`, explains runtime slot
+  behavior, and surfaces draft/published visibility impact without changing the
+  nullable payload contract.
+- Schema coverage now includes explicit nullable create location behavior in
+  `tests/vitest/validation/menuSchemas.test.ts`.

@@ -1,4 +1,4 @@
-import { ArrowLeft, Layers, PlusCircle, RefreshCcw, Save, SlidersHorizontal } from "lucide-react";
+import { Layers, PlusCircle, Save, SlidersHorizontal, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -10,7 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import type { MenuItemNode, MenuItemRecord } from "@/services/menusClient";
+import type {
+  MenuItemInput,
+  MenuItemNode,
+  MenuItemRecord,
+  MenuSummary,
+  MenuWithItems,
+} from "@/services/menusClient";
 import {
   getCachedMenuDetail,
   getMenuWithItemsCached,
@@ -23,11 +29,11 @@ import { SplitShell } from "@/ui/layouts/SplitShell";
 import { MenuItemDeleteDialog } from "@/ui/menus/MenuItemDeleteDialog";
 import { MenuItemDrawer, type MenuItemDraft } from "@/ui/menus/MenuItemDrawer";
 import { resolveMenuId } from "@/ui/menus/routeParams";
-import { MenuTree, type MenuDropIntent } from "@/ui/menus/MenuTree";
+import { MenuTree } from "@/ui/menus/MenuTree";
+import type { MenuDropIntent } from "@/ui/menus/menuDnD";
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
 
 const createTempId = () => {
@@ -160,6 +166,42 @@ const collectRecordDescendants = (items: MenuItemRecord[], id: string) => {
   return descendants;
 };
 
+export function describeMenuLocationState(input: {
+  location: string;
+  status: MenuSummary["status"];
+}) {
+  const location = input.location.trim();
+  if (!location) return "Not assigned to a theme slot.";
+  if (input.status !== "published") {
+    return `Assigned to ${location}, but hidden from runtime until published.`;
+  }
+  return `Assigned to the ${location} theme slot.`;
+}
+
+const buildMenuItemsPayload = (items: MenuItemRecord[]): MenuItemInput[] =>
+  items.map((entry) => {
+    const base = {
+      id: entry.id,
+      label: entry.label.trim(),
+      parentId: entry.parentId ?? null,
+      orderIndex: entry.orderIndex,
+      settings: normalizeMenuItemSettings(entry.settings),
+    };
+    const href = entry.href?.trim() ?? "";
+    const hasPage = Boolean(entry.pageId);
+    const hasHref = href.length > 0;
+    if (hasPage && !hasHref) {
+      return { ...base, pageId: entry.pageId };
+    }
+    if (hasHref && !hasPage) {
+      return { ...base, href };
+    }
+    if (hasPage && hasHref) {
+      return { ...base, pageId: entry.pageId };
+    }
+    return base;
+  });
+
 export const moveMenuItems = (
   items: MenuItemRecord[],
   dragId: string,
@@ -186,11 +228,17 @@ export const moveMenuItems = (
   const oldSiblings = buildSiblings(oldParentId);
   const newSiblings = oldParentId === nextParentId ? oldSiblings : buildSiblings(nextParentId);
 
-  let insertIndex = newSiblings.length;
-  if (intent === "sibling") {
-    const targetIndex = newSiblings.findIndex((item) => item.id === targetId);
-    insertIndex = targetIndex === -1 ? newSiblings.length : targetIndex;
-  }
+  const targetIndex = newSiblings.findIndex((item) => item.id === targetId);
+  const insertIndex =
+    intent === "child"
+      ? newSiblings.length
+      : intent === "before"
+        ? targetIndex === -1
+          ? newSiblings.length
+          : Math.max(0, targetIndex)
+        : targetIndex === -1
+          ? newSiblings.length
+          : Math.max(0, targetIndex + 1);
 
   const moved = { ...dragItem, parentId: nextParentId };
   const nextSiblings = [...newSiblings];
@@ -288,12 +336,9 @@ export function MenuEditorPage() {
   const hasInitialMenuCache = Boolean(initialMenu);
   const [menuName, setMenuName] = useState(() => initialMenu?.menu.name ?? "");
   const [menuLocation, setMenuLocation] = useState(() => initialMenu?.menu.location ?? "");
-  const [originalMenu, setOriginalMenu] = useState<{
-    id: string;
-    name: string;
-    location: string | null;
-    createdAt: string;
-  } | null>(() => initialMenu?.menu ?? null);
+  const [originalMenu, setOriginalMenu] = useState<MenuWithItems["menu"] | null>(
+    () => initialMenu?.menu ?? null
+  );
   const [items, setItems] = useState<MenuItemRecord[]>(() =>
     initialMenu ? flattenMenuItems(initialMenu.items) : []
   );
@@ -308,11 +353,11 @@ export function MenuEditorPage() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(null);
   const hasUnsavedChangesRef = useRef(false);
-  const hasHydratedRef = useRef(hasInitialMenuCache);
   const skipNextDetailRefreshCountRef = useRef(0);
+  const mutationInFlightRef = useRef(false);
   const activeItemIdRef = useRef<string | null>(activeItemId);
   const [isLoading, setIsLoading] = useState(() => Boolean(menuId && !initialMenu));
-  const [isSaving, setIsSaving] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"save" | "publish" | "draft" | null>(null);
   const [error, setError] = useState<string | null>(() =>
     menuId ? null : "Select a menu from the Menus list."
   );
@@ -335,13 +380,7 @@ export function MenuEditorPage() {
   }, []);
 
   const applyMenuPayload = useCallback(
-    (
-      payload: {
-        menu: { id: string; name: string; location: string | null; createdAt: string };
-        items: MenuItemNode[];
-      },
-      options?: { preserveItemId?: string | null }
-    ) => {
+    (payload: MenuWithItems, options?: { preserveItemId?: string | null }) => {
       setOriginalMenu(payload.menu);
       setMenuName(payload.menu.name);
       setMenuLocation(payload.menu.location ?? "");
@@ -401,47 +440,6 @@ export function MenuEditorPage() {
     [applyMenuPayload]
   );
 
-  const refreshMenu = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      if (!menuId) {
-        setError("Select a menu from the Menus list.");
-        setIsLoading(false);
-        return;
-      }
-      const force = options?.force ?? false;
-      const background = resolveCacheRefreshBackground({
-        explicitBackground: options?.background,
-        hasHydrated: hasHydratedRef.current,
-      });
-      if (!background) {
-        setIsLoading(true);
-      }
-      setError(null);
-      try {
-        const pageList = await listPagesCached({ force });
-        setPages(pageList);
-        hasHydratedRef.current = true;
-        await loadMenu(menuId, {
-          force,
-          setLoading: false,
-          preserveItemId: activeItemIdRef.current,
-          allowUnsaved: true,
-        });
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load menu.");
-        }
-      } finally {
-        if (!background) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [loadMenu, menuId]
-  );
-
   useEffect(() => {
     if (!menuId) return;
     const mountOptions = resolveMenuMountRefreshOptions(hasInitialMenuCache);
@@ -453,7 +451,6 @@ export function MenuEditorPage() {
       .then(([pageList, payload]) => {
         if (!active) return;
         setPages(pageList);
-        hasHydratedRef.current = true;
         if (!payload) {
           setOriginalMenu(null);
           setItems([]);
@@ -493,8 +490,11 @@ export function MenuEditorPage() {
     if (!menuId) return;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.menuDetail(menuId)) return;
-      if (skipNextDetailRefreshCountRef.current > 0) {
-        skipNextDetailRefreshCountRef.current -= 1;
+      if (skipNextDetailRefreshCountRef.current > 0 || mutationInFlightRef.current) {
+        skipNextDetailRefreshCountRef.current = Math.max(
+          0,
+          skipNextDetailRefreshCountRef.current - 1
+        );
         return;
       }
       loadMenu(menuId, {
@@ -648,8 +648,46 @@ export function MenuEditorPage() {
     setPendingDelete(null);
   };
 
-  const handleSave = async () => {
-    if (!menuId) return;
+  const runOwnDetailMutation = async <T,>(operation: () => Promise<T>) => {
+    skipNextDetailRefreshCountRef.current += 1;
+    try {
+      return await operation();
+    } catch (err) {
+      skipNextDetailRefreshCountRef.current = Math.max(
+        0,
+        skipNextDetailRefreshCountRef.current - 1
+      );
+      throw err;
+    }
+  };
+
+  const buildMenuMetadataPatch = () => {
+    if (!originalMenu) return null;
+    const nextName = menuName.trim() || originalMenu.name || "Untitled";
+    const nextLocation = menuLocation.trim() || null;
+    const patch: { name?: string; location?: string | null } = {};
+    if (nextName !== originalMenu.name) {
+      patch.name = nextName;
+    }
+    if (nextLocation !== (originalMenu.location ?? null)) {
+      patch.location = nextLocation;
+    }
+    return Object.keys(patch).length > 0 ? patch : null;
+  };
+
+  const persistMenuEditorState = async (options?: {
+    nextStatus?: MenuSummary["status"];
+    successMessage?: string;
+  }) => {
+    if (!menuId || mutationInFlightRef.current) return;
+    mutationInFlightRef.current = true;
+    setPendingAction(
+      options?.nextStatus === "published"
+        ? "publish"
+        : options?.nextStatus === "draft"
+          ? "draft"
+          : "save"
+    );
     setError(null);
 
     const validation = validateMenuItemsPayload(items);
@@ -659,43 +697,21 @@ export function MenuEditorPage() {
       if (!isLargeScreen) {
         setDetailsOpen(true);
       }
+      mutationInFlightRef.current = false;
+      setPendingAction(null);
       return;
     }
 
-    setIsSaving(true);
     try {
-      const didSave = hasMetaChanges || isDirty;
-      skipNextDetailRefreshCountRef.current = (hasMetaChanges ? 1 : 0) + (isDirty ? 1 : 0);
-      if (hasMetaChanges) {
-        await updateMenu(menuId, {
-          name: menuName.trim() || originalMenu?.name || "Untitled",
-          location: menuLocation.trim() || null,
-        });
+      const metadataPatch = buildMenuMetadataPatch();
+      if (metadataPatch) {
+        await runOwnDetailMutation(() => updateMenu(menuId, metadataPatch));
       }
       if (isDirty) {
-        const payload = items.map((entry) => {
-          const base = {
-            id: entry.id,
-            label: entry.label.trim(),
-            parentId: entry.parentId ?? null,
-            orderIndex: entry.orderIndex,
-            settings: normalizeMenuItemSettings(entry.settings),
-          };
-          const href = entry.href?.trim() ?? "";
-          const hasPage = Boolean(entry.pageId);
-          const hasHref = href.length > 0;
-          if (hasPage && !hasHref) {
-            return { ...base, pageId: entry.pageId };
-          }
-          if (hasHref && !hasPage) {
-            return { ...base, href };
-          }
-          if (hasPage && hasHref) {
-            return { ...base, pageId: entry.pageId };
-          }
-          return base;
-        });
-        await replaceMenuItems(menuId, payload);
+        await runOwnDetailMutation(() => replaceMenuItems(menuId, buildMenuItemsPayload(items)));
+      }
+      if (options?.nextStatus) {
+        await runOwnDetailMutation(() => updateMenu(menuId, { status: options.nextStatus }));
       }
       await loadMenu(menuId, {
         force: true,
@@ -703,15 +719,14 @@ export function MenuEditorPage() {
         setLoading: false,
         preserveItemId: activeItemId,
       });
-      if (didSave) {
-        toast.success("Menu saved.");
-      }
+      toast.success(options?.successMessage ?? "Menu saved.");
     } catch (err) {
       const message = isApiClientError(err) ? err.message : "Failed to save menu changes.";
       setError(message);
       toast.error(message);
     } finally {
-      setIsSaving(false);
+      mutationInFlightRef.current = false;
+      setPendingAction(null);
     }
   };
 
@@ -731,6 +746,13 @@ export function MenuEditorPage() {
   ) : null;
 
   const title = originalMenu?.name ?? "Menu Editor";
+  const menuStatus = originalMenu?.status ?? "draft";
+  const isPublished = menuStatus === "published";
+  const isMutating = pendingAction !== null;
+  const locationState = describeMenuLocationState({
+    location: menuLocation,
+    status: menuStatus,
+  });
   const missingMenuState = !isLoading && !originalMenu;
 
   return (
@@ -756,54 +778,75 @@ export function MenuEditorPage() {
       <div className="flex h-full flex-col gap-6">
         <PageHeader
           title={title}
-          description="Edit one menu at a time. Change metadata, refine the structure, and save when the draft is ready."
+          description="Edit one menu at a time. Change metadata, refine the structure, and publish when ready."
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="gap-2" onClick={() => navigate("/menus")}>
-                <ArrowLeft className="h-4 w-4" />
-                Back to menus
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => refreshMenu({ force: true, background: false })}
-              >
-                <RefreshCcw className="h-4 w-4" />
-                Refresh
-              </Button>
+              {originalMenu ? (
+                <>
+                  <Badge variant={isPublished ? "default" : "outline"}>
+                    {isPublished ? "Published" : "Draft"}
+                  </Badge>
+                  <Badge variant={canSave ? "secondary" : "outline"}>
+                    {canSave ? "Unsaved changes" : "All changes saved"}
+                  </Badge>
+                  {!isLargeScreen ? (
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => setDetailsOpen(true)}
+                      disabled={!activeItemId}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Details
+                    </Button>
+                  ) : null}
+                  <Button variant="ghost" onClick={handleDiscard} disabled={!canSave || isMutating}>
+                    Discard
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="gap-2"
+                    onClick={() => persistMenuEditorState()}
+                    disabled={!canSave || isMutating}
+                  >
+                    <Save className="h-4 w-4" />
+                    {pendingAction === "save" ? "Saving..." : "Save changes"}
+                  </Button>
+                  {!isPublished ? (
+                    <Button
+                      className="gap-2"
+                      onClick={() =>
+                        persistMenuEditorState({
+                          nextStatus: "published",
+                          successMessage: "Menu published.",
+                        })
+                      }
+                      disabled={isMutating}
+                    >
+                      <Upload className="h-4 w-4" />
+                      {pendingAction === "publish" ? "Publishing..." : "Publish"}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() =>
+                        persistMenuEditorState({
+                          nextStatus: "draft",
+                          successMessage: "Menu moved to draft.",
+                        })
+                      }
+                      disabled={isMutating}
+                    >
+                      <Upload className="h-4 w-4 rotate-180" />
+                      {pendingAction === "draft" ? "Moving..." : "Move to Draft"}
+                    </Button>
+                  )}
+                </>
+              ) : null}
             </div>
           }
         />
-
-        {originalMenu ? (
-          <div className="rounded-xl border bg-card/60 px-4 py-3 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Badge variant={canSave ? "secondary" : "outline"}>
-                {canSave ? "Unsaved changes" : "All changes saved"}
-              </Badge>
-              <div className="flex flex-wrap items-center gap-2">
-                {!isLargeScreen ? (
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setDetailsOpen(true)}
-                    disabled={!activeItemId}
-                  >
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Details
-                  </Button>
-                ) : null}
-                <Button variant="ghost" onClick={handleDiscard} disabled={!canSave}>
-                  Discard
-                </Button>
-                <Button onClick={handleSave} disabled={!canSave || isSaving}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isSaving ? "Saving…" : "Save changes"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
 
         {error ? (
           <Alert variant="destructive">
@@ -861,16 +904,21 @@ export function MenuEditorPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Location
+                    Theme location
                   </label>
                   <Input
                     value={menuLocation}
                     onChange={(event) => setMenuLocation(event.target.value)}
                     placeholder="primary"
+                    aria-describedby="menu-location-help menu-location-state"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Theme slot identifier such as <code>primary</code> or <code>footer</code>. Use
-                    the value your frontend theme expects for navigation placement.
+                  <p id="menu-location-help" className="text-xs text-muted-foreground">
+                    Slot key used by the theme or Navigation widget, for example{" "}
+                    <code>primary</code> or <code>footer</code>. Leave empty for menus that are not
+                    mounted in a theme slot yet.
+                  </p>
+                  <p id="menu-location-state" className="text-xs text-muted-foreground">
+                    {locationState}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -892,8 +940,8 @@ export function MenuEditorPage() {
                   <div>
                     <h3 className="text-lg font-semibold">Menu Structure</h3>
                     <p className="text-xs text-muted-foreground">
-                      Drag the handle to reorder. Move slightly to the right while dragging to turn
-                      an item into a sub-menu.
+                      Drag from the grip handle to reorder. Drop near the top or bottom of a row for
+                      same-level placement, or drop in the center/right side to create a sub-menu.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleAddItem}>

@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-243
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -287,3 +287,12 @@ Keep refresh only in contextual recovery:
    draft transition path.
 4. Publish persists valid unsaved editor state first.
 5. Save and publish cannot run concurrently.
+
+## Completion Notes
+
+- Done on 2026-04-29.
+- `MenuEditorPage` now keeps lifecycle fields in editor state, renders
+  `Discard`, `Save changes`, and `Publish` / `Move to Draft` in the header, and
+  uses one guarded persistence path for save/publish/draft actions.
+- Targeted coverage lives in
+  `tests/vitest/ui/menu-editor-shell-wave.test.tsx`.

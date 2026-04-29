@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 53 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1370 tasks
+- **Done:** 1375 tasks
 
 ---
 
@@ -81,11 +81,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Technical leaf: authoring guide plus redacted composer diagnostics/observability |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
-| TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Align Menus editor header actions, lifecycle publish, Location guidance, and handle-based drag/drop with current admin editor patterns |
-| TASK-243-01 | Menus Editor Header Actions and Lifecycle Publish | High | Medium | Technical leaf: remove header Back/Refresh, move Discard/Save/Publish into editor actions, and add lifecycle-safe publish flow |
-| TASK-243-02 | Menus Location Contract and Editor Guidance | High | Medium | Technical leaf: verify nullable theme-slot Location behavior and make editor/docs guidance clear |
-| TASK-243-03 | Menu Item Drag Handle and Nesting Drop Contract | High | Large | Technical leaf: make the grip the only drag handle and add deterministic before/after/child drop intents |
-| TASK-243-04 | Menus Editor Validation, Docs, and Closure | Medium | Medium | Technical leaf: targeted tests, manual QA checklist, docs, changelog, and board closure |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
@@ -109,6 +104,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Done: Menus editor header actions, lifecycle publish/draft, Location guidance, and handle-based drag/drop parity shipped |
+| TASK-243-01 | Menus Editor Header Actions and Lifecycle Publish | High | Medium | Done: editor header owns Discard, Save changes, Publish, and Move to Draft with lifecycle-safe persistence |
+| TASK-243-02 | Menus Location Contract and Editor Guidance | High | Medium | Done: Theme location guidance explains nullable slot behavior and runtime published-menu dependency |
+| TASK-243-03 | Menu Item Drag Handle and Nesting Drop Contract | High | Large | Done: grip-only drag, before/after/child intents, drop markers, keyboard reorder actions, and cycle guards shipped |
+| TASK-243-04 | Menus Editor Validation, Docs, and Closure | Medium | Medium | Done: targeted tests, docs, changelog 777, and board closure synced |
 | TASK-242 | Widget Style Token None Options | High | Large | Done: `none` off switches now cover approved visual tokens across widget schemas, render maps, admin selects, focused runtime/UI tests, docs, and changelog 776 |
 | TASK-242-01 | Widget Token Audit and None Semantics | High | Medium | Done: token inventory and semantic boundaries were used to scope the implementation |
 | TASK-242-01-01 | Widget Config Token Inventory | High | Small | Done: visual, legacy-zero, already-none, and structural fields were classified before rollout |

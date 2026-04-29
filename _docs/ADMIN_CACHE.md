@@ -381,10 +381,13 @@ When adding a new resource:
   - `pages:list` cache may seed link labels, but it must not move the editor
     shell into background loading when the selected menu detail is missing.
 - Menu editor detail reload:
-  - reloads the route-selected `menus:detail:<id>` entry on explicit refresh,
-    save completion, or cacheBus detail event,
+  - reloads the route-selected `menus:detail:<id>` entry on contextual remote
+    refresh, save completion, publish/draft completion, or cacheBus detail
+    event,
   - does not switch to another menu because `menus:list` changed elsewhere,
-  - does not auto-force on every route entry when detail cache exists.
+  - does not auto-force on every route entry when detail cache exists,
+  - suppresses its own `menus:detail:<id>` cache events while save/publish is
+    in flight so editor mutations do not show as remote updates.
 
 
 ## Route Map
