@@ -49,7 +49,7 @@ Use this as the seed list and update it if the scan finds drift:
 | Widget | Add or alias `none` for |
 |---|---|
 | `hero` | `layout.maxWidth`, `layout.contentWidth`, `style.headlineSize`, `style.subheadSize`, `style.bodySize`, `style.borderRadius`, `style.mediaRadius`, `style.primaryButtonSize`, `style.secondaryButtonSize` |
-| `navigation` | `layout.maxWidth`, `layout.paddingY`, `layout.itemGap`, `style.fontSize` |
+| `navigation` | `layout.maxWidth`, `layout.paddingY`, `layout.itemGap`, `style.fontSize`, `style.fontWeight` |
 | `footer` | `layout.maxWidth`, `layout.columnGap`, `layout.sectionPaddingY`, `style.fontSize` |
 | `stack` | responsive `gap` tokens, preserving `"0"` compatibility |
 | `splitLayout` | `gap`, preserving `"0"` compatibility |
@@ -72,7 +72,7 @@ Use this as the seed list and update it if the scan finds drift:
 | `newsletter` | `style.spacing` |
 | `formEmbed` | `layout.width`, `layout.spacing`, `style.radius`, `style.inputSize` |
 | `logoCloud` | `style.logoHeight`, `style.gap` |
-| `richTextSection` | `style.fontScale`, `style.spacing`; confirm whether `options.maxWidth = "full"` remains the off switch |
+| `richTextSection` | `style.fontScale`, `style.lineHeight`, `style.spacing`; confirm whether `options.maxWidth = "full"` remains the off switch |
 | `timeline` | `layout.spacing`, `style.titleSize`, `style.descriptionSize`; confirm whether marker/line size needs `none` or should stay structural |
 | `compareTimeline` | `layout.trackSpacing`, `style.trackLabelSize`, `style.stepLabelSize`, `style.segmentLabelSize` |
 
@@ -97,7 +97,7 @@ split.
 | Surface | Source refs | Fields | Owner |
 |---|---|---|---|
 | `hero` | `core/widgets/core/hero.tsx:125-166`, `221-287`, `320-455`, `541` | `borderRadius`, `mediaRadius` owned by TASK-242-02-01; `layout.maxWidth`, `layout.contentWidth`, `headlineSize`, `subheadSize`, `bodySize`, `primaryButtonSize`, `secondaryButtonSize` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
-| `navigation` | `core/widgets/core/navigation.tsx:184-202`, `236-256`, `366-387` | `layout.paddingY`, `layout.itemGap` owned by TASK-242-02-01; `layout.maxWidth`, `style.fontSize` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
+| `navigation` | `core/widgets/core/navigation.tsx:184-203`, `236-268`, `366-389` | `layout.paddingY`, `layout.itemGap` owned by TASK-242-02-01; `layout.maxWidth`, `style.fontSize`, `style.fontWeight` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
 | `footer` | `core/widgets/core/footer.tsx:119-136`, `192-210`, `332-391` | `layout.columnGap`, `layout.sectionPaddingY` owned by TASK-242-02-01; `layout.maxWidth`, `style.fontSize` owned by TASK-242-03-02 | TASK-242-02-01, TASK-242-03-02 |
 | `stack` | `core/widgets/core/stack.tsx:11-26`, `108-166`, `208-260` | responsive `gap` tokens, legacy `"0"` alias | TASK-242-02-01 |
 | `splitLayout` | `core/widgets/core/splitLayout.tsx:13-57`, `118-191`, `247` | `gap`, legacy `"0"` alias | TASK-242-02-01 |
@@ -120,7 +120,7 @@ split.
 | `newsletter` | `core/widgets/core/newsletter.tsx:6-99`, `31`, `135`, `178-251` | `style.spacing` | TASK-242-02-02 |
 | `formEmbed` | `core/widgets/core/formEmbed.tsx:210-224`, `80-112`, `265`, `501-538` | `layout.spacing`, `style.radius` owned by TASK-242-02-02; `layout.width`, `style.inputSize` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
 | `logoCloud` | `core/widgets/core/logoCloud.tsx:6-92`, `35-42`, `134`, `214-354` | `style.gap` owned by TASK-242-02-02; `style.logoHeight` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
-| `richTextSection` | `core/widgets/core/richTextSection.tsx:13-16`, `148-160`, `58-76`, `229`, `405-561` | `style.spacing` owned by TASK-242-02-02; `style.fontScale` owned by TASK-242-03-02; keep `options.maxWidth="full"` as existing no-limit width unless reclassified | TASK-242-02-02, TASK-242-03-02 |
+| `richTextSection` | `core/widgets/core/richTextSection.tsx:13-16`, `148-160`, `58-80`, `229`, `405-561` | `style.spacing` owned by TASK-242-02-02; `style.fontScale` and `style.lineHeight` owned by TASK-242-03-02; keep `options.maxWidth="full"` as existing no-limit width unless reclassified | TASK-242-02-02, TASK-242-03-02 |
 | `timeline` | `core/widgets/core/timeline.tsx:8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `layout.spacing` owned by TASK-242-02-02; `style.titleSize`, `style.descriptionSize` owned by TASK-242-03-02; keep marker/line size structural unless reclassified | TASK-242-02-02, TASK-242-03-02 |
 | `compareTimeline` | `core/widgets/core/compareTimeline.tsx:7-12`, `165`, `187-189`, `365`, `597`, `608-610` | `trackSpacing` owned by TASK-242-02-02; `trackLabelSize`, `stepLabelSize`, `segmentLabelSize` owned by TASK-242-03-02 | TASK-242-02-02, TASK-242-03-02 |
 
@@ -204,7 +204,7 @@ files only for surfaces that already live there.
 |---|---|---|
 | `_docs/WIDGETS.md` | `77`, `188-189`, `406`, `421`, `435` | add global `none` semantics for visual tokens, legacy `"0"` compatibility, and structural exclusions |
 | `_docs/_WIDGETS/HERO.md` | `45-46`, `75-80` | document width, typography, button, and radius `none` behavior |
-| `_docs/_WIDGETS/NAVIGATION.md` | `50`, `66`, `138-154` | document max width, padding, item gap, and font-size `none` behavior |
+| `_docs/_WIDGETS/NAVIGATION.md` | `50`, `66`, `138-154` | document max width, padding, item gap, font-size, and font-weight `none` behavior |
 | `_docs/_WIDGETS/FOOTER.md` | `46`, `55-56`, `68-69`, `95`, `108` | document max width, column gap, section padding, and font-size `none` behavior |
 | `_docs/_WIDGETS/STACK.md` | `27`, `40`, `45`, `50`, `65` | document responsive gap `none` and legacy `"0"` alias |
 | `_docs/_WIDGETS/SPLIT_LAYOUT.md` | `28`, `42`, `58`, `74` | document `gap="none"` behavior |
@@ -226,7 +226,7 @@ files only for surfaces that already live there.
 | `_docs/_WIDGETS/NEWSLETTER.md` | `40`, `55`, `82` | document spacing `none` behavior |
 | `_docs/_WIDGETS/FORM_EMBED.md` | file missing today | create per-widget doc, add it to `_docs/_WIDGETS/README.md`, and document width, spacing, radius, and input-size `none` behavior |
 | `_docs/_WIDGETS/LOGO_CLOUD.md` | `48`, `73`, `76` | document logo height and gap `none` behavior |
-| `_docs/_WIDGETS/RICH_TEXT_SECTION.md` | `54`, `87`, `91`, `95` | document font scale and spacing `none`; keep `maxWidth="full"` note if unchanged |
+| `_docs/_WIDGETS/RICH_TEXT_SECTION.md` | `54`, `87`, `91`, `95` | document font scale, line height, and spacing `none`; keep `maxWidth="full"` note if unchanged |
 | `_docs/_WIDGETS/TIMELINE.md` | `34`, `70` | document spacing and label-size `none` behavior |
 | `_docs/_WIDGETS/COMPARE_TIMELINE.md` | `40` | document track spacing and label-size `none` behavior |
 | `_docs/_WIDGETS/POSTS_FEED.md` | `70` | document inherited content-list gap `none` behavior |

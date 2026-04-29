@@ -56,12 +56,12 @@ often cannot disable the preset.
 | `galleryMosaic` | `style.gap` | zero mosaic gap |
 | `ctaBanner` | `style.padding` | zero banner padding |
 | `pricingPlans` | `style.spacing` | zero plan/card spacing |
-| `faqAccordion` | `style.spacing` | zero item spacing/panel padding where applicable |
+| `faqAccordion` | `style.spacing` | zero item spacing and panel padding, including the compact variant override |
 | `team` | `style.gap` | zero member-card gap |
 | `testimonials` | `style.spacing` | zero testimonial/card spacing |
 | `contact` | `style.spacing` | zero block/form spacing |
 | `newsletter` | `style.spacing` | zero form/content spacing |
-| `formEmbed` | `layout.spacing`, `style.radius` | zero form spacing and no forced field radius |
+| `formEmbed` | `layout.spacing`, `style.radius` | zero form spacing and no forced radius on the surface, field controls, and runtime nav/submit buttons |
 | `logoCloud` | `style.gap` | zero logo gap |
 | `richTextSection` | `style.spacing` | zero rich text spacing |
 | `timeline` | `layout.spacing` | zero step spacing |
@@ -80,6 +80,15 @@ often cannot disable the preset.
 - For `postsFeed`, update the local schema/type/normalizer first, then verify
   the value flows through `mapPostsFeedToContentListData()` into the shared
   content-list renderer. Do not rely on content-list normalization alone.
+- For `formEmbed.style.radius`, do not stop at adding `none: ""` to
+  `radiusClassMap`. The current renderer also has hard-coded `rounded-*` base
+  classes on the surface and runtime buttons. Make the radius token authoritative
+  without changing existing defaults, and prove `none` removes every
+  field-owned rounded class.
+- For `faqAccordion.style.spacing`, update both `spacingClassMap` and
+  `panelPaddingClassMap`; the compact variant currently bypasses the padding
+  map, so `none` must either route compact through the zero padding map or have
+  an explicitly tested field-specific exception.
 
 ## Security Contract
 
@@ -111,11 +120,49 @@ function resolveWidgetSpacing(value: unknown): WidgetSpacing {
 }
 ```
 
+Widget-specific examples:
+
+```ts
+const faqSpacingClassMap = {
+  none: "gap-0",
+  sm: "gap-2",
+  md: "gap-3",
+  lg: "gap-4",
+} as const;
+
+const faqPanelPaddingClassMap = {
+  none: "px-0 py-0",
+  sm: "px-4 py-3",
+  md: "px-5 py-4",
+  lg: "px-6 py-5",
+} as const;
+
+const panelPaddingClass =
+  spacing === "none" ? faqPanelPaddingClassMap.none : compact ? "px-4 py-3" : faqPanelPaddingClassMap[spacing];
+
+const formRadiusClassMap = {
+  none: "",
+  sm: "rounded-md",
+  md: "rounded-lg",
+  lg: "rounded-xl",
+} as const;
+
+const radiusClassName = formRadiusClassMap[style.radius ?? "md"];
+const surfaceClassName = joinClasses("w-full space-y-6 border p-6", radiusClassName);
+const submitButtonClassName = joinClasses("bg-[var(--color-primary)] px-5 py-2", radiusClassName);
+```
+
 ## Testing Requirements
 
 - Add render assertions for `data-*` markers where present, such as
   `data-stats-kpi-spacing`, `data-gallery-mosaic-gap`,
   `data-cta-banner-padding`, and similar markers.
+- Add explicit regressions for `formEmbed.style.radius = "none"` proving the
+  surface, field controls, and runtime nav/submit buttons no longer retain the
+  hard-coded rounded classes.
+- Add explicit regressions for `faqAccordion.style.spacing = "none"` in both
+  standard/two-column and compact variants so gap and panel padding both reach
+  zero.
 - Add normalizer tests in the current owner suite for each widget. Use
   `tests/vitest/widgets/*` for Bun-free widget render/normalizer tests and keep
   existing `tests/unit/widgets/contentList.test.tsx`,

@@ -30,9 +30,9 @@ TASK-242-02-02.
 | File | Current line refs | Fields |
 |---|---|---|
 | `core/widgets/core/hero.tsx` | `125-166`, `221-287`, `320-455`, `541` | `layout.maxWidth`, `layout.contentWidth`, `style.headlineSize`, `style.subheadSize`, `style.bodySize`, `style.primaryButtonSize`, `style.secondaryButtonSize` |
-| `core/widgets/core/navigation.tsx` | `184-202`, `236-256`, `366-387` | `layout.maxWidth`, `style.fontSize` |
+| `core/widgets/core/navigation.tsx` | `184-203`, `236-268`, `366-389` | `layout.maxWidth`, `style.fontSize`, `style.fontWeight` |
 | `core/widgets/core/footer.tsx` | `119-136`, `192-210`, `332-391` | `layout.maxWidth`, `style.fontSize` |
-| `core/widgets/core/richTextSection.tsx` | `13-16`, `148-160`, `58-76`, `229`, `405-561` | `style.fontScale`; keep `options.maxWidth="full"` as the existing no-limit width switch |
+| `core/widgets/core/richTextSection.tsx` | `13-16`, `148-160`, `58-80`, `229`, `405-561` | `style.fontScale`, `style.lineHeight`; keep `options.maxWidth="full"` as the existing no-limit width switch |
 | `core/widgets/core/timeline.tsx` | `8-14`, `138-162`, `58`, `350`, `403`, `474`, `550` | `style.titleSize`, `style.descriptionSize`; keep marker/line sizes out unless TASK-242-01 reclassifies them |
 | `core/widgets/core/compareTimeline.tsx` | `7-12`, `165`, `187-189`, `365`, `597`, `608-610` | `style.trackLabelSize`, `style.stepLabelSize`, `style.segmentLabelSize` |
 | `core/widgets/core/formEmbed.tsx` | `210-224`, `80-112`, `265`, `501-538` | `layout.width`, `style.inputSize` |
@@ -50,9 +50,11 @@ branch changes these files before implementation starts.
 | `hero` | `primaryButtonSize`, `secondaryButtonSize` | emit no forced button size class beyond base button styling |
 | `navigation` | `layout.maxWidth` | emit no max-width wrapper class |
 | `navigation` | `style.fontSize` | emit no forced text-size class |
+| `navigation` | `style.fontWeight` | emit no forced font-weight class |
 | `footer` | `layout.maxWidth` | emit no max-width wrapper class |
 | `footer` | `style.fontSize` | emit no forced text-size class |
 | `richTextSection` | `style.fontScale` | emit no forced prose/text scale class |
+| `richTextSection` | `style.lineHeight` | emit no forced leading class while preserving readable defaults |
 | `timeline` | `style.titleSize`, `style.descriptionSize` | emit no forced label text-size class |
 | `compareTimeline` | label size fields | emit no forced label text-size class |
 | `formEmbed` | `layout.width` | emit no forced width preset when `none` is selected |
@@ -101,14 +103,20 @@ function resolveLabelSize(value: unknown, fallback: LabelSizeToken): LabelSizeTo
 For width tokens, keep `none` distinct from existing semantic width choices.
 
 ```ts
-const widthClassMap: Record<WidthToken, string> = {
+const formEmbedWidthTokens = ["none", "sm", "md", "lg", "xl"] as const;
+type FormEmbedWidthToken = (typeof formEmbedWidthTokens)[number];
+
+const formEmbedWidthClassMap: Record<FormEmbedWidthToken, string> = {
   none: "",
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  full: "max-w-none",
+  sm: "max-w-md",
+  md: "max-w-lg",
+  lg: "max-w-xl",
+  xl: "max-w-2xl",
 };
 ```
+
+Do not add a new `full` value to `formEmbed.layout.width`; it does not exist in
+the current runtime contract. `none` is the new no-forced-width option.
 
 ## Testing Requirements
 

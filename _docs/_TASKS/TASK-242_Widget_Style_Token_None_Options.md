@@ -57,7 +57,7 @@ Primary fields missing a `none` off switch:
 | Hero and global shell sizing | `hero.tsx`, `navigation.tsx`, `footer.tsx` | `maxWidth`, `contentWidth`, `paddingY`, `itemGap`, `columnGap`, `sectionPaddingY`, radius and size tokens |
 | Content/composite spacing | `statsKpi.tsx`, `featureGrid.tsx`, `contentList.tsx`, `postsFeed.tsx`, `entryTeaser.tsx`, `galleryMosaic.tsx`, `ctaBanner.tsx`, `pricingPlans.tsx`, `faqAccordion.tsx`, `team.tsx`, `testimonials.tsx` | `spacing`, `gap`, `padding`, missing radius off switches |
 | Forms and conversion widgets | `contact.tsx`, `newsletter.tsx`, `formEmbed.tsx`, `logoCloud.tsx` | `spacing`, `gap`, `logoHeight`, `width`, `inputSize`, radius |
-| Typography and timeline labels | `richTextSection.tsx`, `timeline.tsx`, `compareTimeline.tsx`, `navigation.tsx`, `footer.tsx`, `hero.tsx` | `fontScale`, `fontSize`, `headlineSize`, `subheadSize`, `bodySize`, `titleSize`, `descriptionSize`, track/step/segment label sizes |
+| Typography and timeline labels | `richTextSection.tsx`, `timeline.tsx`, `compareTimeline.tsx`, `navigation.tsx`, `footer.tsx`, `hero.tsx` | `fontScale`, `lineHeight`, `fontSize`, `fontWeight`, `headlineSize`, `subheadSize`, `bodySize`, `titleSize`, `descriptionSize`, track/step/segment label sizes |
 
 Fields that already have an off switch and should mostly need regression
 coverage or no-op confirmation:

@@ -28,6 +28,7 @@ bun --cwd core lint
 bun --cwd core lint:types
 git diff --check
 bun run gates:coderso
+bun run precommit
 ```
 
 Run focused Vitest suites for every touched widget editor. The expected suite
@@ -65,6 +66,36 @@ set includes, but is not limited to:
 Also run any touched widget runtime suites that cover normalizers or render
 output. Most current widget render suites are in `tests/vitest/widgets/*`; keep
 existing `tests/unit/widgets/*` runs only for surfaces that already live there.
+For full TASK-242 closure, run the current Vitest-owned runtime widget matrix:
+
+```bash
+./node_modules/.bin/vitest run --config vitest.config.ts \
+  tests/vitest/widgets/hero.test.tsx \
+  tests/vitest/widgets/navigation.test.tsx \
+  tests/vitest/widgets/footer.test.tsx \
+  tests/vitest/widgets/stack.test.tsx \
+  tests/vitest/widgets/splitLayout.test.tsx \
+  tests/vitest/widgets/gridColumns.test.tsx \
+  tests/vitest/widgets/divider.test.tsx \
+  tests/vitest/widgets/spacer.test.tsx \
+  tests/vitest/widgets/screenWidgets.test.tsx \
+  tests/vitest/widgets/statsKpi.test.tsx \
+  tests/vitest/widgets/featureGrid.test.tsx \
+  tests/vitest/widgets/galleryMosaic.test.tsx \
+  tests/vitest/widgets/ctaBanner.test.tsx \
+  tests/vitest/widgets/pricingPlans.test.tsx \
+  tests/vitest/widgets/faqAccordion.test.tsx \
+  tests/vitest/widgets/team.test.tsx \
+  tests/vitest/widgets/testimonials.test.tsx \
+  tests/vitest/widgets/contact.test.tsx \
+  tests/vitest/widgets/newsletter.test.tsx \
+  tests/vitest/widgets/formEmbed.test.tsx \
+  tests/vitest/widgets/logoCloud.test.tsx \
+  tests/vitest/widgets/richTextSection.test.tsx \
+  tests/vitest/widgets/timeline.test.tsx \
+  tests/vitest/widgets/compareTimeline.test.tsx
+```
+
 For the current Bun-owned widget suites in scope, run:
 
 ```bash

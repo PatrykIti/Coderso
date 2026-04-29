@@ -49,9 +49,9 @@ has landed.
 | `hero` | `layout.maxWidth`, `layout.contentWidth` | no max-width class |
 | `hero` | `headlineSize`, `subheadSize`, `bodySize` | no forced text-size class |
 | `hero` | `primaryButtonSize`, `secondaryButtonSize` | no forced button size class, only base button styling |
-| `navigation` | `layout.maxWidth`, `style.fontSize` | no max-width/text-size class |
+| `navigation` | `layout.maxWidth`, `style.fontSize`, `style.fontWeight` | no max-width/text-size/font-weight class |
 | `footer` | `layout.maxWidth`, `style.fontSize` | no max-width/text-size class |
-| `richTextSection` | `style.fontScale` | no prose/text scale class; keep `options.maxWidth="full"` as the existing no-limit width unless TASK-242-01 decides otherwise |
+| `richTextSection` | `style.fontScale`, `style.lineHeight` | no prose/text scale or forced leading class; keep `options.maxWidth="full"` as the existing no-limit width unless TASK-242-01 decides otherwise |
 | `timeline` | `titleSize`, `descriptionSize` | no forced label text-size class |
 | `compareTimeline` | `trackLabelSize`, `stepLabelSize`, `segmentLabelSize` | no forced label text-size class |
 | `formEmbed` | `layout.width`, `style.inputSize` | no forced width/input size preset when safe |
