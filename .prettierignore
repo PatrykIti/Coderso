@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+.next
+.git
+coverage
+plugins-runtime
+core/db/migrations
+db/migrations
+.tmp
+_docs/_CHANGELOG/README.md

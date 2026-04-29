@@ -152,6 +152,8 @@ Testing docs:
 - For auth, public-write, secret-handling, dependency, or scanner-config changes, run the local Semgrep/Trivy/Gitleaks commands from `_docs/SECURITY_SPEC.md` when feasible or state clearly that validation remains CI-only. Any change to scanner allowlists/configs must record owner, reason, expiry, and ticket in task/changelog notes.
 - If `bun test:full` cannot complete due to DB/network issues, rerun after recovery and update the changelog with the final test status.
 - If any tests are skipped or cannot run, state it clearly in the summary.
+- Before creating a manual commit, run `bun run precommit` unless the commit is
+  created through the configured Git hook path and the hook runs automatically.
 
 ## Task Closure Rules
 
