@@ -5,7 +5,7 @@
 **Category:** Analytics + React Compiler
 **Estimated Effort:** Medium
 **Dependencies:** TASK-220-02
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -19,7 +19,7 @@ Clean up Analytics page findings, including both mount loader state and
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/analytics/AnalyticsPage.tsx | 64 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `void refresh();` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/analytics/AnalyticsPage.tsx | 67 | react-hooks/preserve-manual-memoization (manual memo dependencies cannot be preserved) | `const metrics = useMemo((): KpiCard[] => {` | Remove cheap memoization or depend on exact scalar values read by the memo callback. |
 | core/admin/ui/analytics/AnalyticsPage.tsx | 67 | react-hooks/preserve-manual-memoization (manual memo dependencies cannot be preserved) | `const metrics = useMemo((): KpiCard[] => {` | Remove cheap memoization or depend on exact scalar values read by the memo callback. |
@@ -57,9 +57,7 @@ Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks C
 ## Pseudocode
 
 ```ts
-const metrics = overview
-  ? buildAnalyticsMetrics(overview)
-  : [];
+const metrics = overview ? buildAnalyticsMetrics(overview) : [];
 
 // If memoization is still needed, depend on exact scalar reads instead of the
 // broad object when React Compiler reports a mismatch.

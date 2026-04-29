@@ -5,7 +5,7 @@
 **Category:** Posts Editor + React Compiler Refs
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-05
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ for callback freshness, while reactive data should live in state/reducer values.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/posts/editor/hooks/usePostEditorState.ts | 424 | react-hooks/refs (render-time ref.current access) | `const metadataDirty = metadataSignature !== baseMetadataSignatureRef.current;` | Move render-time ref read into reactive state/saved snapshot; keep refs only for async freshness. |
 | core/admin/ui/posts/editor/hooks/usePostEditorState.ts | 479 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refresh({ force: true, setLoading: !initialCachedPost }).catch(() => undefined);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/posts/editor/hooks/usePostEditorState.ts | 546 | react-hooks/refs (render-time ref.current access) | `payload: buildAutosavePayload(),` | Move render-time ref read into reactive state/saved snapshot; keep refs only for async freshness. |

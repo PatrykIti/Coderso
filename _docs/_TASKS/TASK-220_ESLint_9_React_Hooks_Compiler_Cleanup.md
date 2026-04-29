@@ -5,19 +5,19 @@
 **Category:** Tooling + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-219
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
 ## Overview
 
-Finish the source cleanup required by the full `eslint-plugin-react-hooks` recommended preset enabled during the ESLint 9 upgrade. The new baseline keeps file scope broad through the existing core lint script:
+Closed the source cleanup required by the full `eslint-plugin-react-hooks` recommended preset enabled during the ESLint 9 upgrade. The maintained lint gate keeps file scope broad through the existing core lint script:
 
 ```bash
 bun --cwd core lint
 ```
 
-Current state after enabling the full preset on 2026-04-27: the command reports 113 errors. Most findings are React Hooks/Compiler rules such as:
+Initial state after enabling the full preset on 2026-04-27: the command reported 113 errors. The closure state on 2026-04-29 is `0` React Hooks/Compiler findings with the full preset still enabled. The original findings were React Hooks/Compiler rules such as:
 
 - `react-hooks/set-state-in-effect`
 - `react-hooks/preserve-manual-memoization`
@@ -32,10 +32,10 @@ Root cause summary from the 2026-04-27 lint audit:
 - `bun --cwd core lint:types` and `bun run lint:repo` passed during the audit, so the first cleanup wave should focus on source-level React lint findings rather than TypeScript contract drift.
 - The findings are not direct public security vulnerabilities. They are resilience and correctness risks: extra mount renders, request amplification, cache hydration flicker, dirty-state overwrite risk, stale ref reads, and manual memoization that React Compiler cannot prove safe.
 
-Current error distribution:
+Initial error distribution:
 
 | Rule | Count | Primary concern |
-|------|-------|-----------------|
+|---|---|---|
 | `react-hooks/set-state-in-effect` | 107 | Effects are being used to synchronously repair local state, trigger loaders that synchronously set loading/error state, hydrate cache into state after first render, or trim selection after render. |
 | `react-hooks/preserve-manual-memoization` | 4 | Manual `useMemo` dependencies do not match the exact values read by the callback, so React Compiler skips optimization. |
 | `react-hooks/refs` | 2 | Render-time derivation reads `ref.current`, which is not reactive and can be stale under compiler assumptions. |
@@ -53,8 +53,11 @@ Remediation policy:
 
 Baseline source: `/tmp/nextless-eslint-report.json` generated from `bun --cwd core lint --format json --output-file /tmp/nextless-eslint-report.json "{admin,server,services,ui,db,plugins,store}/**/*.{ts,tsx}"` on 2026-04-27. Re-run TASK-220-01-01 if the dependency graph or source files change before implementation starts.
 
+Closure source: `bun --cwd core lint` passes on 2026-04-29 with the full
+React Hooks recommended preset enabled. No broad rule disable was added.
+
 | Owner leaf | File | Line | Rule | Current trigger | Fix direction |
-|------------|------|------|------|-----------------|---------------|
+|---|---|---|---|---|---|
 | TASK-220-02-01 | core/admin/app/AdminApp.tsx | 711 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setAuthState("checking");` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | TASK-220-02-01 | core/admin/app/AdminApp.tsx | 727 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refreshSettings();` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | TASK-220-02-01 | core/admin/ui/shared/AdminThemeSwitcher.tsx | 60 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `void refreshProfiles();` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
@@ -171,13 +174,13 @@ Baseline source: `/tmp/nextless-eslint-report.json` generated from `bun --cwd co
 
 ## Sub-Tasks
 
-- [ ] TASK-220-01: Baseline, Rule Policy, and Contributor Guardrails
-- [ ] TASK-220-02: Admin Bootstrap and Read-Only Loader Effects
-- [ ] TASK-220-03: Cache Hydration Hooks and List Mount Refresh
-- [ ] TASK-220-04: Form, Drawer, Dialog, and Derived Field State
-- [ ] TASK-220-05: Editor Dirty-State, Refs, and Autosave Safety
-- [ ] TASK-220-06: Widget, Commerce, Listings, and Resource-Specific Loaders
-- [ ] TASK-220-07: Validation, Docs, and Closure
+- [x] TASK-220-01: Baseline, Rule Policy, and Contributor Guardrails
+- [x] TASK-220-02: Admin Bootstrap and Read-Only Loader Effects
+- [x] TASK-220-03: Cache Hydration Hooks and List Mount Refresh
+- [x] TASK-220-04: Form, Drawer, Dialog, and Derived Field State
+- [x] TASK-220-05: Editor Dirty-State, Refs, and Autosave Safety
+- [x] TASK-220-06: Widget, Commerce, Listings, and Resource-Specific Loaders
+- [x] TASK-220-07: Validation, Docs, and Closure
 
 ## Files to Change
 
@@ -266,7 +269,6 @@ Supporting files expected during implementation and closure:
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache semantics or ownership change.
 - `_docs/_TASKS/README.md` and changelog on completion.
 
-
 ## Security Contract
 
 - Visibility: local and CI lint/tooling quality gate.
@@ -309,3 +311,17 @@ Supporting files expected during implementation and closure:
 2. No new rule disable is added without a narrow code comment explaining an unavoidable React contract exception.
 3. Admin/UI behavior affected by effect and memoization refactors has focused test coverage.
 4. Existing typecheck and relevant Vitest lanes pass.
+
+## Progress Notes
+
+- 2026-04-27: Captured the initial 113-finding baseline and assigned every
+  finding to a TASK-220 implementation leaf.
+- 2026-04-27: Refactored admin bootstrap, cached list hooks, list selection
+  trimming, drawer/dialog derived state, editor hydration, widget/resource
+  loaders, and validation docs without weakening the full React Hooks preset.
+- 2026-04-29: Revalidated closure with `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint:repo:types`, and the DB-backed
+  `set -a && source .env && set +a && bun test tests/unit/content/entryService.test.ts`
+  outside the sandbox. The targeted DB suite passed `9` tests, including the
+  previously slow `duplicateEntry` regression after its explicit timeout was
+  added. Closed with changelog entry `771`.

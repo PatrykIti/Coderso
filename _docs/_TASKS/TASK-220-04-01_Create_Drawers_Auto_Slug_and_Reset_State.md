@@ -5,7 +5,7 @@
 **Category:** Admin Drawers + Derived State
 **Estimated Effort:** Medium
 **Dependencies:** TASK-220-04
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ owned by reducer transitions that handle title/name/type changes.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/content-types/ContentTypeCreateDrawer.tsx | 53 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSlug(name ? slugify(name) : "");` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/content-types/ContentTypeCreateDrawer.tsx | 59 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setName("");` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/entries/EntryCreateDrawer.tsx | 63 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setSlug(title ? slugify(title) : "");` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |

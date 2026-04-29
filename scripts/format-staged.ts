@@ -7,8 +7,6 @@ const FORMAT_EXTENSIONS = new Set([
   ".js",
   ".json",
   ".jsx",
-  ".md",
-  ".mdx",
   ".mjs",
   ".scss",
   ".ts",
@@ -16,6 +14,9 @@ const FORMAT_EXTENSIONS = new Set([
   ".yaml",
   ".yml",
 ]);
+
+// Markdown task boards and architecture diagrams are hand-formatted; Prettier
+// widens tables and flattens unfenced structural examples.
 
 const repoRoot = import.meta.dir.replace(/\/scripts$/, "");
 const prettierBin = `${repoRoot}/node_modules/.bin/prettier`;

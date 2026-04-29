@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Derived State
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-01
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 

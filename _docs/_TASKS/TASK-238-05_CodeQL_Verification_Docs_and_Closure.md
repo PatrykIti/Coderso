@@ -1,18 +1,18 @@
-# TASK-237-05: CodeQL Verification, Docs, and Closure
-# FileName: TASK-237-05_CodeQL_Verification_Docs_and_Closure.md
+# TASK-238-05: CodeQL Verification, Docs, and Closure
+# FileName: TASK-238-05_CodeQL_Verification_Docs_and_Closure.md
 
 **Priority:** High
 **Category:** Security + QA + Docs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-237-01, TASK-237-02, TASK-237-03, TASK-237-04
-**Status:** In Progress (2026-04-29)
+**Dependencies:** TASK-238-01, TASK-238-02, TASK-238-03, TASK-238-04
+**Status:** Done (2026-04-29)
 
 ---
 
 ## Overview
 
-Close the TASK-237 security remediation family after the implementation leaves
-land and a fresh GitHub PR check run has produced code-scanning evidence.
+Close the TASK-238 security remediation family after the implementation leaves
+land and fresh GitHub security evidence proves the CodeQL inventory is clean.
 
 This leaf owns final local validation, GitHub alert verification, docs updates,
 task-board status, and changelog entries.
@@ -20,30 +20,31 @@ task-board status, and changelog entries.
 ## Verification Inventory
 
 | Area | Command or Evidence | Expected Result |
-|------|---------------------|-----------------|
+|---|---|---|
 | Local workflow/config tests | `bun test tests/unit/security` | Permission and scanner workflow tests pass. |
 | Listing query hardening | `bun test tests/unit/content/queryBuilderService.test.ts` | Unsafe field paths cannot pollute prototypes. |
 | Video host validation | Focused Vitest post runtime/editor suites | Trusted YouTube URLs work; lookalike hosts fail closed. |
 | Rich-text hardening | Focused Vitest serializer/runtime/widget/editor suites | Sanitized behavior remains compatible and unsafe payloads are blocked. |
 | Lint/types | `bun --cwd core lint`, `bun --cwd core lint:types` | No lint/type regressions. |
 | Local scanners | `bun run scan:semgrep:strict`, `bun run scan:trivy:strict`, `bun run scan:gitleaks:strict` | No strict scanner findings, or CI-only gap is documented. |
-| GitHub CodeQL | `gh api .../code-scanning/alerts?state=open` | No remaining open alerts for the TASK-237 files/rules after PR checks. |
+| GitHub CodeQL | `gh api .../code-scanning/alerts?state=open` | No remaining open alerts for the TASK-238 files/rules after PR checks. |
 | Secret scanning | `gh api .../secret-scanning/alerts?state=open` | Still 0 open alerts. |
 | Dependabot | `gh api .../dependabot/alerts?state=open` | Either enabled and clean/inventoried, or still disabled and documented. |
 
 ## Sub-Tasks
 
-- [ ] Run the full targeted validation matrix from the umbrella task.
-- [ ] Push/PR the branch and wait for CodeQL/security workflows to complete.
-- [ ] Query GitHub code-scanning alerts with `gh api` and record the remaining
+- [x] Run the full targeted validation matrix from the umbrella task.
+- [x] Push/PR the branch and wait for CodeQL/security workflows to complete.
+- [x] Query GitHub code-scanning alerts with `gh api` and record the remaining
   alert count in the changelog.
-- [ ] Re-query secret-scanning alerts.
-- [ ] Re-query Dependabot alerts and record whether Dependabot is enabled.
-- [ ] Move TASK-237 and child leaves to `Done` only after alert closure is
+- [x] Re-query secret-scanning alerts.
+- [x] Re-query Dependabot alerts and record whether Dependabot is enabled.
+- [x] Move TASK-238 and child leaves to `Done` only after alert closure is
   proven or false-positive dispositions are documented.
-- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [ ] Update `_docs/SECURITY_SPEC.md` if scanner behavior, sanitizer policy, or
-  workflow permission policy changed.
+- [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [x] Confirm `_docs/SECURITY_SPEC.md` does not need an update because this
+  closure does not change scanner behavior, sanitizer policy, or workflow
+  permission policy beyond the already-documented remediation.
 
 ## Implementation Pseudocode
 
@@ -132,7 +133,7 @@ Closure edit shape:
 ## Changelog evidence
 
 - Local validation: paste command list and pass/fail status.
-- GitHub CodeQL: record remaining TASK-237 alert count after PR checks.
+- GitHub CodeQL: record remaining TASK-238 alert count after PR checks.
 - Secret scanning: record open alert count only, never secret values.
 - Dependabot: record enabled/disabled state and count if available.
 ```
@@ -187,18 +188,18 @@ gh api -H 'Accept: application/vnd.github+json' \
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-237*.md`
+- `_docs/_TASKS/TASK-238*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- New `_docs/_CHANGELOG/*task-237-github-codeql-security-findings-remediation.md`
+- New `_docs/_CHANGELOG/770-2026-04-29-task-238-github-codeql-security-findings-remediation.md`
 - `_docs/SECURITY_SPEC.md` only if implementation changes scanner or sanitizer
   policy.
 
 ## Acceptance Criteria
 
-1. TASK-237 and all child leaves are moved to `Done` with dates.
+1. TASK-238 and all child leaves are moved to `Done` with dates.
 2. Changelog records local validation and GitHub CodeQL alert status.
-3. GitHub CodeQL alert inventory is clean for TASK-237 or each remaining alert
+3. GitHub CodeQL alert inventory is clean for TASK-238 or each remaining alert
    has a documented false-positive disposition.
 4. Secret scanning remains clean.
 5. Dependabot state is checked and explicitly recorded.
@@ -207,5 +208,10 @@ gh api -H 'Accept: application/vnd.github+json' \
 ## Progress Notes
 
 - 2026-04-29: Local targeted Bun/Vitest, lint, typecheck, Bun audit, Semgrep,
-  Trivy, and Gitleaks validation passed. GitHub CodeQL verification remains
-  pending until PR checks run on the branch.
+  Trivy, and Gitleaks validation passed.
+- 2026-04-29: GitHub CodeQL verification passed with `0` open code-scanning
+  alerts. Secret scanning remained at `0` open alerts. Dependabot alerts remain
+  disabled/inaccessible with HTTP 403 and are explicitly out of scope for this
+  remediation closure.
+- 2026-04-29: Family renumbered from `TASK-237` to `TASK-238`; the unrelated
+  GHCR Docker image lowercase task keeps `TASK-237`.

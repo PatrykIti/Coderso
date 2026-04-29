@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-220-02, TASK-220-03, TASK-220-04, TASK-220-05, TASK-220-06
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -19,13 +19,13 @@ the source files those commands cover before the final closure leaf starts.
 
 ## Sub-Tasks
 
-- [ ] List every changed file and assign the nearest existing Vitest suite in
+- [x] List every changed file and assign the nearest existing Vitest suite in
   the matrix below before marking that implementation leaf done.
-- [ ] Add focused tests for behavior-sensitive files that lack coverage, instead
+- [x] Add focused tests for behavior-sensitive files that lack coverage, instead
   of relying only on `bun --cwd core lint`.
-- [ ] Run grouped suites in logical waves: bootstrap/loaders, cache/list,
+- [x] Run grouped suites in logical waves: bootstrap/loaders, cache/list,
   editors/dirty-state, dialogs/forms, widgets/resources.
-- [ ] Run the final shared lint/type gates.
+- [x] Run the final shared lint/type gates.
 
 ## Required Regression Matrix
 
@@ -34,7 +34,7 @@ exact and include substitute evidence only when a broader suite has a documented
 pre-existing blocker.
 
 | Leaf | Source surface | Minimum focused Vitest evidence | Additional required checks |
-|------|----------------|----------------------------------|----------------------------|
+|---|---|---|---|
 | TASK-220-02-01 | `AdminApp`, theme bootstrap, auth/settings refresh | Existing or added admin bootstrap/theme suite under `tests/vitest/ui/**`; include protected-route and theme/profile refresh assertions if behavior changes. | `bun --cwd core lint`, `bun --cwd core lint:types` |
 | TASK-220-02-02 | Read-only dashboard/audit/security/settings loaders | Existing or added read-loader/settings suites under `tests/vitest/ui/**`; cover one cache/read success path and one error/loading transition for each changed pattern. | `bun --cwd core lint`, `bun --cwd core lint:types` |
 | TASK-220-02-03 | Analytics loader and KPI memoization | `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/analytics.test.tsx` plus added KPI/range tests if memo logic moves. | `bun --cwd core lint`, `bun --cwd core lint:types` |
@@ -79,6 +79,16 @@ set -a && source .env && set +a && bun run test:bun
 - `set -a && source .env && set +a && bun run test:bun` still hit the same pre-implementation DB timeout in `tests/unit/content/entryService.test.ts` for `duplicateEntry creates a draft copy with unique slug and metadata` at the default 5000 ms timeout; all other Bun tests in that run passed.
 - `tests/unit/content/entryService.test.ts` now gives that slow DB duplicate-entry regression the same explicit per-test timeout pattern used by other long DB suites. The rerun after that test-only timeout adjustment is still pending because the tool approval was rejected by the session usage limit.
 - `git diff --check` passed after the timeout adjustment.
+
+2026-04-29 closure pass:
+
+- `bun --cwd core lint` passed with the full React Hooks recommended preset.
+- `bun --cwd core lint:types` passed.
+- `bun run lint:repo:types` passed.
+- `set -a && source .env && set +a && bun test tests/unit/content/entryService.test.ts`
+  was rerun outside the sandbox against the configured DB and passed `9` tests,
+  including `duplicateEntry creates a draft copy with unique slug and metadata`
+  in `4083.67ms`.
 
 ## Files to Change
 

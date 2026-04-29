@@ -5,7 +5,7 @@
 **Category:** Widget Editors + Async Loaders
 **Estimated Effort:** Medium
 **Dependencies:** TASK-220-06
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -20,7 +20,7 @@ amplify settings/menu reads and cause loading flicker.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/widgets/editors/HeroEditors.tsx | 751 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setPresetsLoading(true);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/widgets/editors/NavigationEditors.tsx | 239 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setIsLoadingMenus(true);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 

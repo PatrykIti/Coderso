@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 48 tasks
-- **In Progress:** 38 tasks
-- **Done:** 1320 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1357 tasks
 
 ---
 
@@ -79,8 +79,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-08-01 | Composition Fixture Matrix and Red-Team Corpus | High | Medium | Technical leaf: mixed prompt fixtures and provider safety cases |
 | TASK-190-08-02 | Docs, Changelog, and Closure | High | Medium | Technical leaf: final docs, changelog, board, and gates |
 | TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Technical leaf: authoring guide plus redacted composer diagnostics/observability |
-| TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
-| TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
+| TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
+| TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
@@ -93,44 +93,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-237 | GitHub CodeQL Security Findings Remediation | High | Large | In progress: local remediation implemented and validated; final GitHub CodeQL closure waits for PR checks |
-| TASK-237-01 | Workflow Least-Privilege Permissions | High | Small | In progress: explicit read-only workflow permissions and regression coverage added; awaiting GitHub CodeQL verification |
-| TASK-237-02 | Listing Query Path Hardening | High | Small | In progress: listing projection path guards and prototype-pollution regression coverage added; awaiting GitHub CodeQL verification |
-| TASK-237-03 | Video Embed Host Validation | High | Medium | In progress: shared exact YouTube host validation added for runtime and editor preview; awaiting GitHub CodeQL verification |
-| TASK-237-04 | Rich Text Sanitizer and Entity Hardening | High | Large | In progress: shared rich-text utilities and sanitizer/entity refactor implemented; awaiting GitHub CodeQL verification |
-| TASK-237-05 | CodeQL Verification, Docs, and Closure | High | Medium | In progress: local Bun/Vitest/lint/typecheck/audit/scanner validation passed; PR CodeQL alert re-query and changelog closure remain |
-| TASK-220 | ESLint 9 React Hooks Compiler Cleanup | High | Large | Fix the 113 React Hooks/Compiler lint findings surfaced by the full `eslint-plugin-react-hooks` recommended preset |
-| TASK-220-01 | Baseline, Rule Policy, and Contributor Guardrails | High | Medium | Lock the ESLint 9 hooks baseline, rule policy, and contributor guidance before implementation |
-| TASK-220-01-01 | Lint Inventory and Rule Ownership | High | Small | Keep a reproducible JSON/grouped inventory and assign every finding to one implementation leaf |
-| TASK-220-01-02 | React Hooks Compiler Remediation Patterns and AGENTS Guidance | High | Small | Document that hooks compiler findings must be fixed, not suppressed |
-| TASK-220-02 | Admin Bootstrap and Read-Only Loader Effects | High | Large | Fix mount loader effects in AdminApp, read-only pages, and analytics |
-| TASK-220-02-01 | AdminApp Auth, Settings, and Theme Bootstrap Effects | High | Medium | Clean protected-route auth/settings/theme bootstrap without weakening read-through cache behavior |
-| TASK-220-02-02 | Read-Only Dashboard, Audit, Security, and Settings Loaders | High | Large | Refactor simple read loaders that synchronously set loading/error state from effects |
-| TASK-220-02-03 | Analytics Memoization and KPI Derived State | High | Medium | Fix Analytics loader and manual memoization failures while preserving KPI behavior |
-| TASK-220-03 | Cache Hydration Hooks and List Mount Refresh | High | Large | Preserve admin cache hydration while clearing hooks compiler findings |
-| TASK-220-03-01 | Shared Cached List Hooks Mount Refresh | High | Large | Fix shared cached list hooks and cache-bus refresh patterns |
-| TASK-220-03-02 | Admin List Page Mount Refresh and Selection Trim | High | Large | Move list mount refresh and visible selection trimming out of post-render repair effects |
-| TASK-220-03-03 | Cached Detail and Editor Hydration | High | Large | Refactor cached detail/editor hydration without dirty-state overwrites |
-| TASK-220-04 | Form, Drawer, Dialog, and Derived Field State | High | Large | Move auto-slug, reset, picker, and settings form state out of repair effects |
-| TASK-220-04-01 | Create Drawers Auto Slug and Reset State | High | Medium | Fix create drawer auto-slug/default reset patterns |
-| TASK-220-04-02 | Dialog Preview Picker and Slot Derived State | High | Large | Fix preview, picker, slot, media, and template dialog derived state |
-| TASK-220-04-03 | Settings Form Snapshots and Profile Route State | High | Large | Fix settings/profile/user route-derived form state without exposing secrets |
-| TASK-220-05 | Editor Dirty-State, Refs, and Autosave Safety | High | Large | Fix higher-risk editor findings around refs, autosave, dirty state, and revisions |
-| TASK-220-05-01 | Post Editor Ref and Autosave Signature Cleanup | High | Large | Remove render-time ref reads and preserve Posts autosave/dirty-state behavior |
-| TASK-220-05-02 | Page Editor Route, Cache, Revisions, and Template Loaders | High | Large | Fix PageEditor route/cache/revision/template loader findings |
-| TASK-220-05-03 | Entry Content Type and Relation Editor State | High | Large | Fix Entry/Content Type relation hydration, tab/field state, and memoization |
-| TASK-220-06 | Widget, Commerce, Listings, and Resource-Specific Loaders | High | Large | Clean remaining resource-specific loader/list findings after shared patterns land |
-| TASK-220-06-01 | Widget Library, Template Category, and Editor Loaders | High | Large | Fix widget template cache, category, and library selection patterns |
-| TASK-220-06-02 | Commerce, Listings, Forms, Menus, and Posts Resource Lists | High | Large | Preserve resource list parity while clearing resource-specific loader findings |
-| TASK-220-06-03 | Widget Hero and Navigation Editor Async Loaders | Medium | Medium | Fix widget editor async preset/menu loaders |
-| TASK-220-07 | Validation, Docs, and Closure | Medium | Medium | Own final lint/type/Vitest validation, docs, changelog, and board sync |
-| TASK-220-07-01 | React Hooks Compiler Regression Matrix | Medium | Medium | Map changed surfaces to focused Vitest suites and shared gates |
-| TASK-220-07-02 | Docs, Changelog, Board, and Lint Gate Closure | Medium | Small | Close task family with changelog, board, and source-of-truth docs |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 
 ---
 
@@ -138,6 +104,42 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-238 | GitHub CodeQL Security Findings Remediation | High | Large | Done: CodeQL remediation was renumbered from TASK-237 to TASK-238, local scanner/lint/type/test validation passed, GitHub CodeQL open alerts are 0, secret scanning open alerts are 0, and Dependabot remains disabled/403 |
+| TASK-238-01 | Workflow Least-Privilege Permissions | High | Small | Done: explicit PR-gate workflow permissions and scoped SARIF write permissions are covered by regression tests |
+| TASK-238-02 | Listing Query Path Hardening | High | Small | Done: listing projection path guards reject unsafe prototype-pollution segments with Bun regression coverage |
+| TASK-238-03 | Video Embed Host Validation | High | Medium | Done: runtime and editor preview share exact YouTube host/subdomain validation with lookalike-host coverage |
+| TASK-238-04 | Rich Text Sanitizer and Entity Hardening | High | Large | Done: shared rich-text utilities replaced broad sanitizer/tag/entity handling and focused Vitest coverage passed |
+| TASK-238-05 | CodeQL Verification, Docs, and Closure | High | Medium | Done: GitHub CodeQL and secret-scanning re-query is clean, Dependabot disabled state is documented, and changelog 770 closes the family |
+| TASK-220 | ESLint 9 React Hooks Compiler Cleanup | High | Large | Done: the original 113 React Hooks/Compiler findings are reduced to 0 with the full preset enabled, lint/type gates and DB-backed blocker rerun passed |
+| TASK-220-01 | Baseline, Rule Policy, and Contributor Guardrails | High | Medium | Done: baseline inventory, rule ownership, and contributor guidance remain documented |
+| TASK-220-01-01 | Lint Inventory and Rule Ownership | High | Small | Done: reproducible inventory assigned each finding to implementation leaves |
+| TASK-220-01-02 | React Hooks Compiler Remediation Patterns and AGENTS Guidance | High | Small | Done: AGENTS guidance keeps compiler findings as implementation issues rather than suppressions |
+| TASK-220-02 | Admin Bootstrap and Read-Only Loader Effects | High | Large | Done: bootstrap/read-loader effect findings were remediated without weakening cache or route behavior |
+| TASK-220-02-01 | AdminApp Auth, Settings, and Theme Bootstrap Effects | High | Medium | Done: auth/settings/theme bootstrap cleanup is covered by the final lint gate |
+| TASK-220-02-02 | Read-Only Dashboard, Audit, Security, and Settings Loaders | High | Large | Done: read-only loader cleanup preserves loading/error behavior |
+| TASK-220-02-03 | Analytics Memoization and KPI Derived State | High | Medium | Done: analytics loader and KPI memoization findings were cleared |
+| TASK-220-03 | Cache Hydration Hooks and List Mount Refresh | High | Large | Done: cache hydration/list refresh findings were cleared while preserving background revalidation |
+| TASK-220-03-01 | Shared Cached List Hooks Mount Refresh | High | Large | Done: shared cached list hook findings are clear under `bun --cwd core lint` |
+| TASK-220-03-02 | Admin List Page Mount Refresh and Selection Trim | High | Large | Done: visible selection trim/list refresh findings are clear under `bun --cwd core lint` |
+| TASK-220-03-03 | Cached Detail and Editor Hydration | High | Large | Done: cached detail/editor hydration findings are clear under `bun --cwd core lint` |
+| TASK-220-04 | Form, Drawer, Dialog, and Derived Field State | High | Large | Done: derived state findings were remediated without changing backend validation ownership |
+| TASK-220-04-01 | Create Drawers Auto Slug and Reset State | High | Medium | Done: create drawer slug/reset patterns no longer trip compiler lint |
+| TASK-220-04-02 | Dialog Preview Picker and Slot Derived State | High | Large | Done: dialog/picker/slot derived state findings are clear under final lint |
+| TASK-220-04-03 | Settings Form Snapshots and Profile Route State | High | Large | Done: settings/profile route-derived state findings were cleared without exposing secrets |
+| TASK-220-05 | Editor Dirty-State, Refs, and Autosave Safety | High | Large | Done: editor ref/autosave/dirty-state findings were remediated and validated |
+| TASK-220-05-01 | Post Editor Ref and Autosave Signature Cleanup | High | Large | Done: render-time ref findings and post autosave signatures are compiler-clean |
+| TASK-220-05-02 | Page Editor Route, Cache, Revisions, and Template Loaders | High | Large | Done: PageEditor route/cache/revision/template loader findings are compiler-clean |
+| TASK-220-05-03 | Entry Content Type and Relation Editor State | High | Large | Done: Entry/content-type relation and memoization findings are compiler-clean |
+| TASK-220-06 | Widget, Commerce, Listings, and Resource-Specific Loaders | High | Large | Done: remaining widget/resource loader findings were cleared |
+| TASK-220-06-01 | Widget Library, Template Category, and Editor Loaders | High | Large | Done: widget template/category/editor loader findings are compiler-clean |
+| TASK-220-06-02 | Commerce, Listings, Forms, Menus, and Posts Resource Lists | High | Large | Done: resource list loader findings are compiler-clean |
+| TASK-220-06-03 | Widget Hero and Navigation Editor Async Loaders | Medium | Medium | Done: widget async loader findings are compiler-clean |
+| TASK-220-07 | Validation, Docs, and Closure | Medium | Medium | Done: final lint/type/DB-backed targeted validation, docs, changelog 771, and board sync are complete |
+| TASK-220-07-01 | React Hooks Compiler Regression Matrix | Medium | Medium | Done: validation log records green lint/type gates and DB-backed `entryService` blocker rerun |
+| TASK-220-07-02 | Docs, Changelog, Board, and Lint Gate Closure | Medium | Small | Done: task statuses, board stats, and changelog entry 771 are synchronized |
+| TASK-054 | Coderso Modular Admin IA | High | Large | Done: historical Coderso IA umbrella is closed around the delivered Advanced module group, canonical `/admin/advanced/*` routes, compatibility aliases, and docs sync |
+| TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Done: closed as superseded by execution-ready umbrella TASK-239 |
+| TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Done: closed as superseded by execution-ready umbrella TASK-240 |
 | TASK-237 | GHCR Docker Image Lowercase Tag Normalization | High | Small | Done: release workflow now lowercases GHCR owner/image before Docker build-push so mixed-case GitHub owners do not create invalid image tags |
 | TASK-236 | Semantic Release Node Runtime Pin | High | Small | Done: release workflow now installs Node 22.14.0 before semantic-release and has regression coverage for the runtime contract |
 | TASK-235 | Security Gate Gitleaks Action v2 Contract | High | Small | Done: Gitleaks Action v2 now uses env-based config, gets `GITHUB_TOKEN` for PR scans, and no longer passes unsupported inputs |

@@ -25,6 +25,10 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 773 | 2026-04-29 | Markdown pre-commit format guard | Developer Tooling |
+| 772 | 2026-04-29 | TASK-054 modular admin IA closure and portal/i18n split | Documentation/Planning |
+| 771 | 2026-04-29 | TASK-220 ESLint 9 React Hooks Compiler cleanup | Tooling/Admin UI |
+| 770 | 2026-04-29 | TASK-238 GitHub CodeQL security findings remediation | Security/CodeQL |
 | 769 | 2026-04-29 | Pre-commit formatting and lint hook | Developer Tooling |
 | 768 | 2026-04-29 | TASK-237 GHCR Docker image lowercase tag normalization | Release Engineering/CI |
 | 767 | 2026-04-28 | TASK-236 semantic release Node runtime pin | Release Engineering/CI |

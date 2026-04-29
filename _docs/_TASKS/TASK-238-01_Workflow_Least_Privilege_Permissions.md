@@ -1,11 +1,11 @@
-# TASK-237-01: Workflow Least-Privilege Permissions
-# FileName: TASK-237-01_Workflow_Least_Privilege_Permissions.md
+# TASK-238-01: Workflow Least-Privilege Permissions
+# FileName: TASK-238-01_Workflow_Least_Privilege_Permissions.md
 
 **Priority:** High
 **Category:** Security + CI
 **Estimated Effort:** Small
-**Dependencies:** TASK-237
-**Status:** In Progress (2026-04-29)
+**Dependencies:** TASK-238
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -24,7 +24,7 @@ job receives `security-events: write` for SARIF upload.
 ## File Inventory
 
 | File | GitHub Alert Lines | Current Issue | Required Change |
-|------|--------------------|---------------|-----------------|
+|---|---|---|---|
 | `.github/workflows/testing-lanes.yml` | 18, 58 | Jobs have no explicit `permissions`, so CodeQL flags implicit token scope. | Replace with `.github/workflows/coderso-pr-gates.yml` and inherit top-level `contents: read`. |
 | `.github/workflows/coderso-release-gates.yml` | 17 | Release-gate job has no explicit `permissions`. | Replace with final `coderso-release-gates` job in the unified workflow. |
 | `.github/workflows/security-gate.yml` | Existing scanner gate | Security scanning was isolated from the testing/release gate order. | Move scanner steps into the unified workflow after test lanes and before release gates. |
@@ -140,9 +140,9 @@ the test pure Bun so it can run without GitHub credentials.
 
 ## Documentation Updates Required
 
-- `_docs/_TASKS/TASK-237_GitHub_CodeQL_Security_Findings_Remediation.md`
+- `_docs/_TASKS/TASK-238_GitHub_CodeQL_Security_Findings_Remediation.md`
 - `_docs/_TASKS/README.md`
-- Changelog entry on TASK-237 closure.
+- Changelog entry on TASK-238 closure.
 
 ## Acceptance Criteria
 
@@ -154,7 +154,8 @@ the test pure Bun so it can run without GitHub credentials.
 ## Progress Notes
 
 - 2026-04-29: Added explicit `contents: read` workflow permissions and Bun
-  regression coverage. Awaiting GitHub CodeQL PR verification before closure.
+  regression coverage. GitHub CodeQL verification is clean as part of
+  TASK-238 closure.
 - 2026-04-29: Consolidated testing, security, and release-gate PR workflows into
   `.github/workflows/coderso-pr-gates.yml` with DB migration preflight,
   lane/security/release gate ordering, and scoped SARIF permissions.

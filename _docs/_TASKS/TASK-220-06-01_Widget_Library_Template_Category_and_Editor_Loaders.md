@@ -5,7 +5,7 @@
 **Category:** Widgets + Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-220-06, TASK-220-03-01
-**Status:** In Progress (2026-04-27)
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -21,7 +21,7 @@ leaves and should be treated as dependencies, not primary ownership here.
 Primary findings owned by this leaf from the 2026-04-27 ESLint 9 / React Hooks Compiler baseline. Re-run TASK-220-01-01 before implementation if line numbers drift.
 
 | File | Line | Rule | Current trigger | Fix direction |
-|------|------|------|-----------------|---------------|
+|---|---|---|---|---|
 | core/admin/ui/widgets/WidgetTemplateEditorPage.tsx | 588 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `void loadTemplate();` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/widgets/WidgetTemplateEditorPage.tsx | 624 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `refreshCategories({ force: true, background: true }).catch(() => undefined);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
 | core/admin/ui/widgets/WidgetTemplateEditorPage.tsx | 636 | react-hooks/set-state-in-effect (synchronous state update from effect path) | `setCategory(templateCategories[0].name);` | Move state transition to initializer/reducer/event/subscription callback or async result boundary. |
