@@ -374,8 +374,12 @@ When adding a new resource:
   - cache present -> `{ force: false, background: true }`
   - cache missing -> `{ force: true, background: false }`
 - `MenuEditorPage` mount policy:
-  - cache present -> `{ force: false, background: true, reloadActive: false }`
-  - cache missing -> `{ force: false, background: false, reloadActive: false }`
+  - route-selected `menus:detail:<id>` cache present ->
+    `{ force: false, background: true, reloadActive: false }`
+  - route-selected `menus:detail:<id>` cache missing ->
+    `{ force: false, background: false, reloadActive: false }`
+  - `pages:list` cache may seed link labels, but it must not move the editor
+    shell into background loading when the selected menu detail is missing.
 - Menu editor detail reload:
   - reloads the route-selected `menus:detail:<id>` entry on explicit refresh,
     save completion, or cacheBus detail event,

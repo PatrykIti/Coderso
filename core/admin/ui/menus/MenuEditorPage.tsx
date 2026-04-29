@@ -1,11 +1,4 @@
-import {
-  ArrowLeft,
-  Layers,
-  PlusCircle,
-  RefreshCcw,
-  Save,
-  SlidersHorizontal,
-} from "lucide-react";
+import { ArrowLeft, Layers, PlusCircle, RefreshCcw, Save, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,36 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import type {
-  MenuItemNode,
-  MenuItemRecord,
-} from "@/services/menusClient";
+import type { MenuItemNode, MenuItemRecord } from "@/services/menusClient";
 import {
   getCachedMenuDetail,
   getMenuWithItemsCached,
   replaceMenuItems,
   updateMenu,
 } from "@/services/menusClient";
-import {
-  getCachedPages,
-  listPagesCached,
-  type PageSummary,
-} from "@/services/pagesClient";
+import { getCachedPages, listPagesCached, type PageSummary } from "@/services/pagesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { MenuItemDeleteDialog } from "@/ui/menus/MenuItemDeleteDialog";
-import {
-  MenuItemDrawer,
-  type MenuItemDraft,
-} from "@/ui/menus/MenuItemDrawer";
+import { MenuItemDrawer, type MenuItemDraft } from "@/ui/menus/MenuItemDrawer";
 import { resolveMenuId } from "@/ui/menus/routeParams";
 import { MenuTree, type MenuDropIntent } from "@/ui/menus/MenuTree";
 import type { MenuItemDisplay } from "@/ui/menus/types";
@@ -87,11 +65,7 @@ const buildDisplayTree = (
   for (const item of items) {
     const page = item.pageId ? pageMap.get(item.pageId) : null;
     const status =
-      !item.href && !item.pageId
-        ? "error"
-        : page === undefined && item.pageId
-          ? "error"
-          : "ok";
+      !item.href && !item.pageId ? "error" : page === undefined && item.pageId ? "error" : "ok";
     nodes.set(item.id, {
       ...item,
       pageTitle: page?.title ?? null,
@@ -197,7 +171,7 @@ export const moveMenuItems = (
   const targetItem = items.find((item) => item.id === targetId);
   if (!dragItem || !targetItem) return items;
 
-  const nextParentId = intent === "child" ? targetItem.id : targetItem.parentId ?? null;
+  const nextParentId = intent === "child" ? targetItem.id : (targetItem.parentId ?? null);
   if (nextParentId === dragId) return items;
 
   const descendants = collectRecordDescendants(items, dragId);
@@ -251,8 +225,7 @@ export const moveMenuItemToRoot = (
   const rootSiblings = buildSiblings(null);
 
   const moved = { ...dragItem, parentId: null };
-  const nextRoot =
-    position === "start" ? [moved, ...rootSiblings] : [...rootSiblings, moved];
+  const nextRoot = position === "start" ? [moved, ...rootSiblings] : [...rootSiblings, moved];
 
   const updates = new Map<string, MenuItemRecord>();
   oldSiblings.forEach((item, index) => {
@@ -293,8 +266,7 @@ export const shouldLoadActiveMenuAfterRefresh = (input: {
   reloadActive: boolean;
 }) =>
   Boolean(
-    input.nextActiveId &&
-      (input.reloadActive || input.nextActiveId !== input.currentActiveId)
+    input.nextActiveId && (input.reloadActive || input.nextActiveId !== input.currentActiveId)
   );
 
 export const resolveMenuMountRefreshOptions = (hasInitialCache: boolean) => ({
@@ -311,16 +283,11 @@ type PendingDeleteState = {
 export function MenuEditorPage() {
   const { navigate, path } = useAdminRouter();
   const menuId = useMemo(() => resolveMenuId(path), [path]);
-  const initialMenu = useMemo(
-    () => (menuId ? getCachedMenuDetail(menuId) : null),
-    [menuId]
-  );
+  const initialMenu = useMemo(() => (menuId ? getCachedMenuDetail(menuId) : null), [menuId]);
   const initialPages = useMemo(() => getCachedPages(), []);
-  const hasInitialCache = Boolean(initialMenu || initialPages);
+  const hasInitialMenuCache = Boolean(initialMenu);
   const [menuName, setMenuName] = useState(() => initialMenu?.menu.name ?? "");
-  const [menuLocation, setMenuLocation] = useState(
-    () => initialMenu?.menu.location ?? ""
-  );
+  const [menuLocation, setMenuLocation] = useState(() => initialMenu?.menu.location ?? "");
   const [originalMenu, setOriginalMenu] = useState<{
     id: string;
     name: string;
@@ -339,17 +306,15 @@ export function MenuEditorPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(
-    null
-  );
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(null);
   const hasUnsavedChangesRef = useRef(false);
-  const hasHydratedRef = useRef(hasInitialCache);
+  const hasHydratedRef = useRef(hasInitialMenuCache);
   const skipNextDetailRefreshCountRef = useRef(0);
   const activeItemIdRef = useRef<string | null>(activeItemId);
   const [isLoading, setIsLoading] = useState(() => Boolean(menuId && !initialMenu));
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(
-    () => (menuId ? null : "Select a menu from the Menus list.")
+  const [error, setError] = useState<string | null>(() =>
+    menuId ? null : "Select a menu from the Menus list."
   );
 
   const pageMap = useMemo(() => new Map(pages.map((page) => [page.id, page])), [pages]);
@@ -371,7 +336,10 @@ export function MenuEditorPage() {
 
   const applyMenuPayload = useCallback(
     (
-      payload: { menu: { id: string; name: string; location: string | null; createdAt: string }; items: MenuItemNode[] },
+      payload: {
+        menu: { id: string; name: string; location: string | null; createdAt: string };
+        items: MenuItemNode[];
+      },
       options?: { preserveItemId?: string | null }
     ) => {
       setOriginalMenu(payload.menu);
@@ -382,9 +350,7 @@ export function MenuEditorPage() {
       setOriginalItems(flattened);
       const preserveId = options?.preserveItemId ?? null;
       const nextActiveId =
-        preserveId && flattened.some((item) => item.id === preserveId)
-          ? preserveId
-          : null;
+        preserveId && flattened.some((item) => item.id === preserveId) ? preserveId : null;
       setActiveItemId(nextActiveId);
       setIsDirty(false);
       setRemoteUpdatePending(false);
@@ -478,9 +444,7 @@ export function MenuEditorPage() {
 
   useEffect(() => {
     if (!menuId) return;
-    const mountOptions = resolveMenuMountRefreshOptions(
-      Boolean(initialMenu || initialPages)
-    );
+    const mountOptions = resolveMenuMountRefreshOptions(hasInitialMenuCache);
     let active = true;
     Promise.all([
       listPagesCached({ force: mountOptions.force }),
@@ -514,7 +478,7 @@ export function MenuEditorPage() {
     return () => {
       active = false;
     };
-  }, [applyMenuPayload, initialMenu, initialPages, menuId]);
+  }, [applyMenuPayload, hasInitialMenuCache, menuId]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
@@ -633,7 +597,7 @@ export function MenuEditorPage() {
       const shouldReindex = existing && existing.parentId !== nextParent;
       const nextOrderIndex = shouldReindex
         ? prev.filter((entry) => entry.parentId === nextParent && entry.id !== draft.id).length
-        : existing?.orderIndex ?? 0;
+        : (existing?.orderIndex ?? 0);
 
       return prev.map((entry) =>
         entry.id === draft.id
@@ -701,8 +665,7 @@ export function MenuEditorPage() {
     setIsSaving(true);
     try {
       const didSave = hasMetaChanges || isDirty;
-      skipNextDetailRefreshCountRef.current =
-        (hasMetaChanges ? 1 : 0) + (isDirty ? 1 : 0);
+      skipNextDetailRefreshCountRef.current = (hasMetaChanges ? 1 : 0) + (isDirty ? 1 : 0);
       if (hasMetaChanges) {
         await updateMenu(menuId, {
           name: menuName.trim() || originalMenu?.name || "Untitled",
@@ -744,8 +707,7 @@ export function MenuEditorPage() {
         toast.success("Menu saved.");
       }
     } catch (err) {
-      const message =
-        isApiClientError(err) ? err.message : "Failed to save menu changes.";
+      const message = isApiClientError(err) ? err.message : "Failed to save menu changes.";
       setError(message);
       toast.error(message);
     } finally {
@@ -797,11 +759,7 @@ export function MenuEditorPage() {
           description="Edit one menu at a time. Change metadata, refine the structure, and save when the draft is ready."
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => navigate("/menus")}
-              >
+              <Button variant="outline" className="gap-2" onClick={() => navigate("/menus")}>
                 <ArrowLeft className="h-4 w-4" />
                 Back to menus
               </Button>
@@ -911,9 +869,8 @@ export function MenuEditorPage() {
                     placeholder="primary"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Theme slot identifier such as <code>primary</code> or{" "}
-                    <code>footer</code>. Use the value your frontend theme
-                    expects for navigation placement.
+                    Theme slot identifier such as <code>primary</code> or <code>footer</code>. Use
+                    the value your frontend theme expects for navigation placement.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -935,8 +892,8 @@ export function MenuEditorPage() {
                   <div>
                     <h3 className="text-lg font-semibold">Menu Structure</h3>
                     <p className="text-xs text-muted-foreground">
-                      Drag the handle to reorder. Move slightly to the right
-                      while dragging to turn an item into a sub-menu.
+                      Drag the handle to reorder. Move slightly to the right while dragging to turn
+                      an item into a sub-menu.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleAddItem}>

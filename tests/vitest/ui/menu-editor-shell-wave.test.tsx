@@ -4,12 +4,14 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import type { MenuWithItems } from "../../../core/admin/services/menusClient";
+import type { PageSummary } from "../../../core/admin/services/pagesClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { MenuEditorPage } from "../../../core/admin/ui/menus/MenuEditorPage";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const menuDetail = {
+const menuDetail: MenuWithItems = {
   menu: {
     id: "menu-1",
     name: "Main Navigation",
@@ -20,6 +22,11 @@ const menuDetail = {
   },
   items: [],
 };
+
+const menuEditorCacheState = vi.hoisted(() => ({
+  cachedMenuDetail: null as MenuWithItems | null,
+  cachedPages: null as PageSummary[] | null,
+}));
 
 const updateMenuMock = vi.fn();
 const replaceMenuItemsMock = vi.fn();
@@ -34,7 +41,7 @@ vi.mock("@/services/menusClient", async () => {
   );
   return {
     ...actual,
-    getCachedMenuDetail: () => menuDetail,
+    getCachedMenuDetail: () => menuEditorCacheState.cachedMenuDetail,
     getMenuWithItemsCached: (...args: unknown[]) => getMenuWithItemsCachedMock(...args),
     replaceMenuItems: (...args: unknown[]) => replaceMenuItemsMock(...args),
     updateMenu: (...args: unknown[]) => updateMenuMock(...args),
@@ -47,7 +54,7 @@ vi.mock("@/services/pagesClient", async () => {
   );
   return {
     ...actual,
-    getCachedPages: () => [],
+    getCachedPages: () => menuEditorCacheState.cachedPages,
     listPagesCached: (...args: unknown[]) => listPagesCachedMock(...args),
   };
 });
@@ -113,16 +120,15 @@ const flush = async () => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
 beforeEach(() => {
+  menuEditorCacheState.cachedMenuDetail = menuDetail;
+  menuEditorCacheState.cachedPages = [];
   getMenuWithItemsCachedMock.mockReset();
   listPagesCachedMock.mockReset();
   updateMenuMock.mockReset();
@@ -162,14 +168,49 @@ test("MenuEditorPage renders editor-side location guidance", async () => {
   }
 });
 
+test("MenuEditorPage clears foreground loading when pages cache exists without menu detail cache", async () => {
+  const newMenuDetail: MenuWithItems = {
+    menu: {
+      ...menuDetail.menu,
+      id: "menu-new",
+      name: "test2",
+      location: null,
+      status: "draft",
+      publishedAt: null,
+    },
+    items: [],
+  };
+  menuEditorCacheState.cachedMenuDetail = null;
+  menuEditorCacheState.cachedPages = [];
+  getMenuWithItemsCachedMock.mockResolvedValueOnce(newMenuDetail);
+
+  const view = mount("/admin/menus/menu-new");
+
+  try {
+    expect(view.container.textContent).toContain("Loading menu settings");
+
+    await flush();
+    await flush();
+
+    expect(getMenuWithItemsCachedMock).toHaveBeenCalledWith("menu-new", {
+      force: false,
+    });
+    expect(view.container.textContent).toContain("test2");
+    expect(view.container.textContent).toContain("Location");
+    expect(view.container.textContent).toContain("Menu Structure");
+    expect(view.container.textContent).toContain("No items yet. Add your first link.");
+    expect(view.container.textContent).not.toContain("Loading menu settings");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("MenuEditorPage shows success feedback after saving metadata", async () => {
   const view = mount();
 
   try {
     await flush();
-    const nameInput = view.container.querySelector(
-      'input[placeholder="Main Menu"]'
-    );
+    const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
     await act(async () => {
       setInputValue(nameInput, "Primary Nav");
@@ -198,9 +239,7 @@ test("MenuEditorPage shows failure feedback when save fails", async () => {
 
   try {
     await flush();
-    const nameInput = view.container.querySelector(
-      'input[placeholder="Main Menu"]'
-    );
+    const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
     await act(async () => {
       setInputValue(nameInput, "Broken Nav");

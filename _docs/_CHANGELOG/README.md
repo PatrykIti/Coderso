@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 775 | 2026-04-29 | Menus editor detail cache hydration | CMS Menus/Admin Cache |
 | 774 | 2026-04-29 | TASK-241 pages published preview draft sync | CMS Pages/Admin UI |
 | 773 | 2026-04-29 | Markdown pre-commit format guard | Developer Tooling |
 | 772 | 2026-04-29 | TASK-054 modular admin IA closure and portal/i18n split | Documentation/Planning |
