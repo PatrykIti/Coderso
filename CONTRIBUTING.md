@@ -1,18 +1,46 @@
-# Contributing To Coderso
+# Contributing to Coderso
+
+Thank you for your interest in contributing to Coderso.
 
 Coderso is a modular web platform: simple on the surface, powerful underneath.
-Contributions should protect that product direction while keeping the codebase
-clear, tested, and easy to operate.
+The project is built to help people create websites, content systems, business
+workflows, and custom digital products with less friction and more freedom.
+
+Contributions are welcome when they help make Coderso more useful, reliable,
+secure, understandable, accessible, or kind to use.
+
+You do not need to contribute a large feature to help. Small fixes, clear bug
+reports, documentation improvements, tests, design feedback, and thoughtful
+questions are all valuable.
+
+## Project Philosophy
+
+Coderso should be friendly for everyday users and powerful for developers.
+
+When contributing, try to protect both sides:
+
+- beginner-facing workflows should stay simple, clear, and human-friendly;
+- advanced capabilities should remain flexible, typed, secure, and documented;
+- technical power should not leak unnecessary complexity into the default user
+  experience.
+
+A good Coderso contribution should make the product easier to trust, easier to
+understand, or easier to extend.
 
 ## Before You Start
+
+Before making a non-trivial change:
 
 - Read `README.md` for product positioning.
 - Read `AGENTS.md` for repository workflow, architecture, task, testing, and
   validation rules.
 - Check `_docs/` for the contract that owns the area you want to change.
-- Check `_docs/_TASKS/README.md` and the relevant task files before starting
-  non-trivial work.
+- Check `_docs/_TASKS/README.md` and relevant task files before starting larger
+  work.
 - For security-sensitive work, read `SECURITY.md` and `_docs/SECURITY_SPEC.md`.
+
+If you are unsure where to start, open a small issue or discussion with the
+problem you want to solve.
 
 ## Documentation Model
 
@@ -26,15 +54,17 @@ Coderso uses two documentation layers with different audiences:
 
 Use `_docs/` when documenting implementation contracts, task breakdowns,
 internal decisions, validation lanes, architecture notes, or agent handoff
-context. It can be more operational and detailed than public documentation.
+context.
 
 Use `docs/` when the content is ready to become official product or developer
 documentation for external readers.
 
 When a change affects both layers, update `_docs/` first to keep the task,
 architecture, and validation contract accurate, then promote the stable
-user-facing explanation into `docs/`. Do not publish temporary plans,
-implementation scratch notes, or agent-only instructions in `docs/`.
+user-facing explanation into `docs/`.
+
+Do not publish temporary plans, implementation scratch notes, private operational
+details, or agent-only instructions in `docs/`.
 
 ## Local Setup
 
@@ -44,6 +74,24 @@ Install dependencies from the repository root:
 bun install
 ```
 
+Run the development environment:
+
+```bash
+bun run dev
+```
+
+Run only the core app:
+
+```bash
+bun run dev:core
+```
+
+Run only the store workspace:
+
+```bash
+bun run dev:store
+```
+
 For database-backed commands or tests, load repository environment variables
 before running the command:
 
@@ -51,10 +99,10 @@ before running the command:
 set -a && source .env && set +a
 ```
 
-Do not commit local secrets, `.env` files, database URLs, provider keys, or
-private credentials.
+Do not commit local secrets, `.env` files, database URLs, provider keys, private
+credentials, or production data.
 
-## Repository Secrets For CI
+## Repository Secrets for CI
 
 Coderso PR checks are intentionally repository-secret backed. Pull requests must
 run against a maintained PostgreSQL test database, and the CI preflight applies
@@ -72,16 +120,9 @@ Required repository secrets:
 
 The repository-provided `GITHUB_TOKEN` is still used where GitHub Actions
 requires it, such as code-scanning uploads, Gitleaks PR scanning, and GHCR
-package publishing. Do not add a personal access token unless a task explicitly
-requires one.
+package publishing.
 
-CI runtime pins:
-
-- Bun: `1.3.13`
-- Node.js: `22.14.0`
-
-Keep PR gates and release automation on the same runtime pins unless a task
-updates the contract and regression tests together.
+Do not add a personal access token unless a task explicitly requires one.
 
 ## Development Workflow
 
@@ -92,8 +133,9 @@ updates the contract and regression tests together.
 - Update task docs, source-of-truth docs, and changelog entries when behavior,
   architecture, process, security posture, or public documentation changes.
 - Do not silently reduce agreed scope to a smaller MVP.
+- Leave the project easier to understand than you found it.
 
-## Testing And Validation
+## Testing and Validation
 
 Run the narrowest relevant checks first, then broaden when the touched contract
 requires it.
@@ -105,9 +147,28 @@ bun --cwd core lint
 bun --cwd core lint:types
 ```
 
-Use Bun for runtime-kernel behavior, route integration, plugin lifecycle,
-performance gates, security gates, and DB-backed flows. Use Vitest for Bun-free
-domain, admin UI, SDK, and pure TypeScript surfaces.
+Repository-level validation:
+
+```bash
+bun run lint
+bun run test
+```
+
+Use Bun for:
+
+- runtime-kernel behavior,
+- route integration,
+- plugin lifecycle,
+- performance gates,
+- security gates,
+- DB-backed flows.
+
+Use Vitest for:
+
+- Bun-free domain logic,
+- admin UI behavior,
+- SDK contracts,
+- pure TypeScript surfaces.
 
 For Coderso release-gated behavior, keep the release gate contract synchronized:
 
@@ -138,13 +199,36 @@ Pull requests should include:
 Keep pull requests reviewable. Split unrelated changes into separate pull
 requests when they have different owners, risk profiles, or validation lanes.
 
-Use the GitHub issue forms for bugs, feature requests, support, and
-documentation issues. Do not use public issues for vulnerabilities.
+Use GitHub issue forms or discussions for bugs, feature requests, support, and
+documentation issues.
 
-## Security And Conduct
+Do not use public issues for vulnerabilities.
 
-- Follow `SECURITY.md` for vulnerability reports. Use GitHub Private
-  Vulnerability Reporting or email `security@paktryiti.pl`; do not disclose
-  vulnerabilities in public issues.
+## Good First Contributions
+
+Helpful starter contributions include:
+
+- fixing unclear documentation,
+- improving error messages,
+- adding small tests for existing behavior,
+- reproducing and minimizing bugs,
+- improving accessibility labels,
+- simplifying confusing UI copy,
+- cleaning up outdated references.
+
+If your contribution helps someone else understand or use Coderso better, it
+matters.
+
+## Security and Conduct
+
+- Follow `SECURITY.md` for vulnerability reports.
+- Do not disclose vulnerabilities in public issues.
 - Follow `CODE_OF_CONDUCT.md` in all project spaces.
 - Use `SUPPORT.md` for support, bug report, and feature request routing.
+
+## Community
+
+Coderso is built with a bias toward kindness, practical help, and respect.
+
+You are welcome here if you want to help build useful software and treat other
+people well while doing it.

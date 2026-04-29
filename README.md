@@ -1,62 +1,88 @@
-# Coderso
+<p align="center">
+  <img src="./.github/banner.png" alt="Coderso - modular web platform" />
+</p>
 
-**Build websites without limits.**
+<p align="center">
+  <strong>Build websites without limits.</strong>
+</p>
 
-Coderso is a modular web platform for building websites, content systems, and
-custom digital products. It is simple on the surface, powerful underneath, and
-designed to grow from everyday publishing workflows into advanced developer-led
-systems.
+<p align="center">
+  A modular web platform for websites, content systems, business workflows, and custom digital products.
+  <br />
+  Simple on the surface. Powerful underneath.
+</p>
 
-Coderso is pronounced **ko-der-so**.
+<p align="center">
+  <a href="#what-is-coderso">Overview</a>
+  ·
+  <a href="#features">Features</a>
+  ·
+  <a href="#architecture">Architecture</a>
+  ·
+  <a href="#getting-started">Getting Started</a>
+  ·
+  <a href="#development">Development</a>
+</p>
 
-## What Coderso Means
+---
 
-Coderso combines two product ideas:
+## What is Coderso?
 
-- **Code + Resources**: pages, posts, media, forms, widgets, screens, and
-  business resources managed as one system.
-- **Code + Orchestrator**: a platform that connects modules, runtime behavior,
-  plugins, and builder workflows without exposing unnecessary complexity to
-  everyday users.
+**Coderso** is a modern, modular CMS and web platform built for people who want the simplicity of WordPress with the flexibility of a developer-first architecture.
 
-The name is intentionally unique, searchable, and flexible. Coderso is not
-limited to being a CMS. It is a foundation for modular websites, business
-workflows, and custom web applications.
+It is designed to start simple:
+
+- create pages,
+- write posts,
+- manage media,
+- build forms,
+- publish content,
+- configure navigation.
+
+And grow into advanced systems:
+
+- custom content models,
+- reusable widgets,
+- custom admin screens,
+- runtime plugins,
+- store-distributed extensions,
+- AI-assisted setup flows,
+- business-specific workflows.
+
+> Coderso is pronounced **ko-der-so**.
+
+---
 
 ## Product Philosophy
 
 Coderso is built around one principle:
 
-**Simple on top, powerful underneath.**
+> **Simple on top, powerful underneath.**
 
-The default user experience stays friendly and direct:
+Most users should not have to think about schemas, runtimes, plugins, or data models.
 
-- create pages,
-- edit content,
-- publish updates,
-- manage media,
-- build forms,
-- organize navigation.
+They should be able to build, edit, preview, and publish.
 
-The system handles the technical layer underneath:
+The advanced layer stays available when teams need deeper control:
 
-- schemas,
-- plugins,
-- runtime rendering,
-- structured content,
+- custom content structures,
+- plugin-based extension points,
+- developer workflows,
+- runtime configuration,
 - automation,
-- integrations,
-- advanced module orchestration.
+- security and performance gates.
 
-The goal is not to make users think like developers. The goal is to give users a
-clean product experience while keeping developer-grade power available when it is
-needed.
+Coderso is not only a CMS.
 
-## For Different Skill Levels
+It is a foundation for modular websites, business workflows, and custom web applications.
 
-### Beginner by Default
+---
 
-Most users should see familiar, product-friendly language:
+## Features
+
+### User-friendly publishing
+
+Coderso aims to keep everyday workflows familiar and approachable:
 
 - Pages
 - Posts
@@ -65,72 +91,252 @@ Most users should see familiar, product-friendly language:
 - Menus
 - Settings
 
-Beginner workflows should focus on creating, editing, previewing, and publishing
-without requiring technical concepts.
+The default experience is designed for creators and site owners, not only developers.
 
-### Advanced When Needed
+---
 
-Advanced users can access deeper platform capabilities:
+### Visual builder
 
-- Engine
-- Entries
-- Screens
-- Widgets
-- Plugins
-- Runtime configuration
+Build pages and interfaces with reusable blocks and widgets.
 
-These areas expose the power behind the product without making the default UI
-feel technical.
+Coderso is designed around visual composition while still keeping structured data underneath.
 
-## Naming Model
+---
 
-The product name is:
+### Content engine
 
-**Coderso**
+Create custom content models for real business data.
 
-Module names should usually stand on their own:
+Use content types, entries, screens, widgets, and listings to build more than simple pages.
 
-- Engine
-- Entries
-- Screens
-- Widgets
-- Forms
+---
 
-Avoid repeating the product name inside every module label. The brand is Coderso;
-the UI should remain clear, short, and human-friendly.
+### Runtime plugin system
 
-## Positioning
+Coderso is designed around a plugin architecture where extensions can be installed without rebuilding the core application.
 
-Coderso is not a developer-only CMS.
+The long-term goal is a WordPress-like extension experience with a more modern runtime and developer workflow.
 
-Coderso is closer to:
+---
 
-**WordPress for everyone, with superpowers for developers.**
+### Store foundation
 
-It gives non-technical users a simple publishing and site-building experience,
-while giving teams the modular architecture needed for custom systems,
-extensions, runtime behavior, and business-specific workflows.
+The repository includes a separate `store` workspace intended for plugin distribution, verification, and future marketplace workflows.
 
-## Taglines
+---
 
-Recommended positioning lines:
+### AI-assisted admin flows
 
-- Coderso - Build websites without limits
-- Coderso - Simple on the surface, powerful underneath
-- Coderso - From idea to website
-- Coderso - Modular web platform
+Coderso includes architecture for assistant-driven setup, docs navigation, planning flows, and guided execution.
 
-## Direction
+The goal is to make advanced configuration easier without exposing unnecessary complexity.
 
-Coderso is a platform for building websites and systems that are easy to manage,
-flexible to extend, and strong enough for real product work.
+---
 
-It should feel approachable to users and capable to developers.
+### Security and quality gates
 
-## Project Resources
+Coderso includes scripts for:
+
+- linting,
+- type checking,
+- Bun tests,
+- Vitest tests,
+- coverage lanes,
+- security scans,
+- release gates.
+
+---
+
+## Architecture
+
+Coderso is organized as a monorepo:
+
+```text
+.
+├── core
+├── store
+└── packages
+```
+
+### Core
+
+The main application runtime and admin experience.
+
+Includes:
+
+- Bun server runtime,
+- React admin UI,
+- Vite build pipeline,
+- content and page runtime,
+- plugin loading foundations,
+- database services,
+- admin modules,
+- public rendering.
+
+### Store
+
+Foundation for the future plugin store and distribution layer.
+
+### Packages
+
+Shared packages such as SDKs and reusable contracts.
+
+---
+
+## Tech Stack
+
+Coderso is built with:
+
+- **Bun** – runtime and test execution
+- **React** – admin UI
+- **Vite** – build pipeline
+- **TypeScript** – typed application code
+- **Tailwind CSS** – styling system
+- **Radix UI** – accessible UI primitives
+- **Drizzle ORM** – database layer
+- **PostgreSQL** – primary database target
+
+---
+
+## Getting Started
+
+> Coderso is under active development. APIs, setup steps, and internal architecture may change.
+
+Clone the repository:
+
+```bash
+git clone https://github.com/PatrykIti/Coderso.git
+cd Coderso
+```
+
+Install dependencies:
+
+```bash
+bun install
+```
+
+Run the development environment:
+
+```bash
+bun run dev
+```
+
+Run only the core app:
+
+```bash
+bun run dev:core
+```
+
+Run only the store workspace:
+
+```bash
+bun run dev:store
+```
+
+---
+
+## Development
+
+### Lint
+
+```bash
+bun run lint
+```
+
+### Tests
+
+```bash
+bun run test
+```
+
+### Full test suite
+
+```bash
+bun run test:full
+```
+
+### Bun test lane
+
+```bash
+bun run test:bun
+```
+
+### Vitest lane
+
+```bash
+bun run test:vitest
+```
+
+### Coverage
+
+```bash
+bun run test:coverage:all
+```
+
+### Security scans
+
+```bash
+bun run scan:security
+```
+
+Strict mode:
+
+```bash
+bun run scan:security:strict
+```
+
+---
+
+## Project Status
+
+Coderso is currently in active development.
+
+The project already contains the foundation for:
+
+- modular core architecture,
+- admin UI,
+- content workflows,
+- plugin/runtime direction,
+- store workspace,
+- testing lanes,
+- security gates,
+- assistant and guided setup architecture.
+
+Some parts are still evolving and should be treated as pre-stable.
+
+---
+
+## Naming
+
+Coderso combines two ideas:
+
+- **Code + Resources**
+- **Code + Orchestrator**
+
+It represents a platform that connects pages, posts, media, forms, widgets, plugins, screens, runtime behavior, and business resources into one modular system.
+
+---
+
+## Vision
+
+Coderso aims to become:
+
+> **WordPress for everyone, with superpowers for developers.**
+
+A platform where non-technical users can manage real websites comfortably, while developers can extend the system into custom products, business tools, and advanced web applications.
+
+---
+
+## Repository Resources
 
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Support](SUPPORT.md)
 - [Security Policy](SECURITY.md)
 - [License](LICENSE.md)
+
+---
+
+## License
+
+Apache-2.0

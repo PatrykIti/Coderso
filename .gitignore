@@ -13,6 +13,7 @@ coverage/
 .tmp
 *.jpg
 *.png
+!banner.png
 
 GENERATION_LIST.md
 .claude
