@@ -566,6 +566,10 @@ Create/Update payload (summary):
 }
 ```
 
+- Pages editor preview with unsaved changes performs a client-side silent draft
+  sync through `PATCH /pages/:id` before calling this endpoint. The sync writes
+  `currentData` only; it does not update `publishedData`, so public visitors keep
+  seeing the last published version until `POST /pages/:id/publish` succeeds.
 - `ttlMinutes` is optional and remains clamped by the preview token policy.
 - `probe` is optional. When `true`, the server probes only the generated preview
   URL/origin and returns UI-safe metadata; it never accepts an arbitrary URL from

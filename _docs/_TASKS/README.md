@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1357 tasks
+- **Done:** 1358 tasks
 
 ---
 
@@ -104,6 +104,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-241 | Pages Published Preview Draft Sync | High | Small | Done: published Pages hide Save draft, Preview silently syncs unsaved editor data to currentData before token generation, and public visitors keep seeing publishedData until Publish |
 | TASK-238 | GitHub CodeQL Security Findings Remediation | High | Large | Done: CodeQL remediation was renumbered from TASK-237 to TASK-238, local scanner/lint/type/test validation passed, GitHub CodeQL open alerts are 0, secret scanning open alerts are 0, and Dependabot remains disabled/403 |
 | TASK-238-01 | Workflow Least-Privilege Permissions | High | Small | Done: explicit PR-gate workflow permissions and scoped SARIF write permissions are covered by regression tests |
 | TASK-238-02 | Listing Query Path Hardening | High | Small | Done: listing projection path guards reject unsafe prototype-pollution segments with Bun regression coverage |

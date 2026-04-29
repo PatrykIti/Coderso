@@ -3,12 +3,7 @@ import { Eye, History, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -109,10 +104,7 @@ const readBlockDataText = (block: Block, key: string) => {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 };
 
-const summarizePageBlocksForAssistant = (
-  blocks: Block[],
-  options: { maxBlocks?: number } = {}
-) => {
+const summarizePageBlocksForAssistant = (blocks: Block[], options: { maxBlocks?: number } = {}) => {
   const maxBlocks = options.maxBlocks ?? 80;
   const result: Array<{
     id: string;
@@ -145,8 +137,10 @@ const summarizePageBlocksForAssistant = (
         path,
         childCount: childBlocks.length + slotChildCount,
         slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
-        templateId: block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
-        templateName: block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
+        templateId:
+          block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
+        templateName:
+          block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
       });
 
       if (result.length >= maxBlocks) return;
@@ -180,9 +174,7 @@ const normalizeBlocks = (data?: Record<string, unknown> | null) => {
         Object.fromEntries(
           Object.entries(normalized.slots).map(([key, value]) => [
             key,
-            Array.isArray(value)
-              ? value.map((child) => normalizeTree(child as Block))
-              : [],
+            Array.isArray(value) ? value.map((child) => normalizeTree(child as Block)) : [],
           ])
         );
       const children =
@@ -255,17 +247,14 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const resolvePageSettings = (
-  data: Record<string, unknown>
-): PageSettingsValue => {
+const resolvePageSettings = (data: Record<string, unknown>): PageSettingsValue => {
   const settings = isRecord(data.settings) ? data.settings : {};
   return {
     template:
       typeof settings.template === "string" && settings.template.trim().length > 0
         ? settings.template
         : "landing",
-    showInNav:
-      typeof settings.showInNav === "boolean" ? settings.showInNav : true,
+    showInNav: typeof settings.showInNav === "boolean" ? settings.showInNav : true,
     layout: normalizePageLayoutSettings(settings.layout),
     revisionRetention: normalizePageRevisionRetentionValue(settings.revisionRetention),
   };
@@ -315,9 +304,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [pageData, setPageData] = useState<Record<string, unknown>>(
     initialPageDetail?.currentData ?? { blocks: defaultBlocks }
   );
-  const [blocks, setBlocks] = useState<Block[]>(
-    normalizeBlocks(initialPageDetail?.currentData)
-  );
+  const [blocks, setBlocks] = useState<Block[]>(normalizeBlocks(initialPageDetail?.currentData));
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
@@ -326,9 +313,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setHasUnsavedChanges(value);
   };
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [isLoading, setIsLoading] = useState(
-    !initialPageDetail && typeof window !== "undefined"
-  );
+  const [isLoading, setIsLoading] = useState(!initialPageDetail && typeof window !== "undefined");
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const pageMutationInFlightRef = useRef(false);
@@ -378,17 +363,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const wrapperBackgroundMedia = pageLayout.wrapper.background.media;
   const wrapperBackgroundImage =
     wrapperBackgroundMedia.type === "image"
-      ? wrapperBackgroundMedia.src ?? pageLayout.wrapper.background.image ?? null
+      ? (wrapperBackgroundMedia.src ?? pageLayout.wrapper.background.image ?? null)
       : null;
   const wrapperBackgroundVideo =
-    wrapperBackgroundMedia.type === "video"
-      ? wrapperBackgroundMedia.src
-      : null;
+    wrapperBackgroundMedia.type === "video" ? wrapperBackgroundMedia.src : null;
   const wrapperBackgroundStyle = {
     backgroundColor: pageLayout.wrapper.background.color,
-    backgroundImage: wrapperBackgroundImage
-      ? `url(${wrapperBackgroundImage})`
-      : undefined,
+    backgroundImage: wrapperBackgroundImage ? `url(${wrapperBackgroundImage})` : undefined,
     backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
     backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
@@ -418,26 +399,23 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     };
   }, [blocks, hasUnsavedChanges, page, pageId, pageSettings.template, selectedId]);
 
-  const applyPage = useCallback(
-    (result: PageDetail, options?: { preserveSelection?: boolean }) => {
-      setPage(result);
-      const nextData = result.currentData ?? { blocks: defaultBlocks };
-      setPageData(nextData as Record<string, unknown>);
-      const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
-      setBlocks(nextBlocks);
-      setSelectedId((current) => {
-        if (options?.preserveSelection && current) {
-          return findBlockById(nextBlocks, current) ? current : nextBlocks[0]?.id ?? null;
-        }
-        return nextBlocks[0]?.id ?? null;
-      });
-      setUnsavedChanges(false);
-      setRemoteUpdatePending(false);
-      setHighlightedBlockId(null);
-      setPendingScrollBlockId(null);
-    },
-    []
-  );
+  const applyPage = useCallback((result: PageDetail, options?: { preserveSelection?: boolean }) => {
+    setPage(result);
+    const nextData = result.currentData ?? { blocks: defaultBlocks };
+    setPageData(nextData as Record<string, unknown>);
+    const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
+    setBlocks(nextBlocks);
+    setSelectedId((current) => {
+      if (options?.preserveSelection && current) {
+        return findBlockById(nextBlocks, current) ? current : (nextBlocks[0]?.id ?? null);
+      }
+      return nextBlocks[0]?.id ?? null;
+    });
+    setUnsavedChanges(false);
+    setRemoteUpdatePending(false);
+    setHighlightedBlockId(null);
+    setPendingScrollBlockId(null);
+  }, []);
 
   const focusInsertedBlock = useCallback((blockId: string) => {
     setSelectedId(blockId);
@@ -448,9 +426,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   useEffect(() => {
     if (typeof window === "undefined" || !highlightedBlockId) return;
     const timerId = window.setTimeout(() => {
-      setHighlightedBlockId((current) =>
-        current === highlightedBlockId ? null : current
-      );
+      setHighlightedBlockId((current) => (current === highlightedBlockId ? null : current));
     }, 2000);
     return () => {
       window.clearTimeout(timerId);
@@ -458,18 +434,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   }, [highlightedBlockId]);
 
   useLayoutEffect(() => {
-    if (
-      typeof document === "undefined" ||
-      typeof window === "undefined" ||
-      !pendingScrollBlockId
-    ) {
+    if (typeof document === "undefined" || typeof window === "undefined" || !pendingScrollBlockId) {
       return;
     }
 
     const escapedId = pendingScrollBlockId.replace(/["\\]/g, "\\$&");
-    const target = document.querySelector(
-      `[data-block-id="${escapedId}"]`
-    ) as HTMLElement | null;
+    const target = document.querySelector(`[data-block-id="${escapedId}"]`) as HTMLElement | null;
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "start" });
     const focusTarget = target.querySelector<HTMLElement>("[data-block-select='true']");
@@ -581,40 +551,28 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     return () => {
       active = false;
     };
-  }, [
-    settingsOpen,
-    templateOptions,
-    templateOptionsError,
-  ]);
+  }, [settingsOpen, templateOptions, templateOptionsError]);
 
-  const refreshRevisions = useCallback(
-    async () => {
-      if (!pageId) return;
-      setRevisionsLoading(true);
-      setRevisionsError(null);
-      try {
-        const items = await listPageRevisions(pageId);
-        setRevisions(items);
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setRevisionsError(err.message);
-        } else {
-          setRevisionsError("Failed to load page history.");
-        }
-      } finally {
-        setRevisionsLoading(false);
+  const refreshRevisions = useCallback(async () => {
+    if (!pageId) return;
+    setRevisionsLoading(true);
+    setRevisionsError(null);
+    try {
+      const items = await listPageRevisions(pageId);
+      setRevisions(items);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setRevisionsError(err.message);
+      } else {
+        setRevisionsError("Failed to load page history.");
       }
-    },
-    [pageId]
-  );
+    } finally {
+      setRevisionsLoading(false);
+    }
+  }, [pageId]);
 
   const handleSettingsOpenChange = (nextOpen: boolean) => {
-    if (
-      nextOpen &&
-      !templateOptions &&
-      !templateOptionsLoading &&
-      !templateOptionsError
-    ) {
+    if (nextOpen && !templateOptions && !templateOptionsLoading && !templateOptionsError) {
       setTemplateOptionsLoading(true);
       setTemplateOptionsError(null);
     }
@@ -833,6 +791,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   };
 
   const handlePreview = async () => {
+    if (pageMutationInFlightRef.current) return;
     setPreviewOpen(true);
     if (!pageId) {
       setPreviewUrl(null);
@@ -841,10 +800,22 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPreviewLoading(false);
       return;
     }
+    pageMutationInFlightRef.current = true;
     setPreviewLoading(true);
     setPreviewError(null);
     setPreviewProbe(null);
+    setPreviewUrl(null);
     try {
+      if (hasUnsavedChangesRef.current) {
+        const updated = await updatePage(pageId, {
+          data: pageData,
+        });
+        if (updated) {
+          setPage(updated);
+        }
+        setUnsavedChanges(false);
+        setRemoteUpdatePending(false);
+      }
       const { previewUrl, probe } = await previewPage(pageId, { probe: true });
       setPreviewUrl(previewUrl);
       setPreviewProbe(probe ?? null);
@@ -857,6 +828,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPreviewUrl(null);
       setPreviewProbe(null);
     } finally {
+      pageMutationInFlightRef.current = false;
       setPreviewLoading(false);
     }
   };
@@ -970,7 +942,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const status = page?.status ?? "draft";
   const title = page?.title ?? "Homepage";
-  const isPageMutationInFlight = isSaving || isPublishing;
+  const isPublished = status === "published";
+  const isPageMutationInFlight = isSaving || isPublishing || previewLoading;
   const renderLibraryPanel = () => (
     <LibraryPanel
       onAddWidget={handleAddBlock}
@@ -994,11 +967,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       activeHref="/admin/pages"
       leftPanel={renderLibraryPanel()}
       rightPanel={
-        <BlockSettings
-          block={selectedBlock}
-          widget={selectedWidget}
-          onChange={handleChangeBlock}
-        />
+        <BlockSettings block={selectedBlock} widget={selectedWidget} onChange={handleChangeBlock} />
       }
       rightPanelClassName="p-6"
       breadcrumbs={
@@ -1026,21 +995,23 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 size="sm"
                 className="gap-2"
                 onClick={handlePreview}
-                disabled={isLoading}
+                disabled={isPageMutationInFlight || isLoading}
               >
                 <Eye className="h-4 w-4" />
                 Preview
               </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                onClick={handleSaveDraft}
-                disabled={isPageMutationInFlight || isLoading}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save draft"}
-              </Button>
+              {!isPublished ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleSaveDraft}
+                  disabled={isPageMutationInFlight || isLoading}
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save draft"}
+                </Button>
+              ) : null}
             </div>
             <Button
               size="sm"
@@ -1075,11 +1046,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 History
               </Button>
               <div className="flex flex-wrap items-center gap-2 lg:hidden">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMobileLibraryOpen(true)}
-                >
+                <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
                   Components
                 </Button>
                 <Button
@@ -1227,9 +1194,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <SheetDescription className="sr-only">
             Browse available components and widgets.
           </SheetDescription>
-          <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            {renderLibraryPanel()}
-          </div>
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">{renderLibraryPanel()}</div>
         </SheetContent>
       </Sheet>
       <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
