@@ -68,6 +68,7 @@ Testing docs:
   - relevant docs/contracts (`_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, `_docs/TESTING_STRATEGY.md`, etc.).
 - For non-trivial tasks, tasks that change contributor/process rules, or work done alongside other active agents, prefer a dedicated git branch + worktree so the change stays isolated from unrelated in-progress edits in the shared tree.
 - If a task is not broken down enough, create physical task/subtask files in `_docs/_TASKS/` first using the exact repo format from `_docs/_TASKS/README.md` (filename, header lines, required fields, required sections, dated statuses, tests, and docs/changelog plan).
+- Execution-ready leaf tasks must include implementation pseudocode for the expected code changes, including the main helper/function shape, data flow, error handling, and regression-test shape. The implementer should be able to execute from the task without rediscovering the fix strategy.
 - For any task/subtask that touches API routes, include an explicit **Security Contract** subsection: endpoint visibility (`internal` vs `public`), auth model, RBAC, CSRF expectations for admin/internal writes, rate-limit bucket, strict reject-unknown validation, and anti-abuse controls (`nonce` + signature/HMAC for public write; optional reCAPTCHA policy; `session` or `API key scope` for internal mode when applicable).
 - Implement in dependency order to avoid unnecessary refactors and rework.
 - Do not silently downgrade scope to MVP if full scope was agreed.

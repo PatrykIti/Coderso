@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 54 tasks
 - **In Progress:** 32 tasks
 - **Done:** 1320 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-237 | GitHub CodeQL Security Findings Remediation | High | Large | Remediate 21 open GitHub CodeQL alerts from code scanning; secret scanning currently has 0 open alerts and Dependabot alerts are disabled |
+| TASK-237-01 | Workflow Least-Privilege Permissions | High | Small | Fix CodeQL workflow permission alerts in testing lanes and Coderso release gates |
+| TASK-237-02 | Listing Query Path Hardening | High | Small | Harden listing query projection path writes against prototype pollution |
+| TASK-237-03 | Video Embed Host Validation | High | Medium | Replace substring YouTube host checks with shared exact host/subdomain validation |
+| TASK-237-04 | Rich Text Sanitizer and Entity Hardening | High | Large | Centralize rich-text entity handling and replace broad sanitizer/tag-filter regexes flagged by CodeQL |
+| TASK-237-05 | CodeQL Verification, Docs, and Closure | High | Medium | Run local/CI validation, re-query GitHub alerts, update docs/changelog, and close the task family |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
