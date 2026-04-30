@@ -58,11 +58,16 @@ or details drawer redesign.
     details-opening click target.
 - `tests/vitest/ui/media-library.test.tsx`
   - update copy assertions from `Upload New` to `Upload`;
+  - assert clicking the header `Upload` CTA still calls the existing
+    `UploadDropzone` hidden file-input/open path;
   - assert the header no longer contains a `Select` mode button;
   - add happy-dom coverage that cached media renders selection checkboxes
     without clicking a mode toggle;
   - assert `Select visible`, `Download`, `Delete`, and `Clear` are available in
-    the default screen state.
+    the default screen state;
+  - assert the bulk action disabled/enabled states: `Download` and `Delete` are
+    disabled at `0 selected`, become enabled after checkbox or `Select visible`
+    selection, and return disabled after `Clear`.
 - `tests/vitest/mediaUi/mediaLibrary.test.tsx`
   - add the SSR smoke assertion to expect `Upload` and not `Upload New`.
 - `tests/vitest/ui/media-components.test.tsx`
@@ -190,6 +195,32 @@ test("MediaLibraryPage keeps selection active without a Select toggle", async ()
   expect(view.container.textContent).toContain("0 selected");
   expect(view.container.textContent).toContain("Select visible");
   expect(view.container.querySelector('button[aria-label="Select Cached hero"]')).toBeTruthy();
+
+  const downloadButton = getButton(view.container, "Download");
+  const deleteButton = getButton(view.container, "Delete");
+  expect(downloadButton).toBeDisabled();
+  expect(deleteButton).toBeDisabled();
+
+  await click(view.container.querySelector('button[aria-label="Select Cached hero"]'));
+  expect(view.container.textContent).toContain("1 selected");
+  expect(downloadButton).not.toBeDisabled();
+  expect(deleteButton).not.toBeDisabled();
+
+  await click(getButton(view.container, "Clear"));
+  expect(view.container.textContent).toContain("0 selected");
+  expect(downloadButton).toBeDisabled();
+  expect(deleteButton).toBeDisabled();
+});
+
+test("MediaLibraryPage header Upload opens the existing dropzone file input", async () => {
+  const view = mountMediaLibrary();
+  await flushEffects();
+
+  const fileInput = view.container.querySelector('input[type="file"]');
+  const openSpy = vi.spyOn(fileInput as HTMLInputElement, "click");
+
+  await click(getButton(view.container, "Upload"));
+  expect(openSpy).toHaveBeenCalled();
 });
 
 test.each(["grid", "list"] as const)(
@@ -227,6 +258,13 @@ test.each(["grid", "list"] as const)(
 - `tests/vitest/ui/media-components.test.tsx` must prove checkbox-vs-primary
   click separation in both grid and list view, matching acceptance criteria 5
   and 6.
+- `tests/vitest/ui/media-library.test.tsx` must prove the renamed header
+  `Upload` CTA still opens the existing `UploadDropzone` hidden file-input path,
+  not a new upload route or duplicate browser file picker.
+- `tests/vitest/ui/media-library.test.tsx` must prove default-state bulk action
+  behavior, not just button presence: `Download` and `Delete` start disabled at
+  `0 selected`, become enabled after checkbox or `Select visible`, and return
+  disabled after `Clear`.
 - `bun run test:vitest -- tests/vitest/ui/media-library.test.tsx tests/vitest/mediaUi/mediaLibrary.test.tsx tests/vitest/ui/media-components.test.tsx tests/vitest/ui/media-card.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
