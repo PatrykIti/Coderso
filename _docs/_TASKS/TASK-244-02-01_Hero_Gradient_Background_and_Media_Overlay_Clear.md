@@ -32,10 +32,17 @@ remove it.
 
 ## Implementation Notes
 
-Current runtime already behaves mostly correctly when `background.gradient` is
-absent: `HeroBlock` resolves `background.gradient ?? ""` and omits
-`backgroundImage` if no gradient/image/video is present. The missing piece is
-editor affordance and payload cleanup.
+Current runtime already behaves mostly correctly for the gradient path when
+`background.gradient` is absent: `HeroBlock` resolves
+`background.gradient ?? ""` and omits `backgroundImage` if no
+gradient/image/video is present. Do not treat that as sufficient for the full
+Hero background contract. `hero.tsx:349` currently emits
+`backgroundColor: background.color ?? "transparent"`, so clearing
+`background.color` still renders a transparent background style. The
+implementation must change the runtime style construction so an absent/cleared
+`background.color` omits `backgroundColor` entirely, while a deliberately saved
+manual value such as `"transparent"` can still render as the user's configured
+color.
 
 Do not add a `"none"` gradient string. Do not save `"transparent"` as the
 gradient off state.
@@ -114,6 +121,7 @@ equivalence.
 
 ```ts
 expect(hero.getAttribute("style") ?? "").not.toContain("background-image");
+expect(hero.getAttribute("style") ?? "").not.toContain("background-color: transparent");
 expect(hero.querySelector("[data-hero-background-overlay]")).toBeNull();
 expect(html).not.toContain("background:#224466");
 ```
@@ -125,7 +133,8 @@ expect(html).not.toContain("background:#224466");
   - configured gradient still renders;
   - cleared gradient omits `backgroundImage`;
   - editor `Clear` removes `background.gradient`;
-  - background color clear removes `background.color`;
+  - background color clear removes `background.color` and runtime omits
+    `backgroundColor` instead of falling back to `"transparent"`;
   - media overlay clear removes the overlay field and overlay node where
     applicable.
   - centered background media overlay clear is covered separately from

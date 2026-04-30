@@ -38,6 +38,11 @@ write `"transparent"` or an empty string solely as an off-state sentinel.
 Run the exact commands below unless the implementation narrows the touched
 surface and records why a listed suite is intentionally skipped.
 
+`tests/vitest/ui/screen-widgets-editor-wave.test.tsx` is not existing proof in
+the current checkout. TASK-244-03-01 must create that suite before closure runs
+the screen widgets command below; do not count the missing file as a skipped
+validation lane.
+
 ```sh
 bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx
 bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx
