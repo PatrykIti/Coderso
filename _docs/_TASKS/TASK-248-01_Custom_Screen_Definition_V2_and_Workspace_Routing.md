@@ -44,6 +44,12 @@ No child task files.
 
 Keep V1 readable. V2 is the new persisted target:
 
+Ownership rule: `contentTypeId` stays on the Custom Screen record (`custom_screens`
+row, service input, and route payload). It must not be duplicated inside
+`CustomScreenDefinitionV2`. The normalizer may receive a resolved content type
+as context for default `List View` generation and field validation, but persisted
+definition JSON must reject a top-level `contentTypeId`.
+
 ```ts
 type CustomScreenDefinitionVersion = 1 | 2;
 
@@ -156,13 +162,18 @@ services. If `contentEntryRoutes.ts` still maps schema failures to 500, add the
 shared `mapContentEntryError` coverage here because V2 create/edit depends on
 clean validation semantics.
 
+Admin UI links must consume shared route helpers through the existing admin
+navigation helpers (`AdminLink`, `adminPaths`/`resolveAdminHref`, and
+`prefetchAdminRoute`). Do not introduce hand-built alias matching or a second
+Custom Screens route convention.
+
 ## Security Contract
 
 - Visibility: internal admin routes only.
 - Auth model: authenticated admin session or existing admin API key model.
 - RBAC:
-  - Custom Screen definition create/update requires the existing Custom Screens
-    write permission.
+  - Custom Screen definition create/update requires the existing `content:write`
+    permission used by current Custom Screens admin routes.
   - Loading content type schema for defaults requires `content:read`.
   - Entry create/update/delete remains owned by existing content entry routes
     and requires `content:write`.
@@ -185,6 +196,7 @@ clean validation semantics.
 - Vitest:
   - V1 definitions normalize into V2 without losing blocks or bindings,
   - V2 definitions reject unknown top-level and nested keys,
+  - V2 definitions reject top-level `contentTypeId` inside the definition JSON,
   - default `List View` generation chooses sensible fields from the House
     Projects schema,
   - invalid list columns/filters are rejected with

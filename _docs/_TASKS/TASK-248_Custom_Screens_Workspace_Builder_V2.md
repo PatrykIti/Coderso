@@ -31,6 +31,12 @@ binding formatting, and one-off presets. Those issues remain useful discovery
 evidence, but they should be solved by the V2 workspace model rather than by
 spending time on soon-to-be-legacy UI paths.
 
+Numbering note: this checkout materializes the workspace-builder family as
+`TASK-248`. Do not create a parallel `TASK-249` family unless the whole set is
+renumbered first: filenames, header lines, dependencies, `_docs/_TASKS/README.md`
+rows, internal task references, and later changelog references must move
+together.
+
 ## Live Discovery Evidence
 
 A Playwright CLI walkthrough on 2026-04-30 against
@@ -71,6 +77,10 @@ Findings that shape V2:
 Custom Screens should become a reusable admin workspace product surface:
 
 - A screen is assigned to exactly one content type.
+- `contentTypeId` remains owned by the Custom Screen record/DB row and admin
+  route payload. Do not duplicate it inside `CustomScreenDefinitionV2`; pass the
+  resolved content type into definition normalizers only as context for defaults,
+  schema-bound validation, and UI option filtering.
 - The screen definition owns a `List View` and an `Editor View`.
 - `List View` controls the records table the user sees from admin navigation.
 - `Editor View` controls the create/edit form canvas the user sees after
@@ -118,6 +128,9 @@ Custom Screens should become a reusable admin workspace product surface:
    admin errors, not `500 internal_error`.
 
 ## Workspace Definition Sketch
+
+`contentTypeId` is intentionally omitted from the persisted definition because
+the screen record already owns the content-type assignment.
 
 ```ts
 type CustomScreenDefinitionV2 = {
@@ -174,11 +187,13 @@ them as transient UI-only tabs.
 - Auth model: authenticated admin session or existing admin API key model used
   by `/admin/api/custom-screens` and `/admin/api/content/:type/entries`.
 - RBAC:
-  - Custom Screen definition writes require the existing Custom Screens write
-    permission.
+  - Custom Screen definition writes require the existing `content:write`
+    permission used by `/admin/api/custom-screens`.
   - List/read rendering requires `content:read` for the selected content type.
   - Entry create/update/delete requires `content:write` for the selected
     content type.
+  - Entry publish/unpublish actions require the existing `content:publish`
+    permission when they call the current publish routes.
 - CSRF:
   - all admin write mutations continue through CSRF-backed admin clients.
 - Rate-limit bucket:
@@ -186,6 +201,8 @@ them as transient UI-only tabs.
 - Reject-unknown validation:
   - V2 screen definitions must reject unknown top-level `listView` and
     `editorView` keys,
+  - V2 screen definitions must reject definition-level `contentTypeId`; the
+    content type assignment is record-level state,
   - entry create/update payloads must keep dynamic fields under `data`,
   - route modules remain orchestration-only and map domain errors centrally.
 - Anti-abuse:

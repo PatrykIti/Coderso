@@ -66,6 +66,11 @@ The designer must scope field choices to the selected content type. A screen
 for House Projects must not offer fields from Posts, Pages, or another custom
 content type.
 
+The selected content type comes from the Custom Screen record's `contentTypeId`,
+not from the `Editor View` definition. `Editor View` blocks/bindings may only
+reference fields from that resolved content type plus approved system entry
+fields such as `title`, `slug`, `status`, and timestamps.
+
 ## Runtime Requirements
 
 1. `/advanced/custom-screens/:screenId/entries/new` opens the screen's
@@ -196,8 +201,10 @@ adding broad string coercion to every binding path.
 - RBAC:
   - loading entry/editor data requires `content:read`,
   - create/update requires `content:write`,
-  - editing `Editor View` configuration requires the existing Custom Screens
-    write permission.
+  - publish/unpublish controls use `content:publish` when they call current
+    entry publish routes,
+  - editing `Editor View` configuration requires the existing `content:write`
+    permission used by Custom Screens writes.
 - CSRF:
   - create/update/save mutations use existing CSRF-backed admin clients.
 - Rate-limit bucket:

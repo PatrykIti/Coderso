@@ -63,6 +63,11 @@ The tab should reuse Pages-editor ergonomics for canvas/settings state, but it
 should not pretend that the list table is a free-form public page canvas.
 Columns and filters are configuration objects, not arbitrary frontend widgets.
 
+Content-type scope is record-level: the rendered list always uses the Custom
+Screen record's `contentTypeId`, resolves that to the current content type, and
+then reads only entries for that type. `List View` must not introduce an
+arbitrary data-source selector.
+
 ## Implementation Pseudocode
 
 ```tsx
@@ -159,9 +164,11 @@ function resolveEntryColumnValue(input: {
 - Auth model: authenticated admin session or existing admin API key model.
 - RBAC:
   - list rendering requires `content:read`,
-  - row delete/publish/unpublish requires `content:write`,
-  - saving `List View` configuration requires the existing Custom Screens write
-    permission.
+  - row delete requires `content:write`,
+  - row publish/unpublish requires the current entry publish permission
+    (`content:publish`) when calling publish routes,
+  - saving `List View` configuration requires the existing `content:write`
+    permission used by Custom Screens writes.
 - CSRF:
   - table mutations use existing CSRF-backed entry/admin clients,
   - saving the Custom Screen definition uses existing CSRF-backed client.

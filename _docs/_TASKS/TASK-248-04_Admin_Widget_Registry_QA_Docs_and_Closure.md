@@ -56,6 +56,12 @@ No child task files.
 Introduce explicit widget surfaces instead of relying on separate ad hoc lists
 that can drift:
 
+Naming decision: use `admin-list-view` and `admin-editor-view` consistently in
+code and tests. These are the technical names for the product-facing `List View`
+and `Editor View` tabs. Do not introduce parallel aliases such as `admin-list`
+or `admin-record` unless the whole registry, docs, and tests are renamed in one
+change.
+
 ```ts
 type WidgetSurface =
   | "public-page"
@@ -170,7 +176,9 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 - RBAC:
   - registry listing is local UI metadata,
   - entry reads/writes during replay use `content:read` and `content:write`,
-  - Custom Screen saves use existing Custom Screens write permission.
+  - entry publish/unpublish uses `content:publish` when publish routes are
+    exercised,
+  - Custom Screen saves use the existing `content:write` permission.
 - CSRF:
   - replay must confirm writes go through existing CSRF-backed clients.
 - Rate-limit bucket:
@@ -190,6 +198,8 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 - Vitest:
   - registry returns only widgets allowed for `admin-list-view`,
   - registry returns only widgets allowed for `admin-editor-view`,
+  - no alternate `admin-list` / `admin-record` aliases are required or accepted
+    unless the registry contract is deliberately renamed,
   - public-only widgets are hidden from Custom Screen builder,
   - legacy V1 widgets still render for existing screens,
   - field-aware admin widgets require a selected content type.
