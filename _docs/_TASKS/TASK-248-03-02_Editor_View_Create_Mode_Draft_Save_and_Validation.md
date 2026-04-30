@@ -38,10 +38,15 @@ No child task files.
 ## Runtime Contract
 
 - `/advanced/custom-screens/:screenId/entries/new` opens create mode.
-- Initial draft is built from the selected content type schema.
+- Initial draft is built from the selected content type schema and the configured
+  `definition.editorView` writable fields.
 - Required fields render inline validation before submit where possible.
-- Save create calls `POST /admin/api/content/:type/entries` with normalized
-  `title`, `slug`, status/default metadata where supported, and full `data`.
+- Save create calls `POST /admin/api/content/:type/entries` with only the
+  create-schema fields currently accepted by the route: normalized `title`,
+  `slug`, and `data`.
+- Post-create status metadata uses `updateEntryMetadata`; explicit publish or
+  unpublish actions use the existing publish routes and require
+  `content:publish`.
 - Valid create invalidates the entries list and navigates according to the
   existing custom screen open-after-create preference.
 - Invalid create must surface the route-boundary machine-readable error from
@@ -51,13 +56,20 @@ No child task files.
 ## Implementation Pseudocode
 
 ```ts
-export function buildInitialEntryDraft(contentType: ContentTypeSummary): EntryDraft {
+export function buildInitialEntryDraft(input: {
+  contentType: ContentTypeSummary;
+  editorView: CustomScreenEditorViewDefinition;
+}): EntryDraft {
+  const editableFields = collectEditorViewWritableFields(input.editorView);
   return {
     title: "",
     slug: "",
     status: "draft",
-    data: buildSchemaDefaultData(contentType.schema),
-    editableFields: collectCreateModeWritableFields(contentType.schema),
+    data: buildSchemaDefaultData(input.contentType.schema, {
+      fields: editableFields,
+      includeRequired: true,
+    }),
+    editableFields,
     originalData: {},
     originalStatus: "draft",
     publishAction: null,
@@ -72,13 +84,19 @@ function CustomScreenEntryEditorRoute(input: {
   contentType: ContentTypeSummary;
   entryId: string;
 }) {
+  const editorView = input.screen.definition.editorView;
+
   if (input.entryId === "new") {
     return (
       <CustomScreenEntryEditor
         mode="create"
         screen={input.screen}
         contentType={input.contentType}
-        initialDraft={buildInitialEntryDraft(input.contentType)}
+        editorView={editorView}
+        initialDraft={buildInitialEntryDraft({
+          contentType: input.contentType,
+          editorView,
+        })}
       />
     );
   }
@@ -119,9 +137,10 @@ async function saveEditorViewCreate(input: {
   contentType: ContentTypeSummary;
   draft: EntryDraft;
 }) {
-  const payload = normalizeEntryPayloadForSchema({
+  const payload = normalizeEntryCreatePayloadForSchema({
     schema: input.contentType.schema,
     draft: input.draft,
+    editableFields: input.draft.editableFields,
   });
 
   const created = await createEntry(input.contentType.slug, payload);
@@ -139,7 +158,9 @@ Create mode should create the entry first, then use existing
 `updateEntryMetadata`, `publishEntry`, or `unpublishEntry` clients for any
 write-capable status/publish controls. If the first implementation keeps status
 controls display-only, the UI must not render them as editable and tests must
-assert no metadata/publish call is made.
+assert no metadata/publish call is made. Do not include `status`, publish flags,
+or metadata fields in the create payload unless the route schema is deliberately
+changed with matching route validation tests.
 
 `CustomScreenEntriesPage` should route directly to `entries/new` when
 `definition.listView.createMode === "editor-view"`. The legacy drawer remains
@@ -150,9 +171,13 @@ only for explicit compatibility mode.
 - Visibility: internal admin UI and existing internal content entry API.
 - Auth model: authenticated admin session on the existing session-cookie admin
   API. No API-key auth path is introduced by this leaf.
-- RBAC: create requires `content:write`; loading screen/content type schema
-  requires `content:read`.
-- CSRF: create uses the existing CSRF-backed `entriesClient`.
+- RBAC:
+  - create requires `content:write`,
+  - post-create metadata status changes require `content:write`,
+  - publish/unpublish actions require `content:publish`,
+  - loading screen/content type schema requires `content:read`.
+- CSRF: create, metadata, publish, and unpublish actions use the existing
+  CSRF-backed `entriesClient`.
 - Rate-limit bucket: existing `admin_write`.
 - Reject-unknown validation:
   - draft normalization emits only approved entry payload keys,
@@ -173,9 +198,15 @@ only for explicit compatibility mode.
   - required fields block submit with inline errors,
   - number, boolean, select, media, and relation field drafts preserve typed
     values,
+  - create editable fields are derived from `definition.editorView`, not every
+    schema field,
   - valid House Projects create submits populated `data`, not `data: {}`,
+  - create payload does not include unsupported top-level `status` or metadata
+    keys,
   - create status changes use `updateEntryMetadata` after create, or status
     controls are explicitly display-only,
+  - create publish/unpublish controls require `content:publish` and use the
+    existing publish clients after create,
   - duplicate slug, invalid media, missing media, invalid relation, and missing
     relation responses render as actionable inline errors,
   - save errors keep dirty draft state and render inline messages.
