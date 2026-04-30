@@ -22,6 +22,7 @@ import {
   type AccordionVariantId,
 } from "../../../../widgets/core/accordion";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: AccordionVariantId;
@@ -79,14 +80,17 @@ function setCount(value: AccordionData, onChange: (next: AccordionData) => void,
       : items[0]?.id;
 
   onChange(
-    normalizeValue({
-      ...current,
-      items,
-      options: {
-        ...current.options,
-        initiallyOpenId,
+    normalizeValue(
+      {
+        ...current,
+        items,
+        options: {
+          ...current.options,
+          initiallyOpenId,
+        },
       },
-    }, count)
+      count
+    )
   );
 }
 
@@ -135,6 +139,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: AccordionData,
+  onChange: (next: AccordionData) => void,
+  key: keyof NonNullable<AccordionData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function EditorSection({
@@ -303,12 +321,14 @@ function BehaviorSection({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="space-y-2">
-          <p className="text-sm font-medium">Surface color</p>
+          <ClearableFieldHeader
+            label="Surface color"
+            value={normalized.style?.surfaceColor}
+            onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+          />
           <Input
             value={normalized.style?.surfaceColor ?? accordionDefaults.style?.surfaceColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { surfaceColor: event.target.value })
-            }
+            onChange={(event) => updateStyle(value, onChange, { surfaceColor: event.target.value })}
             placeholder="var(--color-surface)"
           />
         </div>
@@ -316,9 +336,7 @@ function BehaviorSection({
           <p className="text-sm font-medium">Border color</p>
           <Input
             value={normalized.style?.borderColor ?? accordionDefaults.style?.borderColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { borderColor: event.target.value })
-            }
+            onChange={(event) => updateStyle(value, onChange, { borderColor: event.target.value })}
             placeholder="var(--color-border)"
           />
         </div>
@@ -326,9 +344,7 @@ function BehaviorSection({
           <p className="text-sm font-medium">Summary text color</p>
           <Input
             value={
-              normalized.style?.summaryTextColor ??
-              accordionDefaults.style?.summaryTextColor ??
-              ""
+              normalized.style?.summaryTextColor ?? accordionDefaults.style?.summaryTextColor ?? ""
             }
             onChange={(event) =>
               updateStyle(value, onChange, {

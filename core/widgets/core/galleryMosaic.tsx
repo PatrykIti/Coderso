@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { resolveClearableStyleValue } from "./clearableStyle";
 
 export type GalleryMosaicVariantId = "mosaic" | "uniform-grid" | "feature-left";
 export type GalleryMosaicRatio = "1:1" | "4:3" | "16:9" | "3:4";
@@ -255,6 +256,7 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
     overlay: "rgba(15, 23, 42, 0.35)",
     captionPosition: "inside",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -267,10 +269,9 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
       ratio: resolveGalleryMosaicRatio(data.style?.ratio),
       gap: resolveGalleryMosaicGap(data.style?.gap),
       radius: resolveGalleryMosaicRadius(data.style?.radius),
-      overlay: resolveString(
-        data.style?.overlay,
-        styleDefaults.overlay ?? "rgba(15, 23, 42, 0.35)"
-      ),
+      overlay: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.overlay)
+        : styleDefaults.overlay,
       captionPosition: resolveGalleryMosaicCaptionPosition(data.style?.captionPosition),
     },
   };
@@ -285,7 +286,7 @@ function renderCaption({
   item: GalleryMosaicItem;
   index: number;
   captionPosition: GalleryMosaicCaptionPosition;
-  overlay: string;
+  overlay: string | undefined;
 }) {
   const captionText = (item.caption ?? "").trim();
   if (!captionText) return null;
@@ -302,9 +303,7 @@ function renderCaption({
           ? "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           : undefined
       )}
-      style={{
-        background: overlay,
-      }}
+      style={overlay ? { background: overlay } : undefined}
       data-gallery-caption-inside={String(index + 1)}
     >
       {captionText}
@@ -326,7 +325,7 @@ function GalleryCard({
   ratio: GalleryMosaicRatio;
   radius: GalleryMosaicRadius;
   captionPosition: GalleryMosaicCaptionPosition;
-  overlay: string;
+  overlay: string | undefined;
   featured?: boolean;
 }) {
   const hasVideo = typeof item.video === "string" && item.video.trim().length > 0;
@@ -397,7 +396,7 @@ export function GalleryMosaicBlock({
   const gap = resolveGalleryMosaicGap(style.gap);
   const radius = resolveGalleryMosaicRadius(style.radius);
   const captionPosition = resolveGalleryMosaicCaptionPosition(style.captionPosition);
-  const overlay = style.overlay ?? "rgba(15, 23, 42, 0.35)";
+  const overlay = resolveClearableStyleValue(style.overlay);
   const items = normalizeGalleryMosaicItems(normalized.items);
 
   const showHeader =

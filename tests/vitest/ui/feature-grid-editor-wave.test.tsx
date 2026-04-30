@@ -667,7 +667,7 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
           | null
           | undefined
       )?.value
-    ).toBe(featureGridDefaults.style?.surfaceColor);
+    ).toBe("");
     expect(
       (
         findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as

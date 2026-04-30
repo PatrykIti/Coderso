@@ -49,6 +49,14 @@ Notes:
 - Segment ranges are normalized with `from <= to` and clamped indexes.
 - Invalid variant input falls back to `dual-track`.
 
+## Clear Controls
+
+- Highlight, marker, and guide style colors owned by `style` are clearable.
+  Clear removes the configured style key and preserves comparison state,
+  markers, and segment labels.
+- The `highlightLabelStyle` value remains a semantic display choice; clear does
+  not convert it into a `transparent` style sentinel.
+
 ## Data Model (summary)
 
 ```json

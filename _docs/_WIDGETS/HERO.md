@@ -53,6 +53,16 @@ Technical controls only (no duplicated content/style editing):
 - `centered + video`: no inline video output; use `split` or `media-left`.
 - `split/media-left`: media frame renders image/video inline.
 
+## Clear Controls
+
+- `background.color`, `background.gradient`, and media `overlay` can be cleared
+  from the editor; clear removes the nested key instead of saving
+  `transparent` or an empty string.
+- `style.primaryButtonBg`, `style.secondaryButtonBg`, and related CTA color
+  fields are clearable without changing CTA labels or links.
+- A deliberate user-entered `transparent` value remains valid authored data and
+  is not treated as the clear state.
+
 ## Data Model (summary)
 
 ```json
@@ -86,7 +96,7 @@ Technical controls only (no duplicated content/style editing):
     "primaryButtonText": "#ffffff",
     "secondaryButtonBorder": "#d1d5db"
   },
-  "background": { "color": "transparent", "gradient": "", "image": "" },
+  "background": { "color": "#f8fafc", "gradient": "linear-gradient(135deg, #eef2ff, #ffffff)", "image": "" },
   "responsive": { "hideMediaOnMobile": false }
 }
 ```

@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type PricingPlansVariantId = "three-plans" | "four-plans" | "comparison-rows";
 export type PricingPlansSpacing = "none" | "sm" | "md" | "lg";
@@ -32,6 +33,12 @@ export type PricingPlansData = {
     radius?: PricingPlansRadius;
   };
 };
+
+type ResolvedPricingStyle = Omit<
+  Required<NonNullable<PricingPlansData["style"]>>,
+  "cardSurface" | "cardBorder"
+> &
+  Pick<NonNullable<PricingPlansData["style"]>, "cardSurface" | "cardBorder">;
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
@@ -295,6 +302,7 @@ export function normalizePricingPlansData(data: PricingPlansData): PricingPlansD
     spacing: "md",
     radius: "lg",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -304,14 +312,12 @@ export function normalizePricingPlansData(data: PricingPlansData): PricingPlansD
     },
     plans: ensureSingleHighlighted(normalizePricingPlans(data.plans)),
     style: {
-      cardSurface: resolveString(
-        data.style?.cardSurface,
-        styleDefaults.cardSurface ?? "var(--color-bg)"
-      ),
-      cardBorder: resolveString(
-        data.style?.cardBorder,
-        styleDefaults.cardBorder ?? "var(--color-border)"
-      ),
+      cardSurface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardSurface)
+        : styleDefaults.cardSurface,
+      cardBorder: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardBorder)
+        : styleDefaults.cardBorder,
       highlightRing: resolveString(
         data.style?.highlightRing,
         styleDefaults.highlightRing ?? "var(--color-primary)"
@@ -340,19 +346,20 @@ function PricingCardsLayout({
 }: {
   plans: PricingPlanItem[];
   variant: PricingPlansVariantId;
-  style: Required<NonNullable<PricingPlansData["style"]>>;
+  style: ResolvedPricingStyle;
 }) {
   const gridClassName =
     variant === "four-plans"
       ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
       : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
-  const cardStyleBase: CSSProperties = {
-    backgroundColor: style.cardSurface,
-    borderColor: style.cardBorder,
-    borderStyle: "solid",
-    borderWidth: "1px",
-  };
+  const cardStyleBase: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.cardSurface),
+      borderColor: resolveClearableStyleValue(style.cardBorder),
+      borderStyle: "solid",
+      borderWidth: "1px",
+    }) ?? {};
 
   return (
     <div className={joinClasses(gridClassName, spacingClassMap[style.spacing])}>
@@ -425,16 +432,17 @@ function PricingComparisonRowsLayout({
   style,
 }: {
   plans: PricingPlanItem[];
-  style: Required<NonNullable<PricingPlansData["style"]>>;
+  style: ResolvedPricingStyle;
 }) {
   const featureRows = collectFeatureRows(plans);
 
-  const tableStyle: CSSProperties = {
-    borderColor: style.cardBorder,
-    borderStyle: "solid",
-    borderWidth: "1px",
-    backgroundColor: style.cardSurface,
-  };
+  const tableStyle: CSSProperties =
+    compactStyle({
+      borderColor: resolveClearableStyleValue(style.cardBorder),
+      borderStyle: "solid",
+      borderWidth: "1px",
+      backgroundColor: resolveClearableStyleValue(style.cardSurface),
+    }) ?? {};
 
   return (
     <div className={joinClasses("overflow-x-auto", radiusClassMap[style.radius])}>
@@ -534,12 +542,12 @@ export function PricingPlansBlock({ data, variant }: { data: PricingPlansData; v
   const plans = normalizePricingPlans(normalizedData.plans, visibleCount);
 
   const resolvedStyle = {
-    cardSurface: style.cardSurface ?? "var(--color-bg)",
-    cardBorder: style.cardBorder ?? "var(--color-border)",
+    cardSurface: style.cardSurface,
+    cardBorder: style.cardBorder,
     highlightRing: style.highlightRing ?? "var(--color-primary)",
     spacing: resolvePricingSpacing(style.spacing),
     radius: resolvePricingRadius(style.radius),
-  };
+  } satisfies ResolvedPricingStyle;
 
   return (
     <section

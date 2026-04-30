@@ -1,6 +1,7 @@
-import type { ComponentType } from "react";
+import type { CSSProperties, ComponentType } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type FooterLink = {
   label: string;
@@ -168,6 +169,8 @@ export const footerDefaults: FooterData = {
     sectionPaddingY: "10",
   },
   style: {
+    surfaceColor: "var(--color-bg)",
+    borderColor: "var(--color-border)",
     borderTopWidth: "1",
     fontSize: "sm",
     headingTransform: "uppercase",
@@ -299,12 +302,13 @@ export function FooterBlock({
   const legal = data.legal ?? footerDefaults.legal;
   const social = Array.isArray(data.social) ? data.social : footerDefaults.social;
   const bottomSlotBlocks = slots?.bottom ?? [];
-  const outerStyle = {
-    backgroundColor: style.surfaceColor ?? "var(--color-bg)",
-    borderColor: style.borderColor ?? "var(--color-border)",
-    borderTopWidth: borderWidthValueMap[style.borderTopWidth ?? "1"] ?? "1px",
-    color: style.textColor ?? "var(--color-text)",
-  };
+  const outerStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+      borderColor: resolveClearableStyleValue(style.borderColor),
+      borderTopWidth: borderWidthValueMap[style.borderTopWidth ?? "1"] ?? "1px",
+      color: style.textColor ?? "var(--color-text)",
+    }) ?? {};
   const headingStyle = {
     color: style.headingColor ?? style.textColor ?? "var(--color-text)",
   };

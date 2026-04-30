@@ -25,9 +25,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () => null;
 
 test("gallery mosaic renders defaults", () => {
-  const html = renderToString(
-    <GalleryMosaicBlock data={galleryMosaicDefaults} variant="mosaic" />
-  );
+  const html = renderToString(<GalleryMosaicBlock data={galleryMosaicDefaults} variant="mosaic" />);
 
   expect(html).toContain(galleryMosaicDefaults.header?.title ?? "");
   expect(html).toContain('data-gallery-mosaic-variant="mosaic"');
@@ -106,6 +104,19 @@ test("gallery mosaic validator accepts expanded model", () => {
   ).not.toThrow();
 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("gallery mosaic cleared overlay omits caption background style", () => {
+  const normalized = normalizeGalleryMosaicData({
+    ...galleryMosaicDefaults,
+    style: {},
+  });
+  const html = renderToString(<GalleryMosaicBlock data={normalized} variant="mosaic" />);
+
+  expect(normalized.style?.overlay).toBeUndefined();
+  expect(html).toContain('data-gallery-mosaic-variant="mosaic"');
+  expect(html).not.toContain("background:rgba");
+  expect(html).not.toContain("background-color:transparent");
 });
 
 test("gallery mosaic validator rejects invalid variant", () => {

@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type FeatureGridVariantId = "cards-3" | "cards-4" | "highlight-first";
 export type FeatureGridColumns = "2" | "3" | "4";
@@ -285,6 +286,7 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
     borderWidth: "1",
     radius: "lg",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -297,10 +299,9 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
     style: {
       columns: resolveFeatureGridColumns(data.style?.columns, styleDefaults.columns ?? "3"),
       gap: resolveFeatureGridGap(data.style?.gap),
-      surfaceColor: resolveString(
-        data.style?.surfaceColor,
-        styleDefaults.surfaceColor ?? "var(--color-bg)"
-      ),
+      surfaceColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        : styleDefaults.surfaceColor,
       borderColor: resolveString(
         data.style?.borderColor,
         styleDefaults.borderColor ?? "var(--color-border)"
@@ -339,21 +340,17 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
       ? joinClasses("grid grid-cols-1 md:grid-cols-3", gapClassMap[resolvedGap])
       : joinClasses("grid grid-cols-1", columnsClassMap[resolvedColumns], gapClassMap[resolvedGap]);
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: "transparent",
-  };
-
-  const cardStyle: CSSProperties = {
-    backgroundColor: style.surfaceColor ?? "var(--color-bg)",
-    borderColor: style.borderColor ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: borderWidthValueMap[resolvedBorderWidth] ?? "1px",
-  };
+  const cardStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+      borderColor: style.borderColor ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: borderWidthValueMap[resolvedBorderWidth] ?? "1px",
+    }) ?? {};
 
   return (
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
-      style={sectionStyle}
       data-feature-grid-variant={resolvedVariant}
       data-feature-grid-columns={resolvedColumns}
       data-feature-grid-gap={resolvedGap}

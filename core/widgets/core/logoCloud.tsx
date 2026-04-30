@@ -1,6 +1,7 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type LogoCloudVariantId = "grid" | "strip" | "dense";
 export type LogoCloudHeight = "none" | "sm" | "md" | "lg" | "xl";
@@ -26,6 +27,8 @@ export type LogoCloudData = {
     hoverColor?: boolean;
     gap?: LogoCloudGap;
     alignment?: LogoCloudAlignment;
+    tileBackground?: string;
+    tileBorderColor?: string;
   };
 };
 
@@ -93,6 +96,8 @@ export const logoCloudSchema = {
         hoverColor: { type: "boolean" },
         gap: { enum: ["none", "sm", "md", "lg"] },
         alignment: { enum: ["start", "center", "end"] },
+        tileBackground: { type: "string" },
+        tileBorderColor: { type: "string" },
       },
     },
   },
@@ -117,6 +122,8 @@ export const logoCloudDefaults: LogoCloudData = {
     hoverColor: true,
     gap: "md",
     alignment: "center",
+    tileBackground: "var(--color-bg)",
+    tileBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
 };
 
@@ -223,6 +230,16 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
     gap: "md",
     alignment: "center",
   };
+  const hasStyleObject = data.style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        tileBackground: resolveClearableStyleValue(data.style?.tileBackground),
+        tileBorderColor: resolveClearableStyleValue(data.style?.tileBorderColor),
+      })
+    : compactObject({
+        tileBackground: resolveClearableStyleValue(styleDefaults.tileBackground),
+        tileBorderColor: resolveClearableStyleValue(styleDefaults.tileBorderColor),
+      });
 
   return {
     ...data,
@@ -243,6 +260,7 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
           : Boolean(styleDefaults.hoverColor),
       gap: resolveLogoCloudGap(data.style?.gap),
       alignment: resolveLogoCloudAlignment(data.style?.alignment),
+      ...(clearableStyle ?? {}),
     },
   };
 }
@@ -253,12 +271,14 @@ function LogoCloudItem({
   logoHeight,
   grayscale,
   hoverColor,
+  tileStyle,
 }: {
   logo: LogoCloudLogo;
   index: number;
   logoHeight: LogoCloudHeight;
   grayscale: boolean;
   hoverColor: boolean;
+  tileStyle?: CSSProperties;
 }) {
   const hasImage = typeof logo.image === "string" && logo.image.trim().length > 0;
   const hasLink = typeof logo.href === "string" && logo.href.trim().length > 0;
@@ -281,13 +301,14 @@ function LogoCloudItem({
   );
 
   const wrapperClassName =
-    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg)] px-3 py-2";
+    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border px-3 py-2";
 
   if (hasLink) {
     return (
       <a
         href={logo.href}
         className={wrapperClassName}
+        style={tileStyle}
         data-logo-cloud-item={String(index + 1)}
         data-logo-cloud-has-image={String(hasImage)}
       >
@@ -299,6 +320,7 @@ function LogoCloudItem({
   return (
     <div
       className={wrapperClassName}
+      style={tileStyle}
       data-logo-cloud-item={String(index + 1)}
       data-logo-cloud-has-image={String(hasImage)}
     >
@@ -318,6 +340,10 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
   const grayscale = Boolean(style.grayscale);
   const hoverColor = Boolean(style.hoverColor);
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const tileStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(style.tileBackground),
+    borderColor: resolveClearableStyleValue(style.tileBorderColor),
+  });
 
   const showHeader =
     (normalized.header?.title ?? "").trim().length > 0 ||
@@ -379,6 +405,7 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
             logoHeight={logoHeight}
             grayscale={grayscale}
             hoverColor={hoverColor}
+            tileStyle={tileStyle}
           />
         ))}
       </div>

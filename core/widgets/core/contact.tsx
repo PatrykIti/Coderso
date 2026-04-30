@@ -1,5 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export const contactFieldOptions = ["name", "email", "phone", "message"] as const;
 
@@ -230,6 +231,7 @@ export function normalizeContactData(data: ContactData): ContactData {
     borderColor: "var(--color-border)",
     borderWidth: "1",
   };
+  const hasStyleObject = data.style !== undefined;
 
   const fields = normalizeFieldList(data.form?.fields, formDefaults.fields ?? []);
   const requiredCandidates = normalizeFieldList(data.form?.required, formDefaults.required ?? []);
@@ -258,12 +260,13 @@ export function normalizeContactData(data: ContactData): ContactData {
     },
     style: {
       spacing: resolveContactSpacing(data.style?.spacing),
-      background: resolveString(data.style?.background, styleDefaults.background ?? "transparent"),
+      background: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.background)
+        : styleDefaults.background,
       columns: resolveContactColumns(data.style?.columns),
-      surfaceColor: resolveString(
-        data.style?.surfaceColor,
-        styleDefaults.surfaceColor ?? "var(--color-bg)"
-      ),
+      surfaceColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        : styleDefaults.surfaceColor,
       borderColor: resolveString(
         data.style?.borderColor,
         styleDefaults.borderColor ?? "var(--color-border)"
@@ -295,16 +298,18 @@ export function ContactBlock({ data, variant }: { data: ContactData; variant: st
       : style.columns === "one"
         ? "md:grid-cols-1"
         : "md:grid-cols-2";
-  const sectionStyle: CSSProperties = {
-    backgroundColor: style.background ?? "transparent",
-  };
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+    }) ?? {};
   const panelBorderWidth = style.borderWidth ?? "1";
-  const panelStyle: CSSProperties = {
-    backgroundColor: style.surfaceColor ?? "var(--color-bg)",
-    borderColor: style.borderColor ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: `${panelBorderWidth}px`,
-  };
+  const panelStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+      borderColor: style.borderColor ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: `${panelBorderWidth}px`,
+    }) ?? {};
 
   return (
     <section

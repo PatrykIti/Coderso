@@ -9,6 +9,7 @@ import {
   type AppointmentFormData,
 } from "../../../../widgets/core/appointmentForm";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const update = (
   value: AppointmentFormData,
@@ -36,6 +37,38 @@ const updateResolved = (
         ...current.resolved,
         ...patch,
       },
+    })
+  );
+};
+
+const updateStyle = (
+  value: AppointmentFormData,
+  onChange: (next: AppointmentFormData) => void,
+  patch: Partial<NonNullable<AppointmentFormData["style"]>>
+) => {
+  const current = normalizeAppointmentFormData(value);
+  onChange(
+    normalizeAppointmentFormData({
+      ...current,
+      style: {
+        ...current.style,
+        ...patch,
+      },
+    })
+  );
+};
+
+const clearStyle = (
+  value: AppointmentFormData,
+  onChange: (next: AppointmentFormData) => void,
+  key: keyof NonNullable<AppointmentFormData["style"]>
+) => {
+  const current = normalizeAppointmentFormData(value);
+  const { [key]: _removed, ...nextStyle } = current.style ?? {};
+  onChange(
+    normalizeAppointmentFormData({
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
     })
   );
 };
@@ -102,6 +135,54 @@ function ToggleField({
   );
 }
 
+function SurfaceFields({
+  value,
+  onChange,
+}: {
+  value: AppointmentFormData;
+  onChange: (next: AppointmentFormData) => void;
+}) {
+  return (
+    <Section title="Surface" description="Decorative form shell and summary colors.">
+      <ClearableInputField
+        label="Frame background"
+        value={value.style?.frameBackground}
+        onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+        onClear={() => clearStyle(value, onChange, "frameBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Frame border"
+        value={value.style?.frameBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "frameBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Summary background"
+        value={value.style?.summaryBackground}
+        onChange={(next) => updateStyle(value, onChange, { summaryBackground: next })}
+        onClear={() => clearStyle(value, onChange, "summaryBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Summary border"
+        value={value.style?.summaryBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { summaryBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "summaryBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Submit background"
+        value={value.style?.submitBackground}
+        onChange={(next) => updateStyle(value, onChange, { submitBackground: next })}
+        onClear={() => clearStyle(value, onChange, "submitBackground")}
+        placeholder="var(--color-primary)"
+      />
+    </Section>
+  );
+}
+
 export function AppointmentFormWizardEditor({
   value,
   onChange,
@@ -147,6 +228,7 @@ export function AppointmentFormWizardEditor({
           onChange={(next) => update(normalized, onChange, { successMessage: next })}
         />
       </Section>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -224,6 +306,7 @@ export function AppointmentFormVisualEditor({
           onChange={(next) => update(normalized, onChange, { notesPlaceholder: next })}
         />
       </Section>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -245,7 +328,10 @@ export function AppointmentFormAdvancedEditor({
         />
       </Section>
 
-      <Section title="Errors" description="Message shown if user tries to submit without selected slot.">
+      <Section
+        title="Errors"
+        description="Message shown if user tries to submit without selected slot."
+      >
         <TextField
           label="No selection error"
           value={normalized.noSelectionMessage}

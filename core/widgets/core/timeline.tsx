@@ -1,5 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TimelineVariantId = "milestones" | "cards" | "compact";
 export type TimelineOrientation = "horizontal" | "vertical";
@@ -611,10 +612,12 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
   const layout = resolveTimelineLayout(data.layout);
   const guides = resolveTimelineGuides(data.guides);
   const style = resolveTimelineStyle(data.style);
-  const backgroundColor = data.background?.color ?? "transparent";
+  const backgroundStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(data.background?.color),
+  });
 
   return (
-    <section className="px-4 py-8" style={{ backgroundColor }}>
+    <section className="px-4 py-8" style={backgroundStyle}>
       <div className="mx-auto w-full max-w-6xl">
         <div
           data-timeline-variant={resolvedVariant}

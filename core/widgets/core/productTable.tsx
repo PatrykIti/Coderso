@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import {
@@ -10,6 +10,7 @@ import {
   type CommerceWidgetRuntimeCard,
   type CommerceWidgetSource,
 } from "./commerceWidgetShared";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ProductTableVariantId = "default";
 
@@ -34,6 +35,13 @@ export type ProductTableData = {
   emptyState?: {
     title?: string;
     description?: string;
+  };
+  style?: {
+    tableBackground?: string;
+    tableBorderColor?: string;
+    headerBackground?: string;
+    emptyBackground?: string;
+    emptyBorderColor?: string;
   };
   resolved?: {
     items?: CommerceWidgetRuntimeCard[];
@@ -72,6 +80,13 @@ export const productTableDefaults: ProductTableData = {
     title: "No products available",
     description: "Publish products or adjust source query.",
   },
+  style: {
+    tableBackground: "var(--color-bg)",
+    tableBorderColor: "var(--color-border)",
+    headerBackground: "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+    emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
+    emptyBorderColor: "var(--color-border)",
+  },
   resolved: {
     items: [],
     total: 0,
@@ -108,7 +123,10 @@ const normalizeRuntimeItems = (value: unknown): CommerceWidgetRuntimeCard[] => {
         title,
         slug,
         excerpt: optionalText(payload.excerpt ?? undefined) ?? null,
-        status: payload.status === "draft" || payload.status === "archived" ? payload.status : "published",
+        status:
+          payload.status === "draft" || payload.status === "archived"
+            ? payload.status
+            : "published",
         pricing: {
           amount:
             typeof payload.pricing?.amount === "number" && Number.isFinite(payload.pricing.amount)
@@ -217,6 +235,17 @@ export const productTableSchema = {
         description: { type: "string" },
       },
     },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        tableBackground: { type: "string" },
+        tableBorderColor: { type: "string" },
+        headerBackground: { type: "string" },
+        emptyBackground: { type: "string" },
+        emptyBorderColor: { type: "string" },
+      },
+    },
     resolved: {
       type: "object",
       additionalProperties: false,
@@ -271,6 +300,16 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
     sortDir: "desc",
   });
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
+  const hasStyleObject = value.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        tableBackground: resolveClearableStyleValue(value.style?.tableBackground),
+        tableBorderColor: resolveClearableStyleValue(value.style?.tableBorderColor),
+        headerBackground: resolveClearableStyleValue(value.style?.headerBackground),
+        emptyBackground: resolveClearableStyleValue(value.style?.emptyBackground),
+        emptyBorderColor: resolveClearableStyleValue(value.style?.emptyBorderColor),
+      }) ?? {})
+    : undefined;
 
   return {
     source,
@@ -303,10 +342,10 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
       ),
       description: text(
         value.emptyState?.description,
-        productTableDefaults.emptyState?.description ??
-          "Publish products or adjust source query."
+        productTableDefaults.emptyState?.description ?? "Publish products or adjust source query."
       ),
     },
+    ...(hasStyleObject ? { style } : {}),
     resolved: {
       items: normalizeRuntimeItems(value.resolved?.items),
       total: resolvedMeta.total,
@@ -337,9 +376,29 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
   const normalized = normalizeProductTableData(data);
   const items = normalized.resolved?.items ?? [];
   const hasError = Boolean(normalized.resolved?.error);
+  const tableStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.tableBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.tableBorderColor),
+  });
+  const headerStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.headerBackground),
+  });
+  const emptyStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.emptyBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.emptyBorderColor),
+  });
+  const legacyTableClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]" : "";
+  const legacyHeaderClass = normalized.style === undefined ? "bg-[var(--color-bg)]/80" : "";
+  const legacyEmptyClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/70" : "";
 
   return (
-    <section className="space-y-4" data-widget="product-table" data-product-table-count={String(items.length)}>
+    <section
+      className="space-y-4"
+      data-widget="product-table"
+      data-product-table-count={String(items.length)}
+    >
       {hasError ? (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Commerce runtime warning: {normalized.resolved?.error}
@@ -347,7 +406,10 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
       ) : null}
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/70 px-4 py-6 text-center">
+        <div
+          className={`rounded-xl border border-dashed px-4 py-6 text-center ${legacyEmptyClass}`}
+          style={emptyStyle}
+        >
           <p className="text-sm font-medium text-[var(--color-text)]">
             {normalized.emptyState?.title}
           </p>
@@ -356,10 +418,13 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]">
+        <div className={`overflow-x-auto rounded-xl border ${legacyTableClass}`} style={tableStyle}>
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]/80">
+              <tr
+                className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
+                style={headerStyle}
+              >
                 <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
                   {normalized.labels?.title}
                 </th>
@@ -395,7 +460,10 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-[var(--color-border)]/70 last:border-b-0">
+                <tr
+                  key={item.id}
+                  className="border-b border-[var(--color-border)]/70 last:border-b-0"
+                >
                   <td className="px-3 py-2 font-medium text-[var(--color-text)]/85">
                     {titleWithStatus(item.title, item.status)}
                   </td>
@@ -408,10 +476,7 @@ export function ProductTableBlock({ data }: { data: ProductTableData; variant: s
                   {normalized.fields?.showCompareAt ? (
                     <td className="px-3 py-2 text-[var(--color-text)]/65">
                       {typeof item.pricing.compareAtAmount === "number"
-                        ? formatCommerceMoney(
-                            item.pricing.compareAtAmount,
-                            item.pricing.currency
-                          )
+                        ? formatCommerceMoney(item.pricing.compareAtAmount, item.pricing.currency)
                         : "-"}
                     </td>
                   ) : null}

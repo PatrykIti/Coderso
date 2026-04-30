@@ -6,7 +6,7 @@
 **Category:** Widgets + Editor Helpers
 **Estimated Effort:** Medium
 **Dependencies:** TASK-244-02-01
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 

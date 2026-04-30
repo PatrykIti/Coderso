@@ -6,7 +6,7 @@
 **Category:** Widgets + Composite Runtime + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-244-03-01, TASK-244-03-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 
@@ -20,8 +20,8 @@ Hero and operational frame semantics are established.
 
 ## Sub-Tasks
 
-- [ ] TASK-244-04-01: Marketing and Content Surface and Overlay Clear
-- [ ] TASK-244-04-02: Form, Navigation, Footer, and Primitive Panel Color Clear
+- [x] TASK-244-04-01: Marketing and Content Surface and Overlay Clear
+- [x] TASK-244-04-02: Form, Navigation, Footer, and Primitive Panel Color Clear
 
 ## Files to Change
 

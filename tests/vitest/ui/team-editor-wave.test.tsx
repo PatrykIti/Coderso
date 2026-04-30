@@ -561,8 +561,8 @@ test("Team advanced editor covers normalization safeguards, token updates, and r
         columns: "3",
         gap: "md",
         radius: "lg",
-        cardSurface: "var(--color-bg)",
-        cardBorder: "var(--color-border)",
+        cardSurface: undefined,
+        cardBorder: undefined,
       })
     );
     expect(latestValue.members[1]?.id).toBe("member-2");
@@ -805,7 +805,7 @@ test("Team editors render sparse defaults and ignore variant changes without a h
           | null
           | undefined
       )?.value
-    ).toBe(teamDefaults.style?.cardSurface);
+    ).toBe("");
     expect(
       (
         findInputByPlaceholder(advancedView.container, "var(--color-border)") as
@@ -813,7 +813,7 @@ test("Team editors render sparse defaults and ignore variant changes without a h
           | null
           | undefined
       )?.value
-    ).toBe(teamDefaults.style?.cardBorder);
+    ).toBe("");
   } finally {
     advancedView.cleanup();
   }

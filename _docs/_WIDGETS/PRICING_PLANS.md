@@ -37,6 +37,13 @@ Pricing table for plans, tiers, and comparison-style rows.
 - `style.spacing`: `none` renders zero spacing between plan cards/rows.
 - `style.radius`: `none` removes forced plan-card rounding.
 
+## Clear Controls
+
+- `style.cardSurface` and `style.cardBorder` are clearable. Clear removes the
+  configured card/table surface or border fields and renderers omit those inline
+  style keys.
+- Highlight ring and plan badge semantics remain independent visual fields.
+
 ## Data Model (summary)
 
 ```json
@@ -49,8 +56,8 @@ Pricing table for plans, tiers, and comparison-style rows.
   "style": {
     "spacing": "md",
     "radius": "lg",
-    "surface": "var(--color-bg)",
-    "border": "var(--color-border)"
+    "cardSurface": "var(--color-bg)",
+    "cardBorder": "var(--color-border)"
   }
 }
 ```

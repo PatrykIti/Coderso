@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TestimonialsVariantId = "grid" | "spotlight" | "slider-static";
 export type TestimonialsSpacing = "none" | "sm" | "md" | "lg";
@@ -246,6 +247,7 @@ export function normalizeTestimonialsData(data: TestimonialsData): TestimonialsD
     accentColor: "var(--color-primary)",
     spacing: "md",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -256,14 +258,12 @@ export function normalizeTestimonialsData(data: TestimonialsData): TestimonialsD
     },
     testimonials: normalizeTestimonialsItems(data.testimonials),
     style: {
-      cardSurface: resolveString(
-        data.style?.cardSurface,
-        styleDefaults.cardSurface ?? "var(--color-bg)"
-      ),
-      cardBorder: resolveString(
-        data.style?.cardBorder,
-        styleDefaults.cardBorder ?? "var(--color-border)"
-      ),
+      cardSurface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardSurface)
+        : styleDefaults.cardSurface,
+      cardBorder: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardBorder)
+        : styleDefaults.cardBorder,
       textColor: resolveString(
         data.style?.textColor,
         styleDefaults.textColor ?? "var(--color-text)"
@@ -346,17 +346,14 @@ export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; v
     (normalizedData.header?.title ?? "").trim().length > 0 ||
     (normalizedData.header?.description ?? "").trim().length > 0;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: "transparent",
-  };
-
-  const cardStyle: CSSProperties = {
-    backgroundColor: style.cardSurface ?? "var(--color-bg)",
-    borderColor: style.cardBorder ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: "1px",
-    color: style.textColor ?? "var(--color-text)",
-  };
+  const cardStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.cardSurface),
+      borderColor: resolveClearableStyleValue(style.cardBorder),
+      borderStyle: "solid",
+      borderWidth: "1px",
+      color: style.textColor ?? "var(--color-text)",
+    }) ?? {};
 
   const listClassName =
     resolvedVariant === "slider-static"
@@ -371,7 +368,6 @@ export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; v
   return (
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
-      style={sectionStyle}
       data-testimonials-variant={resolvedVariant}
       data-testimonials-spacing={resolvedSpacing}
       data-testimonials-count={String(items.length)}

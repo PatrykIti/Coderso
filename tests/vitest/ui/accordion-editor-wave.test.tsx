@@ -125,8 +125,7 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -226,11 +225,8 @@ const renderEditor = async ({
   initialValue: AccordionData;
   initialVariant?: string;
 }) => {
-  const {
-    AccordionAdvancedEditor,
-    AccordionVisualEditor,
-    AccordionWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/AccordionEditors");
+  const { AccordionAdvancedEditor, AccordionVisualEditor, AccordionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/AccordionEditors");
 
   const editorMap = {
     wizard: AccordionWizardEditor,
@@ -449,7 +445,7 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
 
     expect(readDiagnostics(view.container)).toEqual({
       items: [
-        { id: "1", title: "Section 1", description: undefined },
+        { id: "1", title: "Section 1" },
         { id: "2", title: "Custom title", description: "Helpful details" },
       ],
       options: {
@@ -457,7 +453,6 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
         allowMultiple: false,
       },
       style: {
-        surfaceColor: accordionDefaults.style?.surfaceColor,
         borderColor: "accent-border",
         summaryTextColor: accordionDefaults.style?.summaryTextColor,
       },
@@ -476,16 +471,15 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
 
     expect(readDiagnostics(view.container)).toEqual({
       items: [
-        { id: "1", title: "Section 1", description: undefined },
+        { id: "1", title: "Section 1" },
         { id: "2", title: "Custom title", description: "Helpful details" },
-        { id: "3", title: "Rollout", description: undefined },
+        { id: "3", title: "Rollout" },
       ],
       options: {
         initiallyOpenId: "1",
         allowMultiple: true,
       },
       style: {
-        surfaceColor: accordionDefaults.style?.surfaceColor,
         borderColor: "accent-border",
         summaryTextColor: "var(--color-muted)",
       },

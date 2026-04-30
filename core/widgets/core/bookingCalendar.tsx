@@ -1,7 +1,8 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type BookingCalendarVariantId = "default";
 
@@ -45,6 +46,10 @@ export type BookingCalendarData = {
   defaultServiceId?: string;
   defaultResourceId?: string;
   slotsEndpoint?: string;
+  style?: {
+    frameBackground?: string;
+    frameBorderColor?: string;
+  };
   resolved?: {
     services?: BookingCalendarResolvedService[];
     resources?: BookingCalendarResolvedResource[];
@@ -70,6 +75,10 @@ export const bookingCalendarDefaults: BookingCalendarData = {
   selectedSlotEmptyMessage: "No slot selected yet.",
   intervalMinutes: 15,
   slotsEndpoint: "/api/booking/slots",
+  style: {
+    frameBackground: "color-mix(in srgb, var(--color-bg) 95%, transparent)",
+    frameBorderColor: "var(--color-border)",
+  },
 };
 
 const text = (value: string | undefined, fallback: string) => {
@@ -195,6 +204,14 @@ export const bookingCalendarSchema = {
     defaultServiceId: { type: "string" },
     defaultResourceId: { type: "string" },
     slotsEndpoint: { type: "string" },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        frameBackground: { type: "string" },
+        frameBorderColor: { type: "string" },
+      },
+    },
     resolved: {
       type: "object",
       additionalProperties: false,
@@ -247,6 +264,13 @@ export const bookingCalendarSchema = {
 export function normalizeBookingCalendarData(data: BookingCalendarData): BookingCalendarData {
   const services = normalizeResolvedServices(data.resolved?.services);
   const resources = normalizeResolvedResources(data.resolved?.resources);
+  const hasStyleObject = data.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        frameBackground: resolveClearableStyleValue(data.style?.frameBackground),
+        frameBorderColor: resolveClearableStyleValue(data.style?.frameBorderColor),
+      }) ?? {})
+    : undefined;
 
   return {
     flowId: text(data.flowId, bookingCalendarDefaults.flowId ?? "booking-flow"),
@@ -262,8 +286,7 @@ export function normalizeBookingCalendarData(data: BookingCalendarData): Booking
     refreshLabel: text(data.refreshLabel, bookingCalendarDefaults.refreshLabel ?? "Refresh slots"),
     missingSelectionMessage: text(
       data.missingSelectionMessage,
-      bookingCalendarDefaults.missingSelectionMessage ??
-        "Choose service, resource, and date first."
+      bookingCalendarDefaults.missingSelectionMessage ?? "Choose service, resource, and date first."
     ),
     emptySlotsMessage: text(
       data.emptySlotsMessage,
@@ -291,6 +314,7 @@ export function normalizeBookingCalendarData(data: BookingCalendarData): Booking
       data.slotsEndpoint,
       bookingCalendarDefaults.slotsEndpoint ?? "/api/booking/slots"
     ),
+    ...(hasStyleObject ? { style } : {}),
     resolved: {
       services,
       resources,
@@ -300,10 +324,7 @@ export function normalizeBookingCalendarData(data: BookingCalendarData): Booking
   };
 }
 
-const pickInitialServiceId = (
-  services: BookingCalendarResolvedService[],
-  requested?: string
-) => {
+const pickInitialServiceId = (services: BookingCalendarResolvedService[], requested?: string) => {
   if (requested && services.some((service) => service.id === requested)) return requested;
   return services[0]?.id ?? "";
 };
@@ -334,6 +355,12 @@ export function BookingCalendarBlock({ data }: { data: BookingCalendarData; vari
   const services = normalized.resolved?.services ?? [];
   const resources = normalized.resolved?.resources ?? [];
   const hasCatalog = services.length > 0 && resources.length > 0;
+  const frameStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
+  });
+  const legacyFrameClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/95" : "";
 
   const initialServiceId = pickInitialServiceId(services, normalized.defaultServiceId);
   const initialService = services.find((service) => service.id === initialServiceId) ?? null;
@@ -345,7 +372,8 @@ export function BookingCalendarBlock({ data }: { data: BookingCalendarData; vari
 
   return (
     <section
-      className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/95 p-5"
+      className={`space-y-4 rounded-xl border p-5 ${legacyFrameClass}`}
+      style={frameStyle}
       data-nextless-booking-calendar="1"
       data-flow-id={normalized.flowId}
       data-slots-endpoint={normalized.slotsEndpoint}
@@ -394,11 +422,7 @@ export function BookingCalendarBlock({ data }: { data: BookingCalendarData; vari
                 className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
               >
                 {resources.map((resource) => (
-                  <option
-                    key={resource.id}
-                    value={resource.id}
-                    data-timezone={resource.timezone}
-                  >
+                  <option key={resource.id} value={resource.id} data-timezone={resource.timezone}>
                     {resource.name}
                   </option>
                 ))}
@@ -453,9 +477,7 @@ export function BookingCalendarBlock({ data }: { data: BookingCalendarData; vari
         </div>
       )}
 
-      <script
-        dangerouslySetInnerHTML={{ __html: getBookingRuntimeClientScript() }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: getBookingRuntimeClientScript() }} />
     </section>
   );
 }

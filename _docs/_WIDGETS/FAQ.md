@@ -57,6 +57,12 @@ Notes:
 - `defaultOpenIndex = -1` renders all FAQ items collapsed by default.
 - `defaultOpenIndex` is normalized to valid item bounds.
 
+## Clear Controls
+
+- `style.surface` is clearable; clear removes the panel surface field and FAQ
+  items render without a forced panel background style.
+- Open-state options and divider/border colors keep their existing behavior.
+
 ## Data Model (summary)
 
 ```json

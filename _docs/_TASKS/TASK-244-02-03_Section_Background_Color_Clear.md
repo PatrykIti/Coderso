@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Editor Controls
 **Estimated Effort:** Small
 **Dependencies:** TASK-244-02-01, TASK-244-02-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 

@@ -12,6 +12,7 @@ import {
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
+import { ClearableInputField } from "./ClearableFields";
 
 const update = (
   value: ProductCompareData,
@@ -25,6 +26,81 @@ const update = (
     })
   );
 };
+
+const updateStyle = (
+  value: ProductCompareData,
+  onChange: (next: ProductCompareData) => void,
+  patch: Partial<NonNullable<ProductCompareData["style"]>>
+) => {
+  update(value, onChange, {
+    style: {
+      ...normalizeProductCompareData(value).style,
+      ...patch,
+    },
+  });
+};
+
+const clearStyle = (
+  value: ProductCompareData,
+  onChange: (next: ProductCompareData) => void,
+  key: keyof NonNullable<ProductCompareData["style"]>
+) => {
+  const current = normalizeProductCompareData(value);
+  const { [key]: _removed, ...nextStyle } = current.style ?? {};
+  update(value, onChange, {
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+};
+
+function SurfaceFields({
+  value,
+  onChange,
+}: {
+  value: ProductCompareData;
+  onChange: (next: ProductCompareData) => void;
+}) {
+  const normalized = normalizeProductCompareData(value);
+
+  return (
+    <CommerceEditorSection title="Surfaces" description="Comparison table and empty state colors.">
+      <ClearableInputField
+        label="Table background"
+        value={normalized.style?.tableBackground}
+        onChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
+        onClear={() => clearStyle(value, onChange, "tableBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Table border"
+        value={normalized.style?.tableBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "tableBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Header background"
+        value={normalized.style?.headerBackground}
+        onChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
+        onClear={() => clearStyle(value, onChange, "headerBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Empty background"
+        value={normalized.style?.emptyBackground}
+        onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
+        onClear={() => clearStyle(value, onChange, "emptyBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Empty border"
+        value={normalized.style?.emptyBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
+        placeholder="var(--color-border)"
+      />
+    </CommerceEditorSection>
+  );
+}
 
 export function ProductCompareWizardEditor({
   value,
@@ -57,6 +133,7 @@ export function ProductCompareWizardEditor({
           Current limit: {source.limit}. For dense catalogs prefer Product Table widget.
         </p>
       </CommerceEditorSection>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -179,6 +256,7 @@ export function ProductCompareVisualEditor({
           }
         />
       </CommerceEditorSection>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -197,7 +275,8 @@ export function ProductCompareAdvancedEditor({
         description="Resolved rows are set by runtime resolver."
       >
         <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Resolved rows: {normalized.resolved?.rows?.length ?? 0} · Total: {normalized.resolved?.total ?? 0}
+          Resolved rows: {normalized.resolved?.rows?.length ?? 0} · Total:{" "}
+          {normalized.resolved?.total ?? 0}
         </div>
         <CommerceTextField
           label="Runtime error flag"

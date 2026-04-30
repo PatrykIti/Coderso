@@ -35,6 +35,7 @@ import {
   type ContentListVariantId,
 } from "../../../../widgets/core/contentList";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: ContentListVariantId;
@@ -447,6 +448,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyle(
+  value: ContentListData,
+  onChange: (next: ContentListData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 export function ContentListWizardEditor({
@@ -875,26 +890,20 @@ export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps
         description="Direct color values for cards and text output."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card background</p>
-            <Input
-              value={resolved.style?.backgroundColor ?? ""}
-              onChange={(event) =>
-                updateStyle(value, onChange, { backgroundColor: event.target.value })
-              }
-              placeholder="var(--color-bg)"
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card border</p>
-            <Input
-              value={resolved.style?.borderColor ?? ""}
-              onChange={(event) =>
-                updateStyle(value, onChange, { borderColor: event.target.value })
-              }
-              placeholder="var(--color-border)"
-            />
-          </div>
+          <ClearableInputField
+            label="Card background"
+            value={resolved.style?.backgroundColor}
+            onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+            onClear={() => clearStyle(value, onChange, "backgroundColor")}
+            placeholder="var(--color-bg)"
+          />
+          <ClearableInputField
+            label="Card border"
+            value={resolved.style?.borderColor}
+            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+            onClear={() => clearStyle(value, onChange, "borderColor")}
+            placeholder="var(--color-border)"
+          />
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Text color</p>

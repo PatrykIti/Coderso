@@ -25,9 +25,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
 
 test("logo cloud renders defaults", () => {
-  const html = renderToString(
-    <LogoCloudBlock data={logoCloudDefaults} variant="grid" />
-  );
+  const html = renderToString(<LogoCloudBlock data={logoCloudDefaults} variant="grid" />);
 
   expect(html).toContain(logoCloudDefaults.header?.title ?? "");
   expect(html).toContain('data-logo-cloud-variant="grid"');
@@ -53,6 +51,27 @@ test("logo cloud normalization keeps deterministic ids and bounds", () => {
   const normalized = normalizeLogoCloudData({ logos: [] });
   expect(normalized.logos).toHaveLength(6);
   expect(normalized.style?.logoHeight).toBe("md");
+});
+
+test("logo cloud cleared tile styles omit forced tile backgrounds", () => {
+  const html = renderToString(
+    <LogoCloudBlock
+      data={normalizeLogoCloudData({
+        ...logoCloudDefaults,
+        style: {
+          logoHeight: "md",
+          grayscale: true,
+          hoverColor: true,
+          gap: "md",
+          alignment: "center",
+        },
+      })}
+      variant="grid"
+    />
+  );
+
+  expect(html).not.toContain("bg-[var(--color-bg)]");
+  expect(html).not.toContain("background-color:transparent");
 });
 
 test("logo cloud validator accepts expanded model", () => {

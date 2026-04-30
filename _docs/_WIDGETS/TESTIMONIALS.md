@@ -36,6 +36,12 @@ Customer proof section with quote cards, spotlight, or static slider layout.
 
 - `style.spacing`: `none` renders zero testimonial card spacing.
 
+## Clear Controls
+
+- `style.cardSurface` and `style.cardBorder` are clearable; clear removes card
+  background/border fields and the renderer omits those inline style keys.
+- `style.textColor` and `style.accentColor` remain normal authored colors.
+
 ## Data Model (summary)
 
 ```json
@@ -47,8 +53,10 @@ Customer proof section with quote cards, spotlight, or static slider layout.
   "items": [],
   "style": {
     "spacing": "md",
-    "surface": "var(--color-bg)",
-    "text": "var(--color-text)"
+    "cardSurface": "var(--color-bg)",
+    "cardBorder": "var(--color-border)",
+    "textColor": "var(--color-text)",
+    "accentColor": "var(--color-primary)"
   }
 }
 ```

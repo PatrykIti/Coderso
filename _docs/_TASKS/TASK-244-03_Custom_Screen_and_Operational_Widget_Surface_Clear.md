@@ -6,7 +6,7 @@
 **Category:** Widgets + Screens + Operational Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-244-02-01, TASK-244-02-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 
@@ -23,8 +23,8 @@ This subtask covers the widgets where the problem is most structural:
 
 ## Sub-Tasks
 
-- [ ] TASK-244-03-01: Custom Screen Widget Frame Surface Clear
-- [ ] TASK-244-03-02: Booking, Listing, Search, and Commerce Frame Surface Clear
+- [x] TASK-244-03-01: Custom Screen Widget Frame Surface Clear
+- [x] TASK-244-03-02: Booking, Listing, Search, and Commerce Frame Surface Clear
 
 ## Files to Change
 

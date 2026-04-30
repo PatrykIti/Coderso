@@ -12,10 +12,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  listListingQueriesCached,
-  type ListingQueryRecord,
-} from "@/services/listingsClient";
+import { listListingQueriesCached, type ListingQueryRecord } from "@/services/listingsClient";
 
 import {
   listingFiltersDefaults,
@@ -27,6 +24,7 @@ import type {
   ListingFacetConfig,
   ListingFacetKind,
 } from "../../../../services/search/filterContract";
+import { ClearableInputField } from "./ClearableFields";
 
 type ListingFilterOperator = NonNullable<ListingFacetConfig["op"]>;
 
@@ -97,9 +95,7 @@ const parseSortOptions = (value: string) =>
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [rawValue, rawLabel, rawField, rawDir] = line
-        .split("|")
-        .map((entry) => entry.trim());
+      const [rawValue, rawLabel, rawField, rawDir] = line.split("|").map((entry) => entry.trim());
       if (!rawValue || !rawField) return null;
       if (rawDir !== "asc" && rawDir !== "desc") return null;
       return {
@@ -115,9 +111,7 @@ const parseSortOptions = (value: string) =>
 
 const formatSortOptions = (facet: ListingFacetConfig) =>
   (facet.sortOptions ?? [])
-    .map((option) =>
-      [option.value, option.label, option.field, option.dir].join("|")
-    )
+    .map((option) => [option.value, option.label, option.field, option.dir].join("|"))
     .join("\n");
 
 function EditorSection({
@@ -150,6 +144,34 @@ function updateValue(
   const current = normalizeListingFiltersData(value);
   const next = updater(current);
   onChange(normalizeListingFiltersData(next));
+}
+
+function updateStyle(
+  value: ListingFiltersData,
+  onChange: (next: ListingFiltersData) => void,
+  patch: Partial<NonNullable<ListingFiltersData["style"]>>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    style: {
+      ...current.style,
+      ...patch,
+    },
+  }));
+}
+
+function clearStyle(
+  value: ListingFiltersData,
+  onChange: (next: ListingFiltersData) => void,
+  key: keyof NonNullable<ListingFiltersData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function useListingQueries() {
@@ -193,18 +215,12 @@ function ListingQuerySelect({
 }) {
   const normalized = normalizeListingFiltersData(value);
   const { items, loading, error } = useListingQueries();
-  const loadState = loading
-    ? "loading"
-    : error
-      ? "error"
-      : items.length === 0
-        ? "empty"
-        : "ready";
+  const loadState = loading ? "loading" : error ? "error" : items.length === 0 ? "empty" : "ready";
   const selectedValue = normalized.listingQueryId || NO_LISTING_QUERY_VALUE;
   const selectedLabel =
     selectedValue === NO_LISTING_QUERY_VALUE
       ? "No listing query selected"
-      : items.find((item) => item.id === selectedValue)?.name ?? "Selected listing query";
+      : (items.find((item) => item.id === selectedValue)?.name ?? "Selected listing query");
 
   return (
     <EditorSection
@@ -236,13 +252,9 @@ function ListingQuerySelect({
         <p className="text-xs text-muted-foreground">Loading listing queries...</p>
       ) : null}
       {loadState === "empty" ? (
-        <p className="text-xs text-muted-foreground">
-          No listing queries are available yet.
-        </p>
+        <p className="text-xs text-muted-foreground">No listing queries are available yet.</p>
       ) : null}
-      {loadState === "error" && error ? (
-        <p className="text-xs text-destructive">{error}</p>
-      ) : null}
+      {loadState === "error" && error ? <p className="text-xs text-destructive">{error}</p> : null}
     </EditorSection>
   );
 }
@@ -343,9 +355,7 @@ function FacetsEditor({
                 <Select
                   value={facet.kind}
                   onValueChange={(nextKind) => {
-                    const resolvedKind = kindOptions.some(
-                      (option) => option.value === nextKind
-                    )
+                    const resolvedKind = kindOptions.some((option) => option.value === nextKind)
                       ? (nextKind as ListingFacetKind)
                       : "checkbox";
                     updateValue(value, onChange, (current) => ({
@@ -356,9 +366,7 @@ function FacetsEditor({
                               ...entry,
                               kind: resolvedKind,
                               op: resolveDefaultOperator(resolvedKind),
-                              ...(resolvedKind === "sort"
-                                ? { field: undefined, options: [] }
-                                : {}),
+                              ...(resolvedKind === "sort" ? { field: undefined, options: [] } : {}),
                             }
                           : entry
                       ),
@@ -563,6 +571,42 @@ function RuntimeBehavior({
   );
 }
 
+function SurfaceEditor({
+  value,
+  onChange,
+}: {
+  value: ListingFiltersData;
+  onChange: (next: ListingFiltersData) => void;
+}) {
+  const normalized = normalizeListingFiltersData(value);
+
+  return (
+    <EditorSection title="Surface" description="Decorative filter frame and action colors.">
+      <ClearableInputField
+        label="Frame background"
+        value={normalized.style?.frameBackground}
+        onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+        onClear={() => clearStyle(value, onChange, "frameBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Frame border"
+        value={normalized.style?.frameBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "frameBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Action background"
+        value={normalized.style?.actionBackground}
+        onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+        onClear={() => clearStyle(value, onChange, "actionBackground")}
+        placeholder="var(--color-primary)"
+      />
+    </EditorSection>
+  );
+}
+
 function RuntimeSnapshot({ value }: { value: ListingFiltersData }) {
   const normalized = normalizeListingFiltersData(value);
   const snapshot = useMemo(
@@ -592,6 +636,7 @@ export function ListingFiltersWizardEditor({
     <div className="space-y-3">
       <ListingQuerySelect value={value} onChange={onChange} />
       <RuntimeBehavior value={value} onChange={onChange} />
+      <SurfaceEditor value={value} onChange={onChange} />
     </div>
   );
 }
@@ -604,6 +649,7 @@ export function ListingFiltersVisualEditor({
     <div className="space-y-3">
       <ListingQuerySelect value={value} onChange={onChange} />
       <RuntimeBehavior value={value} onChange={onChange} />
+      <SurfaceEditor value={value} onChange={onChange} />
       <FacetsEditor value={value} onChange={onChange} />
     </div>
   );

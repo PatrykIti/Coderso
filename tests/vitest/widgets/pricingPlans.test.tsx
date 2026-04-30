@@ -189,6 +189,22 @@ test("pricing plans validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("pricing plans cleared card surfaces omit card and table backgrounds", () => {
+  const normalized = normalizePricingPlansData({
+    ...pricingPlansDefaults,
+    style: {},
+  });
+  const cardHtml = renderToString(<PricingPlansBlock data={normalized} variant="three-plans" />);
+  const tableHtml = renderToString(
+    <PricingPlansBlock data={normalized} variant="comparison-rows" />
+  );
+
+  expect(normalized.style?.cardSurface).toBeUndefined();
+  expect(normalized.style?.cardBorder).toBeUndefined();
+  expect(cardHtml).not.toContain("background-color:var(--color-bg)");
+  expect(tableHtml).not.toContain("background-color:var(--color-bg)");
+});
+
 test("pricing plans validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

@@ -40,6 +40,14 @@ metadata.
 - `style.radius`: `none` removes forced surface/input rounding.
 - `style.inputSize`: `none` removes the input-size preset.
 
+## Clear Controls
+
+- `style.background` and `style.surface` are clearable; clear removes the
+  section/form-surface color fields and the renderer omits the matching inline
+  background styles.
+- Submit button, form field accessibility, access policy, and input-size `none`
+  behavior remain independent of surface clear.
+
 ## Security Notes
 
 No new public write endpoint is introduced by the widget. Runtime submissions
@@ -65,6 +73,8 @@ write hardening owned by the forms subsystem.
     "showRequiredIndicator": true
   },
   "style": {
+    "background": "#f8fafc",
+    "surface": "var(--color-bg)",
     "borderWidth": "1",
     "radius": "md",
     "inputSize": "md"

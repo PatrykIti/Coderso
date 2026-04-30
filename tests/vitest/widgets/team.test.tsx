@@ -122,6 +122,20 @@ test("team validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("team cleared card surfaces omit card background and border color styles", () => {
+  const normalized = normalizeTeamData({
+    ...teamDefaults,
+    style: {},
+  });
+  const html = renderToString(<TeamBlock data={normalized} variant="cards" />);
+
+  expect(normalized.style?.cardSurface).toBeUndefined();
+  expect(normalized.style?.cardBorder).toBeUndefined();
+  expect(html).toContain('data-team-variant="cards"');
+  expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
+});
+
 test("team validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

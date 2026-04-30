@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type CtaBannerVariantId = "centered" | "split" | "with-badge";
 export type CtaBannerBorderWidth = "0" | "1" | "2" | "3";
@@ -217,6 +218,7 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
     secondaryButtonText: "var(--color-text)",
     secondaryButtonBorder: "var(--color-border)",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -242,24 +244,21 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
       ),
     },
     style: {
-      background: resolveString(
-        data.style?.background,
-        styleDefaults.background ?? "var(--color-surface)"
-      ),
+      background: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.background)
+        : styleDefaults.background,
       text: resolveString(data.style?.text, styleDefaults.text ?? "var(--color-text)"),
       border: resolveString(data.style?.border, styleDefaults.border ?? "var(--color-border)"),
       borderWidth: resolveCtaBannerBorderWidth(data.style?.borderWidth),
       radius: resolveCtaBannerRadius(data.style?.radius),
       padding: resolveCtaBannerPadding(data.style?.padding),
-      badgeBackground: resolveString(
-        data.style?.badgeBackground,
-        styleDefaults.badgeBackground ?? "var(--color-primary)"
-      ),
+      badgeBackground: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.badgeBackground)
+        : styleDefaults.badgeBackground,
       badgeText: resolveString(data.style?.badgeText, styleDefaults.badgeText ?? "var(--color-bg)"),
-      primaryButtonBg: resolveString(
-        data.style?.primaryButtonBg,
-        styleDefaults.primaryButtonBg ?? "var(--color-primary)"
-      ),
+      primaryButtonBg: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.primaryButtonBg)
+        : styleDefaults.primaryButtonBg,
       primaryButtonText: resolveString(
         data.style?.primaryButtonText,
         styleDefaults.primaryButtonText ?? "var(--color-bg)"
@@ -268,10 +267,9 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
         data.style?.primaryButtonBorder,
         styleDefaults.primaryButtonBorder ?? "transparent"
       ),
-      secondaryButtonBg: resolveString(
-        data.style?.secondaryButtonBg,
-        styleDefaults.secondaryButtonBg ?? "transparent"
-      ),
+      secondaryButtonBg: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.secondaryButtonBg)
+        : styleDefaults.secondaryButtonBg,
       secondaryButtonText: resolveString(
         data.style?.secondaryButtonText,
         styleDefaults.secondaryButtonText ?? "var(--color-text)"
@@ -311,13 +309,14 @@ export function CtaBannerBlock({ data, variant }: { data: CtaBannerData; variant
       ? "flex flex-wrap items-center gap-3 md:justify-end"
       : "flex flex-wrap items-center justify-center gap-3";
 
-  const containerStyle: CSSProperties = {
-    backgroundColor: style.background ?? "var(--color-surface)",
-    color: style.text ?? "var(--color-text)",
-    borderColor: style.border ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: borderWidthValueMap[resolveCtaBannerBorderWidth(style.borderWidth)],
-  };
+  const containerStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+      color: style.text ?? "var(--color-text)",
+      borderColor: style.border ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: borderWidthValueMap[resolveCtaBannerBorderWidth(style.borderWidth)],
+    }) ?? {};
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8" data-cta-banner-outer="true">
@@ -342,10 +341,10 @@ export function CtaBannerBlock({ data, variant }: { data: CtaBannerData; variant
             {showBadge ? (
               <span
                 className="inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
-                style={{
-                  backgroundColor: style.badgeBackground ?? "var(--color-primary)",
+                style={compactStyle({
+                  backgroundColor: resolveClearableStyleValue(style.badgeBackground),
                   color: style.badgeText ?? "var(--color-bg)",
-                }}
+                })}
               >
                 {content.badge}
               </span>
@@ -364,11 +363,11 @@ export function CtaBannerBlock({ data, variant }: { data: CtaBannerData; variant
               <a
                 href={actions.primaryCta?.href}
                 className="inline-flex rounded-md border px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: style.primaryButtonBg ?? "var(--color-primary)",
+                style={compactStyle({
+                  backgroundColor: resolveClearableStyleValue(style.primaryButtonBg),
                   color: style.primaryButtonText ?? "var(--color-bg)",
                   borderColor: style.primaryButtonBorder ?? "transparent",
-                }}
+                })}
               >
                 {actions.primaryCta?.label}
               </a>
@@ -377,11 +376,11 @@ export function CtaBannerBlock({ data, variant }: { data: CtaBannerData; variant
               <a
                 href={actions.secondaryCta?.href}
                 className="inline-flex rounded-md border px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: style.secondaryButtonBg ?? "transparent",
+                style={compactStyle({
+                  backgroundColor: resolveClearableStyleValue(style.secondaryButtonBg),
                   color: style.secondaryButtonText ?? "var(--color-text)",
                   borderColor: style.secondaryButtonBorder ?? "var(--color-border)",
-                }}
+                })}
               >
                 {actions.secondaryCta?.label}
               </a>

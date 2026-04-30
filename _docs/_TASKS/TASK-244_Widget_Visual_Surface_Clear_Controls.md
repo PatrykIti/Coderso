@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-242
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 
@@ -114,11 +114,11 @@ references in TASK-244-01-01 before implementation.
 
 ## Sub-Tasks
 
-- [ ] TASK-244-01: Widget Surface Inventory and Clear Semantics
-- [ ] TASK-244-02: Hero, Shared Color Fields, and Background Clear Controls
-- [ ] TASK-244-03: Custom Screen and Operational Widget Surface Clear
-- [ ] TASK-244-04: Composite, Content, Form, and Shell Widget Surface Clear
-- [ ] TASK-244-05: Validation, Docs, Changelog, and Board Closure
+- [x] TASK-244-01: Widget Surface Inventory and Clear Semantics
+- [x] TASK-244-02: Hero, Shared Color Fields, and Background Clear Controls
+- [x] TASK-244-03: Custom Screen and Operational Widget Surface Clear
+- [x] TASK-244-04: Composite, Content, Form, and Shell Widget Surface Clear
+- [x] TASK-244-05: Validation, Docs, Changelog, and Board Closure
 
 ## Files to Change
 

@@ -444,6 +444,7 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
       "#1d4ed8",
       "#ffffff",
       "#0f172a",
+      "#ffffff",
       "#e2e8f0",
     ]);
 
@@ -705,6 +706,7 @@ test("CtaBanner editors render defensive empty and default fallbacks for sparse 
       "#1d4ed8",
       "#ffffff",
       "#0f172a",
+      "#ffffff",
       "#e2e8f0",
     ]);
 

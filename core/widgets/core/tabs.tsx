@@ -2,12 +2,8 @@ import type { ComponentType, CSSProperties } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TabsVariantId = "pills" | "underline" | "minimal";
 
@@ -163,7 +159,9 @@ export function normalizeTabsItems(
   const count =
     typeof desiredCount === "number"
       ? normalizeCount(desiredCount)
-      : normalizeCount(source.length > 0 ? source.length : tabsDefaults.items?.length ?? tabsItemMin);
+      : normalizeCount(
+          source.length > 0 ? source.length : (tabsDefaults.items?.length ?? tabsItemMin)
+        );
 
   const used = new Set<string>();
   const normalized: NormalizedTabsItem[] = [];
@@ -187,7 +185,9 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
     toTrimmedString(data.options?.activeId) &&
     items.some((item) => item.id === data.options?.activeId)
       ? (data.options?.activeId as string)
-      : items[0]?.id ?? "1";
+      : (items[0]?.id ?? "1");
+
+  const hasStyleObject = data.style !== undefined;
 
   return {
     items,
@@ -196,18 +196,16 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
       alignment: resolveAlignment(data.options?.alignment),
     },
     style: {
-      surfaceColor:
-        toTrimmedString(data.style?.surfaceColor) ??
-        tabsDefaults.style?.surfaceColor ??
-        "var(--color-surface)",
+      surfaceColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        : (tabsDefaults.style?.surfaceColor ?? "var(--color-surface)"),
       borderColor:
         toTrimmedString(data.style?.borderColor) ??
         tabsDefaults.style?.borderColor ??
         "var(--color-border)",
-      activeBackgroundColor:
-        toTrimmedString(data.style?.activeBackgroundColor) ??
-        tabsDefaults.style?.activeBackgroundColor ??
-        "var(--color-text)",
+      activeBackgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.activeBackgroundColor)
+        : (tabsDefaults.style?.activeBackgroundColor ?? "var(--color-text)"),
       activeTextColor:
         toTrimmedString(data.style?.activeTextColor) ??
         tabsDefaults.style?.activeTextColor ??
@@ -216,10 +214,9 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
         toTrimmedString(data.style?.inactiveTextColor) ??
         tabsDefaults.style?.inactiveTextColor ??
         "var(--color-text)",
-      panelBackgroundColor:
-        toTrimmedString(data.style?.panelBackgroundColor) ??
-        tabsDefaults.style?.panelBackgroundColor ??
-        "var(--color-surface)",
+      panelBackgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.panelBackgroundColor)
+        : (tabsDefaults.style?.panelBackgroundColor ?? "var(--color-surface)"),
     },
   };
 }
@@ -232,7 +229,10 @@ type ResolvedTabPanel = {
   blocks: WidgetBlock[];
 };
 
-const resolvePanels = (data: TabsData, slotMap: Record<string, WidgetBlock[]>): ResolvedTabPanel[] => {
+const resolvePanels = (
+  data: TabsData,
+  slotMap: Record<string, WidgetBlock[]>
+): ResolvedTabPanel[] => {
   const slotTargets = resolveWidgetSlotTargets([tabsPanelSlot], slotMap).filter(
     (target) => target.definitionId === tabsPanelSlot.id
   );
@@ -323,8 +323,7 @@ export function TabsBlock({
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
 }) {
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const panels = resolvePanels(data, slotMap);
   const normalized = normalizeTabsData(data, panels.length);
   const resolvedVariant = resolveVariant(variant);
@@ -332,28 +331,31 @@ export function TabsBlock({
     normalized.options?.activeId &&
     panels.some((panel) => panel.instanceId === normalized.options?.activeId)
       ? normalized.options.activeId
-      : panels[0]?.instanceId ?? "1";
+      : (panels[0]?.instanceId ?? "1");
   const style = normalized.style ?? tabsDefaults.style!;
 
-  const containerStyle: CSSProperties = {
-    borderColor: style.borderColor,
-    backgroundColor: style.surfaceColor,
-  };
+  const containerStyle: CSSProperties =
+    compactStyle({
+      borderColor: style.borderColor,
+      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+    }) ?? {};
 
   const triggerStyle: CSSProperties = {
     color: style.inactiveTextColor,
   };
 
-  const activeTriggerStyle: CSSProperties = {
-    backgroundColor: style.activeBackgroundColor,
-    color: style.activeTextColor,
-    borderColor: style.activeBackgroundColor,
-  };
+  const activeTriggerStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.activeBackgroundColor),
+      color: style.activeTextColor,
+      borderColor: resolveClearableStyleValue(style.activeBackgroundColor),
+    }) ?? {};
 
-  const panelStyle: CSSProperties = {
-    borderColor: style.borderColor,
-    backgroundColor: style.panelBackgroundColor,
-  };
+  const panelStyle: CSSProperties =
+    compactStyle({
+      borderColor: style.borderColor,
+      backgroundColor: resolveClearableStyleValue(style.panelBackgroundColor),
+    }) ?? {};
 
   return (
     <div
@@ -413,11 +415,7 @@ export function TabsBlock({
             ) : null}
             {panel.blocks.length > 0 ? (
               panel.blocks.map((block) => (
-                <WidgetRenderer
-                  key={block.id}
-                  block={block}
-                  previewDevice={previewDevice}
-                />
+                <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
               ))
             ) : (
               <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
@@ -428,9 +426,7 @@ export function TabsBlock({
         );
       })}
 
-      <script
-        dangerouslySetInnerHTML={{ __html: getTabsRuntimeClientScript() }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: getTabsRuntimeClientScript() }} />
     </div>
   );
 }

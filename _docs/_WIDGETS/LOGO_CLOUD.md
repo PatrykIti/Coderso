@@ -53,6 +53,14 @@ Notes:
 - Logo cards render as links only when `href` is provided.
 - Missing image URL falls back to text logo label.
 
+## Clear Controls
+
+- `style.tileBackground` and `style.tileBorderColor` are clearable; clear
+  removes the tile style fields and logo tiles render without forced background
+  or border-color inline styles.
+- Logo height, gap, grayscale, hover-color, and alignment keep their existing
+  token/boolean semantics.
+
 ## Data Model (summary)
 
 ```json
@@ -74,7 +82,9 @@ Notes:
     "grayscale": true,
     "hoverColor": true,
     "gap": "md",
-    "alignment": "center"
+    "alignment": "center",
+    "tileBackground": "var(--color-bg)",
+    "tileBorderColor": "color-mix(in srgb, var(--color-border) 60%, transparent)"
   }
 }
 ```

@@ -16,6 +16,7 @@ import {
   type FooterSocial,
 } from "../../../../widgets/core/footer";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions = [
   { id: "columns-2", label: "Columns 2" },
@@ -126,6 +127,18 @@ const updateFooterStyle = (
       ...value.style,
       ...patch,
     },
+  });
+};
+
+const clearFooterStyle = (
+  value: FooterData,
+  onChange: (next: FooterData) => void,
+  key: keyof NonNullable<FooterData["style"]>
+) => {
+  const { [key]: _removed, ...nextStyle } = value.style ?? {};
+  onChange({
+    ...value,
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
   });
 };
 
@@ -556,20 +569,34 @@ export function FooterVisualEditor({
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Colors and borders</p>
         <div className="grid gap-2 sm:grid-cols-2">
-          <Input
-            value={value.style?.surfaceColor ?? ""}
-            onChange={(event) =>
-              updateFooterStyle(value, onChange, { surfaceColor: event.target.value })
-            }
-            placeholder="Surface color"
-          />
-          <Input
-            value={value.style?.borderColor ?? ""}
-            onChange={(event) =>
-              updateFooterStyle(value, onChange, { borderColor: event.target.value })
-            }
-            placeholder="Border color"
-          />
+          <div className="space-y-1.5">
+            <ClearableFieldHeader
+              label="Surface color"
+              value={value.style?.surfaceColor}
+              onClear={() => clearFooterStyle(value, onChange, "surfaceColor")}
+            />
+            <Input
+              value={value.style?.surfaceColor ?? ""}
+              onChange={(event) =>
+                updateFooterStyle(value, onChange, { surfaceColor: event.target.value })
+              }
+              placeholder="Surface color"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <ClearableFieldHeader
+              label="Border color"
+              value={value.style?.borderColor}
+              onClear={() => clearFooterStyle(value, onChange, "borderColor")}
+            />
+            <Input
+              value={value.style?.borderColor ?? ""}
+              onChange={(event) =>
+                updateFooterStyle(value, onChange, { borderColor: event.target.value })
+              }
+              placeholder="Border color"
+            />
+          </div>
           <Input
             value={value.style?.textColor ?? ""}
             onChange={(event) =>

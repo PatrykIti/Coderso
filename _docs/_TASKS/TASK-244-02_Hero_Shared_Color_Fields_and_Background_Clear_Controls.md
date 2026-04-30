@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Editor Controls
 **Estimated Effort:** Large
 **Dependencies:** TASK-244-01-01, TASK-244-01-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 
@@ -19,9 +19,9 @@ color/background clear buttons without widening into unrelated token work.
 
 ## Sub-Tasks
 
-- [ ] TASK-244-02-01: Hero Gradient, Background, and Media Overlay Clear
-- [ ] TASK-244-02-02: Shared Clear Field Controls and Section No-Regression
-- [ ] TASK-244-02-03: Section Background Color Clear
+- [x] TASK-244-02-01: Hero Gradient, Background, and Media Overlay Clear
+- [x] TASK-244-02-02: Shared Clear Field Controls and Section No-Regression
+- [x] TASK-244-02-03: Section Background Color Clear
 
 ## Files to Change
 

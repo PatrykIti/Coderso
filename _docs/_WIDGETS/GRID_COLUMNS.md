@@ -58,6 +58,12 @@ Notes:
   - `data-grid-columns-gap-y`
   - `data-grid-column` and `data-grid-column-instance` per slot
 
+## Clear Controls
+
+- `style.columnBackground` is clearable; clear removes the field and cardized
+  columns render without a forced background color.
+- Border, radius, padding, and gap controls keep their existing token semantics.
+
 ## Data Model (summary)
 
 ```json

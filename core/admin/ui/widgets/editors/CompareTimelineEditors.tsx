@@ -27,6 +27,7 @@ import {
   type CompareTrackSegment,
 } from "../../../../widgets/core/compareTimeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: CompareTimelineVariantId;
@@ -228,6 +229,20 @@ function updateStyle(
   }));
 }
 
+function clearStyle(
+  value: CompareTimelineData,
+  onChange: (next: CompareTimelineData) => void,
+  key: keyof CompareStyle
+) {
+  updateCompareValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
+}
+
 function updateLayout(
   value: CompareTimelineData,
   onChange: (next: CompareTimelineData) => void,
@@ -307,18 +322,20 @@ function ColorField({
   label,
   value,
   onChange,
+  onClear,
   placeholder,
   pickerFallback,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onClear?: () => void;
   placeholder: string;
   pickerFallback: string;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -785,6 +802,7 @@ export function CompareTimelineVisualEditor({
               label="Highlight color"
               value={normalized.style?.highlightColor}
               onChange={(next) => updateStyle(value, onChange, { highlightColor: next })}
+              onClear={() => clearStyle(value, onChange, "highlightColor")}
               placeholder="#f59e0b"
               pickerFallback="#f59e0b"
             />
@@ -794,6 +812,7 @@ export function CompareTimelineVisualEditor({
             label="Marker color"
             value={normalized.style?.markerColor}
             onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
+            onClear={() => clearStyle(value, onChange, "markerColor")}
             placeholder="#1d4ed8"
             pickerFallback="#1d4ed8"
           />
@@ -826,6 +845,7 @@ export function CompareTimelineVisualEditor({
             label="Guide color"
             value={normalized.style?.guideColor}
             onChange={(next) => updateStyle(value, onChange, { guideColor: next })}
+            onClear={() => clearStyle(value, onChange, "guideColor")}
             placeholder="#e2e8f0"
             pickerFallback="#e2e8f0"
           />

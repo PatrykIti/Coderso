@@ -1,5 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import {
   resolveFormFieldStyle,
@@ -258,6 +259,7 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const layout = resolveLayout(data.layout);
   const style = resolveStyle(data.style);
   const fields = resolveFields(data.fields);
+  const hasStyleObject = data.style !== undefined;
 
   const normalizedLayout: Required<FormEmbedLayout> = {
     alignment: isAlignment(layout.alignment) ? layout.alignment : "start",
@@ -266,9 +268,13 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     buttonAlignment: isAlignment(layout.buttonAlignment) ? layout.buttonAlignment : "start",
   };
 
-  const normalizedStyle: Required<FormEmbedStyle> = {
-    background: resolveNonEmptyString(style.background, "transparent"),
-    surface: resolveNonEmptyString(style.surface, "var(--color-bg)"),
+  const normalizedStyle: FormEmbedStyle = {
+    background: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.background)
+      : resolveNonEmptyString(style.background, "transparent"),
+    surface: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.surface)
+      : resolveNonEmptyString(style.surface, "var(--color-bg)"),
     borderColor: resolveNonEmptyString(style.borderColor, "var(--color-border)"),
     borderWidth: isBorderWidthValue(style.borderWidth) ? style.borderWidth : "1",
     radius: isRadius(style.radius) ? style.radius : "md",
@@ -479,7 +485,10 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const resolvedVariant: FormEmbedVariantId = variant === "standard" ? "standard" : "standard";
   const resolved = normalizedData.resolved;
   const layout = resolveLayout(normalizedData.layout);
-  const style = resolveStyle(normalizedData.style);
+  const style = {
+    ...resolveStyle(undefined),
+    ...(normalizedData.style ?? {}),
+  };
   const fieldsConfig = resolveFields(normalizedData.fields);
   const fields = Array.isArray(resolved?.fields) ? resolved?.fields : [];
   const runtimeLayoutMode =
@@ -490,13 +499,15 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
     : [];
   const saveProgressEnabled = resolved?.settings?.saveProgress === true;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: style.background,
-  };
-  const surfaceStyle: CSSProperties = {
-    backgroundColor: style.surface,
-    borderColor: style.borderColor,
-  };
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+    }) ?? {};
+  const surfaceStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surface),
+      borderColor: style.borderColor,
+    }) ?? {};
 
   const borderClassName = borderWidthClassMap[style.borderWidth];
   const radiusClassName = radiusClassMap[style.radius];

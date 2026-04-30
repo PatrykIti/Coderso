@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<FormEmbedData>> = () => null;
 
 test("form embed renders defaults", () => {
-  const html = renderToString(
-    <FormEmbedBlock data={formEmbedDefaults} variant="standard" />
-  );
+  const html = renderToString(<FormEmbedBlock data={formEmbedDefaults} variant="standard" />);
 
   expect(html).toContain('data-form-embed-variant="standard"');
   expect(html).toContain("Form");
@@ -265,6 +263,19 @@ test("form embed validator accepts schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("form embed cleared background and surface omit frame background styles", () => {
+  const normalized = normalizeFormEmbedData({
+    ...formEmbedDefaults,
+    style: {},
+  });
+  const html = renderToString(<FormEmbedBlock data={normalized} variant="standard" />);
+
+  expect(normalized.style?.background).toBeUndefined();
+  expect(normalized.style?.surface).toBeUndefined();
+  expect(html).toContain('data-form-embed-variant="standard"');
+  expect(html).not.toContain("background-color:transparent");
 });
 
 test("form embed validator accepts resolved runtime payload", () => {

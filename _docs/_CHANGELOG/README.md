@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 781 | 2026-04-30 | TASK-244 widget surface clear controls | CMS Widgets/Admin UI |
 | 780 | 2026-04-30 | TASK-247 media always-on selection and upload copy | CMS Media/Admin UI |
 | 779 | 2026-04-30 | TASK-246 menus drop intent and indicator stability | CMS Menus/Admin UI |
 | 778 | 2026-04-30 | TASK-245 menus drag handle hit target | CMS Menus/Admin UI |

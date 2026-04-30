@@ -47,6 +47,13 @@ Notes:
   - `data-cta-banner-border-width`
 - Buttons render only when both label and href are non-empty.
 
+## Clear Controls
+
+- `style.background`, `style.badgeBackground`, `style.primaryButtonBg`, and
+  `style.secondaryButtonBg` are clearable. Clear removes the configured style key
+  and does not save `transparent` as an off-state sentinel.
+- Border/text fields and CTA link behavior remain independent of surface clear.
+
 ## Data Model (summary)
 
 ```json
@@ -72,7 +79,7 @@ Notes:
     "primaryButtonBg": "var(--color-primary)",
     "primaryButtonText": "var(--color-bg)",
     "primaryButtonBorder": "transparent",
-    "secondaryButtonBg": "transparent",
+    "secondaryButtonBg": "var(--color-bg)",
     "secondaryButtonText": "var(--color-text)",
     "secondaryButtonBorder": "var(--color-border)"
   }

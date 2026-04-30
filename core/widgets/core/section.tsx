@@ -2,12 +2,8 @@ import type { CSSProperties, ComponentType } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { resolveWidgetSlotTargets } from "../slots";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type SectionVariantId = "default" | "contained" | "bleed";
 export type SectionElement = "section" | "div";
@@ -127,9 +123,7 @@ const radiusClassMap: Record<SectionRadius, string> = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
-const resolveSectionBorderWidth = (
-  value: string | undefined
-): SectionBorderWidth => {
+const resolveSectionBorderWidth = (value: string | undefined): SectionBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
   return "1";
 };
@@ -177,6 +171,8 @@ export function normalizeSectionData(data: SectionData): SectionData {
     overlayOpacity: 0,
   };
 
+  const hasStyleObject = data.style !== undefined;
+
   return {
     heading: {
       label: data.heading?.label ?? headingDefaults.label,
@@ -189,7 +185,9 @@ export function normalizeSectionData(data: SectionData): SectionData {
       ariaLabel: data.semantics?.ariaLabel ?? semanticsDefaults.ariaLabel,
     },
     style: {
-      backgroundColor: data.style?.backgroundColor ?? styleDefaults.backgroundColor,
+      backgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.backgroundColor)
+        : styleDefaults.backgroundColor,
       gradientFrom: data.style?.gradientFrom ?? styleDefaults.gradientFrom,
       gradientTo: data.style?.gradientTo ?? styleDefaults.gradientTo,
       gradientAngle: resolveGradientAngle(data.style?.gradientAngle),
@@ -215,8 +213,7 @@ export function SectionBlock({
 }) {
   const resolvedVariant = resolveSectionVariant(variant);
   const normalized = normalizeSectionData(data);
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const slotTargets = resolveWidgetSlotTargets([sectionRegionSlot], slotMap).filter(
     (slot) => slot.definitionId === sectionRegionSlot.id
   );
@@ -225,11 +222,7 @@ export function SectionBlock({
   const style = normalized.style ?? sectionDefaults.style!;
 
   const regionGapClass =
-    resolvedVariant === "contained"
-      ? "gap-4"
-      : resolvedVariant === "bleed"
-        ? "gap-8"
-        : "gap-6";
+    resolvedVariant === "contained" ? "gap-4" : resolvedVariant === "bleed" ? "gap-8" : "gap-6";
 
   const wrapperClass =
     resolvedVariant === "bleed"
@@ -245,8 +238,7 @@ export function SectionBlock({
   );
 
   const hasGradient =
-    (style.gradientFrom ?? "").trim().length > 0 &&
-    (style.gradientTo ?? "").trim().length > 0;
+    (style.gradientFrom ?? "").trim().length > 0 && (style.gradientTo ?? "").trim().length > 0;
   const hasHeading =
     (heading.label ?? "").trim().length > 0 ||
     (heading.title ?? "").trim().length > 0 ||
@@ -254,15 +246,16 @@ export function SectionBlock({
   const overlayOpacity = clampOpacity(style.overlayOpacity);
   const overlayVisible = overlayOpacity > 0;
 
-  const surfaceStyle: CSSProperties = {
-    backgroundColor: style.backgroundColor ?? "transparent",
-    backgroundImage: hasGradient
-      ? `linear-gradient(${resolveGradientAngle(style.gradientAngle)}deg, ${style.gradientFrom}, ${style.gradientTo})`
-      : undefined,
-    borderColor: style.borderColor ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: borderWidthValueMap[style.borderWidth ?? "0"] ?? "0px",
-  };
+  const surfaceStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.backgroundColor),
+      backgroundImage: hasGradient
+        ? `linear-gradient(${resolveGradientAngle(style.gradientAngle)}deg, ${style.gradientFrom}, ${style.gradientTo})`
+        : undefined,
+      borderColor: style.borderColor ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: borderWidthValueMap[style.borderWidth ?? "0"] ?? "0px",
+    }) ?? {};
 
   const Element = semantics.element === "div" ? "div" : "section";
   const anchorId = (semantics.anchorId ?? "").trim();
@@ -297,14 +290,10 @@ export function SectionBlock({
                 </p>
               ) : null}
               {(heading.title ?? "").trim().length > 0 ? (
-                <h3 className="text-2xl font-semibold text-[var(--color-text)]">
-                  {heading.title}
-                </h3>
+                <h3 className="text-2xl font-semibold text-[var(--color-text)]">{heading.title}</h3>
               ) : null}
               {(heading.description ?? "").trim().length > 0 ? (
-                <p className="text-sm text-[var(--color-text)]/75">
-                  {heading.description}
-                </p>
+                <p className="text-sm text-[var(--color-text)]/75">{heading.description}</p>
               ) : null}
             </header>
           ) : null}
@@ -316,18 +305,10 @@ export function SectionBlock({
                 : [];
 
               return (
-                <div
-                  key={target.slotId}
-                  className="space-y-4"
-                  data-section-region={target.slotId}
-                >
+                <div key={target.slotId} className="space-y-4" data-section-region={target.slotId}>
                   {slotBlocks.length > 0 ? (
                     slotBlocks.map((block) => (
-                      <WidgetRenderer
-                        key={block.id}
-                        block={block}
-                        previewDevice={previewDevice}
-                      />
+                      <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
                     ))
                   ) : (
                     <div className="rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/50 px-3 py-2 text-xs text-[var(--color-text)]/70">

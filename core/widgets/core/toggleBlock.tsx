@@ -1,12 +1,8 @@
 import type { ComponentType, CSSProperties } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ToggleBlockVariantId = "switch" | "cards";
 
@@ -86,27 +82,26 @@ const resolveVariant = (variant: string): ToggleBlockVariantId => {
 };
 
 export function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
+  const hasStyleObject = data.style !== undefined;
+
   return {
     labels: {
-      primary: toTrimmedString(data.labels?.primary) ?? toggleBlockDefaults.labels?.primary ?? "View A",
+      primary:
+        toTrimmedString(data.labels?.primary) ?? toggleBlockDefaults.labels?.primary ?? "View A",
       secondary:
         toTrimmedString(data.labels?.secondary) ??
         toggleBlockDefaults.labels?.secondary ??
         "View B",
       helper:
-        toTrimmedString(data.labels?.helper) ??
-        toggleBlockDefaults.labels?.helper ??
-        undefined,
+        toTrimmedString(data.labels?.helper) ?? toggleBlockDefaults.labels?.helper ?? undefined,
     },
     options: {
-      defaultState:
-        data.options?.defaultState === "secondary" ? "secondary" : "primary",
+      defaultState: data.options?.defaultState === "secondary" ? "secondary" : "primary",
     },
     style: {
-      surfaceColor:
-        toTrimmedString(data.style?.surfaceColor) ??
-        toggleBlockDefaults.style?.surfaceColor ??
-        "var(--color-surface)",
+      surfaceColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        : (toggleBlockDefaults.style?.surfaceColor ?? "var(--color-surface)"),
       borderColor:
         toTrimmedString(data.style?.borderColor) ??
         toggleBlockDefaults.style?.borderColor ??
@@ -197,15 +192,15 @@ export function ToggleBlock({
   const style = normalized.style ?? toggleBlockDefaults.style!;
   const labels = normalized.labels ?? toggleBlockDefaults.labels!;
 
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const primaryBlocks = Array.isArray(slotMap.primary) ? slotMap.primary : [];
   const secondaryBlocks = Array.isArray(slotMap.secondary) ? slotMap.secondary : [];
 
-  const containerStyle: CSSProperties = {
-    borderColor: style.borderColor,
-    backgroundColor: style.surfaceColor,
-  };
+  const containerStyle: CSSProperties =
+    compactStyle({
+      borderColor: style.borderColor,
+      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+    }) ?? {};
 
   const triggerStyle: CSSProperties = {
     borderColor: style.borderColor,
@@ -237,17 +232,25 @@ export function ToggleBlock({
           {state === "primary" ? labels.secondary : labels.primary}
         </button>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full border px-2 py-1" style={{ borderColor: style.borderColor }}>
+          <span
+            className="rounded-full border px-2 py-1"
+            style={{ borderColor: style.borderColor }}
+          >
             {labels.primary}
           </span>
           <span>⇄</span>
-          <span className="rounded-full border px-2 py-1" style={{ borderColor: style.borderColor }}>
+          <span
+            className="rounded-full border px-2 py-1"
+            style={{ borderColor: style.borderColor }}
+          >
             {labels.secondary}
           </span>
         </div>
       </div>
 
-      {labels.helper ? <p className="text-sm text-[var(--color-text)]/70">{labels.helper}</p> : null}
+      {labels.helper ? (
+        <p className="text-sm text-[var(--color-text)]/70">{labels.helper}</p>
+      ) : null}
 
       <div
         className={resolvedVariant === "cards" ? "rounded-lg border p-4" : "rounded-md border p-4"}
@@ -258,11 +261,7 @@ export function ToggleBlock({
       >
         {primaryBlocks.length > 0 ? (
           primaryBlocks.map((block) => (
-            <WidgetRenderer
-              key={block.id}
-              block={block}
-              previewDevice={previewDevice}
-            />
+            <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
           ))
         ) : (
           <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
@@ -280,11 +279,7 @@ export function ToggleBlock({
       >
         {secondaryBlocks.length > 0 ? (
           secondaryBlocks.map((block) => (
-            <WidgetRenderer
-              key={block.id}
-              block={block}
-              previewDevice={previewDevice}
-            />
+            <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
           ))
         ) : (
           <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">
@@ -293,9 +288,7 @@ export function ToggleBlock({
         )}
       </div>
 
-      <script
-        dangerouslySetInnerHTML={{ __html: getToggleRuntimeClientScript() }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: getToggleRuntimeClientScript() }} />
     </div>
   );
 }

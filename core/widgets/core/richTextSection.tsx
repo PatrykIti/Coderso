@@ -8,6 +8,7 @@ import {
   sanitizeHtmlWithPolicy,
 } from "../../services/posts/editor/postRichTextHtmlUtils";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type RichTextSectionVariantId = "single-column" | "two-column" | "article";
 export type RichTextSectionFontScale = "none" | "sm" | "md" | "lg";
@@ -410,6 +411,7 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
     background: "transparent",
     spacing: "md",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -441,7 +443,9 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
         data.style?.textColor,
         styleDefaults.textColor ?? "var(--color-text)"
       ),
-      background: resolveString(data.style?.background, styleDefaults.background ?? "transparent"),
+      background: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.background)
+        : styleDefaults.background,
       spacing: resolveRichTextSpacing(data.style?.spacing),
     },
   };
@@ -512,9 +516,10 @@ export function RichTextSectionBlock({
     color: style.textColor ?? "var(--color-text)",
   };
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: style.background ?? "transparent",
-  };
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+    }) ?? {};
 
   const showTitleBlock =
     (normalized.titleBlock?.eyebrow ?? "").trim().length > 0 ||

@@ -50,6 +50,13 @@ Advanced intentionally excludes day-to-day content/style editing.
 - Renderer supports all variants with orientation and label-position markers.
 - Invalid runtime variant input falls back to `milestones`.
 
+## Clear Controls
+
+- `background.color` is clearable; clear removes the background color field and
+  the renderer omits a forced section background style.
+- Style-owned line and marker color fields can be cleared without changing
+  per-step accent readability defaults.
+
 ## Data Model (summary)
 
 ```json
@@ -86,7 +93,7 @@ Advanced intentionally excludes day-to-day content/style editing.
     "descriptionSize": "xs"
   },
   "background": {
-    "color": "transparent"
+    "color": "#f8fafc"
   }
 }
 ```

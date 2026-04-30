@@ -49,6 +49,23 @@ test("appointment form supports nonce from resolved payload", () => {
   expect(html).toContain("nonce-token");
 });
 
+test("appointment form cleared frame and summary styles omit decorative backgrounds", () => {
+  const html = renderToString(
+    <AppointmentFormBlock
+      variant="default"
+      data={normalizeAppointmentFormData({
+        ...appointmentFormDefaults,
+        style: {},
+      })}
+    />
+  );
+  const markup = html.split("<script>")[0] ?? html;
+
+  expect(markup).not.toContain("bg-[var(--color-bg)]/95");
+  expect(markup).not.toContain("bg-[var(--color-bg)]/70");
+  expect(markup).not.toContain("bg-[var(--color-primary)]");
+});
+
 test("appointment form validator accepts resolved runtime payload", () => {
   clearWidgets();
   registerWidget(

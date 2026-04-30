@@ -20,6 +20,7 @@ import {
   type PostsFeedSourceMode,
 } from "../../../../widgets/core/postsFeed";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 type EditorMode = "wizard" | "visual" | "advanced";
 
@@ -110,6 +111,34 @@ function updateValue(
   const current = normalizePostsFeedData(value);
   const next = updater(current);
   onChange(normalizePostsFeedData(next));
+}
+
+function updateStyle(
+  value: PostsFeedData,
+  onChange: (next: PostsFeedData) => void,
+  patch: Partial<NonNullable<PostsFeedData["style"]>>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    style: {
+      ...current.style,
+      ...patch,
+    },
+  }));
+}
+
+function clearStyle(
+  value: PostsFeedData,
+  onChange: (next: PostsFeedData) => void,
+  key: keyof NonNullable<PostsFeedData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function usePostOptions() {
@@ -507,6 +536,23 @@ function LayoutOptions({
             }))
           }
           placeholder="Read more"
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ClearableInputField
+          label="Card background"
+          value={normalized.style?.backgroundColor}
+          onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+          onClear={() => clearStyle(value, onChange, "backgroundColor")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableInputField
+          label="Card border"
+          value={normalized.style?.borderColor}
+          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          onClear={() => clearStyle(value, onChange, "borderColor")}
+          placeholder="var(--color-border)"
         />
       </div>
     </EditorSection>

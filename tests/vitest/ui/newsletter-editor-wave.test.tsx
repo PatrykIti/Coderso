@@ -640,7 +640,7 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
       style: {
         spacing: "xl",
         alignment: "center",
-        background: newsletterDefaults.style?.background,
+        background: undefined,
       },
     });
     expect(normalizeText(container.textContent)).toContain(

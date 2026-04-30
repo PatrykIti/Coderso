@@ -127,6 +127,37 @@ test("entry teaser preserves none spacing and radius tokens", () => {
   expect(html).not.toContain("rounded-lg");
 });
 
+test("entry teaser cleared surface omits card background and border color styles", () => {
+  const normalized = normalizeEntryTeaserData({
+    ...entryTeaserDefaults,
+    sourceMode: "manual",
+    source: {
+      contentTypeId: "blog-type-id",
+      entryId: "entry-1",
+    },
+    style: {},
+    resolved: {
+      item: {
+        id: "entry-1",
+        title: "Quarterly update",
+        href: "/blog/quarterly-update",
+        excerpt: "Highlights from this quarter.",
+        status: "published",
+      },
+      sourceTypeId: "blog-type-id",
+      sourceTypeSlug: "blog",
+      resolvedAt: "2026-02-09T12:01:00.000Z",
+    },
+  });
+  const html = renderToString(<EntryTeaserBlock data={normalized} variant="vertical" />);
+
+  expect(normalized.style?.surface).toBeUndefined();
+  expect(normalized.style?.border).toBeUndefined();
+  expect(html).toContain('data-entry-teaser-state="ready"');
+  expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
+});
+
 test("entry teaser validator accepts extended model and visual ownership", () => {
   clearWidgets();
   const widget = createEntryTeaserWidget({

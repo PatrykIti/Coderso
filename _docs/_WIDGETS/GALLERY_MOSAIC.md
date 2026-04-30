@@ -57,6 +57,12 @@ Notes:
   - otherwise `image`
   - otherwise placeholder tile
 
+## Clear Controls
+
+- `style.overlay` is clearable; clear removes the overlay value and the renderer
+  omits the caption overlay node/style instead of writing a transparent overlay.
+- Caption position, media links, and media source fields are unchanged by clear.
+
 ## Data Model (summary)
 
 ```json

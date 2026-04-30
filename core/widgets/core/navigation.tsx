@@ -2,6 +2,7 @@ import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 import type { WidgetBlock } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type NavigationItem = {
   label: string;
@@ -224,7 +225,12 @@ export const navigationDefaults: NavigationData = {
     hideCtaOnMobile: false,
   },
   layout: { alignment: "right", maxWidth: "6xl", paddingY: "4", itemGap: "4" },
-  style: {},
+  style: {
+    surfaceColor: "var(--color-bg)",
+    ctaBackgroundColor: "var(--color-primary)",
+    ctaTextColor: "var(--color-bg)",
+    ctaBorderColor: "transparent",
+  },
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
@@ -316,17 +322,18 @@ export function NavigationBlock({
   const rightSlotBlocks = slots?.right ?? [];
   const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && data.cta);
   const borderWidth = style.borderWidth ?? "1";
-  const navStyle: CSSProperties = {
-    backgroundColor: behavior.transparent
-      ? "transparent"
-      : (style.surfaceColor ?? "var(--color-bg)"),
-    borderColor: behavior.transparent
-      ? "transparent"
-      : (style.borderColor ?? "var(--color-border)"),
-    borderBottomStyle: "solid",
-    borderBottomWidth: borderWidthValueMap[borderWidth] ?? "1px",
-    color: style.textColor ?? "var(--color-text)",
-  };
+  const navStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: behavior.transparent
+        ? "transparent"
+        : resolveClearableStyleValue(style.surfaceColor),
+      borderColor: behavior.transparent
+        ? "transparent"
+        : (style.borderColor ?? "var(--color-border)"),
+      borderBottomStyle: "solid",
+      borderBottomWidth: borderWidthValueMap[borderWidth] ?? "1px",
+      color: style.textColor ?? "var(--color-text)",
+    }) ?? {};
 
   const logoStyle: CSSProperties =
     data.logo.type === "text"
@@ -337,16 +344,19 @@ export function NavigationBlock({
     color: style.linkColor ?? style.textColor ?? "var(--color-text)",
   };
 
-  const ctaStyle: CSSProperties = {
-    background: style.ctaBackgroundColor ?? "var(--color-primary)",
-    color: style.ctaTextColor ?? "var(--color-bg)",
-    borderColor: style.ctaBorderColor ?? "transparent",
-    borderStyle: "solid",
-    borderWidth:
-      style.ctaBorderColor && style.ctaBorderColor !== "transparent" && style.ctaBorderColor !== ""
-        ? "1px"
-        : "0px",
-  };
+  const ctaStyle: CSSProperties =
+    compactStyle({
+      background: resolveClearableStyleValue(style.ctaBackgroundColor),
+      color: style.ctaTextColor ?? "var(--color-bg)",
+      borderColor: style.ctaBorderColor ?? "transparent",
+      borderStyle: "solid",
+      borderWidth:
+        style.ctaBorderColor &&
+        style.ctaBorderColor !== "transparent" &&
+        style.ctaBorderColor !== ""
+          ? "1px"
+          : "0px",
+    }) ?? {};
 
   const navClass = joinClasses(
     "w-full px-6",

@@ -126,8 +126,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -152,10 +151,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -187,10 +183,7 @@ const setRawInputValue = (element: Element | null | undefined, value: string) =>
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -200,10 +193,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -234,15 +224,10 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findColorInputForPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const findColorInputForPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const textInput = findInputsByPlaceholder(container, placeholder)[index];
   if (!(textInput instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
@@ -298,11 +283,8 @@ const renderEditors = async ({
   initialVariant?: string;
   withVariantChange?: boolean;
 }) => {
-  const {
-    SectionAdvancedEditor,
-    SectionVisualEditor,
-    SectionWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/SectionEditors");
+  const { SectionAdvancedEditor, SectionVisualEditor, SectionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SectionEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -430,7 +412,9 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     expect(findColorInputForPlaceholder(surfaceSection, "#ffffff").value).toBe("#ffffff");
     expect(findInputByPlaceholder(surfaceSection, "#f1f5f9")?.value).toBe("surface-end-token");
     expect(findColorInputForPlaceholder(surfaceSection, "#f1f5f9").value).toBe("#f1f5f9");
-    expect(findInputByPlaceholder(surfaceSection, "var(--color-border)")?.value).toBe("border-token");
+    expect(findInputByPlaceholder(surfaceSection, "var(--color-border)")?.value).toBe(
+      "border-token"
+    );
     expect(findColorInputForPlaceholder(surfaceSection, "var(--color-border)").value).toBe(
       "#e2e8f0"
     );
@@ -438,9 +422,7 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     expect(findColorInputForPlaceholder(surfaceSection, "#000000").value).toBe("#000000");
 
     expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("1");
-    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe(
-      "2xl"
-    );
+    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("2xl");
 
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
     expect(angleInput?.value).toBe("360");
@@ -628,10 +610,7 @@ test("Section surface token inputs preserve raw tokens, fall back safely, and re
     const gradientStartTextInput = findInputByPlaceholder(surfaceSection, "#ffffff");
     const gradientStartColorInput = findColorInputForPlaceholder(surfaceSection, "#ffffff");
     const borderTextInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
-    const borderColorInput = findColorInputForPlaceholder(
-      surfaceSection,
-      "var(--color-border)"
-    );
+    const borderColorInput = findColorInputForPlaceholder(surfaceSection, "var(--color-border)");
 
     setInputValue(backgroundTextInput, "var(--section-surface)");
     setInputValue(gradientStartTextInput, "surface-start-token");
@@ -664,12 +643,12 @@ test("Section surface token inputs preserve raw tokens, fall back safely, and re
 
     setInputValue(backgroundTextInput, "");
 
-    expect(view.getLatestValue().style?.backgroundColor).toBe("");
+    expect(view.getLatestValue().style?.backgroundColor).toBeUndefined();
     expect(backgroundTextInput?.value).toBe("");
     expect(backgroundColorInput.value).toBe("#ffffff");
 
     const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"backgroundColor": ""');
+    expect(snapshot?.textContent).not.toContain('"backgroundColor"');
     expect(snapshot?.textContent).toContain('"gradientFrom": "#abcdef"');
     expect(snapshot?.textContent).toContain('"borderColor": "#334455"');
   } finally {
@@ -740,10 +719,7 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
     }
 
     const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
-    setInputValue(
-      findInputByPlaceholder(technicalTokensSection, "section-anchor"),
-      "wave-layout"
-    );
+    setInputValue(findInputByPlaceholder(technicalTokensSection, "section-anchor"), "wave-layout");
     setInputValue(
       findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
       "Wave layout section"
@@ -836,9 +812,9 @@ test("Section editors fall back to sparse normalized token fields and contract d
     });
 
     expect(findInputByPlaceholder(view.container, "Section title")?.value).toBe("");
-    expect(
-      findTextareaByPlaceholder(view.container, "Short context for the section")?.value
-    ).toBe("");
+    expect(findTextareaByPlaceholder(view.container, "Short context for the section")?.value).toBe(
+      ""
+    );
     expect(findInputsByPlaceholder(view.container, "transparent")[0]?.value).toBe("");
     expect(findColorInputForPlaceholder(view.container, "transparent", 0).value).toBe("#ffffff");
 
@@ -880,9 +856,9 @@ test("Section editors fall back to sparse normalized token fields and contract d
     }
 
     expect(findInputByPlaceholder(technicalTokensSection, "section-anchor")?.value).toBe("");
-    expect(
-      findInputByPlaceholder(technicalTokensSection, "Descriptive section label")?.value
-    ).toBe("");
+    expect(findInputByPlaceholder(technicalTokensSection, "Descriptive section label")?.value).toBe(
+      ""
+    );
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"gradientAngle": 180');
