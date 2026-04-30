@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Forms + Shell + Panels
 **Estimated Effort:** Large
-**Dependencies:** TASK-244-04
+**Dependencies:** TASK-244-03-01, TASK-244-03-02
 **Status:** To Do
 
 ---
@@ -98,6 +98,13 @@ For primitive panel widgets, preserve state semantics:
 - `toggleBlock.surfaceColor`
 - `toggleBlock` accent backgrounds where style-owned
 
+This leaf must extend the current widget contracts in place. If a target field
+already exists but its normalizer re-materializes a default, apply
+TASK-244-01-02 before adding the editor `Clear` action. If a target field does
+not exist, add it to the owning widget data type, schema, defaults, normalizer,
+renderer, editor, tests, and docs while preserving `additionalProperties: false`.
+Do not create an alternate form/shell/panel styling flow.
+
 ## Per-Widget Implementation Matrix
 
 | Widget | Runtime field/output | Editor clear behavior | Regression proof |
@@ -153,6 +160,9 @@ function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
   - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - Add assertions that clear removes saved keys and does not write
   `"transparent"` or empty strings as off-state payloads.
+- Add schema/normalizer assertions for every new or newly-clearable style field:
+  configured value, cleared omission, legacy/default behavior where applicable,
+  and rejected unknown style keys.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`

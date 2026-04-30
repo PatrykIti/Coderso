@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Hero + Editor Controls
 **Estimated Effort:** Large
-**Dependencies:** TASK-244-01
+**Dependencies:** TASK-244-01-01, TASK-244-01-02
 **Status:** To Do
 
 ---

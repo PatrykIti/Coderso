@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Composite Runtime + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-244-02, TASK-244-03
+**Dependencies:** TASK-244-03-01, TASK-244-03-02
 **Status:** To Do
 
 ---

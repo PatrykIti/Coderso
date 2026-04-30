@@ -88,6 +88,15 @@ fallbacks. Prefer creation-time explicit defaults for new widgets and
 backward-compatible legacy adapters for old saved data over storing transparent
 sentinels.
 
+Implementation must extend the existing widget contract in place. That means:
+
+- update the owning widget type, schema, defaults, normalizer, renderer, editor,
+  tests, and docs together;
+- preserve strict reject-unknown schema behavior when adding `style` fields;
+- reuse existing editor sections/helpers where they fit;
+- do not add a second widget variant, route, save flow, or editor mode only to
+  make `Clear` easier to implement.
+
 ## Current Inventory
 
 Initial scan on 2026-04-30 found these real problem groups. Refresh line
@@ -238,6 +247,9 @@ normalizer reapply it after the editor has cleared the property.
   class, or overlay node.
 - Focused editor-wave tests proving each affected color/background/overlay field
   exposes `Clear` and that the emitted payload removes the field.
+- Schema/normalizer tests for every new or newly-clearable style field proving
+  configured values are accepted, cleared omission is preserved, unknown fields
+  are rejected, and legacy/default behavior remains intentional.
 - Backward-compatibility tests for representative existing/default widget data.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Custom Screens
 **Estimated Effort:** Medium
-**Dependencies:** TASK-244-03
+**Dependencies:** TASK-244-01-01, TASK-244-01-02, TASK-244-02-02
 **Status:** To Do
 
 ---
@@ -49,6 +49,14 @@ implementation introduces those pages.
 Do not remove the screen-only surface restriction. These widgets remain scoped to
 custom screen builder surfaces.
 
+This leaf extends existing screen widget contracts in place. The current screen
+widget schemas use `additionalProperties: false`, for example
+`screenRecordHeader.tsx:17-27`, `screenFieldGroup.tsx:25-51`,
+`screenFieldValue.tsx:17-43`, and `screenTwoColumn.tsx:26-55`. Add any new
+style fields to the owning widget data type, schema, defaults, normalizer,
+renderer, `ScreenEditors.tsx`, tests, and docs. Do not create a second screen
+editor panel or bypass strict widget validation.
+
 Add minimal style contracts such as:
 
 ```ts
@@ -61,6 +69,33 @@ type ScreenFrameStyle = {
 
 Only add fields that are required to clear current forced surfaces. Avoid a broad
 screen design-system refactor.
+
+Schema/normalizer pseudocode:
+
+```ts
+type ScreenRecordHeaderData = {
+  /* existing fields */
+  style?: ScreenFrameStyle;
+};
+
+const screenFrameStyleSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    frameBackground: { type: "string" },
+    frameGradient: { type: "string" },
+    frameBorderColor: { type: "string" },
+  },
+};
+
+function normalizeScreenFrameStyle(style: ScreenFrameStyle | undefined) {
+  return compactObject({
+    frameBackground: resolveClearableStyleValue(style?.frameBackground),
+    frameGradient: resolveClearableStyleValue(style?.frameGradient),
+    frameBorderColor: resolveClearableStyleValue(style?.frameBorderColor),
+  });
+}
+```
 
 ## Per-Widget Implementation Matrix
 
@@ -83,11 +118,16 @@ const frameStyle = compactStyle({
   borderColor: resolveClearableStyleValue(data.style?.frameBorderColor),
 });
 
+const useLegacyDefaultFrameSurface = shouldUseLegacyDefaultFrameSurface(data);
 const frameClassName = joinClasses(
   "rounded-3xl border p-6",
-  data.style?.frameBackground || data.style?.frameGradient ? undefined : undefined
+  useLegacyDefaultFrameSurface ? "bg-gradient-to-br from-background via-background to-muted/30" : undefined
 );
 ```
+
+`shouldUseLegacyDefaultFrameSurface` is a placeholder for the field-specific
+compatibility decision from TASK-244-01-02. Do not make absence mean both
+"cleared" and "default" in the same normalized payload.
 
 For the `screen-record-header` current card gradient, do not replace clear with a
 variant switch. Add a real clearable background/gradient contract.
@@ -98,6 +138,10 @@ variant switch. Add a real clearable background/gradient contract.
 - `bun run test:vitest -- tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - Add tests that prove:
   - existing default screen frames still render as before;
+  - new `style` fields pass widget schema validation and unknown `style` keys
+    are still rejected;
+  - normalizers preserve cleared/absent style fields according to
+    TASK-244-01-02 instead of re-materializing cleared defaults;
   - cleared frame background/gradient omits forced `bg-*`/`bg-gradient-*`
     classes or inline background styles;
   - editor `Clear` removes the relevant `style` keys.

@@ -73,6 +73,11 @@ function ClearableColorField(props: ClearableColorFieldProps) {
 }
 ```
 
+Section is not a new clear-control target unless implementation deliberately
+adopts the shared helper there. Its required baseline is no-regression for the
+existing empty-gradient/zero-overlay behavior. If Section receives `Clear`
+buttons, update this leaf and TASK-244-05-01 with explicit key-removal tests.
+
 Section no-regression should keep this contract:
 
 ```ts

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Screens + Operational Runtime
 **Estimated Effort:** Large
-**Dependencies:** TASK-244-02
+**Dependencies:** TASK-244-02-01, TASK-244-02-02
 **Status:** To Do
 
 ---

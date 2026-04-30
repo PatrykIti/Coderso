@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + QA + Docs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-244-02, TASK-244-03, TASK-244-04
+**Dependencies:** TASK-244-02-01, TASK-244-02-02, TASK-244-03-01, TASK-244-03-02, TASK-244-04-01, TASK-244-04-02
 **Status:** To Do
 
 ---
@@ -34,11 +34,13 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 ## Implementation Order
 
 1. Build a final inventory-to-test matrix from TASK-244-01-01.
-2. Run all targeted widget runtime and editor suites for touched surfaces.
-3. Run lint, typecheck, and final Coderso gates.
-4. Update widget docs with `Clear` semantics.
-5. Mark TASK-244 files Done and move board rows to Done.
-6. Add the changelog entry for the completion number assigned during
+2. Confirm every schema/normalizer extension has configured, cleared,
+   legacy/default, and reject-unknown coverage.
+3. Run all targeted widget runtime and editor suites for touched surfaces.
+4. Run lint, typecheck, and final Coderso gates.
+5. Update widget docs with `Clear` semantics.
+6. Mark TASK-244 files Done and move board rows to Done.
+7. Add the changelog entry for the completion number assigned during
    implementation.
 
 ## Testing Requirements

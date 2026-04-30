@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Hero
 **Estimated Effort:** Medium
-**Dependencies:** TASK-244-02
+**Dependencies:** TASK-244-01-01, TASK-244-01-02
 **Status:** To Do
 
 ---
@@ -40,6 +40,13 @@ editor affordance and payload cleanup.
 Do not add a `"none"` gradient string. Do not save `"transparent"` as the
 gradient off state.
 
+Do not treat inline media overlay and background media overlay as the same
+editor path. `HeroEditors.tsx:1044-1103` exposes `media.overlay` only for
+non-centered inline media, while `HeroEditors.tsx:1338-1373` owns centered
+background media and currently has no overlay clear affordance. Runtime uses
+overlay data for centered background image/video output at `hero.tsx:337` and
+`hero.tsx:440`; cover both paths without creating a second Hero editor flow.
+
 Current code references:
 
 - `hero.tsx:17`, `hero.tsx:112`, `hero.tsx:337-351`, `hero.tsx:440-443`, and
@@ -48,6 +55,9 @@ Current code references:
   `hero.tsx:380`, and `hero.tsx:392` own primary/secondary button
   backgrounds.
 - `HeroEditors.tsx:1097-1100` owns media overlay editing.
+- `HeroEditors.tsx:1338-1373` owns background media editing and must receive
+  the background-media overlay clear affordance if centered Hero can render an
+  overlay.
 - `HeroEditors.tsx:1215-1239` owns CTA button background editing.
 - `HeroEditors.tsx:1338-1348` and `HeroEditors.tsx:1557-1570` own background
   color/gradient editing in visual and advanced modes.
@@ -112,6 +122,8 @@ expect(html).not.toContain("background:#224466");
   - background color clear removes `background.color`;
   - media overlay clear removes the overlay field and overlay node where
     applicable.
+  - centered background media overlay clear is covered separately from
+    non-centered inline media overlay.
   - primary and secondary button background clear remove `primaryButtonBg` and
     `secondaryButtonBg` without serializing `"transparent"`.
 - `bun --cwd core lint`

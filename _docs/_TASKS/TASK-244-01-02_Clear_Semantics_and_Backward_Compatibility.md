@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Compatibility
 **Estimated Effort:** Small
-**Dependencies:** TASK-244-01
+**Dependencies:** TASK-244-01-01
 **Status:** To Do
 
 ---
@@ -53,6 +53,50 @@ function compactStyle(style: React.CSSProperties): React.CSSProperties | undefin
 ```
 
 Do not use a helper that converts cleared fields to `"transparent"`.
+
+## Normalizer and Legacy Default Contract
+
+Many current widget normalizers materialize defaults when a style property is
+absent. That is incompatible with `Clear` unless the leaf explicitly changes the
+contract. Each implementation leaf must choose the narrowest existing-contract
+extension below before runtime changes:
+
+1. **Existing field with normalizer fallback.**
+   Move the visible default to the widget defaults / creation payload path and
+   update the normalizer so absence stays absent for clear-capable fields. Add
+   tests for configured value, cleared absence, and representative default data.
+2. **Existing legacy data needs old fallback.**
+   Add a field-specific legacy adapter only where there is deterministic evidence
+   that old saved data omitted the field but expected the visual default. The
+   adapter must be local to the widget normalizer, documented in the leaf, and
+   covered by compatibility tests. Do not use `"transparent"` or empty strings as
+   hidden markers.
+3. **No current style contract.**
+   Extend the existing widget data type/schema/defaults/normalizer/editor with a
+   `style` object or field in the same module. Preserve strict schema rejection
+   for unknown keys and add tests that the clear payload is accepted while
+   unrelated style keys are rejected.
+
+Do not create a second route, save flow, widget variant, or editor mode to avoid
+extending the real widget contract.
+
+Expected field-shape pseudocode:
+
+```ts
+type ClearableFieldInput = {
+  value: unknown;
+  hasOwnKey: boolean;
+  defaultValue?: string;
+  legacyDefaultApplies: boolean;
+};
+
+function normalizeClearableColor(input: ClearableFieldInput): string | undefined {
+  if (!input.hasOwnKey) {
+    return input.legacyDefaultApplies ? input.defaultValue : undefined;
+  }
+  return resolveClearableStyleValue(input.value);
+}
+```
 
 ## Editor Payload Shape
 
@@ -107,6 +151,9 @@ function removeBackgroundKey(
 - Runtime tests proving cleared data omits style output.
 - Backward-compatibility tests for representative default/legacy data where a
   fallback is changed.
+- Schema/normalizer tests for every new style field: accepted clear-capable
+  payloads, preserved `additionalProperties: false`, and rejected unknown style
+  keys.
 - Editor tests proving `Clear` removes the key from emitted data.
 - Payload tests or assertions proving `Clear` does not serialize
   `"transparent"` or empty strings as off-state sentinels.

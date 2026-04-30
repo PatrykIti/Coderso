@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Inventory
 **Estimated Effort:** Medium
-**Dependencies:** TASK-244-01
+**Dependencies:** TASK-242
 **Status:** To Do
 
 ---
@@ -43,6 +43,27 @@ Each finding must be classified as one of:
 - `exclude-admin-only`: admin chrome, preview thumbnail, library card, skeleton,
   or drawer styling that is not rendered widget output.
 
+## Contract Audit Requirements
+
+For every `clear-required` row, record whether the target field already exists
+in the widget data contract or must be added to the existing contract:
+
+- existing field: name the current type, schema, default, normalizer, renderer,
+  editor, test, and docs owner;
+- new field: extend the same widget's data type, JSON schema, defaults,
+  normalizer, renderer, editor, and tests. Do not add a parallel editor flow or
+  a widget-specific save path;
+- defaulted field: if the normalizer currently materializes a default when the
+  property is absent, the implementation leaf must decide how cleared absence is
+  distinguished from legacy absence before runtime work starts;
+- no current editor control: name the insertion point in the existing editor
+  section and add the clearable control there instead of creating a second
+  settings panel for the same widget.
+
+Keep `additionalProperties: false` wherever the current widget schema uses it.
+Strict validation tests must prove accepted clear payloads and rejected unknown
+style keys for every schema extension.
+
 ## Current Execution Matrix
 
 Refresh line references if implementation starts after code moves. The current
@@ -51,16 +72,16 @@ scan is from 2026-04-30 and covers every widget registered by
 
 | Widget | Classification | Current refs | Owner | Test/docs owners |
 |---|---|---|---|---|
-| `section` | `already-clearable` | `section.tsx:101-109`, `section.tsx:192-200`, `section.tsx:257-286` already treat empty gradient endpoints and `overlayOpacity: 0` as omitted output | TASK-244-02-02 | `tests/vitest/widgets/section.test.tsx`; `tests/vitest/ui/section-editor-wave.test.tsx`; `_docs/_WIDGETS/SECTION.md` |
-| `template-section` | `exclude-admin-only` | `templateSection.tsx:107` placeholder `bg-muted/20` is a missing-template guide, not a persisted widget surface | TASK-244-01-01 | `tests/vitest/widgets/templateSection.test.tsx`; `TemplateSectionEditors.tsx`; `_docs/_WIDGETS/TEMPLATE_SECTION.md` |
+| `section` | `already-clearable` | `section.tsx:101-109`, `section.tsx:192-200`, `section.tsx:257-286` already treat empty gradient endpoints and `overlayOpacity: 0` as omitted output; `section.tsx:333` empty-region placeholder is an intentional layout state, not a clearable surface | TASK-244-02-02 | `tests/vitest/widgets/section.test.tsx`; `tests/vitest/ui/section-editor-wave.test.tsx`; `_docs/_WIDGETS/SECTION.md` |
+| `template-section` | `intentional-state` | `templateSection.tsx:107` placeholder `bg-muted/20` is public runtime output, but it is a missing-template state, not a configurable widget surface | TASK-244-01-01 | `tests/vitest/widgets/templateSection.test.tsx`; `TemplateSectionEditors.tsx`; `_docs/_WIDGETS/TEMPLATE_SECTION.md` |
 | `grid-columns` | `clear-required` | `gridColumns.tsx:51`, `gridColumns.tsx:104`, `gridColumns.tsx:126`, `gridColumns.tsx:352`, `gridColumns.tsx:439`; editor `GridColumnsEditors.tsx:696-699` has `Column background` without semantic clear | TASK-244-04-01 | `tests/vitest/widgets/gridColumns.test.tsx`; `tests/vitest/ui/grid-columns-editor-wave.test.tsx`; `_docs/_WIDGETS/GRID_COLUMNS.md` |
-| `split-layout` | `exclude-admin-only` | `splitLayout.tsx:255`, `splitLayout.tsx:269` are empty-column drop/placeholder panels only | TASK-244-01-01 | `tests/vitest/widgets/splitLayout.test.tsx`; `SplitLayoutEditors.tsx`; `_docs/_WIDGETS/SPLIT_LAYOUT.md` |
+| `split-layout` | `intentional-state` | `splitLayout.tsx:255`, `splitLayout.tsx:269` are public empty-column placeholder panels, not configurable visual surfaces | TASK-244-01-01 | `tests/vitest/widgets/splitLayout.test.tsx`; `SplitLayoutEditors.tsx`; `_docs/_WIDGETS/SPLIT_LAYOUT.md` |
 | `tabs` | `clear-required` | `tabs.tsx:27-32`, `tabs.tsx:77-82`, `tabs.tsx:98-103`, `tabs.tsx:199-222`, `tabs.tsx:340-355`; editor `TabsEditors.tsx:319-365` | TASK-244-04-02 | `tests/vitest/widgets/tabs.test.tsx`; `tests/vitest/ui/tabs-editor-wave.test.tsx`; `_docs/WIDGETS.md` |
 | `accordion` | `clear-required` | `accordion.tsx:27`, `accordion.tsx:74`, `accordion.tsx:100`, `accordion.tsx:191-194`, `accordion.tsx:280`; editor `AccordionEditors.tsx:306-312` | TASK-244-04-02 | `tests/vitest/widgets/accordionWidget.test.tsx`; `tests/vitest/ui/accordion-editor-wave.test.tsx`; `_docs/WIDGETS.md` |
 | `toggle-block` | `clear-required` | `toggleBlock.tsx:23`, `toggleBlock.tsx:53`, `toggleBlock.tsx:71`, `toggleBlock.tsx:106-109`, `toggleBlock.tsx:207`; editor `ToggleBlockEditors.tsx:245-255` | TASK-244-04-02 | `tests/vitest/widgets/toggleBlock.test.tsx`; `tests/vitest/ui/toggle-block-editor-wave.test.tsx`; `_docs/WIDGETS.md` |
-| `spacer` | `exclude-admin-only` | `spacer.tsx:188` runtime preview label uses `bg-[var(--color-bg)]/80`; it is the editor/runtime measurement label, not a user surface | TASK-244-01-01 | `tests/vitest/widgets/spacer.test.tsx`; `SpacerEditors.tsx`; `_docs/_WIDGETS/SPACER.md` |
+| `spacer` | `intentional-state` | `spacer.tsx:188` runtime measurement label uses `bg-[var(--color-bg)]/80`; it is public preview output but represents the spacer measurement state, not a configurable widget surface | TASK-244-01-01 | `tests/vitest/widgets/spacer.test.tsx`; `SpacerEditors.tsx`; `_docs/_WIDGETS/SPACER.md` |
 | `divider` | `already-clearable` | No background/surface field in public divider output; classification should stay no-op unless implementation finds a new real surface | TASK-244-01-01 | `tests/vitest/widgets/divider.test.tsx`; `DividerEditors.tsx`; `_docs/_WIDGETS/DIVIDER.md` |
-| `stack` | `exclude-admin-only` | `stack.tsx:268` is an empty-stack placeholder panel only | TASK-244-01-01 | `tests/vitest/widgets/stack.test.tsx`; `StackEditors.tsx`; `_docs/_WIDGETS/STACK.md` |
+| `stack` | `intentional-state` | `stack.tsx:268` is a public empty-stack placeholder panel, not a configurable widget surface | TASK-244-01-01 | `tests/vitest/widgets/stack.test.tsx`; `StackEditors.tsx`; `_docs/_WIDGETS/STACK.md` |
 | `hero` | `clear-required` | `hero.tsx:17`, `hero.tsx:51`, `hero.tsx:55`, `hero.tsx:112`, `hero.tsx:154`, `hero.tsx:158`, `hero.tsx:337-351`, `hero.tsx:380`, `hero.tsx:392`, `hero.tsx:440-443`, `hero.tsx:550-551`; editor `HeroEditors.tsx:1097-1100`, `HeroEditors.tsx:1215-1239`, `HeroEditors.tsx:1338-1348`, `HeroEditors.tsx:1557-1570` | TASK-244-02-01 | `tests/vitest/widgets/hero.test.tsx`; `tests/vitest/widgets/heroEditors.test.tsx`; `tests/vitest/ui/hero-editor-wave.test.tsx`; `_docs/_WIDGETS/HERO.md` |
 | `feature-grid` | `clear-required` | `featureGrid.tsx:31`, `featureGrid.tsx:121`, `featureGrid.tsx:165`, `featureGrid.tsx:300-302`, `featureGrid.tsx:347`; editor `FeatureGridEditors.tsx` | TASK-244-04-01 | `tests/vitest/widgets/featureGrid.test.tsx`; `tests/vitest/ui/feature-grid-editor-wave.test.tsx`; `_docs/_WIDGETS/FEATURE_GRID.md` |
 | `testimonials` | `clear-required` | `testimonials.tsx:26-27`, `testimonials.tsx:89-90`, `testimonials.tsx:132-133`, `testimonials.tsx:259-265`, `testimonials.tsx:354-355`; editor `TestimonialsEditors.tsx` | TASK-244-04-01 | `tests/vitest/widgets/testimonials.test.tsx`; `tests/vitest/ui/testimonials-editor-wave.test.tsx`; `_docs/_WIDGETS/TESTIMONIALS.md` |
@@ -104,8 +125,9 @@ not permission to skip a `clear-required` row.
 - empty/error/success/destructive/warning state colors;
 - form validation and status message colors;
 - media placeholder backgrounds shown only when content is missing;
-- layout/editor placeholders in `template-section`, `split-layout`, `stack`,
-  and `spacer` unless they become persisted public widget surfaces;
+- intentional public layout/placeholders in `template-section`, `split-layout`,
+  `stack`, `spacer`, and empty `section` regions unless they become persisted
+  configurable widget surfaces;
 - `divider`, because current public output has no background/surface contract;
 - `section` gradient runtime, because empty endpoints already remove the
   gradient;

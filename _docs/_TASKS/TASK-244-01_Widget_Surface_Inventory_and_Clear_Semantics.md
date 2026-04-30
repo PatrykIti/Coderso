@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Inventory + UX Contract
 **Estimated Effort:** Medium
-**Dependencies:** TASK-244
+**Dependencies:** TASK-242
 **Status:** To Do
 
 ---

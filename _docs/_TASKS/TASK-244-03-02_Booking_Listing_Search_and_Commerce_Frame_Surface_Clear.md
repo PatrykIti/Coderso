@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Operational Runtime
 **Estimated Effort:** Large
-**Dependencies:** TASK-244-03
+**Dependencies:** TASK-244-01-01, TASK-244-01-02, TASK-244-02-02
 **Status:** To Do
 
 ---
@@ -79,13 +79,34 @@ Keep semantic state colors intact:
 
 Only clear user-configurable frame/surface/background styling.
 
+Several target widgets do not currently expose a `style` object. This leaf is
+therefore a contract-extension task, not only an editor affordance task:
+
+- `booking-calendar` has no `style` object in `BookingCalendarData` and no
+  schema style property at `bookingCalendar.tsx:31-54` and
+  `bookingCalendar.tsx:178-245`;
+- `appointment-form` has no `style` object in `AppointmentFormData` and no
+  schema style property at `appointmentForm.tsx:8-32` and
+  `appointmentForm.tsx:68-100`;
+- `listing-filters` has no `style` object in `ListingFiltersData` and no schema
+  style property at `listingFilters.tsx:16-33` and `listingFilters.tsx:128-267`;
+- commerce widgets already expose limited style contracts, but any new
+  table/header/card clear fields must still be added to their existing
+  type/schema/default/normalizer/editor path.
+
+For every new style field, extend the owning widget module in place, preserve
+`additionalProperties: false`, and add schema tests that accept the new field,
+accept cleared omission, and reject unknown style keys. Reuse existing editor
+sections for presentation/style controls; do not create a second operational
+widget styling flow.
+
 ## Per-Widget Implementation Matrix
 
 | Widget | Runtime fields/classes to own | Editor contract | Regression tests |
 |---|---|---|---|
-| `booking-calendar` | Replace root `bg-[var(--color-bg)]/95` at `bookingCalendar.tsx:348` with clearable `style.frameBackground`; keep warning colors at `bookingCalendar.tsx:361-364`; make refresh action background clearable only if it becomes a style field | Add `Clear` beside frame/action color controls in `BookingCalendarEditors.tsx`; remove keys from `style` | Assert cleared frame omits `backgroundColor`/forced bg class and warning state still renders |
-| `appointment-form` | Replace root `appointmentForm.tsx:229` and selected-slot panel `appointmentForm.tsx:250` with clearable frame/summary surfaces; submit background at `appointmentForm.tsx:317-323` is style-owned only if exposed | Add `Clear` in `AppointmentFormEditors.tsx` for frame/summary/action fields | Assert cleared root and selected-slot surfaces omit background output; error/success colors stay intact |
-| `listing-filters` | Replace filter shell `listingFilters.tsx:493`; treat apply button `listingFilters.tsx:543-548` as style-owned only when editor exposes it | Add `Clear` in `ListingFiltersEditors.tsx` | Assert filter form still works and cleared shell/action keys are absent |
+| `booking-calendar` | Add a minimal `style` contract, then replace root `bg-[var(--color-bg)]/95` at `bookingCalendar.tsx:348` with clearable `style.frameBackground`; keep warning colors at `bookingCalendar.tsx:361-364`; make refresh action background clearable only if it becomes a style field | Extend existing `BookingCalendarEditors.tsx` presentation/style area with frame/action controls plus `Clear`; remove keys from `style` | Assert schema accepts new fields/rejects unknown style keys; cleared frame omits `backgroundColor`/forced bg class and warning state still renders |
+| `appointment-form` | Add a minimal `style` contract, then replace root `appointmentForm.tsx:229` and selected-slot panel `appointmentForm.tsx:250` with clearable frame/summary surfaces; submit background at `appointmentForm.tsx:317-323` is style-owned only if exposed | Extend existing `AppointmentFormEditors.tsx` presentation/style area for frame/summary/action fields plus `Clear` | Assert schema accepts new fields/rejects unknown style keys; cleared root and selected-slot surfaces omit background output; error/success colors stay intact |
+| `listing-filters` | Add a minimal `style` contract, then replace filter shell `listingFilters.tsx:493`; treat apply button `listingFilters.tsx:543-548` as style-owned only when editor exposes it | Extend existing `ListingFiltersEditors.tsx` presentation/style area plus `Clear` | Assert schema accepts new fields/rejects unknown style keys; filter form still works and cleared shell/action keys are absent |
 | `search-box` | Replace listing shell `searchBox.tsx:190-221` and global shell `searchBox.tsx:265-292`; treat submit button background as style-owned only when exposed | Add `Clear` in `SearchBoxEditors.tsx` | Assert both listing and global variants omit cleared shell backgrounds |
 | `product-gallery` | Replace empty state `productGallery.tsx:342` and card backgrounds `productGallery.tsx:363-365` with clearable empty/card surfaces | Add clearable card/empty surface controls in `ProductGalleryEditors.tsx`; use `CommerceWidgetEditorShared.tsx` only for shared product style UI | Assert cards and empty state can render without forced backgrounds while stock labels remain semantic |
 | `product-table` | Replace empty state `productTable.tsx:350`, table wrapper `productTable.tsx:359`, and header `productTable.tsx:362` with clearable surfaces | Add table/header/empty clear controls in `ProductTableEditors.tsx` | Assert table wrapper/header omit cleared backgrounds and structure stays scrollable |
@@ -140,6 +161,9 @@ const clearOperationalStyle = (key: keyof OperationalSurfaceStyle) => {
   - `tests/vitest/ui/product-table-editor-wave.test.tsx`
   - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - Add tests proving `Clear` removes style keys and rendered backgrounds.
+- Add schema/normalizer tests for widgets that gain new `style` fields:
+  accepted configured values, accepted cleared omission, and rejected unknown
+  style keys.
 - Add assertions that cleared fields do not serialize `"transparent"` or empty
   string sentinels.
 - `bun --cwd core lint`
