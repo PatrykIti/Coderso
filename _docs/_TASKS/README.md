@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 63 tasks
+- **To Do:** 64 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1377 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-247 | Media Always-On Selection and Upload Copy | High | Small | Keep Media multi-select always active, remove the Select mode button, and rename Upload New to Upload |
 | TASK-244 | Widget Visual Surface Clear Controls | High | Very Large | Add `Clear` controls for every rendered widget with forced background, gradient, overlay, card surface, or framed shell styling |
 | TASK-244-01 | Widget Surface Inventory and Clear Semantics | High | Medium | Lock inventory and define `Clear` semantics separately from TASK-242 `None` token semantics |
 | TASK-244-01-01 | Widget Surface Background Inventory | High | Medium | Classify every rendered widget surface as clear-required, already-clearable, intentional-state, or admin-only exclusion |
