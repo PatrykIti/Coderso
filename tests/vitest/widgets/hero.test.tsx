@@ -127,19 +127,14 @@ test("hero renders slot content blocks", () => {
 
 test("hero shows media placeholder when type selected without url", () => {
   const html = renderToString(
-    <HeroBlock
-      data={{ ...heroDefaults, media: { type: "image" } }}
-      variant="split"
-    />
+    <HeroBlock data={{ ...heroDefaults, media: { type: "image" } }} variant="split" />
   );
 
   expect(html).toContain("Add media URL");
 });
 
 test("hero split shows placeholder when media type is none", () => {
-  const html = renderToString(
-    <HeroBlock data={heroDefaults} variant="split" />
-  );
+  const html = renderToString(<HeroBlock data={heroDefaults} variant="split" />);
 
   expect(html).toContain("Select media type");
 });
@@ -218,7 +213,36 @@ test("hero renders background video when configured", () => {
     />
   );
 
-  expect(html).toContain("src=\"https://example.com/bg.mp4\"");
+  expect(html).toContain('src="https://example.com/bg.mp4"');
   expect(html).toContain("autoPlay");
   expect(html).toContain("object-cover");
+});
+
+test("hero clearable background and CTA fields omit runtime styles", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{
+        ...heroDefaults,
+        background: {
+          color: undefined,
+          gradient: undefined,
+          media: {
+            type: "image",
+            src: "/hero-bg.jpg",
+            overlay: undefined,
+          },
+        },
+        style: {
+          primaryButtonBg: undefined,
+          secondaryButtonBg: undefined,
+        },
+      }}
+      variant="centered"
+    />
+  );
+
+  expect(html).toContain("background-image:url(/hero-bg.jpg)");
+  expect(html).not.toContain("linear-gradient");
+  expect(html).not.toContain("data-hero-background-overlay");
+  expect(html).not.toContain("background:transparent");
 });

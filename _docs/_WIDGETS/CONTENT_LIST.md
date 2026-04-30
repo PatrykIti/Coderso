@@ -57,6 +57,12 @@ Notes:
   - `data-content-list-status-scope`
   - `data-content-list-state`
 
+## Clear Controls
+
+- `style.backgroundColor` is clearable; clear removes the configured card
+  background field and mapped runtime output omits the inline background style.
+- Border, text, CTA label, and query/source fields are unchanged by clear.
+
 ## Data Model (summary)
 
 ```json

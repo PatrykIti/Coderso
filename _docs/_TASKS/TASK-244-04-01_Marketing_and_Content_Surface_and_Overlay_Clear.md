@@ -6,7 +6,7 @@
 **Category:** Widgets + Marketing + Content
 **Estimated Effort:** Large
 **Dependencies:** TASK-244-03-01, TASK-244-03-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 

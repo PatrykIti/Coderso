@@ -78,6 +78,25 @@ test("listing filters renders resolved facets and runtime markers", () => {
   expect(html).toContain('data-listing-query-id="listing-query-1"');
 });
 
+test("listing filters cleared frame style omits decorative shell and action background", () => {
+  const html = renderToString(
+    <ListingFiltersBlock
+      variant="default"
+      data={normalizeListingFiltersData({
+        ...listingFiltersDefaults,
+        listingQueryId: "listing-query-1",
+        style: {},
+        resolved: {
+          listingQueryId: "listing-query-1",
+        },
+      })}
+    />
+  );
+
+  expect(html).not.toContain("bg-[var(--color-bg)]/80");
+  expect(html).not.toContain("bg-[var(--color-primary)]");
+});
+
 test("listing filters validator accepts runtime metrics payload", () => {
   clearWidgets();
   registerWidget(

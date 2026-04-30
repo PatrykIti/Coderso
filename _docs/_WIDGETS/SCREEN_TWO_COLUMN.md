@@ -35,12 +35,26 @@ supporting admin panel.
 
 - `gap`: `none` renders zero grid gap between columns.
 
+## Clear Controls
+
+- `style.columnBackground` and `style.columnBorderColor` are clearable; clear
+  removes column frame style fields and preserves the left/right slot layout.
+- Related custom-screen widgets use the same frame style clear semantics:
+  `screen-record-header` (`frameBackground`, `frameGradient`,
+  `frameBorderColor`), `screen-field-value` (`frameBackground`,
+  `frameBorderColor`), and `screen-field-group` (`frameBackground`,
+  `frameBorderColor`).
+
 ## Data Model (summary)
 
 ```json
 {
   "leftTitle": "Primary",
   "rightTitle": "Details",
-  "gap": "md"
+  "gap": "md",
+  "style": {
+    "columnBackground": "color-mix(in srgb, var(--color-bg) 60%, transparent)",
+    "columnBorderColor": "color-mix(in srgb, var(--color-border) 60%, transparent)"
+  }
 }
 ```

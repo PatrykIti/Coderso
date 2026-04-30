@@ -6,7 +6,7 @@
 **Category:** Widgets + Operational Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-244-01-01, TASK-244-01-02, TASK-244-02-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 

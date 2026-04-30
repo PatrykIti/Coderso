@@ -6,7 +6,7 @@
 **Category:** Widgets + Inventory
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 

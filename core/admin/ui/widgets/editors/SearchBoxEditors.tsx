@@ -11,10 +11,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  listListingQueriesCached,
-  type ListingQueryRecord,
-} from "@/services/listingsClient";
+import { listListingQueriesCached, type ListingQueryRecord } from "@/services/listingsClient";
 
 import {
   normalizeSearchBoxData,
@@ -22,6 +19,7 @@ import {
   type SearchBoxData,
 } from "../../../../widgets/core/searchBox";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 
@@ -55,6 +53,34 @@ function updateValue(
   const current = normalizeSearchBoxData(value);
   const next = updater(current);
   onChange(normalizeSearchBoxData(next));
+}
+
+function updateStyle(
+  value: SearchBoxData,
+  onChange: (next: SearchBoxData) => void,
+  patch: Partial<NonNullable<SearchBoxData["style"]>>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    style: {
+      ...current.style,
+      ...patch,
+    },
+  }));
+}
+
+function clearStyle(
+  value: SearchBoxData,
+  onChange: (next: SearchBoxData) => void,
+  key: keyof NonNullable<SearchBoxData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function useListingQueries() {
@@ -110,8 +136,7 @@ function SearchMode({
   const selectedLabel =
     selectedListingQuery === NO_LISTING_QUERY_VALUE
       ? "No listing query selected"
-      : items.find((item) => item.id === selectedListingQuery)?.name ??
-        "Selected listing query";
+      : (items.find((item) => item.id === selectedListingQuery)?.name ?? "Selected listing query");
 
   return (
     <EditorSection title="Mode" description="Choose listing search or global public search.">
@@ -160,9 +185,7 @@ function SearchMode({
             <p className="text-xs text-muted-foreground">Loading listing queries...</p>
           ) : null}
           {listingLoadState === "empty" ? (
-            <p className="text-xs text-muted-foreground">
-              No listing queries are available yet.
-            </p>
+            <p className="text-xs text-muted-foreground">No listing queries are available yet.</p>
           ) : null}
           {listingLoadState === "error" && error ? (
             <p className="text-xs text-destructive">{error}</p>
@@ -332,34 +355,63 @@ function RuntimeSnapshot({ value }: { value: SearchBoxData }) {
   );
 }
 
-export function SearchBoxWizardEditor({
+function SurfaceEditor({
   value,
   onChange,
-}: WidgetEditorProps<SearchBoxData>) {
+}: {
+  value: SearchBoxData;
+  onChange: (next: SearchBoxData) => void;
+}) {
+  const normalized = normalizeSearchBoxData(value);
+
+  return (
+    <EditorSection title="Surface" description="Decorative search shell and action color.">
+      <ClearableInputField
+        label="Frame background"
+        value={normalized.style?.frameBackground}
+        onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+        onClear={() => clearStyle(value, onChange, "frameBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Frame border"
+        value={normalized.style?.frameBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "frameBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Action background"
+        value={normalized.style?.actionBackground}
+        onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+        onClear={() => clearStyle(value, onChange, "actionBackground")}
+        placeholder="var(--color-primary)"
+      />
+    </EditorSection>
+  );
+}
+
+export function SearchBoxWizardEditor({ value, onChange }: WidgetEditorProps<SearchBoxData>) {
   return (
     <div className="space-y-3">
       <SearchMode value={value} onChange={onChange} />
       <CopyAndBehavior value={value} onChange={onChange} />
+      <SurfaceEditor value={value} onChange={onChange} />
     </div>
   );
 }
 
-export function SearchBoxVisualEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<SearchBoxData>) {
+export function SearchBoxVisualEditor({ value, onChange }: WidgetEditorProps<SearchBoxData>) {
   return (
     <div className="space-y-3">
       <SearchMode value={value} onChange={onChange} />
       <CopyAndBehavior value={value} onChange={onChange} />
+      <SurfaceEditor value={value} onChange={onChange} />
     </div>
   );
 }
 
-export function SearchBoxAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<SearchBoxData>) {
+export function SearchBoxAdvancedEditor({ value, onChange }: WidgetEditorProps<SearchBoxData>) {
   return (
     <div className="space-y-3">
       <CopyAndBehavior value={value} onChange={onChange} />

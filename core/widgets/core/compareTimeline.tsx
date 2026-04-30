@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, resolveClearableStyleValue } from "./clearableStyle";
 
 export type CompareTimelineVariantId = "dual-track" | "dual-track-highlight";
 export type CompareTimelineGuideStyle = "solid" | "dashed";
@@ -374,6 +375,24 @@ export function normalizeCompareTimelineData(data: CompareTimelineData): Compare
   const resolvedTargetTrackId = tracks.some((track) => track.id === targetTrackId)
     ? targetTrackId
     : (tracks[1]?.id ?? tracks[0]?.id);
+  const hasStyleObject = data.style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        highlightColor: resolveClearableStyleValue(data.style?.highlightColor),
+        markerColor: resolveClearableStyleValue(data.style?.markerColor),
+        trackLabelColor: resolveClearableStyleValue(data.style?.trackLabelColor),
+        stepLabelColor: resolveClearableStyleValue(data.style?.stepLabelColor),
+        mutedStepColor: resolveClearableStyleValue(data.style?.mutedStepColor),
+        guideColor: resolveClearableStyleValue(data.style?.guideColor),
+      })
+    : compactObject({
+        highlightColor: resolveClearableStyleValue(compareTimelineDefaults.style?.highlightColor),
+        markerColor: resolveClearableStyleValue(compareTimelineDefaults.style?.markerColor),
+        trackLabelColor: resolveClearableStyleValue(compareTimelineDefaults.style?.trackLabelColor),
+        stepLabelColor: resolveClearableStyleValue(compareTimelineDefaults.style?.stepLabelColor),
+        mutedStepColor: resolveClearableStyleValue(compareTimelineDefaults.style?.mutedStepColor),
+        guideColor: resolveClearableStyleValue(compareTimelineDefaults.style?.guideColor),
+      });
 
   return {
     ...data,
@@ -393,19 +412,13 @@ export function normalizeCompareTimelineData(data: CompareTimelineData): Compare
       targetTrackId: resolvedTargetTrackId,
     },
     style: {
-      highlightColor: data.style?.highlightColor ?? compareTimelineDefaults.style?.highlightColor,
       highlightLabelStyle:
         data.style?.highlightLabelStyle ?? compareTimelineDefaults.style?.highlightLabelStyle,
-      markerColor: data.style?.markerColor ?? compareTimelineDefaults.style?.markerColor,
-      trackLabelColor:
-        data.style?.trackLabelColor ?? compareTimelineDefaults.style?.trackLabelColor,
-      stepLabelColor: data.style?.stepLabelColor ?? compareTimelineDefaults.style?.stepLabelColor,
-      mutedStepColor: data.style?.mutedStepColor ?? compareTimelineDefaults.style?.mutedStepColor,
-      guideColor: data.style?.guideColor ?? compareTimelineDefaults.style?.guideColor,
       trackLabelSize: data.style?.trackLabelSize ?? compareTimelineDefaults.style?.trackLabelSize,
       stepLabelSize: data.style?.stepLabelSize ?? compareTimelineDefaults.style?.stepLabelSize,
       segmentLabelSize:
         data.style?.segmentLabelSize ?? compareTimelineDefaults.style?.segmentLabelSize,
+      ...(clearableStyle ?? {}),
     },
   };
 }

@@ -30,6 +30,7 @@ import {
   type TeamVariantId,
 } from "../../../../widgets/core/team";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: TeamVariantId;
@@ -150,16 +151,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -213,6 +216,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: TeamData,
+  onChange: (next: TeamData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updateMember(
@@ -755,6 +772,7 @@ export function TeamVisualEditor({
           label="Card background"
           value={style.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
+          onClear={() => clearStyleField(value, onChange, "cardSurface")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
@@ -762,6 +780,7 @@ export function TeamVisualEditor({
           label="Card border"
           value={style.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
+          onClear={() => clearStyleField(value, onChange, "cardBorder")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
@@ -835,17 +854,25 @@ export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamDa
           </Select>
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Card surface token</p>
-          <Input
+          <ClearableFieldHeader
+            label="Card surface token"
             value={style.cardSurface}
+            onClear={() => clearStyleField(value, onChange, "cardSurface")}
+          />
+          <Input
+            value={style.cardSurface ?? ""}
             onChange={(event) => updateStyle(value, onChange, { cardSurface: event.target.value })}
             placeholder="var(--color-bg)"
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Card border token</p>
-          <Input
+          <ClearableFieldHeader
+            label="Card border token"
             value={style.cardBorder}
+            onClear={() => clearStyleField(value, onChange, "cardBorder")}
+          />
+          <Input
+            value={style.cardBorder ?? ""}
             onChange={(event) => updateStyle(value, onChange, { cardBorder: event.target.value })}
             placeholder="var(--color-border)"
           />

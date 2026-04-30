@@ -26,6 +26,7 @@ import {
   type FaqAccordionVariantId,
 } from "../../../../widgets/core/faqAccordion";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: FaqAccordionVariantId;
@@ -135,16 +136,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -212,6 +215,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: FaqAccordionData,
+  onChange: (next: FaqAccordionData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updateItem(
@@ -580,6 +597,7 @@ export function FaqAccordionVisualEditor({
           label="Panel surface"
           value={normalized.style?.surface}
           onChange={(next) => updateStyle(value, onChange, { surface: next })}
+          onClear={() => clearStyleField(value, onChange, "surface")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />

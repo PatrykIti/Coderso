@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type NewsletterVariantId = "inline" | "stacked" | "minimal";
 export type NewsletterSpacing = "none" | "sm" | "md" | "lg" | "xl";
@@ -186,6 +187,7 @@ export function normalizeNewsletterData(data: NewsletterData): NewsletterData {
     alignment: "start",
     background: "transparent",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -212,7 +214,9 @@ export function normalizeNewsletterData(data: NewsletterData): NewsletterData {
     style: {
       spacing: resolveNewsletterSpacing(data.style?.spacing),
       alignment: resolveNewsletterAlignment(data.style?.alignment),
-      background: resolveString(data.style?.background, styleDefaults.background ?? "transparent"),
+      background: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.background)
+        : styleDefaults.background,
     },
   };
 }
@@ -243,9 +247,10 @@ export function NewsletterBlock({ data, variant }: { data: NewsletterData; varia
       ? integration.actionUrl?.trim()
       : undefined;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: style.background ?? "transparent",
-  };
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+    }) ?? {};
 
   return (
     <section

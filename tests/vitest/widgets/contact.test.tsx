@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 
 test("contact renders defaults", () => {
-  const html = renderToString(
-    <ContactBlock data={contactDefaults} variant="form-left" />
-  );
+  const html = renderToString(<ContactBlock data={contactDefaults} variant="form-left" />);
 
   expect(html).toContain('data-contact-variant="form-left"');
   expect(html).toContain("Phone:");
@@ -56,9 +54,7 @@ test("contact form-right variant renders deterministic ordering and map", () => 
 });
 
 test("contact minimal variant hides form", () => {
-  const html = renderToString(
-    <ContactBlock data={contactDefaults} variant="minimal" />
-  );
+  const html = renderToString(<ContactBlock data={contactDefaults} variant="minimal" />);
 
   expect(html).toContain('data-contact-variant="minimal"');
   expect(html).not.toContain('data-contact-field="name"');
@@ -140,6 +136,19 @@ test("contact validator accepts expanded model fields", () => {
     advanced: StubEditor,
   });
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("contact cleared section and panel surfaces omit background styles", () => {
+  const normalized = normalizeContactData({
+    ...contactDefaults,
+    style: {},
+  });
+  const html = renderToString(<ContactBlock data={normalized} variant="form-left" />);
+
+  expect(normalized.style?.background).toBeUndefined();
+  expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(html).toContain('data-contact-variant="form-left"');
+  expect(html).not.toContain("background-color:transparent");
 });
 
 test("contact validator rejects unsupported form field", () => {

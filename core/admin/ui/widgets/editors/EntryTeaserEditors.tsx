@@ -34,6 +34,7 @@ import {
   type EntryTeaserSpacing,
 } from "../../../../widgets/core/entryTeaser";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: EntryTeaserVariantId;
@@ -321,6 +322,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyle(
+  value: EntryTeaserData,
+  onChange: (next: EntryTeaserData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function updateFallback(
@@ -875,22 +890,20 @@ export function EntryTeaserAdvancedEditor({ value, onChange }: WidgetEditorProps
 
       <EditorSection title="Style tokens" description="Direct style tokens for teaser surface.">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Surface color</p>
-            <Input
-              value={normalized.style?.surface ?? ""}
-              onChange={(event) => updateStyle(value, onChange, { surface: event.target.value })}
-              placeholder="var(--color-bg)"
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border color</p>
-            <Input
-              value={normalized.style?.border ?? ""}
-              onChange={(event) => updateStyle(value, onChange, { border: event.target.value })}
-              placeholder="var(--color-border)"
-            />
-          </div>
+          <ClearableInputField
+            label="Surface color"
+            value={normalized.style?.surface}
+            onChange={(next) => updateStyle(value, onChange, { surface: next })}
+            onClear={() => clearStyle(value, onChange, "surface")}
+            placeholder="var(--color-bg)"
+          />
+          <ClearableInputField
+            label="Border color"
+            value={normalized.style?.border}
+            onChange={(next) => updateStyle(value, onChange, { border: next })}
+            onClear={() => clearStyle(value, onChange, "border")}
+            placeholder="var(--color-border)"
+          />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">

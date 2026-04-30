@@ -21,6 +21,7 @@ import {
   type TabsVariantId,
 } from "../../../../widgets/core/tabs";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: TabsVariantId;
@@ -46,9 +47,8 @@ const variantOptions: Array<{
 
 const alignmentOptions = ["start", "center", "end"] as const;
 
-const tabCountOptions = Array.from(
-  { length: tabsItemMax - tabsItemMin + 1 },
-  (_, index) => String(tabsItemMin + index)
+const tabCountOptions = Array.from({ length: tabsItemMax - tabsItemMin + 1 }, (_, index) =>
+  String(tabsItemMin + index)
 );
 
 function resolveVariant(variant: string): TabsVariantId {
@@ -79,14 +79,17 @@ function setCount(value: TabsData, onChange: (next: TabsData) => void, count: nu
       : items[0]?.id;
 
   onChange(
-    normalizeValue({
-      ...current,
-      items,
-      options: {
-        ...current.options,
-        activeId,
+    normalizeValue(
+      {
+        ...current,
+        items,
+        options: {
+          ...current.options,
+          activeId,
+        },
       },
-    }, count)
+      count
+    )
   );
 }
 
@@ -135,6 +138,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: TabsData,
+  onChange: (next: TabsData) => void,
+  key: keyof NonNullable<TabsData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function EditorSection({
@@ -287,10 +304,7 @@ function TabsBehaviorSection({
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection
-      title="Layout"
-      description="Align tab triggers and tune visual colors."
-    >
+    <EditorSection title="Layout" description="Align tab triggers and tune visual colors.">
       <div className="space-y-2">
         <p className="text-sm font-medium">Tab alignment</p>
         <Select
@@ -316,12 +330,14 @@ function TabsBehaviorSection({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <p className="text-sm font-medium">Surface color</p>
+          <ClearableFieldHeader
+            label="Surface color"
+            value={normalized.style?.surfaceColor}
+            onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+          />
           <Input
             value={normalized.style?.surfaceColor ?? tabsDefaults.style?.surfaceColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { surfaceColor: event.target.value })
-            }
+            onChange={(event) => updateStyle(value, onChange, { surfaceColor: event.target.value })}
             placeholder="var(--color-surface)"
           />
         </div>
@@ -329,14 +345,16 @@ function TabsBehaviorSection({
           <p className="text-sm font-medium">Border color</p>
           <Input
             value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { borderColor: event.target.value })
-            }
+            onChange={(event) => updateStyle(value, onChange, { borderColor: event.target.value })}
             placeholder="var(--color-border)"
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Active background</p>
+          <ClearableFieldHeader
+            label="Active background"
+            value={normalized.style?.activeBackgroundColor}
+            onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
+          />
           <Input
             value={
               normalized.style?.activeBackgroundColor ??
@@ -354,15 +372,33 @@ function TabsBehaviorSection({
         <div className="space-y-2">
           <p className="text-sm font-medium">Active text color</p>
           <Input
-            value={
-              normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor ?? ""
-            }
+            value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor ?? ""}
             onChange={(event) =>
               updateStyle(value, onChange, {
                 activeTextColor: event.target.value,
               })
             }
             placeholder="var(--color-background)"
+          />
+        </div>
+        <div className="space-y-2">
+          <ClearableFieldHeader
+            label="Panel background"
+            value={normalized.style?.panelBackgroundColor}
+            onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
+          />
+          <Input
+            value={
+              normalized.style?.panelBackgroundColor ??
+              tabsDefaults.style?.panelBackgroundColor ??
+              ""
+            }
+            onChange={(event) =>
+              updateStyle(value, onChange, {
+                panelBackgroundColor: event.target.value,
+              })
+            }
+            placeholder="var(--color-surface)"
           />
         </div>
       </div>

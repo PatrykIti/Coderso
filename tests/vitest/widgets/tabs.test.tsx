@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
 
 test("tabs renders defaults with runtime marker", () => {
-  const html = renderToString(
-    <TabsBlock data={tabsDefaults} variant="pills" />
-  );
+  const html = renderToString(<TabsBlock data={tabsDefaults} variant="pills" />);
 
   expect(html).toContain('data-nextless-tabs="1"');
   expect(html).toContain('data-nextless-tabs-variant="pills"');
@@ -81,6 +79,23 @@ test("tabs validator accepts schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("tabs cleared surfaces omit tab and panel background styles", () => {
+  const normalized = normalizeTabsData(
+    {
+      ...tabsDefaults,
+      style: {},
+    },
+    tabsDefaults.items?.length ?? 0
+  );
+  const html = renderToString(<TabsBlock data={normalized} variant="pills" />);
+
+  expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(normalized.style?.activeBackgroundColor).toBeUndefined();
+  expect(normalized.style?.panelBackgroundColor).toBeUndefined();
+  expect(html).toContain('data-nextless-tabs-variant="pills"');
+  expect(html).not.toContain("background-color:");
 });
 
 test("tabs visual editor renders structure sections", () => {

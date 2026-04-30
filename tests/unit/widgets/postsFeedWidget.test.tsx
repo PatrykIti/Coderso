@@ -124,6 +124,34 @@ test("posts feed preserves none gap token through content list mapping", () => {
   expect(renderToString(<PostsFeedBlock data={normalized} variant="cards" />)).toContain("gap-0");
 });
 
+test("posts feed cleared card background stays absent through content list mapping", () => {
+  const normalized = normalizePostsFeedData({
+    ...postsFeedDefaults,
+    style: {},
+    resolved: {
+      items: [
+        {
+          id: "post-1",
+          title: "Post one",
+          href: "/blog/post-one",
+          excerpt: "Post one excerpt",
+          status: "published",
+        },
+      ],
+      total: 1,
+      sourceMode: "latest",
+      resolvedAt: "2026-02-22T10:05:00.000Z",
+    },
+  });
+  const mapped = mapPostsFeedToContentListData(normalized);
+  const html = renderToString(<PostsFeedBlock data={normalized} variant="cards" />);
+
+  expect(normalized.style?.backgroundColor).toBeUndefined();
+  expect(mapped.style?.backgroundColor).toBeUndefined();
+  expect(html).toContain('data-content-list-state="ready"');
+  expect(html).not.toContain("background-color:");
+});
+
 test("posts feed resolver filters by preview visibility and route mapping", async () => {
   const resolved = await resolvePostsFeedRuntimeData(
     {

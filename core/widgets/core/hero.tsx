@@ -1,6 +1,7 @@
 import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type HeroCta = {
   label: string;
@@ -66,6 +67,7 @@ export type HeroData = {
       source?: "library" | "external";
       assetId?: string;
       src?: string;
+      overlay?: string;
     };
   };
   responsive?: {
@@ -176,6 +178,7 @@ export const heroSchema = {
             source: { enum: ["library", "external"] },
             assetId: { type: "string" },
             src: { type: "string" },
+            overlay: { type: "string" },
           },
         },
       },
@@ -325,6 +328,7 @@ export function HeroBlock({
     source: background.media?.source ?? "external",
     assetId: background.media?.assetId,
     src: background.media?.src ?? background.image,
+    overlay: background.media?.overlay,
   };
   const centeredImageBackground =
     variant === "centered" && media.type === "image" ? media.src : undefined;
@@ -334,12 +338,14 @@ export function HeroBlock({
     backgroundMedia.type === "image"
       ? (backgroundMedia.src ?? centeredImageBackground)
       : (background.image ?? centeredImageBackground);
-  const resolvedBackgroundGradient = background.gradient ?? "";
-  const centeredMediaOverlay =
-    variant === "centered" && media.type === "image" ? media.overlay : undefined;
+  const resolvedBackgroundGradient = resolveClearableStyleValue(background.gradient);
+  const resolvedBackgroundOverlay = resolveClearableStyleValue(
+    backgroundMedia.overlay ??
+      (variant === "centered" && media.type === "image" ? media.overlay : undefined)
+  );
   const layeredBackground =
     !resolvedBackgroundVideo && resolvedBackgroundImage
-      ? [centeredMediaOverlay, resolvedBackgroundGradient, `url(${resolvedBackgroundImage})`]
+      ? [resolvedBackgroundOverlay, resolvedBackgroundGradient, `url(${resolvedBackgroundImage})`]
           .filter(Boolean)
           .join(", ")
       : !resolvedBackgroundVideo
@@ -347,7 +353,7 @@ export function HeroBlock({
         : undefined;
 
   const backgroundStyle: CSSProperties = {
-    backgroundColor: background.color ?? "transparent",
+    backgroundColor: resolveClearableStyleValue(background.color),
     backgroundImage: layeredBackground,
     backgroundSize: resolvedBackgroundImage ? "cover" : undefined,
     backgroundPosition: resolvedBackgroundImage ? "center" : undefined,
@@ -355,6 +361,7 @@ export function HeroBlock({
     paddingBottom: spacingValueMap[paddingBottom],
   };
   const style = data.style ?? {};
+  const hasStyleObject = data.style !== undefined;
   const borderWidth = style.borderWidth ?? "1";
   const mediaBorderWidth = style.mediaBorderWidth ?? "1";
   const cardStyle: CSSProperties = {
@@ -376,25 +383,31 @@ export function HeroBlock({
   const headlineColor = style.textColor ?? "var(--color-text)";
   const subheadColor = style.subheadColor ?? "var(--color-text)";
   const bodyColor = style.bodyColor ?? "var(--color-text)";
-  const primaryButtonStyle: CSSProperties = {
-    background: style.primaryButtonBg ?? "var(--color-primary)",
-    color: style.primaryButtonText ?? "var(--color-bg)",
-    borderColor: style.primaryButtonBorder ?? "transparent",
-    borderStyle: "solid",
-    borderWidth:
-      style.primaryButtonBorder &&
-      style.primaryButtonBorder !== "transparent" &&
-      style.primaryButtonBorder !== ""
-        ? "1px"
-        : "0px",
-  };
-  const secondaryButtonStyle: CSSProperties = {
-    background: style.secondaryButtonBg ?? "transparent",
-    color: style.secondaryButtonText ?? "var(--color-text)",
-    borderColor: style.secondaryButtonBorder ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: "1px",
-  };
+  const primaryButtonStyle: CSSProperties =
+    compactStyle({
+      background: hasStyleObject
+        ? resolveClearableStyleValue(style.primaryButtonBg)
+        : "var(--color-primary)",
+      color: style.primaryButtonText ?? "var(--color-bg)",
+      borderColor: style.primaryButtonBorder ?? "transparent",
+      borderStyle: "solid",
+      borderWidth:
+        style.primaryButtonBorder &&
+        style.primaryButtonBorder !== "transparent" &&
+        style.primaryButtonBorder !== ""
+          ? "1px"
+          : "0px",
+    }) ?? {};
+  const secondaryButtonStyle: CSSProperties =
+    compactStyle({
+      background: hasStyleObject
+        ? resolveClearableStyleValue(style.secondaryButtonBg)
+        : "transparent",
+      color: style.secondaryButtonText ?? "var(--color-text)",
+      borderColor: style.secondaryButtonBorder ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: "1px",
+    }) ?? {};
 
   const isSplit = variant !== "centered";
   const isMediaLeft = variant === "media-left";
@@ -437,10 +450,11 @@ export function HeroBlock({
           style={{ background: resolvedBackgroundGradient }}
         />
       ) : null}
-      {resolvedBackgroundVideo && centeredMediaOverlay ? (
+      {resolvedBackgroundVideo && resolvedBackgroundOverlay ? (
         <div
+          data-hero-background-overlay="true"
           className="pointer-events-none absolute inset-0"
-          style={{ background: centeredMediaOverlay }}
+          style={{ background: resolvedBackgroundOverlay }}
         />
       ) : null}
       <div className={joinClasses("relative z-[1] mx-auto w-full", maxWidthClassMap[maxWidth])}>

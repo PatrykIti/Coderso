@@ -106,6 +106,18 @@ test("faq accordion validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("faq accordion cleared panel surface omits background style", () => {
+  const normalized = normalizeFaqAccordionData({
+    ...faqAccordionDefaults,
+    style: {},
+  });
+  const html = renderToString(<FaqAccordionBlock data={normalized} variant="single-column" />);
+
+  expect(normalized.style?.surface).toBeUndefined();
+  expect(html).toContain('data-faq-variant="single-column"');
+  expect(html).not.toContain("background-color:");
+});
+
 test("faq accordion validator rejects unsupported variant", () => {
   clearWidgets();
   registerWidget(

@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type FaqAccordionVariantId = "single-column" | "two-column" | "compact";
 export type FaqAccordionSpacing = "none" | "sm" | "md" | "lg";
@@ -242,6 +243,7 @@ export function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionD
     divider: "var(--color-border)",
     spacing: "md",
   };
+  const hasStyleObject = data.style !== undefined;
 
   const items = normalizeFaqAccordionItems(data.items);
   const defaultOpenIndex = resolveDefaultOpenIndex(data.options?.defaultOpenIndex, items.length);
@@ -264,7 +266,9 @@ export function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionD
           : resolveDefaultOpenIndex(optionsDefaults.defaultOpenIndex, items.length),
     },
     style: {
-      surface: resolveString(data.style?.surface, styleDefaults.surface ?? "var(--color-bg)"),
+      surface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surface)
+        : styleDefaults.surface,
       border: resolveString(data.style?.border, styleDefaults.border ?? "var(--color-border)"),
       divider: resolveString(data.style?.divider, styleDefaults.divider ?? "var(--color-border)"),
       spacing: resolveFaqAccordionSpacing(data.style?.spacing),
@@ -287,16 +291,13 @@ export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; v
     (normalizedData.header?.title ?? "").trim().length > 0 ||
     (normalizedData.header?.description ?? "").trim().length > 0;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: "transparent",
-  };
-
-  const panelStyle: CSSProperties = {
-    backgroundColor: style.surface ?? "var(--color-bg)",
-    borderColor: style.border ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: "1px",
-  };
+  const panelStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surface),
+      borderColor: style.border ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: "1px",
+    }) ?? {};
 
   const compact = resolvedVariant === "compact";
   const listClassName =
@@ -315,7 +316,6 @@ export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; v
   return (
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
-      style={sectionStyle}
       data-faq-variant={resolvedVariant}
       data-faq-spacing={spacing}
       data-faq-count={String(itemCount)}

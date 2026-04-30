@@ -35,6 +35,7 @@ import {
   type TimelineVariantId,
 } from "../../../../widgets/core/timeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{ id: TimelineVariantId; label: string; description: string }> = [
   {
@@ -157,18 +158,20 @@ function ColorField({
   label,
   value,
   onChange,
+  onClear,
   placeholder,
   pickerFallback = "#0f172a",
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onClear?: () => void;
   placeholder: string;
   pickerFallback?: string;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -304,6 +307,18 @@ function updateStyle(
   });
 }
 
+function clearStyle(
+  value: TimelineData,
+  onChange: (next: TimelineData) => void,
+  key: keyof TimelineStyle
+) {
+  const { [key]: _removed, ...nextStyle } = value.style ?? {};
+  onChange({
+    ...value,
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+}
+
 function updateBackground(
   value: TimelineData,
   onChange: (next: TimelineData) => void,
@@ -315,6 +330,14 @@ function updateBackground(
       ...value.background,
       color,
     },
+  });
+}
+
+function clearBackground(value: TimelineData, onChange: (next: TimelineData) => void) {
+  const { color: _removed, ...nextBackground } = value.background ?? {};
+  onChange({
+    ...value,
+    background: Object.keys(nextBackground).length > 0 ? nextBackground : {},
   });
 }
 
@@ -638,6 +661,7 @@ function TimelineColorFields({
         label="Line color"
         value={value.style?.lineColor}
         onChange={(next) => updateStyle(value, onChange, { lineColor: next })}
+        onClear={() => clearStyle(value, onChange, "lineColor")}
         placeholder="#e2e8f0"
         pickerFallback="#e2e8f0"
       />
@@ -645,6 +669,7 @@ function TimelineColorFields({
         label="Marker color"
         value={value.style?.markerColor}
         onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
+        onClear={() => clearStyle(value, onChange, "markerColor")}
         placeholder="#1d4ed8"
         pickerFallback="#1d4ed8"
       />
@@ -666,6 +691,7 @@ function TimelineColorFields({
         label="Background color"
         value={value.background?.color}
         onChange={(next) => updateBackground(value, onChange, next)}
+        onClear={() => clearBackground(value, onChange)}
         placeholder="transparent"
         pickerFallback="#ffffff"
       />

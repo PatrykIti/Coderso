@@ -714,7 +714,7 @@ test("RichTextSection advanced editor normalizes incomplete payloads, updates ou
     expect(latestValue.titleBlock?.title).toBe(richTextSectionDefaults.titleBlock?.title);
     expect(latestValue.body?.html).toBe(richTextSectionDefaults.body?.html);
     expect(latestValue.body?.blocks?.[1]?.id).toBe("block-2");
-    expect(latestValue.style?.background).toBe(richTextSectionDefaults.style?.background);
+    expect(latestValue.style?.background).toBeUndefined();
 
     clickByText(view.container, "Reset to defaults");
     expect(latestValue).toEqual(richTextSectionDefaults);

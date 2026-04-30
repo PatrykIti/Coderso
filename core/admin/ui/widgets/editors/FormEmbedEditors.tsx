@@ -19,6 +19,7 @@ import {
   type FormEmbedStyle,
 } from "../../../../widgets/core/formEmbed";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 import { useForms } from "@/ui/forms/hooks/useForms";
 
 const alignmentOptions = [
@@ -163,6 +164,20 @@ function updateStyle(
   }));
 }
 
+function clearStyleField(
+  value: FormEmbedData,
+  onChange: (next: FormEmbedData) => void,
+  key: keyof NonNullable<FormEmbedData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
+}
+
 function updateFields(
   value: FormEmbedData,
   onChange: (next: FormEmbedData) => void,
@@ -183,16 +198,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -497,6 +514,7 @@ function StyleSection({
         label="Background"
         value={normalized.style?.background}
         onChange={(background) => updateStyle(value, onChange, { background })}
+        onClear={() => clearStyleField(value, onChange, "background")}
         placeholder="transparent"
         pickerFallback="#ffffff"
       />
@@ -504,6 +522,7 @@ function StyleSection({
         label="Surface"
         value={normalized.style?.surface}
         onChange={(surface) => updateStyle(value, onChange, { surface })}
+        onClear={() => clearStyleField(value, onChange, "surface")}
         placeholder="var(--color-bg)"
         pickerFallback="#ffffff"
       />

@@ -22,17 +22,14 @@ import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
-const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
-  null;
+const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () => null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 type GridColumnsColumn = NonNullable<GridColumnsData["columns"]>[number];
 type GridColumnsLayout = NonNullable<GridColumnsData["layout"]>;
 type GridColumnsStyle = NonNullable<GridColumnsData["style"]>;
 
 test("grid columns renders defaults", () => {
-  const html = renderToString(
-    <GridColumnsBlock data={gridColumnsDefaults} variant="equal" />
-  );
+  const html = renderToString(<GridColumnsBlock data={gridColumnsDefaults} variant="equal" />);
 
   expect(html).toContain('data-grid-columns-variant="equal"');
   expect(html).toContain('data-grid-columns-count="2"');
@@ -118,6 +115,19 @@ test("grid columns validator accepts expanded model", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("grid columns cleared column surface omits background output", () => {
+  const normalized = normalizeGridColumnsData({
+    ...gridColumnsDefaults,
+    style: {},
+  });
+  const html = renderToString(<GridColumnsBlock data={normalized} variant="equal" />);
+
+  expect(normalized.style?.columnBackground).toBeUndefined();
+  expect(normalized.style?.columnBorderColor).toBeUndefined();
+  expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
 });
 
 test("grid columns validator rejects invalid variant", () => {

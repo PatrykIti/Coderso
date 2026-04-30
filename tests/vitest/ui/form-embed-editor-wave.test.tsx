@@ -566,7 +566,7 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
     expect(colorInputs[1]?.value).toBe("#ffffff");
     expect(colorInputs[2]?.value).toBe("#112233");
     expect(backgroundTextInput.value).toBe("not-a-color");
-    expect(surfaceTextInput.value).toBe("var(--color-bg)");
+    expect(surfaceTextInput.value).toBe("");
     expect(borderTextInput.value).toBe("#112233");
     expect(Array.from(styleSelects[1]!.options).map((option) => option.value)).toContain("none");
     expect(Array.from(styleSelects[2]!.options).map((option) => option.value)).toContain("none");

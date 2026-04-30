@@ -719,7 +719,7 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
           | null
           | undefined
       )?.value
-    ).toBe(contactDefaults.style?.background);
+    ).toBe("");
     expect(
       (
         findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as
@@ -727,7 +727,7 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
           | null
           | undefined
       )?.value
-    ).toBe(contactDefaults.style?.surfaceColor);
+    ).toBe("");
     expect(
       (findSelectByOptions(colorsSection, ["0", "1", "2", "3"]) as HTMLSelectElement | undefined)
         ?.value

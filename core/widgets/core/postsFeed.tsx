@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { resolveClearableStyleValue } from "./clearableStyle";
 import {
   ContentListBlock,
   contentListDefaults,
@@ -251,6 +252,7 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
     borderColor: "var(--color-border)",
     textColor: "var(--color-text)",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     source: {
@@ -295,14 +297,12 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
       gap: resolveContentListGap(data.style?.gap ?? styleDefaults.gap ?? "md"),
       cardStyle: data.style?.cardStyle ?? styleDefaults.cardStyle ?? "outlined",
       ctaLabel: resolveString(data.style?.ctaLabel, styleDefaults.ctaLabel ?? "Read more"),
-      backgroundColor: resolveString(
-        data.style?.backgroundColor,
-        styleDefaults.backgroundColor ?? "var(--color-bg)"
-      ),
-      borderColor: resolveString(
-        data.style?.borderColor,
-        styleDefaults.borderColor ?? "var(--color-border)"
-      ),
+      backgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.backgroundColor)
+        : styleDefaults.backgroundColor,
+      borderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.borderColor)
+        : styleDefaults.borderColor,
       textColor: resolveString(
         data.style?.textColor,
         styleDefaults.textColor ?? "var(--color-text)"
@@ -367,9 +367,8 @@ export function mapPostsFeedToContentListData(data: PostsFeedData): ContentListD
       gap: normalized.style?.gap ?? contentListDefaults.style?.gap,
       cardStyle: normalized.style?.cardStyle ?? contentListDefaults.style?.cardStyle,
       ctaLabel: normalized.style?.ctaLabel ?? contentListDefaults.style?.ctaLabel,
-      backgroundColor:
-        normalized.style?.backgroundColor ?? contentListDefaults.style?.backgroundColor,
-      borderColor: normalized.style?.borderColor ?? contentListDefaults.style?.borderColor,
+      backgroundColor: normalized.style?.backgroundColor,
+      borderColor: normalized.style?.borderColor,
       textColor: normalized.style?.textColor ?? contentListDefaults.style?.textColor,
     },
     resolved: {

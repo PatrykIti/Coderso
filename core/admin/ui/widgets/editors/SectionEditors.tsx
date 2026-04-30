@@ -23,6 +23,7 @@ import {
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: SectionVariantId;
@@ -150,16 +151,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -229,6 +232,20 @@ function updateStyle(
   }));
 }
 
+function clearStyleField(
+  value: SectionData,
+  onChange: (next: SectionData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
+}
+
 function DiagnosticsSnapshot({ value }: { value: SectionData }) {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -279,9 +296,7 @@ export function SectionWizardEditor({
         <p className="text-sm font-medium">Description</p>
         <Textarea
           value={normalized.heading?.description ?? ""}
-          onChange={(event) =>
-            updateHeading(value, onChange, { description: event.target.value })
-          }
+          onChange={(event) => updateHeading(value, onChange, { description: event.target.value })}
           placeholder="Short context for the section"
         />
       </div>
@@ -290,6 +305,7 @@ export function SectionWizardEditor({
         label="Background color"
         value={normalized.style?.backgroundColor}
         onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+        onClear={() => clearStyleField(value, onChange, "backgroundColor")}
         placeholder="transparent"
         pickerFallback="#ffffff"
       />
@@ -381,9 +397,7 @@ export function SectionVisualEditor({
           <p className="text-sm font-medium">Anchor ID</p>
           <Input
             value={normalized.semantics?.anchorId ?? ""}
-            onChange={(event) =>
-              updateSemantics(value, onChange, { anchorId: event.target.value })
-            }
+            onChange={(event) => updateSemantics(value, onChange, { anchorId: event.target.value })}
             placeholder="pricing-section"
           />
         </div>
@@ -408,6 +422,7 @@ export function SectionVisualEditor({
           label="Background color"
           value={normalized.style?.backgroundColor}
           onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+          onClear={() => clearStyleField(value, onChange, "backgroundColor")}
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
@@ -531,10 +546,7 @@ export function SectionVisualEditor({
   );
 }
 
-export function SectionAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<SectionData>) {
+export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
 
   return (

@@ -37,6 +37,13 @@ Marketing grid for feature cards with optional highlighted first item.
 - `style.gap`: `none` renders zero card gap.
 - `style.radius`: `none` removes forced card rounding.
 
+## Clear Controls
+
+- `style.surfaceColor` is clearable; clear removes the card background field and
+  the renderer omits forced card background output.
+- `style.borderColor` remains the border color field; it is not the clear
+  sentinel for surface removal.
+
 ## Data Model (summary)
 
 ```json
@@ -51,8 +58,8 @@ Marketing grid for feature cards with optional highlighted first item.
     "gap": "md",
     "radius": "lg",
     "borderWidth": "1",
-    "surface": "var(--color-bg)",
-    "border": "var(--color-border)"
+    "surfaceColor": "var(--color-bg)",
+    "borderColor": "var(--color-border)"
   }
 }
 ```

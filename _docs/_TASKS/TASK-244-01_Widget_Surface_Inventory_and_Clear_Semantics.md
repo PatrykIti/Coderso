@@ -6,7 +6,7 @@
 **Category:** Widgets + Inventory + UX Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 
@@ -25,8 +25,8 @@ This subtask owns the rule boundary:
 
 ## Sub-Tasks
 
-- [ ] TASK-244-01-01: Widget Surface Background Inventory
-- [ ] TASK-244-01-02: Clear Semantics and Backward Compatibility
+- [x] TASK-244-01-01: Widget Surface Background Inventory
+- [x] TASK-244-01-02: Clear Semantics and Backward Compatibility
 
 ## Files to Change
 

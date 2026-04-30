@@ -27,6 +27,7 @@ import {
   type StatsKpiVariantId,
 } from "../../../../widgets/core/statsKpi";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: StatsKpiVariantId;
@@ -202,6 +203,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyle(
+  value: StatsKpiData,
+  onChange: (next: StatsKpiData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function updateItem(
@@ -529,6 +544,20 @@ export function StatsKpiVisualEditor({
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
+        <ClearableInputField
+          label="Card background"
+          value={normalized.style?.cardBackground}
+          onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
+          onClear={() => clearStyle(value, onChange, "cardBackground")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableInputField
+          label="Card border"
+          value={normalized.style?.cardBorderColor}
+          onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
+          onClear={() => clearStyle(value, onChange, "cardBorderColor")}
+          placeholder="var(--color-border)"
+        />
       </EditorSection>
 
       <EditorSection
@@ -659,6 +688,20 @@ export function StatsKpiAdvancedEditor({ value, onChange }: WidgetEditorProps<St
             placeholder="var(--color-text)"
           />
         </div>
+        <ClearableInputField
+          label="Card background token"
+          value={normalized.style?.cardBackground}
+          onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
+          onClear={() => clearStyle(value, onChange, "cardBackground")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableInputField
+          label="Card border token"
+          value={normalized.style?.cardBorderColor}
+          onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
+          onClear={() => clearStyle(value, onChange, "cardBorderColor")}
+          placeholder="var(--color-border)"
+        />
       </EditorSection>
 
       <EditorSection

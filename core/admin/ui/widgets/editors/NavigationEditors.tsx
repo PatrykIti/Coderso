@@ -25,6 +25,7 @@ import { resolveMenuItemSettings } from "../../../../services/menus/menuItemSett
 
 import { navigationDefaults, type NavigationData } from "../../../../widgets/core/navigation";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 type NavigationLayout = NonNullable<NavigationData["layout"]>;
 type NavigationBehavior = NonNullable<NavigationData["behavior"]>;
@@ -160,16 +161,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback = "#111827",
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback?: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -664,6 +667,10 @@ export function NavigationVisualEditor({
         ...patch,
       },
     });
+  const clearStyleField = (key: keyof NavigationStyle) => {
+    const { [key]: _removed, ...nextStyle } = value.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
 
   const updateBehavior = (patch: Partial<NavigationBehavior>) =>
     update({
@@ -1050,6 +1057,7 @@ export function NavigationVisualEditor({
           label="Surface color"
           value={style.surfaceColor}
           onChange={(next) => updateStyle({ surfaceColor: next })}
+          onClear={() => clearStyleField("surfaceColor")}
           placeholder="#ffffff"
           pickerFallback="#ffffff"
         />
@@ -1085,6 +1093,7 @@ export function NavigationVisualEditor({
           label="CTA background"
           value={style.ctaBackgroundColor}
           onChange={(next) => updateStyle({ ctaBackgroundColor: next })}
+          onClear={() => clearStyleField("ctaBackgroundColor")}
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
         />

@@ -118,6 +118,18 @@ test("rich text section validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("rich text section cleared background omits background style", () => {
+  const normalized = normalizeRichTextSectionData({
+    ...richTextSectionDefaults,
+    style: {},
+  });
+  const html = renderToString(<RichTextSectionBlock data={normalized} variant="single-column" />);
+
+  expect(normalized.style?.background).toBeUndefined();
+  expect(html).toContain('data-rich-text-variant="single-column"');
+  expect(html).not.toContain("background-color:transparent");
+});
+
 test("rich text section validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

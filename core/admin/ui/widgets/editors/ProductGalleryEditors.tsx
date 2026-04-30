@@ -12,6 +12,7 @@ import {
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
+import { ClearableInputField } from "./ClearableFields";
 
 const update = (
   value: ProductGalleryData,
@@ -25,6 +26,74 @@ const update = (
     })
   );
 };
+
+const updateStyle = (
+  value: ProductGalleryData,
+  onChange: (next: ProductGalleryData) => void,
+  patch: Partial<NonNullable<ProductGalleryData["style"]>>
+) => {
+  update(value, onChange, {
+    style: {
+      ...normalizeProductGalleryData(value).style,
+      ...patch,
+    },
+  });
+};
+
+const clearStyle = (
+  value: ProductGalleryData,
+  onChange: (next: ProductGalleryData) => void,
+  key: keyof NonNullable<ProductGalleryData["style"]>
+) => {
+  const current = normalizeProductGalleryData(value);
+  const { [key]: _removed, ...nextStyle } = current.style ?? {};
+  update(value, onChange, {
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+};
+
+function SurfaceFields({
+  value,
+  onChange,
+}: {
+  value: ProductGalleryData;
+  onChange: (next: ProductGalleryData) => void;
+}) {
+  const normalized = normalizeProductGalleryData(value);
+
+  return (
+    <CommerceEditorSection title="Surfaces" description="Card and empty state styling.">
+      <ClearableInputField
+        label="Card background"
+        value={normalized.style?.cardBackground}
+        onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
+        onClear={() => clearStyle(value, onChange, "cardBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Card border"
+        value={normalized.style?.cardBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "cardBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Empty background"
+        value={normalized.style?.emptyBackground}
+        onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
+        onClear={() => clearStyle(value, onChange, "emptyBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Empty border"
+        value={normalized.style?.emptyBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
+        placeholder="var(--color-border)"
+      />
+    </CommerceEditorSection>
+  );
+}
 
 export function ProductGalleryWizardEditor({
   value,
@@ -87,8 +156,7 @@ export function ProductGalleryWizardEditor({
               update(normalized, onChange, {
                 style: {
                   ...normalized.style,
-                  cardStyle:
-                    event.target.value === "minimal" ? "minimal" : "outlined",
+                  cardStyle: event.target.value === "minimal" ? "minimal" : "outlined",
                 },
               })
             }
@@ -98,6 +166,7 @@ export function ProductGalleryWizardEditor({
           </select>
         </label>
       </CommerceEditorSection>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -165,7 +234,10 @@ export function ProductGalleryVisualEditor({
         />
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Empty state" description="Shown when query returns no products.">
+      <CommerceEditorSection
+        title="Empty state"
+        description="Shown when query returns no products."
+      >
         <CommerceTextField
           label="Title"
           value={normalized.emptyState?.title}
@@ -191,6 +263,7 @@ export function ProductGalleryVisualEditor({
           }
         />
       </CommerceEditorSection>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -209,7 +282,8 @@ export function ProductGalleryAdvancedEditor({
         description="Data is injected by runtime resolver before render."
       >
         <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Resolved items: {normalized.resolved?.items?.length ?? 0} · Total: {normalized.resolved?.total ?? 0}
+          Resolved items: {normalized.resolved?.items?.length ?? 0} · Total:{" "}
+          {normalized.resolved?.total ?? 0}
         </div>
         <CommerceTextField
           label="Runtime error flag"

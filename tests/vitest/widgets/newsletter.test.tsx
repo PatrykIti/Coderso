@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 
 test("newsletter renders defaults", () => {
-  const html = renderToString(
-    <NewsletterBlock data={newsletterDefaults} variant="inline" />
-  );
+  const html = renderToString(<NewsletterBlock data={newsletterDefaults} variant="inline" />);
 
   expect(html).toContain(newsletterDefaults.title ?? "");
   expect(html).toContain('data-newsletter-variant="inline"');
@@ -32,9 +30,7 @@ test("newsletter renders defaults", () => {
 });
 
 test("newsletter minimal variant hides description", () => {
-  const html = renderToString(
-    <NewsletterBlock data={newsletterDefaults} variant="minimal" />
-  );
+  const html = renderToString(<NewsletterBlock data={newsletterDefaults} variant="minimal" />);
 
   expect(html).toContain('data-newsletter-variant="minimal"');
   expect(html).not.toContain(newsletterDefaults.description ?? "");
@@ -93,6 +89,18 @@ test("newsletter validator accepts expanded fields", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("newsletter cleared background omits background style", () => {
+  const normalized = normalizeNewsletterData({
+    ...newsletterDefaults,
+    style: {},
+  });
+  const html = renderToString(<NewsletterBlock data={normalized} variant="inline" />);
+
+  expect(normalized.style?.background).toBeUndefined();
+  expect(html).toContain('data-newsletter-variant="inline"');
+  expect(html).not.toContain("background-color:transparent");
 });
 
 test("newsletter validator rejects invalid variant", () => {

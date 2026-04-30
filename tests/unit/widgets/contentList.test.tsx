@@ -163,6 +163,40 @@ test("content list preserves none gap token", () => {
   expect(renderToString(<ContentListBlock data={normalized} variant="cards" />)).toContain("gap-0");
 });
 
+test("content list cleared card background omits runtime background style", () => {
+  const normalized = normalizeContentListData({
+    ...contentListDefaults,
+    source: {
+      contentTypeId: "blog-type-id",
+      statusScope: "published",
+      limit: 3,
+      sort: "published-desc",
+    },
+    style: {},
+    resolved: {
+      items: [
+        {
+          id: "entry-1",
+          title: "Release notes",
+          href: "/blog/release-notes",
+          excerpt: "Latest platform updates.",
+          publishedAt: "2026-02-08T09:00:00.000Z",
+          status: "published",
+        },
+      ],
+      total: 1,
+      sourceTypeId: "blog-type-id",
+      sourceTypeSlug: "blog",
+      resolvedAt: "2026-02-08T09:10:00.000Z",
+    },
+  });
+  const html = renderToString(<ContentListBlock data={normalized} variant="cards" />);
+
+  expect(normalized.style?.backgroundColor).toBeUndefined();
+  expect(html).toContain('data-content-list-state="ready"');
+  expect(html).not.toContain("background-color:");
+});
+
 test("content list normalizes limit and model defaults", () => {
   expect(normalizeContentListLimit(999)).toBe(24);
   expect(normalizeContentListLimit(0)).toBe(1);

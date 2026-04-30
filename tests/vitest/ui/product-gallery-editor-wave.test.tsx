@@ -22,13 +22,7 @@ vi.mock("@/components/ui/input", () => ({
     placeholder?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder}
-      {...props}
-    />
+    <input value={value} onChange={onChange} type={type} placeholder={placeholder} {...props} />
   ),
 }));
 
@@ -63,13 +57,9 @@ vi.mock("@/components/ui/select", () => ({
   SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({
-    value,
-    children,
-  }: {
-    value: string;
-    children?: React.ReactNode;
-  }) => <option value={value}>{children}</option>,
+  SelectItem: ({ value, children }: { value: string; children?: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
 }));
 
 vi.mock("@/services/commerceClient", () => ({
@@ -101,10 +91,7 @@ const normalizeText = (value: string | null | undefined) =>
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -114,10 +101,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -158,11 +142,8 @@ afterEach(() => {
 });
 
 test("ProductGallery editors cover source, card fields, empty state, and runtime preview", async () => {
-  const {
-    ProductGalleryAdvancedEditor,
-    ProductGalleryVisualEditor,
-    ProductGalleryWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+  const { ProductGalleryAdvancedEditor, ProductGalleryVisualEditor, ProductGalleryWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: ProductGalleryData = {
@@ -252,7 +233,10 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
     toggleCheckbox(findInputByLabel(view.container, "Show stock badge"));
     toggleCheckbox(findInputByLabel(view.container, "Show media hint"));
 
-    const emptyStateSection = findSectionByTitle(view.container, "Shown when query returns no products.");
+    const emptyStateSection = findSectionByTitle(
+      view.container,
+      "Shown when query returns no products."
+    );
     setInputValue(findInputByLabel(emptyStateSection ?? view.container, "Title"), "Nothing found");
     const emptyStateInputs = Array.from(
       (emptyStateSection ?? view.container).querySelectorAll("input")
@@ -269,10 +253,16 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
       sortField: "pricing.amount",
       sortDir: "asc",
     });
-    expect(latestValue.style).toEqual({
-      columns: "4",
-      cardStyle: "minimal",
-    });
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        columns: "4",
+        cardStyle: "minimal",
+        cardBackground: "var(--color-bg)",
+        cardBorderColor: "var(--color-border)",
+        emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
+        emptyBorderColor: "var(--color-border)",
+      })
+    );
     expect(latestValue.fields).toEqual({
       showExcerpt: false,
       showPrice: false,
@@ -307,9 +297,8 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
 });
 
 test("ProductGallery visual editor updates the empty-state description in isolation", async () => {
-  const { ProductGalleryVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ProductGalleryEditors"
-  );
+  const { ProductGalleryVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
   let latestValue: ProductGalleryData = {};
 
@@ -331,7 +320,10 @@ test("ProductGallery visual editor updates the empty-state description in isolat
   const view = mount(<Harness />);
 
   try {
-    const emptyStateSection = findSectionByTitle(view.container, "Shown when query returns no products.");
+    const emptyStateSection = findSectionByTitle(
+      view.container,
+      "Shown when query returns no products."
+    );
     const emptyStateInputs = Array.from(
       (emptyStateSection ?? view.container).querySelectorAll("input")
     );
@@ -349,10 +341,8 @@ test("ProductGallery visual editor updates the empty-state description in isolat
 });
 
 test("ProductGallery editors fall back to default layout values and empty runtime totals", async () => {
-  const {
-    ProductGalleryAdvancedEditor,
-    ProductGalleryWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+  const { ProductGalleryAdvancedEditor, ProductGalleryWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
   let latestValue: ProductGalleryData = {
     style: {

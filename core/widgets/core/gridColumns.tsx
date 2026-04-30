@@ -3,6 +3,7 @@ import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export const gridColumnsSpanTokens = [
   "1",
@@ -325,6 +326,7 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
   );
   const normalized: GridColumnsColumn[] = [];
   const usedIds = new Set<string>();
+  const hasStyleObject = data.style !== undefined;
 
   for (let index = 0; index < targetCount; index += 1) {
     const base = source[index] ?? {};
@@ -349,8 +351,12 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
     style: {
       cardizeColumns:
         typeof data.style?.cardizeColumns === "boolean" ? data.style.cardizeColumns : false,
-      columnBackground: data.style?.columnBackground ?? "var(--color-surface)",
-      columnBorderColor: data.style?.columnBorderColor ?? "var(--color-border)",
+      columnBackground: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.columnBackground)
+        : "var(--color-surface)",
+      columnBorderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.columnBorderColor)
+        : "var(--color-border)",
       columnBorderWidth: resolveBorderWidthToken(data.style?.columnBorderWidth),
       columnRadius: resolveRadiusToken(data.style?.columnRadius),
       columnPadding: resolvePaddingToken(data.style?.columnPadding),
@@ -435,12 +441,12 @@ export function GridColumnsBlock({
   const cardized = style.cardizeColumns || resolvedVariant === "masonry-lite";
 
   const columnStyle: CSSProperties | undefined = cardized
-    ? {
-        backgroundColor: style.columnBackground ?? "var(--color-surface)",
-        borderColor: style.columnBorderColor ?? "var(--color-border)",
+    ? compactStyle({
+        backgroundColor: resolveClearableStyleValue(style.columnBackground),
+        borderColor: resolveClearableStyleValue(style.columnBorderColor),
         borderStyle: "solid",
         borderWidth: borderWidthValueMap[style.columnBorderWidth ?? "1"] ?? "1px",
-      }
+      })
     : undefined;
 
   return (

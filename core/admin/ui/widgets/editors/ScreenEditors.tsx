@@ -35,6 +35,7 @@ import {
   type ScreenTwoColumnVariantId,
 } from "../../../../widgets/core/screenTwoColumn";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 function EditorSection({
   title,
@@ -94,6 +95,31 @@ function VariantCards<T extends string>({
   );
 }
 
+function ClearableStyleInput({
+  label,
+  value,
+  onChange,
+  onClear,
+  placeholder,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  onClear: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
+      <Input
+        value={value ?? ""}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
+
 const screenHeaderVariantOptions: Array<{
   id: ScreenRecordHeaderVariantId;
   label: string;
@@ -127,6 +153,12 @@ function ScreenRecordHeaderEditor({
 
   const update = (patch: Partial<ScreenRecordHeaderData>) =>
     onChange(normalizeScreenRecordHeaderData({ ...normalized, ...patch }));
+  const updateStyle = (patch: Partial<NonNullable<ScreenRecordHeaderData["style"]>>) =>
+    update({ style: { ...normalized.style, ...patch } });
+  const clearStyle = (key: keyof NonNullable<ScreenRecordHeaderData["style"]>) => {
+    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
 
   return (
     <div className="space-y-3">
@@ -182,6 +214,43 @@ function ScreenRecordHeaderEditor({
           </SelectContent>
         </Select>
       </EditorSection>
+      <EditorSection title="Surface">
+        <ClearableStyleInput
+          label="Frame background"
+          value={normalized.style?.frameBackground}
+          onChange={(next) => updateStyle({ frameBackground: next })}
+          onClear={() => clearStyle("frameBackground")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableStyleInput
+          label="Frame gradient"
+          value={normalized.style?.frameGradient}
+          onChange={(next) => updateStyle({ frameGradient: next })}
+          onClear={() => clearStyle("frameGradient")}
+          placeholder="linear-gradient(...)"
+        />
+        <ClearableStyleInput
+          label="Frame border"
+          value={normalized.style?.frameBorderColor}
+          onChange={(next) => updateStyle({ frameBorderColor: next })}
+          onClear={() => clearStyle("frameBorderColor")}
+          placeholder="var(--color-border)"
+        />
+        <ClearableStyleInput
+          label="Badge background"
+          value={normalized.style?.badgeBackground}
+          onChange={(next) => updateStyle({ badgeBackground: next })}
+          onClear={() => clearStyle("badgeBackground")}
+          placeholder="var(--color-muted)"
+        />
+        <ClearableStyleInput
+          label="Badge border"
+          value={normalized.style?.badgeBorderColor}
+          onChange={(next) => updateStyle({ badgeBorderColor: next })}
+          onClear={() => clearStyle("badgeBorderColor")}
+          placeholder="var(--color-border)"
+        />
+      </EditorSection>
     </div>
   );
 }
@@ -220,6 +289,12 @@ function ScreenFieldValueEditor({
 
   const update = (patch: Partial<ScreenFieldValueData>) =>
     onChange(normalizeScreenFieldValueData({ ...normalized, ...patch }));
+  const updateStyle = (patch: Partial<NonNullable<ScreenFieldValueData["style"]>>) =>
+    update({ style: { ...normalized.style, ...patch } });
+  const clearStyle = (key: keyof NonNullable<ScreenFieldValueData["style"]>) => {
+    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
 
   return (
     <div className="space-y-3">
@@ -265,6 +340,22 @@ function ScreenFieldValueEditor({
           </SelectContent>
         </Select>
       </EditorSection>
+      <EditorSection title="Surface">
+        <ClearableStyleInput
+          label="Frame background"
+          value={normalized.style?.frameBackground}
+          onChange={(next) => updateStyle({ frameBackground: next })}
+          onClear={() => clearStyle("frameBackground")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableStyleInput
+          label="Frame border"
+          value={normalized.style?.frameBorderColor}
+          onChange={(next) => updateStyle({ frameBorderColor: next })}
+          onClear={() => clearStyle("frameBorderColor")}
+          placeholder="var(--color-border)"
+        />
+      </EditorSection>
     </div>
   );
 }
@@ -292,6 +383,12 @@ function ScreenFieldGroupEditor({
 
   const update = (patch: Partial<ScreenFieldGroupData>) =>
     onChange(normalizeScreenFieldGroupData({ ...normalized, ...patch }));
+  const updateStyle = (patch: Partial<NonNullable<ScreenFieldGroupData["style"]>>) =>
+    update({ style: { ...normalized.style, ...patch } });
+  const clearStyle = (key: keyof NonNullable<ScreenFieldGroupData["style"]>) => {
+    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
 
   return (
     <div className="space-y-3">
@@ -313,6 +410,22 @@ function ScreenFieldGroupEditor({
           value={normalized.description ?? ""}
           onChange={(event) => update({ description: event.target.value })}
           placeholder="Group description"
+        />
+      </EditorSection>
+      <EditorSection title="Surface">
+        <ClearableStyleInput
+          label="Frame background"
+          value={normalized.style?.frameBackground}
+          onChange={(next) => updateStyle({ frameBackground: next })}
+          onClear={() => clearStyle("frameBackground")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableStyleInput
+          label="Frame border"
+          value={normalized.style?.frameBorderColor}
+          onChange={(next) => updateStyle({ frameBorderColor: next })}
+          onClear={() => clearStyle("frameBorderColor")}
+          placeholder="var(--color-border)"
         />
       </EditorSection>
     </div>
@@ -354,6 +467,12 @@ function ScreenTwoColumnEditor({
 
   const update = (patch: Partial<ScreenTwoColumnData>) =>
     onChange(normalizeScreenTwoColumnData({ ...normalized, ...patch }));
+  const updateStyle = (patch: Partial<NonNullable<ScreenTwoColumnData["style"]>>) =>
+    update({ style: { ...normalized.style, ...patch } });
+  const clearStyle = (key: keyof NonNullable<ScreenTwoColumnData["style"]>) => {
+    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
 
   return (
     <div className="space-y-3">
@@ -390,6 +509,22 @@ function ScreenTwoColumnEditor({
             ))}
           </SelectContent>
         </Select>
+      </EditorSection>
+      <EditorSection title="Column Surface">
+        <ClearableStyleInput
+          label="Column background"
+          value={normalized.style?.columnBackground}
+          onChange={(next) => updateStyle({ columnBackground: next })}
+          onClear={() => clearStyle("columnBackground")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableStyleInput
+          label="Column border"
+          value={normalized.style?.columnBorderColor}
+          onChange={(next) => updateStyle({ columnBorderColor: next })}
+          onClear={() => clearStyle("columnBorderColor")}
+          placeholder="var(--color-border)"
+        />
       </EditorSection>
     </div>
   );

@@ -6,7 +6,7 @@
 **Category:** Widgets + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-244-02-01, TASK-244-02-02, TASK-244-02-03, TASK-244-03-01, TASK-244-03-02, TASK-244-04-01, TASK-244-04-02
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 
@@ -20,7 +20,7 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 
 ## Sub-Tasks
 
-- [ ] TASK-244-05-01: Widget Surface Clear Test Matrix and Docs Closure
+- [x] TASK-244-05-01: Widget Surface Clear Test Matrix and Docs Closure
 
 ## Files to Change
 

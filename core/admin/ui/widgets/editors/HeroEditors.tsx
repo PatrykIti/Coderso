@@ -32,6 +32,7 @@ import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import type { HeroData } from "../../../../widgets/core/hero";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 type HeroVariantId = "centered" | "split" | "media-left";
 
@@ -120,6 +121,8 @@ type HeroBodySize = NonNullable<HeroStyle["bodySize"]>;
 type HeroButtonSize = NonNullable<HeroStyle["primaryButtonSize"]>;
 type HeroBorderWidth = NonNullable<HeroStyle["borderWidth"]>;
 type HeroRadius = NonNullable<HeroStyle["borderRadius"]>;
+type HeroBackground = NonNullable<HeroData["background"]>;
+type HeroBackgroundMedia = NonNullable<HeroBackground["media"]>;
 
 const isValidHref = (value: string | undefined) =>
   !value || value.startsWith("/") || value.startsWith("http");
@@ -152,7 +155,7 @@ function HeroMediaSourceFields({
   mediaType,
   onChange,
 }: {
-  media: NonNullable<HeroData["media"]>;
+  media: Partial<NonNullable<HeroData["media"]>>;
   mediaType: HeroMediaType;
   onChange: (patch: Partial<NonNullable<HeroData["media"]>>) => void;
 }) {
@@ -501,9 +504,7 @@ const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
 
-const resolveBackgroundMedia = (
-  background: HeroData["background"]
-): NonNullable<HeroData["media"]> => {
+const resolveBackgroundMedia = (background: HeroData["background"]): HeroBackgroundMedia => {
   const media = background?.media;
   const legacyImage = background?.image;
   return {
@@ -511,6 +512,7 @@ const resolveBackgroundMedia = (
     source: media?.source ?? "external",
     assetId: media?.assetId,
     src: media?.src ?? legacyImage,
+    overlay: media?.overlay,
   };
 };
 
@@ -542,16 +544,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback = "#111827",
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback?: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -573,10 +577,12 @@ function GradientField({
   label,
   value,
   onChange,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onClear?: () => void;
 }) {
   const parsed = value?.match(linearGradientPattern);
   const angle =
@@ -590,7 +596,7 @@ function GradientField({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div
         className="h-10 rounded-md border border-border/70"
         style={{ backgroundImage: `linear-gradient(${angle}deg, ${start}, ${end})` }}
@@ -675,6 +681,37 @@ export function HeroVisualEditor({
         ...patch,
       },
     });
+  const clearBackgroundField = (key: keyof HeroBackground) => {
+    const { [key]: _removed, ...nextBackground } = value.background ?? {};
+    update({ background: Object.keys(nextBackground).length > 0 ? nextBackground : {} });
+  };
+  const clearStyleField = (key: keyof HeroStyle) => {
+    const { [key]: _removed, ...nextStyle } = value.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
+  const clearMediaField = (key: keyof NonNullable<HeroData["media"]>) => {
+    const currentMedia = {
+      type: value.media?.type ?? "none",
+      source: value.media?.source ?? "external",
+      ...value.media,
+    };
+    const nextMedia: Partial<NonNullable<HeroData["media"]>> = { ...currentMedia };
+    delete nextMedia[key];
+    update({
+      media:
+        key === "type"
+          ? { type: "none", source: "external" }
+          : {
+              type: nextMedia.type ?? "none",
+              source: nextMedia.source ?? "external",
+              assetId: nextMedia.assetId,
+              src: nextMedia.src,
+              alt: nextMedia.alt,
+              ratio: nextMedia.ratio,
+              overlay: nextMedia.overlay,
+            },
+    });
+  };
   const updatePrimary = (patch: Partial<HeroData["primaryCta"]>) =>
     update({
       primaryCta: {
@@ -702,23 +739,36 @@ export function HeroVisualEditor({
         ...patch,
       },
     });
-  const updateBackgroundMedia = (patch: Partial<HeroData["media"]>) => {
+  const updateBackgroundMedia = (
+    patch: Partial<NonNullable<HeroData["media"]> & HeroBackgroundMedia>
+  ) => {
     const next = {
       ...backgroundMedia,
       ...patch,
     };
+    const nextType = next.type ?? "none";
     const normalized =
-      next.type === "none"
+      nextType === "none"
         ? { type: "none" as const, source: next.source ?? "external" }
         : {
-            type: next.type,
+            type: nextType,
             source: next.source ?? "external",
             assetId: next.assetId,
             src: next.src,
+            overlay: next.overlay,
           };
     updateBackground({
       media: normalized,
       image: normalized.type === "image" ? normalized.src : undefined,
+    });
+  };
+  const clearBackgroundMediaField = (key: keyof HeroBackgroundMedia) => {
+    const nextBackground = value.background ?? {};
+    const nextMedia = { ...(nextBackground.media ?? backgroundMedia) };
+    delete nextMedia[key];
+    updateBackground({
+      media: Object.keys(nextMedia).length > 0 ? nextMedia : { type: "none" },
+      image: key === "src" ? undefined : nextBackground.image,
     });
   };
 
@@ -1094,7 +1144,11 @@ export function HeroVisualEditor({
                 </Select>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium">Media overlay</p>
+                <ClearableFieldHeader
+                  label="Media overlay"
+                  value={media.overlay}
+                  onClear={() => clearMediaField("overlay")}
+                />
                 <Input
                   value={media.overlay ?? ""}
                   onChange={(event) => updateMedia({ overlay: event.target.value })}
@@ -1216,6 +1270,7 @@ export function HeroVisualEditor({
             label="Primary button background"
             value={style.primaryButtonBg}
             onChange={(next) => updateStyle({ primaryButtonBg: next })}
+            onClear={() => clearStyleField("primaryButtonBg")}
             placeholder="var(--color-primary)"
           />
           <ColorField
@@ -1234,6 +1289,7 @@ export function HeroVisualEditor({
             label="Secondary button background"
             value={style.secondaryButtonBg}
             onChange={(next) => updateStyle({ secondaryButtonBg: next })}
+            onClear={() => clearStyleField("secondaryButtonBg")}
             placeholder="transparent"
           />
           <ColorField
@@ -1339,6 +1395,7 @@ export function HeroVisualEditor({
           label="Background color"
           value={value.background?.color}
           onChange={(next) => updateBackground({ color: next })}
+          onClear={() => clearBackgroundField("color")}
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
@@ -1346,6 +1403,7 @@ export function HeroVisualEditor({
           label="Background gradient"
           value={value.background?.gradient}
           onChange={(next) => updateBackground({ gradient: next })}
+          onClear={() => clearBackgroundField("gradient")}
         />
         <div className="space-y-2">
           <p className="text-sm font-medium">Background media type</p>
@@ -1366,11 +1424,25 @@ export function HeroVisualEditor({
           </Select>
         </div>
         {backgroundMediaType !== "none" ? (
-          <HeroMediaSourceFields
-            media={backgroundMedia}
-            mediaType={backgroundMediaType}
-            onChange={updateBackgroundMedia}
-          />
+          <>
+            <HeroMediaSourceFields
+              media={backgroundMedia}
+              mediaType={backgroundMediaType}
+              onChange={updateBackgroundMedia}
+            />
+            <div className="space-y-2">
+              <ClearableFieldHeader
+                label="Background media overlay"
+                value={backgroundMedia.overlay}
+                onClear={() => clearBackgroundMediaField("overlay")}
+              />
+              <Input
+                value={backgroundMedia.overlay ?? ""}
+                onChange={(event) => updateBackgroundMedia({ overlay: event.target.value })}
+                placeholder="rgba(0,0,0,0.25)"
+              />
+            </div>
+          </>
         ) : null}
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
@@ -1429,23 +1501,40 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
     update({ background: { ...value.background, ...patch } });
   const backgroundMedia = resolveBackgroundMedia(value.background);
   const backgroundMediaType: HeroMediaType = backgroundMedia.type ?? "none";
-  const updateBackgroundMedia = (patch: Partial<HeroData["media"]>) => {
+  const clearBackgroundField = (key: keyof HeroBackground) => {
+    const { [key]: _removed, ...nextBackground } = value.background ?? {};
+    update({ background: Object.keys(nextBackground).length > 0 ? nextBackground : {} });
+  };
+  const updateBackgroundMedia = (
+    patch: Partial<NonNullable<HeroData["media"]> & HeroBackgroundMedia>
+  ) => {
     const next = {
       ...backgroundMedia,
       ...patch,
     };
+    const nextType = next.type ?? "none";
     const normalized =
-      next.type === "none"
+      nextType === "none"
         ? { type: "none" as const, source: next.source ?? "external" }
         : {
-            type: next.type,
+            type: nextType,
             source: next.source ?? "external",
             assetId: next.assetId,
             src: next.src,
+            overlay: next.overlay,
           };
     updateBackground({
       media: normalized,
       image: normalized.type === "image" ? normalized.src : undefined,
+    });
+  };
+  const clearBackgroundMediaField = (key: keyof HeroBackgroundMedia) => {
+    const nextBackground = value.background ?? {};
+    const nextMedia = { ...(nextBackground.media ?? backgroundMedia) };
+    delete nextMedia[key];
+    updateBackground({
+      media: Object.keys(nextMedia).length > 0 ? nextMedia : { type: "none" },
+      image: key === "src" ? undefined : nextBackground.image,
     });
   };
   return (
@@ -1561,6 +1650,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           label="Background color"
           value={value.background?.color}
           onChange={(next) => updateBackground({ color: next })}
+          onClear={() => clearBackgroundField("color")}
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
@@ -1568,6 +1658,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           label="Background gradient"
           value={value.background?.gradient}
           onChange={(next) => updateBackground({ gradient: next })}
+          onClear={() => clearBackgroundField("gradient")}
         />
         <div className="space-y-2">
           <p className="text-sm font-medium">Background media type</p>
@@ -1588,11 +1679,25 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           </Select>
         </div>
         {backgroundMediaType !== "none" ? (
-          <HeroMediaSourceFields
-            media={backgroundMedia}
-            mediaType={backgroundMediaType}
-            onChange={updateBackgroundMedia}
-          />
+          <>
+            <HeroMediaSourceFields
+              media={backgroundMedia}
+              mediaType={backgroundMediaType}
+              onChange={updateBackgroundMedia}
+            />
+            <div className="space-y-2">
+              <ClearableFieldHeader
+                label="Background media overlay"
+                value={backgroundMedia.overlay}
+                onClear={() => clearBackgroundMediaField("overlay")}
+              />
+              <Input
+                value={backgroundMedia.overlay ?? ""}
+                onChange={(event) => updateBackgroundMedia({ overlay: event.target.value })}
+                placeholder="rgba(0,0,0,0.25)"
+              />
+            </div>
+          </>
         ) : null}
       </EditorSection>
 

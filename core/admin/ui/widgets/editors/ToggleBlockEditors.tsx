@@ -18,6 +18,7 @@ import {
   type ToggleBlockVariantId,
 } from "../../../../widgets/core/toggleBlock";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: ToggleBlockVariantId;
@@ -95,6 +96,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: ToggleBlockData,
+  onChange: (next: ToggleBlockData) => void,
+  key: keyof NonNullable<ToggleBlockData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function EditorSection({
@@ -216,17 +231,16 @@ function BehaviorSection({
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection
-      title="Behavior and Style"
-      description="Choose default pane and visual tokens."
-    >
+    <EditorSection title="Behavior and Style" description="Choose default pane and visual tokens.">
       <div className="space-y-2">
         <p className="text-sm font-medium">Default state</p>
         <Select
           value={normalized.options?.defaultState ?? "primary"}
           onValueChange={(next) =>
             updateOptions(value, onChange, {
-              defaultState: next as NonNullable<NonNullable<ToggleBlockData["options"]>["defaultState"]>,
+              defaultState: next as NonNullable<
+                NonNullable<ToggleBlockData["options"]>["defaultState"]
+              >,
             })
           }
         >
@@ -242,11 +256,13 @@ function BehaviorSection({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="space-y-2">
-          <p className="text-sm font-medium">Surface color</p>
+          <ClearableFieldHeader
+            label="Surface color"
+            value={normalized.style?.surfaceColor}
+            onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+          />
           <Input
-            value={
-              normalized.style?.surfaceColor ?? toggleBlockDefaults.style?.surfaceColor ?? ""
-            }
+            value={normalized.style?.surfaceColor ?? toggleBlockDefaults.style?.surfaceColor ?? ""}
             onChange={(event) =>
               updateStyle(value, onChange, {
                 surfaceColor: event.target.value,

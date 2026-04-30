@@ -649,8 +649,8 @@ test("PricingPlans advanced editor covers token overrides and normalization cont
       highlighted: false,
     });
     expect(latestValue.style).toMatchObject({
-      cardSurface: "var(--color-bg)",
-      cardBorder: "var(--color-border)",
+      cardSurface: undefined,
+      cardBorder: undefined,
       highlightRing: "var(--color-primary)",
       spacing: "sm",
       radius: "xl",

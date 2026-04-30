@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ContentListVariantId = "cards" | "list" | "compact";
 export type ContentListStatusScope = "published" | "all" | "draft" | "scheduled" | "archived";
@@ -391,6 +392,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
     borderColor: "var(--color-border)",
     textColor: "var(--color-text)",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -442,14 +444,12 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       gap: resolveContentListGap(data.style?.gap),
       cardStyle: resolveContentListCardStyle(data.style?.cardStyle),
       ctaLabel: resolveString(data.style?.ctaLabel, styleDefaults.ctaLabel ?? "Read more"),
-      backgroundColor: resolveString(
-        data.style?.backgroundColor,
-        styleDefaults.backgroundColor ?? "var(--color-bg)"
-      ),
-      borderColor: resolveString(
-        data.style?.borderColor,
-        styleDefaults.borderColor ?? "var(--color-border)"
-      ),
+      backgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.backgroundColor)
+        : styleDefaults.backgroundColor,
+      borderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.borderColor)
+        : styleDefaults.borderColor,
       textColor: resolveString(
         data.style?.textColor,
         styleDefaults.textColor ?? "var(--color-text)"
@@ -533,11 +533,12 @@ function ContentListItemCard({
       : cardStyle === "minimal"
         ? joinClasses(wrapperClassName, "border-transparent bg-transparent")
         : wrapperClassName;
-  const cardStyleVars: CSSProperties = {
-    backgroundColor: style.backgroundColor ?? "var(--color-bg)",
-    borderColor: style.borderColor ?? "var(--color-border)",
-    color: style.textColor ?? "var(--color-text)",
-  };
+  const cardStyleVars: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.backgroundColor),
+      borderColor: resolveClearableStyleValue(style.borderColor),
+      color: style.textColor ?? "var(--color-text)",
+    }) ?? {};
   const metaLine = buildMetaLine(item);
   const title = item.title ?? "Untitled";
   const href = item.href && item.href.trim().length > 0 ? item.href : undefined;

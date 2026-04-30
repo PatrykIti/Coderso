@@ -143,6 +143,28 @@ and continue to render as zero spacing. Do not add `none` to structural choices
 such as variants, ratios, columns, spans, alignments, sources, statuses, or media
 type modes that already use `none` for content semantics.
 
+## Visual Clear Controls
+
+TASK-244 adds `Clear` actions for configured visual surface fields such as
+background colors, gradients, overlays, card surfaces, table shells, CTA button
+backgrounds, and framed custom-screen surfaces. `Clear` is an editor action, not
+a saved token. It removes the owning field from widget data so the renderer does
+not emit a forced inline style or fallback shell solely because the field was
+cleared.
+
+`Clear` is separate from TASK-242 `None` token semantics:
+
+| Action/value | Saved payload | Runtime contract |
+|---|---|---|
+| `Clear` on a surface field | property omitted from the owning object | no forced background, gradient, overlay, card, table, or panel style for that field |
+| `none` visual token | literal `none` value on approved token fields | fixed zero/empty output for spacing, size, radius, typography, or other approved token maps |
+| deliberate color value such as `transparent` | literal string chosen by the user | render the configured color because it is user-authored data, not a clear sentinel |
+
+Widget editors must remove keys for clear actions and must not serialize
+`transparent` or an empty string as an off-state sentinel. Renderers should
+normalize clearable surface values through the shared clearable-style helpers and
+compact omitted style keys before output.
+
 ---
 
 ## Kontrakty widgetu (v1)

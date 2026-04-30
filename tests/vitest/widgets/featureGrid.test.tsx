@@ -24,9 +24,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
 
 test("feature grid renders defaults", () => {
-  const html = renderToString(
-    <FeatureGridBlock data={featureGridDefaults} variant="cards-3" />
-  );
+  const html = renderToString(<FeatureGridBlock data={featureGridDefaults} variant="cards-3" />);
 
   expect(html).toContain(featureGridDefaults.header?.title ?? "");
   expect(html).toContain('data-feature-grid-variant="cards-3"');
@@ -112,6 +110,18 @@ test("feature grid validator accepts expanded fields", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("feature grid cleared card surface omits background style", () => {
+  const normalized = normalizeFeatureGridData({
+    ...featureGridDefaults,
+    style: {},
+  });
+  const html = renderToString(<FeatureGridBlock data={normalized} variant="cards-3" />);
+
+  expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(html).toContain('data-feature-grid-variant="cards-3"');
+  expect(html).not.toContain("background-color:");
 });
 
 test("feature grid validator rejects unsupported variant", () => {

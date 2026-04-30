@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 64 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1378 tasks
+- **Done:** 1394 tasks
 
 ---
 
@@ -38,22 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-244 | Widget Visual Surface Clear Controls | High | Very Large | Add `Clear` controls for every rendered widget with forced background, gradient, overlay, card surface, or framed shell styling |
-| TASK-244-01 | Widget Surface Inventory and Clear Semantics | High | Medium | Lock inventory and define `Clear` semantics separately from TASK-242 `None` token semantics |
-| TASK-244-01-01 | Widget Surface Background Inventory | High | Medium | Classify every rendered widget surface as clear-required, already-clearable, intentional-state, or admin-only exclusion |
-| TASK-244-01-02 | Clear Semantics and Backward Compatibility | High | Small | Define clear-as-field-removal semantics and compatibility rules without transparent sentinels |
-| TASK-244-02 | Hero, Shared Color Fields, and Background Clear Controls | High | Large | Fix Hero gradient/background clear first and establish reusable color clear controls |
-| TASK-244-02-01 | Hero Gradient, Background, and Media Overlay Clear | High | Medium | Add Hero `Clear` actions and runtime omission tests for gradient, background color, and media overlay |
-| TASK-244-02-02 | Shared Clear Field Controls and Section No-Regression | High | Medium | Reuse small editor clear helpers where justified and keep Section empty-gradient behavior stable |
-| TASK-244-02-03 | Section Background Color Clear | High | Small | Add Section background-color `Clear` semantics without changing empty-gradient or zero-overlay behavior |
-| TASK-244-03 | Custom Screen and Operational Widget Surface Clear | High | Large | Add clearable frame/surface contracts for screen, booking, listing, search, and commerce widgets |
-| TASK-244-03-01 | Custom Screen Widget Frame Surface Clear | High | Medium | Let screen-record-header, screen-field-value, screen-field-group, and screen-two-column clear frame surfaces |
-| TASK-244-03-02 | Booking, Listing, Search, and Commerce Frame Surface Clear | High | Large | Let operational widgets clear shell, table, card, and action background surfaces without touching semantic state colors |
-| TASK-244-04 | Composite, Content, Form, and Shell Widget Surface Clear | High | Large | Sweep remaining marketing, content, form, shell, and primitive panel widgets with real forced surface problems |
-| TASK-244-04-01 | Marketing and Content Surface and Overlay Clear | High | Large | Add clear semantics for overlays, cards, panels, tiles, CTA surfaces, and content-list/posts-feed mappings |
-| TASK-244-04-02 | Form, Navigation, Footer, and Primitive Panel Color Clear | High | Large | Add clear semantics for form backgrounds, global shell colors, and accordion/tabs/toggle panel surfaces |
-| TASK-244-05 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Close with a complete inventory-to-test matrix, docs, changelog, and board sync |
-| TASK-244-05-01 | Widget Surface Clear Test Matrix and Docs Closure | Medium | Small | Record final targeted suites, docs updates, skipped tests, exclusions, and closure evidence |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -120,6 +104,22 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-244 | Widget Visual Surface Clear Controls | High | Very Large | Done: `Clear` controls now remove configured surface/background/overlay style keys across widget runtime and editor contracts without transparent or empty-string sentinels |
+| TASK-244-01 | Widget Surface Inventory and Clear Semantics | High | Medium | Done: clear-required surfaces, exclusions, and clear-as-removal semantics were locked before rollout |
+| TASK-244-01-01 | Widget Surface Background Inventory | High | Medium | Done: every rendered widget surface was classified as clear-required, already-clearable, intentional-state, or excluded |
+| TASK-244-01-02 | Clear Semantics and Backward Compatibility | High | Small | Done: shared helpers preserve deliberate `transparent` values while cleared fields remain absent |
+| TASK-244-02 | Hero, Shared Color Fields, and Background Clear Controls | High | Large | Done: Hero, shared clear helpers, and Section background clear behavior shipped with focused tests |
+| TASK-244-02-01 | Hero Gradient, Background, and Media Overlay Clear | High | Medium | Done: Hero gradient, background color, media overlay, and CTA background clear actions remove nested keys |
+| TASK-244-02-02 | Shared Clear Field Controls and Section No-Regression | High | Medium | Done: reusable clear field helpers cover repeated editor controls and preserve Section gradient/overlay behavior |
+| TASK-244-02-03 | Section Background Color Clear | High | Small | Done: Section background color clear removes `style.backgroundColor` without materializing `transparent` |
+| TASK-244-03 | Custom Screen and Operational Widget Surface Clear | High | Large | Done: screen, booking, listing, search, and commerce widget frames can clear configured surfaces |
+| TASK-244-03-01 | Custom Screen Widget Frame Surface Clear | High | Medium | Done: screen-record-header, screen-field-value, screen-field-group, and screen-two-column frame style keys can be cleared |
+| TASK-244-03-02 | Booking, Listing, Search, and Commerce Frame Surface Clear | High | Large | Done: operational shells, cards, tables, and action backgrounds clear without changing semantic state colors |
+| TASK-244-04 | Composite, Content, Form, and Shell Widget Surface Clear | High | Large | Done: marketing, content, form, shell, and primitive panel surfaces now use real clear semantics |
+| TASK-244-04-01 | Marketing and Content Surface and Overlay Clear | High | Large | Done: overlays, cards, panels, tiles, CTA surfaces, and content-list/posts-feed mappings clear by key removal |
+| TASK-244-04-02 | Form, Navigation, Footer, and Primitive Panel Color Clear | High | Large | Done: form backgrounds, global shell colors, and accordion/tabs/toggle panel surfaces clear while preserving behavior modes |
+| TASK-244-05 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Done: targeted matrix, docs, changelog 781, and task board closure are synchronized |
+| TASK-244-05-01 | Widget Surface Clear Test Matrix and Docs Closure | Medium | Small | Done: closure notes record validation commands, intentional exclusions, skipped broad gates, and no-transparent-sentinel evidence |
 | TASK-247 | Media Always-On Selection and Upload Copy | High | Small | Done: Media multi-select is always active, header `Select` was removed, and the upload CTA now reads `Upload` while preserving the existing dropzone file-input path |
 | TASK-246 | Menus Drop Intent and Indicator Stability | High | Small | Done: Menus row top/middle/bottom drop zones are stable, before/after indicators no longer shift layout, and the grip is centered with fixed height |
 | TASK-245 | Menus Drag Handle Hit Target Fix | High | Small | Done: Menus grip handle now owns a wider full-lane drag target, prevents SVG pointer interception, and keeps row content non-draggable |

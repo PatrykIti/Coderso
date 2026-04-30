@@ -28,6 +28,7 @@ import {
   type LogoCloudVariantId,
 } from "../../../../widgets/core/logoCloud";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: LogoCloudVariantId;
@@ -173,6 +174,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyle(
+  value: LogoCloudData,
+  onChange: (next: LogoCloudData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function updateLogo(
@@ -579,6 +594,22 @@ export function LogoCloudVisualEditor({
             }
           />
         </div>
+
+        <ClearableInputField
+          label="Tile background"
+          value={style.tileBackground}
+          onChange={(next) => updateStyle(value, onChange, { tileBackground: next })}
+          onClear={() => clearStyle(value, onChange, "tileBackground")}
+          placeholder="var(--color-bg)"
+        />
+
+        <ClearableInputField
+          label="Tile border"
+          value={style.tileBorderColor}
+          onChange={(next) => updateStyle(value, onChange, { tileBorderColor: next })}
+          onClear={() => clearStyle(value, onChange, "tileBorderColor")}
+          placeholder="var(--color-border)"
+        />
       </EditorSection>
     </div>
   );

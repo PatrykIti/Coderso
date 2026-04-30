@@ -54,6 +54,14 @@ Notes:
   - `data-section-element`
   - `data-section-region` per region slot instance
 
+## Clear Controls
+
+- `style.backgroundColor` is clearable; clear removes the key and the renderer
+  omits a forced `backgroundColor` style.
+- Empty gradient endpoints and `overlayOpacity: 0` remain the existing
+  no-output behavior and are not replaced with a `None` token.
+- Deliberate `transparent` authored by a user remains a normal color value.
+
 ## Data Model (summary)
 
 ```json
@@ -69,7 +77,7 @@ Notes:
     "ariaLabel": ""
   },
   "style": {
-    "backgroundColor": "transparent",
+    "backgroundColor": "#f8fafc",
     "gradientFrom": "",
     "gradientTo": "",
     "gradientAngle": 180,

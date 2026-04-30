@@ -97,6 +97,14 @@ CTA jest renderowane dla wariantow:
   - runtime buduje linki z opublikowanych stron (`status = published`) z `page.data.settings.showInNav = true` (brak pola traktujemy jako `true`).
   - gdy wynik ma 0 linkow: fallback do manual `items`.
 
+## Clear Controls
+
+- `style.surfaceColor`, `style.ctaBackgroundColor`, `style.ctaTextColor`, and
+  `style.ctaBorderColor` are clearable; clear removes the configured style key
+  and does not replace it with `transparent`.
+- `behavior.transparent` remains a separate product behavior mode for
+  transparent navigation and is not the editor clear sentinel.
+
 ## Data model (summary)
 
 ```json

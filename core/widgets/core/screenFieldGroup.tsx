@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
@@ -8,12 +8,17 @@ import type {
   WidgetEditorProps,
   WidgetLayoutDefaults,
 } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ScreenFieldGroupVariantId = "card" | "subtle";
 
 export type ScreenFieldGroupData = {
   title?: string;
   description?: string;
+  style?: {
+    frameBackground?: string;
+    frameBorderColor?: string;
+  };
 };
 
 export const screenFieldGroupContentSlot = {
@@ -28,33 +33,47 @@ export const screenFieldGroupSchema = {
   properties: {
     title: { type: "string" },
     description: { type: "string" },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        frameBackground: { type: "string" },
+        frameBorderColor: { type: "string" },
+      },
+    },
   },
 } as const;
 
 export const screenFieldGroupDefaults: ScreenFieldGroupData = {
   title: "Field group",
   description: "Group related record fields and widgets into one admin panel.",
+  style: {
+    frameBackground: "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+    frameBorderColor: "color-mix(in srgb, var(--color-border) 70%, transparent)",
+  },
 };
 
-export function resolveScreenFieldGroupVariant(
-  value: string
-): ScreenFieldGroupVariantId {
+export function resolveScreenFieldGroupVariant(value: string): ScreenFieldGroupVariantId {
   if (value === "subtle") return value;
   return "card";
 }
 
-export function normalizeScreenFieldGroupData(
-  value: ScreenFieldGroupData
-): ScreenFieldGroupData {
+export function normalizeScreenFieldGroupData(value: ScreenFieldGroupData): ScreenFieldGroupData {
+  const hasStyleObject = value.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        frameBackground: resolveClearableStyleValue(value.style?.frameBackground),
+        frameBorderColor: resolveClearableStyleValue(value.style?.frameBorderColor),
+      }) ?? {})
+    : undefined;
+
   return {
-    title:
-      typeof value.title === "string"
-        ? value.title
-        : (screenFieldGroupDefaults.title ?? ""),
+    title: typeof value.title === "string" ? value.title : (screenFieldGroupDefaults.title ?? ""),
     description:
       typeof value.description === "string"
         ? value.description
         : (screenFieldGroupDefaults.description ?? ""),
+    ...(hasStyleObject ? { style } : {}),
   };
 }
 
@@ -74,14 +93,26 @@ export function ScreenFieldGroupBlock({
   const normalized = normalizeScreenFieldGroupData(data);
   const resolvedVariant = resolveScreenFieldGroupVariant(variant);
   const content = slots?.content ?? [];
+  const hasStyleObject = normalized.style !== undefined;
+  const frameStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
+  });
+  const legacyFrameSurfaceClass =
+    !hasStyleObject && resolvedVariant === "subtle"
+      ? "border-border/50 bg-muted/20"
+      : !hasStyleObject
+        ? "border-border/70 bg-background/80"
+        : undefined;
   const frameClassName =
     resolvedVariant === "subtle"
-      ? "rounded-2xl border border-border/50 bg-muted/20 p-4"
-      : "rounded-3xl border border-border/70 bg-background/80 p-5 shadow-sm";
+      ? `rounded-2xl border p-4 ${legacyFrameSurfaceClass ?? ""}`
+      : `rounded-3xl border p-5 shadow-sm ${legacyFrameSurfaceClass ?? ""}`;
 
   return (
     <div
       className={`${frameClassName} space-y-4`}
+      style={frameStyle}
       data-screen-widget="field-group"
       data-screen-widget-variant={resolvedVariant}
     >

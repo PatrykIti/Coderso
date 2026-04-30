@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
 export type EntryTeaserSourceMode = "manual" | "latest" | "featured";
@@ -338,6 +339,7 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
     description: "Choose a source mode and content type to render teaser content.",
     fallbackToLatest: true,
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -373,8 +375,12 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
       href: resolveString(data.cta?.href, ctaDefaults.href ?? ""),
     },
     style: {
-      surface: resolveString(data.style?.surface, styleDefaults.surface ?? "var(--color-bg)"),
-      border: resolveString(data.style?.border, styleDefaults.border ?? "var(--color-border)"),
+      surface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surface)
+        : styleDefaults.surface,
+      border: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.border)
+        : styleDefaults.border,
       radius: resolveEntryTeaserRadius(data.style?.radius),
       spacing: resolveEntryTeaserSpacing(data.style?.spacing),
     },
@@ -462,10 +468,11 @@ export function EntryTeaserBlock({
         ? "w-full"
         : "w-full";
   const contentWrapperClassName = resolvedVariant === "horizontal" ? "flex-1" : "w-full";
-  const surfaceStyle: CSSProperties = {
-    backgroundColor: style.surface ?? "var(--color-bg)",
-    borderColor: style.border ?? "var(--color-border)",
-  };
+  const surfaceStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surface),
+      borderColor: resolveClearableStyleValue(style.border),
+    }) ?? {};
   const metaLine = item ? buildMetaLine(item) : "";
 
   return (

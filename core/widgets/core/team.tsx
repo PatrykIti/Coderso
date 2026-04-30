@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TeamVariantId = "cards" | "compact-list" | "spotlight";
 export type TeamColumns = "1" | "2" | "3" | "4";
@@ -327,6 +328,7 @@ export function normalizeTeamData(data: TeamData): TeamData {
     cardBorder: "var(--color-border)",
     radius: "lg",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -338,14 +340,12 @@ export function normalizeTeamData(data: TeamData): TeamData {
     style: {
       columns: resolveTeamColumns(data.style?.columns),
       gap: resolveTeamGap(data.style?.gap),
-      cardSurface: resolveString(
-        data.style?.cardSurface,
-        styleDefaults.cardSurface ?? "var(--color-bg)"
-      ),
-      cardBorder: resolveString(
-        data.style?.cardBorder,
-        styleDefaults.cardBorder ?? "var(--color-border)"
-      ),
+      cardSurface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardSurface)
+        : styleDefaults.cardSurface,
+      cardBorder: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardBorder)
+        : styleDefaults.cardBorder,
       radius: resolveTeamRadius(data.style?.radius),
     },
   };
@@ -452,15 +452,13 @@ export function TeamBlock({ data, variant }: { data: TeamData; variant: string }
   const columns = resolveTeamColumns(style.columns);
   const gap = resolveTeamGap(style.gap);
   const radius = resolveTeamRadius(style.radius);
-  const cardSurface = style.cardSurface ?? "var(--color-bg)";
-  const cardBorder = style.cardBorder ?? "var(--color-border)";
-
-  const cardStyle: CSSProperties = {
-    backgroundColor: cardSurface,
-    borderColor: cardBorder,
-    borderStyle: "solid",
-    borderWidth: "1px",
-  };
+  const cardStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.cardSurface),
+      borderColor: resolveClearableStyleValue(style.cardBorder),
+      borderStyle: "solid",
+      borderWidth: "1px",
+    }) ?? {};
 
   const showHeader =
     (normalized.header?.title ?? "").trim().length > 0 ||

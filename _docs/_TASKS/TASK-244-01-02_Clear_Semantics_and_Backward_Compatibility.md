@@ -6,7 +6,7 @@
 **Category:** Widgets + Compatibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-244-01-01
-**Status:** To Do
+**Status:** Done (2026-04-30)
 
 ---
 

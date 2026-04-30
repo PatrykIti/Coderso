@@ -1,10 +1,11 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import {
   buildListingRuntimeParamName,
   listingRuntimeTokens,
 } from "../../services/search/filterContract";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getListingRuntimeClientScript } from "./listingRuntimeScript";
 
 export type SearchBoxVariantId = "default";
@@ -24,6 +25,11 @@ export type SearchBoxData = {
     pages?: boolean;
     entries?: boolean;
     posts?: boolean;
+  };
+  style?: {
+    frameBackground?: string;
+    frameBorderColor?: string;
+    actionBackground?: string;
   };
   resolved?: {
     query?: string;
@@ -58,6 +64,11 @@ export const searchBoxDefaults: SearchBoxData = {
     entries: true,
     posts: false,
   },
+  style: {
+    frameBackground: "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+    frameBorderColor: "var(--color-border)",
+    actionBackground: "var(--color-primary)",
+  },
 };
 
 export const searchBoxSchema = {
@@ -79,6 +90,15 @@ export const searchBoxSchema = {
         pages: { type: "boolean" },
         entries: { type: "boolean" },
         posts: { type: "boolean" },
+      },
+    },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        frameBackground: { type: "string" },
+        frameBorderColor: { type: "string" },
+        actionBackground: { type: "string" },
       },
     },
     resolved: {
@@ -105,6 +125,14 @@ const sourceOptions = [
 export function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
   const defaults = searchBoxDefaults;
   const mode = data.mode === "global" ? "global" : "listing";
+  const hasStyleObject = data.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        frameBackground: resolveClearableStyleValue(data.style?.frameBackground),
+        frameBorderColor: resolveClearableStyleValue(data.style?.frameBorderColor),
+        actionBackground: resolveClearableStyleValue(data.style?.actionBackground),
+      }) ?? {})
+    : undefined;
 
   return {
     mode,
@@ -116,8 +144,7 @@ export function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
     ),
     placeholder: resolveText(data.placeholder, defaults.placeholder ?? "Type to search..."),
     submitLabel: resolveText(data.submitLabel, defaults.submitLabel ?? "Search"),
-    autoApply:
-      typeof data.autoApply === "boolean" ? data.autoApply : defaults.autoApply !== false,
+    autoApply: typeof data.autoApply === "boolean" ? data.autoApply : defaults.autoApply !== false,
     endpoint: resolveText(data.endpoint, defaults.endpoint ?? "/api/search"),
     sources: {
       pages:
@@ -133,6 +160,7 @@ export function normalizeSearchBoxData(data: SearchBoxData): SearchBoxData {
           ? data.sources.posts
           : defaults.sources?.posts === true,
     },
+    ...(hasStyleObject ? { style } : {}),
     resolved: {
       query: resolveOptionalText(data.resolved?.query),
       rejectedTokens: Array.isArray(data.resolved?.rejectedTokens)
@@ -162,6 +190,16 @@ export function SearchBoxBlock({
   const submitLabel = resolveText(normalized.submitLabel, "Search");
   const queryValue = resolveOptionalText(normalized.resolved?.query) ?? "";
   const autoApply = normalized.autoApply !== false;
+  const frameStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
+  });
+  const actionStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.actionBackground),
+  });
+  const legacyFrameClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/80" : "";
+  const legacyActionClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
 
   if (mode === "listing") {
     const listingQueryId = resolveOptionalText(normalized.listingQueryId);
@@ -187,7 +225,7 @@ export function SearchBoxBlock({
         data-listing-block-id={blockId ?? ""}
         data-listing-query-id={listingQueryId}
       >
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/80 p-4">
+        <div className={`rounded-xl border p-4 ${legacyFrameClass}`} style={frameStyle}>
           <form
             method="get"
             action=""
@@ -208,17 +246,15 @@ export function SearchBoxBlock({
             <div className="flex flex-wrap items-center gap-2">
               <input
                 className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
-                name={buildListingRuntimeParamName(
-                  listingQueryId,
-                  listingRuntimeTokens.search
-                )}
+                name={buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)}
                 data-listing-token={listingRuntimeTokens.search}
                 defaultValue={queryValue}
                 placeholder={placeholder}
               />
               <button
                 type="submit"
-                className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-bg)]"
+                className={`inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold text-[var(--color-bg)] ${legacyActionClass}`}
+                style={actionStyle}
               >
                 {submitLabel}
               </button>
@@ -262,7 +298,7 @@ export function SearchBoxBlock({
       data-listing-block-id={blockId ?? ""}
       data-listing-query-id=""
     >
-      <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/80 p-4">
+      <div className={`space-y-4 rounded-xl border p-4 ${legacyFrameClass}`} style={frameStyle}>
         <form
           method="get"
           action={resolveText(normalized.endpoint, "/api/search")}
@@ -289,7 +325,8 @@ export function SearchBoxBlock({
             />
             <button
               type="submit"
-              className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-bg)]"
+              className={`inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold text-[var(--color-bg)] ${legacyActionClass}`}
+              style={actionStyle}
             >
               {submitLabel}
             </button>

@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type StatsKpiVariantId = "cards" | "inline" | "split-highlight";
 export type StatsKpiAlignment = "start" | "center" | "end";
@@ -26,6 +27,8 @@ export type StatsKpiData = {
     valueColor?: string;
     labelColor?: string;
     divider?: boolean;
+    cardBackground?: string;
+    cardBorderColor?: string;
   };
 };
 
@@ -99,6 +102,8 @@ export const statsKpiSchema = {
         valueColor: { type: "string" },
         labelColor: { type: "string" },
         divider: { type: "boolean" },
+        cardBackground: { type: "string" },
+        cardBorderColor: { type: "string" },
       },
     },
   },
@@ -145,6 +150,8 @@ export const statsKpiDefaults: StatsKpiData = {
     valueColor: "var(--color-text)",
     labelColor: "var(--color-text)",
     divider: true,
+    cardBackground: "var(--color-bg)",
+    cardBorderColor: "var(--color-border)",
   },
 };
 
@@ -251,6 +258,16 @@ export function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
     labelColor: "var(--color-text)",
     divider: true,
   };
+  const hasStyleObject = data.style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        cardBackground: resolveClearableStyleValue(data.style?.cardBackground),
+        cardBorderColor: resolveClearableStyleValue(data.style?.cardBorderColor),
+      })
+    : compactObject({
+        cardBackground: resolveClearableStyleValue(styleDefaults.cardBackground),
+        cardBorderColor: resolveClearableStyleValue(styleDefaults.cardBorderColor),
+      });
 
   return {
     ...data,
@@ -274,6 +291,7 @@ export function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
         typeof data.style?.divider === "boolean"
           ? data.style.divider
           : Boolean(styleDefaults.divider),
+      ...(clearableStyle ?? {}),
     },
   };
 }
@@ -285,6 +303,7 @@ function StatsKpiCard({
   labelColor,
   divider,
   variant,
+  cardStyle,
 }: {
   item: StatsKpiItem;
   index: number;
@@ -292,6 +311,7 @@ function StatsKpiCard({
   labelColor: string;
   divider: boolean;
   variant: StatsKpiVariantId;
+  cardStyle?: CSSProperties;
 }) {
   const hasDescription = (item.description ?? "").trim().length > 0;
   const hasIcon = (item.icon ?? "").trim().length > 0;
@@ -303,8 +323,8 @@ function StatsKpiCard({
           divider && index > 0 ? "border-l border-[var(--color-border)]/70" : undefined
         )
       : variant === "split-highlight" && index === 0
-        ? "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-5"
-        : "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4";
+        ? "rounded-xl border p-5"
+        : "rounded-xl border p-4";
 
   const valueClassName = variant === "split-highlight" && index === 0 ? "text-4xl" : "text-3xl";
   const labelClassName = variant === "split-highlight" && index === 0 ? "text-base" : "text-sm";
@@ -312,6 +332,7 @@ function StatsKpiCard({
   return (
     <article
       className={wrapperClassName}
+      style={variant === "inline" ? undefined : cardStyle}
       data-stats-kpi-item={String(index + 1)}
       data-stats-kpi-highlighted={String(variant === "split-highlight" && index === 0)}
     >
@@ -348,6 +369,10 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
   const valueColor = style.valueColor ?? "var(--color-text)";
   const labelColor = style.labelColor ?? "var(--color-text)";
   const divider = Boolean(style.divider);
+  const cardStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(style.cardBackground),
+    borderColor: resolveClearableStyleValue(style.cardBorderColor),
+  });
 
   const items = normalizeStatsKpiItems(normalized.items);
 
@@ -396,6 +421,7 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
               labelColor={labelColor}
               divider={divider}
               variant={resolvedVariant}
+              cardStyle={cardStyle}
             />
           </div>
           <div
@@ -413,6 +439,7 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
                 labelColor={labelColor}
                 divider={divider}
                 variant={resolvedVariant}
+                cardStyle={cardStyle}
               />
             ))}
           </div>
@@ -428,6 +455,7 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
               labelColor={labelColor}
               divider={divider}
               variant={resolvedVariant}
+              cardStyle={cardStyle}
             />
           ))}
         </div>

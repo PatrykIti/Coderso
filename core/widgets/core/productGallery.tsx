@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import {
@@ -10,6 +10,7 @@ import {
   type CommerceWidgetRuntimeCard,
   type CommerceWidgetSource,
 } from "./commerceWidgetShared";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ProductGalleryVariantId = "cards" | "compact";
 export type ProductGalleryColumns = "2" | "3" | "4";
@@ -29,6 +30,10 @@ export type ProductGalleryData = {
   style?: {
     columns?: ProductGalleryColumns;
     cardStyle?: "outlined" | "minimal";
+    cardBackground?: string;
+    cardBorderColor?: string;
+    emptyBackground?: string;
+    emptyBorderColor?: string;
   };
   resolved?: {
     items?: CommerceWidgetRuntimeCard[];
@@ -60,6 +65,10 @@ export const productGalleryDefaults: ProductGalleryData = {
   style: {
     columns: "3",
     cardStyle: "outlined",
+    cardBackground: "var(--color-bg)",
+    cardBorderColor: "var(--color-border)",
+    emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
+    emptyBorderColor: "var(--color-border)",
   },
   resolved: {
     items: [],
@@ -114,7 +123,10 @@ const normalizeRuntimeItems = (value: unknown): CommerceWidgetRuntimeCard[] => {
         title,
         slug,
         excerpt: optionalText(payload.excerpt ?? undefined) ?? null,
-        status: payload.status === "draft" || payload.status === "archived" ? payload.status : "published",
+        status:
+          payload.status === "draft" || payload.status === "archived"
+            ? payload.status
+            : "published",
         pricing: {
           amount,
           currency: text(payload.pricing?.currency, "USD"),
@@ -208,6 +220,10 @@ export const productGallerySchema = {
       properties: {
         columns: { enum: ["2", "3", "4"] },
         cardStyle: { enum: ["outlined", "minimal"] },
+        cardBackground: { type: "string" },
+        cardBorderColor: { type: "string" },
+        emptyBackground: { type: "string" },
+        emptyBorderColor: { type: "string" },
       },
     },
     resolved: {
@@ -265,6 +281,22 @@ export const normalizeProductGalleryData = (value: ProductGalleryData): ProductG
   });
 
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
+  const hasStyleObject = value.style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        cardBackground: resolveClearableStyleValue(value.style?.cardBackground),
+        cardBorderColor: resolveClearableStyleValue(value.style?.cardBorderColor),
+        emptyBackground: resolveClearableStyleValue(value.style?.emptyBackground),
+        emptyBorderColor: resolveClearableStyleValue(value.style?.emptyBorderColor),
+      })
+    : compactObject({
+        cardBackground: resolveClearableStyleValue(productGalleryDefaults.style?.cardBackground),
+        cardBorderColor: resolveClearableStyleValue(productGalleryDefaults.style?.cardBorderColor),
+        emptyBackground: resolveClearableStyleValue(productGalleryDefaults.style?.emptyBackground),
+        emptyBorderColor: resolveClearableStyleValue(
+          productGalleryDefaults.style?.emptyBorderColor
+        ),
+      });
 
   return {
     source,
@@ -288,6 +320,7 @@ export const normalizeProductGalleryData = (value: ProductGalleryData): ProductG
     style: {
       columns: normalizeColumns(value.style?.columns),
       cardStyle: value.style?.cardStyle === "minimal" ? "minimal" : "outlined",
+      ...(clearableStyle ?? {}),
     },
     resolved: {
       items: normalizeRuntimeItems(value.resolved?.items),
@@ -325,6 +358,23 @@ export function ProductGalleryBlock({ data }: { data: ProductGalleryData; varian
   const normalized = normalizeProductGalleryData(data);
   const items = normalized.resolved?.items ?? [];
   const hasError = Boolean(normalized.resolved?.error);
+  const emptyStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.emptyBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.emptyBorderColor),
+  });
+  const cardSurfaceStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.cardBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.cardBorderColor),
+  });
+  const hasStyleObject = normalized.style !== undefined;
+  const legacyEmptyClass = hasStyleObject
+    ? ""
+    : "border-[var(--color-border)] bg-[var(--color-bg)]/70";
+  const legacyCardSurfaceClass = hasStyleObject
+    ? ""
+    : normalized.style?.cardStyle === "minimal"
+      ? "bg-[var(--color-bg)]"
+      : "border-[var(--color-border)] bg-[var(--color-bg)]";
 
   return (
     <section
@@ -339,7 +389,10 @@ export function ProductGalleryBlock({ data }: { data: ProductGalleryData; varian
       ) : null}
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/70 px-4 py-6 text-center">
+        <div
+          className={`rounded-xl border border-dashed px-4 py-6 text-center ${legacyEmptyClass}`}
+          style={emptyStyle}
+        >
           <p className="text-sm font-medium text-[var(--color-text)]">
             {normalized.emptyState?.title}
           </p>
@@ -349,9 +402,7 @@ export function ProductGalleryBlock({ data }: { data: ProductGalleryData; varian
         </div>
       ) : (
         <div
-          className={`grid grid-cols-1 gap-4 ${
-            columnsClassMap[normalized.style?.columns ?? "3"]
-          }`}
+          className={`grid grid-cols-1 gap-4 ${columnsClassMap[normalized.style?.columns ?? "3"]}`}
         >
           {items.map((item) => {
             const stockState = item.stock.state;
@@ -361,9 +412,10 @@ export function ProductGalleryBlock({ data }: { data: ProductGalleryData; varian
                 key={item.id}
                 className={
                   normalized.style?.cardStyle === "minimal"
-                    ? "space-y-3 rounded-xl bg-[var(--color-bg)] p-4"
-                    : "space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
+                    ? `space-y-3 rounded-xl p-4 ${legacyCardSurfaceClass}`
+                    : `space-y-3 rounded-xl border p-4 ${legacyCardSurfaceClass}`
                 }
+                style={cardSurfaceStyle}
                 data-product-id={item.id}
               >
                 {normalized.fields?.showMediaHint ? (
@@ -392,10 +444,7 @@ export function ProductGalleryBlock({ data }: { data: ProductGalleryData; varian
                   {normalized.fields?.showPrice &&
                   typeof item.pricing.compareAtAmount === "number" ? (
                     <span className="text-xs text-[var(--color-text)]/50 line-through">
-                      {formatCommerceMoney(
-                        item.pricing.compareAtAmount,
-                        item.pricing.currency
-                      )}
+                      {formatCommerceMoney(item.pricing.compareAtAmount, item.pricing.currency)}
                     </span>
                   ) : null}
                   {normalized.fields?.showStock ? (

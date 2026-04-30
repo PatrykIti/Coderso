@@ -27,6 +27,7 @@ import {
   type ContactVariantId,
 } from "../../../../widgets/core/contact";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const fieldLabels: Record<ContactFieldId, string> = {
   name: "Name",
@@ -209,6 +210,20 @@ function updateStyle(
   }));
 }
 
+function clearStyleField(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
+}
+
 function toggleField(
   value: ContactData,
   onChange: (next: ContactData) => void,
@@ -377,16 +392,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -623,6 +640,7 @@ export function ContactVisualEditor({
           label="Section background"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
+          onClear={() => clearStyleField(value, onChange, "background")}
           placeholder="transparent or #f8fafc"
           pickerFallback="#ffffff"
         />
@@ -630,6 +648,7 @@ export function ContactVisualEditor({
           label="Card surface color"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+          onClear={() => clearStyleField(value, onChange, "surfaceColor")}
           placeholder="var(--color-bg) or #ffffff"
           pickerFallback="#ffffff"
         />
