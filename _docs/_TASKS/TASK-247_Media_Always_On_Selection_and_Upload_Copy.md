@@ -64,7 +64,11 @@ or details drawer redesign.
   - assert `Select visible`, `Download`, `Delete`, and `Clear` are available in
     the default screen state.
 - `tests/vitest/mediaUi/mediaLibrary.test.tsx`
-  - update the SSR smoke assertion to expect `Upload` and not `Upload New`.
+  - add the SSR smoke assertion to expect `Upload` and not `Upload New`.
+- `tests/vitest/ui/media-components.test.tsx`
+  - add happy-dom interaction coverage for grid and list `MediaGrid` rendering:
+    clicking the checkbox calls `onToggleSelect` only, while clicking the
+    primary card/row target calls `onSelect` only.
 - `_docs/MEDIA_SPEC.md`
   - update the Admin UI behavior bullets so multi-select is documented as
     always available on the visible asset range.
@@ -187,10 +191,42 @@ test("MediaLibraryPage keeps selection active without a Select toggle", async ()
   expect(view.container.textContent).toContain("Select visible");
   expect(view.container.querySelector('button[aria-label="Select Cached hero"]')).toBeTruthy();
 });
+
+test.each(["grid", "list"] as const)(
+  "MediaGrid keeps checkbox and details targets separate in %s view",
+  async (viewMode) => {
+    const onSelect = vi.fn();
+    const onToggleSelect = vi.fn();
+    const view = mountMediaGrid({
+      items: [mediaItem({ id: "media-1", title: "Cached hero" })],
+      view: viewMode,
+      selectionMode: true,
+      onSelect,
+      onToggleSelect,
+    });
+
+    await click(view.container.querySelector('button[aria-label="Select Cached hero"]'));
+    expect(onToggleSelect).toHaveBeenCalledWith("media-1");
+    expect(onSelect).not.toHaveBeenCalled();
+
+    const primaryButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) =>
+        button.getAttribute("aria-label") !== "Select Cached hero" &&
+        button.textContent?.includes("Cached hero")
+    );
+    expect(primaryButton).toBeTruthy();
+
+    await click(primaryButton!);
+    expect(onSelect).toHaveBeenCalledWith("media-1");
+  }
+);
 ```
 
 ## Testing Requirements
 
+- `tests/vitest/ui/media-components.test.tsx` must prove checkbox-vs-primary
+  click separation in both grid and list view, matching acceptance criteria 5
+  and 6.
 - `bun run test:vitest -- tests/vitest/ui/media-library.test.tsx tests/vitest/mediaUi/mediaLibrary.test.tsx tests/vitest/ui/media-components.test.tsx tests/vitest/ui/media-card.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
