@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 779 | 2026-04-30 | TASK-246 menus drop intent and indicator stability | CMS Menus/Admin UI |
 | 778 | 2026-04-30 | TASK-245 menus drag handle hit target | CMS Menus/Admin UI |
 | 777 | 2026-04-29 | TASK-243 menus editor action, location, and drag parity | CMS Menus/Admin UI |
 | 776 | 2026-04-29 | TASK-242 widget style none tokens | CMS Widgets/Admin UI |

@@ -6,15 +6,11 @@ export function resolveMenuDropIntent(input: {
   rect: Pick<DOMRect, "left" | "top" | "height">;
   indentThresholdPx?: number;
 }): MenuDropIntent {
-  const threshold = input.indentThresholdPx ?? 96;
-  const offsetX = input.clientX - input.rect.left;
   const offsetY = input.clientY - input.rect.top;
   const topZone = input.rect.height * 0.25;
   const bottomZone = input.rect.height * 0.75;
-  const midpoint = input.rect.height * 0.5;
 
   if (offsetY < topZone) return "before";
   if (offsetY > bottomZone) return "after";
-  if (offsetX > threshold) return "child";
-  return offsetY < midpoint ? "before" : "after";
+  return "child";
 }

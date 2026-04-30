@@ -97,10 +97,8 @@ with usable items.
 11. Use `Add Item` when you need a new link.
 12. Reorder items in the structure area by dragging the grip handle:
     - drop near the top of a row to place before that item,
+    - drop through the middle of a row to create a sub-menu,
     - drop near the bottom of a row to place after that item,
-    - keep the handle lane on the left for same-level before/after placement,
-    - move the cursor deliberately to the right side of a row to create a
-      sub-menu.
 13. Select an existing item when you need to edit its details.
 14. In item settings, work top to bottom:
     - `Navigation Label`

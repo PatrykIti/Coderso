@@ -203,8 +203,8 @@ test("resolveMenuDropIntent maps row zones deterministically", () => {
 
   expect(resolveMenuDropIntent({ clientX: 20, clientY: 24, rect })).toBe("before");
   expect(resolveMenuDropIntent({ clientX: 20, clientY: 55, rect })).toBe("after");
-  expect(resolveMenuDropIntent({ clientX: 20, clientY: 36, rect })).toBe("before");
-  expect(resolveMenuDropIntent({ clientX: 20, clientY: 44, rect })).toBe("after");
+  expect(resolveMenuDropIntent({ clientX: 20, clientY: 36, rect })).toBe("child");
+  expect(resolveMenuDropIntent({ clientX: 20, clientY: 44, rect })).toBe("child");
   expect(resolveMenuDropIntent({ clientX: 120, clientY: 40, rect })).toBe("child");
 });
 

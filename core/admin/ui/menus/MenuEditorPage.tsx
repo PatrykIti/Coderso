@@ -949,7 +949,7 @@ export function MenuEditorPage() {
                     <h3 className="text-lg font-semibold">Menu Structure</h3>
                     <p className="text-xs text-muted-foreground">
                       Drag from the grip handle to reorder. Drop near the top or bottom of a row for
-                      same-level placement, or move right across a row to create a sub-menu.
+                      same-level placement, or through the middle to create a sub-menu.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleAddItem}>

@@ -58,7 +58,8 @@ test("MenuItemRow renders hierarchy hint and explicit action labels", () => {
   expect(html).toContain('aria-label="Drag About"');
   expect(html).toContain('draggable="true"');
   expect(html).toContain('draggable="false"');
-  expect(html).toContain("self-stretch");
+  expect(html).toContain("self-center");
+  expect(html).toContain("h-12");
   expect(html).toContain("w-12");
   expect(html).toContain("[&amp;_svg]:pointer-events-none");
   expect(html).toContain("pointer-events-none");
@@ -73,4 +74,21 @@ test("MenuItemRow renders hierarchy hint and explicit action labels", () => {
   expect(html).toContain('aria-label="Outdent About"');
   expect(html).toContain('aria-label="Open details for About"');
   expect(html).toContain('aria-label="Delete About"');
+});
+
+test("MenuItemRow renders before and after indicators as stable overlays", () => {
+  const beforeHtml = renderAdminUi(<MenuItemRow item={item} isDragTarget dropIntent="before" />);
+  const afterHtml = renderAdminUi(<MenuItemRow item={item} isDragTarget dropIntent="after" />);
+
+  expect(beforeHtml).toContain('data-menu-drop-line="item-1:before"');
+  expect(beforeHtml).toContain("absolute");
+  expect(beforeHtml).toContain("pointer-events-none");
+  expect(beforeHtml).toContain("-top-3");
+  expect(beforeHtml).toContain("Drop before");
+
+  expect(afterHtml).toContain('data-menu-drop-line="item-1:after"');
+  expect(afterHtml).toContain("absolute");
+  expect(afterHtml).toContain("pointer-events-none");
+  expect(afterHtml).toContain("-bottom-3");
+  expect(afterHtml).toContain("Drop after");
 });

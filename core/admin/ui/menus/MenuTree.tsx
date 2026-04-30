@@ -1,7 +1,6 @@
 import type { DragEvent, MutableRefObject, ReactElement } from "react";
 import { useRef, useState } from "react";
 
-import { cn } from "@/lib/utils";
 import { resolveMenuDropIntent, type MenuDropIntent } from "@/ui/menus/menuDnD";
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { MenuItemRow, type MenuKeyboardAction } from "@/ui/menus/MenuItemRow";
@@ -10,54 +9,11 @@ export type { MenuDropIntent } from "@/ui/menus/menuDnD";
 
 const CLICK_SUPPRESS_MS = 250;
 
-type MarkerDropHandler = (
-  targetId: string,
-  intent: Exclude<MenuDropIntent, "child">,
-  event: DragEvent<HTMLDivElement>
-) => void;
-
 const setMoveDropEffect = (event: DragEvent<HTMLElement>) => {
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = "move";
   }
 };
-
-function DropLine({
-  targetId,
-  intent,
-  label,
-  active,
-  onDragOverIntent,
-  onDropIntent,
-}: {
-  targetId: string;
-  intent: Exclude<MenuDropIntent, "child">;
-  label: string;
-  active: boolean;
-  onDragOverIntent: MarkerDropHandler;
-  onDropIntent: MarkerDropHandler;
-}) {
-  return (
-    <div
-      className={cn(
-        "my-1 flex min-h-5 items-center rounded-md border border-dashed px-3 text-[11px] font-medium transition",
-        active
-          ? "border-primary/70 bg-primary/10 text-primary"
-          : "border-muted-foreground/40 bg-muted/20 text-muted-foreground"
-      )}
-      role="button"
-      tabIndex={-1}
-      aria-label={label}
-      data-menu-drop-line={`${targetId}:${intent}`}
-      data-menu-target-id={targetId}
-      data-menu-drop-intent={intent}
-      onDragOver={(event) => onDragOverIntent(targetId, intent, event)}
-      onDrop={(event) => onDropIntent(targetId, intent, event)}
-    >
-      {label}
-    </div>
-  );
-}
 
 const buildKeyboardActions = ({
   item,
@@ -160,40 +116,13 @@ const renderTree = (
       : [];
 
     return [
-      isTarget && hoverIntent === "before" ? (
-        <DropLine
-          key={`${item.id}:before`}
-          targetId={item.id}
-          intent="before"
-          label={`Drop before ${item.label || "item"}`}
-          active
-          onDragOverIntent={(targetId, intent, event) => {
-            event.preventDefault();
-            setMoveDropEffect(event);
-            latestHoverIntentRef.current = intent;
-            setRootDrop(null);
-            setHoverId(targetId);
-            setHoverIntent(intent);
-          }}
-          onDropIntent={(targetId, intent, event) => {
-            if (!dragId || dragId === targetId) return;
-            event.preventDefault();
-            markDrag(event.timeStamp);
-            onMove(dragId, targetId, intent);
-            setDragId(null);
-            setHoverId(null);
-            setHoverIntent("child");
-            latestHoverIntentRef.current = "child";
-          }}
-        />
-      ) : null,
       <MenuItemRow
         key={item.id}
         item={item}
         depth={depth}
         active={item.id === activeId}
         isDragTarget={isTarget}
-        dropIntent={isTarget && hoverIntent === "child" ? "child" : null}
+        dropIntent={isTarget ? hoverIntent : null}
         keyboardActions={keyboardActions}
         onSelect={onSelect}
         onEdit={onEdit}
@@ -242,33 +171,6 @@ const renderTree = (
         }}
       />,
       ...children,
-      isTarget && hoverIntent === "after" ? (
-        <DropLine
-          key={`${item.id}:after`}
-          targetId={item.id}
-          intent="after"
-          label={`Drop after ${item.label || "item"}`}
-          active
-          onDragOverIntent={(targetId, intent, event) => {
-            event.preventDefault();
-            setMoveDropEffect(event);
-            latestHoverIntentRef.current = intent;
-            setRootDrop(null);
-            setHoverId(targetId);
-            setHoverIntent(intent);
-          }}
-          onDropIntent={(targetId, intent, event) => {
-            if (!dragId || dragId === targetId) return;
-            event.preventDefault();
-            markDrag(event.timeStamp);
-            onMove(dragId, targetId, intent);
-            setDragId(null);
-            setHoverId(null);
-            setHoverIntent("child");
-            latestHoverIntentRef.current = "child";
-          }}
-        />
-      ) : null,
     ].filter((entry): entry is ReactElement => Boolean(entry));
   });
 

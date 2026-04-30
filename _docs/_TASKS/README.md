@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 63 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1376 tasks
+- **Done:** 1377 tasks
 
 ---
 
@@ -119,6 +119,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-246 | Menus Drop Intent and Indicator Stability | High | Small | Done: Menus row top/middle/bottom drop zones are stable, before/after indicators no longer shift layout, and the grip is centered with fixed height |
 | TASK-245 | Menus Drag Handle Hit Target Fix | High | Small | Done: Menus grip handle now owns a wider full-lane drag target, prevents SVG pointer interception, and keeps row content non-draggable |
 | TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Done: Menus editor header actions, lifecycle publish/draft, Location guidance, and handle-based drag/drop parity shipped |
 | TASK-243-01 | Menus Editor Header Actions and Lifecycle Publish | High | Medium | Done: editor header owns Discard, Save changes, Publish, and Move to Draft with lifecycle-safe persistence |

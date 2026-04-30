@@ -127,7 +127,7 @@ test("MenuTree renders nested hierarchy hints for child items", () => {
   }
 });
 
-test("MenuTree resolves before, after, child, and marker drops from real drag events", () => {
+test("MenuTree resolves before, after, and child from row drag events", () => {
   const onMove = vi.fn();
   const view = mount({ onMove });
 
@@ -148,10 +148,13 @@ test("MenuTree resolves before, after, child, and marker drops from real drag ev
     });
 
     const beforeMarker = view.container.querySelector('[data-menu-drop-line="blog:before"]');
-    expect(beforeMarker?.textContent).toContain("Drop before Blog");
+    expect(beforeMarker?.textContent).toContain("Drop before");
+    expect(blogRow.contains(beforeMarker)).toBe(true);
+    expect(beforeMarker?.className).toContain("absolute");
+    expect(beforeMarker?.className).toContain("pointer-events-none");
 
     act(() => {
-      if (beforeMarker) dispatchDragEvent(beforeMarker, "drop");
+      dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 104 });
     });
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "before");
 
@@ -166,10 +169,13 @@ test("MenuTree resolves before, after, child, and marker drops from real drag ev
       dispatchDragEvent(blogRowAfter, "dragover", { clientX: 8, clientY: 136 });
     });
     const afterMarker = view.container.querySelector('[data-menu-drop-line="blog:after"]');
-    expect(afterMarker?.textContent).toContain("Drop after Blog");
+    expect(afterMarker?.textContent).toContain("Drop after");
+    expect(blogRowAfter.contains(afterMarker)).toBe(true);
+    expect(afterMarker?.className).toContain("absolute");
+    expect(afterMarker?.className).toContain("pointer-events-none");
 
     act(() => {
-      if (afterMarker) dispatchDragEvent(afterMarker, "drop");
+      dispatchDragEvent(blogRowAfter, "drop", { clientX: 8, clientY: 136 });
     });
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "after");
 
@@ -192,7 +198,7 @@ test("MenuTree resolves before, after, child, and marker drops from real drag ev
   }
 });
 
-test("MenuTree supports same-level row drops from the handle lane", () => {
+test("MenuTree keeps bottom-band same-level drops from the handle lane", () => {
   const onMove = vi.fn();
   const view = mount({ onMove });
 
@@ -210,11 +216,39 @@ test("MenuTree supports same-level row drops from the handle lane", () => {
     mockRect(blogRow, { left: 0, top: 100, height: 40 });
 
     act(() => {
-      dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 124 });
-      dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 124 });
+      dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 136 });
+      dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 136 });
     });
 
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "after");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MenuTree maps the middle row band to child without horizontal bias", () => {
+  const onMove = vi.fn();
+  const view = mount({ onMove });
+
+  try {
+    const rootHandle = view.container.querySelector('[data-menu-drag-handle="root"]');
+    expect(rootHandle).not.toBeNull();
+    if (!rootHandle) return;
+
+    act(() => {
+      dispatchDragEvent(rootHandle, "dragstart");
+    });
+    const blogRow = view.container.querySelector('[data-menu-row-id="blog"]');
+    expect(blogRow).not.toBeNull();
+    if (!blogRow) return;
+    mockRect(blogRow, { left: 0, top: 100, height: 40 });
+
+    act(() => {
+      dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 120 });
+      dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 120 });
+    });
+
+    expect(onMove).toHaveBeenLastCalledWith("root", "blog", "child");
   } finally {
     view.cleanup();
   }
