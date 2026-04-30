@@ -23,11 +23,15 @@ empty-gradient runtime behavior.
 
 ## Files to Change
 
-- shared editor helper file only if an existing local pattern supports it
+- `core/admin/ui/widgets/editors/ClearableFields.tsx` only if at least two editor
+  surfaces adopt the same helper; otherwise keep the clear helper local to the
+  touched editor files
 - `core/admin/ui/widgets/editors/HeroEditors.tsx`
 - `core/admin/ui/widgets/editors/SectionEditors.tsx` only if it adopts the shared
   helper
 - `core/widgets/core/section.tsx` only if helper/runtime behavior requires it
+- `tests/vitest/ui/clearable-fields.test.tsx` only if
+  `ClearableFields.tsx` is created
 - `tests/vitest/widgets/section.test.tsx` or the current Section test owner if
   available
 - `tests/vitest/ui/section-editor-wave.test.tsx` if Section editor UI changes
@@ -44,6 +48,10 @@ The helper should be small:
 - `onClear` callback that removes a field.
 
 The helper must not know about route saves, DB, settings, or runtime adapters.
+If the helper is extracted, `ClearableFields.tsx` is the owner and later TASK-244
+leaves must import that file instead of creating parallel clear-button helpers.
+If Hero remains the only user after TASK-244-02-01, do not create the shared file;
+record in closure that Hero editor-wave coverage is the intended proof.
 
 ## Implementation Pseudocode
 
@@ -116,6 +124,13 @@ const hasGradient =
 ## Testing Requirements
 
 - Hero tests from TASK-244-02-01 must remain green.
+- If `ClearableFields.tsx` is created:
+  - create `tests/vitest/ui/clearable-fields.test.tsx`;
+  - run `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`;
+  - prove the helper disables `Clear` for empty values and calls `onClear`
+    without serializing `"transparent"` or an empty off-state value.
+- If no shared helper is created, record that the proof stays in the changed
+  editor-wave suites and do not leave an unused placeholder helper file.
 - If Section editor/runtime changes:
   - targeted Section runtime test proving empty gradient fields omit
     `backgroundImage`;

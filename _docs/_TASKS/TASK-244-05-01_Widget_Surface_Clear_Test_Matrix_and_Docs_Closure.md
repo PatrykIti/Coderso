@@ -36,6 +36,44 @@ Because TASK-244 depends on TASK-242 and edits adjacent style/default/token
 contracts, final closure must also rerun `tests/vitest/widgets/styleNoneTokens.test.tsx`
 to prove existing `None` token behavior did not regress.
 
+## Closure Workflow Pseudocode
+
+```ts
+type Task244ValidationRow = {
+  group: string;
+  clearRequiredSurfaces: string[];
+  runtimeProof: string[];
+  editorProof: string[];
+  schemaProof: string[];
+  docsProof: string[];
+  skippedReason?: string;
+};
+
+function closeTask244() {
+  const inventory = readInventory("TASK-244-01-01");
+  const rows = buildRowsFromImplementationLeaves(inventory);
+
+  for (const row of rows) {
+    assertEveryClearRequiredSurfaceIsFixedOrExcluded(row);
+    assertRuntimeProofShowsOmittedStyleOutput(row.runtimeProof);
+    assertEditorProofShowsKeyRemoval(row.editorProof);
+    assertSchemaProofRejectsUnknownStyleKeys(row.schemaProof);
+    assertNoTransparentOrEmptyStringSentinel(row);
+    assertDocsUpdatedForChangedWidgets(row.docsProof);
+  }
+
+  recordCommandResults(EXACT_VALIDATION_COMMANDS);
+  recordAnySkippedSuitesWithReason(rows);
+  updateWidgetDocsWithClearVsNoneSemantics();
+  updateChangelogAndBoardAfterAllProofIsGreen();
+}
+```
+
+The closure note must include the final changelog number, exact command output
+summary, any skipped-suite reason, remaining audited exclusions, and explicit
+evidence that clear handlers remove keys instead of writing `"transparent"` or
+empty-string off-state sentinels.
+
 ## Security Contract
 
 - Visibility:
