@@ -50,9 +50,7 @@ The rendered list should follow Pages-list behavior where applicable:
 ## Implementation Pseudocode
 
 ```tsx
-const definition = normalizeCustomScreenDefinition(screen.definition, {
-  contentType,
-});
+const definition = screen.definition;
 
 return (
   <CustomScreenEntriesTable
@@ -62,14 +60,14 @@ return (
     buildRowHref={(entry) =>
       definition.listView.rowClick === "classic-editor"
         ? buildClassicEditorHref(contentType.slug, entry.id)
-        : buildCustomScreenWorkspaceHref({
+        : buildCustomScreenWorkspacePath({
             screenId: screen.id,
             entryId: entry.id,
           })
     }
     onCreate={() => {
       if (definition.listView.createMode === "editor-view") {
-        navigate(buildCustomScreenWorkspaceHref({ screenId: screen.id, entryId: "new" }));
+        navigate(buildCustomScreenWorkspacePath({ screenId: screen.id, entryId: "new" }));
         return;
       }
       openLegacyDrawer();
@@ -77,6 +75,9 @@ return (
   />
 );
 ```
+
+`screen.definition` is the normalized V2 field from the Custom Screens service
+contract. The table must not read `listView` from legacy `blocks` or `bindings`.
 
 ```ts
 export function resolveEntryColumnValue(input: {

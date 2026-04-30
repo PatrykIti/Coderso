@@ -33,6 +33,10 @@ leaf tasks.
 - `core/server/routes/customScreenRoutes.ts`
 - `core/server/routes/contentEntryRoutes.ts`
 - `core/admin/services/customScreensClient.ts`
+- `core/db/schema.ts`
+- DB migration SQL for `custom_screens.definition`
+- matching `meta/*_snapshot.json`
+- `meta/_journal.json`
 - `core/admin/services/cachePolicy.ts` if new workspace cache keys are needed.
 - `core/admin/ui/custom-screens/routeParams.ts`
 - `core/admin/ui/custom-screens/assistantSurface.ts`
@@ -85,6 +89,12 @@ type CustomScreenEditorViewDefinition = {
 
 `createMode: "drawer"` exists only as a compatibility escape hatch for V1-like
 screens. New V2 workspaces should default to `editor-view`.
+
+Persistence rule: V2 introduces `custom_screens.definition` as the source of
+truth for the full `CustomScreenDefinitionV2`. Existing `schema_version`,
+`blocks`, and `bindings` remain legacy compatibility columns. Service and client
+records must expose `definition`; V2 callers must consume `screen.definition`
+rather than rebuilding the definition from legacy fields.
 
 ## Implementation Pseudocode
 
@@ -148,18 +158,14 @@ export function buildDefaultListViewDefinition(
 ```
 
 ```ts
-import { resolveAdminHref } from "@/utils/adminPaths";
-
-export function buildCustomScreenWorkspaceHref(input: {
-  basePath: string;
+export function buildCustomScreenWorkspacePath(input: {
   screenId: string;
   entryId?: string | "new";
 }) {
   const path = `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
-  const href = input.entryId
+  return input.entryId
     ? `${path}/${encodeURIComponent(input.entryId)}`
     : path;
-  return resolveAdminHref(input.basePath, href);
 }
 ```
 
@@ -168,10 +174,14 @@ services. If `contentEntryRoutes.ts` still maps schema failures to 500, add the
 shared `mapContentEntryError` coverage here because V2 create/edit depends on
 clean validation semantics.
 
-Admin UI links must consume shared route helpers through the existing admin
-navigation helpers (`AdminLink`, `resolveAdminHref`, and `prefetchAdminRoute`).
-Do not introduce hand-built alias matching, an `adminPaths.*` object bypass, or a
-second Custom Screens route convention.
+Admin UI links must consume shared route helpers through the existing router
+helpers: pass `buildCustomScreenWorkspacePath(...)` into `AdminLink`,
+`navigate(...)`, or `prefetch(...)` so `AdminRouterContext` can resolve the active
+admin base path through `resolveAdminHref`. If a non-router call site needs an
+absolute admin href, add a tiny wrapper that calls `resolveAdminHref(basePath,
+buildCustomScreenWorkspacePath(input))`. Do not introduce hand-built alias
+matching, an `adminPaths.*` object bypass, or a second Custom Screens route
+convention.
 
 ## Security Contract
 
@@ -202,13 +212,15 @@ second Custom Screens route convention.
 - Run the focused test suites required by TASK-248-01-01 and TASK-248-01-02.
 - Vitest:
   - V1 definitions normalize into V2 without losing blocks or bindings,
+  - service/client records expose `definition` for both V1-migrated and V2 rows,
   - V2 definitions reject unknown top-level and nested keys,
   - V2 definitions reject top-level `contentTypeId` inside the definition JSON,
   - default `List View` generation chooses sensible fields from the House
     Projects schema,
   - invalid list columns/filters are rejected with
     `custom_screen_definition_invalid`,
-  - workspace href helpers encode screen and entry ids,
+  - workspace path helpers encode screen and entry ids and route correctly through
+    `AdminLink`/`navigate`/`prefetch`,
   - capabilities detect whether a screen has `List View` and `Editor View`.
 - Bun route tests:
   - Custom Screen create/update accepts a valid V2 definition,

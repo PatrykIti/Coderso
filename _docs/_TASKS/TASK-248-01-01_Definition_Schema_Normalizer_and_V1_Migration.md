@@ -29,9 +29,10 @@ No child task files.
 - `core/services/customScreens/customScreenSchemas.ts`
 - `core/services/customScreens/customScreenService.ts`
 - `core/services/customScreens/capabilities.ts`
-- DB migration SQL and `meta/*` artifacts only if implementation changes the
-  physical `custom_screens` storage shape instead of reusing the existing
-  `schema_version`, `blocks`, and `bindings` columns.
+- `core/db/schema.ts`
+- DB migration SQL for `custom_screens.definition`
+- matching `meta/*_snapshot.json`
+- `meta/_journal.json`
 - `tests/vitest/customScreens/customScreenService.test.ts`
 - `tests/vitest/customScreens/capabilities.test.ts`
 
@@ -52,13 +53,21 @@ The definition normalizer may receive `{ contentType }` as context for default
 generation and field validation, but persisted definition JSON must reject a
 top-level `contentTypeId`.
 
-Storage rule: the default implementation should preserve the current table shape
-and serialize V2 through the existing `schema_version`, `blocks`, and `bindings`
-columns, where `blocks`/`bindings` are interpreted as `editorView` data for V1
-compatibility. If implementation chooses a new physical `definition`,
-`list_view`, or `editor_view` column instead, this leaf must add the full DB
-migration set: SQL migration file, matching `meta/*_snapshot.json`, and
-`meta/_journal.json` update.
+Storage rule: add a new `custom_screens.definition` JSON column as the V2 source
+of truth. The existing `schema_version`, `blocks`, and `bindings` columns remain
+legacy compatibility storage for V1 rows and transitional projections only. Do
+not store `listView` implicitly in `blocks` or `bindings`.
+
+Service mapping must be deterministic:
+
+- For V2 rows with `definition`, normalize and return `record.definition`.
+- For legacy rows without `definition`, migrate `{ schemaVersion, blocks,
+  bindings }` into a V2 definition at read time and persist it on the next
+  update path.
+- Keep `record.blocks` and `record.bindings` as legacy projections of
+  `definition.editorView` only while existing callers are migrated.
+- V2 UI/service code must consume `record.definition`, not reconstruct a
+  definition from legacy fields.
 
 ## Implementation Pseudocode
 
@@ -111,6 +120,29 @@ function migrateV1DefinitionToV2(
 }
 ```
 
+```ts
+function mapCustomScreenRow(row: CustomScreenRow): CustomScreenRecord {
+  const definition = row.definition
+    ? normalizeV2Definition(row.definition, { contentType: row.contentType })
+    : migrateV1DefinitionToV2(
+        normalizeV1Definition({
+          schemaVersion: row.schemaVersion,
+          blocks: row.blocks,
+          bindings: row.bindings,
+        }),
+        { contentType: row.contentType }
+      );
+
+  return {
+    ...mapBaseScreenRow(row),
+    schemaVersion: definition.schemaVersion,
+    definition,
+    blocks: definition.editorView.blocks,
+    bindings: definition.editorView.bindings,
+  };
+}
+```
+
 Default list generation should choose only approved system fields and fields from
 the resolved content type schema:
 
@@ -154,6 +186,9 @@ export function buildDefaultListViewDefinition(
 - `bun --cwd core lint:types`
 - Vitest:
   - V1 definitions normalize into V2 without losing `blocks` or `bindings`,
+  - legacy rows without `definition` project a deterministic V2 `definition`,
+  - V2 rows with `definition` use it as the source of truth,
+  - V2 records expose `definition` and legacy `blocks`/`bindings` projections,
   - V2 definitions reject unknown top-level and nested keys,
   - V2 definitions reject persisted `contentTypeId`,
   - default `List View` generation uses only approved system fields and selected
@@ -171,6 +206,8 @@ export function buildDefaultListViewDefinition(
 
 1. `CustomScreenDefinitionVersion` supports `1 | 2`.
 2. Existing V1 rows load through a deterministic migration path.
-3. V2 definitions persist explicit `listView` and `editorView` objects.
+3. V2 definitions persist explicit `listView` and `editorView` objects in
+   `custom_screens.definition`.
 4. Unknown V2 keys fail with `custom_screen_definition_invalid`.
 5. `contentTypeId` is never duplicated inside persisted definition JSON.
+6. Full DB migration artifacts exist for `custom_screens.definition`.

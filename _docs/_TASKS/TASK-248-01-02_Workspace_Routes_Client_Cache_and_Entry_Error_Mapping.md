@@ -44,22 +44,29 @@ second hand-built Custom Screens route convention.
 ```ts
 import { resolveAdminHref } from "@/utils/adminPaths";
 
-export function buildCustomScreenWorkspaceHref(input: {
-  basePath: string;
+export function buildCustomScreenWorkspacePath(input: {
   screenId: string;
   entryId?: string | "new";
 }) {
   const path = `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
-  const href = input.entryId
+  return input.entryId
     ? `${path}/${encodeURIComponent(input.entryId)}`
     : path;
-  return resolveAdminHref(input.basePath, href);
+}
+
+export function buildCustomScreenWorkspaceHref(
+  basePath: string,
+  input: Parameters<typeof buildCustomScreenWorkspacePath>[0]
+) {
+  return resolveAdminHref(basePath, buildCustomScreenWorkspacePath(input));
 }
 ```
 
-If the implementation adds a named convenience helper to `adminPaths.ts`, that
-helper must wrap `resolveAdminHref` and receive the admin base path explicitly.
-Do not introduce an `adminPaths.*` object that bypasses the current helper API.
+Router call sites should pass `buildCustomScreenWorkspacePath(...)` into
+`AdminLink`, `navigate(...)`, or `prefetch(...)`. Those helpers already resolve
+the active admin base path. Only non-router call sites should use
+`buildCustomScreenWorkspaceHref(basePath, input)`. Do not introduce an
+`adminPaths.*` object that bypasses the current helper API.
 
 The existing Custom Screen CRUD routes continue to own definition persistence:
 
@@ -135,6 +142,59 @@ Wrap each content-entry route body in `withContentEntryErrors` without moving
 business logic into the route. The route remains orchestration-only: validate,
 load content type/entry, delegate to service, map known domain errors.
 
+```ts
+const CUSTOM_SCREEN_WORKSPACE_PATTERN =
+  /^\/advanced\/custom-screens\/([^/]+)\/entries(?:\/([^/]+))?\/?$/;
+
+function matchCustomScreenWorkspacePath(path: string) {
+  const pathname = path.split("?")[0] ?? path;
+  const match = CUSTOM_SCREEN_WORKSPACE_PATTERN.exec(pathname);
+  if (!match) return null;
+
+  return {
+    params: {
+      screenId: match[1],
+      entryId: match[2],
+    },
+  };
+}
+
+export function resolveCustomScreenWorkspacePrefetchTarget(path: string) {
+  const match = matchCustomScreenWorkspacePath(path);
+  if (!match) return null;
+
+  return {
+    screenId: decodeURIComponent(match.params.screenId),
+    entryId: match.params.entryId
+      ? decodeURIComponent(match.params.entryId)
+      : undefined,
+  };
+}
+
+export async function prefetchCustomScreenWorkspace(path: string) {
+  const target = resolveCustomScreenWorkspacePrefetchTarget(path);
+  if (!target) return false;
+
+  await listCustomScreensCached();
+  const screen = await getCustomScreenCached(target.screenId);
+  const contentTypes = await listContentTypesCached();
+  const contentType = contentTypes.find((item) => item.id === screen.contentTypeId);
+  if (!contentType) return true;
+
+  await listEntriesCached(contentType.slug);
+  if (target.entryId && target.entryId !== "new") {
+    await getEntryCached(contentType.slug, target.entryId);
+  }
+
+  return true;
+}
+```
+
+`adminPrefetch.ts` must keep this route-param aware. It should warm the Custom
+Screen list, screen detail, selected content type, entries list, and optional
+entry detail for the assigned content type only. It must not add a generic
+datasource prefetcher or a mount-force refetch loop.
+
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal admin API only.
@@ -178,9 +238,14 @@ load content type/entry, delegate to service, map known domain errors.
   - responses do not leak stack traces.
 - Vitest admin/client tests:
   - V2 payloads round-trip through `customScreensClient`,
-  - workspace href helpers encode screen and entry ids,
-  - prefetch warms `customScreens:list`, the screen detail key, and the relevant
-    content type/entries keys without mount-force refetch loops.
+  - workspace path helpers encode screen and entry ids,
+  - router call sites pass workspace paths through `AdminLink`, `navigate`, or
+    `prefetch`,
+  - absolute href helper wraps `resolveAdminHref(basePath, path)` only for
+    non-router call sites,
+  - prefetch parses workspace route params and warms `customScreens:list`, the
+    screen detail key, the selected content type, the assigned entries list, and
+    the optional entry detail key without mount-force refetch loops.
 
 ## Documentation Updates Required
 

@@ -71,6 +71,9 @@ arbitrary data-source selector.
 
 ## Implementation Pseudocode
 
+`screen.definition` is the normalized V2 definition exposed by TASK-248-01. This
+renderer must not rebuild the definition from legacy `blocks` or `bindings`.
+
 ```tsx
 // CustomScreenEditorPage.tsx
 <Tabs value={activeBuilderTab} onValueChange={setActiveBuilderTab}>
@@ -113,9 +116,7 @@ function updateListColumn(input: {
 
 ```tsx
 // CustomScreenEntriesPage.tsx
-const definition = normalizeCustomScreenDefinition(screen.definition, {
-  contentType,
-});
+const definition = screen.definition;
 
 return (
   <CustomScreenEntriesTable
@@ -125,14 +126,14 @@ return (
     buildRowHref={(entry) =>
       definition.listView.rowClick === "classic-editor"
         ? buildClassicEditorHref(contentType.slug, entry.id)
-        : buildCustomScreenWorkspaceHref({
+        : buildCustomScreenWorkspacePath({
             screenId: screen.id,
             entryId: entry.id,
           })
     }
     onCreate={() => {
       if (definition.listView.createMode === "editor-view") {
-        navigate(buildCustomScreenWorkspaceHref({ screenId: screen.id, entryId: "new" }));
+        navigate(buildCustomScreenWorkspacePath({ screenId: screen.id, entryId: "new" }));
         return;
       }
       openLegacyDrawer();

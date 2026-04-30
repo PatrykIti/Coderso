@@ -165,11 +165,16 @@ The exact type names can change during implementation, but the contract must
 keep `List View` and `Editor View` as explicit persisted concepts. Do not hide
 them as transient UI-only tabs.
 
-Storage note: the default implementation should preserve the existing
-`custom_screens` storage shape and map V2 through `schema_version`, `blocks`, and
-`bindings` for backward compatibility. If implementation adds a new physical
-definition/list/editor column, it must include the full migration artifacts
-required by AGENTS.md.
+Storage note: V2 must persist the full definition in a new record-level JSON
+column, `custom_screens.definition`, owned by the Custom Screen service contract.
+The existing `schema_version`, `blocks`, and `bindings` columns remain legacy
+compatibility fields for current V1 rows and transitional projections only; they
+must not become the hidden storage for `listView`. This requires the full DB
+migration set from AGENTS.md: SQL migration file, matching
+`meta/*_snapshot.json`, and `meta/_journal.json` update. API/client records
+should expose a normalized `definition: CustomScreenDefinitionV2`; V2 callers
+must consume that field instead of reconstructing the definition from legacy
+`blocks` and `bindings`.
 
 ## Sub-Tasks
 
@@ -190,14 +195,15 @@ required by AGENTS.md.
 ## Implementation Order
 
 1. Add the V2 definition, normalizers, default generation, and V1 migration.
-2. Add workspace route helpers and client/cache support for V2 screens.
-3. Build the `List View` designer and the rendered records table from the V2
+2. Add the `custom_screens.definition` migration and service/client projection.
+3. Add workspace route helpers and client/cache support for V2 screens.
+4. Build the `List View` designer and the rendered records table from the V2
    `listView` definition.
-4. Build the `Editor View` designer and create/edit entry renderer from the V2
+5. Build the `Editor View` designer and create/edit entry renderer from the V2
    `editorView` definition.
-5. Split widget registry behavior by surface so admin widgets stay scoped and
+6. Split widget registry behavior by surface so admin widgets stay scoped and
    data-aware widgets only use the selected content type.
-6. Replay the House Projects workflow with Playwright CLI and close docs.
+7. Replay the House Projects workflow with Playwright CLI and close docs.
 
 ## Security Contract
 
@@ -234,6 +240,7 @@ required by AGENTS.md.
 - `bun --cwd core lint:types`
 - Targeted Vitest tests for:
   - V2 definition normalization and V1 migration,
+  - persisted `definition` projection from V1 rows and V2 rows,
   - default `List View` generation from a content type schema,
   - `List View` designer state and save payload,
   - rendered records table columns/filters/row actions,
@@ -246,6 +253,8 @@ required by AGENTS.md.
   - validation errors rendered inline without stack leakage.
 - Targeted Bun route/service tests for:
   - Custom Screen V2 create/update strict schema validation,
+  - DB migration artifacts add `custom_screens.definition` without dropping V1
+    `blocks`/`bindings` compatibility,
   - content entry validation mapped to 400-level errors,
   - duplicate entry slugs mapped to 409-level errors,
   - media and relation entry failures mapped to bounded 400/404-level errors,

@@ -45,7 +45,9 @@ Use explicit surfaces:
 
 ```ts
 type WidgetSurface =
-  | "public-page"
+  | "page-builder"
+  | "widget-library"
+  | "custom-screen-builder"
   | "admin-list-view"
   | "admin-editor-view"
   | "admin-readonly-preview";
@@ -65,7 +67,10 @@ type RegisteredWidget = {
 ```
 
 The exact structure may adapt to the current registry, but the output must be
-deterministic by surface and content type.
+deterministic by surface and content type. This is an additive split: preserve
+the current `page-builder`, `widget-library`, and legacy
+`custom-screen-builder` surfaces, then add the admin V2 surfaces. Do not rename
+the existing public/widget-library surfaces in this leaf.
 
 Admin widget contract rule:
 
@@ -120,9 +125,11 @@ export function registerAdminEntryWidgets() {
 ```
 
 Compatibility rule: existing V1 screen widget types remain renderable. If a V1
-screen uses a legacy widget that is no longer selectable in V2, load it for
-legacy rendering/editing but do not offer it as a new V2 widget unless it is
-marked admin-safe.
+screen uses a legacy widget or the legacy `custom-screen-builder` surface, load
+it for legacy rendering/editing but do not offer it as a new V2 widget unless it
+is marked admin-safe. If a compatibility adapter maps `custom-screen-builder` to
+`admin-editor-view`, keep the adapter local, deterministic, and covered by
+tests; do not perform a broad registry rename.
 
 ## Security Contract
 
@@ -147,6 +154,8 @@ marked admin-safe.
 - Vitest:
   - registry returns only widgets allowed for `admin-list-view`,
   - registry returns only widgets allowed for `admin-editor-view`,
+  - existing `page-builder`, `widget-library`, and legacy
+    `custom-screen-builder` availability remains unchanged,
   - public-only widgets are hidden from Custom Screen builder,
   - legacy V1 widgets still render for existing screens,
   - field-aware admin widgets require a selected content type,

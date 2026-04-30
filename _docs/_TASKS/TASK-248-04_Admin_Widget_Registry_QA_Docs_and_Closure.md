@@ -70,7 +70,9 @@ change.
 
 ```ts
 type WidgetSurface =
-  | "public-page"
+  | "page-builder"
+  | "widget-library"
+  | "custom-screen-builder"
   | "admin-list-view"
   | "admin-editor-view"
   | "admin-readonly-preview";
@@ -91,7 +93,10 @@ type RegisteredWidget = {
 
 The exact type can be smaller if the existing registry shape already has an
 equivalent extension point. The required outcome is that widget availability is
-deterministic by surface and content type.
+deterministic by surface and content type. This split is additive: preserve the
+current `page-builder`, `widget-library`, and legacy `custom-screen-builder`
+surfaces, then add the admin V2 surfaces. Do not rename current public/widget
+library surfaces as part of this task.
 
 Registered admin widgets must follow the same product-surface rule as other
 widgets: `schema`, `defaults`, `normalize*`, render contract,
@@ -147,9 +152,12 @@ const listWidgets = listRegisteredWidgetsForSurface({
 ```
 
 Compatibility rule: existing V1 screen widget types must remain renderable.
-If a V1 screen uses a legacy widget that is no longer selectable in V2, load it
-as a legacy block for rendering/editing the old screen, but do not offer it as a
-new `Editor View` widget unless it is marked admin-safe.
+If a V1 screen uses a legacy widget or the legacy `custom-screen-builder`
+surface, load it as a legacy block for rendering/editing the old screen. Do not
+offer it as a new `Editor View` widget unless it is explicitly marked
+admin-safe. If a compatibility adapter maps `custom-screen-builder` to
+`admin-editor-view`, keep that adapter local and covered by tests; do not make it
+a broad registry rename.
 
 ## Playwright CLI Replay
 
@@ -212,6 +220,8 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 - Vitest:
   - registry returns only widgets allowed for `admin-list-view`,
   - registry returns only widgets allowed for `admin-editor-view`,
+  - existing `page-builder`, `widget-library`, and legacy
+    `custom-screen-builder` availability remains unchanged,
   - no alternate `admin-list` / `admin-record` aliases are required or accepted
     unless the registry contract is deliberately renamed,
   - public-only widgets are hidden from Custom Screen builder,
