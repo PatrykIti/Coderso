@@ -144,8 +144,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -170,10 +169,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -183,10 +179,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -196,10 +189,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -229,8 +219,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareasByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).filter(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
@@ -257,11 +246,7 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
     )
   );
 
-const findColorInputForPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const findColorInputForPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const textInput = findInputsByPlaceholder(container, placeholder)[index];
   if (!(textInput instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
@@ -292,11 +277,8 @@ const renderEditors = async ({
   initialVariant?: string;
   withVariantChange?: boolean;
 }) => {
-  const {
-    TestimonialsAdvancedEditor,
-    TestimonialsVisualEditor,
-    TestimonialsWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/TestimonialsEditors");
+  const { TestimonialsAdvancedEditor, TestimonialsVisualEditor, TestimonialsWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TestimonialsEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -355,11 +337,8 @@ const renderEditors = async ({
 };
 
 test("Testimonials editors cover variant changes, content edits, ordering, colors, and advanced normalization", async () => {
-  const {
-    TestimonialsAdvancedEditor,
-    TestimonialsVisualEditor,
-    TestimonialsWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/TestimonialsEditors");
+  const { TestimonialsAdvancedEditor, TestimonialsVisualEditor, TestimonialsWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TestimonialsEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: TestimonialsData = {
@@ -480,16 +459,10 @@ test("Testimonials editors cover variant changes, content edits, ordering, color
 
     setInputValue(findInputsByPlaceholder(view.container, "var(--color-bg)")[0], "#111111");
     setInputValue(findInputsByPlaceholder(view.container, "var(--color-border)")[0], "#222222");
-    setInputValue(
-      findInputsByPlaceholder(view.container, "var(--color-text)")[0],
-      "#f3f4f6"
-    );
-    setInputValue(
-      findInputsByPlaceholder(view.container, "var(--color-primary)")[0],
-      "#2563eb"
-    );
+    setInputValue(findInputsByPlaceholder(view.container, "var(--color-text)")[0], "#f3f4f6");
+    setInputValue(findInputsByPlaceholder(view.container, "var(--color-primary)")[0], "#2563eb");
 
-    const spacingSelect = findSelectsByOptions(view.container, ["sm", "md", "lg"])[0];
+    const spacingSelect = findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0];
     setSelectValue(spacingSelect, "lg");
 
     clickButton(findButtonsByText(view.container, "Normalize list to variant baseline")[0]);
@@ -605,10 +578,7 @@ test("Testimonials editors normalize sparse payloads, preserve token colors, and
     expect(ratingSelects[0]?.value).toBe("5");
     expect(ratingSelects[1]?.value).toBe("0");
     expect(findButtonsByText(contentSection, "Move up")[0]).toHaveProperty("disabled", true);
-    expect(findButtonsByText(contentSection, "Move down").at(-1)).toHaveProperty(
-      "disabled",
-      true
-    );
+    expect(findButtonsByText(contentSection, "Move down").at(-1)).toHaveProperty("disabled", true);
     expect(findButtonsByText(contentSection, "Remove")[0]).toHaveProperty("disabled", true);
 
     const colorsSection = findSectionByTitle(view.container, "Colors and emphasis");
@@ -625,9 +595,7 @@ test("Testimonials editors normalize sparse payloads, preserve token colors, and
       "#e2e8f0"
     );
     expect(findInputByPlaceholder(colorsSection, "var(--color-text)")?.value).toBe("text-token");
-    expect(findColorInputForPlaceholder(colorsSection, "var(--color-text)").value).toBe(
-      "#0f172a"
-    );
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-text)").value).toBe("#0f172a");
     expect(findInputByPlaceholder(colorsSection, "var(--color-primary)")?.value).toBe(
       "accent-token"
     );
@@ -640,7 +608,7 @@ test("Testimonials editors normalize sparse payloads, preserve token colors, and
       throw new Error("Missing advanced display section");
     }
 
-    const advancedSpacingSelect = findSelectByOptions(advancedSection, ["sm", "md", "lg"]);
+    const advancedSpacingSelect = findSelectByOptions(advancedSection, ["none", "sm", "md", "lg"]);
     expect(advancedSpacingSelect.value).toBe("md");
     setSelectValue(advancedSpacingSelect, "lg");
 
@@ -813,9 +781,9 @@ test("Testimonials visual editor covers header copy, card field updates, picker 
 test("Testimonials editors fall back when normalized header, style, and item fields are sparse", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/testimonials", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/testimonials")
-    >("../../../core/widgets/core/testimonials");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/testimonials")>(
+      "../../../core/widgets/core/testimonials"
+    );
 
     return {
       ...actual,
@@ -903,9 +871,11 @@ test("Testimonials editors fall back when normalized header, style, and item fie
 
   try {
     expect(
-      (findSelectByOptions(view.container, ["grid", "spotlight", "slider-static"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectByOptions(view.container, ["grid", "spotlight", "slider-static"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("grid");
     expect(
       (
@@ -915,14 +885,24 @@ test("Testimonials editors fall back when normalized header, style, and item fie
       )?.value
     ).toBe("");
     expect(
-      (findTextareaByPlaceholder(view.container, "Customer quote") as HTMLTextAreaElement | null | undefined)
+      (
+        findTextareaByPlaceholder(view.container, "Customer quote") as
+          | HTMLTextAreaElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(view.container, "Author name") as HTMLInputElement | null | undefined)
         ?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Author name") as HTMLInputElement | null | undefined)?.value
-    ).toBe("");
-    expect(
-      (findInputByPlaceholder(view.container, "Role or position") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(view.container, "Role or position") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
       (
@@ -932,23 +912,29 @@ test("Testimonials editors fall back when normalized header, style, and item fie
       )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Acme Studio") as HTMLInputElement | null | undefined)?.value
+      (findInputByPlaceholder(view.container, "Acme Studio") as HTMLInputElement | null | undefined)
+        ?.value
     ).toBe("");
     expect(
-      (findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"]) as
-        unknown as HTMLSelectElement | undefined)?.value
+      (
+        findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"]) as unknown as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("0");
     expect(
-      (findSelectByOptions(view.container, ["sm", "md", "lg"]) as unknown as HTMLSelectElement | null | undefined)
-        ?.value
+      (
+        findSelectByOptions(view.container, ["none", "sm", "md", "lg"]) as unknown as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("md");
     expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
     expect(findColorInputForPlaceholder(view.container, "var(--color-border)").value).toBe(
       "#e2e8f0"
     );
-    expect(findColorInputForPlaceholder(view.container, "var(--color-text)").value).toBe(
-      "#0f172a"
-    );
+    expect(findColorInputForPlaceholder(view.container, "var(--color-text)").value).toBe("#0f172a");
     expect(findColorInputForPlaceholder(view.container, "var(--color-primary)").value).toBe(
       "#1d4ed8"
     );

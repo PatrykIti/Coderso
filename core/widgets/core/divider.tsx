@@ -3,6 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export const dividerSpaceTokens = [
+  "none",
   "0",
   "1",
   "2",
@@ -57,6 +58,7 @@ export const dividerDefaults: DividerData = {
 };
 
 export const dividerSpaceCssValueMap: Record<DividerSpaceToken, string> = {
+  none: "0rem",
   "0": "0rem",
   "1": "0.25rem",
   "2": "0.5rem",
@@ -119,10 +121,7 @@ const resolveDividerWidthMode = (value: string | undefined): DividerWidthMode =>
 export const resolveDividerSpaceCss = (value: string): string =>
   isDividerSpaceToken(value) ? dividerSpaceCssValueMap[value] : value;
 
-const resolveDividerWidthCss = (
-  mode: DividerWidthMode,
-  customWidth: string | undefined
-) => {
+const resolveDividerWidthCss = (mode: DividerWidthMode, customWidth: string | undefined) => {
   if (mode === "container") return "min(100%, 48rem)";
   if (mode === "custom") {
     return resolveCustomWidth(customWidth, dividerDefaults.customWidth ?? "320px");
@@ -132,29 +131,20 @@ const resolveDividerWidthCss = (
 
 export function normalizeDividerData(data: DividerData): DividerData {
   return {
-    label: typeof data.label === "string" ? data.label : dividerDefaults.label ?? "",
+    label: typeof data.label === "string" ? data.label : (dividerDefaults.label ?? ""),
     thickness: clampThickness(data.thickness),
     color:
       typeof data.color === "string"
         ? data.color
-        : dividerDefaults.color ?? "var(--color-border)",
+        : (dividerDefaults.color ?? "var(--color-border)"),
     width: resolveDividerWidthMode(data.width),
-    customWidth: resolveCustomWidth(
-      data.customWidth,
-      dividerDefaults.customWidth ?? "320px"
-    ),
+    customWidth: resolveCustomWidth(data.customWidth, dividerDefaults.customWidth ?? "320px"),
     marginTop: resolveTokenOrPx(data.marginTop, dividerDefaults.marginTop ?? "6"),
     marginBottom: resolveTokenOrPx(data.marginBottom, dividerDefaults.marginBottom ?? "6"),
   };
 }
 
-export function DividerBlock({
-  data,
-  variant,
-}: {
-  data: DividerData;
-  variant: string;
-}) {
+export function DividerBlock({ data, variant }: { data: DividerData; variant: string }) {
   const resolvedVariant = resolveDividerVariant(variant);
   const normalized = normalizeDividerData(data);
   const label = (normalized.label ?? "").trim();
@@ -202,7 +192,10 @@ export function DividerBlock({
           <span aria-hidden="true" className="block flex-1 border-t" style={lineStyle} />
         </div>
       ) : (
-        <div className={joinClasses("mx-auto border-t")} style={{ ...lineStyle, width: widthCss }} />
+        <div
+          className={joinClasses("mx-auto border-t")}
+          style={{ ...lineStyle, width: widthCss }}
+        />
       )}
     </div>
   );

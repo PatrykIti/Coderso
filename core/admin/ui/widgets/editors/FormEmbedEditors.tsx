@@ -28,6 +28,7 @@ const alignmentOptions = [
 ] as const;
 
 const widthOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
@@ -35,6 +36,7 @@ const widthOptions = [
 ] as const;
 
 const spacingOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -48,12 +50,14 @@ const borderWidthOptions = [
 ] as const;
 
 const radiusOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
 ] as const;
 
 const inputSizeOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
@@ -78,9 +82,8 @@ const isWidthValue = (value: string): value is WidthValue =>
 const isSpacingValue = (value: string): value is SpacingValue =>
   spacingOptions.some((option) => option.id === value);
 
-const isButtonAlignmentValue = (
-  value: string
-): value is ButtonAlignmentValue => isAlignmentValue(value);
+const isButtonAlignmentValue = (value: string): value is ButtonAlignmentValue =>
+  isAlignmentValue(value);
 
 const isBorderWidthValue = (value: string): value is BorderWidthValue =>
   borderWidthOptions.some((option) => option.id === value);
@@ -263,7 +266,8 @@ function FormSelection({
       {isInternal ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           Internal submissions require an authenticated admin session or an API key with the
-          <span className="font-semibold"> forms.submit </span>scope. Avoid embedding this form on public pages.
+          <span className="font-semibold"> forms.submit </span>scope. Avoid embedding this form on
+          public pages.
         </div>
       ) : null}
     </EditorSection>
@@ -281,9 +285,7 @@ function ContentSection({
   return (
     <EditorSection title="Content" description="Override the title and messaging.">
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Title
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Title</label>
         <Input
           value={normalized.title ?? ""}
           onChange={(event) =>
@@ -296,9 +298,7 @@ function ContentSection({
         />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Description
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Description</label>
         <Textarea
           rows={3}
           value={normalized.description ?? ""}
@@ -356,9 +356,7 @@ function LayoutSection({
   return (
     <EditorSection title="Layout" description="Control spacing and alignment.">
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Alignment
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Alignment</label>
         <Select
           value={normalized.layout?.alignment ?? "start"}
           onValueChange={(alignment) => {
@@ -379,9 +377,7 @@ function LayoutSection({
         </Select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Width
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Width</label>
         <Select
           value={normalized.layout?.width ?? "md"}
           onValueChange={(width) => {
@@ -402,9 +398,7 @@ function LayoutSection({
         </Select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Spacing
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Spacing</label>
         <Select
           value={normalized.layout?.spacing ?? "md"}
           onValueChange={(spacing) => {
@@ -464,21 +458,19 @@ function FieldsSection({
       <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
         <div>
           <p className="text-sm font-medium text-foreground">Show labels</p>
-          <p className="text-xs text-muted-foreground">
-            Display field names above each input.
-          </p>
+          <p className="text-xs text-muted-foreground">Display field names above each input.</p>
         </div>
         <Switch
           checked={Boolean(normalized.fields?.showLabels)}
-          onCheckedChange={(checked) => updateFields(value, onChange, { showLabels: checked === true })}
+          onCheckedChange={(checked) =>
+            updateFields(value, onChange, { showLabels: checked === true })
+          }
         />
       </div>
       <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
         <div>
           <p className="text-sm font-medium text-foreground">Required indicator</p>
-          <p className="text-xs text-muted-foreground">
-            Show a star for required fields.
-          </p>
+          <p className="text-xs text-muted-foreground">Show a star for required fields.</p>
         </div>
         <Switch
           checked={Boolean(normalized.fields?.showRequiredIndicator)}
@@ -546,9 +538,7 @@ function StyleSection({
         </Select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Radius
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Radius</label>
         <Select
           value={normalized.style?.radius ?? "md"}
           onValueChange={(radius) => {
@@ -569,9 +559,7 @@ function StyleSection({
         </Select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Input size
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Input size</label>
         <Select
           value={normalized.style?.inputSize ?? "md"}
           onValueChange={(inputSize) => {

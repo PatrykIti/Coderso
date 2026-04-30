@@ -52,6 +52,7 @@ const variantOptions: Array<{
 ];
 
 const logoHeightOptions: Array<{ id: LogoCloudHeight; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
@@ -59,6 +60,7 @@ const logoHeightOptions: Array<{ id: LogoCloudHeight; label: string }> = [
 ];
 
 const gapOptions: Array<{ id: LogoCloudGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -70,9 +72,7 @@ const alignmentOptions: Array<{ id: LogoCloudAlignment; label: string }> = [
   { id: "end", label: "End" },
 ];
 
-const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) =>
-  String(index + 1)
-);
+const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) => String(index + 1));
 
 type HeaderData = NonNullable<LogoCloudData["header"]>;
 type StyleData = NonNullable<LogoCloudData["style"]>;
@@ -224,11 +224,7 @@ function addLogo(value: LogoCloudData, onChange: (next: LogoCloudData) => void) 
   });
 }
 
-function removeLogo(
-  value: LogoCloudData,
-  onChange: (next: LogoCloudData) => void,
-  index: number
-) {
+function removeLogo(value: LogoCloudData, onChange: (next: LogoCloudData) => void, index: number) {
   updateValue(value, onChange, (current) => {
     const logos = normalizeLogoCloudLogos(current.logos);
     if (logos.length <= 1) return current;
@@ -337,9 +333,7 @@ export function LogoCloudWizardEditor({
           <Input
             key={logo.id}
             value={logo.name}
-            onChange={(event) =>
-              updateLogo(value, onChange, index, { name: event.target.value })
-            }
+            onChange={(event) => updateLogo(value, onChange, index, { name: event.target.value })}
             placeholder={`Logo ${index + 1}`}
           />
         ))}
@@ -403,9 +397,7 @@ export function LogoCloudVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={header.description}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Showcase partner and client logos."
           />
         </div>
@@ -522,9 +514,7 @@ export function LogoCloudVisualEditor({
           <p className="text-sm font-medium">Gap</p>
           <Select
             value={style.gap}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { gap: next as LogoCloudGap })
-            }
+            onValueChange={(next) => updateStyle(value, onChange, { gap: next as LogoCloudGap })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gap" />
@@ -594,10 +584,7 @@ export function LogoCloudVisualEditor({
   );
 }
 
-export function LogoCloudAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<LogoCloudData>) {
+export function LogoCloudAdvancedEditor({ value, onChange }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? logoCloudDefaults.style!;
 
@@ -631,9 +618,7 @@ export function LogoCloudAdvancedEditor({
           <p className="text-sm font-medium">Gap token</p>
           <Select
             value={style.gap}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { gap: next as LogoCloudGap })
-            }
+            onValueChange={(next) => updateStyle(value, onChange, { gap: next as LogoCloudGap })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gap" />

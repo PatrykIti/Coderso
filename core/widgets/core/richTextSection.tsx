@@ -10,9 +10,9 @@ import {
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type RichTextSectionVariantId = "single-column" | "two-column" | "article";
-export type RichTextSectionFontScale = "sm" | "md" | "lg";
-export type RichTextSectionLineHeight = "tight" | "normal" | "relaxed";
-export type RichTextSectionSpacing = "sm" | "md" | "lg";
+export type RichTextSectionFontScale = "none" | "sm" | "md" | "lg";
+export type RichTextSectionLineHeight = "none" | "tight" | "normal" | "relaxed";
+export type RichTextSectionSpacing = "none" | "sm" | "md" | "lg";
 export type RichTextSectionMaxWidth = "md" | "lg" | "xl" | "full";
 export type RichTextSectionOutputMode = "html" | "blocks-fallback" | "blocks";
 
@@ -56,18 +56,21 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const fontScaleClassMap: Record<RichTextSectionFontScale, string> = {
+  none: "",
   sm: "text-sm",
   md: "text-base",
   lg: "text-lg",
 };
 
 const lineHeightClassMap: Record<RichTextSectionLineHeight, string> = {
+  none: "",
   tight: "leading-6",
   normal: "leading-7",
   relaxed: "leading-8",
 };
 
 const spacingClassMap: Record<RichTextSectionSpacing, string> = {
+  none: "space-y-0",
   sm: "space-y-4",
   md: "space-y-6",
   lg: "space-y-8",
@@ -153,11 +156,11 @@ export const richTextSectionSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        fontScale: { enum: ["sm", "md", "lg"] },
-        lineHeight: { enum: ["tight", "normal", "relaxed"] },
+        fontScale: { enum: ["none", "sm", "md", "lg"] },
+        lineHeight: { enum: ["none", "tight", "normal", "relaxed"] },
         textColor: { type: "string" },
         background: { type: "string" },
-        spacing: { enum: ["sm", "md", "lg"] },
+        spacing: { enum: ["none", "sm", "md", "lg"] },
       },
     },
   },
@@ -212,52 +215,39 @@ const resolveString = (value: string | undefined, fallback: string) =>
 const resolveOptionalString = (value: string | undefined) =>
   typeof value === "string" ? value : undefined;
 
-const resolveRichTextFontScale = (
-  value: string | undefined
-): RichTextSectionFontScale => {
-  if (value === "sm" || value === "lg") return value;
+const resolveRichTextFontScale = (value: string | undefined): RichTextSectionFontScale => {
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
-const resolveRichTextLineHeight = (
-  value: string | undefined
-): RichTextSectionLineHeight => {
-  if (value === "tight" || value === "relaxed") return value;
+const resolveRichTextLineHeight = (value: string | undefined): RichTextSectionLineHeight => {
+  if (value === "none" || value === "tight" || value === "relaxed") return value;
   return "normal";
 };
 
-const resolveRichTextSpacing = (
-  value: string | undefined
-): RichTextSectionSpacing => {
-  if (value === "sm" || value === "lg") return value;
+const resolveRichTextSpacing = (value: string | undefined): RichTextSectionSpacing => {
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
-const resolveRichTextMaxWidth = (
-  value: string | undefined
-): RichTextSectionMaxWidth => {
+const resolveRichTextMaxWidth = (value: string | undefined): RichTextSectionMaxWidth => {
   if (value === "md" || value === "xl" || value === "full") return value;
   return "lg";
 };
 
-const resolveRichTextOutputMode = (
-  value: string | undefined
-): RichTextSectionOutputMode => {
+const resolveRichTextOutputMode = (value: string | undefined): RichTextSectionOutputMode => {
   if (value === "html" || value === "blocks") return value;
   return "blocks-fallback";
 };
 
-export const resolveRichTextSectionVariant = (
-  variant: string
-): RichTextSectionVariantId => {
+export const resolveRichTextSectionVariant = (variant: string): RichTextSectionVariantId => {
   if (variant === "two-column" || variant === "article") return variant;
   return "single-column";
 };
 
 const headingTextBlockTags = new Set(["h2", "h3", "h4", "span", "strong", "em"]);
 
-const extractHeadingText = (value: string) =>
-  htmlToPlainText(value, headingTextBlockTags);
+const extractHeadingText = (value: string) => htmlToPlainText(value, headingTextBlockTags);
 
 const slugifyHeading = (value: string, fallbackIndex: number) => {
   const normalized = value
@@ -440,10 +430,7 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
         typeof data.options?.dropcap === "boolean"
           ? data.options.dropcap
           : Boolean(optionsDefaults.dropcap),
-      toc:
-        typeof data.options?.toc === "boolean"
-          ? data.options.toc
-          : Boolean(optionsDefaults.toc),
+      toc: typeof data.options?.toc === "boolean" ? data.options.toc : Boolean(optionsDefaults.toc),
       maxWidth: resolveRichTextMaxWidth(data.options?.maxWidth),
       outputMode: resolveRichTextOutputMode(data.options?.outputMode),
     },
@@ -454,10 +441,7 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
         data.style?.textColor,
         styleDefaults.textColor ?? "var(--color-text)"
       ),
-      background: resolveString(
-        data.style?.background,
-        styleDefaults.background ?? "transparent"
-      ),
+      background: resolveString(data.style?.background, styleDefaults.background ?? "transparent"),
       spacing: resolveRichTextSpacing(data.style?.spacing),
     },
   };
@@ -505,11 +489,11 @@ export function RichTextSectionBlock({
   const blocksHtml = renderBlocksAsHtml(normalized.body?.blocks);
   const rawHtml =
     options.outputMode === "html"
-      ? normalized.body?.html ?? ""
+      ? (normalized.body?.html ?? "")
       : options.outputMode === "blocks"
         ? blocksHtml
         : (normalized.body?.html ?? "").trim().length > 0
-          ? normalized.body?.html ?? ""
+          ? (normalized.body?.html ?? "")
           : blocksHtml;
 
   const sanitizedHtml = sanitizeRichTextHtml(rawHtml);

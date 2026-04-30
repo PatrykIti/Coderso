@@ -5,7 +5,7 @@ export const contactFieldOptions = ["name", "email", "phone", "message"] as cons
 
 export type ContactFieldId = (typeof contactFieldOptions)[number];
 export type ContactVariantId = "form-left" | "form-right" | "minimal";
-export type ContactSpacing = "sm" | "md" | "lg" | "xl";
+export type ContactSpacing = "none" | "sm" | "md" | "lg" | "xl";
 export type ContactColumns = "one" | "two";
 export type ContactBorderWidth = "0" | "1" | "2" | "3";
 
@@ -57,6 +57,7 @@ const contactFieldInputTypeMap: Record<ContactFieldId, string> = {
 };
 
 const spacingClassMap: Record<ContactSpacing, string> = {
+  none: "gap-0 py-0",
   sm: "gap-4 py-6",
   md: "gap-6 py-8",
   lg: "gap-8 py-10",
@@ -80,7 +81,7 @@ const resolveNonEmptyString = (value: string | undefined, fallback: string) => {
 };
 
 const resolveContactSpacing = (value: string | undefined): ContactSpacing => {
-  if (value === "sm" || value === "lg" || value === "xl") return value;
+  if (value === "none" || value === "sm" || value === "lg" || value === "xl") return value;
   return "md";
 };
 
@@ -94,10 +95,7 @@ const resolveContactBorderWidth = (value: string | undefined): ContactBorderWidt
   return "1";
 };
 
-const normalizeFieldList = (
-  value: unknown,
-  fallback: ContactFieldId[]
-): ContactFieldId[] => {
+const normalizeFieldList = (value: unknown, fallback: ContactFieldId[]): ContactFieldId[] => {
   const source = Array.isArray(value) ? value : [];
   const normalized: ContactFieldId[] = [];
   const seen = new Set<ContactFieldId>();
@@ -177,7 +175,7 @@ export const contactSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        spacing: { enum: ["sm", "md", "lg", "xl"] },
+        spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
         background: { type: "string" },
         columns: { enum: ["one", "two"] },
         surfaceColor: { type: "string" },
@@ -234,10 +232,7 @@ export function normalizeContactData(data: ContactData): ContactData {
   };
 
   const fields = normalizeFieldList(data.form?.fields, formDefaults.fields ?? []);
-  const requiredCandidates = normalizeFieldList(
-    data.form?.required,
-    formDefaults.required ?? []
-  );
+  const requiredCandidates = normalizeFieldList(data.form?.required, formDefaults.required ?? []);
   const fieldSet = new Set<ContactFieldId>(fields);
   const required = requiredCandidates.filter((item) => fieldSet.has(item));
 
@@ -263,10 +258,7 @@ export function normalizeContactData(data: ContactData): ContactData {
     },
     style: {
       spacing: resolveContactSpacing(data.style?.spacing),
-      background: resolveString(
-        data.style?.background,
-        styleDefaults.background ?? "transparent"
-      ),
+      background: resolveString(data.style?.background, styleDefaults.background ?? "transparent"),
       columns: resolveContactColumns(data.style?.columns),
       surfaceColor: resolveString(
         data.style?.surfaceColor,
@@ -281,13 +273,7 @@ export function normalizeContactData(data: ContactData): ContactData {
   };
 }
 
-export function ContactBlock({
-  data,
-  variant,
-}: {
-  data: ContactData;
-  variant: string;
-}) {
+export function ContactBlock({ data, variant }: { data: ContactData; variant: string }) {
   const normalizedData = normalizeContactData(data);
   const resolvedVariant = resolveContactVariant(variant);
 
@@ -336,10 +322,7 @@ export function ContactBlock({
     >
       {showForm ? (
         <form
-          className={joinClasses(
-            "space-y-3 rounded-xl p-4",
-            formOrderClass
-          )}
+          className={joinClasses("space-y-3 rounded-xl p-4", formOrderClass)}
           style={panelStyle}
         >
           {form.fields?.map((field) =>

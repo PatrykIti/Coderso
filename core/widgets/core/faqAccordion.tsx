@@ -3,7 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type FaqAccordionVariantId = "single-column" | "two-column" | "compact";
-export type FaqAccordionSpacing = "sm" | "md" | "lg";
+export type FaqAccordionSpacing = "none" | "sm" | "md" | "lg";
 
 export type FaqAccordionItem = {
   id?: string;
@@ -33,12 +33,14 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const spacingClassMap: Record<FaqAccordionSpacing, string> = {
+  none: "gap-0",
   sm: "gap-2",
   md: "gap-3",
   lg: "gap-4",
 };
 
 const panelPaddingClassMap: Record<FaqAccordionSpacing, string> = {
+  none: "px-0 py-0",
   sm: "px-4 py-3",
   md: "px-5 py-4",
   lg: "px-6 py-5",
@@ -89,7 +91,7 @@ export const faqAccordionSchema = {
         surface: { type: "string" },
         border: { type: "string" },
         divider: { type: "string" },
-        spacing: { enum: ["sm", "md", "lg"] },
+        spacing: { enum: ["none", "sm", "md", "lg"] },
       },
     },
   },
@@ -104,8 +106,7 @@ export const faqAccordionDefaults: FaqAccordionData = {
     {
       id: "faq-1",
       question: "How long does setup take?",
-      answer:
-        "Most teams configure their first page in under one day using reusable templates.",
+      answer: "Most teams configure their first page in under one day using reusable templates.",
     },
     {
       id: "faq-2",
@@ -138,7 +139,7 @@ const resolveString = (value: string | undefined, fallback: string) =>
 const createFaqItemId = (index: number) => `faq-${index + 1}`;
 
 const resolveFaqAccordionSpacing = (value: string | undefined): FaqAccordionSpacing => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
@@ -209,12 +210,12 @@ export function normalizeFaqAccordionItems(
     const question =
       typeof base.question === "string" && base.question.trim().length > 0
         ? base.question.trim()
-        : fallbackQuestions[index] ?? `Question ${index + 1}`;
+        : (fallbackQuestions[index] ?? `Question ${index + 1}`);
 
     const answer =
       typeof base.answer === "string" && base.answer.trim().length > 0
         ? base.answer.trim()
-        : fallbackAnswers[index] ?? `Answer ${index + 1}`;
+        : (fallbackAnswers[index] ?? `Answer ${index + 1}`);
 
     normalized.push({
       id,
@@ -243,19 +244,13 @@ export function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionD
   };
 
   const items = normalizeFaqAccordionItems(data.items);
-  const defaultOpenIndex = resolveDefaultOpenIndex(
-    data.options?.defaultOpenIndex,
-    items.length
-  );
+  const defaultOpenIndex = resolveDefaultOpenIndex(data.options?.defaultOpenIndex, items.length);
 
   return {
     ...data,
     header: {
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
-      description: resolveString(
-        data.header?.description,
-        headerDefaults.description ?? ""
-      ),
+      description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     items,
     options: {
@@ -269,30 +264,15 @@ export function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionD
           : resolveDefaultOpenIndex(optionsDefaults.defaultOpenIndex, items.length),
     },
     style: {
-      surface: resolveString(
-        data.style?.surface,
-        styleDefaults.surface ?? "var(--color-bg)"
-      ),
-      border: resolveString(
-        data.style?.border,
-        styleDefaults.border ?? "var(--color-border)"
-      ),
-      divider: resolveString(
-        data.style?.divider,
-        styleDefaults.divider ?? "var(--color-border)"
-      ),
+      surface: resolveString(data.style?.surface, styleDefaults.surface ?? "var(--color-bg)"),
+      border: resolveString(data.style?.border, styleDefaults.border ?? "var(--color-border)"),
+      divider: resolveString(data.style?.divider, styleDefaults.divider ?? "var(--color-border)"),
       spacing: resolveFaqAccordionSpacing(data.style?.spacing),
     },
   };
 }
 
-export function FaqAccordionBlock({
-  data,
-  variant,
-}: {
-  data: FaqAccordionData;
-  variant: string;
-}) {
+export function FaqAccordionBlock({ data, variant }: { data: FaqAccordionData; variant: string }) {
   const resolvedVariant = resolveFaqAccordionVariant(variant);
   const normalizedData = normalizeFaqAccordionData(data);
   const style = normalizedData.style ?? faqAccordionDefaults.style!;
@@ -323,7 +303,12 @@ export function FaqAccordionBlock({
     resolvedVariant === "two-column"
       ? joinClasses("grid grid-cols-1 lg:grid-cols-2", spacingClassMap[spacing])
       : joinClasses("grid grid-cols-1", spacingClassMap[spacing]);
-  const panelPaddingClass = compact ? "px-4 py-3" : panelPaddingClassMap[spacing];
+  const panelPaddingClass =
+    spacing === "none"
+      ? panelPaddingClassMap.none
+      : compact
+        ? "px-4 py-3"
+        : panelPaddingClassMap[spacing];
   const summaryClassName = compact ? "text-sm font-semibold" : "text-base font-semibold";
   const answerClassName = compact ? "text-xs leading-relaxed" : "text-sm leading-relaxed";
 
@@ -345,7 +330,13 @@ export function FaqAccordionBlock({
             </h3>
           ) : null}
           {(normalizedData.header?.description ?? "").trim().length > 0 ? (
-            <p className={compact ? "text-sm text-[var(--color-text)]/75" : "text-base text-[var(--color-text)]/75"}>
+            <p
+              className={
+                compact
+                  ? "text-sm text-[var(--color-text)]/75"
+                  : "text-base text-[var(--color-text)]/75"
+              }
+            >
               {normalizedData.header?.description}
             </p>
           ) : null}
@@ -364,7 +355,13 @@ export function FaqAccordionBlock({
               data-faq-item-open={String(open)}
             >
               <details open={open}>
-                <summary className={joinClasses("cursor-pointer list-none", panelPaddingClass, summaryClassName)}>
+                <summary
+                  className={joinClasses(
+                    "cursor-pointer list-none",
+                    panelPaddingClass,
+                    summaryClassName
+                  )}
+                >
                   {item.question}
                 </summary>
                 <div

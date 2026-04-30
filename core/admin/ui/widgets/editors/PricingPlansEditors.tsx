@@ -52,6 +52,7 @@ const variantOptions: Array<{
 ];
 
 const spacingOptions: Array<{ id: PricingPlansSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -506,7 +507,10 @@ export function PricingPlansWizardEditor({
       <div className="space-y-3">
         <p className="text-sm font-medium">Basic plan setup</p>
         {plans.map((plan, index) => (
-          <div key={plan.id ?? `wizard-plan-${index + 1}`} className="space-y-2 rounded-lg border p-3">
+          <div
+            key={plan.id ?? `wizard-plan-${index + 1}`}
+            className="space-y-2 rounded-lg border p-3"
+          >
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Plan {index + 1}
             </p>
@@ -517,7 +521,9 @@ export function PricingPlansWizardEditor({
             />
             <Input
               value={plan.price ?? ""}
-              onChange={(event) => updatePlan(value, onChange, index, { price: event.target.value })}
+              onChange={(event) =>
+                updatePlan(value, onChange, index, { price: event.target.value })
+              }
               placeholder="$49"
             />
           </div>
@@ -582,9 +588,7 @@ export function PricingPlansVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Compare pricing tiers and pick the option matching your team stage."
           />
         </div>
@@ -730,7 +734,10 @@ export function PricingPlansVisualEditor({
               ) : (
                 <div className="space-y-2">
                   {(plan.features ?? []).map((feature, featureIndex) => (
-                    <div key={`${plan.id ?? planIndex}-feature-${featureIndex}`} className="space-y-2 rounded-md border p-2">
+                    <div
+                      key={`${plan.id ?? planIndex}-feature-${featureIndex}`}
+                      className="space-y-2 rounded-md border p-2"
+                    >
                       <Input
                         value={feature}
                         onChange={(event) =>
@@ -750,13 +757,7 @@ export function PricingPlansVisualEditor({
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            moveFeature(
-                              value,
-                              onChange,
-                              planIndex,
-                              featureIndex,
-                              featureIndex - 1
-                            )
+                            moveFeature(value, onChange, planIndex, featureIndex, featureIndex - 1)
                           }
                           disabled={featureIndex === 0}
                         >
@@ -767,13 +768,7 @@ export function PricingPlansVisualEditor({
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            moveFeature(
-                              value,
-                              onChange,
-                              planIndex,
-                              featureIndex,
-                              featureIndex + 1
-                            )
+                            moveFeature(value, onChange, planIndex, featureIndex, featureIndex + 1)
                           }
                           disabled={featureIndex === (plan.features ?? []).length - 1}
                         >
@@ -783,9 +778,7 @@ export function PricingPlansVisualEditor({
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            removeFeature(value, onChange, planIndex, featureIndex)
-                          }
+                          onClick={() => removeFeature(value, onChange, planIndex, featureIndex)}
                         >
                           Remove
                         </Button>
@@ -952,11 +945,7 @@ export function PricingPlansAdvancedEditor({
             type="button"
             variant="outline"
             onClick={() =>
-              setPlanCount(
-                value,
-                onChange,
-                resolvePricingPlanCountForVariant(resolvedVariant)
-              )
+              setPlanCount(value, onChange, resolvePricingPlanCountForVariant(resolvedVariant))
             }
           >
             Normalize plans to variant baseline

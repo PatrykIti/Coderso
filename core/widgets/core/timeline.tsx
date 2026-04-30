@@ -5,13 +5,13 @@ export type TimelineVariantId = "milestones" | "cards" | "compact";
 export type TimelineOrientation = "horizontal" | "vertical";
 export type TimelineAlign = "start" | "center" | "end";
 export type TimelineLabelPosition = "top" | "bottom";
-export type TimelineSpacing = "sm" | "md" | "lg" | "xl";
+export type TimelineSpacing = "none" | "sm" | "md" | "lg" | "xl";
 export type TimelineGuideStyle = "solid" | "dashed";
 export type TimelineLineStyle = "solid" | "dashed";
 export type TimelineMarkerSize = "sm" | "md" | "lg";
 export type TimelineThickness = "1" | "2" | "3" | "4";
-export type TimelineTitleSize = "sm" | "base" | "lg" | "xl";
-export type TimelineDescriptionSize = "xs" | "sm" | "base" | "lg";
+export type TimelineTitleSize = "none" | "sm" | "base" | "lg" | "xl";
+export type TimelineDescriptionSize = "none" | "xs" | "sm" | "base" | "lg";
 
 export type TimelineStep = {
   id?: string;
@@ -56,6 +56,7 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const spacingClassMap = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
@@ -69,6 +70,7 @@ const markerSizeClassMap = {
 } as const;
 
 const titleSizeClassMap = {
+  none: "",
   sm: "text-sm",
   base: "text-base",
   lg: "text-lg",
@@ -76,6 +78,7 @@ const titleSizeClassMap = {
 } as const;
 
 const descriptionSizeClassMap = {
+  none: "",
   xs: "text-xs",
   sm: "text-sm",
   base: "text-base",
@@ -135,7 +138,7 @@ export const timelineSchema = {
       properties: {
         orientation: { enum: ["horizontal", "vertical"] },
         align: { enum: ["start", "center", "end"] },
-        spacing: { enum: ["sm", "md", "lg", "xl"] },
+        spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
         labelPosition: { enum: ["top", "bottom"] },
       },
     },
@@ -158,8 +161,8 @@ export const timelineSchema = {
         markerColor: { type: "string" },
         titleColor: { type: "string" },
         descriptionColor: { type: "string" },
-        titleSize: { enum: ["sm", "base", "lg", "xl"] },
-        descriptionSize: { enum: ["xs", "sm", "base", "lg"] },
+        titleSize: { enum: ["none", "sm", "base", "lg", "xl"] },
+        descriptionSize: { enum: ["none", "xs", "sm", "base", "lg"] },
       },
     },
     background: {
@@ -209,7 +212,7 @@ export function normalizeTimelineSteps(
     const title =
       typeof base.title === "string" && base.title.trim().length > 0
         ? base.title.trim()
-        : fallbackTitles[index] ?? `Step ${index + 1}`;
+        : (fallbackTitles[index] ?? `Step ${index + 1}`);
 
     normalized.push({
       id,
@@ -298,30 +301,36 @@ const renderStepText = (
   titleSize: TimelineTitleSize,
   descriptionSize: TimelineDescriptionSize,
   compact?: boolean
-) => (
-  <div className={joinClasses("space-y-1", textAlignClassMap[align] ?? "text-center")}>
-    <div className="flex items-center gap-2">
-      {step.icon ? <span className="text-sm leading-none">{step.icon}</span> : null}
-      <span
-        className={joinClasses(
-          "font-semibold",
-          compact ? "text-sm" : titleSizeClassMap[titleSize] ?? "text-base"
-        )}
-        style={{ color: titleColor }}
-      >
-        {step.title}
-      </span>
+) => {
+  const titleSizeClass =
+    titleSize === "none"
+      ? undefined
+      : compact
+        ? "text-sm"
+        : (titleSizeClassMap[titleSize] ?? "text-base");
+
+  return (
+    <div className={joinClasses("space-y-1", textAlignClassMap[align] ?? "text-center")}>
+      <div className="flex items-center gap-2">
+        {step.icon ? <span className="text-sm leading-none">{step.icon}</span> : null}
+        <span
+          className={joinClasses("font-semibold", titleSizeClass)}
+          style={{ color: titleColor }}
+        >
+          {step.title}
+        </span>
+      </div>
+      {!compact && step.description ? (
+        <p
+          className={descriptionSizeClassMap[descriptionSize] ?? "text-xs"}
+          style={{ color: descriptionColor }}
+        >
+          {step.description}
+        </p>
+      ) : null}
     </div>
-    {!compact && step.description ? (
-      <p
-        className={descriptionSizeClassMap[descriptionSize] ?? "text-xs"}
-        style={{ color: descriptionColor }}
-      >
-        {step.description}
-      </p>
-    ) : null}
-  </div>
-);
+  );
+};
 
 function TimelineMilestonesLayout({
   steps,
@@ -420,7 +429,12 @@ function TimelineMilestonesLayout({
             className={joinClasses("min-w-[10rem]", itemAlignClassMap[layout.align])}
           >
             {layout.labelPosition === "top" ? textNode : null}
-            <div className={joinClasses("my-2 flex items-center", layout.align === "end" ? "justify-end" : "justify-start")}>
+            <div
+              className={joinClasses(
+                "my-2 flex items-center",
+                layout.align === "end" ? "justify-end" : "justify-start"
+              )}
+            >
               <span
                 className={joinClasses("rounded-full border", markerSize)}
                 style={{
@@ -549,7 +563,7 @@ function TimelineCompactLayout({
         layout.orientation === "vertical" ? "flex-col" : "flex-wrap",
         spacingClassMap[layout.spacing] ?? "gap-5",
         layout.orientation === "horizontal"
-          ? justifyClassMap[layout.align] ?? "justify-center"
+          ? (justifyClassMap[layout.align] ?? "justify-center")
           : undefined
       )}
     >
@@ -608,26 +622,11 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
           data-timeline-label-position={layout.labelPosition}
         >
           {resolvedVariant === "cards" ? (
-            <TimelineCardsLayout
-              steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
-            />
+            <TimelineCardsLayout steps={steps} layout={layout} guides={guides} style={style} />
           ) : resolvedVariant === "compact" ? (
-            <TimelineCompactLayout
-              steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
-            />
+            <TimelineCompactLayout steps={steps} layout={layout} guides={guides} style={style} />
           ) : (
-            <TimelineMilestonesLayout
-              steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
-            />
+            <TimelineMilestonesLayout steps={steps} layout={layout} guides={guides} style={style} />
           )}
         </div>
       </div>

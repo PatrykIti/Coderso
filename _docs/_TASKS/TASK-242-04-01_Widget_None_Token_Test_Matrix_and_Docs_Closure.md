@@ -6,7 +6,7 @@
 **Category:** Widget QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-242-02, TASK-242-03
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -130,6 +130,38 @@ for (const changedWidget of changedWidgets) {
 - Record exact commands and pass/fail results in TASK-242 before moving Done.
 - If a broad suite fails for unrelated pre-existing reasons, isolate it with a
   focused suite and document the blocker separately.
+
+## Validation Results
+
+Completed on 2026-04-29.
+
+- [x] `bun --cwd core lint:types` - PASS.
+- [x] `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` -
+  PASS, 6 tests.
+- [x] Vitest runtime widget matrix - PASS, 25 files / 188 tests.
+- [x] Changed editor-wave matrix - PASS, 23 files / 111 tests:
+  `compare-timeline`, `contact`, `content-list`, `cta-banner`,
+  `entry-teaser`, `faq-accordion`, `feature-grid`, `footer`, `form-embed`,
+  `grid-columns`, `hero`, `logo-cloud`, `navigation`, `newsletter`,
+  `posts-feed`, `pricing-plans`, `rich-text-section`, `split-layout`, `stack`,
+  `stats-kpi`, `team`, `testimonials`, and `timeline`.
+- [x] `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun test tests/unit/widgets/contentList.test.tsx --test-name-pattern "content list preserves none gap token"` - PASS.
+- [x] `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun test tests/unit/widgets/entryTeaser.test.tsx --test-name-pattern "entry teaser preserves none spacing and radius tokens"` - PASS.
+- [x] `set -a && source /Users/pciechanski/Documents/_moje_projekty/Nextless/.env && set +a && bun test tests/unit/widgets/postsFeedWidget.test.tsx --test-name-pattern "posts feed preserves none gap token through content list mapping"` - PASS.
+- [x] `bun --cwd core lint` - PASS.
+- [x] `git diff --check` - PASS.
+- [x] `bun run gates:coderso` - PASS; optional DB-backed checks skipped because
+  `DATABASE_URL` is not configured in the task worktree environment.
+- [x] `bun run precommit` - PASS.
+
+Known unrelated validation notes:
+
+- Running the Bun-owned widget files without the main checkout `.env` fails with
+  `DATABASE_URL is not set`.
+- A broad run of `tests/unit/widgets/contentList.test.tsx` currently exposes
+  `Cannot access 'POST_CONTENT_TYPE_SLUG' before initialization` in the existing
+  posts-source resolver test; TASK-242 closure is covered by the focused passing
+  tests above.
 
 ## Documentation Updates Required
 

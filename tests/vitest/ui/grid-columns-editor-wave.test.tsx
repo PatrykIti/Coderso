@@ -144,8 +144,7 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const allSpanOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
@@ -204,21 +203,13 @@ const clickButton = (element: Element | null | undefined) => {
   });
 };
 
-const queryInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) =>
+const queryInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element): element is HTMLInputElement =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   )[index];
 
-const findInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const findInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = queryInputByPlaceholder(container, placeholder, index);
   if (!(input instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
@@ -286,11 +277,8 @@ const renderEditor = async ({
   initialVariant?: string;
   withVariantChange?: boolean;
 }) => {
-  const {
-    GridColumnsAdvancedEditor,
-    GridColumnsVisualEditor,
-    GridColumnsWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/GridColumnsEditors");
+  const { GridColumnsAdvancedEditor, GridColumnsVisualEditor, GridColumnsWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GridColumnsEditors");
 
   const editorMap = {
     wizard: GridColumnsWizardEditor,
@@ -380,7 +368,7 @@ test("GridColumns wizard editor covers variant fallback, count clamp, label edit
       "5",
       String(gridColumnsColumnMax),
     ]);
-    const gapSelects = findSelectsByOptions(view.container, ["2", "3", "4", "6", "8"]);
+    const gapSelects = findSelectsByOptions(view.container, ["none", "2", "3", "4", "6", "8"]);
 
     expect(variantSelect.value).toBe("equal");
     expect(countSelect.value).toBe(String(gridColumnsColumnMax));
@@ -470,9 +458,9 @@ test("GridColumns variant controls ignore changes when variant handlers are abse
     expect(wizardView.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(visualView.getVariant()).toBe("equal");
     expect(visualView.onVariantChangeSpy).not.toHaveBeenCalled();
-    expect(normalizeText(findButtonsByText(visualVariantSection, "Equal")[0]?.textContent)).toContain(
-      "selected"
-    );
+    expect(
+      normalizeText(findButtonsByText(visualVariantSection, "Equal")[0]?.textContent)
+    ).toContain("selected");
     expect(
       normalizeText(findButtonsByText(visualVariantSection, "Masonry Lite")[0]?.textContent)
     ).toContain("pick");
@@ -547,7 +535,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     clickButton(findButtonsByText(columnSection, "Remove last config")[0]);
     expect(view.getValue().columns).toHaveLength(3);
 
-    const gapSelects = findSelectsByOptions(surfaceSection, ["2", "3", "4", "6", "8"]);
+    const gapSelects = findSelectsByOptions(surfaceSection, ["none", "2", "3", "4", "6", "8"]);
     expect(gapSelects).toHaveLength(2);
     expect(gapSelects[0]?.value).toBe(gridColumnsDefaults.layout?.gapX);
     expect(gapSelects[1]?.value).toBe(gridColumnsDefaults.layout?.gapY);
@@ -573,7 +561,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
 
     const borderWidthSelect = findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]);
     const radiusSelect = findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]);
-    const paddingSelect = findSelectByOptions(surfaceSection, ["2", "3", "4", "5", "6"]);
+    const paddingSelect = findSelectByOptions(surfaceSection, ["none", "2", "3", "4", "5", "6"]);
     setSelectValue(borderWidthSelect, "2");
     setSelectValue(radiusSelect, "2xl");
     setSelectValue(paddingSelect, "6");
@@ -680,7 +668,14 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
       "5",
       String(gridColumnsColumnMax),
     ]);
-    const wizardGapSelects = findSelectsByOptions(wizardView.container, ["2", "3", "4", "6", "8"]);
+    const wizardGapSelects = findSelectsByOptions(wizardView.container, [
+      "none",
+      "2",
+      "3",
+      "4",
+      "6",
+      "8",
+    ]);
 
     expect(wizardVariantSelect.value).toBe("equal");
     expect(wizardCountSelect.value).toBe(String(gridColumnsColumnMin));
@@ -721,7 +716,14 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
     ]);
     const addButton = findButtonsByText(visualEmptyView.container, "Add column config")[0];
     const removeButton = findButtonsByText(visualEmptyView.container, "Remove last config")[0];
-    const visualGapSelects = findSelectsByOptions(visualSurfaceSection, ["2", "3", "4", "6", "8"]);
+    const visualGapSelects = findSelectsByOptions(visualSurfaceSection, [
+      "none",
+      "2",
+      "3",
+      "4",
+      "6",
+      "8",
+    ]);
     const visualSpanSelects = findSelectsByOptions(visualColumnSection, allSpanOptions);
     const visualColorInputs = Array.from(
       visualSurfaceSection.querySelectorAll('input[type="color"]')
@@ -748,10 +750,10 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
     expect(findInputByPlaceholder(visualSurfaceSection, "var(--color-surface)").value).toBe("");
     expect(findInputByPlaceholder(visualSurfaceSection, "var(--color-border)").value).toBe("");
     expect(findSelectByOptions(visualSurfaceSection, ["0", "1", "2", "3"]).value).toBe("1");
-    expect(findSelectByOptions(visualSurfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe(
-      "xl"
+    expect(findSelectByOptions(visualSurfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("xl");
+    expect(findSelectByOptions(visualSurfaceSection, ["none", "2", "3", "4", "5", "6"]).value).toBe(
+      "4"
     );
-    expect(findSelectByOptions(visualSurfaceSection, ["2", "3", "4", "5", "6"]).value).toBe("4");
 
     const advancedSection = getSectionByTitle(advancedView.container, "Technical layout tokens");
     const advancedSelects = Array.from(advancedSection.querySelectorAll("select")).filter(
@@ -828,7 +830,7 @@ test("GridColumns advanced editor covers normalized diagnostics and technical to
     setCheckboxValue(cardizeToggle ?? undefined, true);
 
     const borderWidthSelect = findSelectByOptions(technicalSection, ["0", "1", "2", "3"]);
-    const paddingSelect = findSelectByOptions(technicalSection, ["2", "3", "4", "5", "6"]);
+    const paddingSelect = findSelectByOptions(technicalSection, ["none", "2", "3", "4", "5", "6"]);
     setSelectValue(borderWidthSelect, "3");
     setSelectValue(paddingSelect, "6");
 

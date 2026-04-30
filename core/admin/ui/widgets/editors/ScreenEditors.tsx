@@ -337,6 +337,7 @@ const twoColumnVariantOptions: Array<{
 ];
 
 const gapOptions: Array<{ id: ScreenTwoColumnGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },

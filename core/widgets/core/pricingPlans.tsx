@@ -2,11 +2,8 @@ import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
-export type PricingPlansVariantId =
-  | "three-plans"
-  | "four-plans"
-  | "comparison-rows";
-export type PricingPlansSpacing = "sm" | "md" | "lg";
+export type PricingPlansVariantId = "three-plans" | "four-plans" | "comparison-rows";
+export type PricingPlansSpacing = "none" | "sm" | "md" | "lg";
 export type PricingPlansRadius = "none" | "md" | "lg" | "xl";
 
 export type PricingPlanItem = {
@@ -46,6 +43,7 @@ const pricingVariantPlanCountMap: Record<PricingPlansVariantId, number> = {
 };
 
 const spacingClassMap: Record<PricingPlansSpacing, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
@@ -104,7 +102,7 @@ export const pricingPlansSchema = {
         cardSurface: { type: "string" },
         cardBorder: { type: "string" },
         highlightRing: { type: "string" },
-        spacing: { enum: ["sm", "md", "lg"] },
+        spacing: { enum: ["none", "sm", "md", "lg"] },
         radius: { enum: ["none", "md", "lg", "xl"] },
       },
     },
@@ -114,8 +112,7 @@ export const pricingPlansSchema = {
 export const pricingPlansDefaults: PricingPlansData = {
   header: {
     title: "Choose the plan that fits your workflow",
-    description:
-      "Compare pricing tiers and pick the option matching your team stage.",
+    description: "Compare pricing tiers and pick the option matching your team stage.",
   },
   plans: [
     {
@@ -170,7 +167,7 @@ const resolveOptionalString = (value: string | undefined) =>
   typeof value === "string" ? value : undefined;
 
 const resolvePricingSpacing = (value: string | undefined): PricingPlansSpacing => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
@@ -197,9 +194,8 @@ export const resolvePricingPlansVariant = (variant: string): PricingPlansVariant
   return "three-plans";
 };
 
-export const resolvePricingPlanCountForVariant = (
-  variant: PricingPlansVariantId
-): number => pricingVariantPlanCountMap[variant];
+export const resolvePricingPlanCountForVariant = (variant: PricingPlansVariantId): number =>
+  pricingVariantPlanCountMap[variant];
 
 export const normalizePricingPlanCount = (value: number) => {
   if (!Number.isFinite(value)) return resolvePricingPlanCountForVariant("three-plans");
@@ -218,9 +214,7 @@ export function normalizePricingPlans(
     typeof desiredCount === "number"
       ? normalizePricingPlanCount(desiredCount)
       : normalizePricingPlanCount(
-          source.length > 0
-            ? source.length
-            : resolvePricingPlanCountForVariant("three-plans")
+          source.length > 0 ? source.length : resolvePricingPlanCountForVariant("three-plans")
         );
 
   const normalized: PricingPlanItem[] = [];
@@ -246,12 +240,12 @@ export function normalizePricingPlans(
     const name =
       typeof base.name === "string" && base.name.trim().length > 0
         ? base.name.trim()
-        : fallbackNames[index] ?? `Plan ${index + 1}`;
+        : (fallbackNames[index] ?? `Plan ${index + 1}`);
 
     const price =
       typeof base.price === "string" && base.price.trim().length > 0
         ? base.price.trim()
-        : fallbackPrices[index] ?? "$0";
+        : (fallbackPrices[index] ?? "$0");
 
     normalized.push({
       id,
@@ -306,10 +300,7 @@ export function normalizePricingPlansData(data: PricingPlansData): PricingPlansD
     ...data,
     header: {
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
-      description: resolveString(
-        data.header?.description,
-        headerDefaults.description ?? ""
-      ),
+      description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     plans: ensureSingleHighlighted(normalizePricingPlans(data.plans)),
     style: {
@@ -369,9 +360,7 @@ function PricingCardsLayout({
         const highlighted = Boolean(plan.highlighted);
         const cardStyle: CSSProperties = {
           ...cardStyleBase,
-          boxShadow: highlighted
-            ? `0 0 0 2px ${style.highlightRing}`
-            : undefined,
+          boxShadow: highlighted ? `0 0 0 2px ${style.highlightRing}` : undefined,
         };
 
         return (
@@ -416,8 +405,7 @@ function PricingCardsLayout({
               ))}
             </ul>
 
-            {(plan.ctaLabel ?? "").trim().length > 0 &&
-            (plan.ctaHref ?? "").trim().length > 0 ? (
+            {(plan.ctaLabel ?? "").trim().length > 0 && (plan.ctaHref ?? "").trim().length > 0 ? (
               <a
                 href={plan.ctaHref}
                 className="mt-auto inline-flex w-fit rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]"
@@ -537,13 +525,7 @@ function PricingComparisonRowsLayout({
   );
 }
 
-export function PricingPlansBlock({
-  data,
-  variant,
-}: {
-  data: PricingPlansData;
-  variant: string;
-}) {
+export function PricingPlansBlock({ data, variant }: { data: PricingPlansData; variant: string }) {
   const resolvedVariant = resolvePricingPlansVariant(variant);
   const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
   const normalizedData = normalizePricingPlansData(data);

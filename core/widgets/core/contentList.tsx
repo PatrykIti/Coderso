@@ -3,12 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type ContentListVariantId = "cards" | "list" | "compact";
-export type ContentListStatusScope =
-  | "published"
-  | "all"
-  | "draft"
-  | "scheduled"
-  | "archived";
+export type ContentListStatusScope = "published" | "all" | "draft" | "scheduled" | "archived";
 export type ContentListSort =
   | "published-desc"
   | "published-asc"
@@ -18,7 +13,7 @@ export type ContentListSort =
   | "title-desc";
 export type ContentListSourceMode = "legacy" | "listing";
 export type ContentListColumns = "1" | "2" | "3";
-export type ContentListGap = "sm" | "md" | "lg";
+export type ContentListGap = "none" | "sm" | "md" | "lg";
 export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
 
 export type ContentListRuntimeItem = {
@@ -151,7 +146,7 @@ export const contentListSchema = {
       additionalProperties: false,
       properties: {
         columns: { enum: ["1", "2", "3"] },
-        gap: { enum: ["sm", "md", "lg"] },
+        gap: { enum: ["none", "sm", "md", "lg"] },
         cardStyle: { enum: ["outlined", "elevated", "minimal"] },
         ctaLabel: { type: "string" },
         backgroundColor: { type: "string" },
@@ -264,6 +259,7 @@ const gridColumnsClassMap: Record<ContentListColumns, string> = {
 };
 
 const gapClassMap: Record<ContentListGap, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
@@ -281,15 +277,8 @@ const resolveTrimmedOptionalString = (value: string | undefined) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const resolveContentListStatusScope = (
-  value: string | undefined
-): ContentListStatusScope => {
-  if (
-    value === "all" ||
-    value === "draft" ||
-    value === "scheduled" ||
-    value === "archived"
-  ) {
+const resolveContentListStatusScope = (value: string | undefined): ContentListStatusScope => {
+  if (value === "all" || value === "draft" || value === "scheduled" || value === "archived") {
     return value;
   }
   return "published";
@@ -318,21 +307,17 @@ const resolveContentListSourceMode = (
   return "legacy";
 };
 
-const resolveContentListColumns = (
-  value: string | undefined
-): ContentListColumns => {
+const resolveContentListColumns = (value: string | undefined): ContentListColumns => {
   if (value === "1" || value === "2") return value;
   return "3";
 };
 
-const resolveContentListGap = (value: string | undefined): ContentListGap => {
-  if (value === "sm" || value === "lg") return value;
+export const resolveContentListGap = (value: string | undefined): ContentListGap => {
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
-const resolveContentListCardStyle = (
-  value: string | undefined
-): ContentListCardStyle => {
+const resolveContentListCardStyle = (value: string | undefined): ContentListCardStyle => {
   if (value === "elevated" || value === "minimal") return value;
   return "outlined";
 };
@@ -410,10 +395,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
   return {
     ...data,
     source: {
-      mode: resolveContentListSourceMode(
-        data.source?.mode,
-        data.source?.listingQueryId
-      ),
+      mode: resolveContentListSourceMode(data.source?.mode, data.source?.listingQueryId),
       listingQueryId: resolveString(data.source?.listingQueryId, ""),
       listingTemplateId: resolveString(data.source?.listingTemplateId, ""),
       contentTypeId: resolveString(data.source?.contentTypeId, sourceDefaults.contentTypeId ?? ""),
@@ -427,10 +409,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
         typeof data.filters?.featuredOnly === "boolean"
           ? data.filters.featuredOnly
           : Boolean(filterDefaults.featuredOnly),
-      searchQuery: resolveString(
-        data.filters?.searchQuery,
-        filterDefaults.searchQuery ?? ""
-      ),
+      searchQuery: resolveString(data.filters?.searchQuery, filterDefaults.searchQuery ?? ""),
       authorId: resolveString(data.filters?.authorId, filterDefaults.authorId ?? ""),
     },
     fields: {
@@ -455,8 +434,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       title: resolveString(data.emptyState?.title, emptyStateDefaults.title ?? "No items found"),
       description: resolveString(
         data.emptyState?.description,
-        emptyStateDefaults.description ??
-          "Adjust filters or publish entries for this content type."
+        emptyStateDefaults.description ?? "Adjust filters or publish entries for this content type."
       ),
     },
     style: {
@@ -472,7 +450,10 @@ export function normalizeContentListData(data: ContentListData): ContentListData
         data.style?.borderColor,
         styleDefaults.borderColor ?? "var(--color-border)"
       ),
-      textColor: resolveString(data.style?.textColor, styleDefaults.textColor ?? "var(--color-text)"),
+      textColor: resolveString(
+        data.style?.textColor,
+        styleDefaults.textColor ?? "var(--color-text)"
+      ),
     },
     resolved: {
       items: normalizeContentListRuntimeItems(data.resolved?.items),
@@ -640,9 +621,7 @@ export function ContentListBlock({
       ? joinClasses("flex flex-col", gapClassMap[style.gap ?? "md"])
       : joinClasses(
           "grid",
-          resolvedVariant === "compact"
-            ? "grid-cols-1"
-            : gridColumnsClassMap[style.columns ?? "3"],
+          resolvedVariant === "compact" ? "grid-cols-1" : gridColumnsClassMap[style.columns ?? "3"],
           gapClassMap[style.gap ?? "md"]
         );
 
@@ -652,16 +631,14 @@ export function ContentListBlock({
       data-content-list-variant={resolvedVariant}
       data-content-list-source-mode={sourceMode}
       data-content-list-source={
-        sourceMode === "listing"
-          ? source.listingQueryId ?? ""
-          : source.contentTypeId ?? ""
+        sourceMode === "listing" ? (source.listingQueryId ?? "") : (source.contentTypeId ?? "")
       }
       data-content-list-items={String(resolvedItems.length)}
       data-content-list-status-scope={source.statusScope ?? "published"}
       data-content-list-state={state}
       data-listing-widget="content-list"
       data-listing-block-id={blockId ?? ""}
-      data-listing-query-id={sourceMode === "listing" ? source.listingQueryId ?? "" : ""}
+      data-listing-query-id={sourceMode === "listing" ? (source.listingQueryId ?? "") : ""}
     >
       {errorText ? (
         <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">

@@ -3,6 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 
 export const spacerHeightTokens = [
+  "none",
   "0",
   "1",
   "2",
@@ -58,6 +59,7 @@ export const spacerDefaults: SpacerData = {
 };
 
 export const spacerHeightCssValueMap: Record<SpacerHeightToken, string> = {
+  none: "0rem",
   "0": "0rem",
   "1": "0.25rem",
   "2": "0.5rem",
@@ -101,10 +103,7 @@ export function resolveSpacerVariant(variant: string): SpacerVariantId {
   return "responsive";
 }
 
-export function normalizeSpacerData(
-  data: SpacerData,
-  variant: string = "responsive"
-): SpacerData {
+export function normalizeSpacerData(data: SpacerData, variant: string = "responsive"): SpacerData {
   const resolvedVariant = resolveSpacerVariant(variant);
   const fallbackDesktop = spacerDefaults.height?.desktop ?? "16";
   const fallbackTablet = spacerDefaults.height?.tablet ?? "12";

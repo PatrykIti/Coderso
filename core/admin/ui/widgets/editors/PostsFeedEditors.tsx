@@ -68,6 +68,7 @@ const columnsOptions = [
 ] as const;
 
 const gapOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -161,10 +162,7 @@ function SourceSetup({
   const { items: posts, loading, error } = usePostOptions();
   const selectedManualIds = normalized.source?.manualPostIds ?? [];
 
-  const postsById = useMemo(
-    () => new Map(posts.map((item) => [item.id, item])),
-    [posts]
-  );
+  const postsById = useMemo(() => new Map(posts.map((item) => [item.id, item])), [posts]);
 
   const selectedPosts = selectedManualIds
     .map((id) => postsById.get(id))
@@ -291,7 +289,7 @@ function SourceSetup({
                 ...current,
                 source: {
                   ...current.source,
-                  limit: Number.isFinite(parsed) ? parsed : postsFeedDefaults.source?.limit ?? 6,
+                  limit: Number.isFinite(parsed) ? parsed : (postsFeedDefaults.source?.limit ?? 6),
                 },
               }));
             }}
@@ -561,7 +559,10 @@ function RuntimeSnapshot({ value }: { value: PostsFeedData }) {
   const normalized = normalizePostsFeedData(value);
 
   return (
-    <EditorSection title="Runtime payload" description="Read-only snapshot of resolved runtime data.">
+    <EditorSection
+      title="Runtime payload"
+      description="Read-only snapshot of resolved runtime data."
+    >
       <pre className="max-h-64 overflow-auto rounded-md border border-border/70 bg-background/70 p-3 text-xs">
         {JSON.stringify(normalized.resolved ?? {}, null, 2)}
       </pre>
@@ -569,10 +570,7 @@ function RuntimeSnapshot({ value }: { value: PostsFeedData }) {
   );
 }
 
-function renderPostsFeedEditor(
-  mode: EditorMode,
-  props: WidgetEditorProps<PostsFeedData>
-) {
+function renderPostsFeedEditor(mode: EditorMode, props: WidgetEditorProps<PostsFeedData>) {
   const { value, onChange, variant, onVariantChange } = props;
 
   if (mode === "wizard") {

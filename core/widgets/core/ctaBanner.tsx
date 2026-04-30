@@ -5,7 +5,7 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 export type CtaBannerVariantId = "centered" | "split" | "with-badge";
 export type CtaBannerBorderWidth = "0" | "1" | "2" | "3";
 export type CtaBannerRadius = "none" | "md" | "lg" | "xl" | "2xl";
-export type CtaBannerPadding = "sm" | "md" | "lg" | "xl";
+export type CtaBannerPadding = "none" | "sm" | "md" | "lg" | "xl";
 
 export type CtaBannerAction = {
   label?: string;
@@ -52,6 +52,7 @@ const radiusClassMap: Record<CtaBannerRadius, string> = {
 };
 
 const paddingClassMap: Record<CtaBannerPadding, string> = {
+  none: "p-0",
   sm: "px-4 py-4",
   md: "px-5 py-5",
   lg: "px-6 py-6",
@@ -109,7 +110,7 @@ export const ctaBannerSchema = {
         border: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
         radius: { enum: ["none", "md", "lg", "xl", "2xl"] },
-        padding: { enum: ["sm", "md", "lg", "xl"] },
+        padding: { enum: ["none", "sm", "md", "lg", "xl"] },
         badgeBackground: { type: "string" },
         badgeText: { type: "string" },
         primaryButtonBg: { type: "string" },
@@ -168,9 +169,7 @@ const normalizeAction = (
   href: resolveString(action?.href, fallback.href),
 });
 
-const resolveCtaBannerBorderWidth = (
-  value: string | undefined
-): CtaBannerBorderWidth => {
+const resolveCtaBannerBorderWidth = (value: string | undefined): CtaBannerBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
   return "1";
 };
@@ -183,7 +182,7 @@ const resolveCtaBannerRadius = (value: string | undefined): CtaBannerRadius => {
 };
 
 const resolveCtaBannerPadding = (value: string | undefined): CtaBannerPadding => {
-  if (value === "sm" || value === "lg" || value === "xl") return value;
+  if (value === "none" || value === "sm" || value === "lg" || value === "xl") return value;
   return "md";
 };
 
@@ -224,19 +223,22 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
     content: {
       badge: resolveString(data.content?.badge, contentDefaults.badge ?? ""),
       title: resolveString(data.content?.title, contentDefaults.title ?? ""),
-      description: resolveString(
-        data.content?.description,
-        contentDefaults.description ?? ""
-      ),
+      description: resolveString(data.content?.description, contentDefaults.description ?? ""),
     },
     actions: {
       primaryCta: normalizeAction(
         data.actions?.primaryCta,
-        (actionsDefaults.primaryCta ?? { label: "Get started", href: "#" }) as Required<CtaBannerAction>
+        (actionsDefaults.primaryCta ?? {
+          label: "Get started",
+          href: "#",
+        }) as Required<CtaBannerAction>
       ),
       secondaryCta: normalizeAction(
         data.actions?.secondaryCta,
-        (actionsDefaults.secondaryCta ?? { label: "Learn more", href: "#" }) as Required<CtaBannerAction>
+        (actionsDefaults.secondaryCta ?? {
+          label: "Learn more",
+          href: "#",
+        }) as Required<CtaBannerAction>
       ),
     },
     style: {
@@ -253,10 +255,7 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
         data.style?.badgeBackground,
         styleDefaults.badgeBackground ?? "var(--color-primary)"
       ),
-      badgeText: resolveString(
-        data.style?.badgeText,
-        styleDefaults.badgeText ?? "var(--color-bg)"
-      ),
+      badgeText: resolveString(data.style?.badgeText, styleDefaults.badgeText ?? "var(--color-bg)"),
       primaryButtonBg: resolveString(
         data.style?.primaryButtonBg,
         styleDefaults.primaryButtonBg ?? "var(--color-primary)"
@@ -285,13 +284,7 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
   };
 }
 
-export function CtaBannerBlock({
-  data,
-  variant,
-}: {
-  data: CtaBannerData;
-  variant: string;
-}) {
+export function CtaBannerBlock({ data, variant }: { data: CtaBannerData; variant: string }) {
   const normalized = normalizeCtaBannerData(data);
   const resolvedVariant = resolveCtaBannerVariant(variant);
   const style = normalized.style ?? ctaBannerDefaults.style!;
@@ -340,7 +333,12 @@ export function CtaBannerBlock({
         data-cta-banner-border-width={resolveCtaBannerBorderWidth(style.borderWidth)}
       >
         <div className={wrapperClassName}>
-          <div className={joinClasses("space-y-2", resolvedVariant === "split" ? "md:max-w-2xl" : "max-w-2xl")}>
+          <div
+            className={joinClasses(
+              "space-y-2",
+              resolvedVariant === "split" ? "md:max-w-2xl" : "max-w-2xl"
+            )}
+          >
             {showBadge ? (
               <span
                 className="inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"

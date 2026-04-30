@@ -204,10 +204,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -217,10 +214,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -230,10 +224,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -263,15 +254,10 @@ const getSectionByTitle = (container: ParentNode, title: string) => {
   return section;
 };
 
-const getInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const getInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = Array.from(container.querySelectorAll("input")).filter(
     (element) =>
-      element instanceof HTMLInputElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   )[index];
   if (!(input instanceof HTMLInputElement)) {
     throw new Error(`Missing input "${placeholder}" (${index})`);
@@ -279,15 +265,10 @@ const getInputByPlaceholder = (
   return input;
 };
 
-const getTextareaByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const getTextareaByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).filter(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   )[index];
   if (!(textarea instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea "${placeholder}" (${index})`);
@@ -347,11 +328,8 @@ const renderEditor = async ({
   editor: EditorKind;
   initialValue: FormEmbedData;
 }) => {
-  const {
-    FormEmbedAdvancedEditor,
-    FormEmbedVisualEditor,
-    FormEmbedWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/FormEmbedEditors");
+  const { FormEmbedAdvancedEditor, FormEmbedVisualEditor, FormEmbedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FormEmbedEditors");
 
   const editorMap = {
     wizard: FormEmbedWizardEditor,
@@ -454,19 +432,19 @@ test("FormEmbed wizard editor normalizes content defaults and updates layout and
     const layoutSection = getSectionByTitle(view.container, "Layout");
     const layoutSelects = getSelects(layoutSection);
 
-    expect(layoutSelects.map((select) => select.value)).toEqual([
-      "start",
-      "md",
-      "md",
-      "start",
-    ]);
+    expect(Array.from(layoutSelects[1]!.options).map((option) => option.value)).toContain("none");
+    expect(Array.from(layoutSelects[2]!.options).map((option) => option.value)).toContain("none");
+    expect(layoutSelects.map((select) => select.value)).toEqual(["start", "md", "md", "start"]);
 
     const fieldsSection = getSectionByTitle(view.container, "Field labels");
     const fieldToggles = getCheckboxes(fieldsSection);
 
     expect(fieldToggles.map((toggle) => toggle.checked)).toEqual([true, true]);
 
-    setSelectValue(getSelects(getSectionByTitle(view.container, "Form selection"))[0], "form-public");
+    setSelectValue(
+      getSelects(getSectionByTitle(view.container, "Form selection"))[0],
+      "form-public"
+    );
     expect(view.getLatestValue()).toMatchObject({
       formId: "form-public",
       layout: {
@@ -590,9 +568,14 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
     expect(backgroundTextInput.value).toBe("not-a-color");
     expect(surfaceTextInput.value).toBe("var(--color-bg)");
     expect(borderTextInput.value).toBe("#112233");
+    expect(Array.from(styleSelects[1]!.options).map((option) => option.value)).toContain("none");
+    expect(Array.from(styleSelects[2]!.options).map((option) => option.value)).toContain("none");
     expect(styleSelects.map((select) => select.value)).toEqual(["1", "md", "md"]);
 
-    setSelectValue(getSelects(getSectionByTitle(view.container, "Form selection"))[0], "form-public");
+    setSelectValue(
+      getSelects(getSectionByTitle(view.container, "Form selection"))[0],
+      "form-public"
+    );
     expect(view.container.textContent).not.toContain("Internal submissions require");
     expect(view.getLatestValue()).toMatchObject({
       formId: "form-public",
@@ -677,7 +660,10 @@ test("FormEmbed advanced editor covers loading and empty form states before sele
 
     expect(view.container.textContent).toContain("Select form");
 
-    setSelectValue(getSelects(getSectionByTitle(view.container, "Form selection"))[0], "form-internal");
+    setSelectValue(
+      getSelects(getSectionByTitle(view.container, "Form selection"))[0],
+      "form-internal"
+    );
 
     expect(view.onChangeSpy).toHaveBeenCalled();
     expect(view.getLatestValue()).toMatchObject({

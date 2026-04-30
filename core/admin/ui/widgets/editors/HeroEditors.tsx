@@ -102,8 +102,8 @@ const ctaOptions = [
 ] as const;
 
 const alignOptions = ["left", "center", "right"] as const;
-const maxWidthOptions = ["sm", "md", "lg", "xl", "2xl"] as const;
-const contentWidthOptions = ["sm", "md", "lg", "xl"] as const;
+const maxWidthOptions = ["none", "sm", "md", "lg", "xl", "2xl"] as const;
+const contentWidthOptions = ["none", "sm", "md", "lg", "xl"] as const;
 const spacingOptions = ["none", "xs", "sm", "md", "lg", "xl", "2xl"] as const;
 const ratioOptions = ["16:9", "4:3", "1:1", "3:4"] as const;
 type HeroAlign = NonNullable<HeroData["layout"]>["align"];
@@ -132,12 +132,13 @@ const mediaSourceOptions = [
   { id: "external", label: "External URL" },
 ] as const;
 
-const headlineSizeOptions = ["2xl", "3xl", "4xl", "5xl"] as const;
-const subheadSizeOptions = ["base", "lg", "xl", "2xl"] as const;
-const bodySizeOptions = ["sm", "base", "lg", "xl"] as const;
-const buttonSizeOptions = ["sm", "md", "lg"] as const;
+const headlineSizeOptions = ["none", "2xl", "3xl", "4xl", "5xl"] as const;
+const subheadSizeOptions = ["none", "base", "lg", "xl", "2xl"] as const;
+const bodySizeOptions = ["none", "sm", "base", "lg", "xl"] as const;
+const buttonSizeOptions = ["none", "sm", "md", "lg"] as const;
 const borderWidthOptions = ["0", "1", "2", "3"] as const;
-const radiusOptions = ["lg", "xl", "2xl", "3xl"] as const;
+const radiusOptions = ["none", "lg", "xl", "2xl", "3xl"] as const;
+const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 const heroPresetLimit = 24;
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const linearGradientPattern =
@@ -159,11 +160,7 @@ function HeroMediaSourceFields({
   const requestIdRef = useRef(0);
   const source: HeroMediaSource = media.source ?? "external";
   const accept =
-    mediaType === "image"
-      ? ["image/*"]
-      : mediaType === "video"
-        ? ["video/*"]
-        : undefined;
+    mediaType === "image" ? ["image/*"] : mediaType === "video" ? ["video/*"] : undefined;
 
   const handleSourceChange = (next: HeroMediaSource) => {
     requestIdRef.current += 1;
@@ -197,7 +194,7 @@ function HeroMediaSourceFields({
           alt:
             media.alt && media.alt.trim().length > 0
               ? media.alt
-              : match.alt ?? match.title ?? match.originalName ?? "",
+              : (match.alt ?? match.title ?? match.originalName ?? ""),
         });
       } else {
         setLookupError("Selected media could not be resolved.");
@@ -240,9 +237,7 @@ function HeroMediaSourceFields({
             multiple={false}
             accept={accept}
           />
-          {lookupError ? (
-            <p className="text-xs text-destructive">{lookupError}</p>
-          ) : null}
+          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
         </div>
       ) : (
         <div className="space-y-2">
@@ -253,9 +248,7 @@ function HeroMediaSourceFields({
             placeholder="https://"
           />
           {!isValidMediaUrl(media.src) ? (
-            <p className="text-xs text-destructive">
-              Use a relative path or full URL.
-            </p>
+            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
           ) : null}
         </div>
       )}
@@ -386,9 +379,7 @@ export function HeroWizardEditor({
           <p className="text-sm font-medium">Primary CTA Label</p>
           <Input
             value={primary.label}
-            onChange={(event) =>
-              update({ primaryCta: { ...primary, label: event.target.value } })
-            }
+            onChange={(event) => update({ primaryCta: { ...primary, label: event.target.value } })}
             placeholder="Get started"
           />
         </div>
@@ -396,9 +387,7 @@ export function HeroWizardEditor({
           <p className="text-sm font-medium">Primary CTA URL</p>
           <Input
             value={primary.href}
-            onChange={(event) =>
-              update({ primaryCta: { ...primary, href: event.target.value } })
-            }
+            onChange={(event) => update({ primaryCta: { ...primary, href: event.target.value } })}
             placeholder="/start"
           />
         </div>
@@ -435,9 +424,7 @@ export function HeroWizardEditor({
         <p className="text-sm font-medium">Media</p>
         <Select
           value={mediaType}
-          onValueChange={(next) =>
-            updateMedia({ type: next as HeroMediaType })
-          }
+          onValueChange={(next) => updateMedia({ type: next as HeroMediaType })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select media" />
@@ -452,11 +439,7 @@ export function HeroWizardEditor({
         </Select>
       </div>
       {mediaType !== "none" ? (
-        <HeroMediaSourceFields
-          media={media}
-          mediaType={mediaType}
-          onChange={updateMedia}
-        />
+        <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
       ) : null}
       {variant === "centered" && mediaType === "image" ? (
         <p className="text-xs text-muted-foreground">
@@ -465,8 +448,8 @@ export function HeroWizardEditor({
       ) : null}
       {variant === "centered" && mediaType === "video" ? (
         <p className="text-xs text-muted-foreground">
-          Centered layout does not show inline video. Use Media Right or Media Left
-          to display video content.
+          Centered layout does not show inline video. Use Media Right or Media Left to display video
+          content.
         </p>
       ) : null}
     </div>
@@ -476,8 +459,7 @@ export function HeroWizardEditor({
 const isHeroVariant = (value: string): value is HeroVariantId =>
   variantOptions.some((option) => option.id === value);
 
-const cloneHeroData = (value: HeroData): HeroData =>
-  JSON.parse(JSON.stringify(value)) as HeroData;
+const cloneHeroData = (value: HeroData): HeroData => JSON.parse(JSON.stringify(value)) as HeroData;
 
 const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
   if (!Array.isArray(value)) {
@@ -547,9 +529,7 @@ function EditorSection({
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </p>
-        {description ? (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        ) : null}
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       </div>
       <div className="space-y-3">{children}</div>
     </section>
@@ -600,13 +580,9 @@ function GradientField({
 }) {
   const parsed = value?.match(linearGradientPattern);
   const angle =
-    parsed && Number.isFinite(Number(parsed[1]))
-      ? Number(parsed[1])
-      : defaultGradientAngle;
-  const start =
-    parsed && hexColorPattern.test(parsed[2]) ? parsed[2] : defaultGradientStart;
-  const end =
-    parsed && hexColorPattern.test(parsed[3]) ? parsed[3] : defaultGradientEnd;
+    parsed && Number.isFinite(Number(parsed[1])) ? Number(parsed[1]) : defaultGradientAngle;
+  const start = parsed && hexColorPattern.test(parsed[2]) ? parsed[2] : defaultGradientStart;
+  const end = parsed && hexColorPattern.test(parsed[3]) ? parsed[3] : defaultGradientEnd;
 
   const emit = (nextAngle: number, nextStart: string, nextEnd: string) => {
     onChange(`linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`);
@@ -787,11 +763,7 @@ export function HeroVisualEditor({
       setPresetsError("Preset name is required.");
       return;
     }
-    if (
-      presets.some(
-        (entry) => entry.name.toLowerCase() === normalizedName.toLowerCase()
-      )
-    ) {
+    if (presets.some((entry) => entry.name.toLowerCase() === normalizedName.toLowerCase())) {
       setPresetsError("Preset name must be unique.");
       return;
     }
@@ -857,13 +829,8 @@ export function HeroVisualEditor({
               )}
             >
               <div className="flex w-full items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-semibold leading-tight">
-                  {option.label}
-                </p>
-                <Badge
-                  className="shrink-0"
-                  variant={variant === option.id ? "default" : "outline"}
-                >
+                <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+                <Badge className="shrink-0" variant={variant === option.id ? "default" : "outline"}>
                   {variant === option.id ? "Selected" : "Pick"}
                 </Badge>
               </div>
@@ -935,15 +902,10 @@ export function HeroVisualEditor({
             ))}
           </div>
         )}
-        {presetsError ? (
-          <p className="text-xs text-destructive">{presetsError}</p>
-        ) : null}
+        {presetsError ? <p className="text-xs text-destructive">{presetsError}</p> : null}
       </EditorSection>
 
-      <EditorSection
-        title="Content"
-        description="Edit all copy shown in this Hero block."
-      >
+      <EditorSection title="Content" description="Edit all copy shown in this Hero block.">
         <div className="space-y-2">
           <p className="text-sm font-medium">Headline</p>
           <Input
@@ -970,10 +932,7 @@ export function HeroVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="CTA"
-        description="Manage CTA structure and button appearance."
-      >
+      <EditorSection title="CTA" description="Manage CTA structure and button appearance.">
         <div className="space-y-2">
           <p className="text-sm font-medium">CTA layout</p>
           <Select
@@ -1015,18 +974,14 @@ export function HeroVisualEditor({
               placeholder="/start"
             />
             {!isValidHref(primary.href) ? (
-              <p className="text-xs text-destructive">
-                Use a relative path or full URL.
-              </p>
+              <p className="text-xs text-destructive">Use a relative path or full URL.</p>
             ) : null}
           </div>
           <div className="space-y-2">
             <p className="text-sm font-medium">Primary button size</p>
             <Select
               value={style.primaryButtonSize ?? "md"}
-              onValueChange={(next) =>
-                updateStyle({ primaryButtonSize: next as HeroButtonSize })
-              }
+              onValueChange={(next) => updateStyle({ primaryButtonSize: next as HeroButtonSize })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select size" />
@@ -1034,7 +989,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {buttonSizeOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1046,9 +1001,7 @@ export function HeroVisualEditor({
                 <p className="text-sm font-medium">Secondary CTA Label</p>
                 <Input
                   value={secondary.label}
-                  onChange={(event) =>
-                    updateSecondary({ label: event.target.value })
-                  }
+                  onChange={(event) => updateSecondary({ label: event.target.value })}
                   placeholder="Learn more"
                 />
               </div>
@@ -1056,15 +1009,11 @@ export function HeroVisualEditor({
                 <p className="text-sm font-medium">Secondary CTA URL</p>
                 <Input
                   value={secondary.href}
-                  onChange={(event) =>
-                    updateSecondary({ href: event.target.value })
-                  }
+                  onChange={(event) => updateSecondary({ href: event.target.value })}
                   placeholder="/learn"
                 />
                 {!isValidHref(secondary.href) ? (
-                  <p className="text-xs text-destructive">
-                    Use a relative path or full URL.
-                  </p>
+                  <p className="text-xs text-destructive">Use a relative path or full URL.</p>
                 ) : null}
               </div>
               <div className="space-y-2">
@@ -1081,7 +1030,7 @@ export function HeroVisualEditor({
                   <SelectContent>
                     {buttonSizeOptions.map((option) => (
                       <SelectItem key={option} value={option}>
-                        {option}
+                        {formatTokenOptionLabel(option)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1117,11 +1066,7 @@ export function HeroVisualEditor({
           </div>
           {mediaType !== "none" ? (
             <>
-              <HeroMediaSourceFields
-                media={media}
-                mediaType={mediaType}
-                onChange={updateMedia}
-              />
+              <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
               <div className="space-y-2">
                 <p className="text-sm font-medium">Media alt text</p>
                 <Input
@@ -1142,7 +1087,7 @@ export function HeroVisualEditor({
                   <SelectContent>
                     {ratioOptions.map((option) => (
                       <SelectItem key={option} value={option}>
-                        {option}
+                        {formatTokenOptionLabel(option)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1161,10 +1106,7 @@ export function HeroVisualEditor({
         </EditorSection>
       ) : null}
 
-      <EditorSection
-        title="Typography"
-        description="Adjust alignment and text scale."
-      >
+      <EditorSection title="Typography" description="Adjust alignment and text scale.">
         <div className="space-y-2">
           <p className="text-sm font-medium">Alignment</p>
           <Select
@@ -1177,7 +1119,7 @@ export function HeroVisualEditor({
             <SelectContent>
               {alignOptions.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {option}
+                  {formatTokenOptionLabel(option)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1188,9 +1130,7 @@ export function HeroVisualEditor({
             <p className="text-sm font-medium">Headline size</p>
             <Select
               value={style.headlineSize ?? "3xl"}
-              onValueChange={(next) =>
-                updateStyle({ headlineSize: next as HeroHeadlineSize })
-              }
+              onValueChange={(next) => updateStyle({ headlineSize: next as HeroHeadlineSize })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select size" />
@@ -1198,7 +1138,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {headlineSizeOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1208,9 +1148,7 @@ export function HeroVisualEditor({
             <p className="text-sm font-medium">Subhead size</p>
             <Select
               value={style.subheadSize ?? "xl"}
-              onValueChange={(next) =>
-                updateStyle({ subheadSize: next as HeroSubheadSize })
-              }
+              onValueChange={(next) => updateStyle({ subheadSize: next as HeroSubheadSize })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select size" />
@@ -1218,7 +1156,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {subheadSizeOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1228,9 +1166,7 @@ export function HeroVisualEditor({
             <p className="text-sm font-medium">Body size</p>
             <Select
               value={style.bodySize ?? "base"}
-              onValueChange={(next) =>
-                updateStyle({ bodySize: next as HeroBodySize })
-              }
+              onValueChange={(next) => updateStyle({ bodySize: next as HeroBodySize })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select size" />
@@ -1238,7 +1174,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {bodySizeOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1332,7 +1268,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {borderWidthOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1350,7 +1286,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {radiusOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1360,9 +1296,7 @@ export function HeroVisualEditor({
             <p className="text-sm font-medium">Media border width</p>
             <Select
               value={style.mediaBorderWidth ?? "1"}
-              onValueChange={(next) =>
-                updateStyle({ mediaBorderWidth: next as HeroBorderWidth })
-              }
+              onValueChange={(next) => updateStyle({ mediaBorderWidth: next as HeroBorderWidth })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select width" />
@@ -1370,7 +1304,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {borderWidthOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1388,7 +1322,7 @@ export function HeroVisualEditor({
               <SelectContent>
                 {radiusOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1417,9 +1351,7 @@ export function HeroVisualEditor({
           <p className="text-sm font-medium">Background media type</p>
           <Select
             value={backgroundMediaType}
-            onValueChange={(next) =>
-              updateBackgroundMedia({ type: next as HeroMediaType })
-            }
+            onValueChange={(next) => updateBackgroundMedia({ type: next as HeroMediaType })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select media type" />
@@ -1465,16 +1397,12 @@ export function HeroVisualEditor({
               />
             </div>
             <div className="rounded-md border border-border/70 bg-muted/30 p-2 text-xs text-muted-foreground">
-              The preset stores current variant, copy, CTA, media, typography,
-              colors, borders, and background settings.
+              The preset stores current variant, copy, CTA, media, typography, colors, borders, and
+              background settings.
             </div>
           </div>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsPresetDialogOpen(false)}
-            >
+            <Button type="button" variant="ghost" onClick={() => setIsPresetDialogOpen(false)}>
               Cancel
             </Button>
             <Button
@@ -1541,7 +1469,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             <SelectContent>
               {alignOptions.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {option}
+                  {formatTokenOptionLabel(option)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1552,9 +1480,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             <p className="text-sm font-medium">Max width</p>
             <Select
               value={value.layout?.maxWidth ?? "xl"}
-              onValueChange={(next) =>
-                updateLayout({ maxWidth: next as HeroMaxWidth })
-              }
+              onValueChange={(next) => updateLayout({ maxWidth: next as HeroMaxWidth })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select width" />
@@ -1562,7 +1488,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
               <SelectContent>
                 {maxWidthOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1572,9 +1498,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             <p className="text-sm font-medium">Content width</p>
             <Select
               value={value.layout?.contentWidth ?? "lg"}
-              onValueChange={(next) =>
-                updateLayout({ contentWidth: next as HeroContentWidth })
-              }
+              onValueChange={(next) => updateLayout({ contentWidth: next as HeroContentWidth })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select width" />
@@ -1582,7 +1506,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
               <SelectContent>
                 {contentWidthOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1594,9 +1518,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             <p className="text-sm font-medium">Padding top</p>
             <Select
               value={value.spacing?.paddingTop ?? "xl"}
-              onValueChange={(next) =>
-                updateSpacing({ paddingTop: next as HeroSpacing })
-              }
+              onValueChange={(next) => updateSpacing({ paddingTop: next as HeroSpacing })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select padding" />
@@ -1604,7 +1526,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
               <SelectContent>
                 {spacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1614,9 +1536,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
             <p className="text-sm font-medium">Padding bottom</p>
             <Select
               value={value.spacing?.paddingBottom ?? "xl"}
-              onValueChange={(next) =>
-                updateSpacing({ paddingBottom: next as HeroSpacing })
-              }
+              onValueChange={(next) => updateSpacing({ paddingBottom: next as HeroSpacing })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select padding" />
@@ -1624,7 +1544,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
               <SelectContent>
                 {spacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1653,9 +1573,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           <p className="text-sm font-medium">Background media type</p>
           <Select
             value={backgroundMediaType}
-            onValueChange={(next) =>
-              updateBackgroundMedia({ type: next as HeroMediaType })
-            }
+            onValueChange={(next) => updateBackgroundMedia({ type: next as HeroMediaType })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select media type" />
@@ -1681,9 +1599,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
       <div className="flex items-center justify-between rounded-lg border p-3">
         <div>
           <p className="text-sm font-medium">Hide media on mobile</p>
-          <p className="text-xs text-muted-foreground">
-            Keep the hero focused on copy and CTA.
-          </p>
+          <p className="text-xs text-muted-foreground">Keep the hero focused on copy and CTA.</p>
         </div>
         <Switch
           checked={value.responsive?.hideMediaOnMobile ?? false}

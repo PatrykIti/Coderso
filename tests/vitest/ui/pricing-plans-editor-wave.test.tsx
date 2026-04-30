@@ -172,8 +172,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -198,10 +197,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -211,10 +207,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -224,10 +217,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -268,8 +258,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -292,9 +281,8 @@ afterEach(() => {
 });
 
 test("PricingPlans wizard editor covers variant changes, header updates, and plan count expansion", async () => {
-  const { PricingPlansWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
-  );
+  const { PricingPlansWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -340,20 +328,16 @@ test("PricingPlans wizard editor covers variant changes, header updates, and pla
     setSelectValue(findSelectByOptions(view.container, ["2", "3", "4", "5", "6"]), "4");
 
     setInputValue(findInputByPlaceholder(view.container, "Plan 4"), "Enterprise");
-    setInputValue(
-      findInputsByPlaceholder(view.container, "$49").at(-1),
-      "$249"
-    );
+    setInputValue(findInputsByPlaceholder(view.container, "$49").at(-1), "$249");
 
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("comparison-rows");
     expect(onChangeSpy).toHaveBeenCalled();
     expect(
       (
-        findSelectByOptions(view.container, [
-          "three-plans",
-          "four-plans",
-          "comparison-rows",
-        ]) as HTMLSelectElement | null | undefined
+        findSelectByOptions(view.container, ["three-plans", "four-plans", "comparison-rows"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
       )?.value
     ).toBe("comparison-rows");
     expect(latestValue.header?.title).toBe("Simple pricing");
@@ -372,9 +356,8 @@ test("PricingPlans wizard editor covers variant changes, header updates, and pla
 });
 
 test("PricingPlans visual editor covers variant cards, plan and feature management, highlight exclusivity, and style tokens", async () => {
-  const { PricingPlansVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
-  );
+  const { PricingPlansVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -486,10 +469,16 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     expect(firstPlanCard?.textContent).toContain("No features yet.");
 
     clickButtonByText(firstPlanCard ?? view.container, "Add feature");
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Feature 1"), "Email support");
+    setInputValue(
+      findInputByPlaceholder(firstPlanCard ?? view.container, "Feature 1"),
+      "Email support"
+    );
     clickButtonByText(firstPlanCard ?? view.container, "Add feature");
     firstPlanCard = getPlanCards(view.container)[0];
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Feature 2"), "API access");
+    setInputValue(
+      findInputByPlaceholder(firstPlanCard ?? view.container, "Feature 2"),
+      "API access"
+    );
 
     let featureRows = getFeatureRows(firstPlanCard ?? view.container);
     clickButtonByText(featureRows[1] ?? firstPlanCard ?? view.container, "Move up");
@@ -502,10 +491,19 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     firstPlanCard = getPlanCards(view.container)[0];
     setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Plan 1"), "Solo");
     setInputValue(findInputsByPlaceholder(firstPlanCard ?? view.container, "$49")[0], "$29");
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Most popular"), "Best value");
+    setInputValue(
+      findInputByPlaceholder(firstPlanCard ?? view.container, "Most popular"),
+      "Best value"
+    );
     setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "/month"), "/seat");
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Choose plan"), "Try now");
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "/checkout"), "/try-solo");
+    setInputValue(
+      findInputByPlaceholder(firstPlanCard ?? view.container, "Choose plan"),
+      "Try now"
+    );
+    setInputValue(
+      findInputByPlaceholder(firstPlanCard ?? view.container, "/checkout"),
+      "/try-solo"
+    );
 
     clickButtonByText(firstPlanCard ?? view.container, "Move down");
 
@@ -555,7 +553,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#112233");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "#223344");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-primary)"), "#334455");
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
     setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
 
     const colorPickersAfterUpdate = Array.from(
@@ -575,9 +573,8 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
 });
 
 test("PricingPlans advanced editor covers token overrides and normalization controls", async () => {
-  const { PricingPlansAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
-  );
+  const { PricingPlansAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: PricingPlansData = {
@@ -626,7 +623,7 @@ test("PricingPlans advanced editor covers token overrides and normalization cont
     expect(previewBeforeActions?.textContent).toContain('"radius": "lg"');
     expect(previewBeforeActions?.textContent).toContain('"id": "dup"');
 
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "sm");
+    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "sm");
     setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
 
     clickButtonByText(view.container, "Normalize full payload");
@@ -678,9 +675,8 @@ test("PricingPlans advanced editor covers token overrides and normalization cont
 });
 
 test("PricingPlans visual editor covers plan-count contraction, move-up ordering, and feature move-down flow", async () => {
-  const { PricingPlansVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
-  );
+  const { PricingPlansVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
   let latestValue: PricingPlansData = {
     plans: [
@@ -743,11 +739,8 @@ test("PricingPlans visual editor covers plan-count contraction, move-up ordering
 });
 
 test("PricingPlans editors render sparse defaults and ignore variant changes without a handler", async () => {
-  const {
-    PricingPlansAdvancedEditor,
-    PricingPlansVisualEditor,
-    PricingPlansWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
+  const { PricingPlansAdvancedEditor, PricingPlansVisualEditor, PricingPlansWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
   const sparseValue: PricingPlansData = {
     header: {},
@@ -765,29 +758,50 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
 
   try {
     expect(
-      (findInputByPlaceholder(
-        wizardView.container,
-        pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
-      ) as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(
+          wizardView.container,
+          pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
+        ) as HTMLInputElement | null | undefined
+      )?.value
     ).toBe(pricingPlansDefaults.header?.title);
-    expect((findSelectByOptions(wizardView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "2"
-    );
-    expect((findInputByPlaceholder(wizardView.container, "Plan 1") as HTMLInputElement | null | undefined)?.value).toBe(
-      "Starter"
-    );
-    expect((findInputsByPlaceholder(wizardView.container, "$49")[0] as HTMLInputElement | null | undefined)?.value).toBe(
-      "$19"
-    );
+    expect(
+      (
+        findSelectByOptions(wizardView.container, ["2", "3", "4", "5", "6"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("2");
+    expect(
+      (
+        findInputByPlaceholder(wizardView.container, "Plan 1") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("Starter");
+    expect(
+      (
+        findInputsByPlaceholder(wizardView.container, "$49")[0] as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("$19");
 
     setSelectValue(
       findSelectByOptions(wizardView.container, ["three-plans", "four-plans", "comparison-rows"]),
       "comparison-rows"
     );
     expect(
-      (findSelectByOptions(wizardView.container, ["three-plans", "four-plans", "comparison-rows"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectByOptions(wizardView.container, [
+          "three-plans",
+          "four-plans",
+          "comparison-rows",
+        ]) as HTMLSelectElement | undefined
+      )?.value
     ).toBe("three-plans");
   } finally {
     wizardView.cleanup();
@@ -803,27 +817,41 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
 
   try {
     expect(
-      (findInputByPlaceholder(
-        visualView.container,
-        pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
-      ) as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(
+          visualView.container,
+          pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
+        ) as HTMLInputElement | null | undefined
+      )?.value
     ).toBe(pricingPlansDefaults.header?.title);
     expect(
-      (findTextareaByPlaceholder(
-        visualView.container,
-        pricingPlansDefaults.header?.description ??
-          "Compare pricing tiers and pick the option matching your team stage."
-      ) as HTMLTextAreaElement | null | undefined)?.value
+      (
+        findTextareaByPlaceholder(
+          visualView.container,
+          pricingPlansDefaults.header?.description ??
+            "Compare pricing tiers and pick the option matching your team stage."
+        ) as HTMLTextAreaElement | null | undefined
+      )?.value
     ).toBe(pricingPlansDefaults.header?.description);
-    expect((findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "2"
-    );
+    expect(
+      (
+        findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("2");
     expect(visualView.container.textContent).toContain("No features yet.");
 
     clickButtonByText(visualView.container, "Four Plans");
     expect(visualView.container.textContent).toContain("Selected");
     expect(
-      (findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("2");
   } finally {
     visualView.cleanup();
@@ -838,21 +866,30 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
   );
 
   try {
-    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "md"
-    );
-    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "lg"
-    );
+    expect(
+      (
+        findSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("md");
+    expect(
+      (
+        findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("lg");
   } finally {
     advancedView.cleanup();
   }
 });
 
 test("PricingPlans visual editor keeps payload stable when guard actions are triggered at bounds", async () => {
-  const { PricingPlansVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
-  );
+  const { PricingPlansVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
   let latestValue: PricingPlansData = {
     plans: [

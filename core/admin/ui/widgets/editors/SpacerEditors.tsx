@@ -44,7 +44,7 @@ const variantOptions: Array<{
 
 const heightTokenOptions = spacerHeightTokens.map((token) => ({
   id: token,
-  label: `${token} (${spacerHeightCssValueMap[token]})`,
+  label: token === "none" ? "None" : `${token} (${spacerHeightCssValueMap[token]})`,
 }));
 
 const isSpacerHeightToken = (value: string): value is SpacerHeightToken =>
@@ -256,7 +256,10 @@ export function SpacerWizardEditor({
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-sm font-medium">Spacer mode</p>
-        <Select value={resolveSpacerVariant(variant)} onValueChange={(next) => onVariantChange?.(next)}>
+        <Select
+          value={resolveSpacerVariant(variant)}
+          onValueChange={(next) => onVariantChange?.(next)}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Select mode" />
           </SelectTrigger>
@@ -345,11 +348,7 @@ export function SpacerVisualEditor({
   );
 }
 
-export function SpacerAdvancedEditor({
-  value,
-  onChange,
-  variant,
-}: WidgetEditorProps<SpacerData>) {
+export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<SpacerData>) {
   const normalized = normalizeValue(value, variant);
 
   return (

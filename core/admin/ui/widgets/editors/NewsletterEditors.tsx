@@ -46,6 +46,7 @@ const variantOptions: Array<{
 ];
 
 const spacingOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -198,13 +199,7 @@ function ColorField({
   );
 }
 
-function VariantCards({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-}) {
+function VariantCards({ value, onChange }: { value: string; onChange?: (next: string) => void }) {
   return (
     <div className="space-y-2">
       {variantOptions.map((option) => (
@@ -440,9 +435,7 @@ export function NewsletterVisualEditor({
               <p className="text-sm font-medium">Consent label</p>
               <Input
                 value={consent.label}
-                onChange={(event) =>
-                  updateConsent(value, onChange, { label: event.target.value })
-                }
+                onChange={(event) => updateConsent(value, onChange, { label: event.target.value })}
                 placeholder="I agree to receive updates."
               />
             </div>
@@ -451,9 +444,7 @@ export function NewsletterVisualEditor({
               <p className="text-sm font-medium">Consent required</p>
               <Switch
                 checked={consent.required}
-                onCheckedChange={(checked) =>
-                  updateConsent(value, onChange, { required: checked })
-                }
+                onCheckedChange={(checked) => updateConsent(value, onChange, { required: checked })}
               />
             </div>
           </>
@@ -582,7 +573,8 @@ export function NewsletterVisualEditor({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Use runtime preview device tabs to validate spacing and input/button readability per viewport.
+          Use runtime preview device tabs to validate spacing and input/button readability per
+          viewport.
         </p>
       </EditorSection>
     </div>
@@ -715,11 +707,8 @@ export function NewsletterAdvancedEditor({
         description="Enforce deterministic defaults and inspect resolved runtime metadata."
       >
         <p className="text-xs text-muted-foreground">
-          Resolved variant: {resolveNewsletterVariant(variant)}. Resolved integration mode:
-          {" "}
-          {integration.mode}. Consent required:
-          {" "}
-          {consent.required ? "true" : "false"}.
+          Resolved variant: {resolveNewsletterVariant(variant)}. Resolved integration mode:{" "}
+          {integration.mode}. Consent required: {consent.required ? "true" : "false"}.
         </p>
         <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
           Normalize newsletter payload

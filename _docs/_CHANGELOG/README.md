@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 776 | 2026-04-29 | TASK-242 widget style none tokens | CMS Widgets/Admin UI |
 | 775 | 2026-04-29 | Menus editor detail cache hydration | CMS Menus/Admin Cache |
 | 774 | 2026-04-29 | TASK-241 pages published preview draft sync | CMS Pages/Admin UI |
 | 773 | 2026-04-29 | Markdown pre-commit format guard | Developer Tooling |

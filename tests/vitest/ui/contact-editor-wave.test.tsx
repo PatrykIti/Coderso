@@ -166,8 +166,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -192,10 +191,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -205,10 +201,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -218,10 +211,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -257,8 +247,7 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -310,9 +299,8 @@ afterEach(() => {
 });
 
 test("ContactWizardEditor covers variant fallback, form field guard branches, and contact detail updates", async () => {
-  const { ContactWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ContactEditors"
-  );
+  const { ContactWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: ContactData = {
@@ -397,9 +385,8 @@ test("ContactWizardEditor covers variant fallback, form field guard branches, an
 });
 
 test("ContactVisualEditor covers variant cards, required and ordering rules, contact details, map visibility, and style controls", async () => {
-  const { ContactVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ContactEditors"
-  );
+  const { ContactVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: ContactData = {
@@ -461,11 +448,7 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
     const colorInputs = Array.from(
       view.container.querySelectorAll("input[type='color']")
     ) as HTMLInputElement[];
-    expect(colorInputs.map((input) => input.value)).toEqual([
-      "#ffffff",
-      "#ffffff",
-      "#e2e8f0",
-    ]);
+    expect(colorInputs.map((input) => input.value)).toEqual(["#ffffff", "#ffffff", "#e2e8f0"]);
 
     clickButtonByText(view.container, "Minimal");
     expect(currentVariant).toBe("minimal");
@@ -482,10 +465,7 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
       throw new Error("Missing rules section");
     }
 
-    setCheckboxValue(
-      findRequiredFieldCheckbox(rulesSection, "Email"),
-      true
-    );
+    setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), true);
     expect(latestValue.form?.required).toEqual(["phone", "email"]);
     setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), false);
     expect(latestValue.form?.required).toEqual(["phone"]);
@@ -507,10 +487,7 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
 
     setInputValue(findInputByPlaceholder(view.container, "Send message"), "Talk to us");
     setInputValue(findInputByPlaceholder(view.container, "+1 555 123 456"), "+48 222 333 444");
-    setInputValue(
-      findInputByPlaceholder(view.container, "hello@example.com"),
-      "hello@coderso.dev"
-    );
+    setInputValue(findInputByPlaceholder(view.container, "hello@example.com"), "hello@coderso.dev");
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "123 Market Street"),
       "Nowy Swiat 10"
@@ -543,7 +520,7 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
       "var(--surface-contact)"
     );
     setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "3");
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(view.container, ["one", "two"]), "one");
 
     expect(onChangeSpy).toHaveBeenCalled();
@@ -569,9 +546,8 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, con
 });
 
 test("ContactAdvancedEditor covers map metadata updates, normalization, and diagnostics output", async () => {
-  const { ContactAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ContactEditors"
-  );
+  const { ContactAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: ContactData = {
@@ -615,10 +591,7 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
     expect(initialSnapshot?.textContent).toContain('"submitLabel": "Send message"');
     expect(initialSnapshot?.textContent).toContain('"borderWidth": "1"');
 
-    setCheckboxValue(
-      view.container.querySelector("input[type='checkbox']") ?? undefined,
-      true
-    );
+    setCheckboxValue(view.container.querySelector("input[type='checkbox']") ?? undefined, true);
     setInputValue(
       findInputByPlaceholder(view.container, "https://maps.google.com/..."),
       "https://maps.example.com/advanced"
@@ -644,20 +617,15 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
 
     const finalSnapshot = view.container.querySelector("pre");
     expect(finalSnapshot?.textContent).toContain('"enabled": true');
-    expect(finalSnapshot?.textContent).toContain(
-      '"embedUrl": "https://maps.example.com/advanced"'
-    );
+    expect(finalSnapshot?.textContent).toContain('"embedUrl": "https://maps.example.com/advanced"');
   } finally {
     view.cleanup();
   }
 });
 
 test("Contact editors cover sparse defaults, minimal variant fallback, and default map metadata state", async () => {
-  const {
-    ContactAdvancedEditor,
-    ContactVisualEditor,
-    ContactWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ContactEditors");
+  const { ContactAdvancedEditor, ContactVisualEditor, ContactWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
   const sparseValue: ContactData = {
     form: {},
@@ -672,12 +640,20 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
 
   try {
     expect(
-      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "Send message") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("Send message");
     expect(
-      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "+1 555 123 456") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(contactDefaults.contact?.phone);
   } finally {
     wizardView.cleanup();
@@ -716,7 +692,9 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
       throw new Error("Missing map section");
     }
 
-    expect(findInputByPlaceholder(visualView.container, "https://maps.google.com/...")).toBeUndefined();
+    expect(
+      findInputByPlaceholder(visualView.container, "https://maps.google.com/...")
+    ).toBeUndefined();
 
     setCheckboxValue(mapSection.querySelector("input[type='checkbox']") ?? undefined, true);
     setInputValue(
@@ -735,19 +713,24 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
     }
 
     expect(
-      (findInputByPlaceholder(colorsSection, "transparent or #f8fafc") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe(contactDefaults.style?.background);
-    expect(
-      (findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe(contactDefaults.style?.surfaceColor);
-    expect(
       (
-        findSelectByOptions(colorsSection, ["0", "1", "2", "3"]) as
-          | HTMLSelectElement
+        findInputByPlaceholder(colorsSection, "transparent or #f8fafc") as
+          | HTMLInputElement
+          | null
           | undefined
       )?.value
+    ).toBe(contactDefaults.style?.background);
+    expect(
+      (
+        findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe(contactDefaults.style?.surfaceColor);
+    expect(
+      (findSelectByOptions(colorsSection, ["0", "1", "2", "3"]) as HTMLSelectElement | undefined)
+        ?.value
     ).toBe("1");
 
     const spacingSection = findSection(visualView.container, "Spacing and columns");
@@ -757,7 +740,7 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
 
     expect(
       (
-        findSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]) as
+        findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]) as
           | HTMLSelectElement
           | undefined
       )?.value
@@ -772,8 +755,12 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
 
   try {
     expect(
-      (advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | null | undefined)
-        ?.checked
+      (
+        advancedView.container.querySelector("input[type='checkbox']") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.checked
     ).toBe(false);
     expect(
       (
@@ -790,9 +777,9 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
 test("Contact editors fall back to empty/default UI values when normalized payload is sparse", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/contact", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/contact")
-    >("../../../core/widgets/core/contact");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/contact")>(
+      "../../../core/widgets/core/contact"
+    );
 
     return {
       ...actual,
@@ -825,9 +812,8 @@ test("Contact editors fall back to empty/default UI values when normalized paylo
     };
   });
 
-  const { ContactAdvancedEditor, ContactVisualEditor, ContactWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/ContactEditors"
-  );
+  const { ContactAdvancedEditor, ContactVisualEditor, ContactWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
   const sparseValue: ContactData = {
     form: {},
@@ -837,30 +823,40 @@ test("Contact editors fall back to empty/default UI values when normalized paylo
   };
 
   const wizardView = mount(
-    <ContactWizardEditor
-      value={sparseValue}
-      onChange={() => undefined}
-      variant="legacy-contact"
-    />
+    <ContactWizardEditor value={sparseValue} onChange={() => undefined} variant="legacy-contact" />
   );
 
   try {
     expect(
-      (findSelectByOptions(wizardView.container, ["form-left", "form-right", "minimal"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectByOptions(wizardView.container, ["form-left", "form-right", "minimal"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("form-left");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "Send message") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "+1 555 123 456") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(wizardView.container, "hello@example.com") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "hello@example.com") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
       (
@@ -884,18 +880,23 @@ test("Contact editors fall back to empty/default UI values when normalized paylo
     }
 
     expect(findInputByPlaceholder(visualView.container, "Send message")).toBeTruthy();
-    expect(findInputByPlaceholder(visualView.container, "https://maps.google.com/...")).toBeUndefined();
     expect(
-      (findSelectByOptions(visualView.container, ["sm", "md", "lg", "xl"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      findInputByPlaceholder(visualView.container, "https://maps.google.com/...")
+    ).toBeUndefined();
+    expect(
+      (
+        findSelectByOptions(visualView.container, ["none", "sm", "md", "lg", "xl"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("md");
     expect(
-      (findSelectByOptions(visualView.container, ["one", "two"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      (findSelectByOptions(visualView.container, ["one", "two"]) as HTMLSelectElement | undefined)
+        ?.value
     ).toBe("two");
-    const colorInputs = Array.from(styleSection.querySelectorAll("input[type='color']")) as HTMLInputElement[];
+    const colorInputs = Array.from(
+      styleSection.querySelectorAll("input[type='color']")
+    ) as HTMLInputElement[];
     expect(colorInputs.map((input) => input.value)).toEqual(["#ffffff", "#ffffff", "#e2e8f0"]);
   } finally {
     visualView.cleanup();
@@ -907,14 +908,15 @@ test("Contact editors fall back to empty/default UI values when normalized paylo
 
   try {
     expect(
-      (
-        advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | null
-      )?.checked
+      (advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | null)
+        ?.checked
     ).toBe(false);
     expect(
-      (findInputByPlaceholder(advancedView.container, "https://maps.google.com/...") as
-        | HTMLInputElement
-        | undefined)?.value
+      (
+        findInputByPlaceholder(advancedView.container, "https://maps.google.com/...") as
+          | HTMLInputElement
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     advancedView.cleanup();

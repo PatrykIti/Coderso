@@ -63,6 +63,7 @@ const radiusOptions: Array<{ id: CtaBannerRadius; label: string }> = [
 ];
 
 const paddingOptions: Array<{ id: CtaBannerPadding; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -305,10 +306,7 @@ export function CtaBannerVisualEditor({
         <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
 
-      <EditorSection
-        title="Content copy"
-        description="Edit badge, title, and support line."
-      >
+      <EditorSection title="Content copy" description="Edit badge, title, and support line.">
         <div className="space-y-2">
           <p className="text-sm font-medium">Badge</p>
           <Input
@@ -339,10 +337,7 @@ export function CtaBannerVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="Actions"
-        description="Configure primary and secondary CTA buttons."
-      >
+      <EditorSection title="Actions" description="Configure primary and secondary CTA buttons.">
         <div className="space-y-2 rounded-md border p-3">
           <p className="text-sm font-semibold">Primary CTA</p>
           <Input
@@ -400,10 +395,7 @@ export function CtaBannerVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="Colors and button styles"
-        description="Set content and button palette."
-      >
+      <EditorSection title="Colors and button styles" description="Set content and button palette.">
         <ColorField
           label="Background"
           value={normalized.style?.background}
@@ -534,10 +526,7 @@ export function CtaBannerVisualEditor({
   );
 }
 
-export function CtaBannerAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<CtaBannerData>) {
+export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<CtaBannerData>) {
   const normalized = normalizeValue(value);
 
   return (

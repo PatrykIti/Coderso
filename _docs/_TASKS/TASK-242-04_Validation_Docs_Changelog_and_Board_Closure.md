@@ -6,7 +6,7 @@
 **Category:** QA + Docs + Task Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242-02, TASK-242-03
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -17,7 +17,7 @@ close the task family with changelog and board synchronization.
 
 ## Sub-Tasks
 
-- [ ] TASK-242-04-01: Widget None Token Test Matrix and Docs Closure
+- [x] TASK-242-04-01: Widget None Token Test Matrix and Docs Closure
 
 ## Security Contract
 

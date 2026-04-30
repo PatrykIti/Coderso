@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-215
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -112,10 +112,10 @@ family. This keeps tests, review, and merge conflict handling scoped.
 
 ## Sub-Tasks
 
-- [ ] TASK-242-01: Widget Token Audit and None Semantics
-- [ ] TASK-242-02: Layout, Spacing, Gap, Padding, and Radius None Rollout
-- [ ] TASK-242-03: Typography, Size, Width, and Editor UI None Rollout
-- [ ] TASK-242-04: Validation, Docs, Changelog, and Board Closure
+- [x] TASK-242-01: Widget Token Audit and None Semantics
+- [x] TASK-242-02: Layout, Spacing, Gap, Padding, and Radius None Rollout
+- [x] TASK-242-03: Typography, Size, Width, and Editor UI None Rollout
+- [x] TASK-242-04: Validation, Docs, Changelog, and Board Closure
 
 ## Files to Change
 
@@ -235,6 +235,39 @@ const fontSizeClassMap: Record<WidgetFontSize, string> = {
 - impacted `_docs/_WIDGETS/*.md` examples and token lists
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and matching changelog entry on completion
+
+## Closure Notes
+
+Completed on 2026-04-29.
+
+- Added approved `none` tokens across widget schemas, type unions,
+  normalizers, render maps, and admin editor select options.
+- Kept structural fields excluded from the `none` rollout.
+- Preserved legacy numeric zero spacing values where they already existed.
+- Added focused runtime and editor-wave regression coverage.
+- Updated `_docs/WIDGETS.md`, `_docs/_WIDGETS/README.md`, missing per-widget
+  docs, `_docs/_TASKS/README.md`, and changelog entry `776`.
+
+## Validation Results
+
+- [x] `bun --cwd core lint:types` - PASS.
+- [x] `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` -
+  PASS, 6 tests.
+- [x] Vitest runtime widget matrix - PASS, 25 files / 188 tests.
+- [x] Changed widget editor wave matrix - PASS, 23 files / 111 tests:
+  `compare-timeline`, `contact`, `content-list`, `cta-banner`,
+  `entry-teaser`, `faq-accordion`, `feature-grid`, `footer`, `form-embed`,
+  `grid-columns`, `hero`, `logo-cloud`, `navigation`, `newsletter`,
+  `posts-feed`, `pricing-plans`, `rich-text-section`, `split-layout`, `stack`,
+  `stats-kpi`, `team`, `testimonials`, and `timeline`.
+- [x] Focused Bun-owned widget tests with main checkout `.env` loaded:
+  content-list `none` gap, entry-teaser `none` spacing/radius, posts-feed
+  `none` gap mapping - PASS.
+- [x] `bun --cwd core lint` - PASS.
+- [x] `git diff --check` - PASS.
+- [x] `bun run gates:coderso` - PASS; optional DB-backed checks skipped because
+  `DATABASE_URL` is not configured in the task worktree environment.
+- [x] `bun run precommit` - PASS.
 
 ## Acceptance Criteria
 

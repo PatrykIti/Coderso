@@ -71,6 +71,7 @@ const labelPositionOptions: Array<{ id: TimelineLabelPosition; label: string }> 
 ];
 
 const spacingOptions: Array<{ id: TimelineSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -101,6 +102,7 @@ const thicknessOptions: Array<{ id: TimelineThickness; label: string }> = [
 ];
 
 const titleSizeOptions: Array<{ id: TimelineTitleSize; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "base", label: "Base" },
   { id: "lg", label: "Large" },
@@ -108,6 +110,7 @@ const titleSizeOptions: Array<{ id: TimelineTitleSize; label: string }> = [
 ];
 
 const descriptionSizeOptions: Array<{ id: TimelineDescriptionSize; label: string }> = [
+  { id: "none", label: "None" },
   { id: "xs", label: "Extra small" },
   { id: "sm", label: "Small" },
   { id: "base", label: "Base" },
@@ -315,11 +318,7 @@ function updateBackground(
   });
 }
 
-function setStepsCount(
-  value: TimelineData,
-  onChange: (next: TimelineData) => void,
-  count: number
-) {
+function setStepsCount(value: TimelineData, onChange: (next: TimelineData) => void, count: number) {
   const steps = normalizeTimelineSteps(value.steps, normalizeTimelineStepCount(count));
   onChange({ ...value, steps });
 }
@@ -334,11 +333,7 @@ function addStep(value: TimelineData, onChange: (next: TimelineData) => void) {
   onChange({ ...value, steps: next });
 }
 
-function removeStep(
-  value: TimelineData,
-  onChange: (next: TimelineData) => void,
-  index: number
-) {
+function removeStep(value: TimelineData, onChange: (next: TimelineData) => void, index: number) {
   const steps = getNormalizedSteps(value);
   if (steps.length <= timelineStepMin) return;
   const next = steps.filter((_, currentIndex) => currentIndex !== index);
@@ -371,8 +366,7 @@ function normalizeTimelinePayload(value: TimelineData): TimelineData {
       orientation: value.layout?.orientation ?? timelineDefaults.layout?.orientation,
       align: value.layout?.align ?? timelineDefaults.layout?.align,
       spacing: value.layout?.spacing ?? timelineDefaults.layout?.spacing,
-      labelPosition:
-        value.layout?.labelPosition ?? timelineDefaults.layout?.labelPosition,
+      labelPosition: value.layout?.labelPosition ?? timelineDefaults.layout?.labelPosition,
     },
     guides: {
       enabled: value.guides?.enabled ?? timelineDefaults.guides?.enabled,
@@ -976,10 +970,7 @@ export function TimelineVisualEditor({
   );
 }
 
-export function TimelineAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<TimelineData>) {
+export function TimelineAdvancedEditor({ value, onChange }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
 
   return (
@@ -996,8 +987,8 @@ export function TimelineAdvancedEditor({
         description="Normalize step IDs and enforce safe step-count bounds."
       >
         <p className="text-xs text-muted-foreground">
-          Current steps: {steps.length}. Normalization keeps payload compatible with runtime
-          rules (`{timelineStepMin}-{timelineStepMax}` steps, unique stable IDs).
+          Current steps: {steps.length}. Normalization keeps payload compatible with runtime rules
+          (`{timelineStepMin}-{timelineStepMax}` steps, unique stable IDs).
         </p>
         <Button
           type="button"

@@ -96,6 +96,34 @@ test("posts feed normalizer deduplicates manual IDs and maps to content list con
   expect(mapped.resolved?.items?.[0]?.tags).toEqual([]);
 });
 
+test("posts feed preserves none gap token through content list mapping", () => {
+  const normalized = normalizePostsFeedData({
+    ...postsFeedDefaults,
+    style: {
+      ...postsFeedDefaults.style,
+      gap: "none",
+    },
+    resolved: {
+      items: [
+        {
+          id: "post-1",
+          title: "Post one",
+          href: "/blog/post-one",
+          excerpt: "Post one excerpt",
+          status: "published",
+        },
+      ],
+      total: 1,
+      sourceMode: "latest",
+      resolvedAt: "2026-02-22T10:05:00.000Z",
+    },
+  });
+
+  expect(normalized.style?.gap).toBe("none");
+  expect(mapPostsFeedToContentListData(normalized).style?.gap).toBe("none");
+  expect(renderToString(<PostsFeedBlock data={normalized} variant="cards" />)).toContain("gap-0");
+});
+
 test("posts feed resolver filters by preview visibility and route mapping", async () => {
   const resolved = await resolvePostsFeedRuntimeData(
     {

@@ -4,7 +4,7 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type FeatureGridVariantId = "cards-3" | "cards-4" | "highlight-first";
 export type FeatureGridColumns = "2" | "3" | "4";
-export type FeatureGridGap = "sm" | "md" | "lg";
+export type FeatureGridGap = "none" | "sm" | "md" | "lg";
 export type FeatureGridBorderWidth = "0" | "1" | "2" | "3";
 export type FeatureGridRadius = "none" | "md" | "lg" | "xl";
 
@@ -51,6 +51,7 @@ const variantDefaultColumnsMap: Record<FeatureGridVariantId, FeatureGridColumns>
 };
 
 const gapClassMap: Record<FeatureGridGap, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
@@ -116,7 +117,7 @@ export const featureGridSchema = {
       additionalProperties: false,
       properties: {
         columns: { enum: ["2", "3", "4"] },
-        gap: { enum: ["sm", "md", "lg"] },
+        gap: { enum: ["none", "sm", "md", "lg"] },
         surfaceColor: { type: "string" },
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
@@ -181,9 +182,8 @@ export const resolveFeatureGridVariant = (variant: string): FeatureGridVariantId
   return "cards-3";
 };
 
-export const resolveFeatureGridItemCountForVariant = (
-  variant: FeatureGridVariantId
-): number => featureGridVariantItemCountMap[variant];
+export const resolveFeatureGridItemCountForVariant = (variant: FeatureGridVariantId): number =>
+  featureGridVariantItemCountMap[variant];
 
 export const normalizeFeatureGridItemCount = (value: number) => {
   if (!Number.isFinite(value)) return resolveFeatureGridItemCountForVariant("cards-3");
@@ -206,9 +206,7 @@ export function normalizeFeatureGridItems(
     typeof desiredCount === "number"
       ? normalizeFeatureGridItemCount(desiredCount)
       : normalizeFeatureGridItemCount(
-          source.length > 0
-            ? source.length
-            : resolveFeatureGridItemCountForVariant("cards-3")
+          source.length > 0 ? source.length : resolveFeatureGridItemCountForVariant("cards-3")
         );
 
   const normalized: FeatureGridItem[] = [];
@@ -234,7 +232,7 @@ export function normalizeFeatureGridItems(
     const title =
       typeof base.title === "string" && base.title.trim().length > 0
         ? base.title.trim()
-        : fallbackTitles[index] ?? `Feature ${index + 1}`;
+        : (fallbackTitles[index] ?? `Feature ${index + 1}`);
 
     normalized.push({
       id,
@@ -259,13 +257,11 @@ const resolveFeatureGridColumns = (
 };
 
 const resolveFeatureGridGap = (value: string | undefined): FeatureGridGap => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
-const resolveFeatureGridBorderWidth = (
-  value: string | undefined
-): FeatureGridBorderWidth => {
+const resolveFeatureGridBorderWidth = (value: string | undefined): FeatureGridBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
   return "1";
 };
@@ -299,10 +295,7 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
     },
     items: normalizeFeatureGridItems(data.items),
     style: {
-      columns: resolveFeatureGridColumns(
-        data.style?.columns,
-        styleDefaults.columns ?? "3"
-      ),
+      columns: resolveFeatureGridColumns(data.style?.columns, styleDefaults.columns ?? "3"),
       gap: resolveFeatureGridGap(data.style?.gap),
       surfaceColor: resolveString(
         data.style?.surfaceColor,
@@ -318,13 +311,7 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
   };
 }
 
-export function FeatureGridBlock({
-  data,
-  variant,
-}: {
-  data: FeatureGridData;
-  variant: string;
-}) {
+export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; variant: string }) {
   const resolvedVariant = resolveFeatureGridVariant(variant);
   const visibleItemCount = resolveFeatureGridItemCountForVariant(resolvedVariant);
   const normalizedData = normalizeFeatureGridData(data);
@@ -350,11 +337,7 @@ export function FeatureGridBlock({
   const gridClassName =
     resolvedVariant === "highlight-first"
       ? joinClasses("grid grid-cols-1 md:grid-cols-3", gapClassMap[resolvedGap])
-      : joinClasses(
-          "grid grid-cols-1",
-          columnsClassMap[resolvedColumns],
-          gapClassMap[resolvedGap]
-        );
+      : joinClasses("grid grid-cols-1", columnsClassMap[resolvedColumns], gapClassMap[resolvedGap]);
 
   const sectionStyle: CSSProperties = {
     backgroundColor: "transparent",
@@ -425,7 +408,10 @@ export function FeatureGridBlock({
                 <img
                   src={item.image}
                   alt={item.title ?? `Feature ${index + 1}`}
-                  className={joinClasses("h-40 w-full object-cover", radiusClassMap[resolvedRadius])}
+                  className={joinClasses(
+                    "h-40 w-full object-cover",
+                    radiusClassMap[resolvedRadius]
+                  )}
                 />
               ) : hasIcon ? (
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] text-lg">

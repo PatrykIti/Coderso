@@ -97,13 +97,18 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/CONTACT.md`
 - `_docs/_WIDGETS/FAQ.md`
 - `_docs/_WIDGETS/CTA_BANNER.md`
+- `_docs/_WIDGETS/FEATURE_GRID.md`
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/TEAM.md`
+- `_docs/_WIDGETS/TESTIMONIALS.md`
+- `_docs/_WIDGETS/PRICING_PLANS.md`
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
+- `_docs/_WIDGETS/FORM_EMBED.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`
@@ -113,6 +118,30 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/DIVIDER.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
+
+---
+
+## Visual Off Tokens
+
+TASK-242 adds a consistent `none` token for off-capable visual presets. Editors
+show this value as `None`, schemas accept it only for approved visual fields, and
+renderers map it through fixed class/style maps instead of accepting arbitrary
+class names.
+
+Use `none` only for visual styling controls that can be disabled:
+
+| Token family | Widgets and fields |
+|---|---|
+| Layout gap/spacing/padding | `stack.gap.*`, `splitLayout.gap`, `gridColumns.layout.gapX/gapY`, `gridColumns.style.columnPadding`, `screenTwoColumn.gap`, `statsKpi.style.spacing`, `featureGrid.style.gap`, `contentList.style.gap`, `postsFeed.style.gap`, `galleryMosaic.style.gap`, `pricingPlans.style.spacing`, `faqAccordion.style.spacing`, `team.style.gap`, `testimonials.style.spacing`, `contact.style.spacing`, `newsletter.style.spacing`, `ctaBanner.style.padding`, `logoCloud.style.gap`, `richTextSection.style.spacing`, `timeline.layout.spacing`, `compareTimeline.layout.trackSpacing` |
+| Vertical utility rhythm | `divider.marginTop/marginBottom`, `spacer.height.desktop/tablet/mobile` |
+| Radius | `hero.style.borderRadius/mediaRadius`, `entryTeaser.style.radius`, plus existing radius fields on `section`, `ctaBanner`, `featureGrid`, `galleryMosaic`, `pricingPlans`, `team`, and `gridColumns` |
+| Width and size | `hero.layout.maxWidth/contentWidth`, `navigation.layout.maxWidth`, `footer.layout.maxWidth`, `formEmbed.layout.width`, `logoCloud.style.logoHeight`, `formEmbed.style.inputSize`, `hero.style.primaryButtonSize/secondaryButtonSize` |
+| Typography | `hero.style.headlineSize/subheadSize/bodySize`, `navigation.style.fontSize/fontWeight`, `footer.style.fontSize`, `richTextSection.style.fontScale/lineHeight`, `timeline.style.titleSize/descriptionSize`, `compareTimeline.style.trackLabelSize/stepLabelSize/segmentLabelSize` |
+
+Legacy numeric zero values remain backward compatible where they already existed
+and continue to render as zero spacing. Do not add `none` to structural choices
+such as variants, ratios, columns, spans, alignments, sources, statuses, or media
+type modes that already use `none` for content semantics.
 
 ---
 

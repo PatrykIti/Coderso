@@ -146,9 +146,7 @@ function createMediaRecords(): TestMediaRecord[] {
   ];
 }
 
-function createNavigationValue(
-  overrides: Partial<NavigationData> = {}
-): NavigationData {
+function createNavigationValue(overrides: Partial<NavigationData> = {}): NavigationData {
   return {
     logo: {
       type: "text",
@@ -157,13 +155,11 @@ function createNavigationValue(
       source: "external",
       ...overrides.logo,
     },
-    items:
-      overrides.items ??
-      [
-        { label: "Home", href: "/" },
-        { label: "Docs", href: "/docs" },
-        { label: "Pricing", href: "/pricing" },
-      ],
+    items: overrides.items ?? [
+      { label: "Home", href: "/" },
+      { label: "Docs", href: "/docs" },
+      { label: "Pricing", href: "/pricing" },
+    ],
     cta: {
       label: "Get started",
       href: "/start",
@@ -335,8 +331,7 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -431,10 +426,7 @@ const normalizeText = (value: string | null | undefined) =>
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -444,10 +436,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -493,11 +482,8 @@ const findSelectsByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
-const findSelectByOptions = (
-  container: ParentNode,
-  values: string[],
-  index = 0
-) => findSelectsByOptions(container, values)[index];
+const findSelectByOptions = (container: ParentNode, values: string[], index = 0) =>
+  findSelectsByOptions(container, values)[index];
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find(
@@ -527,9 +513,8 @@ afterEach(() => {
 });
 
 test("Navigation helper exports map menu metadata and selection patches", async () => {
-  const { buildMenuSelectionPatch, mapMenuNodesToNavigationItems } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { buildMenuSelectionPatch, mapMenuNodesToNavigationItems } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   const mapped = mapMenuNodesToNavigationItems(createMenuDetails()["menu-1"].items);
 
@@ -579,9 +564,8 @@ test("Navigation helper exports map menu metadata and selection patches", async 
 });
 
 test("NavigationWizardEditor covers links-source branching, menu sync, logo library resolution, and CTA variant toggles", async () => {
-  const { NavigationWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue();
   let latestVariant = "simple";
@@ -746,9 +730,8 @@ test("NavigationWizardEditor surfaces menu list and logo lookup API errors witho
   navigationClientState.listMenusError = createApiClientError("Menus unavailable");
   navigationClientState.mediaError = createApiClientError("Logo lookup failed");
 
-  const { NavigationWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue({
     linksSource: "menu",
@@ -783,9 +766,7 @@ test("NavigationWizardEditor surfaces menu list and logo lookup API errors witho
   try {
     await flush();
 
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Menus unavailable")
-    );
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Menus unavailable"));
 
     clickByText(view.container, "pick-media");
     await flush();
@@ -803,9 +784,8 @@ test("NavigationWizardEditor surfaces menu list and logo lookup API errors witho
 });
 
 test("NavigationWizardEditor updates manual links and logo copy safely without a variant handler", async () => {
-  const { NavigationWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue({
     linksSource: "manual",
@@ -874,9 +854,8 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
 });
 
 test("Navigation editors surface generic menu and logo resolver failures without relying on API error wrappers", async () => {
-  const { NavigationVisualEditor, NavigationWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationVisualEditor, NavigationWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   navigationClientState.listMenusError = new Error("menus_failed");
 
@@ -980,9 +959,8 @@ test("Navigation editors surface generic menu and logo resolver failures without
 });
 
 test("NavigationVisualEditor covers API menu resolver fallback and color picker updates", async () => {
-  const { NavigationVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue();
 
@@ -1009,10 +987,7 @@ test("NavigationVisualEditor covers API menu resolver fallback and color picker 
       throw new Error("Missing structure section");
     }
 
-    setSelectValue(
-      findSelectByOptions(structureSection, ["manual", "menu", "pages"]),
-      "menu"
-    );
+    setSelectValue(findSelectByOptions(structureSection, ["manual", "menu", "pages"]), "menu");
     await flush();
 
     navigationClientState.menuDetailError = createApiClientError("Menu sync unavailable");
@@ -1047,9 +1022,8 @@ test("NavigationVisualEditor covers API menu resolver fallback and color picker 
 });
 
 test("NavigationVisualEditor covers manual editing, menu error recovery, CTA validation, and style or behavior controls", async () => {
-  const { NavigationVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue();
   let latestVariant = "simple";
@@ -1086,14 +1060,8 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     const linksSection = findSectionByTitle(view.container, "Navigation Links");
     const ctaSection = findSectionByTitle(view.container, "CTA and Right Actions");
     const mobileSection = findSectionByTitle(view.container, "Mobile Behavior");
-    const colorsSection = findSectionByTitle(
-      view.container,
-      "Colors, Borders, Typography"
-    );
-    const surfaceSection = findSectionByTitle(
-      view.container,
-      "Surface and Runtime Behavior"
-    );
+    const colorsSection = findSectionByTitle(view.container, "Colors, Borders, Typography");
+    const surfaceSection = findSectionByTitle(view.container, "Surface and Runtime Behavior");
 
     expect(structureSection).toBeTruthy();
     expect(brandSection).toBeTruthy();
@@ -1107,7 +1075,10 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     expect(latestVariant).toBe("split");
 
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Item 1 label"), "Docs");
-    setInputValue(findInputsByPlaceholder(linksSection ?? view.container, "/path")[0], "ftp://invalid");
+    setInputValue(
+      findInputsByPlaceholder(linksSection ?? view.container, "/path")[0],
+      "ftp://invalid"
+    );
 
     expect(normalizeText(linksSection?.textContent)).toContain(
       normalizeText("Use a relative path or full URL.")
@@ -1119,10 +1090,7 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
 
     clickByText(linksSection ?? view.container, "Add sub-link", 0);
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Sub-link label"), "API");
-    setInputValue(
-      findInputsByPlaceholder(linksSection ?? view.container, "/path")[1],
-      "/api"
-    );
+    setInputValue(findInputsByPlaceholder(linksSection ?? view.container, "/path")[1], "/api");
 
     expect(latestValue.items[0].children).toEqual([
       {
@@ -1195,11 +1163,23 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     ]);
 
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "image");
-    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "https://..."), "/brand/logo.svg");
-    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"), "/brand");
-    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Logo alt text"), "Brand mark");
+    setInputValue(
+      findInputByPlaceholder(brandSection ?? view.container, "https://..."),
+      "/brand/logo.svg"
+    );
+    setInputValue(
+      findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"),
+      "/brand"
+    );
+    setInputValue(
+      findInputByPlaceholder(brandSection ?? view.container, "Logo alt text"),
+      "Brand mark"
+    );
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "text");
-    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Coderso"), "Northwind OS");
+    setInputValue(
+      findInputByPlaceholder(brandSection ?? view.container, "Coderso"),
+      "Northwind OS"
+    );
 
     expect(latestValue.logo).toMatchObject({
       type: "text",
@@ -1209,7 +1189,10 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     });
 
     setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "CTA label"), "Contact");
-    setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "/start"), "mailto:test@example.com");
+    setInputValue(
+      findInputByPlaceholder(ctaSection ?? view.container, "/start"),
+      "mailto:test@example.com"
+    );
 
     expect(normalizeText(ctaSection?.textContent)).toContain(
       normalizeText("Use a relative path or full URL.")
@@ -1232,18 +1215,48 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
 
     setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#ffffff"), "#f8fafc");
     setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#e2e8f0"), "#cbd5e1");
-    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[0], "#0f172b");
-    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[1], "#1f2937");
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#334155"), "#475569");
-    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[0], "#2563eb");
-    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#ffffff")[1], "#eff6ff");
-    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[1], "#1e40af");
-    setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["0", "1", "2", "3"]), "2");
-    setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["xs", "sm", "base", "lg"]), "lg");
-    setSelectValue(
-      findSelectByOptions(colorsSection ?? view.container, ["normal", "medium", "semibold", "bold"]),
-      "bold"
+    setInputValue(
+      findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[0],
+      "#0f172b"
     );
+    setInputValue(
+      findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[1],
+      "#1f2937"
+    );
+    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#334155"), "#475569");
+    setInputValue(
+      findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[0],
+      "#2563eb"
+    );
+    setInputValue(
+      findInputsByPlaceholder(colorsSection ?? view.container, "#ffffff")[1],
+      "#eff6ff"
+    );
+    setInputValue(
+      findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[1],
+      "#1e40af"
+    );
+    setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["0", "1", "2", "3"]), "2");
+    const fontSizeSelect = findSelectByOptions(colorsSection ?? view.container, [
+      "xs",
+      "sm",
+      "base",
+      "lg",
+    ]);
+    const fontWeightSelect = findSelectByOptions(colorsSection ?? view.container, [
+      "normal",
+      "medium",
+      "semibold",
+      "bold",
+    ]);
+    expect(
+      Array.from((fontSizeSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    expect(
+      Array.from((fontWeightSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    setSelectValue(fontSizeSelect, "lg");
+    setSelectValue(fontWeightSelect, "bold");
     setSelectValue(
       findSelectByOptions(colorsSection ?? view.container, ["none", "uppercase", "capitalize"]),
       "uppercase"
@@ -1274,9 +1287,8 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
 });
 
 test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async () => {
-  const { NavigationAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NavigationEditors"
-  );
+  const { NavigationAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue({
     layout: {},
@@ -1304,14 +1316,20 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
   const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Runtime Behavior")
-    );
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Runtime Behavior"));
 
     setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "center");
-    setSelectValue(findSelectByOptions(view.container, ["5xl", "6xl", "7xl"]), "7xl");
-    setSelectValue(findSelectByOptions(view.container, ["2", "3", "4", "5"]), "5");
-    setSelectValue(findSelectByOptions(view.container, ["2", "3", "4", "6"]), "6");
+    const maxWidthSelect = findSelectByOptions(view.container, ["5xl", "6xl", "7xl"]);
+    const paddingYSelect = findSelectByOptions(view.container, ["2", "3", "4", "5"]);
+    const itemGapSelect = findSelectByOptions(view.container, ["2", "3", "4", "6"]);
+    for (const select of [maxWidthSelect, paddingYSelect, itemGapSelect]) {
+      expect(
+        Array.from((select as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
+    }
+    setSelectValue(maxWidthSelect, "7xl");
+    setSelectValue(paddingYSelect, "5");
+    setSelectValue(itemGapSelect, "6");
 
     const checkboxes = findCheckboxes(view.container);
     clickElement(checkboxes[0]);
@@ -1333,11 +1351,8 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
 });
 
 test("Navigation editors fall back to default source, items, behavior, and layout values for sparse payloads", async () => {
-  const {
-    NavigationAdvancedEditor,
-    NavigationVisualEditor,
-    NavigationWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+  const { NavigationAdvancedEditor, NavigationVisualEditor, NavigationWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   const sparseValue = {
     logo: {
@@ -1364,15 +1379,24 @@ test("Navigation editors fall back to default source, items, behavior, and layou
       )?.value
     ).toBe("manual");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Item 1 label") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "Item 1 label") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("Home");
     expect(
-      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | null | undefined)?.value
+      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | null | undefined)
+        ?.value
     ).toBe("/");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Coderso") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "Coderso") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
   } finally {
     wizardView.cleanup();
@@ -1384,38 +1408,39 @@ test("Navigation editors fall back to default source, items, behavior, and layou
 
   try {
     const mobileSection = findSectionByTitle(visualView.container, "Mobile Behavior");
-    const colorsSection = findSectionByTitle(
-      visualView.container,
-      "Colors, Borders, Typography"
-    );
-    const surfaceSection = findSectionByTitle(
-      visualView.container,
-      "Surface and Runtime Behavior"
-    );
+    const colorsSection = findSectionByTitle(visualView.container, "Colors, Borders, Typography");
+    const surfaceSection = findSectionByTitle(visualView.container, "Surface and Runtime Behavior");
 
     expect(normalizeText(visualView.container.textContent)).toContain(
       normalizeText("CTA is disabled for the Simple variant.")
     );
     expect(
-      (findInputByPlaceholder(visualView.container, "Item 1 label") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(visualView.container, "Item 1 label") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("Home");
     expect(
       (
-        findSelectByOptions(
-          mobileSection as ParentNode,
-          ["expanded", "drawer", "minimal"]
-        ) as HTMLSelectElement | null | undefined
+        findSelectByOptions(mobileSection as ParentNode, ["expanded", "drawer", "minimal"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
       )?.value
     ).toBe("expanded");
     expect(
-      (
-        findCheckboxes(mobileSection as ParentNode)[0] as HTMLInputElement | null | undefined
-      )?.checked
+      (findCheckboxes(mobileSection as ParentNode)[0] as HTMLInputElement | null | undefined)
+        ?.checked
     ).toBe(false);
     expect(
-      (findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
       (
@@ -1424,25 +1449,29 @@ test("Navigation editors fall back to default source, items, behavior, and layou
           | undefined
       )?.value
     ).toBe("1");
+    const fontSizeSelect = findSelectByOptions(colorsSection as ParentNode, [
+      "xs",
+      "sm",
+      "base",
+      "lg",
+    ]);
+    expect(
+      Array.from((fontSizeSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    expect((fontSizeSelect as HTMLSelectElement | undefined)?.value).toBe("sm");
     expect(
       (
-        findSelectByOptions(colorsSection as ParentNode, ["xs", "sm", "base", "lg"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("sm");
-    expect(
-      (
-        findSelectByOptions(
-          colorsSection as ParentNode,
-          ["normal", "medium", "semibold", "bold"]
-        ) as HTMLSelectElement | null | undefined
+        findSelectByOptions(colorsSection as ParentNode, [
+          "normal",
+          "medium",
+          "semibold",
+          "bold",
+        ]) as HTMLSelectElement | null | undefined
       )?.value
     ).toBe("medium");
     expect(
-      (
-        findCheckboxes(surfaceSection as ParentNode)[0] as HTMLInputElement | null | undefined
-      )?.checked
+      (findCheckboxes(surfaceSection as ParentNode)[0] as HTMLInputElement | null | undefined)
+        ?.checked
     ).toBe(false);
   } finally {
     visualView.cleanup();
@@ -1455,34 +1484,23 @@ test("Navigation editors fall back to default source, items, behavior, and layou
   try {
     expect(
       (
-        findSelectByOptions(
-          advancedView.container,
-          ["left", "center", "right"]
-        ) as HTMLSelectElement | null | undefined
+        findSelectByOptions(advancedView.container, ["left", "center", "right"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
       )?.value
     ).toBe("right");
-    expect(
-      (
-        findSelectByOptions(
-          advancedView.container,
-          ["5xl", "6xl", "7xl"]
-        ) as HTMLSelectElement | null | undefined
-      )?.value
-    ).toBe("6xl");
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["2", "3", "4", "5"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("4");
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["2", "3", "4", "6"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("4");
+    const maxWidthSelect = findSelectByOptions(advancedView.container, ["5xl", "6xl", "7xl"]);
+    const paddingYSelect = findSelectByOptions(advancedView.container, ["2", "3", "4", "5"]);
+    const itemGapSelect = findSelectByOptions(advancedView.container, ["2", "3", "4", "6"]);
+    for (const select of [maxWidthSelect, paddingYSelect, itemGapSelect]) {
+      expect(
+        Array.from((select as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
+    }
+    expect((maxWidthSelect as HTMLSelectElement | null | undefined)?.value).toBe("6xl");
+    expect((paddingYSelect as HTMLSelectElement | undefined)?.value).toBe("4");
+    expect((itemGapSelect as HTMLSelectElement | undefined)?.value).toBe("4");
     const toggles = findCheckboxes(advancedView.container);
     expect(toggles[0]?.checked).toBe(false);
     expect(toggles[1]?.checked).toBe(false);

@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () => null;
 
 test("entry teaser renders source placeholder without content type", () => {
-  const html = renderToString(
-    <EntryTeaserBlock data={entryTeaserDefaults} variant="horizontal" />
-  );
+  const html = renderToString(<EntryTeaserBlock data={entryTeaserDefaults} variant="horizontal" />);
 
   expect(html).toContain("Select content type");
   expect(html).toContain('data-entry-teaser-state="missing-source"');
@@ -91,6 +89,42 @@ test("entry teaser renders resolved item and markers", () => {
   expect(html).toContain('data-entry-teaser-variant="vertical"');
   expect(html).toContain('data-entry-teaser-source-mode="manual"');
   expect(html).toContain('data-entry-teaser-state="ready"');
+});
+
+test("entry teaser preserves none spacing and radius tokens", () => {
+  const normalized = normalizeEntryTeaserData({
+    ...entryTeaserDefaults,
+    sourceMode: "manual",
+    source: {
+      contentTypeId: "blog-type-id",
+      entryId: "entry-1",
+    },
+    style: {
+      ...entryTeaserDefaults.style,
+      spacing: "none",
+      radius: "none",
+    },
+    resolved: {
+      item: {
+        id: "entry-1",
+        title: "Quarterly update",
+        href: "/blog/quarterly-update",
+        excerpt: "Highlights from this quarter.",
+        status: "published",
+      },
+      sourceTypeId: "blog-type-id",
+      sourceTypeSlug: "blog",
+      resolvedAt: "2026-02-09T12:01:00.000Z",
+    },
+  });
+
+  expect(normalized.style).toMatchObject({
+    spacing: "none",
+    radius: "none",
+  });
+  const html = renderToString(<EntryTeaserBlock data={normalized} variant="vertical" />);
+  expect(html).toContain("gap-0");
+  expect(html).not.toContain("rounded-lg");
 });
 
 test("entry teaser validator accepts extended model and visual ownership", () => {

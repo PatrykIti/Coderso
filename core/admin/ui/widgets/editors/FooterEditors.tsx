@@ -30,18 +30,21 @@ const alignOptions = [
 ];
 
 const maxWidthOptions = [
+  { id: "none", label: "None" },
   { id: "5xl", label: "5xl" },
   { id: "6xl", label: "6xl" },
   { id: "7xl", label: "7xl" },
 ];
 
 const columnGapOptions = [
+  { id: "none", label: "None" },
   { id: "4", label: "Compact" },
   { id: "6", label: "Default" },
   { id: "8", label: "Spacious" },
 ];
 
 const sectionPaddingOptions = [
+  { id: "none", label: "None" },
   { id: "8", label: "Compact" },
   { id: "10", label: "Default" },
   { id: "12", label: "Spacious" },
@@ -55,6 +58,7 @@ const borderTopWidthOptions = [
 ];
 
 const fontSizeOptions = [
+  { id: "none", label: "None" },
   { id: "xs", label: "Extra small" },
   { id: "sm", label: "Small" },
   { id: "base", label: "Base" },
@@ -66,14 +70,7 @@ const headingTransformOptions = [
   { id: "capitalize", label: "Capitalize" },
 ];
 
-const socialTypeOptions = [
-  "linkedin",
-  "twitter",
-  "github",
-  "youtube",
-  "facebook",
-  "instagram",
-];
+const socialTypeOptions = ["linkedin", "twitter", "github", "youtube", "facebook", "instagram"];
 
 const emptySocialLink: FooterSocial = {
   type: "linkedin",
@@ -259,9 +256,7 @@ function ColumnsQuickSetup({
               Column {index + 1}
             </p>
             <label className="space-y-1 text-sm">
-              <span className="font-medium text-foreground">
-                Column {index + 1} title
-              </span>
+              <span className="font-medium text-foreground">Column {index + 1} title</span>
               <Input
                 value={column.title}
                 onChange={(event) =>
@@ -354,13 +349,8 @@ function SocialLinksEditor({
       {visibleItems.map((item, index) => (
         <div key={`${item.type}-${index}`} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
           <label className="space-y-1 text-sm">
-            <span className="font-medium text-foreground">
-              Social {index + 1} platform
-            </span>
-            <Select
-              value={item.type}
-              onValueChange={(next) => updateSocial(index, { type: next })}
-            >
+            <span className="font-medium text-foreground">Social {index + 1} platform</span>
+            <Select value={item.type} onValueChange={(next) => updateSocial(index, { type: next })}>
               <SelectTrigger>
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -374,21 +364,14 @@ function SocialLinksEditor({
             </Select>
           </label>
           <label className="space-y-1 text-sm">
-            <span className="font-medium text-foreground">
-              Social {index + 1} URL
-            </span>
+            <span className="font-medium text-foreground">Social {index + 1} URL</span>
             <Input
               value={item.href}
               onChange={(event) => updateSocial(index, { href: event.target.value })}
               placeholder="Social URL"
             />
           </label>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => removeSocial(index)}
-          >
+          <Button type="button" size="sm" variant="ghost" onClick={() => removeSocial(index)}>
             Remove
           </Button>
         </div>
@@ -417,24 +400,18 @@ function LegalEditor({
     <div className="space-y-2">
       <Input
         value={value.legal?.copyright ?? ""}
-        onChange={(event) =>
-          updateFooterLegal(value, onChange, { copyright: event.target.value })
-        }
+        onChange={(event) => updateFooterLegal(value, onChange, { copyright: event.target.value })}
         placeholder="© 2026 Company name"
       />
       <div className="grid gap-2 sm:grid-cols-2">
         <Input
           value={value.legal?.privacy ?? ""}
-          onChange={(event) =>
-            updateFooterLegal(value, onChange, { privacy: event.target.value })
-          }
+          onChange={(event) => updateFooterLegal(value, onChange, { privacy: event.target.value })}
           placeholder="Privacy URL"
         />
         <Input
           value={value.legal?.terms ?? ""}
-          onChange={(event) =>
-            updateFooterLegal(value, onChange, { terms: event.target.value })
-          }
+          onChange={(event) => updateFooterLegal(value, onChange, { terms: event.target.value })}
           placeholder="Terms URL"
         />
       </div>
@@ -671,8 +648,7 @@ export function FooterVisualEditor({
             value={value.style?.headingTransform ?? "uppercase"}
             onValueChange={(next) =>
               updateFooterStyle(value, onChange, {
-                headingTransform:
-                  next as NonNullable<FooterData["style"]>["headingTransform"],
+                headingTransform: next as NonNullable<FooterData["style"]>["headingTransform"],
               })
             }
           >
@@ -691,8 +667,7 @@ export function FooterVisualEditor({
             value={value.layout?.sectionPaddingY ?? "10"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
-                sectionPaddingY:
-                  next as NonNullable<FooterData["layout"]>["sectionPaddingY"],
+                sectionPaddingY: next as NonNullable<FooterData["layout"]>["sectionPaddingY"],
               })
             }
           >
@@ -722,10 +697,7 @@ export function FooterVisualEditor({
   );
 }
 
-export function FooterAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<FooterData>) {
+export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<FooterData>) {
   return (
     <div className="space-y-5">
       <div className="space-y-3 rounded-xl border p-4">
@@ -814,8 +786,7 @@ export function FooterAdvancedEditor({
             value={value.layout?.sectionPaddingY ?? "10"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
-                sectionPaddingY:
-                  next as NonNullable<FooterData["layout"]>["sectionPaddingY"],
+                sectionPaddingY: next as NonNullable<FooterData["layout"]>["sectionPaddingY"],
               })
             }
           >
@@ -834,8 +805,8 @@ export function FooterAdvancedEditor({
       </div>
 
       <div className="space-y-2 rounded-xl border p-4 text-xs text-muted-foreground">
-        Visibility, container tokens, block-level spacing, and background overrides are
-        controlled in the global Advanced panel above this editor.
+        Visibility, container tokens, block-level spacing, and background overrides are controlled
+        in the global Advanced panel above this editor.
       </div>
     </div>
   );

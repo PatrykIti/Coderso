@@ -61,18 +61,21 @@ const maxWidthOptions: Array<{ id: RichTextSectionMaxWidth; label: string }> = [
 ];
 
 const fontScaleOptions: Array<{ id: RichTextSectionFontScale; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Large" },
 ];
 
 const lineHeightOptions: Array<{ id: RichTextSectionLineHeight; label: string }> = [
+  { id: "none", label: "None" },
   { id: "tight", label: "Tight" },
   { id: "normal", label: "Normal" },
   { id: "relaxed", label: "Relaxed" },
 ];
 
 const spacingOptions: Array<{ id: RichTextSectionSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -84,9 +87,7 @@ const outputModeOptions: Array<{ id: RichTextSectionOutputMode; label: string }>
   { id: "blocks", label: "Blocks only" },
 ];
 
-const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) =>
-  String(index)
-);
+const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) => String(index));
 const wizardBlockCount = Math.max(richTextSectionDefaults.body?.blocks?.length ?? 2, 2);
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
@@ -441,9 +442,7 @@ export function RichTextSectionWizardEditor({
         <p className="text-sm font-medium">Eyebrow</p>
         <Input
           value={normalized.titleBlock?.eyebrow ?? ""}
-          onChange={(event) =>
-            updateTitleBlock(value, onChange, { eyebrow: event.target.value })
-          }
+          onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
           placeholder="Editorial"
         />
       </div>
@@ -452,9 +451,7 @@ export function RichTextSectionWizardEditor({
         <p className="text-sm font-medium">Title</p>
         <Input
           value={normalized.titleBlock?.title ?? ""}
-          onChange={(event) =>
-            updateTitleBlock(value, onChange, { title: event.target.value })
-          }
+          onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
           placeholder="Long-form content section"
         />
       </div>
@@ -539,9 +536,7 @@ export function RichTextSectionVisualEditor({
           <p className="text-sm font-medium">Eyebrow</p>
           <Input
             value={normalized.titleBlock?.eyebrow ?? ""}
-            onChange={(event) =>
-              updateTitleBlock(value, onChange, { eyebrow: event.target.value })
-            }
+            onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
             placeholder="Editorial"
           />
         </div>
@@ -549,9 +544,7 @@ export function RichTextSectionVisualEditor({
           <p className="text-sm font-medium">Title</p>
           <Input
             value={normalized.titleBlock?.title ?? ""}
-            onChange={(event) =>
-              updateTitleBlock(value, onChange, { title: event.target.value })
-            }
+            onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
             placeholder="Long-form content section"
           />
         </div>
@@ -596,7 +589,10 @@ export function RichTextSectionVisualEditor({
         </div>
 
         {blocks.map((block, index) => (
-          <div key={block.id ?? `fallback-block-${index + 1}`} className="space-y-3 rounded-lg border p-3">
+          <div
+            key={block.id ?? `fallback-block-${index + 1}`}
+            className="space-y-3 rounded-lg border p-3"
+          >
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Block {index + 1}</p>
               <div className="flex gap-2">
@@ -689,9 +685,7 @@ export function RichTextSectionVisualEditor({
           </div>
           <Switch
             checked={Boolean(normalized.options?.toc)}
-            onCheckedChange={(checked) =>
-              updateOptions(value, onChange, { toc: Boolean(checked) })
-            }
+            onCheckedChange={(checked) => updateOptions(value, onChange, { toc: Boolean(checked) })}
           />
         </div>
       </EditorSection>

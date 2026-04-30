@@ -6,7 +6,7 @@
 **Category:** Widgets + Contract Helpers
 **Estimated Effort:** Small
 **Dependencies:** TASK-242-01-01
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 

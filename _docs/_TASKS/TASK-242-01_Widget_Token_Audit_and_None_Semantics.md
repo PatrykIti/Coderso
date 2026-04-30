@@ -6,7 +6,7 @@
 **Category:** Widgets + Contract Design
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -18,8 +18,8 @@ fields while still covering all visual options that currently force a preset.
 
 ## Sub-Tasks
 
-- [ ] TASK-242-01-01: Widget Config Token Inventory
-- [ ] TASK-242-01-02: None Token Semantics and Compatibility Helpers
+- [x] TASK-242-01-01: Widget Config Token Inventory
+- [x] TASK-242-01-02: None Token Semantics and Compatibility Helpers
 
 ## Files to Change
 

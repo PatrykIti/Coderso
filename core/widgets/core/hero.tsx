@@ -1,11 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type HeroCta = {
   label: string;
@@ -31,8 +26,8 @@ export type HeroData = {
   media?: HeroMedia;
   layout?: {
     align?: "left" | "center" | "right";
-    maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
-    contentWidth?: "sm" | "md" | "lg" | "xl";
+    maxWidth?: "none" | "sm" | "md" | "lg" | "xl" | "2xl";
+    contentWidth?: "none" | "sm" | "md" | "lg" | "xl";
   };
   spacing?: {
     paddingTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
@@ -44,23 +39,23 @@ export type HeroData = {
     textColor?: string;
     subheadColor?: string;
     bodyColor?: string;
-    headlineSize?: "2xl" | "3xl" | "4xl" | "5xl";
-    subheadSize?: "base" | "lg" | "xl" | "2xl";
-    bodySize?: "sm" | "base" | "lg" | "xl";
+    headlineSize?: "none" | "2xl" | "3xl" | "4xl" | "5xl";
+    subheadSize?: "none" | "base" | "lg" | "xl" | "2xl";
+    bodySize?: "none" | "sm" | "base" | "lg" | "xl";
     borderColor?: string;
     borderWidth?: "0" | "1" | "2" | "3";
-    borderRadius?: "lg" | "xl" | "2xl" | "3xl";
+    borderRadius?: "none" | "lg" | "xl" | "2xl" | "3xl";
     mediaBorderColor?: string;
     mediaBorderWidth?: "0" | "1" | "2" | "3";
-    mediaRadius?: "lg" | "xl" | "2xl" | "3xl";
+    mediaRadius?: "none" | "lg" | "xl" | "2xl" | "3xl";
     primaryButtonBg?: string;
     primaryButtonText?: string;
     primaryButtonBorder?: string;
-    primaryButtonSize?: "sm" | "md" | "lg";
+    primaryButtonSize?: "none" | "sm" | "md" | "lg";
     secondaryButtonBg?: string;
     secondaryButtonText?: string;
     secondaryButtonBorder?: string;
-    secondaryButtonSize?: "sm" | "md" | "lg";
+    secondaryButtonSize?: "none" | "sm" | "md" | "lg";
   };
   background?: {
     color?: string;
@@ -122,8 +117,8 @@ export const heroSchema = {
       additionalProperties: false,
       properties: {
         align: { enum: ["left", "center", "right"] },
-        maxWidth: { enum: ["sm", "md", "lg", "xl", "2xl"] },
-        contentWidth: { enum: ["sm", "md", "lg", "xl"] },
+        maxWidth: { enum: ["none", "sm", "md", "lg", "xl", "2xl"] },
+        contentWidth: { enum: ["none", "sm", "md", "lg", "xl"] },
       },
     },
     spacing: {
@@ -147,23 +142,23 @@ export const heroSchema = {
         textColor: { type: "string" },
         subheadColor: { type: "string" },
         bodyColor: { type: "string" },
-        headlineSize: { enum: ["2xl", "3xl", "4xl", "5xl"] },
-        subheadSize: { enum: ["base", "lg", "xl", "2xl"] },
-        bodySize: { enum: ["sm", "base", "lg", "xl"] },
+        headlineSize: { enum: ["none", "2xl", "3xl", "4xl", "5xl"] },
+        subheadSize: { enum: ["none", "base", "lg", "xl", "2xl"] },
+        bodySize: { enum: ["none", "sm", "base", "lg", "xl"] },
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
-        borderRadius: { enum: ["lg", "xl", "2xl", "3xl"] },
+        borderRadius: { enum: ["none", "lg", "xl", "2xl", "3xl"] },
         mediaBorderColor: { type: "string" },
         mediaBorderWidth: { enum: ["0", "1", "2", "3"] },
-        mediaRadius: { enum: ["lg", "xl", "2xl", "3xl"] },
+        mediaRadius: { enum: ["none", "lg", "xl", "2xl", "3xl"] },
         primaryButtonBg: { type: "string" },
         primaryButtonText: { type: "string" },
         primaryButtonBorder: { type: "string" },
-        primaryButtonSize: { enum: ["sm", "md", "lg"] },
+        primaryButtonSize: { enum: ["none", "sm", "md", "lg"] },
         secondaryButtonBg: { type: "string" },
         secondaryButtonText: { type: "string" },
         secondaryButtonBorder: { type: "string" },
-        secondaryButtonSize: { enum: ["sm", "md", "lg"] },
+        secondaryButtonSize: { enum: ["none", "sm", "md", "lg"] },
       },
     },
     background: {
@@ -219,6 +214,7 @@ const spacingValueMap = {
 } as const;
 
 const maxWidthClassMap = {
+  none: "",
   sm: "max-w-3xl",
   md: "max-w-4xl",
   lg: "max-w-5xl",
@@ -227,6 +223,7 @@ const maxWidthClassMap = {
 } as const;
 
 const contentWidthClassMap = {
+  none: "",
   sm: "max-w-sm",
   md: "max-w-md",
   lg: "max-w-lg",
@@ -241,6 +238,7 @@ const ratioClassMap: Record<string, string> = {
 };
 
 const headlineSizeClassMap = {
+  none: "",
   "2xl": "text-2xl",
   "3xl": "text-3xl",
   "4xl": "text-4xl",
@@ -248,6 +246,7 @@ const headlineSizeClassMap = {
 } as const;
 
 const subheadSizeClassMap = {
+  none: "",
   base: "text-base",
   lg: "text-lg",
   xl: "text-xl",
@@ -255,6 +254,7 @@ const subheadSizeClassMap = {
 } as const;
 
 const bodySizeClassMap = {
+  none: "",
   sm: "text-sm",
   base: "text-base",
   lg: "text-lg",
@@ -262,6 +262,7 @@ const bodySizeClassMap = {
 } as const;
 
 const buttonSizeClassMap = {
+  none: "",
   sm: "px-3 py-1.5 text-xs",
   md: "px-4 py-2 text-sm",
   lg: "px-5 py-2.5 text-base",
@@ -275,6 +276,7 @@ const borderWidthValueMap = {
 } as const;
 
 const radiusClassMap = {
+  none: "",
   lg: "rounded-lg",
   xl: "rounded-xl",
   "2xl": "rounded-2xl",
@@ -284,10 +286,8 @@ const radiusClassMap = {
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const resolveSpacingKey = (
-  value: string | undefined,
-  fallback: keyof typeof spacingValueMap
-) => (value && value in spacingValueMap ? (value as keyof typeof spacingValueMap) : fallback);
+const resolveSpacingKey = (value: string | undefined, fallback: keyof typeof spacingValueMap) =>
+  value && value in spacingValueMap ? (value as keyof typeof spacingValueMap) : fallback;
 
 export function HeroBlock({
   data,
@@ -332,22 +332,19 @@ export function HeroBlock({
     backgroundMedia.type === "video" ? backgroundMedia.src : undefined;
   const resolvedBackgroundImage =
     backgroundMedia.type === "image"
-      ? backgroundMedia.src ?? centeredImageBackground
-      : background.image ?? centeredImageBackground;
+      ? (backgroundMedia.src ?? centeredImageBackground)
+      : (background.image ?? centeredImageBackground);
   const resolvedBackgroundGradient = background.gradient ?? "";
   const centeredMediaOverlay =
     variant === "centered" && media.type === "image" ? media.overlay : undefined;
-  const layeredBackground = !resolvedBackgroundVideo && resolvedBackgroundImage
-    ? [
-        centeredMediaOverlay,
-        resolvedBackgroundGradient,
-        `url(${resolvedBackgroundImage})`,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : !resolvedBackgroundVideo
-      ? resolvedBackgroundGradient || undefined
-      : undefined;
+  const layeredBackground =
+    !resolvedBackgroundVideo && resolvedBackgroundImage
+      ? [centeredMediaOverlay, resolvedBackgroundGradient, `url(${resolvedBackgroundImage})`]
+          .filter(Boolean)
+          .join(", ")
+      : !resolvedBackgroundVideo
+        ? resolvedBackgroundGradient || undefined
+        : undefined;
 
   const backgroundStyle: CSSProperties = {
     backgroundColor: background.color ?? "transparent",
@@ -453,7 +450,7 @@ export function HeroBlock({
               "space-y-4",
               textAlignClass,
               isSplit ? "w-full md:flex-1" : contentWidthClassMap[contentWidth],
-              !isSplit && contentPlacementClass,
+              !isSplit && contentPlacementClass
             )}
           >
             <h1
@@ -467,9 +464,7 @@ export function HeroBlock({
             </h1>
             {data.subhead ? (
               <p
-                className={joinClasses(
-                  subheadSizeClassMap[subheadSize] ?? "text-xl"
-                )}
+                className={joinClasses(subheadSizeClassMap[subheadSize] ?? "text-xl")}
                 style={{ color: subheadColor }}
               >
                 {data.subhead}
@@ -529,11 +524,7 @@ export function HeroBlock({
           </div>
           {isSplit ? (
             <div
-              className={joinClasses(
-                "w-full",
-                "md:flex-1",
-                hideMediaOnMobile && "hidden md:block"
-              )}
+              className={joinClasses("w-full", "md:flex-1", hideMediaOnMobile && "hidden md:block")}
             >
               <div
                 className={joinClasses(
@@ -550,21 +541,14 @@ export function HeroBlock({
                     className="h-full w-full object-cover"
                   />
                 ) : media?.type === "video" && media.src ? (
-                  <video
-                    controls
-                    src={media?.src}
-                    className="h-full w-full object-cover"
-                  />
+                  <video controls src={media?.src} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs font-medium text-muted-foreground">
                     {media?.type === "none" ? "Select media type" : "Add media URL"}
                   </div>
                 )}
                 {media?.overlay ? (
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: media.overlay }}
-                  />
+                  <div className="absolute inset-0" style={{ background: media.overlay }} />
                 ) : null}
               </div>
             </div>

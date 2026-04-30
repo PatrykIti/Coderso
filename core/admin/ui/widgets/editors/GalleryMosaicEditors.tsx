@@ -61,6 +61,7 @@ const ratioOptions: Array<{ id: GalleryMosaicRatio; label: string }> = [
 ];
 
 const gapOptions: Array<{ id: GalleryMosaicGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -433,9 +434,7 @@ export function GalleryMosaicWizardEditor({
         <p className="text-xs text-muted-foreground">
           Selected media is saved as public image URLs in gallery items.
         </p>
-        {mediaPickerError ? (
-          <p className="text-xs text-destructive">{mediaPickerError}</p>
-        ) : null}
+        {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
       </div>
     </div>
   );
@@ -494,9 +493,7 @@ export function GalleryMosaicVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Visual storytelling block with media tiles."
           />
         </div>

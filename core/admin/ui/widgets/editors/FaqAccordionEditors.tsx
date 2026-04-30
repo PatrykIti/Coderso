@@ -50,6 +50,7 @@ const variantOptions: Array<{
 ];
 
 const spacingOptions: Array<{ id: FaqAccordionSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -455,9 +456,7 @@ export function FaqAccordionVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Address objections with short and clear answers."
           />
         </div>

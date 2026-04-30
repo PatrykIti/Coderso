@@ -76,7 +76,9 @@ vi.mock("@/components/ui/input", () => ({
     placeholder?: string;
     type?: string;
     [key: string]: unknown;
-  }) => <input value={value} onChange={onChange} placeholder={placeholder} type={type} {...props} />,
+  }) => (
+    <input value={value} onChange={onChange} placeholder={placeholder} type={type} {...props} />
+  ),
 }));
 
 vi.mock("@/components/ui/select", () => {
@@ -167,7 +169,9 @@ vi.mock("@/components/ui/textarea", () => ({
     placeholder?: string;
     rows?: number;
     [key: string]: unknown;
-  }) => <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />,
+  }) => (
+    <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />
+  ),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -228,10 +232,7 @@ const flush = async () => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -239,10 +240,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -250,10 +248,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -267,8 +262,7 @@ const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
 const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -291,11 +285,8 @@ afterEach(() => {
 });
 
 test("PostsFeed editors cover source modes, manual posts, display toggles, layout, CTA, and runtime snapshot", async () => {
-  const {
-    PostsFeedAdvancedEditor,
-    PostsFeedVisualEditor,
-    PostsFeedWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -356,12 +347,7 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
 
     act(() => {
       setSelectValue(
-        findSelectByOptions(view.container, [
-          "latest",
-          "featured",
-          "category",
-          "manual",
-        ]),
+        findSelectByOptions(view.container, ["latest", "featured", "category", "manual"]),
         "manual"
       );
     });
@@ -387,16 +373,9 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
         ),
         "Try another filter"
       );
-      setSelectValue(
-        findSelectByOptions(view.container, [
-          "cards",
-          "list",
-          "compact",
-        ]),
-        "compact"
-      );
+      setSelectValue(findSelectByOptions(view.container, ["cards", "list", "compact"]), "compact");
       setSelectValue(findSelectByOptions(view.container, ["1", "2", "3"]), "2");
-      setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "lg");
+      setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
       setSelectValue(
         findSelectByOptions(view.container, ["outlined", "elevated", "minimal"]),
         "elevated"
@@ -457,11 +436,8 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, layou
 });
 
 test("PostsFeed editors surface post loading errors", async () => {
-  const {
-    PostsFeedAdvancedEditor,
-    PostsFeedVisualEditor,
-    PostsFeedWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   postsFeedState.postsError = {
     name: "ApiClientError",
@@ -484,12 +460,7 @@ test("PostsFeed editors surface post loading errors", async () => {
   try {
     act(() => {
       setSelectValue(
-        findSelectByOptions(view.container, [
-          "latest",
-          "featured",
-          "category",
-          "manual",
-        ]),
+        findSelectByOptions(view.container, ["latest", "featured", "category", "manual"]),
         "manual"
       );
     });
@@ -501,11 +472,8 @@ test("PostsFeed editors surface post loading errors", async () => {
 });
 
 test("PostsFeed editors cover category filtering, manual deselection, empty catalog, and generic load errors", async () => {
-  const {
-    PostsFeedAdvancedEditor,
-    PostsFeedVisualEditor,
-    PostsFeedWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const originalPosts = postsFeedState.posts;
   postsFeedState.posts = [];
@@ -641,11 +609,8 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
 });
 
 test("PostsFeed editors fall back for invalid numeric/select values and sparse defaults", async () => {
-  const {
-    PostsFeedAdvancedEditor,
-    PostsFeedVisualEditor,
-    PostsFeedWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   let latestValue: PostsFeedData = {
     source: {
@@ -724,7 +689,10 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
         "invalid-sort"
       );
       setSelectValue(findSelectByOptions(view.container, ["1", "2", "3"]), "invalid-columns");
-      setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "invalid-gap");
+      setSelectValue(
+        findSelectByOptions(view.container, ["none", "sm", "md", "lg"]),
+        "invalid-gap"
+      );
       setSelectValue(
         findSelectByOptions(view.container, ["outlined", "elevated", "minimal"]),
         "invalid-style"
@@ -750,9 +718,8 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
 });
 
 test("PostsFeed editors ignore async post option resolution after unmount", async () => {
-  const { PostsFeedWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/PostsFeedEditors"
-  );
+  const { PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const resolveDeferred = createDeferred<typeof postsFeedState.posts>();
   postsFeedState.listPostsImpl = () => resolveDeferred.promise;

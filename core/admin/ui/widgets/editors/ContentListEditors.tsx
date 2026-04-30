@@ -13,10 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  listContentTypesCached,
-  type ContentTypeSummary,
-} from "@/services/contentTypesClient";
+import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
   listListingQueriesCached,
   listListingTemplatesCached,
@@ -90,6 +87,7 @@ const columnsOptions = [
 ] as const;
 
 const gapOptions: Array<{ id: ContentListGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -200,16 +198,14 @@ function ContentTypeSelect({
   const selectedLabel =
     selectValue === NO_CONTENT_TYPE_VALUE
       ? "No content type selected"
-      : types.find((entry) => entry.id === selectValue)?.name ?? "Selected content type";
+      : (types.find((entry) => entry.id === selectValue)?.name ?? "Selected content type");
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Content type</p>
       <Select
         value={selectValue}
-        onValueChange={(next) =>
-          onChange(next === NO_CONTENT_TYPE_VALUE ? "" : next)
-        }
+        onValueChange={(next) => onChange(next === NO_CONTENT_TYPE_VALUE ? "" : next)}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select content type">{selectedLabel}</SelectValue>
@@ -284,20 +280,17 @@ function ListingSourceSelect({
   onTemplateChange: (next: string) => void;
 }) {
   const { queries, templates, loading, error } = useListingOptions();
-  const querySelectValue =
-    queryId.trim().length > 0 ? queryId : NO_LISTING_QUERY_VALUE;
-  const templateSelectValue =
-    templateId.trim().length > 0 ? templateId : NO_LISTING_TEMPLATE_VALUE;
+  const querySelectValue = queryId.trim().length > 0 ? queryId : NO_LISTING_QUERY_VALUE;
+  const templateSelectValue = templateId.trim().length > 0 ? templateId : NO_LISTING_TEMPLATE_VALUE;
   const selectedQueryName =
     querySelectValue === NO_LISTING_QUERY_VALUE
       ? "No listing query selected"
-      : queries.find((item) => item.id === querySelectValue)?.name ??
-        "Selected listing query";
+      : (queries.find((item) => item.id === querySelectValue)?.name ?? "Selected listing query");
   const selectedTemplateName =
     templateSelectValue === NO_LISTING_TEMPLATE_VALUE
       ? "No template selected (optional)"
-      : templates.find((item) => item.id === templateSelectValue)?.name ??
-        "Selected listing template";
+      : (templates.find((item) => item.id === templateSelectValue)?.name ??
+        "Selected listing template");
 
   return (
     <div className="space-y-3">
@@ -305,19 +298,13 @@ function ListingSourceSelect({
         <p className="text-sm font-medium">Listing query</p>
         <Select
           value={querySelectValue}
-          onValueChange={(next) =>
-            onQueryChange(next === NO_LISTING_QUERY_VALUE ? "" : next)
-          }
+          onValueChange={(next) => onQueryChange(next === NO_LISTING_QUERY_VALUE ? "" : next)}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select listing query">
-              {selectedQueryName}
-            </SelectValue>
+            <SelectValue placeholder="Select listing query">{selectedQueryName}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={NO_LISTING_QUERY_VALUE}>
-              No listing query selected
-            </SelectItem>
+            <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
             {queries.map((item) => (
               <SelectItem key={item.id} value={item.id}>
                 {item.name}
@@ -330,14 +317,10 @@ function ListingSourceSelect({
         <p className="text-sm font-medium">Listing template</p>
         <Select
           value={templateSelectValue}
-          onValueChange={(next) =>
-            onTemplateChange(next === NO_LISTING_TEMPLATE_VALUE ? "" : next)
-          }
+          onValueChange={(next) => onTemplateChange(next === NO_LISTING_TEMPLATE_VALUE ? "" : next)}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select listing template">
-              {selectedTemplateName}
-            </SelectValue>
+            <SelectValue placeholder="Select listing template">{selectedTemplateName}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NO_LISTING_TEMPLATE_VALUE}>
@@ -506,12 +489,8 @@ export function ContentListWizardEditor({
           <ListingSourceSelect
             queryId={resolved.source?.listingQueryId ?? ""}
             templateId={resolved.source?.listingTemplateId ?? ""}
-            onQueryChange={(next) =>
-              updateSource(value, onChange, { listingQueryId: next })
-            }
-            onTemplateChange={(next) =>
-              updateSource(value, onChange, { listingTemplateId: next })
-            }
+            onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
+            onTemplateChange={(next) => updateSource(value, onChange, { listingTemplateId: next })}
           />
         ) : (
           <ContentTypeSelect
@@ -601,7 +580,9 @@ export function ContentListVisualEditor({
             <p className="text-sm font-medium">Gap</p>
             <Select
               value={resolved.style?.gap ?? "md"}
-              onValueChange={(next) => updateStyle(value, onChange, { gap: next as ContentListGap })}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { gap: next as ContentListGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Gap" />
@@ -666,12 +647,8 @@ export function ContentListVisualEditor({
           <ListingSourceSelect
             queryId={resolved.source?.listingQueryId ?? ""}
             templateId={resolved.source?.listingTemplateId ?? ""}
-            onQueryChange={(next) =>
-              updateSource(value, onChange, { listingQueryId: next })
-            }
-            onTemplateChange={(next) =>
-              updateSource(value, onChange, { listingTemplateId: next })
-            }
+            onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
+            onTemplateChange={(next) => updateSource(value, onChange, { listingTemplateId: next })}
           />
         ) : (
           <>
@@ -751,9 +728,7 @@ export function ContentListVisualEditor({
             <span className="text-sm">Show excerpt</span>
             <Switch
               checked={resolved.fields?.showExcerpt ?? true}
-              onCheckedChange={(checked) =>
-                updateFields(value, onChange, { showExcerpt: checked })
-              }
+              onCheckedChange={(checked) => updateFields(value, onChange, { showExcerpt: checked })}
             />
           </label>
           <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
@@ -786,9 +761,7 @@ export function ContentListVisualEditor({
           <p className="text-sm font-medium">Title</p>
           <Input
             value={resolved.emptyState?.title ?? ""}
-            onChange={(event) =>
-              updateEmptyState(value, onChange, { title: event.target.value })
-            }
+            onChange={(event) => updateEmptyState(value, onChange, { title: event.target.value })}
             placeholder="No items found"
           />
         </div>
@@ -808,10 +781,7 @@ export function ContentListVisualEditor({
   );
 }
 
-export function ContentListAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<ContentListData>) {
+export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
   const sourceMode = resolved.source?.mode ?? "legacy";
 
@@ -845,12 +815,8 @@ export function ContentListAdvancedEditor({
           <ListingSourceSelect
             queryId={resolved.source?.listingQueryId ?? ""}
             templateId={resolved.source?.listingTemplateId ?? ""}
-            onQueryChange={(next) =>
-              updateSource(value, onChange, { listingQueryId: next })
-            }
-            onTemplateChange={(next) =>
-              updateSource(value, onChange, { listingTemplateId: next })
-            }
+            onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
+            onTemplateChange={(next) => updateSource(value, onChange, { listingTemplateId: next })}
           />
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -872,9 +838,7 @@ export function ContentListAdvancedEditor({
             <p className="text-sm font-medium">Author id filter</p>
             <Input
               value={resolved.filters?.authorId ?? ""}
-              onChange={(event) =>
-                updateFilters(value, onChange, { authorId: event.target.value })
-              }
+              onChange={(event) => updateFilters(value, onChange, { authorId: event.target.value })}
               placeholder="Optional author UUID"
               disabled={sourceMode === "listing"}
             />
@@ -895,9 +859,7 @@ export function ContentListAdvancedEditor({
           <span className="text-sm">Featured only</span>
           <Switch
             checked={resolved.filters?.featuredOnly ?? false}
-            onCheckedChange={(checked) =>
-              updateFilters(value, onChange, { featuredOnly: checked })
-            }
+            onCheckedChange={(checked) => updateFilters(value, onChange, { featuredOnly: checked })}
             disabled={sourceMode === "listing"}
           />
         </label>

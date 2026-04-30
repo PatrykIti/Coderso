@@ -6,7 +6,7 @@
 **Category:** Layout Widgets + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242-02
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 

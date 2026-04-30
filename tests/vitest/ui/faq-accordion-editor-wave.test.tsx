@@ -182,8 +182,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -208,10 +207,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -221,10 +217,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -234,10 +227,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -275,8 +265,7 @@ const findInputsByPlaceholderPrefix = (container: HTMLElement, prefix: string) =
 const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findButtonByText = (container: HTMLElement, text: string) =>
@@ -302,11 +291,7 @@ const findAllInputsByPlaceholder = (container: HTMLElement, placeholder: string)
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findColorInputForPlaceholder = (
-  container: HTMLElement,
-  placeholder: string,
-  index = 0
-) => {
+const findColorInputForPlaceholder = (container: HTMLElement, placeholder: string, index = 0) => {
   const textInput = findAllInputsByPlaceholder(container, placeholder)[index];
   if (!(textInput instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
@@ -329,11 +314,8 @@ const renderEditor = async ({
   initialValue: FaqAccordionData;
   initialVariant?: string;
 }) => {
-  const {
-    FaqAccordionAdvancedEditor,
-    FaqAccordionVisualEditor,
-    FaqAccordionWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/FaqAccordionEditors");
+  const { FaqAccordionAdvancedEditor, FaqAccordionVisualEditor, FaqAccordionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FaqAccordionEditors");
 
   const editorMap = {
     wizard: FaqAccordionWizardEditor,
@@ -467,7 +449,9 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     expect(view.getValue().items).toHaveLength(1);
 
     const removeButtonsWhenSingle = findButtonsByText(view.container, "Remove");
-    expect((removeButtonsWhenSingle[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
+    expect((removeButtonsWhenSingle[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(
+      true
+    );
 
     clickElement(findButtonByText(view.container, "Add item"));
     expect(view.getValue().items).toHaveLength(2);
@@ -479,10 +463,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     );
 
     setTextareaValue(
-      findTextareaByPlaceholder(
-        view.container,
-        "Address objections with short and clear answers."
-      ),
+      findTextareaByPlaceholder(view.container, "Address objections with short and clear answers."),
       "Short answers first."
     );
     setInputValue(
@@ -518,11 +499,13 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     const borderInputs = findAllInputsByPlaceholder(view.container, "var(--color-border)");
     setInputValue(borderInputs[0], "#654321");
     setInputValue(borderInputs[1], "#abcdef");
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
     clickElement(findButtonsByText(view.container, "Remove")[1]);
 
     const removeButtonsAfterDelete = findButtonsByText(view.container, "Remove");
-    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
+    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(
+      true
+    );
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
@@ -637,7 +620,7 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
     setInputValue(surfaceInput, "var(--faq-surface)");
     setInputValue(borderAndDividerInputs[0], "var(--faq-border)");
     setInputValue(borderAndDividerInputs[1], "var(--faq-divider)");
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
@@ -665,9 +648,9 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
 test("FaqAccordion editors fall back to default UI values when normalized payload is sparse", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/faqAccordion", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/faqAccordion")
-    >("../../../core/widgets/core/faqAccordion");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/faqAccordion")>(
+      "../../../core/widgets/core/faqAccordion"
+    );
 
     return {
       ...actual,
@@ -729,30 +712,47 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
 
   try {
     expect(
-      (findSelectByOptions(view.container, ["single-column", "two-column", "compact"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectByOptions(view.container, ["single-column", "two-column", "compact"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("single-column");
     expect(
-      (findInputByPlaceholder(view.container, "Frequently asked questions") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe("");
-    expect(
       (
-        findTextareaByPlaceholder(view.container, "Address objections with short and clear answers.") as
-          | HTMLTextAreaElement
+        findInputByPlaceholder(view.container, "Frequently asked questions") as
+          | HTMLInputElement
+          | null
           | undefined
       )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(view.container, "Question 1") as HTMLInputElement | null | undefined)?.value
+      (
+        findTextareaByPlaceholder(
+          view.container,
+          "Address objections with short and clear answers."
+        ) as HTMLTextAreaElement | undefined
+      )?.value
     ).toBe("");
     expect(
-      (findTextareaByPlaceholder(view.container, "Answer 1") as HTMLTextAreaElement | null | undefined)?.value
-    ).toBe("");
-    expect(
-      (findSelectByOptions(view.container, ["sm", "md", "lg"]) as unknown as HTMLSelectElement | null | undefined)
+      (findInputByPlaceholder(view.container, "Question 1") as HTMLInputElement | null | undefined)
         ?.value
+    ).toBe("");
+    expect(
+      (
+        findTextareaByPlaceholder(view.container, "Answer 1") as
+          | HTMLTextAreaElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (
+        findSelectByOptions(view.container, ["none", "sm", "md", "lg"]) as unknown as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("md");
     expect(
       (view.container.querySelector("input[type='number']") as HTMLInputElement | null)?.value

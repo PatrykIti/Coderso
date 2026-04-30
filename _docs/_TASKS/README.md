@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 65 tasks
+- **To Do:** 53 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1358 tasks
+- **Done:** 1370 tasks
 
 ---
 
@@ -81,18 +81,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-08-03 | Capability Authoring Guide and Observability | High | Medium | Technical leaf: authoring guide plus redacted composer diagnostics/observability |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
-| TASK-242 | Widget Style Token None Options | High | Large | Add `none` off switches to off-capable widget visual tokens across schemas, renderers, editors, tests, and docs |
-| TASK-242-01 | Widget Token Audit and None Semantics | High | Medium | Lock widget token inventory and define where `none` is allowed before implementation |
-| TASK-242-01-01 | Widget Config Token Inventory | High | Small | Technical leaf: classify visual, legacy-zero, already-none, and structural widget token fields |
-| TASK-242-01-02 | None Token Semantics and Compatibility Helpers | High | Small | Technical leaf: define `none` behavior, legacy `"0"` compatibility, and helper ownership |
-| TASK-242-02 | Layout, Spacing, Gap, Padding, and Radius None Rollout | High | Large | Add `none` to layout-facing spacing, gap, padding, and radius widget contracts |
-| TASK-242-02-01 | Flow Layout and Container Widget None Tokens | High | Medium | Technical leaf: stack, split layout, divider, spacer, grid columns, hero, navigation, footer, and screen gaps |
-| TASK-242-02-02 | Content, Form, Timeline, and Composite Widget None Tokens | High | Large | Technical leaf: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens |
-| TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Add `none` to typography/width/logo/input/button runtime tokens and expose all approved options in editors |
-| TASK-242-03-01 | Widget Editor Select Option Regressions | High | Medium | Technical leaf: expose `None` in widget selects and update editor-wave coverage |
-| TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Technical leaf: runtime/schema support for typography, width, logo height, input, and button `none` tokens; spacing/radius stay in TASK-242-02 |
-| TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Final validation, widget docs, changelog, and board sync |
-| TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Technical leaf: focused test matrix, docs examples, changelog, and task closure |
 | TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Align Menus editor header actions, lifecycle publish, Location guidance, and handle-based drag/drop with current admin editor patterns |
 | TASK-243-01 | Menus Editor Header Actions and Lifecycle Publish | High | Medium | Technical leaf: remove header Back/Refresh, move Discard/Save/Publish into editor actions, and add lifecycle-safe publish flow |
 | TASK-243-02 | Menus Location Contract and Editor Guidance | High | Medium | Technical leaf: verify nullable theme-slot Location behavior and make editor/docs guidance clear |
@@ -121,6 +109,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-242 | Widget Style Token None Options | High | Large | Done: `none` off switches now cover approved visual tokens across widget schemas, render maps, admin selects, focused runtime/UI tests, docs, and changelog 776 |
+| TASK-242-01 | Widget Token Audit and None Semantics | High | Medium | Done: token inventory and semantic boundaries were used to scope the implementation |
+| TASK-242-01-01 | Widget Config Token Inventory | High | Small | Done: visual, legacy-zero, already-none, and structural fields were classified before rollout |
+| TASK-242-01-02 | None Token Semantics and Compatibility Helpers | High | Small | Done: `none` maps to fixed zero/empty output while legacy zero tokens remain compatible |
+| TASK-242-02 | Layout, Spacing, Gap, Padding, and Radius None Rollout | High | Large | Done: layout, spacing, padding, and radius runtime contracts accept `none` where approved |
+| TASK-242-02-01 | Flow Layout and Container Widget None Tokens | High | Medium | Done: stack, split layout, divider, spacer, grid columns, hero, navigation, footer, and screen gap tokens support `none` |
+| TASK-242-02-02 | Content, Form, Timeline, and Composite Widget None Tokens | High | Large | Done: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens support `none` |
+| TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Done: typography, width, logo/input/button size, and editor select contracts expose `None` |
+| TASK-242-03-01 | Widget Editor Select Option Regressions | High | Medium | Done: editor-wave tests assert `None` visibility across changed widget editors |
+| TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Done: runtime/schema support for typography, width, logo height, input, and button `none` tokens landed |
+| TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Done: validation, widget docs, changelog 776, and board sync completed |
+| TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Done: focused test matrix and widget docs were added for the `none` token rollout |
 | TASK-241 | Pages Published Preview Draft Sync | High | Small | Done: published Pages hide Save draft, Preview silently syncs unsaved editor data to currentData before token generation, and public visitors keep seeing publishedData until Publish |
 | TASK-238 | GitHub CodeQL Security Findings Remediation | High | Large | Done: CodeQL remediation was renumbered from TASK-237 to TASK-238, local scanner/lint/type/test validation passed, GitHub CodeQL open alerts are 0, secret scanning open alerts are 0, and Dependabot remains disabled/403 |
 | TASK-238-01 | Workflow Least-Privilege Permissions | High | Small | Done: explicit PR-gate workflow permissions and scoped SARIF write permissions are covered by regression tests |

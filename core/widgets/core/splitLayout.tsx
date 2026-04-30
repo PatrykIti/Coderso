@@ -1,16 +1,12 @@
 import type { ComponentType } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 
 export const splitLayoutRatioTokens = ["50-50", "40-60", "60-40"] as const;
 export const splitLayoutCollapseTokens = ["stack", "keep"] as const;
 export const splitLayoutGapTokens = [
+  "none",
   "0",
   "1",
   "2",
@@ -116,6 +112,7 @@ const desktopRightSpanMap: Record<SplitLayoutRatio, string> = {
 };
 
 const gapClassMap: Record<SplitLayoutGap, string> = {
+  none: "gap-0",
   "0": "gap-0",
   "1": "gap-1",
   "2": "gap-2",
@@ -143,21 +140,16 @@ const resolveSplitLayoutRatio = (
     ? (value as SplitLayoutRatio)
     : fallback;
 
-const resolveSplitLayoutCollapse = (
-  value: string | undefined
-): SplitLayoutCollapseMobile => (value === "keep" ? "keep" : "stack");
+const resolveSplitLayoutCollapse = (value: string | undefined): SplitLayoutCollapseMobile =>
+  value === "keep" ? "keep" : "stack";
 
 const resolveSplitLayoutGap = (
   value: string | undefined,
   fallback: SplitLayoutGap
 ): SplitLayoutGap =>
-  splitLayoutGapTokens.includes(value as SplitLayoutGap)
-    ? (value as SplitLayoutGap)
-    : fallback;
+  splitLayoutGapTokens.includes(value as SplitLayoutGap) ? (value as SplitLayoutGap) : fallback;
 
-const resolveSplitLayoutVerticalAlign = (
-  value: string | undefined
-): SplitLayoutVerticalAlign => {
+const resolveSplitLayoutVerticalAlign = (value: string | undefined): SplitLayoutVerticalAlign => {
   if (value === "start" || value === "center" || value === "end") return value;
   return "stretch";
 };
@@ -180,14 +172,10 @@ export function normalizeSplitLayoutData(
   return {
     ratio: {
       desktop: resolveSplitLayoutRatio(data.ratio?.desktop, resolvedVariant),
-      tablet: resolveSplitLayoutRatio(
-        data.ratio?.tablet,
-        defaultRatio.tablet ?? resolvedVariant
-      ),
+      tablet: resolveSplitLayoutRatio(data.ratio?.tablet, defaultRatio.tablet ?? resolvedVariant),
     },
     collapseMobile: resolveSplitLayoutCollapse(data.collapseMobile),
-    reverseOnMobile:
-      typeof data.reverseOnMobile === "boolean" ? data.reverseOnMobile : false,
+    reverseOnMobile: typeof data.reverseOnMobile === "boolean" ? data.reverseOnMobile : false,
     gap: resolveSplitLayoutGap(data.gap, splitLayoutDefaults.gap ?? "6"),
     verticalAlign: resolveSplitLayoutVerticalAlign(data.verticalAlign),
   };
@@ -215,8 +203,7 @@ export function SplitLayoutBlock({
   const gap = normalized.gap ?? "6";
   const verticalAlign = normalized.verticalAlign ?? "stretch";
 
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const leftBlocks = Array.isArray(slotMap.left) ? slotMap.left : [];
   const rightBlocks = Array.isArray(slotMap.right) ? slotMap.right : [];
 
@@ -261,11 +248,7 @@ export function SplitLayoutBlock({
         {leftBlocks.length > 0 ? (
           <div className="space-y-4">
             {leftBlocks.map((block) => (
-              <WidgetRenderer
-                key={block.id}
-                block={block}
-                previewDevice={previewDevice}
-              />
+              <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
             ))}
           </div>
         ) : (
@@ -279,11 +262,7 @@ export function SplitLayoutBlock({
         {rightBlocks.length > 0 ? (
           <div className="space-y-4">
             {rightBlocks.map((block) => (
-              <WidgetRenderer
-                key={block.id}
-                block={block}
-                previewDevice={previewDevice}
-              />
+              <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
             ))}
           </div>
         ) : (

@@ -61,7 +61,7 @@ const spanOptions = gridColumnsSpanTokens.map((value) => ({
 
 const gapOptions = gridColumnsGapTokens.map((value) => ({
   id: value,
-  label: `Gap ${value}`,
+  label: value === "none" ? "None" : `Gap ${value}`,
 }));
 
 const alignOptions: Array<{ id: GridColumnsAlign; label: string }> = [
@@ -86,6 +86,7 @@ const radiusOptions: Array<{ id: GridColumnsRadius; label: string }> = [
 ];
 
 const paddingOptions: Array<{ id: GridColumnsPadding; label: string }> = [
+  { id: "none", label: "None" },
   { id: "2", label: "Compact" },
   { id: "3", label: "Small" },
   { id: "4", label: "Default" },
@@ -439,8 +440,8 @@ function ColumnsCountControl({
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        Slot count is controlled in the Slots panel. Keep this in sync with `column`
-        slot instances for predictable sizing.
+        Slot count is controlled in the Slots panel. Keep this in sync with `column` slot instances
+        for predictable sizing.
       </p>
     </div>
   );
@@ -485,9 +486,7 @@ export function GridColumnsWizardEditor({
           <p className="text-sm font-medium">Column 1 label</p>
           <Input
             value={first?.label ?? ""}
-            onChange={(event) =>
-              updateColumn(value, onChange, 0, { label: event.target.value })
-            }
+            onChange={(event) => updateColumn(value, onChange, 0, { label: event.target.value })}
             placeholder="Column 1"
           />
         </div>
@@ -495,9 +494,7 @@ export function GridColumnsWizardEditor({
           <p className="text-sm font-medium">Column 2 label</p>
           <Input
             value={second?.label ?? ""}
-            onChange={(event) =>
-              updateColumn(value, onChange, 1, { label: event.target.value })
-            }
+            onChange={(event) => updateColumn(value, onChange, 1, { label: event.target.value })}
             placeholder="Column 2"
           />
         </div>
@@ -508,7 +505,9 @@ export function GridColumnsWizardEditor({
           <p className="text-sm font-medium">Horizontal gap</p>
           <Select
             value={normalized.layout?.gapX ?? gridColumnsDefaults.layout?.gapX ?? "6"}
-            onValueChange={(next) => updateLayout(value, onChange, { gapX: next as GridColumnsGap })}
+            onValueChange={(next) =>
+              updateLayout(value, onChange, { gapX: next as GridColumnsGap })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Horizontal gap" />
@@ -526,7 +525,9 @@ export function GridColumnsWizardEditor({
           <p className="text-sm font-medium">Vertical gap</p>
           <Select
             value={normalized.layout?.gapY ?? gridColumnsDefaults.layout?.gapY ?? "6"}
-            onValueChange={(next) => updateLayout(value, onChange, { gapY: next as GridColumnsGap })}
+            onValueChange={(next) =>
+              updateLayout(value, onChange, { gapY: next as GridColumnsGap })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Vertical gap" />
@@ -568,7 +569,9 @@ export function GridColumnsVisualEditor({
           <p className="text-sm font-medium">Cross-axis alignment</p>
           <Select
             value={normalized.layout?.align ?? "start"}
-            onValueChange={(next) => updateLayout(value, onChange, { align: next as GridColumnsAlign })}
+            onValueChange={(next) =>
+              updateLayout(value, onChange, { align: next as GridColumnsAlign })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Alignment" />
@@ -595,7 +598,11 @@ export function GridColumnsVisualEditor({
             size="sm"
             variant="outline"
             onClick={() =>
-              setColumnsCount(value, onChange, (normalized.columns?.length ?? gridColumnsColumnMin) + 1)
+              setColumnsCount(
+                value,
+                onChange,
+                (normalized.columns?.length ?? gridColumnsColumnMin) + 1
+              )
             }
             disabled={(normalized.columns?.length ?? 0) >= gridColumnsColumnMax}
           >
@@ -606,7 +613,11 @@ export function GridColumnsVisualEditor({
             size="sm"
             variant="outline"
             onClick={() =>
-              setColumnsCount(value, onChange, (normalized.columns?.length ?? gridColumnsColumnMin) - 1)
+              setColumnsCount(
+                value,
+                onChange,
+                (normalized.columns?.length ?? gridColumnsColumnMin) - 1
+              )
             }
             disabled={(normalized.columns?.length ?? 0) <= gridColumnsColumnMin}
           >
@@ -624,7 +635,9 @@ export function GridColumnsVisualEditor({
             <p className="text-sm font-medium">Horizontal gap</p>
             <Select
               value={normalized.layout?.gapX ?? "6"}
-              onValueChange={(next) => updateLayout(value, onChange, { gapX: next as GridColumnsGap })}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { gapX: next as GridColumnsGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Horizontal gap" />
@@ -643,7 +656,9 @@ export function GridColumnsVisualEditor({
             <p className="text-sm font-medium">Vertical gap</p>
             <Select
               value={normalized.layout?.gapY ?? "6"}
-              onValueChange={(next) => updateLayout(value, onChange, { gapY: next as GridColumnsGap })}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { gapY: next as GridColumnsGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Vertical gap" />
@@ -669,7 +684,9 @@ export function GridColumnsVisualEditor({
             </div>
             <Switch
               checked={Boolean(style.cardizeColumns)}
-              onCheckedChange={(checked) => updateStyle(value, onChange, { cardizeColumns: checked })}
+              onCheckedChange={(checked) =>
+                updateStyle(value, onChange, { cardizeColumns: checked })
+              }
             />
           </div>
         </div>
@@ -698,7 +715,9 @@ export function GridColumnsVisualEditor({
                 <Select
                   value={style.columnBorderWidth ?? "1"}
                   onValueChange={(next) =>
-                    updateStyle(value, onChange, { columnBorderWidth: next as GridColumnsBorderWidth })
+                    updateStyle(value, onChange, {
+                      columnBorderWidth: next as GridColumnsBorderWidth,
+                    })
                   }
                 >
                   <SelectTrigger>
@@ -765,18 +784,15 @@ export function GridColumnsVisualEditor({
         description="`grid-columns` uses repeatable `column` slots (`column:1`, `column:2`, ...)."
       >
         <p className="text-xs text-muted-foreground">
-          Add or remove column slots in the Slots panel above tabs. This section controls
-          styling and sizing tokens used when those slot instances render.
+          Add or remove column slots in the Slots panel above tabs. This section controls styling
+          and sizing tokens used when those slot instances render.
         </p>
       </EditorSection>
     </div>
   );
 }
 
-export function GridColumnsAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<GridColumnsData>) {
+export function GridColumnsAdvancedEditor({ value, onChange }: WidgetEditorProps<GridColumnsData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? gridColumnsDefaults.style!;
 
@@ -791,7 +807,9 @@ export function GridColumnsAdvancedEditor({
             <p className="text-sm font-medium">Align</p>
             <Select
               value={normalized.layout?.align ?? "start"}
-              onValueChange={(next) => updateLayout(value, onChange, { align: next as GridColumnsAlign })}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { align: next as GridColumnsAlign })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Align" />
@@ -810,7 +828,9 @@ export function GridColumnsAdvancedEditor({
             <p className="text-sm font-medium">Gap X</p>
             <Select
               value={normalized.layout?.gapX ?? "6"}
-              onValueChange={(next) => updateLayout(value, onChange, { gapX: next as GridColumnsGap })}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { gapX: next as GridColumnsGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Gap X" />
@@ -829,7 +849,9 @@ export function GridColumnsAdvancedEditor({
             <p className="text-sm font-medium">Gap Y</p>
             <Select
               value={normalized.layout?.gapY ?? "6"}
-              onValueChange={(next) => updateLayout(value, onChange, { gapY: next as GridColumnsGap })}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { gapY: next as GridColumnsGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Gap Y" />
@@ -850,7 +872,9 @@ export function GridColumnsAdvancedEditor({
             <p className="text-sm font-medium">Cardized columns</p>
             <Switch
               checked={Boolean(style.cardizeColumns)}
-              onCheckedChange={(checked) => updateStyle(value, onChange, { cardizeColumns: checked })}
+              onCheckedChange={(checked) =>
+                updateStyle(value, onChange, { cardizeColumns: checked })
+              }
             />
           </div>
         </div>

@@ -57,14 +57,13 @@ const alignmentOptions: Array<{ id: StatsKpiAlignment; label: string }> = [
 ];
 
 const spacingOptions: Array<{ id: StatsKpiSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
 ];
 
-const itemCountOptions = Array.from({ length: statsKpiItemMax }, (_, index) =>
-  String(index + 1)
-);
+const itemCountOptions = Array.from({ length: statsKpiItemMax }, (_, index) => String(index + 1));
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
@@ -228,11 +227,7 @@ function updateItem(
   });
 }
 
-function setItemsCount(
-  value: StatsKpiData,
-  onChange: (next: StatsKpiData) => void,
-  count: number
-) {
+function setItemsCount(value: StatsKpiData, onChange: (next: StatsKpiData) => void, count: number) {
   updateValue(value, onChange, (current) => ({
     ...current,
     items: normalizeStatsKpiItems(current.items, count),
@@ -261,11 +256,7 @@ function addItem(value: StatsKpiData, onChange: (next: StatsKpiData) => void) {
   });
 }
 
-function removeItem(
-  value: StatsKpiData,
-  onChange: (next: StatsKpiData) => void,
-  index: number
-) {
+function removeItem(value: StatsKpiData, onChange: (next: StatsKpiData) => void, index: number) {
   updateValue(value, onChange, (current) => {
     const items = normalizeStatsKpiItems(current.items);
     if (items.length <= 1) return current;
@@ -363,9 +354,7 @@ export function StatsKpiWizardEditor({
           <Input
             key={item.id ?? `wizard-metric-${index + 1}`}
             value={item.value ?? ""}
-            onChange={(event) =>
-              updateItem(value, onChange, index, { value: event.target.value })
-            }
+            onChange={(event) => updateItem(value, onChange, index, { value: event.target.value })}
             placeholder={`Metric ${index + 1} value`}
           />
         ))}
@@ -411,10 +400,7 @@ export function StatsKpiVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="Header copy"
-        description="Edit section title and supporting context."
-      >
+      <EditorSection title="Header copy" description="Edit section title and supporting context.">
         <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
@@ -427,9 +413,7 @@ export function StatsKpiVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Show key performance metrics and outcomes."
           />
         </div>
@@ -610,10 +594,7 @@ export function StatsKpiVisualEditor({
   );
 }
 
-export function StatsKpiAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<StatsKpiData>) {
+export function StatsKpiAdvancedEditor({ value, onChange }: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
 
   return (
@@ -666,9 +647,7 @@ export function StatsKpiAdvancedEditor({
           <p className="text-sm font-medium">Value color token</p>
           <Input
             value={normalized.style?.valueColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { valueColor: event.target.value })
-            }
+            onChange={(event) => updateStyle(value, onChange, { valueColor: event.target.value })}
             placeholder="var(--color-text)"
           />
         </div>
@@ -676,9 +655,7 @@ export function StatsKpiAdvancedEditor({
           <p className="text-sm font-medium">Label color token</p>
           <Input
             value={normalized.style?.labelColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { labelColor: event.target.value })
-            }
+            onChange={(event) => updateStyle(value, onChange, { labelColor: event.target.value })}
             placeholder="var(--color-text)"
           />
         </div>

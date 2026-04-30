@@ -6,7 +6,7 @@
 **Category:** Widget Runtime + Typography Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242-01-02
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 

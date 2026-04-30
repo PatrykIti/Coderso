@@ -1,11 +1,6 @@
 import type { ComponentType } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type FooterLink = {
   label: string;
@@ -35,9 +30,9 @@ export type FooterData = {
   layout?: {
     align?: "left" | "center" | "right";
     legalAlign?: "left" | "center" | "right";
-    maxWidth?: "5xl" | "6xl" | "7xl";
-    columnGap?: "4" | "6" | "8";
-    sectionPaddingY?: "8" | "10" | "12";
+    maxWidth?: "none" | "5xl" | "6xl" | "7xl";
+    columnGap?: "none" | "4" | "6" | "8";
+    sectionPaddingY?: "none" | "8" | "10" | "12";
   };
   style?: {
     surfaceColor?: string;
@@ -48,16 +43,12 @@ export type FooterData = {
     linkColor?: string;
     legalTextColor?: string;
     socialColor?: string;
-    fontSize?: "xs" | "sm" | "base";
+    fontSize?: "none" | "xs" | "sm" | "base";
     headingTransform?: "none" | "uppercase" | "capitalize";
   };
 };
 
-export const footerColumnSlotIds = [
-  "column-1",
-  "column-2",
-  "column-3",
-] as const;
+export const footerColumnSlotIds = ["column-1", "column-2", "column-3"] as const;
 export type FooterColumnSlotId = (typeof footerColumnSlotIds)[number];
 
 export const footerSchema = {
@@ -116,9 +107,9 @@ export const footerSchema = {
       properties: {
         align: { enum: ["left", "center", "right"] },
         legalAlign: { enum: ["left", "center", "right"] },
-        maxWidth: { enum: ["5xl", "6xl", "7xl"] },
-        columnGap: { enum: ["4", "6", "8"] },
-        sectionPaddingY: { enum: ["8", "10", "12"] },
+        maxWidth: { enum: ["none", "5xl", "6xl", "7xl"] },
+        columnGap: { enum: ["none", "4", "6", "8"] },
+        sectionPaddingY: { enum: ["none", "8", "10", "12"] },
       },
     },
     style: {
@@ -133,7 +124,7 @@ export const footerSchema = {
         linkColor: { type: "string" },
         legalTextColor: { type: "string" },
         socialColor: { type: "string" },
-        fontSize: { enum: ["xs", "sm", "base"] },
+        fontSize: { enum: ["none", "xs", "sm", "base"] },
         headingTransform: { enum: ["none", "uppercase", "capitalize"] },
       },
     },
@@ -190,24 +181,28 @@ const footerColumnCountByVariant = {
 } as const;
 
 const maxWidthClassMap = {
+  none: "",
   "5xl": "max-w-5xl",
   "6xl": "max-w-6xl",
   "7xl": "max-w-7xl",
 } as const;
 
 const gapClassMap = {
+  none: "gap-0",
   "4": "gap-4",
   "6": "gap-6",
   "8": "gap-8",
 } as const;
 
 const sectionPaddingYClassMap = {
+  none: "py-0",
   "8": "py-8",
   "10": "py-10",
   "12": "py-12",
 } as const;
 
 const fontSizeClassMap = {
+  none: "",
   xs: "text-xs",
   sm: "text-sm",
   base: "text-base",
@@ -249,9 +244,7 @@ const normalizeFooterLink = (link: FooterLink, index: number): FooterLink => {
 
 const normalizeFooterColumn = (column: FooterColumn, index: number): FooterColumn => {
   const title = column.title?.trim() || `Column ${index + 1}`;
-  const links = Array.isArray(column.links)
-    ? column.links.map(normalizeFooterLink)
-    : [];
+  const links = Array.isArray(column.links) ? column.links.map(normalizeFooterLink) : [];
   return { title, links };
 };
 
@@ -269,10 +262,11 @@ export function resolveFooterColumnsForVariant(
   const result: FooterColumn[] = [];
 
   for (let index = 0; index < requestedCount; index += 1) {
-    const base = normalizedInput[index] ?? normalizedDefaults[index] ?? {
-      title: `Column ${index + 1}`,
-      links: [],
-    };
+    const base = normalizedInput[index] ??
+      normalizedDefaults[index] ?? {
+        title: `Column ${index + 1}`,
+        links: [],
+      };
     result.push(base);
   }
 
@@ -343,7 +337,7 @@ export function FooterBlock({
       >
         {columns.map((column, index) => {
           const slotId = footerColumnSlotIds[index];
-          const slotBlocks = slotId ? slots?.[slotId] ?? [] : [];
+          const slotBlocks = slotId ? (slots?.[slotId] ?? []) : [];
           return (
             <div
               key={`${column.title}-${index}`}
@@ -352,8 +346,7 @@ export function FooterBlock({
               <p
                 className={joinClasses(
                   "text-xs font-semibold",
-                  headingTransformClassMap[style.headingTransform ?? "uppercase"] ??
-                    "uppercase"
+                  headingTransformClassMap[style.headingTransform ?? "uppercase"] ?? "uppercase"
                 )}
                 style={headingStyle}
               >
@@ -398,11 +391,7 @@ export function FooterBlock({
         <span style={legalStyle}>{legal?.copyright}</span>
         <div className={joinClasses("flex flex-wrap items-center gap-4")}>
           {bottomSlotBlocks.map((slotBlock) => (
-            <WidgetRenderer
-              key={slotBlock.id}
-              block={slotBlock}
-              previewDevice={previewDevice}
-            />
+            <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
           ))}
           {legal?.privacy ? (
             <a href={legal.privacy} style={linkStyle}>

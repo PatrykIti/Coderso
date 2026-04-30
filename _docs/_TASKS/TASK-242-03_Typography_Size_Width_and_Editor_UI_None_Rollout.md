@@ -6,7 +6,7 @@
 **Category:** Widget Editors + Typography Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-242-02
-**Status:** To Do
+**Status:** Done (2026-04-29)
 
 ---
 
@@ -21,8 +21,8 @@ changes stay owned by TASK-242-02 leaves.
 
 ## Sub-Tasks
 
-- [ ] TASK-242-03-02: Typography, Size, Width Runtime None Tokens
-- [ ] TASK-242-03-01: Widget Editor Select Option Regressions
+- [x] TASK-242-03-02: Typography, Size, Width Runtime None Tokens
+- [x] TASK-242-03-01: Widget Editor Select Option Regressions
 
 ## Files to Change
 

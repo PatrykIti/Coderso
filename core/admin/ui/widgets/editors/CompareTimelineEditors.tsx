@@ -47,11 +47,12 @@ const variantOptions: Array<{
 
 const guideStyles = ["solid", "dashed"] as const;
 const labelPositionOptions = ["top", "bottom"] as const;
-const trackSpacingOptions = ["sm", "md", "lg", "xl"] as const;
+const trackSpacingOptions = ["none", "sm", "md", "lg", "xl"] as const;
 const highlightLabelStyles = ["solid", "outline", "subtle"] as const;
-const trackLabelSizes = ["sm", "base", "lg"] as const;
-const stepLabelSizes = ["xs", "sm", "base"] as const;
-const segmentLabelSizes = ["xs", "sm", "base"] as const;
+const trackLabelSizes = ["none", "sm", "base", "lg"] as const;
+const stepLabelSizes = ["none", "xs", "sm", "base"] as const;
+const segmentLabelSizes = ["none", "xs", "sm", "base"] as const;
+const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 
 const stepCountOptions = Array.from(
   { length: compareAxisStepMax - compareAxisStepMin + 1 },
@@ -296,10 +297,7 @@ function addAxisStep(value: CompareTimelineData, onChange: (next: CompareTimelin
   setAxisStepCount(value, onChange, current.axis.steps.length + 1);
 }
 
-function removeAxisStep(
-  value: CompareTimelineData,
-  onChange: (next: CompareTimelineData) => void
-) {
+function removeAxisStep(value: CompareTimelineData, onChange: (next: CompareTimelineData) => void) {
   const current = normalizeValue(value);
   if (current.axis.steps.length <= compareAxisStepMin) return;
   setAxisStepCount(value, onChange, current.axis.steps.length - 1);
@@ -338,13 +336,7 @@ function ColorField({
   );
 }
 
-function VariantCards({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-}) {
+function VariantCards({ value, onChange }: { value: string; onChange?: (next: string) => void }) {
   return (
     <div className="space-y-2">
       {variantOptions.map((option) => (
@@ -441,7 +433,10 @@ function SegmentEditor({
               </SelectTrigger>
               <SelectContent>
                 {steps.map((step, stepIndex) => (
-                  <SelectItem key={`${track.id}-from-${step.id ?? stepIndex}`} value={String(stepIndex)}>
+                  <SelectItem
+                    key={`${track.id}-from-${step.id ?? stepIndex}`}
+                    value={String(stepIndex)}
+                  >
                     {step.label}
                   </SelectItem>
                 ))}
@@ -457,7 +452,10 @@ function SegmentEditor({
               </SelectTrigger>
               <SelectContent>
                 {steps.map((step, stepIndex) => (
-                  <SelectItem key={`${track.id}-to-${step.id ?? stepIndex}`} value={String(stepIndex)}>
+                  <SelectItem
+                    key={`${track.id}-to-${step.id ?? stepIndex}`}
+                    value={String(stepIndex)}
+                  >
                     {step.label}
                   </SelectItem>
                 ))}
@@ -486,8 +484,7 @@ function SegmentEditor({
 
 function getTargetTrackContext(value: CompareTimelineData) {
   const tracks = value.tracks;
-  const targetTrackId =
-    value.highlight?.targetTrackId ?? tracks[1]?.id ?? tracks[0]?.id ?? "a";
+  const targetTrackId = value.highlight?.targetTrackId ?? tracks[1]?.id ?? tracks[0]?.id ?? "a";
   const targetTrackIndex = Math.max(
     tracks.findIndex((track) => track.id === targetTrackId),
     0
@@ -516,9 +513,7 @@ export function CompareTimelineWizardEditor({
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Highlight mode</p>
-            <p className="text-xs text-muted-foreground">
-              Emphasize ranges on a target track.
-            </p>
+            <p className="text-xs text-muted-foreground">Emphasize ranges on a target track.</p>
           </div>
           <Switch
             checked={highlightEnabled}
@@ -746,7 +741,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {guideStyles.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -770,7 +765,7 @@ export function CompareTimelineVisualEditor({
                 <SelectContent>
                   {highlightLabelStyles.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -853,7 +848,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {trackLabelSizes.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -876,7 +871,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {stepLabelSizes.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -900,7 +895,7 @@ export function CompareTimelineVisualEditor({
                 <SelectContent>
                   {segmentLabelSizes.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -931,7 +926,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {trackSpacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -954,7 +949,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {labelPositionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -999,7 +994,7 @@ export function CompareTimelineAdvancedEditor({
               <SelectContent>
                 {trackSpacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1022,7 +1017,7 @@ export function CompareTimelineAdvancedEditor({
               <SelectContent>
                 {labelPositionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1057,7 +1052,7 @@ export function CompareTimelineAdvancedEditor({
             <SelectContent>
               {guideStyles.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {option}
+                  {formatTokenOptionLabel(option)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1130,9 +1125,9 @@ export function CompareTimelineAdvancedEditor({
         description="Apply deterministic normalization for axis count, IDs, markers, and segments."
       >
         <p className="text-xs text-muted-foreground">
-          Current axis steps: {normalized.axis.steps.length}. Runtime rules enforce
-          {" "}
-          {compareAxisStepMin}-{compareAxisStepMax} steps, stable IDs, and clamped marker/segment ranges.
+          Current axis steps: {normalized.axis.steps.length}. Runtime rules enforce{" "}
+          {compareAxisStepMin}-{compareAxisStepMax} steps, stable IDs, and clamped marker/segment
+          ranges.
         </p>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
