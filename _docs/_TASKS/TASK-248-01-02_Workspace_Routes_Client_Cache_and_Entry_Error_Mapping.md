@@ -42,15 +42,24 @@ Admin UI links must go through the shared admin helpers. Do not introduce a
 second hand-built Custom Screens route convention.
 
 ```ts
+import { resolveAdminHref } from "@/utils/adminPaths";
+
 export function buildCustomScreenWorkspaceHref(input: {
+  basePath: string;
   screenId: string;
   entryId?: string | "new";
 }) {
-  const base = adminPaths.advancedCustomScreenEntries(input.screenId);
-  if (!input.entryId) return base;
-  return `${base}/${encodeURIComponent(input.entryId)}`;
+  const path = `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
+  const href = input.entryId
+    ? `${path}/${encodeURIComponent(input.entryId)}`
+    : path;
+  return resolveAdminHref(input.basePath, href);
 }
 ```
+
+If the implementation adds a named convenience helper to `adminPaths.ts`, that
+helper must wrap `resolveAdminHref` and receive the admin base path explicitly.
+Do not introduce an `adminPaths.*` object that bypasses the current helper API.
 
 The existing Custom Screen CRUD routes continue to own definition persistence:
 

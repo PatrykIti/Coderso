@@ -43,9 +43,14 @@ The product decision is reuse-first, not copy-everything:
 - `core/widgets/core/screenTwoColumn.tsx`
 - new admin widget files if field-aware widgets are introduced outside the
   existing screen widget files.
+- `core/widgets/modulePackMatrix.ts` only if implementation makes an admin
+  widget module-facing or changes pack readiness.
 - `_docs/WIDGETS.md`
 - relevant `_docs/_WIDGETS/*` files if widget surface contracts are documented
   per widget.
+- `_docs/WIDGET_PACK_MATRIX.md` only if implementation changes module-facing
+  widget readiness; otherwise record that admin-only controls do not alter the
+  pack matrix.
 - `_docs/PLAYWRIGHT/SUMMARY-SCREENS-2026-04-30.md` or a dated V2 follow-up
   summary.
 - `_docs/_TASKS/TASK-248*.md`
@@ -87,6 +92,13 @@ type RegisteredWidget = {
 The exact type can be smaller if the existing registry shape already has an
 equivalent extension point. The required outcome is that widget availability is
 deterministic by surface and content type.
+
+Registered admin widgets must follow the same product-surface rule as other
+widgets: `schema`, `defaults`, `normalize*`, render contract,
+`wizard`/`visual`/`advanced` editor behavior, and focused tests. If a field
+control is not a registered widget, keep it as an internal Custom Screens
+control and document that it does not participate in the public widget registry
+or module pack matrix.
 
 ## Implementation Pseudocode
 
@@ -204,7 +216,11 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
     unless the registry contract is deliberately renamed,
   - public-only widgets are hidden from Custom Screen builder,
   - legacy V1 widgets still render for existing screens,
-  - field-aware admin widgets require a selected content type.
+  - field-aware admin widgets require a selected content type,
+  - registered admin widgets expose schema/defaults/normalizer/render/editor
+    contracts or are documented as internal controls outside the registry,
+  - module pack matrix expectations stay unchanged for admin-only controls or
+    are updated with docs when a control becomes module-facing.
 - Run all targeted tests from TASK-248-01, TASK-248-02, and TASK-248-03.
 - Playwright CLI replay with screenshots for:
   - `List View` builder,
@@ -216,6 +232,7 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 
 - `_docs/WIDGETS.md`
 - relevant `_docs/_WIDGETS/*` docs for new/admin-scoped widgets.
+- `_docs/WIDGET_PACK_MATRIX.md` if module-facing widget readiness changes.
 - `_docs/PLAYWRIGHT/*`
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cache contracts
   changed in earlier leaves.
@@ -229,5 +246,7 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
    marked admin-safe.
 3. Admin entry widgets can read/write only the selected content type and entry.
 4. The House Projects V2 replay succeeds through Playwright CLI.
-5. Docs, task board rows, changelog, and skipped-check notes are synchronized
+5. Registered admin widgets either satisfy the full widget contract or remain
+   documented internal controls outside the registry.
+6. Docs, task board rows, changelog, and skipped-check notes are synchronized
    at closure.

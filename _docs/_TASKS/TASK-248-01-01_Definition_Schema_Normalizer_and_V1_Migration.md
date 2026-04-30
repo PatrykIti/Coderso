@@ -29,6 +29,9 @@ No child task files.
 - `core/services/customScreens/customScreenSchemas.ts`
 - `core/services/customScreens/customScreenService.ts`
 - `core/services/customScreens/capabilities.ts`
+- DB migration SQL and `meta/*` artifacts only if implementation changes the
+  physical `custom_screens` storage shape instead of reusing the existing
+  `schema_version`, `blocks`, and `bindings` columns.
 - `tests/vitest/customScreens/customScreenService.test.ts`
 - `tests/vitest/customScreens/capabilities.test.ts`
 
@@ -48,6 +51,14 @@ type CustomScreenDefinitionV2 = {
 The definition normalizer may receive `{ contentType }` as context for default
 generation and field validation, but persisted definition JSON must reject a
 top-level `contentTypeId`.
+
+Storage rule: the default implementation should preserve the current table shape
+and serialize V2 through the existing `schema_version`, `blocks`, and `bindings`
+columns, where `blocks`/`bindings` are interpreted as `editorView` data for V1
+compatibility. If implementation chooses a new physical `definition`,
+`list_view`, or `editor_view` column instead, this leaf must add the full DB
+migration set: SQL migration file, matching `meta/*_snapshot.json`, and
+`meta/_journal.json` update.
 
 ## Implementation Pseudocode
 

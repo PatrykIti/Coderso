@@ -148,13 +148,18 @@ export function buildDefaultListViewDefinition(
 ```
 
 ```ts
+import { resolveAdminHref } from "@/utils/adminPaths";
+
 export function buildCustomScreenWorkspaceHref(input: {
+  basePath: string;
   screenId: string;
   entryId?: string | "new";
 }) {
-  const base = `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
-  if (!input.entryId) return base;
-  return `${base}/${encodeURIComponent(input.entryId)}`;
+  const path = `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
+  const href = input.entryId
+    ? `${path}/${encodeURIComponent(input.entryId)}`
+    : path;
+  return resolveAdminHref(input.basePath, href);
 }
 ```
 
@@ -164,9 +169,9 @@ shared `mapContentEntryError` coverage here because V2 create/edit depends on
 clean validation semantics.
 
 Admin UI links must consume shared route helpers through the existing admin
-navigation helpers (`AdminLink`, `adminPaths`/`resolveAdminHref`, and
-`prefetchAdminRoute`). Do not introduce hand-built alias matching or a second
-Custom Screens route convention.
+navigation helpers (`AdminLink`, `resolveAdminHref`, and `prefetchAdminRoute`).
+Do not introduce hand-built alias matching, an `adminPaths.*` object bypass, or a
+second Custom Screens route convention.
 
 ## Security Contract
 

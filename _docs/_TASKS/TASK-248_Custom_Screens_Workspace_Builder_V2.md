@@ -165,6 +165,12 @@ The exact type names can change during implementation, but the contract must
 keep `List View` and `Editor View` as explicit persisted concepts. Do not hide
 them as transient UI-only tabs.
 
+Storage note: the default implementation should preserve the existing
+`custom_screens` storage shape and map V2 through `schema_version`, `blocks`, and
+`bindings` for backward compatibility. If implementation adds a new physical
+definition/list/editor column, it must include the full migration artifacts
+required by AGENTS.md.
+
 ## Sub-Tasks
 
 - [ ] TASK-248-01: Custom Screen Definition V2 and Workspace Routing
@@ -234,6 +240,9 @@ them as transient UI-only tabs.
   - `Editor View` create mode submitting normalized entry `data`,
   - `Editor View` edit mode preserving typed entry values,
   - admin widget registry filtering by surface,
+  - registered admin widgets exposing schema/defaults/normalizer/render/editor
+    contracts, or being explicitly documented as internal controls outside the
+    widget registry,
   - validation errors rendered inline without stack leakage.
 - Targeted Bun route/service tests for:
   - Custom Screen V2 create/update strict schema validation,
@@ -256,6 +265,9 @@ them as transient UI-only tabs.
   schema-derived entry defaults.
 - `_docs/WIDGETS.md` and relevant `_docs/_WIDGETS/*` docs if admin widget
   registry semantics become part of the widget contract.
+- `_docs/WIDGET_PACK_MATRIX.md` and `core/widgets/modulePackMatrix.ts` only when
+  admin widget work changes module-facing widget readiness; otherwise record
+  that admin-only controls do not alter the pack matrix.
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if new cached Custom
   Screen workspace resources or invalidation keys are added.
 - `_docs/PLAYWRIGHT/*` with the V2 House Projects replay evidence.

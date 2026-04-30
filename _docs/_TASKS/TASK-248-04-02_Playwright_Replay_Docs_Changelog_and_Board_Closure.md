@@ -156,6 +156,9 @@ replacement targeted suite in both the replay summary and changelog entry.
   - successful edit entry flow.
 - `bun run gates:coderso` when feasible; if an existing repo blocker prevents
   it, record the exact blocker and targeted replacement suites in the changelog.
+- Before a manual implementation commit, run `bun run precommit` unless the
+  commit is created through the configured git hook path and that hook runs
+  automatically.
 
 ## Documentation Updates Required
 

@@ -34,6 +34,8 @@ No child task files.
 - `core/widgets/core/screenTwoColumn.tsx`
 - new admin widget files if field-aware widgets live outside existing screen
   widget files.
+- `core/widgets/modulePackMatrix.ts` only if any new or changed widget affects a
+  public/module-facing pack readiness contract.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/customScreens/bindingResolver.test.ts`
 
@@ -64,6 +66,20 @@ type RegisteredWidget = {
 
 The exact structure may adapt to the current registry, but the output must be
 deterministic by surface and content type.
+
+Admin widget contract rule:
+
+- Any new admin widget/control that is registered as a widget must ship its
+  `schema`, `defaults`, `normalize*` helper, render contract, and
+  `wizard`/`visual`/`advanced` editor-mode behavior in code.
+- If a field/control is an internal Custom Screens form control rather than a
+  registered widget, document that explicitly in the implementation notes and
+  keep it out of the public widget registry.
+- Admin-only `admin-list-view`, `admin-editor-view`, and `admin-readonly-preview`
+  controls are not module-pack widgets by default. If implementation makes one
+  module-facing or changes pack completeness/readiness, update
+  `core/widgets/modulePackMatrix.ts`, `_docs/WIDGET_PACK_MATRIX.md`, and the
+  relevant `_docs/_WIDGETS/*` docs in the same leaf.
 
 ## Implementation Pseudocode
 
@@ -134,6 +150,11 @@ marked admin-safe.
   - public-only widgets are hidden from Custom Screen builder,
   - legacy V1 widgets still render for existing screens,
   - field-aware admin widgets require a selected content type,
+  - registered admin widgets expose schema/defaults/normalizer/render/editor
+    contracts or are explicitly documented as internal controls outside the
+    widget registry,
+  - module pack matrix assertions stay unchanged for admin-only controls, or are
+    updated with matching docs when a control becomes module-facing,
   - alternate aliases such as `admin-list` and `admin-record` are not accepted
     unless the full registry contract is deliberately renamed.
 
@@ -141,6 +162,9 @@ marked admin-safe.
 
 - `_docs/WIDGETS.md`
 - relevant `_docs/_WIDGETS/*` docs for new/admin-scoped widgets.
+- `_docs/WIDGET_PACK_MATRIX.md` when the implementation changes module-facing
+  widget readiness; otherwise record that admin-only controls do not alter the
+  pack matrix.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
@@ -151,3 +175,5 @@ marked admin-safe.
    admin-safe.
 3. Admin field widgets can access only the selected content type and entry.
 4. Existing V1 Custom Screens still render legacy widgets.
+5. Any registered admin widget has a complete schema/defaults/normalizer/render
+   and editor-mode contract, or is explicitly kept as an internal control.
