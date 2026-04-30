@@ -12,9 +12,10 @@
 
 ## Overview
 
-Add clear controls for Hero background gradient, background color, and media
-overlay fields. This is the bug that triggered TASK-244: once a Hero gradient is
-configured, the visual editor has no natural way to remove it.
+Add clear controls for Hero background gradient, background color, media overlay,
+and style-owned CTA button backgrounds. This is the bug that triggered TASK-244:
+once a Hero gradient is configured, the visual editor has no natural way to
+remove it.
 
 ## Sub-Tasks
 
@@ -38,6 +39,18 @@ editor affordance and payload cleanup.
 
 Do not add a `"none"` gradient string. Do not save `"transparent"` as the
 gradient off state.
+
+Current code references:
+
+- `hero.tsx:17`, `hero.tsx:112`, `hero.tsx:337-351`, `hero.tsx:440-443`, and
+  `hero.tsx:550-551` own background/media overlay output.
+- `hero.tsx:51`, `hero.tsx:55`, `hero.tsx:154`, `hero.tsx:158`,
+  `hero.tsx:380`, and `hero.tsx:392` own primary/secondary button
+  backgrounds.
+- `HeroEditors.tsx:1097-1100` owns media overlay editing.
+- `HeroEditors.tsx:1215-1239` owns CTA button background editing.
+- `HeroEditors.tsx:1338-1348` and `HeroEditors.tsx:1557-1570` own background
+  color/gradient editing in visual and advanced modes.
 
 ## Implementation Pseudocode
 
@@ -72,12 +85,21 @@ const clearBackgroundField = (key: keyof NonNullable<HeroData["background"]>) =>
 };
 ```
 
+Button style clears use the owning `style` object and must remove the exact
+style keys.
+
+```ts
+clearStyleField("primaryButtonBg");
+clearStyleField("secondaryButtonBg");
+```
+
 Runtime assertions should check absence of rendered style, not only visual
 equivalence.
 
 ```ts
 expect(hero.getAttribute("style") ?? "").not.toContain("background-image");
 expect(hero.querySelector("[data-hero-background-overlay]")).toBeNull();
+expect(html).not.toContain("background:#224466");
 ```
 
 ## Testing Requirements
@@ -90,6 +112,8 @@ expect(hero.querySelector("[data-hero-background-overlay]")).toBeNull();
   - background color clear removes `background.color`;
   - media overlay clear removes the overlay field and overlay node where
     applicable.
+  - primary and secondary button background clear remove `primaryButtonBg` and
+    `secondaryButtonBg` without serializing `"transparent"`.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -108,3 +132,5 @@ expect(hero.querySelector("[data-hero-background-overlay]")).toBeNull();
 3. Runtime omits cleared `backgroundImage`, `backgroundColor`, and overlay
    output.
 4. Existing Hero gradient/image/video behavior remains backward compatible.
+5. Primary and secondary button background clears remove the style keys and do
+   not pin transparent button backgrounds into saved widget data.

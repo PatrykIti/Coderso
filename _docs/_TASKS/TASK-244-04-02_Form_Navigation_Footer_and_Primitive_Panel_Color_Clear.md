@@ -40,10 +40,41 @@ Target widgets:
 - `core/widgets/core/accordion.tsx`
 - `core/widgets/core/tabs.tsx`
 - `core/widgets/core/toggleBlock.tsx`
-- matching editor files under `core/admin/ui/widgets/editors/`
-- matching runtime/editor tests
+- `core/admin/ui/widgets/editors/ContactEditors.tsx`
+- `core/admin/ui/widgets/editors/NewsletterEditors.tsx`
+- `core/admin/ui/widgets/editors/FormEmbedEditors.tsx`
+- `core/admin/ui/widgets/editors/NavigationEditors.tsx`
+- `core/admin/ui/widgets/editors/FooterEditors.tsx`
+- `core/admin/ui/widgets/editors/AccordionEditors.tsx`
+- `core/admin/ui/widgets/editors/TabsEditors.tsx`
+- `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
+- `tests/vitest/widgets/contact.test.tsx`
+- `tests/vitest/widgets/newsletter.test.tsx`
+- `tests/vitest/widgets/formEmbed.test.tsx`
+- `tests/vitest/widgets/navigation.test.tsx`
+- `tests/vitest/widgets/footer.test.tsx`
+- `tests/vitest/widgets/accordionWidget.test.tsx`
+- `tests/vitest/widgets/tabs.test.tsx`
+- `tests/vitest/widgets/toggleBlock.test.tsx`
+- `tests/vitest/ui/contact-editor-wave.test.tsx`
+- `tests/vitest/ui/newsletter-editor-wave.test.tsx`
+- `tests/vitest/ui/form-embed-editor-wave.test.tsx`
+- `tests/vitest/ui/navigation-editor-wave.test.tsx`
+- `tests/vitest/ui/footer-editor-wave.test.tsx`
+- `tests/vitest/ui/accordion-editor-wave.test.tsx`
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- `_docs/_WIDGETS/CONTACT.md`
+- `_docs/_WIDGETS/NEWSLETTER.md`
+- `_docs/_WIDGETS/FORM_EMBED.md`
+- `_docs/_WIDGETS/NAVIGATION.md`
+- `_docs/_WIDGETS/FOOTER.md`
+
+No per-widget docs currently exist for `accordion`, `tabs`, or `toggle-block`.
+Document their shared primitive-panel clear semantics in `_docs/WIDGETS.md`
+unless implementation deliberately creates exact new `_docs/_WIDGETS/*.md`
+files for those widgets.
 
 ## Implementation Notes
 
@@ -54,6 +85,9 @@ a value but cannot clear it.
 
 For forms, keep input readability and accessibility intact. Clearing a surface
 must not make focus rings, labels, error messages, or submit controls unusable.
+Do not include `form-embed` `inputSize` in this task; that is TASK-242 token
+work. TASK-244 only covers root/background/surface fields and any explicit
+button surface contract introduced by implementation.
 
 For primitive panel widgets, preserve state semantics:
 
@@ -63,6 +97,19 @@ For primitive panel widgets, preserve state semantics:
 - `tabs.panelBackgroundColor`
 - `toggleBlock.surfaceColor`
 - `toggleBlock` accent backgrounds where style-owned
+
+## Per-Widget Implementation Matrix
+
+| Widget | Runtime field/output | Editor clear behavior | Regression proof |
+|---|---|---|---|
+| `contact` | `style.background` and `style.surfaceColor` at `contact.tsx:30-32`, schema `contact.tsx:179-181`, defaults `contact.tsx:204-206`, normalizer `contact.tsx:261-265`, runtime `contact.tsx:299-303` | Add `Clear` to `ContactEditors.tsx:619-636`; remove `background` and `surfaceColor` from `style` | `contact.test.tsx` asserts cleared section/card omit backgrounds; `contact-editor-wave.test.tsx` asserts key removal and no `"transparent"` sentinel |
+| `newsletter` | `style.background` at `newsletter.tsx:24`, schema `newsletter.tsx:102`, defaults `newsletter.tsx:129`, `newsletter.tsx:187`, normalizer `newsletter.tsx:215`, runtime `newsletter.tsx:247` | Add `Clear` to `NewsletterEditors.tsx:514-517` | Assert cleared background omits `backgroundColor` and CTA theme token remains readable |
+| `form-embed` | `style.background` and `style.surface` at `formEmbed.tsx:20-21`, defaults/fallbacks `formEmbed.tsx:154-155`, `formEmbed.tsx:244-245`, normalizer `formEmbed.tsx:270-271`, runtime `formEmbed.tsx:494-497` | Add `Clear` to `FormEmbedEditors.tsx:495-506`; exclude `inputSize` at `FormEmbedEditors.tsx:564-574` | Assert background/surface keys are removed; submit/step buttons stay accessible; no `inputSize` behavior changes |
+| `navigation` | `surfaceColor`, `ctaBackgroundColor`, and related CTA colors at `navigation.tsx:62-67`, schema `navigation.tsx:196-201`, runtime `navigation.tsx:320-343`, CTA output `navigation.tsx:430-436` | Add `Clear` to `NavigationEditors.tsx:1049-1098`; preserve transparent behavior toggle at `NavigationEditors.tsx:1191-1198` | Assert surface/CTA clears remove keys while transparent behavior still overrides surface color |
+| `footer` | `surfaceColor` at `footer.tsx:38`, schema `footer.tsx:119`, runtime `footer.tsx:303` | Add `Clear` to `FooterEditors.tsx:560-564` | Assert cleared footer omits background style and layout blocks remain |
+| `accordion` | `surfaceColor` at `accordion.tsx:27`, schema `accordion.tsx:74`, default `accordion.tsx:100`, normalizer `accordion.tsx:191-194`, runtime `accordion.tsx:280` | Add `Clear` to `AccordionEditors.tsx:306-312` | Assert cleared accordion items omit panel background and expanded state remains |
+| `tabs` | `surfaceColor`, `activeBackgroundColor`, and `panelBackgroundColor` at `tabs.tsx:27-32`, schema `tabs.tsx:77-82`, defaults `tabs.tsx:98-103`, normalizer `tabs.tsx:199-222`, runtime `tabs.tsx:340-355` | Add `Clear` to `TabsEditors.tsx:319-365` for background/surface fields; preserve text and border color controls | Assert cleared surface/active/panel backgrounds omit style without breaking selected tab state |
+| `toggle-block` | `surfaceColor` at `toggleBlock.tsx:23`, schema `toggleBlock.tsx:53`, default `toggleBlock.tsx:71`, normalizer `toggleBlock.tsx:106-109`, runtime `toggleBlock.tsx:207` | Add `Clear` to `ToggleBlockEditors.tsx:245-255` | Assert cleared surface omits background and toggle behavior still works |
 
 ## Implementation Pseudocode
 
@@ -87,18 +134,25 @@ where it maps to user-facing control.
 
 When cleared, prefer no background class and no inline background style.
 
+Editor clear helpers must remove keys from `style`.
+
+```ts
+function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
+  const { [key]: _removed, ...nextStyle } = value.style ?? {};
+  onChange({
+    ...value,
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined,
+  });
+}
+```
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/toggleBlock.test.tsx`
 - Matching editor-wave tests:
-  - `tests/vitest/ui/contact-editor-wave.test.tsx`
-  - `tests/vitest/ui/newsletter-editor-wave.test.tsx`
-  - `tests/vitest/ui/form-embed-editor-wave.test.tsx`
-  - `tests/vitest/ui/navigation-editor-wave.test.tsx`
-  - `tests/vitest/ui/footer-editor-wave.test.tsx`
-  - `tests/vitest/ui/accordion-editor-wave.test.tsx`
-  - `tests/vitest/ui/tabs-editor-wave.test.tsx`
-  - `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+- Add assertions that clear removes saved keys and does not write
+  `"transparent"` or empty strings as off-state payloads.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -106,7 +160,14 @@ When cleared, prefer no background class and no inline background style.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- `_docs/_WIDGETS/CONTACT.md`
+- `_docs/_WIDGETS/NEWSLETTER.md`
+- `_docs/_WIDGETS/FORM_EMBED.md`
+- `_docs/_WIDGETS/NAVIGATION.md`
+- `_docs/_WIDGETS/FOOTER.md`
+- New exact primitive panel docs only if implementation creates them for
+  `accordion`, `tabs`, or `toggle-block`; otherwise keep primitive panel clear
+  semantics in `_docs/WIDGETS.md`.
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria
@@ -117,3 +178,6 @@ When cleared, prefer no background class and no inline background style.
 3. Primitive panel widget surfaces can be cleared while preserving active/state
    semantics.
 4. Runtime/editor tests prove clear removes saved fields and rendered output.
+5. `form-embed` `inputSize` remains outside this task and is not changed as a
+   side effect of surface clearing.
+6. Clear removes keys instead of serializing `"transparent"` as an off state.

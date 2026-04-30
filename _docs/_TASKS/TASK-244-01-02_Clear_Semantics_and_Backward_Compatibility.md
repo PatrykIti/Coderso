@@ -108,12 +108,15 @@ function removeBackgroundKey(
 - Backward-compatibility tests for representative default/legacy data where a
   fallback is changed.
 - Editor tests proving `Clear` removes the key from emitted data.
+- Payload tests or assertions proving `Clear` does not serialize
+  `"transparent"` or empty strings as off-state sentinels.
 - `git diff --check`
 
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- exact `_docs/_WIDGETS/*.md` files named by the implementation leaf that
+  changes a widget contract
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria
@@ -123,3 +126,5 @@ function removeBackgroundKey(
 3. Legacy/default widget data behavior is tested where fallback semantics
    change.
 4. Editor helpers can remove keys rather than only merge values.
+5. Empty strings are treated as editor input cleanup, not serialized off-state
+   payloads.

@@ -35,10 +35,14 @@ the layout and remove the visual surface.
 - `core/widgets/core/screenTwoColumn.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `tests/vitest/widgets/screenWidgets.test.tsx`
-- relevant custom-screen UI tests if editor controls are added there
+- `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
-- missing per-widget docs for screen widgets if added during closure
+
+No per-widget docs currently exist for `screen-record-header`,
+`screen-field-group`, or `screen-field-value`. Document shared screen-widget
+clear semantics in `_docs/WIDGETS.md`; create exact new docs only if
+implementation introduces those pages.
 
 ## Implementation Notes
 
@@ -57,6 +61,15 @@ type ScreenFrameStyle = {
 
 Only add fields that are required to clear current forced surfaces. Avoid a broad
 screen design-system refactor.
+
+## Per-Widget Implementation Matrix
+
+| Widget | Runtime field/output | Editor clear behavior | Regression proof |
+|---|---|---|---|
+| `screen-record-header` | compact/card surfaces and card gradient at `screenRecordHeader.tsx:88-89`; pill surface at `screenRecordHeader.tsx:107` | Add `Clear` in `ScreenEditors.tsx` for frame background/gradient; do not require variant switch | `screenWidgets.test.tsx` asserts cleared card frame omits `bg-gradient-*` and forced `bg-background/*` output |
+| `screen-field-group` | subtle/default surfaces at `screenFieldGroup.tsx:79-80`; empty-group surface at `screenFieldGroup.tsx:105` | Add `Clear` for group surface style keys in `ScreenEditors.tsx` | Assert cleared group frame omits `bg-muted/20` and `bg-background/80` equivalents while children still bind |
+| `screen-field-value` | inline/stacked surfaces at `screenFieldValue.tsx:80` and `screenFieldValue.tsx:99` | Add `Clear` for field value surface style keys in `ScreenEditors.tsx` | Assert cleared inline and stacked variants preserve bound value rendering |
+| `screen-two-column` | two-column frame and empty area surfaces at `screenTwoColumn.tsx:93` and `screenTwoColumn.tsx:111` | Add `Clear` for column/drop-area surfaces in `ScreenEditors.tsx` | Assert cleared two-column frame preserves column layout and drop area affordance |
 
 ## Implementation Pseudocode
 
@@ -82,11 +95,14 @@ variant switch. Add a real clearable background/gradient contract.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - Add tests that prove:
   - existing default screen frames still render as before;
   - cleared frame background/gradient omits forced `bg-*`/`bg-gradient-*`
     classes or inline background styles;
   - editor `Clear` removes the relevant `style` keys.
+  - clear does not serialize `"transparent"` or empty strings as off-state
+    payloads.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -95,8 +111,9 @@ variant switch. Add a real clearable background/gradient contract.
 
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
-- new docs for `screen-record-header`, `screen-field-group`, and
-  `screen-field-value` if they remain undocumented
+- new exact docs for `screen-record-header`, `screen-field-group`, and
+  `screen-field-value` only if implementation creates those pages; otherwise
+  keep their shared screen-widget clear semantics in `_docs/WIDGETS.md`
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria
@@ -105,3 +122,4 @@ variant switch. Add a real clearable background/gradient contract.
 2. Clearing does not change widget variant or binding behavior.
 3. Screen-only widget restrictions remain unchanged.
 4. Runtime/editor tests cover cleared and default states.
+5. Clear removes style keys instead of writing transparent sentinels.

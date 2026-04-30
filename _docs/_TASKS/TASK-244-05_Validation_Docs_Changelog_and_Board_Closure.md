@@ -25,7 +25,7 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 ## Files to Change
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- exact `_docs/_WIDGETS/*.md` files named by TASK-244 implementation leaves
 - `_docs/_TASKS/TASK-244*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
@@ -53,7 +53,7 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- exact `_docs/_WIDGETS/*.md` files named by TASK-244 implementation leaves
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and matching changelog entry on completion
 

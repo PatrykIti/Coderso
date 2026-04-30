@@ -38,10 +38,34 @@ Target widgets:
 - `core/widgets/core/productGallery.tsx`
 - `core/widgets/core/productTable.tsx`
 - `core/widgets/core/productCompare.tsx`
-- matching editor files under `core/admin/ui/widgets/editors/`
-- matching widget/editor tests
+- `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx`
+- `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx`
+- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx`
+- `core/admin/ui/widgets/editors/SearchBoxEditors.tsx`
+- `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx`
+- `core/admin/ui/widgets/editors/ProductTableEditors.tsx`
+- `core/admin/ui/widgets/editors/ProductCompareEditors.tsx`
+- `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` only if the
+  product widgets share the same style editor controls
+- `tests/vitest/widgets/bookingCalendar.test.tsx`
+- `tests/vitest/widgets/appointmentForm.test.tsx`
+- `tests/vitest/widgets/listingFilters.test.tsx`
+- `tests/vitest/widgets/searchBox.test.tsx`
+- `tests/vitest/widgets/productGallery.test.tsx`
+- `tests/vitest/widgets/productTable.test.tsx`
+- `tests/vitest/widgets/productCompare.test.tsx`
+- `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
+- `tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+- `tests/vitest/ui/listing-filters-editor-wave.test.tsx`
+- `tests/vitest/ui/search-box-editor-wave.test.tsx`
+- `tests/vitest/ui/product-gallery-editor-wave.test.tsx`
+- `tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+
+No per-widget docs currently exist under `_docs/_WIDGETS/` for these seven
+widgets. Update `_docs/WIDGETS.md`; create exact new `_docs/_WIDGETS/*.md` files
+only if implementation introduces a new per-widget documentation surface.
 
 ## Implementation Notes
 
@@ -54,6 +78,18 @@ Keep semantic state colors intact:
 - destructive states.
 
 Only clear user-configurable frame/surface/background styling.
+
+## Per-Widget Implementation Matrix
+
+| Widget | Runtime fields/classes to own | Editor contract | Regression tests |
+|---|---|---|---|
+| `booking-calendar` | Replace root `bg-[var(--color-bg)]/95` at `bookingCalendar.tsx:348` with clearable `style.frameBackground`; keep warning colors at `bookingCalendar.tsx:361-364`; make refresh action background clearable only if it becomes a style field | Add `Clear` beside frame/action color controls in `BookingCalendarEditors.tsx`; remove keys from `style` | Assert cleared frame omits `backgroundColor`/forced bg class and warning state still renders |
+| `appointment-form` | Replace root `appointmentForm.tsx:229` and selected-slot panel `appointmentForm.tsx:250` with clearable frame/summary surfaces; submit background at `appointmentForm.tsx:317-323` is style-owned only if exposed | Add `Clear` in `AppointmentFormEditors.tsx` for frame/summary/action fields | Assert cleared root and selected-slot surfaces omit background output; error/success colors stay intact |
+| `listing-filters` | Replace filter shell `listingFilters.tsx:493`; treat apply button `listingFilters.tsx:543-548` as style-owned only when editor exposes it | Add `Clear` in `ListingFiltersEditors.tsx` | Assert filter form still works and cleared shell/action keys are absent |
+| `search-box` | Replace listing shell `searchBox.tsx:190-221` and global shell `searchBox.tsx:265-292`; treat submit button background as style-owned only when exposed | Add `Clear` in `SearchBoxEditors.tsx` | Assert both listing and global variants omit cleared shell backgrounds |
+| `product-gallery` | Replace empty state `productGallery.tsx:342` and card backgrounds `productGallery.tsx:363-365` with clearable empty/card surfaces | Add clearable card/empty surface controls in `ProductGalleryEditors.tsx`; use `CommerceWidgetEditorShared.tsx` only for shared product style UI | Assert cards and empty state can render without forced backgrounds while stock labels remain semantic |
+| `product-table` | Replace empty state `productTable.tsx:350`, table wrapper `productTable.tsx:359`, and header `productTable.tsx:362` with clearable surfaces | Add table/header/empty clear controls in `ProductTableEditors.tsx` | Assert table wrapper/header omit cleared backgrounds and structure stays scrollable |
+| `product-compare` | Replace empty state `productCompare.tsx:339`, table wrapper `productCompare.tsx:348`, and header `productCompare.tsx:351` with clearable surfaces | Add table/header/empty clear controls in `ProductCompareEditors.tsx` | Assert compare table wrapper/header omit cleared backgrounds and attribute rows remain readable |
 
 ## Implementation Pseudocode
 
@@ -80,6 +116,18 @@ For table widgets, preserve table structure and scroll wrappers:
 </div>
 ```
 
+When an editor clears a field, remove the property from `style`.
+
+```ts
+const clearOperationalStyle = (key: keyof OperationalSurfaceStyle) => {
+  const { [key]: _removed, ...nextStyle } = value.style ?? {};
+  onChange({
+    ...value,
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined,
+  });
+};
+```
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/widgets/productCompare.test.tsx`
@@ -92,6 +140,8 @@ For table widgets, preserve table structure and scroll wrappers:
   - `tests/vitest/ui/product-table-editor-wave.test.tsx`
   - `tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - Add tests proving `Clear` removes style keys and rendered backgrounds.
+- Add assertions that cleared fields do not serialize `"transparent"` or empty
+  string sentinels.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -99,7 +149,9 @@ For table widgets, preserve table structure and scroll wrappers:
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- New exact `_docs/_WIDGETS/*.md` files only if implementation adds per-widget
+  docs for these widgets; otherwise document the shared operational clear
+  semantics in `_docs/WIDGETS.md`.
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria
@@ -108,3 +160,5 @@ For table widgets, preserve table structure and scroll wrappers:
 2. Commerce cards/tables can remove visual surfaces while preserving layout.
 3. Semantic state colors remain untouched.
 4. Runtime/editor tests cover cleared/default behavior.
+5. Clear removes the saved style keys and rendered backgrounds; it does not
+   write `"transparent"` solely to suppress output.

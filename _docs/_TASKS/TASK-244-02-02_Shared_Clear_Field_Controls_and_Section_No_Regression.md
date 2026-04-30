@@ -30,7 +30,7 @@ empty-gradient runtime behavior.
 - `core/widgets/core/section.tsx` only if helper/runtime behavior requires it
 - `tests/vitest/widgets/section.test.tsx` or the current Section test owner if
   available
-- relevant editor-wave tests if Section editor UI changes
+- `tests/vitest/ui/section-editor-wave.test.tsx` if Section editor UI changes
 
 ## Implementation Notes
 
@@ -87,7 +87,8 @@ const hasGradient =
 - If Section editor/runtime changes:
   - targeted Section runtime test proving empty gradient fields omit
     `backgroundImage`;
-  - targeted Section editor test proving clear removes gradient/color fields.
+  - `bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+    proving clear removes gradient/color fields.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -105,3 +106,5 @@ const hasGradient =
 3. Clear buttons remove fields rather than writing transparent values.
 4. Helper adoption reduces duplication without forcing all editors into a new
    abstraction.
+5. Clear helper tests prove no `"transparent"` or empty-string sentinel is
+   emitted solely by the clear action.

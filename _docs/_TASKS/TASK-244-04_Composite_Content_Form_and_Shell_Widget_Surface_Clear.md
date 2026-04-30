@@ -25,6 +25,7 @@ Hero and operational frame semantics are established.
 
 ## Files to Change
 
+- `core/widgets/core/gridColumns.tsx`
 - `core/widgets/core/galleryMosaic.tsx`
 - `core/widgets/core/featureGrid.tsx`
 - `core/widgets/core/faqAccordion.tsx`
@@ -48,12 +49,13 @@ Hero and operational frame semantics are established.
 - `core/widgets/core/accordion.tsx`
 - `core/widgets/core/tabs.tsx`
 - `core/widgets/core/toggleBlock.tsx`
-- matching editor and test files
+- exact editor, runtime-test, editor-wave, and docs files listed in
+  TASK-244-04-01 and TASK-244-04-02
 
 ## Implementation Order
 
 1. Implement clear semantics for marketing/content widgets with card surfaces and
-   overlays.
+   overlays, including `grid-columns` column background.
 2. Implement clear semantics for form widgets and global shell widgets.
 3. Add primitive panel widget clear behavior for `accordion`, `tabs`, and
    `toggle-block`.
@@ -75,7 +77,9 @@ Hero and operational frame semantics are established.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- exact `_docs/_WIDGETS/*.md` files listed by TASK-244-04-01 and
+  TASK-244-04-02; create new primitive docs only if implementation introduces
+  those pages
 - `_docs/_TASKS/README.md` status only when this subtask moves state
 
 ## Acceptance Criteria
@@ -85,3 +89,5 @@ Hero and operational frame semantics are established.
 3. Composite widgets preserve their default/new-widget visual presentation where
    required by compatibility.
 4. Tests cover editor payload and runtime output.
+5. Clear paths do not serialize `"transparent"` or empty strings as off-state
+   payloads.

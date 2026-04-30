@@ -99,7 +99,7 @@ references in TASK-244-01-01 before implementation.
 | Custom screen widgets | `screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column` | hard-coded `bg-gradient-*`, `bg-background/*`, and `bg-muted/*` frame surfaces with no style contract |
 | Booking/listing/search widgets | `booking-calendar`, `appointment-form`, `listing-filters`, `search-box` | hard-coded framed shells and button backgrounds with no clearable widget surface model |
 | Commerce widgets | `product-gallery`, `product-table`, `product-compare` | cards, tables, headers, and empty states force `bg-[var(--color-bg)]` surfaces without clear controls |
-| Composite/content widgets | `gallery-mosaic`, `feature-grid`, `faq-accordion`, `pricing-plans`, `testimonials`, `team`, `stats-kpi`, `content-list`, `posts-feed`, `entry-teaser`, `cta-banner`, `logo-cloud`, `rich-text-section`, `timeline`, `compare-timeline` | card/panel/surface/overlay backgrounds are editable only as raw values or are forced in runtime |
+| Composite/content widgets | `grid-columns`, `gallery-mosaic`, `feature-grid`, `faq-accordion`, `pricing-plans`, `testimonials`, `team`, `stats-kpi`, `content-list`, `posts-feed`, `entry-teaser`, `cta-banner`, `logo-cloud`, `rich-text-section`, `timeline`, `compare-timeline` | column/card/panel/surface/overlay backgrounds are editable only as raw values or are forced in runtime |
 | Form and global shell widgets | `contact`, `newsletter`, `form-embed`, `navigation`, `footer` | section/surface/CTA/button backgrounds need clear affordances and output omission semantics |
 | Primitive panel widgets | `accordion`, `tabs`, `toggle-block` | active/panel/surface backgrounds are forced by style defaults without a consistent clear contract |
 
@@ -250,7 +250,8 @@ normalizer reapply it after the editor has cleared the property.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- impacted `_docs/_WIDGETS/*.md`
+- exact `_docs/_WIDGETS/*.md` files named by the implementation leaf for the
+  widget being changed
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and matching changelog entry on completion
 
