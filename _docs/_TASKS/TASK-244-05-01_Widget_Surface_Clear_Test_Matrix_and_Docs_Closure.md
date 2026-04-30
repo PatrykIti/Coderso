@@ -36,6 +36,12 @@ Because TASK-244 depends on TASK-242 and edits adjacent style/default/token
 contracts, final closure must also rerun `tests/vitest/widgets/styleNoneTokens.test.tsx`
 to prove existing `None` token behavior did not regress.
 
+Section remains a no-regression/helper-only surface for TASK-244 closure. Do not
+count missing Section `Clear` controls as an implementation gap unless an earlier
+TASK-244 leaf first promotes Section to `clear-required` in TASK-244-01-01 and
+adds a dedicated implementation leaf. Closure proof for Section is limited to
+empty-gradient and zero-overlay omission behavior unless that promotion happens.
+
 ## Closure Workflow Pseudocode
 
 ```ts

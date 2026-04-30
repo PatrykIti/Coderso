@@ -85,6 +85,10 @@ Section is not a new clear-control target unless implementation deliberately
 adopts the shared helper there. Its required baseline is no-regression for the
 existing empty-gradient/zero-overlay behavior. If Section receives `Clear`
 buttons, update this leaf and TASK-244-05-01 with explicit key-removal tests.
+Do not add Section `Clear` controls in this rollout unless implementation first
+promotes Section from no-regression coverage to `clear-required` in
+TASK-244-01-01 and adds a dedicated implementation leaf. Current acceptance is
+limited to preserving empty-gradient and zero-overlay omission behavior.
 
 Section no-regression should keep this contract:
 
