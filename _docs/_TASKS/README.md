@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 64 tasks
+- **To Do:** 69 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1378 tasks
 
@@ -38,6 +38,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-248 | Custom Screens Workspace Builder V2 | High | Very Large | Rebuild Custom Screens as content-type workspaces with `List View` and `Editor View` builder tabs |
+| TASK-248-01 | Custom Screen Definition V2 and Workspace Routing | High | Large | Add `schemaVersion: 2` with `listView`/`editorView`, migration, routes, and cache contracts |
+| TASK-248-02 | Custom Screen List View Builder and Records Table | High | Large | Configure Pages-like records tables, columns, filters, row actions, and create entry routing |
+| TASK-248-03 | Custom Screen Editor View Canvas and Entry Create Mode | High | Very Large | Build schema-bound create/edit canvases for entries using `Editor View` blocks and bindings |
+| TASK-248-04 | Admin Widget Registry, QA, Docs, and Closure | Medium | Large | Split admin/public widget registry behavior and close with Playwright CLI workspace replay |
 | TASK-244 | Widget Visual Surface Clear Controls | High | Very Large | Add `Clear` controls for every rendered widget with forced background, gradient, overlay, card surface, or framed shell styling |
 | TASK-244-01 | Widget Surface Inventory and Clear Semantics | High | Medium | Lock inventory and define `Clear` semantics separately from TASK-242 `None` token semantics |
 | TASK-244-01-01 | Widget Surface Background Inventory | High | Medium | Classify every rendered widget surface as clear-required, already-clearable, intentional-state, or admin-only exclusion |
