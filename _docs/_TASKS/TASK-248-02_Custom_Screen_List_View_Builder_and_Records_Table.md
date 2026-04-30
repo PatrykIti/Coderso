@@ -22,7 +22,8 @@ not a generic table builder over arbitrary data.
 
 ## Sub-Tasks
 
-No child task files.
+- [ ] TASK-248-02-01: List View Designer and Persisted Configuration
+- [ ] TASK-248-02-02: Records Table Renderer, Actions, and Cache Behavior
 
 ## Files to Change
 
@@ -186,6 +187,7 @@ function resolveEntryColumnValue(input: {
 
 ## Testing Requirements
 
+- Run the focused test suites required by TASK-248-02-01 and TASK-248-02-02.
 - Vitest UI:
   - `List View` tab renders after loading a V2 Custom Screen,
   - default columns are generated for the House Projects schema,

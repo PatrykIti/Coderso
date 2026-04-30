@@ -22,7 +22,8 @@ leaf tasks.
 
 ## Sub-Tasks
 
-No child task files.
+- [ ] TASK-248-01-01: Definition Schema, Normalizer, and V1 Migration
+- [ ] TASK-248-01-02: Workspace Routes, Client Cache, and Entry Error Mapping
 
 ## Files to Change
 
@@ -193,6 +194,7 @@ Custom Screens route convention.
 
 ## Testing Requirements
 
+- Run the focused test suites required by TASK-248-01-01 and TASK-248-01-02.
 - Vitest:
   - V1 definitions normalize into V2 without losing blocks or bindings,
   - V2 definitions reject unknown top-level and nested keys,

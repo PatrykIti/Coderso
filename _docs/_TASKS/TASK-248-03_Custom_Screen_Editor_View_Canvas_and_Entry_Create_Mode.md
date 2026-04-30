@@ -27,7 +27,9 @@ widgets as a workaround. It should use field-aware admin widgets.
 
 ## Sub-Tasks
 
-No child task files.
+- [ ] TASK-248-03-01: Editor View Designer and Admin Field Widget Controls
+- [ ] TASK-248-03-02: Editor View Create Mode Draft, Save, and Validation
+- [ ] TASK-248-03-03: Editor View Edit Mode Hydration, Save, and Dirty State
 
 ## Files to Change
 
@@ -221,6 +223,8 @@ adding broad string coercion to every binding path.
 
 ## Testing Requirements
 
+- Run the focused test suites required by TASK-248-03-01, TASK-248-03-02,
+  and TASK-248-03-03.
 - Vitest UI:
   - `Editor View` tab renders field-aware admin widgets for the selected
     content type,

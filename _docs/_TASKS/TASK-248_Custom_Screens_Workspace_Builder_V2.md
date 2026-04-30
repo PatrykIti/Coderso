@@ -165,9 +165,18 @@ them as transient UI-only tabs.
 ## Sub-Tasks
 
 - [ ] TASK-248-01: Custom Screen Definition V2 and Workspace Routing
+- [ ] TASK-248-01-01: Definition Schema, Normalizer, and V1 Migration
+- [ ] TASK-248-01-02: Workspace Routes, Client Cache, and Entry Error Mapping
 - [ ] TASK-248-02: Custom Screen List View Builder and Records Table
+- [ ] TASK-248-02-01: List View Designer and Persisted Configuration
+- [ ] TASK-248-02-02: Records Table Renderer, Actions, and Cache Behavior
 - [ ] TASK-248-03: Custom Screen Editor View Canvas and Entry Create Mode
+- [ ] TASK-248-03-01: Editor View Designer and Admin Field Widget Controls
+- [ ] TASK-248-03-02: Editor View Create Mode Draft, Save, and Validation
+- [ ] TASK-248-03-03: Editor View Edit Mode Hydration, Save, and Dirty State
 - [ ] TASK-248-04: Admin Widget Registry, QA, Docs, and Closure
+- [ ] TASK-248-04-01: Admin Widget Registry Surface Split
+- [ ] TASK-248-04-02: Playwright Replay, Docs, Changelog, and Board Closure
 
 ## Implementation Order
 

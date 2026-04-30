@@ -27,7 +27,8 @@ The product decision is reuse-first, not copy-everything:
 
 ## Sub-Tasks
 
-No child task files.
+- [ ] TASK-248-04-01: Admin Widget Registry Surface Split
+- [ ] TASK-248-04-02: Playwright Replay, Docs, Changelog, and Board Closure
 
 ## Files to Change
 
@@ -193,6 +194,7 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 
 ## Testing Requirements
 
+- Run the focused test suites required by TASK-248-04-01 and TASK-248-04-02.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Vitest:
