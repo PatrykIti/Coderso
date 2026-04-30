@@ -44,6 +44,9 @@ No child task files.
   `title`, `slug`, status/default metadata where supported, and full `data`.
 - Valid create invalidates the entries list and navigates according to the
   existing custom screen open-after-create preference.
+- Invalid create must surface the route-boundary machine-readable error from
+  TASK-248-01-02. Do not add a Custom Screens-only catch-all message that hides
+  `entry_validation_failed`, `entry_slug_conflict`, media, or relation errors.
 
 ## Implementation Pseudocode
 
@@ -128,10 +131,15 @@ only for explicit compatibility mode.
   - number, boolean, select, media, and relation field drafts preserve typed
     values,
   - valid House Projects create submits populated `data`, not `data: {}`,
+  - duplicate slug, invalid media, missing media, invalid relation, and missing
+    relation responses render as actionable inline errors,
   - save errors keep dirty draft state and render inline messages.
 - Bun route tests:
   - valid create returns the created entry,
   - invalid required-schema create returns `entry_validation_failed` as 400,
+  - duplicate slug returns `entry_slug_conflict` as 409,
+  - media and relation validation failures keep the mapped status/code from
+    TASK-248-01-02,
   - response payloads do not expose stack traces.
 
 ## Documentation Updates Required
@@ -147,3 +155,5 @@ only for explicit compatibility mode.
 2. Required-field content types can create entries from Custom Screens.
 3. Create submits normalized `data` for schema fields.
 4. Validation failures are visible as 400-level admin errors, not 500s.
+5. Slug, media, and relation failures preserve the centralized route error code
+   so the create UI can show field-appropriate feedback.

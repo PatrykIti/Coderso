@@ -126,6 +126,9 @@ Custom Screens should become a reusable admin workspace product surface:
    `List View` from the assigned content type.
 8. Validation errors from entry create/update are mapped as user-readable
    admin errors, not `500 internal_error`.
+9. Entry create/update failures keep centralized machine-readable error codes
+   for validation, duplicate slugs, media values/assets, and relation values so
+   the UI can show actionable field feedback without exposing stacks.
 
 ## Workspace Definition Sketch
 
@@ -235,6 +238,8 @@ them as transient UI-only tabs.
 - Targeted Bun route/service tests for:
   - Custom Screen V2 create/update strict schema validation,
   - content entry validation mapped to 400-level errors,
+  - duplicate entry slugs mapped to 409-level errors,
+  - media and relation entry failures mapped to bounded 400/404-level errors,
   - route registration for generated workspace entry routes.
 - Playwright CLI replay:
   - create or reuse the House Projects content type,

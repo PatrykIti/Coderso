@@ -39,6 +39,9 @@ No child task files.
 - Field widgets read/write typed values from the draft.
 - Save edit calls the existing update contract for the selected content type.
 - Update payload preserves fields that are not owned by the current editor view.
+- The save path must not rebuild `data` from all schema keys with empty
+  fallback values. It must merge normalized edited fields into the original entry
+  data so hidden, unsupported, or future fields survive a V2 editor save.
 - Cache events do not overwrite dirty local drafts.
 - Navigation away from dirty state is protected using existing editor patterns.
 
@@ -71,12 +74,17 @@ function buildUpdatePayload(input: {
   originalData: Record<string, unknown>;
   contentType: ContentTypeSummary;
 }) {
+  const editedData = normalizeEditableDraftData(input.draft.data, {
+    schema: input.contentType.schema,
+    editableFields: input.draft.editableFields,
+  });
+
   return {
     title: normalizeText(input.draft.title),
     slug: normalizeText(input.draft.slug),
     data: {
       ...input.originalData,
-      ...normalizeEditableDraftData(input.draft.data, input.contentType.schema),
+      ...editedData,
     },
   };
 }
@@ -112,6 +120,8 @@ async function saveEditorViewEdit(input: {
   - dynamic fields stay under `data`,
   - editable fields are limited to selected content type schema fields and
     approved system fields,
+  - non-editable `data` keys are preserved from the loaded entry but never
+    become new editable controls unless the V2 definition and schema allow them,
   - route errors map to machine-readable responses.
 - Anti-abuse: no public endpoint, nonce, HMAC, signature, or reCAPTCHA flow is
   introduced.
@@ -124,12 +134,17 @@ async function saveEditorViewEdit(input: {
   - edit mode hydrates title, slug, status, and schema data,
   - number, boolean, select, media, and relation fields retain typed values,
   - save updates only edited fields and preserves unrelated `data`,
+  - hidden or unsupported existing `data` keys are not reset to empty fallback
+    values after save,
   - cache refresh while dirty shows remote-update state instead of overwriting,
   - dirty navigation guard blocks accidental loss,
   - validation errors keep dirty state and render inline messages.
 - Bun route tests:
   - valid update returns the updated entry,
   - invalid update returns a 400-level machine-readable error,
+  - duplicate slug returns `entry_slug_conflict` as 409,
+  - invalid media and relation updates keep the centralized machine-readable
+    status/code mapping from TASK-248-01-02,
   - update for an entry outside the selected content type returns 404.
 
 ## Documentation Updates Required

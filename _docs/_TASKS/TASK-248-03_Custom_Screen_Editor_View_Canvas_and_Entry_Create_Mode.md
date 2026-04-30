@@ -49,7 +49,7 @@ widgets as a workaround. It should use field-aware admin widgets.
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx`
 - `tests/vitest/customScreens/bindingResolver.test.ts`
 - `tests/vitest/admin/entriesClient.test.ts`
-- `tests/integration/routes/contentTypes.test.ts`
+- `tests/integration/routes/contentEntryRoutes.test.ts`
 
 ## Builder Requirements
 
@@ -89,6 +89,11 @@ fields such as `title`, `slug`, `status`, and timestamps.
    unrelated entry fields.
 8. Validation errors map to inline field/form errors and do not leak server
    stack details.
+
+Edit-mode saves must merge edited fields into the original entry `data` instead
+of rebuilding `data` from every schema property. Hidden, unsupported, or future
+fields that are already present on the entry must survive a Custom Screen editor
+save unless the user explicitly edits a field owned by `Editor View`.
 
 ## Implementation Pseudocode
 
@@ -233,6 +238,7 @@ adding broad string coercion to every binding path.
   - required fields block submit with inline errors,
   - create mode submits normalized `data` for the House Projects schema,
   - edit mode hydrates existing values and saves typed updates,
+  - edit mode preserves hidden, unsupported, and unrelated existing `data` keys,
   - save errors keep dirty state and render inline messages,
   - navigation away from dirty create/edit state is protected.
 - Vitest service/client:

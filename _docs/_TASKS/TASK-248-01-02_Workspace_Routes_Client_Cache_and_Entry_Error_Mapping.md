@@ -65,7 +65,18 @@ No public API route is added by this leaf.
 ## Implementation Pseudocode
 
 ```ts
+import { ContentValidationError } from "../../services/content/validation";
+
 export const mapContentEntryError = (error: unknown) => {
+  if (error instanceof ContentValidationError) {
+    return new ApiError(
+      "entry_validation_failed",
+      "Entry validation failed.",
+      400,
+      { validation: error.details ?? [] }
+    );
+  }
+
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "content_type_not_found":
@@ -74,6 +85,20 @@ export const mapContentEntryError = (error: unknown) => {
       return new ApiError("entry_not_found", "Entry not found.", 404);
     case "entry_validation_failed":
       return new ApiError("entry_validation_failed", "Entry validation failed.", 400);
+    case "entry_slug_conflict":
+      return new ApiError("entry_slug_conflict", "Entry slug already exists.", 409);
+    case "media_value_invalid":
+      return new ApiError("media_value_invalid", "Media field value is invalid.", 400);
+    case "media_asset_missing":
+      return new ApiError("media_asset_missing", "Selected media asset was not found.", 404);
+    case "media_type_not_allowed":
+      return new ApiError("media_type_not_allowed", "Selected media type is not allowed.", 400);
+    case "relation_target_not_found":
+      return new ApiError("relation_target_not_found", "Relation target content type was not found.", 404);
+    case "relation_value_invalid":
+      return new ApiError("relation_value_invalid", "Relation field value is invalid.", 400);
+    case "relation_entry_missing":
+      return new ApiError("relation_entry_missing", "Related entry was not found.", 404);
     case "entry_duplicate_failed":
       return new ApiError("entry_duplicate_failed", "Entry could not be duplicated.", 400);
     case "auth_required":
@@ -118,6 +143,8 @@ load content type/entry, delegate to service, map known domain errors.
     definition schemas,
   - content-entry create/update schemas continue to reject unknown top-level
     payload keys,
+  - `ContentValidationError` details may be exposed only as AJV validation
+    details, not as raw stack traces or arbitrary thrown error objects,
   - route modules delegate normalization to service/domain owners.
 - Anti-abuse: no public endpoint, nonce, HMAC, signature, or reCAPTCHA flow is
   introduced.
@@ -129,7 +156,15 @@ load content type/entry, delegate to service, map known domain errors.
 - Bun route tests:
   - Custom Screen create/update accepts valid V2 definitions,
   - invalid V2 definitions map to 400-level machine-readable errors,
-  - `entry_validation_failed` maps to 400 instead of 500,
+  - `ContentValidationError("entry_validation_failed")` maps to 400 instead of
+    `internal_error`, with bounded validation details and no stack leakage,
+  - `entry_slug_conflict` maps to 409,
+  - media errors map deterministically:
+    `media_value_invalid` -> 400, `media_asset_missing` -> 404,
+    `media_type_not_allowed` -> 400,
+  - relation errors map deterministically:
+    `relation_target_not_found` -> 404, `relation_value_invalid` -> 400,
+    `relation_entry_missing` -> 404,
   - `content_type_not_found` and `entry_not_found` map to 404,
   - responses do not leak stack traces.
 - Vitest admin/client tests:
@@ -150,6 +185,7 @@ load content type/entry, delegate to service, map known domain errors.
 
 1. V2 Custom Screen payloads pass through route validation and service
    normalization.
-2. Content-entry validation failures return 400-level admin errors.
+2. Content-entry validation, slug, media, and relation failures return bounded
+   machine-readable admin errors instead of `internal_error`.
 3. Workspace links use shared canonical admin helpers.
 4. Cache/preload behavior remains aligned with the existing admin cache contract.
