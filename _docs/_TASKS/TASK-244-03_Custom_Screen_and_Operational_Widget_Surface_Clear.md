@@ -63,7 +63,8 @@ This subtask covers the widgets where the problem is most structural:
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx tests/vitest/ui/screen-widgets-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/custom-screen-binding-panel.test.tsx` only if binding-panel behavior changes
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/widgets/productCompare.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx`
 - `bun --cwd core lint`

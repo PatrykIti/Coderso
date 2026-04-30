@@ -90,9 +90,15 @@ therefore a contract-extension task, not only an editor affordance task:
   `appointmentForm.tsx:68-100`;
 - `listing-filters` has no `style` object in `ListingFiltersData` and no schema
   style property at `listingFilters.tsx:16-33` and `listingFilters.tsx:128-267`;
-- commerce widgets already expose limited style contracts, but any new
-  table/header/card clear fields must still be added to their existing
-  type/schema/default/normalizer/editor path.
+- `search-box` has no `style` object in `SearchBoxData` and no schema style
+  property at `searchBox.tsx:14-33` and `searchBox.tsx:63-97`;
+- `product-table` has no style contract in `ProductTableData` / schema at
+  `productTable.tsx:16` and `productTable.tsx:153`;
+- `product-compare` has no style contract in `ProductCompareData` / schema at
+  `productCompare.tsx:16` and `productCompare.tsx:127`;
+- `product-gallery` exposes a limited style contract, but new card/empty surface
+  clear fields must still be added to its existing type/schema/default/
+  normalizer/editor path.
 
 For every new style field, extend the owning widget module in place, preserve
 `additionalProperties: false`, and add schema tests that accept the new field,
@@ -107,10 +113,10 @@ widget styling flow.
 | `booking-calendar` | Add a minimal `style` contract, then replace root `bg-[var(--color-bg)]/95` at `bookingCalendar.tsx:348` with clearable `style.frameBackground`; keep warning colors at `bookingCalendar.tsx:361-364`; make refresh action background clearable only if it becomes a style field | Extend existing `BookingCalendarEditors.tsx` presentation/style area with frame/action controls plus `Clear`; remove keys from `style` | Assert schema accepts new fields/rejects unknown style keys; cleared frame omits `backgroundColor`/forced bg class and warning state still renders |
 | `appointment-form` | Add a minimal `style` contract, then replace root `appointmentForm.tsx:229` and selected-slot panel `appointmentForm.tsx:250` with clearable frame/summary surfaces; submit background at `appointmentForm.tsx:317-323` is style-owned only if exposed | Extend existing `AppointmentFormEditors.tsx` presentation/style area for frame/summary/action fields plus `Clear` | Assert schema accepts new fields/rejects unknown style keys; cleared root and selected-slot surfaces omit background output; error/success colors stay intact |
 | `listing-filters` | Add a minimal `style` contract, then replace filter shell `listingFilters.tsx:493`; treat apply button `listingFilters.tsx:543-548` as style-owned only when editor exposes it | Extend existing `ListingFiltersEditors.tsx` presentation/style area plus `Clear` | Assert schema accepts new fields/rejects unknown style keys; filter form still works and cleared shell/action keys are absent |
-| `search-box` | Replace listing shell `searchBox.tsx:190-221` and global shell `searchBox.tsx:265-292`; treat submit button background as style-owned only when exposed | Add `Clear` in `SearchBoxEditors.tsx` | Assert both listing and global variants omit cleared shell backgrounds |
+| `search-box` | Add a minimal `style` contract, then replace listing shell `searchBox.tsx:190-221` and global shell `searchBox.tsx:265-292`; treat submit button background as style-owned only when exposed | Extend existing `SearchBoxEditors.tsx` presentation/style area plus `Clear` | Assert schema accepts new fields/rejects unknown style keys; both listing and global variants omit cleared shell backgrounds |
 | `product-gallery` | Replace empty state `productGallery.tsx:342` and card backgrounds `productGallery.tsx:363-365` with clearable empty/card surfaces | Add clearable card/empty surface controls in `ProductGalleryEditors.tsx`; use `CommerceWidgetEditorShared.tsx` only for shared product style UI | Assert cards and empty state can render without forced backgrounds while stock labels remain semantic |
-| `product-table` | Replace empty state `productTable.tsx:350`, table wrapper `productTable.tsx:359`, and header `productTable.tsx:362` with clearable surfaces | Add table/header/empty clear controls in `ProductTableEditors.tsx` | Assert table wrapper/header omit cleared backgrounds and structure stays scrollable |
-| `product-compare` | Replace empty state `productCompare.tsx:339`, table wrapper `productCompare.tsx:348`, and header `productCompare.tsx:351` with clearable surfaces | Add table/header/empty clear controls in `ProductCompareEditors.tsx` | Assert compare table wrapper/header omit cleared backgrounds and attribute rows remain readable |
+| `product-table` | Add a minimal `style` contract, then replace empty state `productTable.tsx:350`, table wrapper `productTable.tsx:359`, and header `productTable.tsx:362` with clearable surfaces | Extend existing `ProductTableEditors.tsx` presentation/style area with table/header/empty clear controls | Assert schema accepts new fields/rejects unknown style keys; table wrapper/header omit cleared backgrounds and structure stays scrollable |
+| `product-compare` | Add a minimal `style` contract, then replace empty state `productCompare.tsx:339`, table wrapper `productCompare.tsx:348`, and header `productCompare.tsx:351` with clearable surfaces | Extend existing `ProductCompareEditors.tsx` presentation/style area with table/header/empty clear controls | Assert schema accepts new fields/rejects unknown style keys; compare table wrapper/header omit cleared backgrounds and attribute rows remain readable |
 
 ## Implementation Pseudocode
 

@@ -43,9 +43,15 @@ gradient off state.
 Do not treat inline media overlay and background media overlay as the same
 editor path. `HeroEditors.tsx:1044-1103` exposes `media.overlay` only for
 non-centered inline media, while `HeroEditors.tsx:1338-1373` owns centered
-background media and currently has no overlay clear affordance. Runtime uses
-overlay data for centered background image/video output at `hero.tsx:337` and
-`hero.tsx:440`; cover both paths without creating a second Hero editor flow.
+background media and currently has no overlay clear affordance. Runtime overlay
+currently comes from legacy/inline `media.overlay` at `hero.tsx:338`, while
+`background.media` has no `overlay` field in the type/schema at `hero.tsx:60-70`
+and `hero.tsx:164-180`. Extend the existing `background.media` contract with
+`overlay?: string`, update `heroSchema`, `resolveBackgroundMedia`,
+`updateBackgroundMedia`, and the renderer to prefer `background.media.overlay`
+for centered background media. Keep a narrow compatibility adapter for existing
+centered Heroes that still have legacy `media.overlay`. Do not create a second
+Hero editor flow.
 
 Current code references:
 
@@ -56,8 +62,8 @@ Current code references:
   backgrounds.
 - `HeroEditors.tsx:1097-1100` owns media overlay editing.
 - `HeroEditors.tsx:1338-1373` owns background media editing and must receive
-  the background-media overlay clear affordance if centered Hero can render an
-  overlay.
+  the background-media overlay clear affordance through the real
+  `background.media.overlay` contract.
 - `HeroEditors.tsx:1215-1239` owns CTA button background editing.
 - `HeroEditors.tsx:1338-1348` and `HeroEditors.tsx:1557-1570` own background
   color/gradient editing in visual and advanced modes.
@@ -123,7 +129,8 @@ expect(html).not.toContain("background:#224466");
   - media overlay clear removes the overlay field and overlay node where
     applicable.
   - centered background media overlay clear is covered separately from
-    non-centered inline media overlay.
+    non-centered inline media overlay, including schema acceptance for
+    `background.media.overlay` and compatibility for legacy `media.overlay`.
   - primary and secondary button background clear remove `primaryButtonBg` and
     `secondaryButtonBg` without serializing `"transparent"`.
 - `bun --cwd core lint`

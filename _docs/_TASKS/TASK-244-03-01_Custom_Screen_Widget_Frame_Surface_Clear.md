@@ -35,7 +35,9 @@ the layout and remove the visual surface.
 - `core/widgets/core/screenTwoColumn.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `tests/vitest/widgets/screenWidgets.test.tsx`
-- `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `tests/vitest/ui/screen-widgets-editor-wave.test.tsx` (create if missing)
+- `tests/vitest/ui/custom-screen-binding-panel.test.tsx` only if binding panel
+  behavior changes
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 
@@ -102,9 +104,9 @@ function normalizeScreenFrameStyle(style: ScreenFrameStyle | undefined) {
 | Widget | Runtime field/output | Editor clear behavior | Regression proof |
 |---|---|---|---|
 | `screen-record-header` | compact/card surfaces and card gradient at `screenRecordHeader.tsx:88-89`; pill surface at `screenRecordHeader.tsx:107` | Add `Clear` in `ScreenEditors.tsx` for frame background/gradient; do not require variant switch | `screenWidgets.test.tsx` asserts cleared card frame omits `bg-gradient-*` and forced `bg-background/*` output |
-| `screen-field-group` | subtle/default surfaces at `screenFieldGroup.tsx:79-80`; empty-group surface at `screenFieldGroup.tsx:105` | Add `Clear` for group surface style keys in `ScreenEditors.tsx` | Assert cleared group frame omits `bg-muted/20` and `bg-background/80` equivalents while children still bind |
+| `screen-field-group` | subtle/default frame surfaces at `screenFieldGroup.tsx:79-80`; empty-group placeholder at `screenFieldGroup.tsx:105` remains an intentional builder state unless product explicitly makes placeholder styling configurable | Add `Clear` for group frame surface style keys in `ScreenEditors.tsx` | Assert cleared group frame omits `bg-muted/20` and `bg-background/80` equivalents while children still bind; do not remove empty placeholder affordance as a side effect |
 | `screen-field-value` | inline/stacked surfaces at `screenFieldValue.tsx:80` and `screenFieldValue.tsx:99` | Add `Clear` for field value surface style keys in `ScreenEditors.tsx` | Assert cleared inline and stacked variants preserve bound value rendering |
-| `screen-two-column` | two-column frame and empty area surfaces at `screenTwoColumn.tsx:93` and `screenTwoColumn.tsx:111` | Add `Clear` for column/drop-area surfaces in `ScreenEditors.tsx` | Assert cleared two-column frame preserves column layout and drop area affordance |
+| `screen-two-column` | two-column frame at `screenTwoColumn.tsx:93`; empty drop-area placeholder at `screenTwoColumn.tsx:111` remains an intentional builder state unless product explicitly makes placeholder styling configurable | Add `Clear` for column/frame surfaces in `ScreenEditors.tsx` | Assert cleared two-column frame preserves column layout and drop area affordance |
 
 ## Implementation Pseudocode
 
@@ -135,7 +137,9 @@ variant switch. Add a real clearable background/gradient contract.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/screen-widgets-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+  only if implementation changes binding panel behavior
 - Add tests that prove:
   - existing default screen frames still render as before;
   - new `style` fields pass widget schema validation and unknown `style` keys
