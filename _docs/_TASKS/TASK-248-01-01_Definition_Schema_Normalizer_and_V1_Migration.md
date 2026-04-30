@@ -121,16 +121,37 @@ function migrateV1DefinitionToV2(
 ```
 
 ```ts
-function mapCustomScreenRow(row: CustomScreenRow): CustomScreenRecord {
+async function getCustomScreenRecord(id: string): Promise<CustomScreenRecord> {
+  const row = await findCustomScreenRow(id);
+  const contentType = await findContentTypeById(row.contentTypeId);
+  return mapCustomScreenRow(row, { contentType });
+}
+
+async function listCustomScreenRecords(): Promise<CustomScreenRecord[]> {
+  const rows = await listCustomScreenRows();
+  const contentTypesById = await loadContentTypesById(
+    rows.map((row) => row.contentTypeId)
+  );
+  return rows.map((row) =>
+    mapCustomScreenRow(row, {
+      contentType: contentTypesById.get(row.contentTypeId),
+    })
+  );
+}
+
+function mapCustomScreenRow(
+  row: CustomScreenRow,
+  context: { contentType?: ContentTypeSummary }
+): CustomScreenRecord {
   const definition = row.definition
-    ? normalizeV2Definition(row.definition, { contentType: row.contentType })
+    ? normalizeV2Definition(row.definition, context)
     : migrateV1DefinitionToV2(
         normalizeV1Definition({
           schemaVersion: row.schemaVersion,
           blocks: row.blocks,
           bindings: row.bindings,
         }),
-        { contentType: row.contentType }
+        context
       );
 
   return {
@@ -189,6 +210,10 @@ export function buildDefaultListViewDefinition(
   - legacy rows without `definition` project a deterministic V2 `definition`,
   - V2 rows with `definition` use it as the source of truth,
   - V2 records expose `definition` and legacy `blocks`/`bindings` projections,
+  - list/get service paths load the assigned content type before row mapping and
+    pass it as normalizer context,
+  - missing content-type context follows the explicit fallback/error behavior
+    chosen by the service instead of relying on a non-existent `row.contentType`,
   - V2 definitions reject unknown top-level and nested keys,
   - V2 definitions reject persisted `contentTypeId`,
   - default `List View` generation uses only approved system fields and selected

@@ -57,10 +57,38 @@ export function buildInitialEntryDraft(contentType: ContentTypeSummary): EntryDr
     slug: "",
     status: "draft",
     data: buildSchemaDefaultData(contentType.schema),
+    editableFields: collectCreateModeWritableFields(contentType.schema),
+    originalData: {},
+    originalStatus: "draft",
+    publishAction: null,
     fieldErrors: {},
   };
 }
 ```
+
+```tsx
+function CustomScreenEntryEditorRoute(input: {
+  screen: CustomScreenRecord;
+  contentType: ContentTypeSummary;
+  entryId: string;
+}) {
+  if (input.entryId === "new") {
+    return (
+      <CustomScreenEntryEditor
+        mode="create"
+        screen={input.screen}
+        contentType={input.contentType}
+        initialDraft={buildInitialEntryDraft(input.contentType)}
+      />
+    );
+  }
+
+  return <CustomScreenEntryEditor mode="edit" entryId={input.entryId} ... />;
+}
+```
+
+The `entryId === "new"` branch must skip existing-entry loading entirely. It
+renders a schema-default create draft and saves through create-mode logic.
 
 ```ts
 export function applyEditorFieldChange(input: {
@@ -96,9 +124,22 @@ async function saveEditorViewCreate(input: {
     draft: input.draft,
   });
 
-  return createEntry(input.contentType.slug, payload);
+  const created = await createEntry(input.contentType.slug, payload);
+  return applyEditorViewStatusChange({
+    typeSlug: input.contentType.slug,
+    entryId: created.id,
+    draft: input.draft,
+    originalStatus: "draft",
+    fallbackEntry: created,
+  });
 }
 ```
+
+Create mode should create the entry first, then use existing
+`updateEntryMetadata`, `publishEntry`, or `unpublishEntry` clients for any
+write-capable status/publish controls. If the first implementation keeps status
+controls display-only, the UI must not render them as editable and tests must
+assert no metadata/publish call is made.
 
 `CustomScreenEntriesPage` should route directly to `entries/new` when
 `definition.listView.createMode === "editor-view"`. The legacy drawer remains
@@ -107,7 +148,8 @@ only for explicit compatibility mode.
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal content entry API.
-- Auth model: authenticated admin session or existing admin API key model.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this leaf.
 - RBAC: create requires `content:write`; loading screen/content type schema
   requires `content:read`.
 - CSRF: create uses the existing CSRF-backed `entriesClient`.
@@ -126,11 +168,14 @@ only for explicit compatibility mode.
 - `bun --cwd core lint:types`
 - Vitest UI:
   - `New record` routes to `entries/new` for V2 editor-view create mode,
+  - `entryId === "new"` skips existing-entry loading and renders a create draft,
   - create mode initializes schema defaults,
   - required fields block submit with inline errors,
   - number, boolean, select, media, and relation field drafts preserve typed
     values,
   - valid House Projects create submits populated `data`, not `data: {}`,
+  - create status changes use `updateEntryMetadata` after create, or status
+    controls are explicitly display-only,
   - duplicate slug, invalid media, missing media, invalid relation, and missing
     relation responses render as actionable inline errors,
   - save errors keep dirty draft state and render inline messages.

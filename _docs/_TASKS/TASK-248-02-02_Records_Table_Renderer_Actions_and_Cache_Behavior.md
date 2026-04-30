@@ -107,7 +107,8 @@ Cache subscriptions must refresh on:
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal entry API.
-- Auth model: authenticated admin session or existing admin API key model.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this leaf.
 - RBAC:
   - list rendering requires `content:read`,
   - row delete requires `content:write`,

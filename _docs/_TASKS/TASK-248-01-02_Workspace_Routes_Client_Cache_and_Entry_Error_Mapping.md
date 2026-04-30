@@ -35,6 +35,7 @@ No child task files.
 - `tests/integration/routes/customScreensRoutes.test.ts`
 - new `tests/integration/routes/contentEntryRoutes.test.ts`
 - `tests/vitest/admin/customScreensClient.test.ts`
+- `tests/vitest/admin/adminPrefetch.test.ts`
 
 ## Route and Client Contract
 
@@ -143,6 +144,32 @@ business logic into the route. The route remains orchestration-only: validate,
 load content type/entry, delegate to service, map known domain errors.
 
 ```ts
+export type AdminPrefetchRunContext = {
+  href: string;
+  basePath: string;
+  path: string;
+  activePath?: string;
+};
+
+export type AdminPrefetchEntry = {
+  match: string | ((path: string) => boolean);
+  resolveKey?: (context: AdminPrefetchRunContext) => string;
+  run: (context: AdminPrefetchRunContext) => Promise<unknown> | void;
+};
+
+function enqueuePrefetch(entry: AdminPrefetchEntry, context: AdminPrefetchRunContext) {
+  const key = entry.resolveKey?.(context) ?? String(entry.match);
+  queue.push({ key, entry, context });
+}
+```
+
+`createAdminPrefetcher` must pass the resolved route path into `run(context)`;
+the current zero-argument `run()` shape is not enough for workspace routes such
+as `/advanced/custom-screens/:screenId/entries/:entryId`. The workspace entry
+should also provide a route-specific `resolveKey` so list, create, and detail
+warmups do not incorrectly share a broad `/advanced/custom-screens` cooldown key.
+
+```ts
 const CUSTOM_SCREEN_WORKSPACE_PATTERN =
   /^\/advanced\/custom-screens\/([^/]+)\/entries(?:\/([^/]+))?\/?$/;
 
@@ -176,7 +203,9 @@ export async function prefetchCustomScreenWorkspace(path: string) {
   if (!target) return false;
 
   await listCustomScreensCached();
-  const screen = await getCustomScreenCached(target.screenId);
+  const screen = await getCustomScreenCached(target.screenId).catch(() => null);
+  if (!screen) return true;
+
   const contentTypes = await listContentTypesCached();
   const contentType = contentTypes.find((item) => item.id === screen.contentTypeId);
   if (!contentType) return true;
@@ -198,7 +227,8 @@ datasource prefetcher or a mount-force refetch loop.
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal admin API only.
-- Auth model: authenticated admin session or existing admin API key model.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this leaf.
 - RBAC:
   - Custom Screen definition create/update keeps `content:write`,
   - Custom Screen read keeps `content:read`,
@@ -243,6 +273,10 @@ datasource prefetcher or a mount-force refetch loop.
     `prefetch`,
   - absolute href helper wraps `resolveAdminHref(basePath, path)` only for
     non-router call sites,
+  - `createAdminPrefetcher` passes `{ href, basePath, path, activePath }` into
+    `AdminPrefetchEntry.run`,
+  - workspace prefetch uses a route-specific key for list, create, and entry
+    detail paths,
   - prefetch parses workspace route params and warms `customScreens:list`, the
     screen detail key, the selected content type, the assigned entries list, and
     the optional entry detail key without mount-force refetch loops.

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Custom Screens + Entry Editor + Builder UX
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-248-01, TASK-248-02
+**Dependencies:** TASK-248-01, TASK-248-02, TASK-248-04-01
 **Status:** To Do
 
 ---
@@ -136,11 +136,16 @@ save unless the user explicitly edits a field owned by `Editor View`.
 ```ts
 function buildInitialEntryDraft(input: {
   contentType: ContentTypeSummary;
+  editorView: CustomScreenEditorViewDefinition;
   mode: "create" | "edit";
   entry?: EntrySummary;
 }) {
   if (input.mode === "edit" && input.entry) {
-    return hydrateDraftFromEntry(input.entry, input.contentType.schema);
+    return hydrateDraftFromEntry({
+      entry: input.entry,
+      schema: input.contentType.schema,
+      editableFields: collectEditorViewWritableFields(input.editorView),
+    });
   }
 
   return {
@@ -148,6 +153,10 @@ function buildInitialEntryDraft(input: {
     slug: "",
     status: "draft",
     data: buildSchemaDefaultData(input.contentType.schema),
+    editableFields: collectEditorViewWritableFields(input.editorView),
+    originalData: {},
+    originalStatus: "draft",
+    publishAction: null,
     fieldErrors: {},
   };
 }
@@ -184,18 +193,43 @@ async function saveEditorViewEntry(input: {
   entryId?: string;
   draft: EntryDraft;
 }) {
-  const payload = normalizeEntryPayloadForSchema({
-    schema: input.contentType.schema,
-    draft: input.draft,
-  });
-
   if (input.mode === "create") {
-    return createEntry(input.contentType.slug, payload);
+    const payload = normalizeEntryCreatePayloadForSchema({
+      schema: input.contentType.schema,
+      draft: input.draft,
+    });
+    const created = await createEntry(input.contentType.slug, payload);
+    return applyEditorViewStatusChange({
+      typeSlug: input.contentType.slug,
+      entryId: created.id,
+      draft: input.draft,
+      originalStatus: "draft",
+    });
   }
 
-  return updateEntry(input.contentType.slug, input.entryId!, payload);
+  const payload = buildEditorViewUpdatePayload({
+    draft: input.draft,
+    originalData: input.draft.originalData,
+    editableFields: input.draft.editableFields,
+    schema: input.contentType.schema,
+  });
+  const updated = await updateEntry(input.contentType.slug, input.entryId!, payload);
+  return applyEditorViewStatusChange({
+    typeSlug: input.contentType.slug,
+    entryId: input.entryId!,
+    draft: input.draft,
+    originalStatus: input.draft.originalStatus,
+    fallbackEntry: updated,
+  });
 }
 ```
+
+`applyEditorViewStatusChange` must use the existing `updateEntryMetadata`,
+`publishEntry`, and `unpublishEntry` clients. It must not smuggle status or
+publish mutations into the content-data update payload. If status controls are
+rendered as display-only for the first implementation slice, that limitation must
+be explicit in the leaf and the publish/unpublish controls must not be shown as
+write-capable.
 
 `screen-field-value` can still exist as a read-only display widget, but typed
 editing should be done by field-aware widgets. Do not solve the V2 editor by
@@ -204,7 +238,8 @@ adding broad string coercion to every binding path.
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal content entry API.
-- Auth model: authenticated admin session or existing admin API key model.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this task.
 - RBAC:
   - loading entry/editor data requires `content:read`,
   - create/update requires `content:write`,
@@ -239,6 +274,9 @@ adding broad string coercion to every binding path.
   - create mode submits normalized `data` for the House Projects schema,
   - edit mode hydrates existing values and saves typed updates,
   - edit mode preserves hidden, unsupported, and unrelated existing `data` keys,
+  - status changes call `updateEntryMetadata`,
+  - publish/unpublish controls call the existing publish routes only when the user
+    has `content:publish`,
   - save errors keep dirty state and render inline messages,
   - navigation away from dirty create/edit state is protected.
 - Vitest service/client:

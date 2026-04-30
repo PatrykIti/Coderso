@@ -186,7 +186,8 @@ convention.
 ## Security Contract
 
 - Visibility: internal admin routes only.
-- Auth model: authenticated admin session or existing admin API key model.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this task.
 - RBAC:
   - Custom Screen definition create/update requires the existing `content:write`
     permission used by current Custom Screens admin routes.

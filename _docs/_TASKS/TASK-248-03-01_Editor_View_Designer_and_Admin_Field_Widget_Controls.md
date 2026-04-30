@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Custom Screens + Builder UX + Admin Widgets
 **Estimated Effort:** Medium
-**Dependencies:** TASK-248-02-02
+**Dependencies:** TASK-248-02-02, TASK-248-04-01
 **Status:** To Do
 
 ---

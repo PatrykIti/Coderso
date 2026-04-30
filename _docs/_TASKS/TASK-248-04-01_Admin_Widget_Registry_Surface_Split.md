@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Widgets + Admin Registry
 **Estimated Effort:** Medium
-**Dependencies:** TASK-248-03-03
+**Dependencies:** TASK-248-01-01
 **Status:** To Do
 
 ---
@@ -49,8 +49,7 @@ type WidgetSurface =
   | "widget-library"
   | "custom-screen-builder"
   | "admin-list-view"
-  | "admin-editor-view"
-  | "admin-readonly-preview";
+  | "admin-editor-view";
 
 type RegisteredWidget = {
   type: string;
@@ -80,11 +79,15 @@ Admin widget contract rule:
 - If a field/control is an internal Custom Screens form control rather than a
   registered widget, document that explicitly in the implementation notes and
   keep it out of the public widget registry.
-- Admin-only `admin-list-view`, `admin-editor-view`, and `admin-readonly-preview`
-  controls are not module-pack widgets by default. If implementation makes one
-  module-facing or changes pack completeness/readiness, update
+- Admin-only `admin-list-view` and `admin-editor-view` controls are not
+  module-pack widgets by default. If implementation makes one module-facing or
+  changes pack completeness/readiness, update
   `core/widgets/modulePackMatrix.ts`, `_docs/WIDGET_PACK_MATRIX.md`, and the
   relevant `_docs/_WIDGETS/*` docs in the same leaf.
+- `admin-list-view` is optional and list-scoped. It may expose safe list chrome
+  or display helpers, but columns, filters, row actions, and bulk actions remain
+  `definition.listView` configuration objects owned by TASK-248-02. Do not build
+  a second widget-backed table model.
 
 ## Implementation Pseudocode
 
@@ -154,6 +157,10 @@ tests; do not perform a broad registry rename.
 - Vitest:
   - registry returns only widgets allowed for `admin-list-view`,
   - registry returns only widgets allowed for `admin-editor-view`,
+  - an empty `admin-list-view` registry is valid when list behavior remains
+    configuration-only,
+  - List View columns, filters, row actions, and bulk actions are not read from
+    widget blocks,
   - existing `page-builder`, `widget-library`, and legacy
     `custom-screen-builder` availability remains unchanged,
   - public-only widgets are hidden from Custom Screen builder,

@@ -199,17 +199,17 @@ must consume that field instead of reconstructing the definition from legacy
 3. Add workspace route helpers and client/cache support for V2 screens.
 4. Build the `List View` designer and the rendered records table from the V2
    `listView` definition.
-5. Build the `Editor View` designer and create/edit entry renderer from the V2
+5. Split widget registry behavior by surface so the `admin-editor-view` surface
+   exists before the Editor View designer consumes it.
+6. Build the `Editor View` designer and create/edit entry renderer from the V2
    `editorView` definition.
-6. Split widget registry behavior by surface so admin widgets stay scoped and
-   data-aware widgets only use the selected content type.
 7. Replay the House Projects workflow with Playwright CLI and close docs.
 
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal admin API only.
-- Auth model: authenticated admin session or existing admin API key model used
-  by `/admin/api/custom-screens` and `/admin/api/content/:type/entries`.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this task family.
 - RBAC:
   - Custom Screen definition writes require the existing `content:write`
     permission used by `/admin/api/custom-screens`.
@@ -246,6 +246,8 @@ must consume that field instead of reconstructing the definition from legacy
   - rendered records table columns/filters/row actions,
   - `Editor View` create mode submitting normalized entry `data`,
   - `Editor View` edit mode preserving typed entry values,
+  - `Editor View` status changes using existing metadata/publish clients without
+    bypassing `content:write` / `content:publish`,
   - admin widget registry filtering by surface,
   - registered admin widgets exposing schema/defaults/normalizer/render/editor
     contracts, or being explicitly documented as internal controls outside the
@@ -258,7 +260,13 @@ must consume that field instead of reconstructing the definition from legacy
   - content entry validation mapped to 400-level errors,
   - duplicate entry slugs mapped to 409-level errors,
   - media and relation entry failures mapped to bounded 400/404-level errors,
-  - route registration for generated workspace entry routes.
+  - publish/unpublish route errors remain machine-readable when status controls
+    exercise those existing routes.
+- Vitest admin routing/cache tests for:
+  - `AdminApp` and Custom Screen route-param helpers recognize generated
+    workspace entry paths,
+  - `adminPrefetch` receives route context and warms workspace list/detail keys
+    without mount-force refetch loops.
 - Playwright CLI replay:
   - create or reuse the House Projects content type,
   - configure a Custom Screen with `List View` and `Editor View`,

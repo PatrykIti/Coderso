@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Coderso Custom Screens + QA + Docs
 **Estimated Effort:** Small
-**Dependencies:** TASK-248-04-01
+**Dependencies:** TASK-248-03-03, TASK-248-04-01
 **Status:** To Do
 
 ---

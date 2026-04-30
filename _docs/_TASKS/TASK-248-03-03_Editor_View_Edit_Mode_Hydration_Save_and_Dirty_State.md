@@ -62,7 +62,10 @@ export function hydrateEditorViewDraft(input: {
       existing: input.entry.data ?? {},
       fields: collectEditorViewWritableFields(input.editorView),
     }),
+    editableFields: collectEditorViewWritableFields(input.editorView),
     originalData: input.entry.data ?? {},
+    originalStatus: input.entry.status,
+    publishAction: null,
     fieldErrors: {},
   };
 }
@@ -72,11 +75,12 @@ export function hydrateEditorViewDraft(input: {
 function buildUpdatePayload(input: {
   draft: EntryDraft;
   originalData: Record<string, unknown>;
+  editableFields: string[];
   contentType: ContentTypeSummary;
 }) {
   const editedData = normalizeEditableDraftData(input.draft.data, {
     schema: input.contentType.schema,
-    editableFields: input.draft.editableFields,
+    editableFields: input.editableFields,
   });
 
   return {
@@ -99,16 +103,30 @@ async function saveEditorViewEdit(input: {
   const payload = buildUpdatePayload({
     draft: input.draft,
     originalData: input.draft.originalData,
+    editableFields: input.draft.editableFields,
     contentType: input.contentType,
   });
-  return updateEntry(input.contentType.slug, input.entryId, payload);
+  const updated = await updateEntry(input.contentType.slug, input.entryId, payload);
+  return applyEditorViewStatusChange({
+    typeSlug: input.contentType.slug,
+    entryId: input.entryId,
+    draft: input.draft,
+    originalStatus: input.draft.originalStatus,
+    fallbackEntry: updated,
+  });
 }
 ```
+
+`applyEditorViewStatusChange` must use `updateEntryMetadata` for draft/archive or
+scheduled status changes and `publishEntry` / `unpublishEntry` for explicit
+publish controls. Status mutations remain separate from `updateEntry` data
+payloads so unrelated entry data can still be preserved by merge.
 
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal content entry API.
-- Auth model: authenticated admin session or existing admin API key model.
+- Auth model: authenticated admin session on the existing session-cookie admin
+  API. No API-key auth path is introduced by this leaf.
 - RBAC:
   - loading edit data requires `content:read`,
   - update requires `content:write`,
@@ -134,6 +152,9 @@ async function saveEditorViewEdit(input: {
   - edit mode hydrates title, slug, status, and schema data,
   - number, boolean, select, media, and relation fields retain typed values,
   - save updates only edited fields and preserves unrelated `data`,
+  - status changes call `updateEntryMetadata`,
+  - publish/unpublish controls call the existing publish routes only when
+    `content:publish` is available,
   - hidden or unsupported existing `data` keys are not reset to empty fallback
     values after save,
   - cache refresh while dirty shows remote-update state instead of overwriting,

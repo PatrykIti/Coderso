@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Coderso Custom Screens + Widgets + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-248-01, TASK-248-02, TASK-248-03
+**Dependencies:** TASK-248-01, TASK-248-02
 **Status:** To Do
 
 ---
@@ -22,8 +22,15 @@ The product decision is reuse-first, not copy-everything:
 - Reuse layout widgets only when they are explicitly safe for admin surfaces.
 - Do not expose public/front widgets in Custom Screens simply because they
   exist in the page builder.
-- Add admin-specific widgets for `List View` and `Editor View` where the data
-  source is the selected content type and its entries.
+- Add admin-specific widgets for `Editor View` where the data source is the
+  selected content type and entry.
+- Keep `List View` configuration-first. Its columns, filters, bulk actions, and
+  row actions remain `definition.listView` config objects, not arbitrary widgets.
+
+Dependency note: TASK-248-04-01 is intentionally executed before
+TASK-248-03-01 so the `admin-editor-view` surface exists before the editor
+designer consumes it. TASK-248-04-02 remains the final closure/replay leaf after
+TASK-248-03-03.
 
 ## Sub-Tasks
 
@@ -74,8 +81,7 @@ type WidgetSurface =
   | "widget-library"
   | "custom-screen-builder"
   | "admin-list-view"
-  | "admin-editor-view"
-  | "admin-readonly-preview";
+  | "admin-editor-view";
 
 type RegisteredWidget = {
   type: string;
@@ -103,7 +109,9 @@ widgets: `schema`, `defaults`, `normalize*`, render contract,
 `wizard`/`visual`/`advanced` editor behavior, and focused tests. If a field
 control is not a registered widget, keep it as an internal Custom Screens
 control and document that it does not participate in the public widget registry
-or module pack matrix.
+or module pack matrix. The `admin-list-view` surface is optional and list-scoped:
+it may expose safe list chrome or display helpers, but it must not replace
+`definition.listView.columns`, filters, row actions, or bulk-action config.
 
 ## Implementation Pseudocode
 
@@ -150,6 +158,10 @@ const listWidgets = listRegisteredWidgetsForSurface({
   contentType,
 });
 ```
+
+List widgets are allowed to be empty in V2. The list table is still rendered from
+`definition.listView`; `admin-list-view` must not introduce a second free-form
+table builder.
 
 Compatibility rule: existing V1 screen widget types must remain renderable.
 If a V1 screen uses a legacy widget or the legacy `custom-screen-builder`
@@ -220,6 +232,9 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 - Vitest:
   - registry returns only widgets allowed for `admin-list-view`,
   - registry returns only widgets allowed for `admin-editor-view`,
+  - an empty `admin-list-view` registry is valid when List View is implemented as
+    configuration objects only,
+  - list columns/filters/row actions are not read from widget blocks,
   - existing `page-builder`, `widget-library`, and legacy
     `custom-screen-builder` availability remains unchanged,
   - no alternate `admin-list` / `admin-record` aliases are required or accepted
