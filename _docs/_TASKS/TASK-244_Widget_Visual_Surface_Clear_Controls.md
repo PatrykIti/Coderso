@@ -63,8 +63,8 @@ Out of scope:
 - structural choices such as variant, source, alignment, columns, ratios, and
   content modes;
 - `section` runtime gradient behavior, which already omits the gradient when
-  both gradient endpoints are empty. This task may still add shared editor
-  helpers or no-regression tests around it.
+  both gradient endpoints are empty. Section background-color clear semantics
+  are in scope through TASK-244-02-03.
 
 ## Clear Semantics
 
@@ -104,7 +104,7 @@ references in TASK-244-01-01 before implementation.
 
 | Group | Widgets | Problem |
 |---|---|---|
-| Hero and shared color controls | `hero`; shared color/gradient field helpers; `section` no-regression | Hero gradient editor cannot clear `background.gradient`; background color and media overlays lack a first-class clear affordance |
+| Hero and shared color controls | `hero`; shared color/gradient field helpers; `section` background clear plus no-regression | Hero gradient editor cannot clear `background.gradient`; Hero background color and media overlays lack a first-class clear affordance; Section background color currently falls back to transparent output instead of omission |
 | Custom screen widgets | `screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column` | hard-coded `bg-gradient-*`, `bg-background/*`, and `bg-muted/*` frame surfaces with no style contract |
 | Booking/listing/search widgets | `booking-calendar`, `appointment-form`, `listing-filters`, `search-box` | hard-coded framed shells and button backgrounds with no clearable widget surface model |
 | Commerce widgets | `product-gallery`, `product-table`, `product-compare` | cards, tables, headers, and empty states force `bg-[var(--color-bg)]` surfaces without clear controls |

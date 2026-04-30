@@ -21,6 +21,7 @@ color/background clear buttons without widening into unrelated token work.
 
 - [ ] TASK-244-02-01: Hero Gradient, Background, and Media Overlay Clear
 - [ ] TASK-244-02-02: Shared Clear Field Controls and Section No-Regression
+- [ ] TASK-244-02-03: Section Background Color Clear
 
 ## Files to Change
 
@@ -28,9 +29,10 @@ color/background clear buttons without widening into unrelated token work.
 - `core/admin/ui/widgets/editors/HeroEditors.tsx`
 - shared editor helpers only if they avoid repeated clear-button logic without
   adding runtime coupling
-- `core/widgets/core/section.tsx` only for no-regression tests or helper reuse
-- `core/admin/ui/widgets/editors/SectionEditors.tsx` only if shared clear-field
-  controls are introduced there too
+- `core/widgets/core/section.tsx`
+- `core/admin/ui/widgets/editors/SectionEditors.tsx`
+- `tests/vitest/widgets/section.test.tsx`
+- `tests/vitest/ui/section-editor-wave.test.tsx`
 
 ## Implementation Order
 
@@ -40,7 +42,10 @@ color/background clear buttons without widening into unrelated token work.
 3. Ensure runtime omits `backgroundImage`, overlay DOM, and cleared inline style
    output.
 4. Extract small editor helper components only after Hero behavior is proven.
-5. Add Section no-regression coverage if shared helpers touch section controls.
+5. Add Section background-color clear behavior without changing
+   empty-gradient/zero-overlay behavior.
+6. Add Section no-regression coverage if shared helpers touch additional
+   Section controls.
 
 ## Security Contract
 
@@ -61,6 +66,8 @@ color/background clear buttons without widening into unrelated token work.
 - Reject-unknown validation:
   - Hero/background/media/style schemas must accept clear omission while still
     rejecting unknown keys.
+  - Section `style.backgroundColor` must remain owned by the strict Section
+    schema and reject unknown style keys.
 - Anti-abuse:
   - no public write surface is added;
   - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
@@ -71,7 +78,7 @@ color/background clear buttons without widening into unrelated token work.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`
-- Section no-regression suite if Section editor/runtime is touched.
+- `bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -79,7 +86,7 @@ color/background clear buttons without widening into unrelated token work.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/HERO.md`
-- `_docs/_WIDGETS/SECTION.md` only if shared controls or docs change
+- `_docs/_WIDGETS/SECTION.md`
 - `_docs/WIDGETS.md`
 - `_docs/_TASKS/README.md` status only when this subtask moves state
 
@@ -89,4 +96,6 @@ color/background clear buttons without widening into unrelated token work.
 2. Clear removes Hero background and CTA style fields from emitted widget data.
 3. Hero runtime does not render cleared gradient/background/overlay/button
    background output.
-4. Section behavior remains stable if shared controls are reused.
+4. Section background color can be cleared without writing `"transparent"` or an
+   empty-string off-state sentinel.
+5. Section empty-gradient and zero-overlay behavior remains stable.

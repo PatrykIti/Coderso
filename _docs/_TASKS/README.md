@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 64 tasks
+- **To Do:** 65 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1377 tasks
 
@@ -46,6 +46,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-244-02 | Hero, Shared Color Fields, and Background Clear Controls | High | Large | Fix Hero gradient/background clear first and establish reusable color clear controls |
 | TASK-244-02-01 | Hero Gradient, Background, and Media Overlay Clear | High | Medium | Add Hero `Clear` actions and runtime omission tests for gradient, background color, and media overlay |
 | TASK-244-02-02 | Shared Clear Field Controls and Section No-Regression | High | Medium | Reuse small editor clear helpers where justified and keep Section empty-gradient behavior stable |
+| TASK-244-02-03 | Section Background Color Clear | High | Small | Add Section background-color `Clear` semantics without changing empty-gradient or zero-overlay behavior |
 | TASK-244-03 | Custom Screen and Operational Widget Surface Clear | High | Large | Add clearable frame/surface contracts for screen, booking, listing, search, and commerce widgets |
 | TASK-244-03-01 | Custom Screen Widget Frame Surface Clear | High | Medium | Let screen-record-header, screen-field-value, screen-field-group, and screen-two-column clear frame surfaces |
 | TASK-244-03-02 | Booking, Listing, Search, and Commerce Frame Surface Clear | High | Large | Let operational widgets clear shell, table, card, and action background surfaces without touching semantic state colors |

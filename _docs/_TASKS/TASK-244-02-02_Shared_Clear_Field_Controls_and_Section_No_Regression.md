@@ -81,14 +81,12 @@ function ClearableColorField(props: ClearableColorFieldProps) {
 }
 ```
 
-Section is not a new clear-control target unless implementation deliberately
-adopts the shared helper there. Its required baseline is no-regression for the
-existing empty-gradient/zero-overlay behavior. If Section receives `Clear`
-buttons, update this leaf and TASK-244-05-01 with explicit key-removal tests.
-Do not add Section `Clear` controls in this rollout unless implementation first
-promotes Section from no-regression coverage to `clear-required` in
-TASK-244-01-01 and adds a dedicated implementation leaf. Current acceptance is
-limited to preserving empty-gradient and zero-overlay omission behavior.
+Section background-color clear behavior is owned by TASK-244-02-03. This leaf
+remains responsible for shared helper reuse and no-regression coverage around
+the existing empty-gradient/zero-overlay behavior. Do not add additional Section
+`Clear` controls from this helper leaf unless implementation first promotes the
+specific field to `clear-required` in TASK-244-01-01 and adds a dedicated
+implementation leaf.
 
 Section no-regression should keep this contract:
 
@@ -135,11 +133,12 @@ const hasGradient =
     without serializing `"transparent"` or an empty off-state value.
 - If no shared helper is created, record that the proof stays in the changed
   editor-wave suites and do not leave an unused placeholder helper file.
-- If Section editor/runtime changes:
+- If Section editor/runtime changes through TASK-244-02-03:
   - targeted Section runtime test proving empty gradient fields omit
     `backgroundImage`;
   - `bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
-    proving clear removes gradient/color fields.
+    proving background-color clear removes the key and no-regression behavior
+    stays intact.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -147,7 +146,8 @@ const hasGradient =
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- `_docs/_WIDGETS/SECTION.md` only if Section editor behavior changes
+- `_docs/_WIDGETS/SECTION.md` through TASK-244-02-03 when Section background
+  clear behavior changes
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria

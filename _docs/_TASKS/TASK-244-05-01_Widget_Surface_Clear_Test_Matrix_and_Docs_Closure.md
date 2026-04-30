@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + QA + Docs
 **Estimated Effort:** Small
-**Dependencies:** TASK-244-02-01, TASK-244-02-02, TASK-244-03-01, TASK-244-03-02, TASK-244-04-01, TASK-244-04-02
+**Dependencies:** TASK-244-02-01, TASK-244-02-02, TASK-244-02-03, TASK-244-03-01, TASK-244-03-02, TASK-244-04-01, TASK-244-04-02
 **Status:** To Do
 
 ---
@@ -24,7 +24,7 @@ problem needs targeted proof.
 
 | Group | Runtime proof | Editor proof | Docs proof |
 |---|---|---|---|
-| Hero/shared controls | `tests/vitest/widgets/hero.test.tsx` and `tests/vitest/widgets/heroEditors.test.tsx` prove cleared gradient/background/overlay/button backgrounds omit output; `tests/vitest/widgets/section.test.tsx` proves Section no-regression unless Section adopts the shared clear helper | `tests/vitest/ui/hero-editor-wave.test.tsx` proves `Clear` removes nested `background`/`style` keys; `tests/vitest/ui/section-editor-wave.test.tsx` is required only if Section editor behavior changes | `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/SECTION.md` only if Section docs change, `_docs/WIDGETS.md` |
+| Hero/shared controls | `tests/vitest/widgets/hero.test.tsx` and `tests/vitest/widgets/heroEditors.test.tsx` prove cleared gradient/background/overlay/button backgrounds omit output; `tests/vitest/widgets/section.test.tsx` proves Section background-color clear plus empty-gradient/zero-overlay no-regression | `tests/vitest/ui/hero-editor-wave.test.tsx` proves `Clear` removes nested `background`/`style` keys; `tests/vitest/ui/section-editor-wave.test.tsx` proves Section `Clear` removes `style.backgroundColor` without writing `"transparent"` or an empty string | `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/SECTION.md`, `_docs/WIDGETS.md` |
 | Screen widgets | `tests/vitest/widgets/screenWidgets.test.tsx` proves cleared screen frame surfaces omit background classes/styles; `tests/vitest/admin/custom-screen-schemas.test.ts` proves configured and cleared screen widget style payloads survive `normalizeCustomScreenBlocks()` without schema bypasses | `tests/vitest/ui/screen-widgets-editor-wave.test.tsx` must be created or extended to import `ScreenEditors.tsx` and prove removed style keys; `tests/vitest/ui/custom-screen-binding-panel.test.tsx` is only required if binding panel behavior changes | `_docs/WIDGETS.md`, `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md` where two-column docs change |
 | Operational widgets | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/widgets/appointmentForm.test.tsx`, `tests/vitest/widgets/listingFilters.test.tsx`, `tests/vitest/widgets/searchBox.test.tsx`, `tests/vitest/widgets/productGallery.test.tsx`, `tests/vitest/widgets/productTable.test.tsx`, `tests/vitest/widgets/productCompare.test.tsx` prove cleared shells/tables/cards omit forced backgrounds | The seven operational editor-wave tests listed in TASK-244-03-02 prove `Clear` removes keys | `_docs/WIDGETS.md`; exact new `_docs/_WIDGETS/*.md` files only if introduced |
 | Composite/content widgets | `tests/vitest/widgets/gridColumns.test.tsx`, marketing/content Vitest widget suites, and Bun-owned `tests/unit/widgets/contentList.test.tsx`, `tests/unit/widgets/postsFeedWidget.test.tsx`, `tests/unit/widgets/entryTeaser.test.tsx` prove cleared surfaces/overlays omit output | The sixteen editor-wave tests listed in TASK-244-04-01 prove `Clear` removes keys | Exact docs listed in TASK-244-04-01 |
@@ -36,11 +36,10 @@ Because TASK-244 depends on TASK-242 and edits adjacent style/default/token
 contracts, final closure must also rerun `tests/vitest/widgets/styleNoneTokens.test.tsx`
 to prove existing `None` token behavior did not regress.
 
-Section remains a no-regression/helper-only surface for TASK-244 closure. Do not
-count missing Section `Clear` controls as an implementation gap unless an earlier
-TASK-244 leaf first promotes Section to `clear-required` in TASK-244-01-01 and
-adds a dedicated implementation leaf. Closure proof for Section is limited to
-empty-gradient and zero-overlay omission behavior unless that promotion happens.
+Section background color is clear-required through TASK-244-02-03. Closure must
+count missing Section background `Clear` controls as an implementation gap.
+Section gradient and overlay behavior remain no-regression proof unless a later
+leaf separately promotes those fields.
 
 ## Closure Workflow Pseudocode
 

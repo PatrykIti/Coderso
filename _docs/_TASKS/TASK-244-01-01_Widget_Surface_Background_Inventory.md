@@ -72,7 +72,7 @@ scan is from 2026-04-30 and covers every widget registered by
 
 | Widget | Classification | Current refs | Owner | Test/docs owners |
 |---|---|---|---|---|
-| `section` | `already-clearable` for gradient/overlay no-regression only | `section.tsx:101-109`, `section.tsx:192-200`, `section.tsx:257-286` already treat empty gradient endpoints and `overlayOpacity: 0` as omitted output; `section.tsx:191` and `section.tsx:257` still normalize/render transparent `backgroundColor`, so Section is not broadly clear-complete; `section.tsx:333` empty-region placeholder is an intentional layout state | TASK-244-02-02 | `tests/vitest/widgets/section.test.tsx`; `tests/vitest/ui/section-editor-wave.test.tsx` only if Section editor changes; `_docs/_WIDGETS/SECTION.md` only if Section docs change |
+| `section` | `clear-required` for `style.backgroundColor`; gradient/overlay no-regression | `section.tsx:101-109`, `section.tsx:192-200`, `section.tsx:257-286` already treat empty gradient endpoints and `overlayOpacity: 0` as omitted output; `section.tsx:191` and `section.tsx:257` still normalize/render transparent `backgroundColor`; `SectionEditors.tsx:289-295` and `SectionEditors.tsx:407-413` expose background color without semantic clear; `section.tsx:333` empty-region placeholder is an intentional layout state | TASK-244-02-03 | `tests/vitest/widgets/section.test.tsx`; `tests/vitest/ui/section-editor-wave.test.tsx`; `_docs/_WIDGETS/SECTION.md` |
 | `template-section` | `intentional-state` | `templateSection.tsx:107` placeholder `bg-muted/20` is public runtime output, but it is a missing-template state, not a configurable widget surface | TASK-244-01-01 | `tests/vitest/widgets/templateSection.test.tsx`; `TemplateSectionEditors.tsx`; `_docs/_WIDGETS/TEMPLATE_SECTION.md` |
 | `grid-columns` | `clear-required` | `gridColumns.tsx:51`, `gridColumns.tsx:104`, `gridColumns.tsx:126`, `gridColumns.tsx:352`, `gridColumns.tsx:439`; editor `GridColumnsEditors.tsx:696-699` has `Column background` without semantic clear | TASK-244-04-01 | `tests/vitest/widgets/gridColumns.test.tsx`; `tests/vitest/ui/grid-columns-editor-wave.test.tsx`; `_docs/_WIDGETS/GRID_COLUMNS.md` |
 | `split-layout` | `intentional-state` | `splitLayout.tsx:255`, `splitLayout.tsx:269` are public empty-column placeholder panels, not configurable visual surfaces | TASK-244-01-01 | `tests/vitest/widgets/splitLayout.test.tsx`; `SplitLayoutEditors.tsx`; `_docs/_WIDGETS/SPLIT_LAYOUT.md` |
@@ -130,7 +130,8 @@ not permission to skip a `clear-required` row.
   configurable widget surfaces;
 - `divider`, because current public output has no background/surface contract;
 - `section` gradient runtime, because empty endpoints already remove the
-  gradient;
+  gradient; Section `style.backgroundColor` remains clear-required through
+  TASK-244-02-03;
 - TASK-242 token controls such as spacing, width, radius, typography, and size.
 
 ## Pseudocode

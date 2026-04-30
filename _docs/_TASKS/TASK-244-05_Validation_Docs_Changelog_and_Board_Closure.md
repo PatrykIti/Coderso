@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + QA + Docs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-244-02-01, TASK-244-02-02, TASK-244-03-01, TASK-244-03-02, TASK-244-04-01, TASK-244-04-02
+**Dependencies:** TASK-244-02-01, TASK-244-02-02, TASK-244-02-03, TASK-244-03-01, TASK-244-03-02, TASK-244-04-01, TASK-244-04-02
 **Status:** To Do
 
 ---
