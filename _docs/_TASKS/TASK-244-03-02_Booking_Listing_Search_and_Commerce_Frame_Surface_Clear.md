@@ -65,7 +65,8 @@ Target widgets:
 
 No per-widget docs currently exist under `_docs/_WIDGETS/` for these seven
 widgets. Update `_docs/WIDGETS.md`; create exact new `_docs/_WIDGETS/*.md` files
-only if implementation introduces a new per-widget documentation surface.
+only if implementation introduces a new per-widget documentation surface. If new
+files are created, update `_docs/_WIDGETS/README.md` in the same leaf.
 
 ## Implementation Notes
 
@@ -105,6 +106,19 @@ For every new style field, extend the owning widget module in place, preserve
 accept cleared omission, and reject unknown style keys. Reuse existing editor
 sections for presentation/style controls; do not create a second operational
 widget styling flow.
+
+Default and compatibility policy:
+
+- Use **creation default only** for new operational style fields by adding
+  explicit defaults to the owning widget defaults and inserted block payload.
+- Preserve existing saved widgets through the current `def.defaults` shallow
+  merge. If a widget still needs visible legacy behavior after a cleared payload
+  would otherwise look absent, add a local normalizer adapter for that widget and
+  test it.
+- When a clear action removes the last style key, persist `style: {}` so the
+  saved block explicitly overrides shallow-merged defaults. Do not use a shared
+  `normalizeWidgetBlock()` change for this leaf unless multiple widgets prove the
+  same default policy cannot be expressed locally.
 
 ## Per-Widget Implementation Matrix
 
@@ -208,6 +222,7 @@ const clearOperationalStyle = (key: keyof OperationalSurfaceStyle) => {
 - New exact `_docs/_WIDGETS/*.md` files only if implementation adds per-widget
   docs for these widgets; otherwise document the shared operational clear
   semantics in `_docs/WIDGETS.md`.
+- `_docs/_WIDGETS/README.md` if any new per-widget doc file is created
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria

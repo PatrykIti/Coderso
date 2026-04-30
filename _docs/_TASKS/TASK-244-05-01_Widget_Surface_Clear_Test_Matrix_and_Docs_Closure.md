@@ -115,6 +115,7 @@ bun run precommit
 
 - `_docs/WIDGETS.md`
 - exact `_docs/_WIDGETS/*.md` files named by TASK-244 implementation leaves
+- `_docs/_WIDGETS/README.md` if implementation adds any new per-widget doc files
 - `_docs/_TASKS/TASK-244*.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and matching changelog entry on completion

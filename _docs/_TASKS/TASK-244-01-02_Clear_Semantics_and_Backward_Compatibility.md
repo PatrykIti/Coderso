@@ -117,6 +117,13 @@ chosen policy for each affected field:
    regression coverage and must preserve strict schema validation.
 
 Do not leave this decision for implementers to rediscover from failing tests.
+When a widget already has a defaulted top-level object, an empty object can be
+the clear-safe persisted override. For example, if `def.defaults.background`
+would be shallow-merged back when `background` is omitted, the leaf should use
+`background: {}` for the cleared-last-field payload and prove that render output
+still omits the cleared background. Empty objects are allowed only as ownership
+boundaries for shallow-merge defaults; they must not hide `"transparent"`,
+empty-string, or broad catch-all style sentinels.
 
 Expected field-shape pseudocode:
 

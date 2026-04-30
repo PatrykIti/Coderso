@@ -151,6 +151,26 @@ Where a current normalizer re-materializes defaults for absent style fields,
 apply TASK-244-01-02 first. Clear cannot be implemented as key removal if the
 same normalizer immediately turns the missing key back into a visible default.
 
+Default and compatibility policy:
+
+- `grid-columns`, `feature-grid`, `faq-accordion`, `pricing-plans`,
+  `testimonials`, `team`, `content-list`, `posts-feed`, `entry-teaser`, and
+  `rich-text-section`: use **creation default only** with an explicit
+  `style: {}` clear override. The implementation must remove field-level
+  normalizer fallbacks such as `?? "var(--color-surface)"` when the owning
+  `style` object is present but the key was cleared.
+- `gallery-mosaic` and `cta-banner`: use the same creation-default-only policy
+  for overlay/container/button style fields; clear removes the field and keeps
+  the owning object empty if that is needed to override shallow defaults.
+- `logo-cloud` and `stats-kpi`: for newly added tile/card style fields, add
+  explicit defaults to the widget defaults and inserted block payload, then use
+  `style: {}` as the clear override. Add a local legacy adapter only if audited
+  saved data cannot be preserved by the default merge.
+- `timeline` and `compare-timeline`: use creation-default-only for decorative
+  background/surface fields. Keep semantic readability states local and
+  defaulted; do not make those state colors clearable unless the row explicitly
+  proves they are user-owned style surfaces.
+
 ## Per-Widget Implementation Matrix
 
 | Widget | Runtime field/output | Editor clear behavior | Regression proof |

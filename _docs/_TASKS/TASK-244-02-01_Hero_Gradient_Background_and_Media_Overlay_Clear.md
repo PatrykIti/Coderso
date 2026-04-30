@@ -44,6 +44,16 @@ implementation must change the runtime style construction so an absent/cleared
 manual value such as `"transparent"` can still render as the user's configured
 color.
 
+Hero has a shallow-merge default hazard that must be handled in this leaf:
+`heroDefaults` currently includes `background: { color: "transparent" }`, and
+`normalizeWidgetBlock()` shallow-merges `def.defaults` into saved block data
+before `WidgetRenderer` renders. Therefore clearing the last Hero background key
+must not persist `background: undefined`, because omitted `background` can be
+re-defaulted on render. Use `background: {}` as the clear-safe saved shape for
+the cleared-last-background-field case, then update the renderer so an empty
+background object omits `backgroundColor`, `backgroundImage`, and overlay output.
+Add a `WidgetRenderer` regression for this exact saved shape.
+
 Do not add a `"none"` gradient string. Do not save `"transparent"` as the
 gradient off state.
 
@@ -103,7 +113,9 @@ Remove nested background keys instead of merging `undefined`.
 const clearBackgroundField = (key: keyof NonNullable<HeroData["background"]>) => {
   const { [key]: _removed, ...background } = value.background ?? {};
   update({
-    background: Object.keys(background).length > 0 ? background : undefined,
+    // Keep an empty object to override heroDefaults.background during
+    // normalizeWidgetBlock() shallow default merge.
+    background: Object.keys(background).length > 0 ? background : {},
   });
 };
 ```
@@ -158,7 +170,10 @@ expect(html).not.toContain("background:#224466");
 - Add or update tests that prove:
   - configured gradient still renders;
   - cleared gradient omits `backgroundImage`;
-  - editor `Clear` removes `background.gradient`;
+  - editor `Clear` removes `background.gradient` while preserving
+    `background: {}` when that was the last remaining background key;
+  - `WidgetRenderer` with saved data `{ background: {} }` does not regain
+    `heroDefaults.background.color` through `normalizeWidgetBlock()`;
   - background color clear removes `background.color` and runtime omits
     `backgroundColor` instead of falling back to `"transparent"`;
   - media overlay clear removes the overlay field and overlay node where
@@ -184,7 +199,7 @@ expect(html).not.toContain("background:#224466");
    the gradient.
 2. Clear removes the nested Hero background key from widget data.
 3. Runtime omits cleared `backgroundImage`, `backgroundColor`, and overlay
-   output.
+   output, including the `background: {}` saved-shape regression.
 4. Existing Hero gradient/image/video behavior remains backward compatible.
 5. Primary and secondary button background clears remove the style keys and do
    not pin transparent button backgrounds into saved widget data.

@@ -74,7 +74,8 @@ Target widgets:
 No per-widget docs currently exist for `accordion`, `tabs`, or `toggle-block`.
 Document their shared primitive-panel clear semantics in `_docs/WIDGETS.md`
 unless implementation deliberately creates exact new `_docs/_WIDGETS/*.md`
-files for those widgets.
+files for those widgets. If new files are created, update
+`_docs/_WIDGETS/README.md` in the same leaf.
 
 ## Implementation Notes
 
@@ -104,6 +105,18 @@ TASK-244-01-02 before adding the editor `Clear` action. If a target field does
 not exist, add it to the owning widget data type, schema, defaults, normalizer,
 renderer, editor, tests, and docs while preserving `additionalProperties: false`.
 Do not create an alternate form/shell/panel styling flow.
+
+Default and compatibility policy:
+
+- `contact`, `newsletter`, `form-embed`, `navigation`, `footer`, `accordion`,
+  `tabs`, and `toggle-block` use **creation default only** for clearable
+  background/surface fields already represented in widget defaults.
+- A cleared field must remain absent in the saved style object and rendered
+  output. If clearing removes the last key in `style`, persist `style: {}` when
+  required to override shallow-merged defaults.
+- Preserve navigation transparent behavior, form accessibility states, and panel
+  selected/expanded semantics through local widget logic, not through a shared
+  merge-path change.
 
 ## Per-Widget Implementation Matrix
 
@@ -203,6 +216,7 @@ function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
 - New exact primitive panel docs only if implementation creates them for
   `accordion`, `tabs`, or `toggle-block`; otherwise keep primitive panel clear
   semantics in `_docs/WIDGETS.md`.
+- `_docs/_WIDGETS/README.md` if any new primitive panel doc file is created
 - `_docs/_TASKS/README.md` status only when this leaf moves state
 
 ## Acceptance Criteria

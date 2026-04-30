@@ -85,6 +85,19 @@ type ScreenFrameStyle = {
 Only add fields that are required to clear current forced surfaces. Avoid a broad
 screen design-system refactor.
 
+Default and compatibility policy:
+
+- Use **creation default only** for newly added screen frame style fields:
+  defaults for new blocks should live in the widget defaults / inserted block
+  payload, not in a renderer-only forced class.
+- Preserve old saved screen widgets through the existing shallow default merge.
+  If implementation finds legacy data that still omits the new `style` object
+  after defaults are applied, add a local widget normalizer adapter and cover it
+  with compatibility tests.
+- When clearing the last field in `style`, persist `style: {}` as the explicit
+  clear override for shallow-merge defaults. Do not collapse it to `undefined`
+  if that would make the renderer treat the block like an old defaulted payload.
+
 Schema/normalizer pseudocode:
 
 ```ts
@@ -140,9 +153,10 @@ const frameClassName = joinClasses(
 );
 ```
 
-`shouldUseLegacyDefaultFrameSurface` is a placeholder for the field-specific
-compatibility decision from TASK-244-01-02. Do not make absence mean both
-"cleared" and "default" in the same normalized payload.
+`shouldUseLegacyDefaultFrameSurface` must be implemented only for a concrete
+legacy-adapter case proven by the field audit above. The default path is the
+creation-default-only policy with `style: {}` as the clear override. Do not make
+absence mean both "cleared" and "default" in the same normalized payload.
 
 For the `screen-record-header` current card gradient, do not replace clear with a
 variant switch. Add a real clearable background/gradient contract.
