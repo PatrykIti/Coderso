@@ -389,13 +389,13 @@ Możliwe pozostałości z wcześniejszych testów innych agentów: nie obserwowa
 
 ### Nowe obserwacje 2026-04-30
 
-#### [OBS-1] Przycisk "Refresh" zniknął z toolbar edytora
+#### [OBS-1] Przycisk "Refresh" celowo usunięty z toolbar edytora ✅
 
 **Gdzie:** `/admin/menus/{uuid}` → toolbar nagłówka.
 
-**Co się dzieje:** W re-retescie z 2026-04-26 raportowano "Refresh button (editor) — Obecny w toolbarze edytora." Teraz go nie ma. `querySelectorAll` na `button` w headerze nie zawiera żadnego buttona z tekstem/arią "Refresh". Toolbar edytora ma: Discard, Save changes, Publish/Move to Draft.
+**Co się dzieje:** W re-retescie z 2026-04-26 raportowano "Refresh button — Obecny w toolbarze edytora." Teraz go nie ma — i słusznie. Refresh był potrzebny w starym flow z "Active menu" comboboxem (jedna strona dla wszystkich menu). Po redesignie na architekturę list+detail, każdy edytor jest dedykowany jednemu menu — reload strony po prostu wraca do tego samego URL z aktualnym stanem. Discard + nawigacja breadcrumb zastępują Refresh w 100%.
 
-**Ocena:** Regresja lub celowe usunięcie (Discard pełni podobną rolę). Do weryfikacji z deweloperem.
+**Ocena:** Celowe, uzasadnione usunięcie. Nie bug.
 
 ---
 
@@ -467,7 +467,7 @@ Możliwe pozostałości z wcześniejszych testów innych agentów: nie obserwowa
 - **BUG-N2** — native `<select>` stale label po rename — teraz NIE synchronizuje się nawet po Update Item (regresja).
 - **BUG-N3** — brak `role="radiogroup"` na toggle Page/Custom URL — pomijany przez screen readery.
 - **BUG-N4** — dialog usuwania menu bez nazwy — niespójność z item delete.
-- **OBS-1** — zniknięcie Refresh buttona z toolbar edytora — sprawdzić czy celowe.
+- **OBS-1** — Refresh usunięty celowo (był zbędny w architekturze per-menu editor). ✅
 - **UX-4** — Icon Name bez wizualnego podglądu — content manager nie wie co wpisać.
 
 ### Screenshoty (2026-04-30)
