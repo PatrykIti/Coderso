@@ -98,7 +98,7 @@ export function MenuItemRow({
     >
       <button
         type="button"
-        className="flex w-10 shrink-0 cursor-grab items-center justify-center self-stretch rounded-md border bg-muted/40 text-muted-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-12 shrink-0 cursor-grab items-center justify-center self-stretch rounded-md border bg-muted/40 text-muted-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&_svg]:pointer-events-none"
         draggable
         aria-label={`Drag ${label}`}
         title={`Drag ${label}`}
@@ -110,7 +110,11 @@ export function MenuItemRow({
         }}
         onDragEnd={(event) => onDragEnd?.(event)}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical
+          aria-hidden="true"
+          focusable="false"
+          className="h-4 w-4 pointer-events-none"
+        />
       </button>
       <button
         type="button"

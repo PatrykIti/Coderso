@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 778 | 2026-04-30 | TASK-245 menus drag handle hit target | CMS Menus/Admin UI |
 | 777 | 2026-04-29 | TASK-243 menus editor action, location, and drag parity | CMS Menus/Admin UI |
 | 776 | 2026-04-29 | TASK-242 widget style none tokens | CMS Widgets/Admin UI |
 | 775 | 2026-04-29 | Menus editor detail cache hydration | CMS Menus/Admin Cache |
