@@ -34,8 +34,12 @@ the layout and remove the visual surface.
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
+- `core/services/customScreens/customScreenSchemas.ts` only if schema
+  persistence behavior must change; otherwise keep it as explicit validation
+  proof that new screen widget payloads survive the existing normalizer
 - `tests/vitest/widgets/screenWidgets.test.tsx`
 - `tests/vitest/ui/screen-widgets-editor-wave.test.tsx` (create if missing)
+- `tests/vitest/admin/custom-screen-schemas.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx` only if binding panel
   behavior changes
 - `_docs/WIDGETS.md`
@@ -50,6 +54,15 @@ implementation introduces those pages.
 
 Do not remove the screen-only surface restriction. These widgets remain scoped to
 custom screen builder surfaces.
+
+Custom screen persistence must stay on the existing service schema path,
+`core/services/customScreens/customScreenSchemas.ts`:
+`normalizeCustomScreenBlocks()` calls `normalizeWidgetBlocks()` after
+registering runtime widgets. New screen widget `style` fields must pass through
+that path without adding a custom-screen-only schema bypass, and cleared style
+keys must remain absent after normalization. Cover this in
+`tests/vitest/admin/custom-screen-schemas.test.ts` in addition to runtime and
+editor-wave tests.
 
 This leaf extends existing screen widget contracts in place. The current screen
 widget schemas use `additionalProperties: false`, for example
@@ -164,12 +177,16 @@ variant switch. Add a real clearable background/gradient contract.
 
 - `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/screen-widgets-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/custom-screen-schemas.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/custom-screen-binding-panel.test.tsx`
   only if implementation changes binding panel behavior
 - Add tests that prove:
   - existing default screen frames still render as before;
   - new `style` fields pass widget schema validation and unknown `style` keys
     are still rejected;
+  - custom-screen schema normalization accepts configured screen style fields,
+    preserves cleared omission, and rejects unknown screen style keys through
+    `normalizeCustomScreenBlocks()`;
   - normalizers preserve cleared/absent style fields according to
     TASK-244-01-02 instead of re-materializing cleared defaults;
   - cleared frame background/gradient omits forced `bg-*`/`bg-gradient-*`
@@ -195,5 +212,6 @@ variant switch. Add a real clearable background/gradient contract.
 1. Every custom screen widget frame surface can be cleared.
 2. Clearing does not change widget variant or binding behavior.
 3. Screen-only widget restrictions remain unchanged.
-4. Runtime/editor tests cover cleared and default states.
+4. Runtime, editor, and custom-screen schema tests cover cleared and default
+   states.
 5. Clear removes style keys instead of writing transparent sentinels.

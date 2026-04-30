@@ -36,7 +36,8 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 1. Build a final inventory-to-test matrix from TASK-244-01-01.
 2. Confirm every schema/normalizer extension has configured, cleared,
    legacy/default, and reject-unknown coverage.
-3. Run all targeted widget runtime and editor suites for touched surfaces.
+3. Run all targeted widget runtime, editor, schema, and TASK-242 regression
+   suites for touched surfaces.
 4. Run lint, typecheck, and final Coderso gates.
 5. Update widget docs with `Clear` semantics.
 6. Mark TASK-244 files Done and move board rows to Done.
@@ -70,6 +71,11 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 ## Testing Requirements
 
 - All targeted suites listed in TASK-244-02, TASK-244-03, and TASK-244-04.
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+  because TASK-244 changes style/default contracts adjacent to TASK-242 `None`
+  token behavior.
+- `bun run test:vitest -- tests/vitest/admin/custom-screen-schemas.test.ts`
+  when TASK-244-03-01 changes screen widget payload contracts.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`

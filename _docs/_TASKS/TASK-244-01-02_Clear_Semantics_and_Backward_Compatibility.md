@@ -37,6 +37,14 @@ to suppress a background.
 Prefer local helpers first. Extract a shared helper only when multiple widgets
 need the exact same behavior and the owner module stays Bun-free.
 
+If the Hero leaf proves the same `resolveClearableStyleValue`, `compactStyle`,
+and key-removal semantics are needed by more than one widget group, standardize
+the helper in a Bun-free widget/admin utility before the broad sweeps begin.
+The helper owner must be named in the first implementation leaf that extracts
+it, and every later leaf must import that owner instead of reimplementing a
+different absence policy. Do not put the helper in a module that imports
+`db/client`, runtime adapters, settings services, or route code.
+
 ```ts
 function resolveClearableStyleValue(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -79,6 +87,36 @@ extension below before runtime changes:
 
 Do not create a second route, save flow, widget variant, or editor mode to avoid
 extending the real widget contract.
+
+## Shared Default Merge Path
+
+Every implementation leaf must audit the shared widget default path before
+claiming that omitted fields stay omitted:
+
+- `core/widgets/validator.ts` `normalizeWidgetBlock()` shallow-merges
+  `def.defaults` with saved block data before schema validation;
+- `core/widgets/renderers/widgetRenderer.tsx` renders through
+  `normalizeWidgetBlock()`;
+- `core/admin/ui/pages/builder/blockUtils.ts` inserts new blocks with
+  `resolved?.defaults` as the initial payload.
+
+This means a clear action that removes the last key from a top-level object such
+as `style` or `background` can be re-defaulted by the shared merge path unless
+the leaf explicitly owns that case. Before changing a renderer, record the
+chosen policy for each affected field:
+
+1. **Creation default only.**
+   New widgets keep explicit defaults in the inserted block payload, while a
+   saved cleared field remains absent and renderers omit the output.
+2. **Local legacy adapter.**
+   Old saved data that omitted a field but relied on the visual default is
+   detected locally in the widget normalizer and covered by compatibility tests.
+3. **Shared merge adjustment.**
+   Change `normalizeWidgetBlock()` only if several widgets truly require a
+   common clear-aware default policy. That change must include cross-widget
+   regression coverage and must preserve strict schema validation.
+
+Do not leave this decision for implementers to rediscover from failing tests.
 
 Expected field-shape pseudocode:
 
@@ -175,6 +213,8 @@ function removeBackgroundKey(
 - Runtime tests proving cleared data omits style output.
 - Backward-compatibility tests for representative default/legacy data where a
   fallback is changed.
+- Tests for any touched shared default path, including inserted default payloads,
+  renderer normalization, and cleared saved payloads that must stay absent.
 - Schema/normalizer tests for every new style field: accepted clear-capable
   payloads, preserved `additionalProperties: false`, and rejected unknown style
   keys.
@@ -197,5 +237,7 @@ function removeBackgroundKey(
 3. Legacy/default widget data behavior is tested where fallback semantics
    change.
 4. Editor helpers can remove keys rather than only merge values.
-5. Empty strings are treated as editor input cleanup, not serialized off-state
+5. Shared default merging cannot re-materialize a cleared field without an
+   explicit compatibility adapter and regression test.
+6. Empty strings are treated as editor input cleanup, not serialized off-state
    payloads.

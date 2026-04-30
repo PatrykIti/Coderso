@@ -25,13 +25,16 @@ problem needs targeted proof.
 | Group | Runtime proof | Editor proof | Docs proof |
 |---|---|---|---|
 | Hero/shared controls | `tests/vitest/widgets/hero.test.tsx` and `tests/vitest/widgets/heroEditors.test.tsx` prove cleared gradient/background/overlay/button backgrounds omit output; `tests/vitest/widgets/section.test.tsx` proves Section no-regression unless Section adopts the shared clear helper | `tests/vitest/ui/hero-editor-wave.test.tsx` proves `Clear` removes nested `background`/`style` keys; `tests/vitest/ui/section-editor-wave.test.tsx` is required only if Section editor behavior changes | `_docs/_WIDGETS/HERO.md`, `_docs/_WIDGETS/SECTION.md` only if Section docs change, `_docs/WIDGETS.md` |
-| Screen widgets | `tests/vitest/widgets/screenWidgets.test.tsx` proves cleared screen frame surfaces omit background classes/styles | `tests/vitest/ui/screen-widgets-editor-wave.test.tsx` must be created or extended to import `ScreenEditors.tsx` and prove removed style keys; `tests/vitest/ui/custom-screen-binding-panel.test.tsx` is only required if binding panel behavior changes | `_docs/WIDGETS.md`, `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md` where two-column docs change |
+| Screen widgets | `tests/vitest/widgets/screenWidgets.test.tsx` proves cleared screen frame surfaces omit background classes/styles; `tests/vitest/admin/custom-screen-schemas.test.ts` proves configured and cleared screen widget style payloads survive `normalizeCustomScreenBlocks()` without schema bypasses | `tests/vitest/ui/screen-widgets-editor-wave.test.tsx` must be created or extended to import `ScreenEditors.tsx` and prove removed style keys; `tests/vitest/ui/custom-screen-binding-panel.test.tsx` is only required if binding panel behavior changes | `_docs/WIDGETS.md`, `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md` where two-column docs change |
 | Operational widgets | `tests/vitest/widgets/bookingCalendar.test.tsx`, `tests/vitest/widgets/appointmentForm.test.tsx`, `tests/vitest/widgets/listingFilters.test.tsx`, `tests/vitest/widgets/searchBox.test.tsx`, `tests/vitest/widgets/productGallery.test.tsx`, `tests/vitest/widgets/productTable.test.tsx`, `tests/vitest/widgets/productCompare.test.tsx` prove cleared shells/tables/cards omit forced backgrounds | The seven operational editor-wave tests listed in TASK-244-03-02 prove `Clear` removes keys | `_docs/WIDGETS.md`; exact new `_docs/_WIDGETS/*.md` files only if introduced |
 | Composite/content widgets | `tests/vitest/widgets/gridColumns.test.tsx`, marketing/content Vitest widget suites, and Bun-owned `tests/unit/widgets/contentList.test.tsx`, `tests/unit/widgets/postsFeedWidget.test.tsx`, `tests/unit/widgets/entryTeaser.test.tsx` prove cleared surfaces/overlays omit output | The sixteen editor-wave tests listed in TASK-244-04-01 prove `Clear` removes keys | Exact docs listed in TASK-244-04-01 |
 | Form/shell/panel widgets | `tests/vitest/widgets/contact.test.tsx`, `tests/vitest/widgets/newsletter.test.tsx`, `tests/vitest/widgets/formEmbed.test.tsx`, `tests/vitest/widgets/navigation.test.tsx`, `tests/vitest/widgets/footer.test.tsx`, `tests/vitest/widgets/accordionWidget.test.tsx`, `tests/vitest/widgets/tabs.test.tsx`, `tests/vitest/widgets/toggleBlock.test.tsx` prove cleared backgrounds omit output | The eight editor-wave tests listed in TASK-244-04-02 prove `Clear` removes keys | `_docs/_WIDGETS/CONTACT.md`, `_docs/_WIDGETS/NEWSLETTER.md`, `_docs/_WIDGETS/FORM_EMBED.md`, `_docs/_WIDGETS/NAVIGATION.md`, `_docs/_WIDGETS/FOOTER.md`, `_docs/WIDGETS.md` |
 
 Every group must also include a negative payload assertion: `Clear` must not
 write `"transparent"` or an empty string solely as an off-state sentinel.
+Because TASK-244 depends on TASK-242 and edits adjacent style/default/token
+contracts, final closure must also rerun `tests/vitest/widgets/styleNoneTokens.test.tsx`
+to prove existing `None` token behavior did not regress.
 
 ## Security Contract
 
@@ -70,7 +73,7 @@ validation lane.
 ```sh
 bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx
 bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx
-bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx tests/vitest/ui/screen-widgets-editor-wave.test.tsx
+bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx tests/vitest/admin/custom-screen-schemas.test.ts tests/vitest/ui/screen-widgets-editor-wave.test.tsx
 bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/widgets/productCompare.test.tsx
 bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx
 bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/testimonials.test.tsx tests/vitest/widgets/team.test.tsx tests/vitest/widgets/statsKpi.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/richTextSection.test.tsx tests/vitest/widgets/timeline.test.tsx tests/vitest/widgets/compareTimeline.test.tsx
@@ -78,6 +81,7 @@ bun test tests/unit/widgets/contentList.test.tsx tests/unit/widgets/postsFeedWid
 bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/ui/feature-grid-editor-wave.test.tsx tests/vitest/ui/faq-accordion-editor-wave.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/ui/testimonials-editor-wave.test.tsx tests/vitest/ui/team-editor-wave.test.tsx tests/vitest/ui/stats-kpi-editor-wave.test.tsx tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/ui/entry-teaser-editor-wave.test.tsx tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/ui/rich-text-section-editor-wave.test.tsx tests/vitest/ui/timeline-editor-wave.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx
 bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/toggleBlock.test.tsx
 bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx
+bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx
 bun --cwd core lint
 bun --cwd core lint:types
 bun run gates:coderso
@@ -93,6 +97,9 @@ bun run precommit
   - no `backgroundColor: "transparent"` assertions used as proof of clear when
     the contract requires omitted output;
   - saved widget payload fixtures omit cleared fields.
+- TASK-242 regression guard:
+  - `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+    must pass after any TASK-244 style/default/normalizer change.
 - Baseline:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
