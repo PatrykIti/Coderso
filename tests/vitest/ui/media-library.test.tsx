@@ -2,13 +2,10 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
-import {
-  clearMediaCache,
-  type MediaRecord,
-} from "../../../core/admin/services/mediaClient";
+import { clearMediaCache, type MediaRecord } from "../../../core/admin/services/mediaClient";
 import { MediaLibraryPage } from "../../../core/admin/ui/media/MediaLibraryPage";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { broadcastCacheEvent } from "../../../core/admin/utils/cacheBus";
@@ -66,6 +63,26 @@ const flushEffects = async () => {
   });
 };
 
+const click = async (element: Element | null) => {
+  if (!element) {
+    throw new Error("Expected element to exist before clicking");
+  }
+  await act(async () => {
+    element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+};
+
+const getButton = (container: HTMLElement, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (entry) => entry.textContent?.trim() === label
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Expected button "${label}" to exist`);
+  }
+  return button;
+};
+
 const mountMediaLibrary = () => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -101,7 +118,8 @@ test("MediaLibraryPage renders toolbar and grid", () => {
 
   expect(html).toContain("Media Library");
   expect(html).toContain("Media settings");
-  expect(html).toContain("Upload New");
+  expect(html).toContain("Upload");
+  expect(html).not.toContain("Upload New");
 });
 
 const createLocalStorage = () => {
@@ -177,9 +195,7 @@ test("MediaLibraryPage route entry reuses fresh media cache without fetching med
     await flushEffects();
 
     expect(view.container.textContent).toContain("Cached hero");
-    expect(
-      calls.filter((call) => String(call.input) === "/admin/api/media")
-    ).toHaveLength(0);
+    expect(calls.filter((call) => String(call.input) === "/admin/api/media")).toHaveLength(0);
   } finally {
     view.cleanup();
     globalThis.fetch = originalFetch;
@@ -212,9 +228,94 @@ test("MediaLibraryPage applies media update events from storage without fetching
     });
 
     expect(view.container.textContent).toContain("Storage update");
-    expect(
-      calls.filter((call) => String(call.input) === "/admin/api/media")
-    ).toHaveLength(0);
+    expect(calls.filter((call) => String(call.input) === "/admin/api/media")).toHaveLength(0);
+  } finally {
+    view.cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("MediaLibraryPage header Upload opens the existing dropzone file input", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).endsWith("/user-settings")) {
+      return jsonResponse(userSettingsResponse);
+    }
+    if (String(input).endsWith("/media")) {
+      return jsonResponse([]);
+    }
+    return jsonResponse({});
+  };
+
+  const view = mountMediaLibrary();
+  try {
+    await flushEffects();
+
+    const fileInput = view.container.querySelector('input[type="file"]');
+    if (!(fileInput instanceof HTMLInputElement)) {
+      throw new Error("Expected UploadDropzone file input to exist");
+    }
+    const openSpy = vi.spyOn(fileInput, "click");
+
+    await click(getButton(view.container, "Upload"));
+
+    expect(openSpy).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("MediaLibraryPage keeps selection active without a Select toggle", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).endsWith("/user-settings")) {
+      return jsonResponse(userSettingsResponse);
+    }
+    if (String(input).endsWith("/media")) {
+      return jsonResponse([mediaRecord({ title: "Network hero" })]);
+    }
+    return jsonResponse({});
+  };
+
+  writeMediaCache([mediaRecord({ title: "Cached hero" })]);
+
+  const view = mountMediaLibrary();
+  try {
+    await flushEffects();
+
+    const exactSelectButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Select"
+    );
+    expect(exactSelectButton).toBeUndefined();
+    expect(view.container.textContent).toContain("Upload");
+    expect(view.container.textContent).not.toContain("Upload New");
+    expect(view.container.textContent).toContain("0 selected");
+    expect(view.container.textContent).toContain("Select visible");
+    expect(view.container.querySelector('button[aria-label="Select Cached hero"]')).toBeTruthy();
+
+    const downloadButton = getButton(view.container, "Download");
+    const deleteButton = getButton(view.container, "Delete");
+    expect(downloadButton.disabled).toBe(true);
+    expect(deleteButton.disabled).toBe(true);
+
+    await click(view.container.querySelector('button[aria-label="Select Cached hero"]'));
+
+    expect(view.container.textContent).toContain("1 selected");
+    expect(downloadButton.disabled).toBe(false);
+    expect(deleteButton.disabled).toBe(false);
+
+    await click(getButton(view.container, "Clear"));
+
+    expect(view.container.textContent).toContain("0 selected");
+    expect(downloadButton.disabled).toBe(true);
+    expect(deleteButton.disabled).toBe(true);
+
+    await click(getButton(view.container, "Select visible"));
+
+    expect(view.container.textContent).toContain("1 selected");
+    expect(downloadButton.disabled).toBe(false);
+    expect(deleteButton.disabled).toBe(false);
   } finally {
     view.cleanup();
     globalThis.fetch = originalFetch;

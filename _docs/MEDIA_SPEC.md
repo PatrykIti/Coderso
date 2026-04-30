@@ -95,8 +95,8 @@ Multi:
 - Obrazy bez alt text pokazuja ostrzezenie accessibility w karcie i details.
 - Empty states i loaded counts sa prawdziwe dla aktualnego full-list API; UI nie
   pokazuje martwego `Load More Assets`.
-- Multi-select dziala na widocznym zakresie assetow i uzywa istniejacych
-  per-asset delete/download sciezek.
+- Multi-select jest stale dostepny na widocznym zakresie assetow bez osobnego
+  trybu `Select` i uzywa istniejacych per-asset delete/download sciezek.
 - `media.openAfterUpload` jest preference uzytkownika przy upload surface i
   nadal zapisuje sie przez `userSettingsClient`.
 - Delete asset wymaga potwierdzenia w UI (v1.1).

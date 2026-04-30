@@ -30,6 +30,8 @@ test("MediaLibraryPage renders upload and details drawer", () => {
   );
 
   expect(html).toContain("Media Library");
+  expect(html).toContain("Upload");
+  expect(html).not.toContain("Upload New");
   expect(html).toContain("Drag and drop files");
   expect(drawer).toContain("Media Details");
 });

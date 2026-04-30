@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckSquare, Download, Settings2, Trash2, UploadCloud } from "lucide-react";
+import { Download, Settings2, Trash2, UploadCloud } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,25 +18,15 @@ import {
   updateMedia,
   uploadMedia,
 } from "@/services/mediaClient";
-import {
-  getStorageSettings,
-  updateStorageSettings,
-} from "@/services/settingsClient";
+import { getStorageSettings, updateStorageSettings } from "@/services/settingsClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import { MediaSettingsDrawer } from "@/ui/media/MediaSettingsDrawer";
-import {
-  MediaToolbar,
-  type MediaFilter,
-  type MediaView,
-} from "@/ui/media/MediaToolbar";
+import { MediaToolbar, type MediaFilter, type MediaView } from "@/ui/media/MediaToolbar";
 import type { MediaItem, MediaMetaUpdate, MediaUsageItem } from "@/ui/media/types";
-import {
-  UploadDropzone,
-  type UploadDropzoneHandle,
-} from "@/ui/media/UploadDropzone";
+import { UploadDropzone, type UploadDropzoneHandle } from "@/ui/media/UploadDropzone";
 import { resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -76,7 +66,6 @@ export function MediaLibraryPage() {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MediaFilter>("all");
@@ -90,9 +79,7 @@ export function MediaLibraryPage() {
   const [usageById, setUsageById] = useState<Record<string, UsageLoadState>>({});
   const [dimensionById, setDimensionById] = useState<Record<string, DimensionRecoveryState>>({});
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
-  const [deliveryAccessMode, setDeliveryAccessMode] = useState<
-    "public" | "internal"
-  >("public");
+  const [deliveryAccessMode, setDeliveryAccessMode] = useState<"public" | "internal">("public");
   const [isSettingsLoading, setIsSettingsLoading] = useState(false);
   const [isSettingsSaving, setIsSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -105,35 +92,32 @@ export function MediaLibraryPage() {
     return params.get("selected");
   }, []);
 
-  const refresh = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      const force = options?.force ?? false;
-      const background = resolveCacheRefreshBackground({
-        explicitBackground: options?.background,
-        hasHydrated: hasHydratedRef.current,
-      });
+  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    const force = options?.force ?? false;
+    const background = resolveCacheRefreshBackground({
+      explicitBackground: options?.background,
+      hasHydrated: hasHydratedRef.current,
+    });
+    if (!background) {
+      setIsLoading(true);
+    }
+    setError(null);
+    try {
+      const result = await listMediaCached({ force });
+      setItems(result.map(toMediaItem));
+      hasHydratedRef.current = true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load media assets.");
+      }
+    } finally {
       if (!background) {
-        setIsLoading(true);
+        setIsLoading(false);
       }
-      setError(null);
-      try {
-        const result = await listMediaCached({ force });
-        setItems(result.map(toMediaItem));
-        hasHydratedRef.current = true;
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load media assets.");
-        }
-      } finally {
-        if (!background) {
-          setIsLoading(false);
-        }
-      }
-    },
-    []
-  );
+    }
+  }, []);
 
   const applyCachedMediaRows = useCallback(() => {
     const cached = getCachedMediaForEvent();
@@ -182,9 +166,7 @@ export function MediaLibraryPage() {
   }, [items, selectedId]);
 
   useEffect(() => {
-    setSelectedIds((current) =>
-      current.filter((id) => items.some((item) => item.id === id))
-    );
+    setSelectedIds((current) => current.filter((id) => items.some((item) => item.id === id)));
   }, [items]);
 
   useEffect(() => {
@@ -217,9 +199,11 @@ export function MediaLibraryPage() {
     () => items.filter((item) => selectedSet.has(item.id)),
     [items, selectedSet]
   );
-  const currentUsage = selectedId ? usageById[selectedId] ?? defaultUsageState : defaultUsageState;
+  const currentUsage = selectedId
+    ? (usageById[selectedId] ?? defaultUsageState)
+    : defaultUsageState;
   const currentDimensionState = selectedId
-    ? dimensionById[selectedId] ?? defaultDimensionState
+    ? (dimensionById[selectedId] ?? defaultDimensionState)
     : defaultDimensionState;
 
   const updateOpenAfterUpload = (next: boolean) => {
@@ -312,7 +296,6 @@ export function MediaLibraryPage() {
 
   const handleClearSelection = () => {
     setSelectedIds([]);
-    setIsSelectionMode(false);
     setActionMessage(null);
   };
 
@@ -458,9 +441,7 @@ export function MediaLibraryPage() {
           ...prev,
           [id]: {
             state: "error",
-            message: isApiClientError(err)
-              ? err.message
-              : "Failed to recover dimensions.",
+            message: isApiClientError(err) ? err.message : "Failed to recover dimensions.",
           },
         }));
       });
@@ -531,28 +512,13 @@ export function MediaLibraryPage() {
           description="Manage your images and assets."
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant={isSelectionMode ? "secondary" : "outline"}
-                className="gap-2"
-                onClick={() => setIsSelectionMode((value) => !value)}
-              >
-                <CheckSquare className="h-4 w-4" />
-                Select
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={handleOpenMediaSettings}
-              >
+              <Button variant="outline" className="gap-2" onClick={handleOpenMediaSettings}>
                 <Settings2 className="h-4 w-4" />
                 Media settings
               </Button>
-              <Button
-                className="gap-2"
-                onClick={() => dropzoneRef.current?.openFileDialog()}
-              >
+              <Button className="gap-2" onClick={() => dropzoneRef.current?.openFileDialog()}>
                 <UploadCloud className="h-4 w-4" />
-                Upload New
+                Upload
               </Button>
             </div>
           }
@@ -577,43 +543,39 @@ export function MediaLibraryPage() {
           onFilterChange={setFilter}
           onViewChange={setView}
         />
-        {isSelectionMode ? (
-          <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              {selectedIds.length} selected
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={handleSelectVisible}>
-                Select visible
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                disabled={selectedIds.length === 0}
-                onClick={handleBulkDownload}
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="gap-2"
-                disabled={selectedIds.length === 0}
-                onClick={() => {
-                  handleBulkDelete().catch(() => undefined);
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleClearSelection}>
-                Clear
-              </Button>
-            </div>
+        <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">{selectedIds.length} selected</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleSelectVisible}>
+              Select visible
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={selectedIds.length === 0}
+              onClick={handleBulkDownload}
+            >
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2"
+              disabled={selectedIds.length === 0}
+              onClick={() => {
+                handleBulkDelete().catch(() => undefined);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+              Clear
+            </Button>
           </div>
-        ) : null}
+        </div>
         <Card className="border-border/60">
           <CardContent className="space-y-8">
             <div className="space-y-3">
@@ -659,7 +621,7 @@ export function MediaLibraryPage() {
                 selectedId={selectedId}
                 selectedIds={selectedIds}
                 view={view}
-                selectionMode={isSelectionMode}
+                selectionMode
                 onSelect={handleSelectItem}
                 onToggleSelect={handleToggleSelect}
               />
