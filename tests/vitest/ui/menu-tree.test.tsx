@@ -181,12 +181,40 @@ test("MenuTree resolves before, after, child, and marker drops from real drag ev
     if (!blogRowChild) return;
     mockRect(blogRowChild, { left: 0, top: 100, height: 40 });
     act(() => {
-      dispatchDragEvent(blogRowChild, "dragover", { clientX: 80, clientY: 120 });
+      dispatchDragEvent(blogRowChild, "dragover", { clientX: 120, clientY: 120 });
     });
     act(() => {
-      dispatchDragEvent(blogRowChild, "drop", { clientX: 80, clientY: 120 });
+      dispatchDragEvent(blogRowChild, "drop", { clientX: 120, clientY: 120 });
     });
     expect(onMove).toHaveBeenLastCalledWith("root", "blog", "child");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MenuTree supports same-level row drops from the handle lane", () => {
+  const onMove = vi.fn();
+  const view = mount({ onMove });
+
+  try {
+    const rootHandle = view.container.querySelector('[data-menu-drag-handle="root"]');
+    expect(rootHandle).not.toBeNull();
+    if (!rootHandle) return;
+
+    act(() => {
+      dispatchDragEvent(rootHandle, "dragstart");
+    });
+    const blogRow = view.container.querySelector('[data-menu-row-id="blog"]');
+    expect(blogRow).not.toBeNull();
+    if (!blogRow) return;
+    mockRect(blogRow, { left: 0, top: 100, height: 40 });
+
+    act(() => {
+      dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 124 });
+      dispatchDragEvent(blogRow, "drop", { clientX: 8, clientY: 124 });
+    });
+
+    expect(onMove).toHaveBeenLastCalledWith("root", "blog", "after");
   } finally {
     view.cleanup();
   }

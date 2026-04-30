@@ -183,6 +183,9 @@ test("MenuEditorPage renders editor-side location guidance", async () => {
     expect(view.container.textContent).toContain("Published");
     expect(view.container.textContent).toContain("Move to Draft");
     expect(view.container.textContent).toContain("Save changes");
+    expect(view.container.querySelector("header")?.textContent).toContain("Published");
+    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-emerald-500/10");
+    expect(view.container.textContent).not.toContain("All changes saved");
     expect(view.container.textContent).not.toContain("Back to menus");
   } finally {
     view.cleanup();
@@ -220,6 +223,7 @@ test("MenuEditorPage clears foreground loading when pages cache exists without m
     expect(view.container.textContent).toContain("Theme location");
     expect(view.container.textContent).toContain("Not assigned to a theme slot.");
     expect(view.container.textContent).toContain("Draft");
+    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-amber-100");
     expect(view.container.textContent).toContain("Publish");
     expect(view.container.textContent).toContain("Menu Structure");
     expect(view.container.textContent).toContain("No items yet. Add your first link.");
@@ -239,6 +243,9 @@ test("MenuEditorPage shows success feedback after saving metadata", async () => 
     await act(async () => {
       setInputValue(nameInput, "Primary Nav");
     });
+
+    expect(view.container.querySelector("header")?.textContent).toContain("Unsaved changes");
+    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-rose-100");
 
     await act(async () => {
       Array.from(view.container.querySelectorAll("button"))

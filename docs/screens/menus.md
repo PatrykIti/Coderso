@@ -25,8 +25,7 @@ In the current UI, the Menus experience includes:
 - a list-first screen with `New`, filters, selection, lifecycle actions, and
   one row per menu,
 - an editor route that opens only after you choose a menu from the list,
-- save state controls such as `All changes saved`, `Discard`, and
-  `Save changes`,
+- save state controls such as `Unsaved changes`, `Discard`, and `Save changes`,
 - lifecycle controls such as `Draft`, `Published`, `Publish`, and
   `Move to Draft`,
 - menu-level fields for `Theme location` and `Menu name`,
@@ -56,7 +55,8 @@ The Menus experience is easiest to understand as five connected workflows:
 
 The editor also exposes a clear save model:
 
-- `All changes saved` when nothing is pending
+- status badges such as `Draft` and `Published` in the main admin header
+- `Unsaved changes` in the main admin header only when local edits are pending
 - `Discard` when you want to throw away unsaved changes
 - `Save changes` when you want to persist the current editor state
 - `Publish` when a draft menu should become available to runtime navigation
@@ -84,7 +84,7 @@ with usable items.
 7. In the editor header, confirm:
    - you are editing the correct menu,
    - whether the menu is `Draft` or `Published`,
-   - whether the page says `All changes saved`,
+   - whether `Unsaved changes` is already shown,
    - whether `Discard`, `Save changes`, and `Publish` or `Move to Draft` are
      available.
 8. Review the menu-level fields before touching the structure:
@@ -98,7 +98,9 @@ with usable items.
 12. Reorder items in the structure area by dragging the grip handle:
     - drop near the top of a row to place before that item,
     - drop near the bottom of a row to place after that item,
-    - drop in the center or right side of a row to create a sub-menu.
+    - keep the handle lane on the left for same-level before/after placement,
+    - move the cursor deliberately to the right side of a row to create a
+      sub-menu.
 13. Select an existing item when you need to edit its details.
 14. In item settings, work top to bottom:
     - `Navigation Label`

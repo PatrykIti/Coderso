@@ -166,8 +166,9 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
         type="button"
         onClick={() =>
           onDragOver?.(item, {
-            clientX: 50,
+            clientX: 120,
             clientY: 20,
+            dataTransfer: { dropEffect: "none" },
             currentTarget: {
               getBoundingClientRect: () => ({ left: 0, top: 0, height: 40 }),
             },
@@ -181,11 +182,12 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
         onClick={() =>
           onDrop?.(item, {
             timeStamp: 150,
-            clientX: 50,
+            clientX: 120,
             clientY: 20,
             currentTarget: {
               getBoundingClientRect: () => ({ left: 0, top: 0, height: 40 }),
             },
+            dataTransfer: { dropEffect: "none" },
             preventDefault: () => undefined,
           } as React.DragEvent<HTMLDivElement>)
         }

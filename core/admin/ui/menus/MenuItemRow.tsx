@@ -98,7 +98,7 @@ export function MenuItemRow({
     >
       <button
         type="button"
-        className="my-3 flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-10 shrink-0 cursor-grab items-center justify-center self-stretch rounded-md border bg-muted/40 text-muted-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         draggable
         aria-label={`Drag ${label}`}
         title={`Drag ${label}`}

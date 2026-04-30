@@ -58,6 +58,7 @@ test("MenuItemRow renders hierarchy hint and explicit action labels", () => {
   expect(html).toContain('aria-label="Drag About"');
   expect(html).toContain('draggable="true"');
   expect(html).toContain('draggable="false"');
+  expect(html).toContain("self-stretch");
   expect(html).toContain("Sub-item of Home");
   expect(html).toContain("Drop as sub-menu");
   expect(html).toContain('aria-label="Move up About"');

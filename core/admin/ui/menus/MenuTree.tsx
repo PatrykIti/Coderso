@@ -16,6 +16,12 @@ type MarkerDropHandler = (
   event: DragEvent<HTMLDivElement>
 ) => void;
 
+const setMoveDropEffect = (event: DragEvent<HTMLElement>) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move";
+  }
+};
+
 function DropLine({
   targetId,
   intent,
@@ -163,6 +169,7 @@ const renderTree = (
           active
           onDragOverIntent={(targetId, intent, event) => {
             event.preventDefault();
+            setMoveDropEffect(event);
             latestHoverIntentRef.current = intent;
             setRootDrop(null);
             setHoverId(targetId);
@@ -206,6 +213,7 @@ const renderTree = (
         }}
         onDragOver={(hovered, event) => {
           if (!dragId) return;
+          setMoveDropEffect(event);
           const intent = resolveMenuDropIntent({
             clientX: event.clientX,
             clientY: event.clientY,
@@ -243,6 +251,7 @@ const renderTree = (
           active
           onDragOverIntent={(targetId, intent, event) => {
             event.preventDefault();
+            setMoveDropEffect(event);
             latestHoverIntentRef.current = intent;
             setRootDrop(null);
             setHoverId(targetId);
@@ -301,6 +310,7 @@ export function MenuTree({
   const handleRootDragOver = (event: DragEvent<HTMLDivElement>, position: "start" | "end") => {
     if (!dragId) return;
     event.preventDefault();
+    setMoveDropEffect(event);
     setHoverId(null);
     setRootDrop(position);
   };

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +41,11 @@ const createTempId = () => {
   }
   return `menu_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
+
+const menuEditorStatusBadgeClassName = (status: MenuSummary["status"]) =>
+  status === "published"
+    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
+    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
 
 const flattenMenuItems = (items: MenuItemNode[]) => {
   const result: MenuItemRecord[] = [];
@@ -772,6 +776,16 @@ export function MenuEditorPage() {
           </button>
           <span>/</span>
           <span className="text-foreground">{title}</span>
+          {originalMenu ? (
+            <span className={menuEditorStatusBadgeClassName(menuStatus)}>
+              {isPublished ? "Published" : "Draft"}
+            </span>
+          ) : null}
+          {canSave ? (
+            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
+              Unsaved changes
+            </span>
+          ) : null}
         </div>
       }
     >
@@ -783,12 +797,6 @@ export function MenuEditorPage() {
             <div className="flex flex-wrap items-center gap-2">
               {originalMenu ? (
                 <>
-                  <Badge variant={isPublished ? "default" : "outline"}>
-                    {isPublished ? "Published" : "Draft"}
-                  </Badge>
-                  <Badge variant={canSave ? "secondary" : "outline"}>
-                    {canSave ? "Unsaved changes" : "All changes saved"}
-                  </Badge>
                   {!isLargeScreen ? (
                     <Button
                       variant="outline"
@@ -941,7 +949,7 @@ export function MenuEditorPage() {
                     <h3 className="text-lg font-semibold">Menu Structure</h3>
                     <p className="text-xs text-muted-foreground">
                       Drag from the grip handle to reorder. Drop near the top or bottom of a row for
-                      same-level placement, or drop in the center/right side to create a sub-menu.
+                      same-level placement, or move right across a row to create a sub-menu.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleAddItem}>

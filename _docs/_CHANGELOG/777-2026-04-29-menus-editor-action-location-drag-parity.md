@@ -16,6 +16,10 @@ Tasks: TASK-243, TASK-243-01, TASK-243-02, TASK-243-03, TASK-243-04
 - Reworked menu item drag-and-drop so the visible grip is the drag source,
   rows resolve deterministic before/after/child intents, and keyboard reorder
   actions are available.
+- Follow-up on 2026-04-30 aligned Menus editor status/unsaved badges with the
+  Pages editor topbar colors and widened drag intent handling so the left
+  handle lane keeps same-level before/after placement while deliberate
+  rightward movement creates sub-menus.
 
 ### Documentation
 - Updated Menus screen guidance, CMS/API/model notes, list lifecycle UX, and
@@ -25,9 +29,10 @@ Tasks: TASK-243, TASK-243-01, TASK-243-02, TASK-243-03, TASK-243-04
 ## Validation
 
 - PASS `bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/validation/menuSchemas.test.ts`
+- PASS `bun run test:vitest -- tests/vitest/ui/menu-editor-shell-wave.test.tsx tests/vitest/ui/menu-editor-validation.test.ts tests/vitest/ui/menu-tree.test.tsx tests/vitest/ui/menu-item-row.test.tsx tests/vitest/ui/menu-leaf-components.test.tsx tests/vitest/ui/menu-editor.test.tsx tests/vitest/admin/menusClient.test.ts tests/vitest/validation/menuSchemas.test.ts`
 - PASS `bun --cwd core lint`
 - PASS `bun --cwd core lint:types`
 - PASS `git diff --check`
 - PASS `bun run gates:coderso`
   - DB-backed gate checks were skipped because `DATABASE_URL` was not
-    configured in this worktree environment.
+    configured in this environment.
