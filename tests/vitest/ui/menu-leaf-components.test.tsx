@@ -393,12 +393,11 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
   }
 });
 
-test("MenuTree suppresses post-drag click selection and forwards edit/delete/move/root-drop", () => {
+test("MenuTree suppresses post-drag click selection and forwards edit/delete/move", () => {
   const onSelect = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
   const onMove = vi.fn();
-  const onMoveToRoot = vi.fn();
 
   const items = [
     {
@@ -429,7 +428,6 @@ test("MenuTree suppresses post-drag click selection and forwards edit/delete/mov
       onEdit={onEdit}
       onDelete={onDelete}
       onMove={onMove}
-      onMoveToRoot={onMoveToRoot}
     />
   );
 
@@ -463,21 +461,7 @@ test("MenuTree suppresses post-drag click selection and forwards edit/delete/mov
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: "item-2" }));
     expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "item-2" }));
     expect(onMove).toHaveBeenCalledWith("item-1", "item-2", "child");
-
-    act(() => {
-      click("drag-start-item-1");
-    });
-
-    const rootDrop = Array.from(view.container.querySelectorAll("div")).find(
-      (div) => div.textContent?.trim() === "Drop here to move to top level"
-    );
-
-    act(() => {
-      rootDrop?.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true }));
-      rootDrop?.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true }));
-    });
-
-    expect(onMoveToRoot).toHaveBeenCalledWith("item-1", "start");
+    expect(view.container.textContent).not.toContain("Drop here to move to top level");
   } finally {
     view.cleanup();
   }

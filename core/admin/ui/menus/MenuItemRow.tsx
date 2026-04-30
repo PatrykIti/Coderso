@@ -110,7 +110,9 @@ export function MenuItemRow({
       className={cn(
         "group relative flex items-stretch gap-3 rounded-xl border bg-background px-3 shadow-sm transition select-none",
         active && "border-primary/60 ring-1 ring-primary/20",
-        isDragTarget && "border-primary/50 ring-2 ring-primary/10"
+        isDragTarget && dropIntent === "child"
+          ? "border-primary bg-primary/5 ring-2 ring-primary/40"
+          : isDragTarget && "border-primary/50 ring-2 ring-primary/10"
       )}
       data-menu-depth={depth}
       data-menu-row-id={item.id}
@@ -126,6 +128,14 @@ export function MenuItemRow({
     >
       {isDragTarget && dropIntent && dropIntent !== "child" ? (
         <RowDropIndicator item={item} intent={dropIntent} />
+      ) : null}
+      {isDragTarget && dropIntent === "child" ? (
+        <div
+          className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-primary/60 bg-background px-2 py-0.5 text-[11px] font-semibold text-primary shadow-sm"
+          aria-hidden="true"
+        >
+          Drop as sub-menu
+        </div>
       ) : null}
       <button
         type="button"
@@ -190,15 +200,6 @@ export function MenuItemRow({
             <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
               <span aria-hidden="true">↳</span>
               <span>{nestedHint}</span>
-            </div>
-          ) : null}
-          {isDragTarget && dropIntent ? (
-            <div className="mt-1 text-[11px] font-medium text-primary">
-              {dropIntent === "child"
-                ? "Drop as sub-menu"
-                : dropIntent === "before"
-                  ? "Drop before this item"
-                  : "Drop after this item"}
             </div>
           ) : null}
         </div>

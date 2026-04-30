@@ -14,6 +14,9 @@ Tasks: TASK-246
 - Replaced normal-flow before/after drop lines with absolute row overlays so
   hover feedback no longer shifts the target row.
 - Strengthened before/after indicators with primary color lines and labels.
+- Removed the separate `Drop here to move to top level` drag banners so the
+  Menus editor uses only row-level before/after/child feedback while moving
+  items.
 - Centered the drag handle with fixed `h-12` so the grab cursor does not cover
   the full row height.
 

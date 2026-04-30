@@ -630,16 +630,6 @@ export function MenuEditorPage() {
     });
   };
 
-  const handleMoveToRoot = (dragId: string, position: "start" | "end") => {
-    setItems((prev) => {
-      const next = moveMenuItemToRoot(prev, dragId, position);
-      if (next !== prev) {
-        setIsDirty(true);
-      }
-      return next;
-    });
-  };
-
   const handleDiscard = () => {
     if (originalMenu) {
       setMenuName(originalMenu.name);
@@ -969,7 +959,6 @@ export function MenuEditorPage() {
                     onEdit={handleEditItem}
                     onDelete={handleRequestDeleteItem}
                     onMove={handleMove}
-                    onMoveToRoot={handleMoveToRoot}
                   />
                 )}
               </CardContent>

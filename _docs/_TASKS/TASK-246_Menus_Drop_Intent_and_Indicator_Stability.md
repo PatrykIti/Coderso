@@ -44,7 +44,8 @@ drop feedback deterministic and visually stable.
 - `core/admin/ui/menus/MenuTree.tsx`
   - stop inserting `DropLine` as a normal-flow sibling above/below the row;
   - pass all active drop intents directly into `MenuItemRow`;
-  - keep row/root drop handlers unchanged.
+  - remove the separate root-level drag banners so row-level `before` / `after`
+    / `child` feedback is the only drag guidance shown while moving items.
 - `core/admin/ui/menus/MenuItemRow.tsx`
   - render before/after indicators as absolute, pointer-events-none overlays
     inside the row so they cannot move layout or swallow drops;
@@ -175,5 +176,7 @@ Keep the handle visually centered:
 4. Before/after indicators do not shift row layout.
 5. Active before/after indicators are visually prominent.
 6. Grip cursor area is centered and not the full row height.
-7. Existing row content/edit/delete controls remain non-drag interactions.
-8. Targeted Vitest, lint, typecheck, and diff hygiene pass.
+7. The editor does not render separate `Drop here to move to top level` banners
+   during drag because row-level indicators own the movement UX.
+8. Existing row content/edit/delete controls remain non-drag interactions.
+9. Targeted Vitest, lint, typecheck, and diff hygiene pass.

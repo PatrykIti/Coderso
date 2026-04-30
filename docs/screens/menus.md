@@ -49,7 +49,8 @@ The Menus experience is easiest to understand as five connected workflows:
 - menu-level editing:
   update location and menu name on the selected menu
 - structure editing:
-  add items, reorder them, and build parent/child hierarchy
+  add items, reorder them with row-level before/after feedback, and build
+  parent/child hierarchy
 - item-level editing:
   define what each link points to and when it should appear
 
@@ -99,6 +100,8 @@ with usable items.
     - drop near the top of a row to place before that item,
     - drop through the middle of a row to create a sub-menu,
     - drop near the bottom of a row to place after that item,
+    - use the row indicators as the only drag feedback; the editor does not show
+      separate top-level drop banners while dragging.
 13. Select an existing item when you need to edit its details.
 14. In item settings, work top to bottom:
     - `Navigation Label`

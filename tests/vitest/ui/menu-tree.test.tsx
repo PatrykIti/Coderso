@@ -52,7 +52,6 @@ const mount = (props?: Partial<React.ComponentProps<typeof MenuTree>>) => {
     onEdit: vi.fn(),
     onDelete: vi.fn(),
     onMove: vi.fn(),
-    onMoveToRoot: vi.fn(),
   } satisfies React.ComponentProps<typeof MenuTree>;
 
   act(() => {
@@ -86,6 +85,7 @@ const dispatchDragEvent = (
     configurable: true,
     value: {
       effectAllowed: "",
+      setDragImage: vi.fn(),
       setData: vi.fn(),
     },
   });
@@ -254,10 +254,9 @@ test("MenuTree maps the middle row band to child without horizontal bias", () =>
   }
 });
 
-test("MenuTree exposes keyboard reorder actions and root drop zones", () => {
+test("MenuTree exposes keyboard reorder actions without root drop zones", () => {
   const onMove = vi.fn();
-  const onMoveToRoot = vi.fn();
-  const view = mount({ onMove, onMoveToRoot });
+  const view = mount({ onMove });
 
   try {
     const buttons = Array.from(view.container.querySelectorAll("button"));
@@ -278,18 +277,7 @@ test("MenuTree exposes keyboard reorder actions and root drop zones", () => {
     act(() => {
       dispatchDragEvent(rootHandle, "dragstart");
     });
-    const rootDrop = Array.from(view.container.querySelectorAll("div")).find(
-      (div) => div.textContent?.trim() === "Drop here to move to top level"
-    );
-    expect(rootDrop).not.toBeUndefined();
-
-    act(() => {
-      if (rootDrop) {
-        dispatchDragEvent(rootDrop, "dragover");
-        dispatchDragEvent(rootDrop, "drop");
-      }
-    });
-    expect(onMoveToRoot).toHaveBeenCalledWith("root", "start");
+    expect(view.container.textContent).not.toContain("Drop here to move to top level");
   } finally {
     view.cleanup();
   }

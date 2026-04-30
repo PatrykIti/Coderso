@@ -81,7 +81,6 @@ const renderTree = (
   setDragId: (value: string | null) => void,
   setHoverId: (value: string | null) => void,
   setHoverIntent: (value: MenuDropIntent) => void,
-  setRootDrop: (value: "start" | "end" | null) => void,
   latestHoverIntentRef: MutableRefObject<MenuDropIntent>,
   markDrag: (eventTimeStamp: number) => void
 ): ReactElement[] =>
@@ -109,7 +108,6 @@ const renderTree = (
           setDragId,
           setHoverId,
           setHoverIntent,
-          setRootDrop,
           latestHoverIntentRef,
           markDrag
         )
@@ -130,14 +128,12 @@ const renderTree = (
         onDragStart={(dragItem, event) => {
           markDrag(event.timeStamp);
           setDragId(dragItem.id);
-          setRootDrop(null);
         }}
         onDragEnd={(event) => {
           markDrag(event.timeStamp);
           setDragId(null);
           setHoverId(null);
           setHoverIntent("child");
-          setRootDrop(null);
           latestHoverIntentRef.current = "child";
         }}
         onDragOver={(hovered, event) => {
@@ -149,7 +145,6 @@ const renderTree = (
             rect: event.currentTarget.getBoundingClientRect(),
           });
           latestHoverIntentRef.current = intent;
-          setRootDrop(null);
           setHoverId(hovered.id);
           setHoverIntent(intent);
         }}
@@ -181,23 +176,13 @@ type MenuTreeProps = {
   onEdit: (item: MenuItemDisplay) => void;
   onDelete: (item: MenuItemDisplay) => void;
   onMove: (dragId: string, targetId: string, intent: MenuDropIntent) => void;
-  onMoveToRoot: (dragId: string, position: "start" | "end") => void;
 };
 
-export function MenuTree({
-  items,
-  activeId,
-  onSelect,
-  onEdit,
-  onDelete,
-  onMove,
-  onMoveToRoot,
-}: MenuTreeProps) {
+export function MenuTree({ items, activeId, onSelect, onEdit, onDelete, onMove }: MenuTreeProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverIntent, setHoverIntent] = useState<MenuDropIntent>("child");
   const [suppressClickUntil, setSuppressClickUntil] = useState(0);
-  const [rootDrop, setRootDrop] = useState<"start" | "end" | null>(null);
   const latestHoverIntentRef = useRef<MenuDropIntent>("child");
 
   const markDrag = (eventTimeStamp: number) => {
@@ -209,43 +194,8 @@ export function MenuTree({
     onSelect(item);
   };
 
-  const handleRootDragOver = (event: DragEvent<HTMLDivElement>, position: "start" | "end") => {
-    if (!dragId) return;
-    event.preventDefault();
-    setMoveDropEffect(event);
-    setHoverId(null);
-    setRootDrop(position);
-  };
-
-  const handleRootDrop = (event: DragEvent<HTMLDivElement>, position: "start" | "end") => {
-    if (!dragId) return;
-    event.preventDefault();
-    markDrag(event.timeStamp);
-    onMoveToRoot(dragId, position);
-    setDragId(null);
-    setHoverId(null);
-    setHoverIntent("child");
-    setRootDrop(null);
-    latestHoverIntentRef.current = "child";
-  };
-
   return (
     <div className="space-y-3">
-      {dragId ? (
-        <div
-          className={
-            rootDrop === "start"
-              ? "rounded-lg border border-dashed border-primary/60 bg-primary/5 px-3 py-2 text-xs text-primary"
-              : "rounded-lg border border-dashed border-muted-foreground/40 px-3 py-2 text-xs text-muted-foreground"
-          }
-          onDragOver={(event) => handleRootDragOver(event, "start")}
-          onDragLeave={() => setRootDrop(null)}
-          onDrop={(event) => handleRootDrop(event, "start")}
-        >
-          Drop here to move to top level
-        </div>
-      ) : null}
-
       {renderTree(
         items,
         0,
@@ -261,25 +211,9 @@ export function MenuTree({
         setDragId,
         setHoverId,
         setHoverIntent,
-        setRootDrop,
         latestHoverIntentRef,
         markDrag
       )}
-
-      {dragId ? (
-        <div
-          className={
-            rootDrop === "end"
-              ? "rounded-lg border border-dashed border-primary/60 bg-primary/5 px-3 py-2 text-xs text-primary"
-              : "rounded-lg border border-dashed border-muted-foreground/40 px-3 py-2 text-xs text-muted-foreground"
-          }
-          onDragOver={(event) => handleRootDragOver(event, "end")}
-          onDragLeave={() => setRootDrop(null)}
-          onDrop={(event) => handleRootDrop(event, "end")}
-        >
-          Drop here to move to top level
-        </div>
-      ) : null}
     </div>
   );
 }
