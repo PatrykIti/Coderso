@@ -155,6 +155,8 @@ Docs and board:
 - Auth model:
   - no new endpoint is introduced;
   - widget edits keep the existing authenticated admin page/template save flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because TASK-244 does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -167,6 +169,8 @@ Docs and board:
     forced style output.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - renderers must not emit raw invalid class names from user-controlled color
     values;
   - user-provided style values stay inline-style values or validated tokens,
@@ -211,16 +215,26 @@ const surfaceStyle = omitUndefinedStyle({ backgroundColor });
 ```
 
 Editor clear actions must remove the property, not write `"transparent"`.
+When a cleared object is also present in widget defaults, keep an empty object
+override so the shared shallow default merge cannot re-materialize the cleared
+field.
 
 ```ts
 function clearStyleField<T extends { style?: Record<string, unknown> }>(
   value: T,
-  key: string
+  key: string,
+  keepEmptyStyleOverride = false
 ): T {
   const { [key]: _removed, ...nextStyle } = value.style ?? {};
+  const style =
+    Object.keys(nextStyle).length > 0
+      ? nextStyle
+      : keepEmptyStyleOverride
+        ? {}
+        : undefined;
   return {
     ...value,
-    style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined,
+    style,
   };
 }
 ```
@@ -228,11 +242,15 @@ function clearStyleField<T extends { style?: Record<string, unknown> }>(
 For nested Hero background fields:
 
 ```ts
-function clearBackgroundField(value: HeroData, key: keyof NonNullable<HeroData["background"]>) {
+function clearBackgroundField(
+  value: HeroData,
+  key: keyof NonNullable<HeroData["background"]>
+) {
   const { [key]: _removed, ...nextBackground } = value.background ?? {};
   return {
     ...value,
-    background: Object.keys(nextBackground).length > 0 ? nextBackground : undefined,
+    // Keep an empty object to override heroDefaults.background.
+    background: Object.keys(nextBackground).length > 0 ? nextBackground : {},
   };
 }
 ```

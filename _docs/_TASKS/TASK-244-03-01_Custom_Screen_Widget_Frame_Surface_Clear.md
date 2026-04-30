@@ -170,6 +170,8 @@ variant switch. Add a real clearable background/gradient contract.
 - Auth model:
   - no new endpoint is introduced;
   - edits persist through the existing authenticated custom-screen/page save flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this leaf does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing custom-screen and page/template write permissions.
 - CSRF:
@@ -181,6 +183,8 @@ variant switch. Add a real clearable background/gradient contract.
     unknown keys rejected.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - frame background/gradient values must render through validated fields and
     inline styles, not dynamic class-name interpolation.
 - Compatibility:

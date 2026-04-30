@@ -104,7 +104,7 @@ scan is from 2026-04-30 and covers every widget registered by
 | `timeline` | `clear-required` | `timeline.tsx:47`, `timeline.tsx:168`, `timeline.tsx:249`, `timeline.tsx:353`, `timeline.tsx:385`, `timeline.tsx:441`, `timeline.tsx:511`, `timeline.tsx:580`, `timeline.tsx:597`, `timeline.tsx:614-617`; editor `TimelineEditors.tsx` | TASK-244-04-01 | `tests/vitest/widgets/timeline.test.tsx`; `tests/vitest/ui/timeline-editor-wave.test.tsx`; `_docs/_WIDGETS/TIMELINE.md` |
 | `compare-timeline` | `clear-required` | `compareTimeline.tsx:479-522` highlight, marker, and panel backgrounds need style-owned clear semantics without removing state readability | TASK-244-04-01 | `tests/vitest/widgets/compareTimeline.test.tsx`; `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`; `_docs/_WIDGETS/COMPARE_TIMELINE.md` |
 | `newsletter` | `clear-required` | `newsletter.tsx:24`, `newsletter.tsx:102`, `newsletter.tsx:129`, `newsletter.tsx:187`, `newsletter.tsx:215`, `newsletter.tsx:247`; editor `NewsletterEditors.tsx:514-517` | TASK-244-04-02 | `tests/vitest/widgets/newsletter.test.tsx`; `tests/vitest/ui/newsletter-editor-wave.test.tsx`; `_docs/_WIDGETS/NEWSLETTER.md` |
-| `booking-calendar` | `clear-required` | `bookingCalendar.tsx:348`, `bookingCalendar.tsx:418-424` force root frame and refresh action surface | TASK-244-03-02 | `tests/vitest/widgets/bookingCalendar.test.tsx`; `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`; `_docs/WIDGETS.md` |
+| `booking-calendar` | `clear-required` | `bookingCalendar.tsx:348` forces the root frame; `bookingCalendar.tsx:418-424` is currently border/text-only refresh action output, so action background should become clearable only if TASK-244-03-02 first introduces a user-owned action background field | TASK-244-03-02 | `tests/vitest/widgets/bookingCalendar.test.tsx`; `tests/vitest/ui/booking-calendar-editor-wave.test.tsx`; `_docs/WIDGETS.md` |
 | `appointment-form` | `clear-required` | `appointmentForm.tsx:229`, `appointmentForm.tsx:250`, `appointmentForm.tsx:317-323` force root, selected-slot panel, and submit action background | TASK-244-03-02 | `tests/vitest/widgets/appointmentForm.test.tsx`; `tests/vitest/ui/appointment-form-editor-wave.test.tsx`; `_docs/WIDGETS.md` |
 | `form-embed` | `clear-required` | `formEmbed.tsx:20-21`, `formEmbed.tsx:154-155`, `formEmbed.tsx:211-212`, `formEmbed.tsx:244-245`, `formEmbed.tsx:270-271`, `formEmbed.tsx:494-497`; editor `FormEmbedEditors.tsx:495-506`; `inputSize` at `FormEmbedEditors.tsx:564-574` is TASK-242 token work, not TASK-244 surface clear | TASK-244-04-02 | `tests/vitest/widgets/formEmbed.test.tsx`; `tests/vitest/ui/form-embed-editor-wave.test.tsx`; `_docs/_WIDGETS/FORM_EMBED.md` |
 | `contact` | `clear-required` | `contact.tsx:30-32`, `contact.tsx:179-181`, `contact.tsx:204-206`, `contact.tsx:261-265`, `contact.tsx:299-303`; editor `ContactEditors.tsx:619-636` | TASK-244-04-02 | `tests/vitest/widgets/contact.test.tsx`; `tests/vitest/ui/contact-editor-wave.test.tsx`; `_docs/_WIDGETS/CONTACT.md` |
@@ -154,6 +154,9 @@ files.
 - Auth model:
   - no new endpoint is introduced;
   - implementation leaves keep the existing authenticated admin save flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this inventory does not introduce an internal API-key
+    mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -165,6 +168,8 @@ files.
     strict reject-unknown schema coverage.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - inventory rows must not recommend raw user-controlled Tailwind class
     interpolation for colors, gradients, overlays, or surfaces.
 
@@ -172,6 +177,8 @@ files.
 
 - Documentation-only validation:
   - `git diff --check`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
 - No runtime tests are required in this inventory leaf unless it is implemented
   together with code changes.
 

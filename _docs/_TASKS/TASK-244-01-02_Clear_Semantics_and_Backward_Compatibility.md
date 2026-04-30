@@ -151,12 +151,19 @@ only merge patches are not enough when the patch contains `undefined`.
 ```ts
 function removeStyleKey<T extends { style?: Record<string, unknown> }>(
   value: T,
-  key: string
+  key: string,
+  keepEmptyStyleOverride = false
 ): T {
   const { [key]: _removed, ...style } = value.style ?? {};
+  const nextStyle =
+    Object.keys(style).length > 0
+      ? style
+      : keepEmptyStyleOverride
+        ? {}
+        : undefined;
   return {
     ...value,
-    style: Object.keys(style).length > 0 ? style : undefined,
+    style: nextStyle,
   };
 }
 ```
@@ -164,14 +171,22 @@ function removeStyleKey<T extends { style?: Record<string, unknown> }>(
 For nested groups such as Hero background:
 
 ```ts
+const shouldKeepEmptyBackgroundOverride = true; // true when def.defaults.background would shallow-merge back
+
 function removeBackgroundKey(
   value: HeroData,
   key: keyof NonNullable<HeroData["background"]>
 ): HeroData {
   const { [key]: _removed, ...background } = value.background ?? {};
+  const nextBackground =
+    Object.keys(background).length > 0
+      ? background
+      : shouldKeepEmptyBackgroundOverride
+        ? {}
+        : undefined;
   return {
     ...value,
-    background: Object.keys(background).length > 0 ? background : undefined,
+    background: nextBackground,
   };
 }
 ```
@@ -197,6 +212,8 @@ function removeBackgroundKey(
 - Auth model:
   - no new endpoint is introduced;
   - clear actions persist only through existing authenticated admin save flows.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because TASK-244 does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -208,6 +225,8 @@ function removeBackgroundKey(
     payloads with catch-all style objects.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - style helpers must return values for inline styles or validated tokens only,
     not raw class fragments derived from user input.
 - Compatibility:
@@ -216,18 +235,34 @@ function removeBackgroundKey(
 
 ## Testing Requirements
 
-- Unit/render tests for helper behavior if a shared helper is introduced.
-- Runtime tests proving cleared data omits style output.
-- Backward-compatibility tests for representative default/legacy data where a
-  fallback is changed.
-- Tests for any touched shared default path, including inserted default payloads,
-  renderer normalization, and cleared saved payloads that must stay absent.
-- Schema/normalizer tests for every new style field: accepted clear-capable
-  payloads, preserved `additionalProperties: false`, and rejected unknown style
-  keys.
-- Editor tests proving `Clear` removes the key from emitted data.
-- Payload tests or assertions proving `Clear` does not serialize
-  `"transparent"` or empty strings as off-state sentinels.
+- Documentation-only refinement of this leaf:
+  - `git diff --check`
+- If a shared clear helper is extracted:
+  - create or update `tests/vitest/widgets/clearableStyle.test.ts` for helper
+    behavior, unless the implementation leaf names a more precise existing
+    owner;
+  - `bun run test:vitest -- tests/vitest/widgets/clearableStyle.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+- If `normalizeWidgetBlock()`, `WidgetRenderer`, or the shared default merge
+  path changes:
+  - `bun test tests/unit/widgets/validator.test.ts`
+  - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - add or update `tests/vitest/pageBuilder/wizardFlow.test.tsx` coverage when
+    inserted block defaults change through `blockUtils.createBlock()`;
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+- Each implementation leaf must also run its targeted runtime/editor suites and
+  include:
+  - runtime tests proving cleared data omits style output;
+  - backward-compatibility tests for representative default/legacy data where a
+    fallback is changed;
+  - schema/normalizer tests for every new style field: accepted clear-capable
+    payloads, preserved `additionalProperties: false`, and rejected unknown
+    style keys;
+  - editor tests proving `Clear` removes the key from emitted data;
+  - payload assertions proving `Clear` does not serialize `"transparent"` or
+    empty strings as off-state sentinels.
 - `git diff --check`
 
 ## Documentation Updates Required

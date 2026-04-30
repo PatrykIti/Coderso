@@ -236,6 +236,8 @@ When cleared, the mapped field should be absent, not `"transparent"`.
 - Auth model:
   - no new endpoint is introduced;
   - edits persist through existing authenticated admin page/template save flows.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this leaf does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -247,6 +249,8 @@ When cleared, the mapped field should be absent, not `"transparent"`.
     defaults, and normalizer with unknown keys rejected.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - card, overlay, marker, timeline, and tile values must render through
     validated style fields, not user-controlled class-name fragments.
 - Compatibility:

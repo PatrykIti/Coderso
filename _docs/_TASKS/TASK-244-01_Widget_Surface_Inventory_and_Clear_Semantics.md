@@ -55,6 +55,8 @@ This subtask owns the rule boundary:
   - no new endpoint is introduced;
   - future widget edits continue through the existing authenticated admin
     page/template save flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this subtask does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -66,6 +68,8 @@ This subtask owns the rule boundary:
     call out any field that needs schema/default/normalizer changes.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - user-controlled color/background values must remain validated tokens or
     inline-style values, never interpolated class-name fragments.
 

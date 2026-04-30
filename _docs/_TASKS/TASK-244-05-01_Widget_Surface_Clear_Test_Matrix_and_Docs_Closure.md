@@ -44,6 +44,8 @@ to prove existing `None` token behavior did not regress.
 - Auth model:
   - no new endpoint is introduced;
   - test evidence must preserve existing authenticated admin save flow behavior.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because closure does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/custom-screen/widget-template permissions.
 - CSRF:
@@ -57,6 +59,8 @@ to prove existing `None` token behavior did not regress.
     changed.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - validation must prove no clear handler writes `"transparent"` or empty strings
     as off-state sentinels and no renderer emits user-controlled class fragments.
 

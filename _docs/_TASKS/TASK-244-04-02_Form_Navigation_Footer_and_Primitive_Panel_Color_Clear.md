@@ -128,7 +128,7 @@ Default and compatibility policy:
 | `navigation` | `surfaceColor`, `ctaBackgroundColor`, and related CTA colors at `navigation.tsx:62-67`, schema `navigation.tsx:196-201`, runtime `navigation.tsx:320-343`, CTA output `navigation.tsx:430-436` | Add `Clear` to `NavigationEditors.tsx:1049-1098`; preserve transparent behavior toggle at `NavigationEditors.tsx:1191-1198` | Assert surface/CTA clears remove keys while transparent behavior still overrides surface color |
 | `footer` | `surfaceColor` at `footer.tsx:38`, schema `footer.tsx:119`, runtime `footer.tsx:303` | Add `Clear` to `FooterEditors.tsx:560-564` | Assert cleared footer omits background style and layout blocks remain |
 | `accordion` | `surfaceColor` at `accordion.tsx:27`, schema `accordion.tsx:74`, default `accordion.tsx:100`, normalizer `accordion.tsx:191-194`, runtime `accordion.tsx:280` | Add `Clear` to `AccordionEditors.tsx:306-312` | Assert cleared accordion items omit panel background and expanded state remains |
-| `tabs` | `surfaceColor`, `activeBackgroundColor`, and `panelBackgroundColor` at `tabs.tsx:27-32`, schema `tabs.tsx:77-82`, defaults `tabs.tsx:98-103`, normalizer `tabs.tsx:199-222`, runtime `tabs.tsx:340-355` | Add `Clear` to `TabsEditors.tsx:319-365` for background/surface fields; preserve text and border color controls | Assert cleared surface/active/panel backgrounds omit style without breaking selected tab state |
+| `tabs` | `surfaceColor`, `activeBackgroundColor`, and `panelBackgroundColor` at `tabs.tsx:27-32`, schema `tabs.tsx:77-82`, defaults `tabs.tsx:98-103`, normalizer `tabs.tsx:199-222`, runtime `tabs.tsx:340-355` | Add `Clear` to the existing `TabsEditors.tsx:319-365` surface/active controls and add a panel background control there because the live editor currently does not expose `panelBackgroundColor`; preserve text and border color controls | Assert cleared surface/active/panel backgrounds omit style without breaking selected tab state |
 | `toggle-block` | `surfaceColor` at `toggleBlock.tsx:23`, schema `toggleBlock.tsx:53`, default `toggleBlock.tsx:71`, normalizer `toggleBlock.tsx:106-109`, runtime `toggleBlock.tsx:207` | Add `Clear` to `ToggleBlockEditors.tsx:245-255` | Assert cleared surface omits background and toggle behavior still works |
 
 ## Implementation Pseudocode
@@ -154,14 +154,16 @@ where it maps to user-facing control.
 
 When cleared, prefer no background class and no inline background style.
 
-Editor clear helpers must remove keys from `style`.
+Editor clear helpers must remove keys from `style`. If the widget's defaults
+include `style`, keep `style: {}` when the last key is cleared so the shared
+shallow default merge cannot re-materialize a cleared surface.
 
 ```ts
 function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
   const { [key]: _removed, ...nextStyle } = value.style ?? {};
   onChange({
     ...value,
-    style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined,
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
   });
 }
 ```
@@ -174,6 +176,8 @@ function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
 - Auth model:
   - no new endpoint is introduced;
   - edits persist through existing authenticated admin page/template save flows.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this leaf does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -185,6 +189,8 @@ function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
     schema-first and reject unknown keys.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - CTA/form/button color values must be validated fields or inline styles, not
     dynamic class fragments.
 - Compatibility:

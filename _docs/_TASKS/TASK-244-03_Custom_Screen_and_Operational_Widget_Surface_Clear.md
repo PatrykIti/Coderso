@@ -70,6 +70,8 @@ This subtask covers the widgets where the problem is most structural:
   - no new endpoint is introduced;
   - edits keep the existing authenticated admin page/template/custom-screen save
     flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this subtask does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing custom-screen, page, template, and widget-template write
     permissions.
@@ -82,6 +84,8 @@ This subtask covers the widgets where the problem is most structural:
     and must reject unknown keys.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - user-controlled style values must not be emitted as dynamic class fragments.
 
 ## Testing Requirements

@@ -95,6 +95,8 @@ const hasGradient =
   - no new endpoint is introduced;
   - emitted editor payloads persist through existing authenticated admin save
     flows.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this leaf does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -106,6 +108,8 @@ const hasGradient =
     payloads.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - helper APIs must not support raw class-name generation from user-entered
     color, gradient, or overlay values.
 

@@ -70,6 +70,8 @@ Hero and operational frame semantics are established.
 - Auth model:
   - no new endpoint is introduced;
   - edits persist through existing authenticated admin page/template save flows.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this subtask does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -80,6 +82,8 @@ Hero and operational frame semantics are established.
   - style-field changes must stay schema-first and reject unknown payload keys.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - user-provided color/background values must not be emitted as dynamic class
     names.
 - Compatibility:

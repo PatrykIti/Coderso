@@ -50,6 +50,8 @@ color/background clear buttons without widening into unrelated token work.
 - Auth model:
   - no new endpoint is introduced;
   - edits keep the existing authenticated admin page/template save flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this subtask does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -61,6 +63,8 @@ color/background clear buttons without widening into unrelated token work.
     rejecting unknown keys.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - gradient, overlay, and color values must not be interpolated into dynamic
     class names from user input.
 

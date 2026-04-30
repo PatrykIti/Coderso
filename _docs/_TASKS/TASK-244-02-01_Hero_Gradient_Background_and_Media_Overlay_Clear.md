@@ -147,6 +147,8 @@ expect(html).not.toContain("background:#224466");
   - no new endpoint is introduced;
   - Hero edits persist through the existing authenticated admin page/template save
     flow.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because this leaf does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/widget-template write permissions.
 - CSRF:
@@ -158,6 +160,8 @@ expect(html).not.toContain("background:#224466");
     `additionalProperties: false` semantics and reject unknown fields.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - gradient/color/overlay values must render through validated fields and inline
     styles, not user-controlled class-name fragments.
 - Compatibility:

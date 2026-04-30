@@ -53,6 +53,8 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
   - no new endpoint is introduced by closure;
   - validation must confirm implementation leaves kept existing authenticated admin
     save flows.
+  - existing admin writes remain session-authenticated; API-key scope is not
+    applicable because closure does not introduce an internal API-key mode.
 - RBAC:
   - unchanged existing page/template/custom-screen/widget-template permissions.
 - CSRF:
@@ -65,6 +67,8 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
     cleared omission, and rejected unknown keys for changed payloads.
 - Anti-abuse:
   - no public write surface is added;
+  - nonce, signature/HMAC, and reCAPTCHA are not applicable because no public
+    write endpoint is added.
   - closure must record that no new clear path stores `"transparent"`/empty
     strings as fake off-state sentinels or emits user-controlled class fragments.
 
