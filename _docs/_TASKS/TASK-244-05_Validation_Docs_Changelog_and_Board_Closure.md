@@ -43,6 +43,30 @@ TASK-244-01 is either fixed or explicitly excluded with evidence.
 7. Add the changelog entry for the completion number assigned during
    implementation.
 
+## Security Contract
+
+- Visibility:
+  - closure validates internal admin editor controls and public widget runtime
+    output.
+- Auth model:
+  - no new endpoint is introduced by closure;
+  - validation must confirm implementation leaves kept existing authenticated admin
+    save flows.
+- RBAC:
+  - unchanged existing page/template/custom-screen/widget-template permissions.
+- CSRF:
+  - closure must confirm no implementation leaf bypassed existing admin CSRF
+    handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - closure must include schema tests proving accepted configured values, accepted
+    cleared omission, and rejected unknown keys for changed payloads.
+- Anti-abuse:
+  - no public write surface is added;
+  - closure must record that no new clear path stores `"transparent"`/empty
+    strings as fake off-state sentinels or emits user-controlled class fragments.
+
 ## Testing Requirements
 
 - All targeted suites listed in TASK-244-02, TASK-244-03, and TASK-244-04.

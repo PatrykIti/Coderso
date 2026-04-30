@@ -134,6 +134,32 @@ compatibility decision from TASK-244-01-02. Do not make absence mean both
 For the `screen-record-header` current card gradient, do not replace clear with a
 variant switch. Add a real clearable background/gradient contract.
 
+## Security Contract
+
+- Visibility:
+  - custom screen widget editor controls are internal admin UI;
+  - custom screen widget render output remains public/runtime screen output where
+    custom screens are rendered.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits persist through the existing authenticated custom-screen/page save flow.
+- RBAC:
+  - unchanged existing custom-screen and page/template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - new screen widget `style` fields must stay in the owning widget schemas with
+    unknown keys rejected.
+- Anti-abuse:
+  - no public write surface is added;
+  - frame background/gradient values must render through validated fields and
+    inline styles, not dynamic class-name interpolation.
+- Compatibility:
+  - screen-only widget restrictions and binding behavior must not be loosened by
+    clear support.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx`

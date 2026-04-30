@@ -208,6 +208,31 @@ mapPostsFeedToContentListData({
 
 When cleared, the mapped field should be absent, not `"transparent"`.
 
+## Security Contract
+
+- Visibility:
+  - marketing/content widget editor controls are internal admin UI;
+  - rendered widget output is public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits persist through existing authenticated admin page/template save flows.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - every new or newly-clearable style field must be owned by its widget schema,
+    defaults, and normalizer with unknown keys rejected.
+- Anti-abuse:
+  - no public write surface is added;
+  - card, overlay, marker, timeline, and tile values must render through
+    validated style fields, not user-controlled class-name fragments.
+- Compatibility:
+  - content-list/posts-feed mappings must preserve absence without weakening
+    resolver validation or semantic readability states.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/testimonials.test.tsx tests/vitest/widgets/team.test.tsx tests/vitest/widgets/statsKpi.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/richTextSection.test.tsx tests/vitest/widgets/timeline.test.tsx tests/vitest/widgets/compareTimeline.test.tsx`

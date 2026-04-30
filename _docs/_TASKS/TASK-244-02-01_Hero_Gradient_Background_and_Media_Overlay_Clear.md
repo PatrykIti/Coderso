@@ -126,6 +126,32 @@ expect(hero.querySelector("[data-hero-background-overlay]")).toBeNull();
 expect(html).not.toContain("background:#224466");
 ```
 
+## Security Contract
+
+- Visibility:
+  - Hero editor controls are internal admin UI;
+  - Hero render output is public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - Hero edits persist through the existing authenticated admin page/template save
+    flow.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - `background`, `background.media`, and `style` schema changes must keep
+    `additionalProperties: false` semantics and reject unknown fields.
+- Anti-abuse:
+  - no public write surface is added;
+  - gradient/color/overlay values must render through validated fields and inline
+    styles, not user-controlled class-name fragments.
+- Compatibility:
+  - legacy `media.overlay` compatibility must be read-only adaptation, not a
+    route or payload validation bypass.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`

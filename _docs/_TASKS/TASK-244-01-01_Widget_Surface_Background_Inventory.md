@@ -146,6 +146,28 @@ Then map every finding to exactly one leaf owner. Do not leave a broad
 "composite widgets" bucket without naming the runtime, editor, test, and docs
 files.
 
+## Security Contract
+
+- Visibility:
+  - internal task inventory for admin editor payloads and public widget runtime
+    output.
+- Auth model:
+  - no new endpoint is introduced;
+  - implementation leaves keep the existing authenticated admin save flow.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin write CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - every `clear-required` row that adds or changes `style` fields must keep
+    strict reject-unknown schema coverage.
+- Anti-abuse:
+  - no public write surface is added;
+  - inventory rows must not recommend raw user-controlled Tailwind class
+    interpolation for colors, gradients, overlays, or surfaces.
+
 ## Testing Requirements
 
 - Documentation-only validation:

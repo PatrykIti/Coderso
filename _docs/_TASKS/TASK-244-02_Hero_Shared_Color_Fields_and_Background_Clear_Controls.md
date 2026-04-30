@@ -42,6 +42,28 @@ color/background clear buttons without widening into unrelated token work.
 4. Extract small editor helper components only after Hero behavior is proven.
 5. Add Section no-regression coverage if shared helpers touch section controls.
 
+## Security Contract
+
+- Visibility:
+  - admin Hero/shared editor controls are internal admin UI;
+  - rendered Hero/Section output remains public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits keep the existing authenticated admin page/template save flow.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - Hero/background/media/style schemas must accept clear omission while still
+    rejecting unknown keys.
+- Anti-abuse:
+  - no public write surface is added;
+  - gradient, overlay, and color values must not be interpolated into dynamic
+    class names from user input.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`

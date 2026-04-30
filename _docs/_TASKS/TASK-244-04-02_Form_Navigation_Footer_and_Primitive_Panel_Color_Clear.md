@@ -153,6 +153,31 @@ function clearPanelStyle<K extends keyof WidgetStyle>(key: K) {
 }
 ```
 
+## Security Contract
+
+- Visibility:
+  - form/navigation/footer/panel widget editor controls are internal admin UI;
+  - rendered widgets remain public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits persist through existing authenticated admin page/template save flows.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - form, navigation, footer, and primitive panel style fields must stay
+    schema-first and reject unknown keys.
+- Anti-abuse:
+  - no public write surface is added;
+  - CTA/form/button color values must be validated fields or inline styles, not
+    dynamic class fragments.
+- Compatibility:
+  - navigation transparent behavior, form input readability, submit state colors,
+    and panel expanded/selected state semantics must remain intact.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/toggleBlock.test.tsx`

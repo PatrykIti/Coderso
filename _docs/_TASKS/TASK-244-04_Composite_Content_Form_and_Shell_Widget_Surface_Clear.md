@@ -62,6 +62,30 @@ Hero and operational frame semantics are established.
 4. Keep TASK-242 `None` token behavior unchanged.
 5. Update docs and tests in the same owner groups.
 
+## Security Contract
+
+- Visibility:
+  - composite/content/form/shell widget editor controls are internal admin UI;
+  - rendered widgets remain public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits persist through existing authenticated admin page/template save flows.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - style-field changes must stay schema-first and reject unknown payload keys.
+- Anti-abuse:
+  - no public write surface is added;
+  - user-provided color/background values must not be emitted as dynamic class
+    names.
+- Compatibility:
+  - form readability, navigation behavior, footer links, and content resolver
+    mappings must not be weakened by clear support.
+
 ## Testing Requirements
 
 - Targeted Vitest widget suites for every touched file.

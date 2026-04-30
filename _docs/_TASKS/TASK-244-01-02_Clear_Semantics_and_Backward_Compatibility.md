@@ -145,6 +145,30 @@ function removeBackgroundKey(
 5. Do not remove semantic state colors for warnings, errors, stock states,
    validation, or lifecycle badges.
 
+## Security Contract
+
+- Visibility:
+  - internal shared widget contract used by admin editors and public renderers.
+- Auth model:
+  - no new endpoint is introduced;
+  - clear actions persist only through existing authenticated admin save flows.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - helpers must preserve strict schema behavior and must not broaden widget
+    payloads with catch-all style objects.
+- Anti-abuse:
+  - no public write surface is added;
+  - style helpers must return values for inline styles or validated tokens only,
+    not raw class fragments derived from user input.
+- Compatibility:
+  - cleared absence must not be replaced by `"transparent"` or empty-string
+    sentinels that could hide validation drift.
+
 ## Testing Requirements
 
 - Unit/render tests for helper behavior if a shared helper is introduced.

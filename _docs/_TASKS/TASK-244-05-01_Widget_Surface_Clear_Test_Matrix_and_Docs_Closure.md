@@ -33,6 +33,30 @@ problem needs targeted proof.
 Every group must also include a negative payload assertion: `Clear` must not
 write `"transparent"` or an empty string solely as an off-state sentinel.
 
+## Security Contract
+
+- Visibility:
+  - validation covers internal admin editor controls and public widget runtime
+    output.
+- Auth model:
+  - no new endpoint is introduced;
+  - test evidence must preserve existing authenticated admin save flow behavior.
+- RBAC:
+  - unchanged existing page/template/custom-screen/widget-template permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling; no test should bypass
+    this by adding production-only fallbacks.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - every validation group must include strict schema coverage for configured
+    values, cleared omission, and rejected unknown keys where payload contracts
+    changed.
+- Anti-abuse:
+  - no public write surface is added;
+  - validation must prove no clear handler writes `"transparent"` or empty strings
+    as off-state sentinels and no renderer emits user-controlled class fragments.
+
 ## Exact Validation Commands
 
 Run the exact commands below unless the implementation narrows the touched

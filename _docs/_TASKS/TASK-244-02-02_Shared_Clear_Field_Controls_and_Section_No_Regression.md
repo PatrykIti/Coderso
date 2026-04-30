@@ -86,6 +86,29 @@ const hasGradient =
   (style.gradientTo ?? "").trim().length > 0;
 ```
 
+## Security Contract
+
+- Visibility:
+  - shared clear helpers are internal admin editor UI utilities;
+  - any renderer behavior they affect remains public widget output.
+- Auth model:
+  - no new endpoint is introduced;
+  - emitted editor payloads persist through existing authenticated admin save
+    flows.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - helpers must remove known keys only and must not create broad arbitrary style
+    payloads.
+- Anti-abuse:
+  - no public write surface is added;
+  - helper APIs must not support raw class-name generation from user-entered
+    color, gradient, or overlay values.
+
 ## Testing Requirements
 
 - Hero tests from TASK-244-02-01 must remain green.

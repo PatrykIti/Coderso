@@ -155,6 +155,32 @@ const clearOperationalStyle = (key: keyof OperationalSurfaceStyle) => {
 };
 ```
 
+## Security Contract
+
+- Visibility:
+  - booking/listing/search/commerce widget editor controls are internal admin UI;
+  - rendered widgets remain public runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits persist through existing authenticated admin page/template save flows.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - each widget that gains `style` fields must update schema/default/normalizer
+    ownership and preserve unknown-key rejection.
+- Anti-abuse:
+  - no public write surface is added;
+  - operational state colors, errors, availability states, and commerce/listing
+    semantic states must not be converted into unvalidated user-controlled class
+    fragments.
+- Compatibility:
+  - public booking/listing/search behavior and existing state/readability colors
+    must remain intact when a decorative surface is cleared.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/widgets/productCompare.test.tsx`

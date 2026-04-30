@@ -61,6 +61,29 @@ This subtask covers the widgets where the problem is most structural:
 4. Keep controls functional and accessible after background removal.
 5. Add targeted runtime/editor tests.
 
+## Security Contract
+
+- Visibility:
+  - admin screen/operational widget controls are internal admin UI;
+  - rendered widget output remains public runtime output.
+- Auth model:
+  - no new endpoint is introduced;
+  - edits keep the existing authenticated admin page/template/custom-screen save
+    flow.
+- RBAC:
+  - unchanged existing custom-screen, page, template, and widget-template write
+    permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - every new `style` field must be owned by the widget schema/default/normalizer
+    and must reject unknown keys.
+- Anti-abuse:
+  - no public write surface is added;
+  - user-controlled style values must not be emitted as dynamic class fragments.
+
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/screenWidgets.test.tsx tests/vitest/ui/screen-widgets-editor-wave.test.tsx`

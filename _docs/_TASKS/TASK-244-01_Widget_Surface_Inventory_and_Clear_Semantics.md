@@ -46,6 +46,29 @@ This subtask owns the rule boundary:
 5. Keep the field semantics aligned with TASK-244-01-02 before implementation
    starts.
 
+## Security Contract
+
+- Visibility:
+  - this inventory is an internal planning contract for admin widget editors and
+    public widget render output.
+- Auth model:
+  - no new endpoint is introduced;
+  - future widget edits continue through the existing authenticated admin
+    page/template save flow.
+- RBAC:
+  - unchanged existing page/template/widget-template write permissions.
+- CSRF:
+  - unchanged existing admin save calls and CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - inventory decisions must preserve strict widget schema validation and must
+    call out any field that needs schema/default/normalizer changes.
+- Anti-abuse:
+  - no public write surface is added;
+  - user-controlled color/background values must remain validated tokens or
+    inline-style values, never interpolated class-name fragments.
+
 ## Testing Requirements
 
 - Documentation-only validation:
