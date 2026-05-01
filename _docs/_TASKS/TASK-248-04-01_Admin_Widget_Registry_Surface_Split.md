@@ -38,6 +38,7 @@ No child task files.
   public/module-facing pack readiness contract.
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/customScreens/bindingResolver.test.ts`
+- `tests/unit/widgets/registry.test.ts`
 
 ## Registry Contract
 
@@ -154,15 +155,21 @@ tests; do not perform a broad registry rename.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Vitest:
+- Bun widget registry:
+  - update and run `tests/unit/widgets/registry.test.ts`,
   - registry returns only widgets allowed for `admin-list-view`,
   - registry returns only widgets allowed for `admin-editor-view`,
+  - `WidgetSurface` normalization accepts `admin-list-view` and
+    `admin-editor-view`,
   - an empty `admin-list-view` registry is valid when list behavior remains
     configuration-only,
-  - List View columns, filters, row actions, and bulk actions are not read from
-    widget blocks,
   - existing `page-builder`, `widget-library`, and legacy
     `custom-screen-builder` availability remains unchanged,
+  - alternate aliases such as `admin-list` and `admin-record` are not accepted
+    unless the full registry contract is deliberately renamed.
+- Vitest UI/service:
+  - List View columns, filters, row actions, and bulk actions are not read from
+    widget blocks,
   - public-only widgets are hidden from Custom Screen builder,
   - legacy V1 widgets still render for existing screens,
   - field-aware admin widgets require a selected content type,
@@ -170,9 +177,7 @@ tests; do not perform a broad registry rename.
     contracts or are explicitly documented as internal controls outside the
     widget registry,
   - module pack matrix assertions stay unchanged for admin-only controls, or are
-    updated with matching docs when a control becomes module-facing,
-  - alternate aliases such as `admin-list` and `admin-record` are not accepted
-    unless the full registry contract is deliberately renamed.
+    updated with matching docs when a control becomes module-facing.
 
 ## Documentation Updates Required
 

@@ -14,11 +14,12 @@
 Add the versioned Custom Screen definition model for workspace-builder V2 while
 keeping existing V1 screens readable.
 
-This leaf owns the pure service/domain contract only. It must not change admin UI
-rendering, route registration, or widget registry behavior. The expected output
-is a strict definition normalizer that accepts current V1 rows, emits V2 defaults
-for the selected content type when context is available, and rejects unknown V2
-keys before persistence.
+This leaf owns the service/domain contract plus the persistence migration needed
+for that contract. It must not change admin UI rendering, route registration, or
+widget registry behavior. The expected output is a strict definition normalizer
+that accepts current V1 rows, emits V2 defaults for the selected content type
+when context is available, rejects unknown V2 keys before persistence, and ships
+the full DB migration artifacts for `custom_screens.definition`.
 
 ## Sub-Tasks
 
@@ -35,6 +36,9 @@ No child task files.
 - `meta/_journal.json`
 - `tests/vitest/customScreens/customScreenService.test.ts`
 - `tests/vitest/customScreens/capabilities.test.ts`
+- DB-backed Bun migration/service validation, for example a focused
+  `tests/integration/routes/customScreensRoutes.test.ts` scenario or a dedicated
+  migration artifact smoke suite for `custom_screens.definition`.
 
 ## Contract
 
@@ -220,6 +224,16 @@ export function buildDefaultListViewDefinition(
     content type fields,
   - invalid column/filter fields throw `custom_screen_definition_invalid`,
   - capabilities report V2 list/editor support without breaking legacy V1 rows.
+- Bun/DB-backed validation when `DATABASE_URL` is available:
+  - load env before the suite with `set -a && source .env && set +a`,
+  - verify the migration artifacts add `custom_screens.definition`,
+  - verify existing `schema_version`, `blocks`, and `bindings` remain present for
+    V1 compatibility,
+  - verify a legacy V1 row can be read after migration and maps to a deterministic
+    V2 `definition`,
+  - verify a V2 row persists and reads `definition` as the source of truth.
+  If the DB is unavailable, record the exact skipped command and rerun the
+  DB-backed validation before closing the parent family.
 
 ## Documentation Updates Required
 

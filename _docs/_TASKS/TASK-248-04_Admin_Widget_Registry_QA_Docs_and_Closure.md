@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Coderso Custom Screens + Widgets + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-248-01, TASK-248-02
+**Dependencies:** TASK-248-01, TASK-248-02; TASK-248-04-02 depends on TASK-248-03-03
 **Status:** To Do
 
 ---
@@ -27,10 +27,10 @@ The product decision is reuse-first, not copy-everything:
 - Keep `List View` configuration-first. Its columns, filters, bulk actions, and
   row actions remain `definition.listView` config objects, not arbitrary widgets.
 
-Dependency note: TASK-248-04-01 is intentionally executed before
-TASK-248-03-01 so the `admin-editor-view` surface exists before the editor
-designer consumes it. TASK-248-04-02 remains the final closure/replay leaf after
-TASK-248-03-03.
+Dependency note: TASK-248-04 is split intentionally. TASK-248-04-01 is executed
+before TASK-248-03-01 so the `admin-editor-view` surface exists before the
+editor designer consumes it. TASK-248-04-02 must not start until TASK-248-03-03
+is implemented and remains the final closure/replay leaf.
 
 ## Sub-Tasks
 
@@ -246,6 +246,13 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
     contracts or are documented as internal controls outside the registry,
   - module pack matrix expectations stay unchanged for admin-only controls or
     are updated with docs when a control becomes module-facing.
+- Bun widget registry tests:
+  - update and run `tests/unit/widgets/registry.test.ts` for the core
+    `WidgetSurface` union, surface normalization, `listWidgetsForSurface`, and
+    rejection of alternate aliases such as `admin-list` or `admin-record`,
+  - preserve existing `page-builder`, `widget-library`, and legacy
+    `custom-screen-builder` behavior while adding `admin-list-view` and
+    `admin-editor-view`.
 - Run all targeted tests from TASK-248-01, TASK-248-02, and TASK-248-03.
 - Playwright CLI replay with screenshots for:
   - `List View` builder,

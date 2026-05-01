@@ -50,7 +50,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-248-03-02 | Editor View Create Mode Draft, Save, and Validation | High | Medium | Route V2 `New record` to create mode and submit normalized entry data instead of `data: {}` |
 | TASK-248-03-03 | Editor View Edit Mode Hydration, Save, and Dirty State | High | Medium | Hydrate typed entry values, save non-destructively, and preserve dirty-state/cache semantics |
 | TASK-248-04 | Admin Widget Registry, QA, Docs, and Closure | Medium | Large | Split admin/public widget registry behavior and close with Playwright CLI workspace replay |
-| TASK-248-04-01 | Admin Widget Registry Surface Split | High | Medium | Scope widget availability by `public-page`, `admin-list-view`, and `admin-editor-view` surfaces |
+| TASK-248-04-01 | Admin Widget Registry Surface Split | High | Medium | Scope widget availability by `page-builder`, `admin-list-view`, and `admin-editor-view` surfaces |
 | TASK-248-04-02 | Playwright Replay, Docs, Changelog, and Board Closure | Medium | Small | Replay House Projects end to end and synchronize docs, changelog, task statuses, and board counts |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |

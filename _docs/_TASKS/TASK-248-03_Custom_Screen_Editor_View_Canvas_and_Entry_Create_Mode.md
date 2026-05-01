@@ -99,22 +99,17 @@ save unless the user explicitly edits a field owned by `Editor View`.
 
 ```tsx
 // EditorViewDesigner.tsx
-<PageLikeBuilderShell
-  blocks={definition.editorView.blocks}
-  registry={listRegisteredAdminWidgets({
-    surface: "admin-editor-view",
-    contentType,
-  })}
-  selectedId={selectedId}
-  onBlocksChange={(blocks) =>
-    updateDefinition({
-      editorView: {
-        ...definition.editorView,
-        blocks,
-      },
-    })
+<CustomScreenShell
+  leftPanel={
+    <WidgetPicker
+      widgets={listRegisteredWidgetsForSurface({
+        surface: "admin-editor-view",
+        contentType,
+      })}
+      onInsert={insertEditorViewBlock}
+    />
   }
-  detailsPanel={
+  rightPanel={
     <FieldBindingPanel
       contentType={contentType}
       bindings={definition.editorView.bindings}
@@ -130,8 +125,29 @@ save unless the user explicitly edits a field owned by `Editor View`.
       }
     />
   }
-/>;
+>
+  <BlockList
+    blocks={definition.editorView.blocks}
+    selectedId={selectedId}
+    onSelect={setSelectedId}
+    onChange={(blocks) =>
+      updateDefinition({
+        ...definition,
+        editorView: {
+          ...definition.editorView,
+          blocks,
+        },
+      })
+    }
+  />
+</CustomScreenShell>;
 ```
+
+Reuse the current Custom Screens and Pages builder seams (`CustomScreenShell`,
+`BlockList`, `WidgetPicker`, `BlockSettings`, and shared block utilities).
+Do not introduce a separate `PageLikeBuilderShell` abstraction unless the Pages
+and Custom Screens builders are deliberately extracted into a shared component in
+the same implementation slice with focused tests.
 
 ```ts
 function buildInitialEntryDraft(input: {
