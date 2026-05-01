@@ -83,11 +83,13 @@ fields such as `title`, `slug`, `status`, and timestamps.
    fields.
 4. Edit mode hydrates draft state from the existing entry.
 5. Field widgets write typed values into draft state.
-6. Save create calls `POST /admin/api/content/:type/entries` with normalized
-   `title`, `slug`, status, and `data`.
+6. Save create calls `POST /admin/api/content/:type/entries` with only the
+   route-accepted create payload: normalized `title`, `slug`, and `data`.
 7. Save edit calls the existing update contract without destructive removal of
    unrelated entry fields.
-8. Validation errors map to inline field/form errors and do not leak server
+8. Post-create status or publish changes use existing metadata/publish clients
+   instead of being smuggled into the create payload.
+9. Validation errors map to inline field/form errors and do not leak server
    stack details.
 
 Edit-mode saves must merge edited fields into the original entry `data` instead
@@ -100,13 +102,16 @@ save unless the user explicitly edits a field owned by `Editor View`.
 ```tsx
 // EditorViewDesigner.tsx
 <CustomScreenShell
+  name={screen.name}
+  status={screen.status}
+  hasUnsavedChanges={hasUnsavedChanges}
   leftPanel={
     <WidgetPicker
       widgets={listRegisteredWidgetsForSurface({
         surface: "admin-editor-view",
         contentType,
       })}
-      onInsert={insertEditorViewBlock}
+      onAdd={insertEditorViewBlock}
     />
   }
   rightPanel={
@@ -117,6 +122,7 @@ save unless the user explicitly edits a field owned by `Editor View`.
       surface="admin-editor-view"
       onChange={(bindings) =>
         updateDefinition({
+          ...definition,
           editorView: {
             ...definition.editorView,
             bindings,
@@ -130,15 +136,16 @@ save unless the user explicitly edits a field owned by `Editor View`.
     blocks={definition.editorView.blocks}
     selectedId={selectedId}
     onSelect={setSelectedId}
-    onChange={(blocks) =>
-      updateDefinition({
-        ...definition,
-        editorView: {
-          ...definition.editorView,
-          blocks,
-        },
-      })
-    }
+    onMove={moveEditorViewBlock}
+    onDuplicate={duplicateEditorViewBlock}
+    onDelete={deleteEditorViewBlock}
+    onInsert={insertEditorViewSlotBlock}
+    onMoveToSlot={moveEditorViewBlockToSlot}
+    onOpenSlotInsert={setEditorViewSlotInsertTarget}
+    widgetRegistry={listRegisteredWidgetsForSurface({
+      surface: "admin-editor-view",
+      contentType,
+    })}
   />
 </CustomScreenShell>;
 ```

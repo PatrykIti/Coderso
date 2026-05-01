@@ -229,16 +229,8 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
 - Run the focused test suites required by TASK-248-04-01 and TASK-248-04-02.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Vitest:
-  - registry returns only widgets allowed for `admin-list-view`,
-  - registry returns only widgets allowed for `admin-editor-view`,
-  - an empty `admin-list-view` registry is valid when List View is implemented as
-    configuration objects only,
+- Vitest UI/service:
   - list columns/filters/row actions are not read from widget blocks,
-  - existing `page-builder`, `widget-library`, and legacy
-    `custom-screen-builder` availability remains unchanged,
-  - no alternate `admin-list` / `admin-record` aliases are required or accepted
-    unless the registry contract is deliberately renamed,
   - public-only widgets are hidden from Custom Screen builder,
   - legacy V1 widgets still render for existing screens,
   - field-aware admin widgets require a selected content type,
@@ -250,6 +242,10 @@ Run the replay after TASK-248-01 through TASK-248-03 are implemented:
   - update and run `tests/unit/widgets/registry.test.ts` for the core
     `WidgetSurface` union, surface normalization, `listWidgetsForSurface`, and
     rejection of alternate aliases such as `admin-list` or `admin-record`,
+  - registry returns only widgets allowed for `admin-list-view`,
+  - registry returns only widgets allowed for `admin-editor-view`,
+  - an empty `admin-list-view` registry is valid when List View is implemented as
+    configuration objects only,
   - preserve existing `page-builder`, `widget-library`, and legacy
     `custom-screen-builder` behavior while adding `admin-list-view` and
     `admin-editor-view`.
