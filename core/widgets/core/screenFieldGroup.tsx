@@ -31,8 +31,8 @@ export const screenFieldGroupSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    title: { type: "string" },
-    description: { type: "string" },
+    title: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    description: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
     style: {
       type: "object",
       additionalProperties: false,

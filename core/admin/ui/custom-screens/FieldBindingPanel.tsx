@@ -53,6 +53,41 @@ const systemFieldOptions: BindingFieldOption[] = [
   { value: "publishedAt", label: "Published", type: "system", writable: false },
 ];
 
+const preferredBindingPropPaths: Record<string, string[]> = {
+  "screen-record-header": ["title", "subtitle", "description", "eyebrow", "badge"],
+  "screen-field-value": ["value", "label", "helper"],
+  "screen-field-group": ["title", "description"],
+  "screen-two-column": ["leftTitle", "rightTitle"],
+};
+
+const hiddenBindingPropPaths = new Set([
+  "align",
+  "style",
+  "style.frameBackground",
+  "style.frameGradient",
+  "style.frameBorderColor",
+  "style.badgeBackground",
+  "style.badgeBorderColor",
+  "style.columnBackground",
+  "style.columnBorderColor",
+]);
+
+const resolveBindingPropPathOptions = (
+  block: Block | null,
+  existingBindings: CustomScreenBinding[]
+) => {
+  const current = block?.data ?? {};
+  const detectedPaths = collectBindingPropPaths(current).filter(
+    (path) => !hiddenBindingPropPaths.has(path)
+  );
+  const preferredPaths = block ? (preferredBindingPropPaths[block.type] ?? []) : [];
+  const existingPaths = existingBindings.map((binding) => binding.propPath);
+
+  return Array.from(new Set([...preferredPaths, ...existingPaths, ...detectedPaths])).filter(
+    Boolean
+  );
+};
+
 export function FieldBindingPanel({
   selectedBlock,
   value,
@@ -83,14 +118,12 @@ export function FieldBindingPanel({
     [fields]
   );
   const propPathSuggestions = useMemo(() => {
-    const current = selectedBlock?.data ?? {};
-    return Array.from(
-      new Set([
-        ...collectBindingPropPaths(current),
-        ...selectedBindings.map((binding) => binding.propPath),
-      ])
-    ).sort((left, right) => left.localeCompare(right));
+    return resolveBindingPropPathOptions(selectedBlock, selectedBindings);
   }, [selectedBindings, selectedBlock]);
+  const unboundPropPaths = useMemo(() => {
+    const bound = new Set(selectedBindings.map((binding) => binding.propPath));
+    return propPathSuggestions.filter((path) => !bound.has(path));
+  }, [propPathSuggestions, selectedBindings]);
 
   const updateBinding = (bindingId: string, updates: Partial<CustomScreenBinding>) => {
     onChange(
@@ -102,16 +135,23 @@ export function FieldBindingPanel({
     onChange(value.filter((binding) => binding.id !== bindingId));
   };
 
-  const addBinding = () => {
+  const addBinding = (preferredPropPath?: string) => {
     if (!selectedBlock) return;
     const firstOption = fieldOptions[0];
     if (!firstOption) return;
+    const usedPropPaths = new Set(selectedBindings.map((binding) => binding.propPath));
+    const nextPropPath =
+      preferredPropPath && !usedPropPaths.has(preferredPropPath)
+        ? preferredPropPath
+        : (propPathSuggestions.find((path) => !usedPropPaths.has(path)) ??
+          propPathSuggestions[0] ??
+          "value");
     onChange([
       ...value,
       {
         id: createBindingId(),
         widgetId: selectedBlock.id,
-        propPath: propPathSuggestions[0] ?? "value",
+        propPath: nextPropPath,
         field: firstOption.value,
         mode: firstOption.writable ? "readwrite" : "read",
       },
@@ -144,7 +184,13 @@ export function FieldBindingPanel({
             to content fields.
           </p>
         </div>
-        <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={addBinding}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => addBinding()}
+        >
           <Plus className="h-4 w-4" />
           Add binding
         </Button>
@@ -153,6 +199,39 @@ export function FieldBindingPanel({
       {selectedBindings.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
           No bindings configured for this widget yet.
+        </div>
+      ) : null}
+
+      {unboundPropPaths.length > 0 ? (
+        <div className="space-y-2 rounded-lg border border-dashed bg-muted/10 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Available widget props
+          </p>
+          <div className="grid gap-2">
+            {unboundPropPaths.map((path) => (
+              <div
+                key={path}
+                className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2"
+              >
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">{path}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add a binding for this widget prop.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => addBinding(path)}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

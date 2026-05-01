@@ -26,11 +26,11 @@ export const screenRecordHeaderSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    eyebrow: { type: "string" },
-    title: { type: "string" },
-    subtitle: { type: "string" },
-    description: { type: "string" },
-    badge: { type: "string" },
+    eyebrow: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    title: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    subtitle: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    description: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    badge: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
     align: { enum: ["start", "center"] },
     style: {
       type: "object",

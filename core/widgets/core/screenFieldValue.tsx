@@ -21,9 +21,19 @@ export const screenFieldValueSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    label: { type: "string" },
-    value: { type: "string" },
-    helper: { type: "string" },
+    label: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    value: {
+      anyOf: [
+        { type: "string" },
+        { type: "number" },
+        { type: "boolean" },
+        {
+          type: "array",
+          items: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+        },
+      ],
+    },
+    helper: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
     tone: { enum: ["default", "strong", "muted"] },
     style: {
       type: "object",
@@ -51,6 +61,16 @@ const stringifyPrimitive = (value: unknown) => {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === "string" || typeof item === "number" || typeof item === "boolean"
+          ? String(item)
+          : ""
+      )
+      .filter(Boolean)
+      .join(", ");
   }
   return null;
 };

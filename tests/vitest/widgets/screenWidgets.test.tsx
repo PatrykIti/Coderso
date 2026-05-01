@@ -1,11 +1,16 @@
 import React from "react";
 import { expect, test } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
+import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
+import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
+import { CustomScreenPreview } from "../../../core/admin/ui/custom-screens/CustomScreenPreview";
 
 import { ScreenFieldValueBlock } from "../../../core/widgets/core/screenFieldValue";
 import { ScreenRecordHeaderBlock } from "../../../core/widgets/core/screenRecordHeader";
 import { ScreenFieldGroupBlock } from "../../../core/widgets/core/screenFieldGroup";
 import { ScreenTwoColumnBlock } from "../../../core/widgets/core/screenTwoColumn";
+
+ensureRuntimeWidgetsRegistered();
 
 test("ScreenFieldValueBlock stringifies primitive bound values", () => {
   const html = renderAdminUi(
@@ -81,4 +86,84 @@ test("screen widget cleared frame styles omit forced surface classes", () => {
     />
   );
   expect(columns).not.toContain("bg-background/60");
+});
+
+test("screen widgets render through WidgetRenderer without invalid widget data for primitive bound values", () => {
+  const header = renderAdminUi(
+    <WidgetRenderer
+      block={{
+        id: "header-1",
+        type: "screen-record-header",
+        data: {
+          title: 42,
+          subtitle: true,
+          badge: 3,
+        },
+      }}
+    />
+  );
+  expect(header).toContain("42");
+  expect(header).toContain("true");
+  expect(header).toContain("3");
+  expect(header).not.toContain("Invalid widget data");
+
+  const field = renderAdminUi(
+    <WidgetRenderer
+      block={{
+        id: "field-1",
+        type: "screen-field-value",
+        data: {
+          label: "Area",
+          value: [148, 212] as unknown as string,
+          helper: true as unknown as string,
+        },
+      }}
+    />
+  );
+  expect(field).toContain("148");
+  expect(field).toContain("148, 212");
+  expect(field).toContain("true");
+  expect(field).not.toContain("Invalid widget data");
+});
+
+test("CustomScreenPreview applies bindings before rendering screen widgets", () => {
+  const html = renderAdminUi(
+    <CustomScreenPreview
+      blocks={[
+        {
+          id: "header-1",
+          type: "screen-record-header",
+          data: {
+            title: "Untitled record",
+            subtitle: "Preview subtitle",
+          },
+        },
+      ]}
+      bindings={[
+        {
+          id: "binding-title",
+          widgetId: "header-1",
+          propPath: "title",
+          field: "title",
+          mode: "readwrite",
+        },
+        {
+          id: "binding-subtitle",
+          widgetId: "header-1",
+          propPath: "subtitle",
+          field: "projectTitle",
+          mode: "readwrite",
+        },
+      ]}
+      data={{
+        title: "Project title",
+        projectTitle: "Villa Aurora",
+      }}
+    />
+  );
+
+  expect(html).toContain("Project title");
+  expect(html).toContain("Villa Aurora");
+  expect(html).not.toContain("Untitled record");
+  expect(html).not.toContain("Invalid widget data");
 });

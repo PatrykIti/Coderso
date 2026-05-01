@@ -32,8 +32,8 @@ export const screenTwoColumnSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    leftTitle: { type: "string" },
-    rightTitle: { type: "string" },
+    leftTitle: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    rightTitle: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
     gap: { enum: ["none", "sm", "md", "lg"] },
     style: {
       type: "object",
