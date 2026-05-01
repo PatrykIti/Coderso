@@ -104,6 +104,34 @@ test("listCustomScreens maps normalized custom screen records", async () => {
   expect(result[0]?.capabilities.mode).toBe("editor");
 });
 
+test("listCustomScreens falls back to legacy blocks and bindings when persisted definition is unreadable", async () => {
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 2,
+      definition: null,
+      blocks: [{ id: "section-1", type: "section", data: {} }],
+      bindings: [
+        {
+          widgetId: "section-1",
+          propPath: "title",
+          field: "name",
+          mode: "readwrite",
+        },
+      ],
+    }),
+  ];
+
+  const result = await listCustomScreens();
+
+  expect(result).toHaveLength(1);
+  expect(result[0]?.schemaVersion).toBe(2);
+  expect(result[0]?.definition.editorView.blocks[0]).toMatchObject({
+    id: "section-1",
+    type: "section",
+  });
+  expect(result[0]?.capabilities.mode).toBe("editor");
+});
+
 test("getCustomScreen returns null when the row is missing", async () => {
   await expect(getCustomScreen("missing")).resolves.toBeNull();
 });

@@ -600,6 +600,73 @@ export function normalizeCustomScreenDefinition(
   };
 }
 
+export function normalizeCustomScreenDefinitionForRead(
+  input: {
+    schemaVersion?: unknown;
+    blocks?: unknown;
+    bindings?: unknown;
+    definition?: unknown;
+    listView?: unknown;
+    editorView?: unknown;
+  } = {},
+  context?: CustomScreenDefinitionContext
+): CustomScreenDefinition {
+  const rawInput = input.definition !== undefined ? input.definition : input;
+  try {
+    return normalizeCustomScreenDefinition(input, context);
+  } catch {
+    if (isRecord(rawInput)) {
+      const version =
+        "listView" in rawInput || "editorView" in rawInput
+          ? 2
+          : typeof rawInput.schemaVersion === "number"
+            ? rawInput.schemaVersion
+            : null;
+
+      if (version === 2) {
+        const listView = (() => {
+          try {
+            return normalizeCustomScreenListViewDefinition(rawInput.listView);
+          } catch {
+            return buildDefaultListViewDefinition(context?.contentType);
+          }
+        })();
+
+        const editorView = (() => {
+          try {
+            return normalizeCustomScreenEditorViewDefinition(rawInput.editorView);
+          } catch {
+            return {
+              blocks: normalizeCustomScreenBlocks(input.blocks),
+              bindings: normalizeCustomScreenBindings(input.bindings),
+              saveMode: "entry" as const,
+            };
+          }
+        })();
+
+        return {
+          schemaVersion: 2,
+          listView,
+          editorView,
+        };
+      }
+    }
+
+    try {
+      return normalizeCustomScreenDefinition(input);
+    } catch {
+      return migrateV1DefinitionToV2(
+        normalizeCustomScreenV1Definition({
+          schemaVersion: 1,
+          blocks: input.blocks,
+          bindings: input.bindings,
+        }),
+        context
+      );
+    }
+  }
+}
+
 export function normalizeCustomScreenSidebarConfig(
   input: {
     showInSidebar?: unknown;

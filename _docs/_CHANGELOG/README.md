@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 784 | 2026-05-01 | Custom Screens read-path definition fallback | CMS Custom Screens/Resilience |
 | 783 | 2026-05-01 | TASK-248 custom screens runtime contract follow-up | CMS Custom Screens/Admin UI |
 | 782 | 2026-05-01 | TASK-248 custom screens workspace builder V2 | CMS Custom Screens/Admin UI |
 | 781 | 2026-04-30 | TASK-244 widget surface clear controls | CMS Widgets/Admin UI |

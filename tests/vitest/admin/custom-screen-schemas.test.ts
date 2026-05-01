@@ -6,6 +6,7 @@ import {
   customScreenUpdateSchema,
   normalizeCustomScreenBindings,
   normalizeCustomScreenDefinition,
+  normalizeCustomScreenDefinitionForRead,
   normalizeCustomScreenSidebarConfig,
 } from "../../../core/services/customScreens/customScreenSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
@@ -131,6 +132,68 @@ test("normalizeCustomScreenDefinition accepts strict v2 definitions", () => {
     id: "field-projectstatus",
     field: "projectStatus",
     formatter: "select",
+  });
+});
+
+test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v2 shape", () => {
+  const definition = normalizeCustomScreenDefinitionForRead(
+    {
+      definition: {
+        schemaVersion: 2,
+        listView: {
+          columns: [
+            {
+              source: "field",
+              field: "removedField",
+              label: "Removed field",
+              formatter: "text",
+              visible: true,
+            },
+          ],
+          filters: [],
+          defaultSort: { field: "removedField", direction: "desc" },
+          rowClick: "editor-view",
+          createMode: "editor-view",
+          bulkActions: { delete: true, publish: true, unpublish: true },
+        },
+        editorView: {
+          blocks: [],
+          bindings: [
+            {
+              widgetId: "field-1",
+              propPath: "value",
+              field: "removedField",
+              mode: "readwrite",
+            },
+          ],
+          saveMode: "entry",
+        },
+      },
+    },
+    {
+      contentType: {
+        id: "house-projects",
+        slug: "house-projects",
+        name: "House Projects",
+        schema: {
+          properties: {
+            projectStatus: {
+              type: "string",
+              enum: ["planned", "active"],
+            },
+          },
+        },
+      },
+    }
+  );
+
+  expect(definition.schemaVersion).toBe(2);
+  expect(definition.listView.defaultSort).toEqual({
+    field: "updatedAt",
+    direction: "desc",
+  });
+  expect(definition.editorView.bindings[0]).toMatchObject({
+    field: "removedField",
   });
 });
 

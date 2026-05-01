@@ -5,6 +5,7 @@ import { contentTypes, customScreens } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
 import {
   normalizeCustomScreenDefinition,
+  normalizeCustomScreenDefinitionForRead,
   type CustomScreenBinding,
   type CustomScreenDefinition,
   type CustomScreenDefinitionVersion,
@@ -95,7 +96,7 @@ const mapRow = (
   row: typeof customScreens.$inferSelect,
   context?: { contentType?: ContentTypeDefinitionContext | null }
 ): CustomScreenRecord => {
-  const definition = normalizeCustomScreenDefinition(
+  const definition = normalizeCustomScreenDefinitionForRead(
     {
       definition: row.definition,
       schemaVersion: row.schemaVersion,
@@ -209,13 +210,34 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
       : existing.contentTypeId;
   const contentTypesById = await loadContentTypesById([nextContentTypeId]);
   const contentType = contentTypesById.get(nextContentTypeId) ?? null;
-  const definition = normalizeCustomScreenDefinition(
+  const baseDefinition = normalizeCustomScreenDefinitionForRead(
     {
-      definition: input.definition !== undefined ? input.definition : existing.definition,
-      schemaVersion: input.schemaVersion ?? existing.schemaVersion,
-      blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
-      bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
+      definition: existing.definition,
+      schemaVersion: existing.schemaVersion,
+      blocks: existing.blocks,
+      bindings: existing.bindings,
     },
+    { contentType }
+  );
+  const definition = normalizeCustomScreenDefinition(
+    input.definition !== undefined
+      ? {
+          definition: input.definition,
+          schemaVersion: input.schemaVersion ?? existing.schemaVersion,
+          blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
+          bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
+        }
+      : input.blocks !== undefined ||
+          input.bindings !== undefined ||
+          input.schemaVersion !== undefined
+        ? {
+            schemaVersion: input.schemaVersion ?? existing.schemaVersion,
+            blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
+            bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
+          }
+        : {
+            definition: baseDefinition,
+          },
     { contentType }
   );
   const sidebar = normalizeCustomScreenSidebarConfig({
