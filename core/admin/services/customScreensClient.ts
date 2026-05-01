@@ -13,7 +13,7 @@ import {
   type CustomScreenCapabilities,
 } from "../../services/customScreens/capabilities";
 import {
-  normalizeCustomScreenDefinition,
+  normalizeCustomScreenDefinitionForRead,
   type CustomScreenDefinition,
 } from "../../services/customScreens/customScreenSchemas";
 
@@ -105,7 +105,7 @@ const isCustomScreenList = (value: unknown): value is CustomScreenRecord[] =>
 let cachedScreensPromise: Promise<CustomScreenRecord[]> | null = null;
 
 const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => {
-  const definition = normalizeCustomScreenDefinition({
+  const definition = normalizeCustomScreenDefinitionForRead({
     definition: item.definition,
     schemaVersion: item.schemaVersion,
     blocks: item.blocks,

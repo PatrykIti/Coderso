@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, SquarePen, Trash2 } from "lucide-react";
+import { MoreHorizontal, SquarePen, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,7 +27,6 @@ type CustomScreenEntriesTableProps = {
   listView: CustomScreenListViewDefinition;
   emptyMessage?: string;
   buildRowHref: (entry: EntrySummary) => string;
-  buildClassicHref: (entry: EntrySummary) => string;
   selectedIds?: string[];
   isAllSelected?: boolean;
   isIndeterminate?: boolean;
@@ -43,7 +42,6 @@ export function CustomScreenEntriesTable({
   listView,
   emptyMessage,
   buildRowHref,
-  buildClassicHref,
   selectedIds = [],
   isAllSelected = false,
   isIndeterminate = false,
@@ -152,12 +150,6 @@ export function CustomScreenEntriesTable({
                         <AdminLink href={rowHref} className="w-full">
                           <SquarePen className="h-4 w-4" />
                           Edit record
-                        </AdminLink>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <AdminLink href={buildClassicHref(item)} className="w-full">
-                          <Pencil className="h-4 w-4" />
-                          Classic editor
                         </AdminLink>
                       </DropdownMenuItem>
                       {item.status === "published" ? (

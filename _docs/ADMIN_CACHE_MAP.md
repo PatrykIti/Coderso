@@ -109,9 +109,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `contentTypes:list`
 - Custom screen builder and records workflow
   - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`,
-    `ListViewDesigner.tsx`, `EditorViewDesigner.tsx`,
+    `ListViewDesigner.tsx`, `ListViewCanvas.tsx`,
+    `ListViewElementLibrary.tsx`, `ListViewColumnInspector.tsx`,
+    `EditorViewDesigner.tsx`,
     `CustomScreenEntriesPage.tsx`, `CustomScreenEntriesTable.tsx`,
-    `CustomScreenEntryEditor.tsx`
+    `CustomScreenEntryEditor.tsx`, `CustomScreenEntryCanvas.tsx`
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,
     `listCustomScreensCached`, `listContentTypesCached`, `listEntriesCached`,
     `getEntryCached`
@@ -127,6 +129,8 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/layouts/AdminShell.tsx`
   - Cached APIs: `listCustomScreensCached`
   - Cache bus: `customScreens:list`
+  - Shortcut gate: only active screens with `supportsDedicatedEditor=true`
+    become sidebar workspace links
 
 ## Widget Templates
 - Template editor

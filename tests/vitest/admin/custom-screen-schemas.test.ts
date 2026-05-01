@@ -42,12 +42,11 @@ test("custom screen schemas accept nullable sidebarLabel", () => {
 
 test("normalizeCustomScreenDefinition returns defaults", () => {
   const definition = normalizeCustomScreenDefinition();
-  expect(definition.schemaVersion).toBe(2);
+  expect(definition.schemaVersion).toBe(3);
   expect(definition.editorView.blocks).toEqual([]);
   expect(definition.editorView.bindings).toEqual([]);
+  expect(definition.editorView.interactionMode).toBe("inline");
   expect(definition.listView).toMatchObject({
-    rowClick: "editor-view",
-    createMode: "editor-view",
     defaultSort: { field: "updatedAt", direction: "desc" },
   });
 });
@@ -70,12 +69,69 @@ test("normalizeCustomScreenDefinition normalizes blocks", () => {
     blocks: [{ id: "section-1", type: "section", data: {} }],
     bindings: [],
   });
-  expect(definition.schemaVersion).toBe(2);
+  expect(definition.schemaVersion).toBe(3);
   expect(definition.editorView.blocks[0]?.type).toBe("section");
+  expect(definition.editorView.interactionMode).toBe("inline");
 });
 
-test("normalizeCustomScreenDefinition accepts strict v2 definitions", () => {
-  const definition = normalizeCustomScreenDefinition(
+test("normalizeCustomScreenDefinition rejects explicit v2 write definitions", () => {
+  expect(() =>
+    normalizeCustomScreenDefinition(
+      {
+        definition: {
+          schemaVersion: 2,
+          listView: {
+            columns: [
+              {
+                source: "field",
+                field: "projectStatus",
+                label: "Project status",
+                formatter: "select",
+                visible: true,
+              },
+            ],
+            filters: [
+              {
+                source: "field",
+                field: "projectStatus",
+                label: "Project status",
+                operator: "equals",
+                enabled: true,
+              },
+            ],
+            defaultSort: { field: "updatedAt", direction: "desc" },
+            rowClick: "editor-view",
+            createMode: "editor-view",
+            bulkActions: { delete: true, publish: true, unpublish: true },
+          },
+          editorView: {
+            blocks: [],
+            bindings: [],
+            saveMode: "entry",
+          },
+        },
+      },
+      {
+        contentType: {
+          id: "house-projects",
+          slug: "house-projects",
+          name: "House Projects",
+          schema: {
+            properties: {
+              projectStatus: {
+                type: "string",
+                enum: ["planned", "active"],
+              },
+            },
+          },
+        },
+      }
+    )
+  ).toThrow("custom_screen_definition_invalid");
+});
+
+test("normalizeCustomScreenDefinitionForRead migrates strict v2 definitions to v3", () => {
+  const definition = normalizeCustomScreenDefinitionForRead(
     {
       definition: {
         schemaVersion: 2,
@@ -127,15 +183,16 @@ test("normalizeCustomScreenDefinition accepts strict v2 definitions", () => {
     }
   );
 
-  expect(definition.schemaVersion).toBe(2);
+  expect(definition.schemaVersion).toBe(3);
   expect(definition.listView.columns[0]).toMatchObject({
     id: "field-projectstatus",
     field: "projectStatus",
     formatter: "select",
   });
+  expect(definition.editorView.interactionMode).toBe("inline");
 });
 
-test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v2 shape", () => {
+test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v3 shape", () => {
   const definition = normalizeCustomScreenDefinitionForRead(
     {
       definition: {
@@ -187,7 +244,7 @@ test("normalizeCustomScreenDefinitionForRead tolerates stale field references an
     }
   );
 
-  expect(definition.schemaVersion).toBe(2);
+  expect(definition.schemaVersion).toBe(3);
   expect(definition.listView.defaultSort).toEqual({
     field: "updatedAt",
     direction: "desc",
@@ -201,7 +258,7 @@ test("normalizeCustomScreenDefinition rejects definition-owned content type ids 
   expect(() =>
     normalizeCustomScreenDefinition({
       definition: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         contentTypeId: "house-projects",
         listView: null,
         editorView: null,
@@ -212,9 +269,9 @@ test("normalizeCustomScreenDefinition rejects definition-owned content type ids 
   expect(() =>
     normalizeCustomScreenDefinition({
       definition: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         listView: { extra: true },
-        editorView: { blocks: [], bindings: [], saveMode: "entry" },
+        editorView: { blocks: [], bindings: [], saveMode: "entry", interactionMode: "inline" },
       },
     })
   ).toThrow("custom_screen_definition_invalid");

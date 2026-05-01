@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Entries + Admin/UI + Builder UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-248, TASK-226, TASK-220
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -106,17 +107,17 @@ workspace contract:
 
 ## Sub-Tasks
 
-- [ ] TASK-249-01: Workspace V3 Contract, Routes, and Legacy Path Removal
-- [ ] TASK-249-01-01: Definition Schema, Read Migration, and Persistence Hard Cutover
-- [ ] TASK-249-01-02: Routes, Clients, Cache, Nav, and Assistant Canonicalization
-- [ ] TASK-249-02: Builder IA and List View Canvas Realignment
-- [ ] TASK-249-02-01: Topbar Mode Switch, Preview Action, and Inspector Ownership
-- [ ] TASK-249-02-02: List View Table Canvas and Column Inspector
-- [ ] TASK-249-03: Interactive Editor View and Entry Runtime
-- [ ] TASK-249-03-01: Admin Editor Widgets and Inline Editable Screen Components
-- [ ] TASK-249-03-02: Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback
-- [ ] TASK-249-04: QA, Docs, and Closure
-- [ ] TASK-249-04-01: Replay, Validation Matrix, Docs, Board, and Changelog Closure
+- [x] TASK-249-01: Workspace V3 Contract, Routes, and Legacy Path Removal
+- [x] TASK-249-01-01: Definition Schema, Read Migration, and Persistence Hard Cutover
+- [x] TASK-249-01-02: Routes, Clients, Cache, Nav, and Assistant Canonicalization
+- [x] TASK-249-02: Builder IA and List View Canvas Realignment
+- [x] TASK-249-02-01: Topbar Mode Switch, Preview Action, and Inspector Ownership
+- [x] TASK-249-02-02: List View Table Canvas and Column Inspector
+- [x] TASK-249-03: Interactive Editor View and Entry Runtime
+- [x] TASK-249-03-01: Admin Editor Widgets and Inline Editable Screen Components
+- [x] TASK-249-03-02: Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback
+- [x] TASK-249-04: QA, Docs, and Closure
+- [x] TASK-249-04-01: Replay, Validation Matrix, Docs, Board, and Changelog Closure
 
 ## Implementation Order
 

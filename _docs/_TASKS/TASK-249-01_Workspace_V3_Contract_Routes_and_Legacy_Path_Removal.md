@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Contracts + Routing
 **Estimated Effort:** Large
 **Dependencies:** TASK-249
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -25,8 +26,8 @@ from “screen is eligible for the canonical active workspace flow.”
 
 ## Sub-Tasks
 
-- [ ] TASK-249-01-01: Definition Schema, Read Migration, and Persistence Hard Cutover
-- [ ] TASK-249-01-02: Routes, Clients, Cache, Nav, and Assistant Canonicalization
+- [x] TASK-249-01-01: Definition Schema, Read Migration, and Persistence Hard Cutover
+- [x] TASK-249-01-02: Routes, Clients, Cache, Nav, and Assistant Canonicalization
 
 ## Files to Change
 

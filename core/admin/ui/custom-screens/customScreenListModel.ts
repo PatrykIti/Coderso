@@ -12,6 +12,9 @@ import type {
 } from "../../../services/customScreens/customScreenSchemas";
 
 export type CustomScreenSidebarShortcutState = "visible" | "configured_after_activation" | "hidden";
+export type CustomScreenSidebarShortcutStateV3 =
+  | CustomScreenSidebarShortcutState
+  | "requires_editor_setup";
 
 export type CustomScreenListRow = {
   screen: CustomScreenRecord;
@@ -19,7 +22,7 @@ export type CustomScreenListRow = {
   contentTypeSlug?: string;
   modeLabel: string;
   sidebarShortcutLabel: string | null;
-  sidebarShortcutState: CustomScreenSidebarShortcutState;
+  sidebarShortcutState: CustomScreenSidebarShortcutStateV3;
   updatedAt: string;
 };
 
@@ -36,12 +39,6 @@ export type CustomScreenEntriesFilterOption = {
   options: Array<{ value: string; label: string }>;
 };
 
-const modeLabels = {
-  "collection-only": "Collection",
-  dashboard: "Dashboard",
-  editor: "Editor",
-} as const;
-
 export const resolveCustomScreenModeLabel = (screen: CustomScreenRecord) => {
   const capabilities =
     screen.capabilities ??
@@ -49,13 +46,25 @@ export const resolveCustomScreenModeLabel = (screen: CustomScreenRecord) => {
       blocks: screen.blocks,
       bindings: screen.bindings,
     });
-  return modeLabels[capabilities.mode] ?? "Collection";
+  if (capabilities.supportsDedicatedEditor) return "Workspace ready";
+  if (capabilities.supportsDedicatedPreview) return "Preview only";
+  return "Setup required";
 };
 
 export const resolveCustomScreenSidebarShortcutState = (
   screen: CustomScreenRecord
-): CustomScreenSidebarShortcutState => {
+): CustomScreenSidebarShortcutStateV3 => {
+  const capabilities =
+    screen.capabilities ??
+    resolveCustomScreenCapabilities({
+      definition: screen.definition,
+      blocks: screen.blocks,
+      bindings: screen.bindings,
+    });
   if (!screen.showInSidebar) return "hidden";
+  if (screen.status === "active" && capabilities.supportsDedicatedEditor !== true) {
+    return "requires_editor_setup";
+  }
   if (screen.status === "active") return "visible";
   return "configured_after_activation";
 };

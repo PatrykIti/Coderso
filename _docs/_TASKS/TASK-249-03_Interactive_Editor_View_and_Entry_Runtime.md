@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Entry Editor + Runtime UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-249-01, TASK-249-02
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -19,8 +20,8 @@ actual editing surface for the record.
 
 ## Sub-Tasks
 
-- [ ] TASK-249-03-01: Admin Editor Widgets and Inline Editable Screen Components
-- [ ] TASK-249-03-02: Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback
+- [x] TASK-249-03-01: Admin Editor Widgets and Inline Editable Screen Components
+- [x] TASK-249-03-02: Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback
 
 ## Files to Change
 

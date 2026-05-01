@@ -1094,7 +1094,7 @@ Public runtime safety:
 - runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
 - public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
 
-## Coderso Custom Screens (workspace builder V2)
+## Coderso Custom Screens (workspace builder V3)
 
 Permissions (internal, routes in TASK-054-22-02): `content:read`, `content:write`
 
@@ -1107,9 +1107,9 @@ Custom screen payload (summary):
   "status": "draft",
   "showInSidebar": true,
   "sidebarLabel": "Katalog domow",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "definition": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "listView": {
       "columns": [
         {
@@ -1140,8 +1140,6 @@ Custom screen payload (summary):
         }
       ],
       "defaultSort": { "field": "updatedAt", "direction": "desc" },
-      "rowClick": "editor-view",
-      "createMode": "editor-view",
       "bulkActions": {
         "delete": true,
         "publish": true,
@@ -1150,6 +1148,7 @@ Custom screen payload (summary):
     },
     "editorView": {
       "saveMode": "entry",
+      "interactionMode": "inline",
       "blocks": [
         {
           "id": "field-1",
@@ -1174,44 +1173,46 @@ Custom screen payload (summary):
 Notes:
 - `contentTypeId` pozostaje stanem rekordu `custom_screens.content_type_id`;
   persisted `definition` odrzuca top-level `contentTypeId`.
-- `definition.schemaVersion=2` jest zrodlem prawdy dla nowych Custom Screens.
-  Legacy `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
-  `definition.editorView` oraz kompatybilnoscia dla V1 rows.
-- V1 rows bez `definition` sa migrowane przy odczycie do V2:
+- `definition.schemaVersion=3` jest zrodlem prawdy dla aktywnego workspace
+  Custom Screens.
+- Legacy `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
+  `definition.editorView` oraz kompatybilnoscia dla starszych rows.
+- V1/V2 rows bez gotowego V3 payloadu sa migrowane przy odczycie do V3:
   `listView` dostaje deterministyczne domyslne kolumny/filtry z wybranego
   content type, a dawne `blocks`/`bindings` trafiaja do `editorView`.
 - `definition.listView` jest wlascicielem tabeli rekordow: system/field
-  columns, filters, `defaultSort`, `rowClick`, `createMode`, i bulk action
-  visibility.
+  columns, filters, `defaultSort`, i bulk action visibility.
 - `definition.editorView` jest wlascicielem canvasa create/edit:
-  `blocks`, `bindings`, i `saveMode: "entry"`.
+  `blocks`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
 - `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
 - builder insert library filtruje do admin surface `admin-editor-view`; public
   page builder i widget library nadal uzywaja swoich powierzchni.
 - `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
-- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `2`.
-- `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
+- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `3`.
+- `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
+  pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
 - lista `/admin/advanced/custom-screens` wzbogaca wiersze o nazwy content type
   z `contentTypes:list`, ale nie zapisuje denormalizowanych labeli do custom
   screen record.
 - lista pokazuje status sidebar shortcut jako pochodna:
-  `active + showInSidebar` -> visible shortcut,
+  `active + showInSidebar + supportsDedicatedEditor` -> visible shortcut,
+  `active + showInSidebar + !supportsDedicatedEditor` -> requires editor setup,
   `draft + showInSidebar` -> configured after activation,
   otherwise -> not shown.
 - create drawer na liscie wysyla tylko istniejace pola create schema:
   `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`,
   `blocks`, `bindings`.
-- builder preview rozwiazuje bindings przed przekazaniem blokow do `WidgetRenderer`.
+- builder topbar uzywa `Preview`, `List View`, `Editor View`, i `Save`; aktywny
+  runtime flow nie uzywa juz `Builder / Preview`, `Open records`, ani
+  classic-editor / drawer branches.
 - response record niesie tez derived `capabilities`:
   - `mode: "collection-only" | "dashboard" | "editor"`
   - `hasBlocks`, `hasBindings`, `hasReadableBindings`, `hasWritableBindings`
   - `supportsDedicatedPreview`, `supportsDedicatedEditor`
-- admin record workflow korzysta z `capabilities`:
-  - `collection-only` -> entries workspace with no bound fields yet,
-  - `dashboard` -> read-only record screen + classic editor CTA,
-  - `editor` -> dedicated screen editor with writable bound fields.
+- `capabilities` pozostaje polem diagnostycznym/readiness, ale aktywna sciezka
+  runtime dla V3 nie rozgalezia sie juz do classic editor / drawer.
 - dedicated record workflow nie dodaje nowego API `custom-screen entries`; reuse is through existing internal entry endpoints:
   - `GET /content/:type/entries`
   - `POST /content/:type/entries`
@@ -1221,6 +1222,9 @@ Notes:
   - `/admin/advanced/custom-screens/:screenId/entries`
   - `/admin/advanced/custom-screens/:screenId/entries/:entryId`
   - `/admin/advanced/custom-screens/:screenId/entries/new`
+- `New record` z records workspace zawsze otwiera
+  `/admin/advanced/custom-screens/:screenId/entries/new`; active V3 runtime nie
+  otwiera juz shared `EntryCreateDrawer`.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ## Coderso Filters & Search (v2 beta)

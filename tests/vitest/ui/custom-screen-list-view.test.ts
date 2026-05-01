@@ -79,8 +79,6 @@ const listView: CustomScreenListViewDefinition = {
     field: "updatedAt",
     direction: "desc",
   },
-  rowClick: "editor-view",
-  createMode: "editor-view",
   bulkActions: {
     delete: true,
     publish: true,

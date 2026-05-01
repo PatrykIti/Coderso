@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 90 tasks
+- **To Do:** 78 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1429 tasks
+- **Done:** 1441 tasks
 
 ---
 
@@ -38,18 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-249 | Custom Screens Workspace V3 Legacy Path Removal | High | Very Large | Follow-up: remove mixed V2/V1 active paths, promote a workspace-only V3 contract, and realign builder/list/editor UX to one coherent screen-owned flow |
-| TASK-249-01 | Workspace V3 Contract, Routes, and Legacy Path Removal | High | Large | Business area: hard-cut schema/service/client/route/navigation seams away from classic-editor and drawer fallbacks |
-| TASK-249-01-01 | Definition Schema, Read Migration, and Persistence Hard Cutover | High | Large | Technical leaf: promote `schemaVersion: 3`, migrate V1/V2 reads, and reject legacy mode keys on write |
-| TASK-249-01-02 | Routes, Clients, Cache, Nav, and Assistant Canonicalization | High | Large | Technical leaf: canonicalize list/new/entry routes, client normalization, sidebar shortcuts, prefetch, and assistant context |
-| TASK-249-02 | Builder IA and List View Canvas Realignment | High | Large | Business area: rebuild the builder shell around `List View` and `Editor View`, with a real table-canvas list designer |
-| TASK-249-02-01 | Topbar Mode Switch, Preview Action, and Inspector Ownership | High | Medium | Technical leaf: remove `Open records` and `Builder`, move `Preview`, keep `Save`, and move settings fully into the right inspector |
-| TASK-249-02-02 | List View Table Canvas and Column Inspector | High | Large | Technical leaf: left-panel list element library, center table preview canvas, and right-panel selected-column inspector |
-| TASK-249-03 | Interactive Editor View and Entry Runtime | High | Very Large | Business area: replace preview-plus-classic fallback with a single screen-owned interactive record editor |
-| TASK-249-03-01 | Admin Editor Widgets and Inline Editable Screen Components | High | Large | Technical leaf: admin-editor widget set for inline title, field, media, gallery, and supported relation editing |
-| TASK-249-03-02 | Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback | High | Large | Technical leaf: remove EntryCreateDrawer and classic-editor runtime branches, keep shared entry API and inline errors |
-| TASK-249-04 | QA, Docs, and Closure | Medium | Medium | Business area: replay, validation matrix, source docs, board, and changelog closure for the V3 cutover |
-| TASK-249-04-01 | Replay, Validation Matrix, Docs, Board, and Changelog Closure | Medium | Medium | Technical leaf: House Projects replay, validation evidence, and final doc/board/changelog synchronization |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -116,6 +104,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-249 | Custom Screens Workspace V3 Legacy Path Removal | High | Very Large | Done: Custom Screens now use a workspace-first V3 contract, table-canvas List View, screen-owned editor runtime, sidebar readiness gating, and no active classic-editor or drawer fallback |
+| TASK-249-01 | Workspace V3 Contract, Routes, and Legacy Path Removal | High | Large | Done: V3 read/write contract, canonical workspace routing, sidebar shortcut gate, and assistant route parsing were hard-cut away from legacy active-path branches |
+| TASK-249-01-01 | Definition Schema, Read Migration, and Persistence Hard Cutover | High | Large | Done: `schemaVersion: 3` is active, V1/V2 reads migrate safely, explicit V2 write payloads are rejected, and legacy rows no longer auto-promote to writable editors |
+| TASK-249-01-02 | Routes, Clients, Cache, Nav, and Assistant Canonicalization | High | Large | Done: workspace paths, client normalization, sidebar shortcuts, prefetch, and assistant create-route parsing now follow the canonical records workflow |
+| TASK-249-02 | Builder IA and List View Canvas Realignment | High | Large | Done: the builder shell now uses `Preview`, `List View`, `Editor View`, and `Save`, while list building moved to a canvas plus inspector model |
+| TASK-249-02-01 | Topbar Mode Switch, Preview Action, and Inspector Ownership | High | Medium | Done: `Open records`, `Builder`, and center-canvas settings were removed; screen settings now live only in the right inspector |
+| TASK-249-02-02 | List View Table Canvas and Column Inspector | High | Large | Done: left-panel list element library, center table preview canvas, and selected-column inspector now own the records-list builder flow |
+| TASK-249-03 | Interactive Editor View and Entry Runtime | High | Very Large | Done: the record route now uses a screen-owned inline canvas and no longer offers active classic-editor or drawer fallback paths |
+| TASK-249-03-01 | Admin Editor Widgets and Inline Editable Screen Components | High | Large | Done: existing `screen-*` widgets were extended into the active inline editor surface instead of introducing a parallel widget platform |
+| TASK-249-03-02 | Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback | High | Large | Done: records/new and row edit always route through the screen-owned editor, inline errors map from shared entry routes, and `EntryCreateDrawer` is gone from the active path |
+| TASK-249-04 | QA, Docs, and Closure | Medium | Medium | Done: docs, board, changelog, and targeted validation were synchronized for the V3 cutover |
+| TASK-249-04-01 | Replay, Validation Matrix, Docs, Board, and Changelog Closure | Medium | Medium | Done: targeted validation and docs closure landed; local Playwright replay remained unavailable and is recorded separately |
 | TASK-248 | Custom Screens Workspace Builder V2 | High | Very Large | Done: Custom Screens now persist V2 `definition`, expose `List View` and `Editor View` builder surfaces, and reuse existing entry routes/cache contracts |
 | TASK-248-01 | Custom Screen Definition V2 and Workspace Routing | High | Large | Done: V2 definition storage, V1 read migration, workspace route helpers, and prefetch contract landed |
 | TASK-248-01-01 | Definition Schema, Normalizer, and V1 Migration | High | Medium | Done: strict V2 normalizer, default list view generation, V1 migration, migration artifacts, and service projections shipped |

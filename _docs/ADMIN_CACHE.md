@@ -330,6 +330,10 @@ Clients update caches and broadcast events on:
   warms `contentTypes:list`, and warms `entries:list:<typeSlug>` for the
   assigned content type. Detail workspace routes additionally warm
   `entries:detail:<typeSlug>:<entryId>` when `entryId` is not `new`.
+- Active sidebar shortcuts only resolve screens with
+  `supportsDedicatedEditor=true`; non-ready screens stay cached and readable in
+  the builder/list catalog, but they are not exposed as active workspace
+  shortcuts.
 - `contentTypesClient` also uses TTL-backed memory for `contentTypes:list`, so
   Custom Screens label projection cannot be pinned to stale module memory after
   the shared list TTL expires.
@@ -343,7 +347,9 @@ Clients update caches and broadcast events on:
 - `CustomScreenEntryEditor` create/edit mode reuses the existing entry cache
   contract. Create/update/delete writes update or invalidate
   `entries:list:<typeSlug>` and `entries:detail:<typeSlug>:<entryId>` through
-  `entriesClient`; no Custom Screens-specific entry cache is introduced.
+  `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
+  screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
+  as a parallel create path.
 
 ### Forms list/detail cache note
 

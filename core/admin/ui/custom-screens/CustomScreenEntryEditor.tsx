@@ -1,4 +1,4 @@
-import { ArrowLeft, RefreshCcw, Save, SquareArrowOutUpRight } from "lucide-react";
+import { ArrowLeft, RefreshCcw, Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,12 +32,12 @@ import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
-import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
+import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenEntryParams } from "./routeParams";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
@@ -58,48 +58,6 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
-}
-
-type BoundFieldCardProps = {
-  field: ContentField;
-  usageCount: number;
-  value: unknown;
-  error?: string;
-  onChange: (value: unknown) => void;
-  relationTargets: Array<{ slug: string; name: string }>;
-};
-
-function BoundFieldCard({
-  field,
-  usageCount,
-  value,
-  error,
-  onChange,
-  relationTargets,
-}: BoundFieldCardProps) {
-  return (
-    <div className="space-y-3 rounded-xl border p-4">
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">{field.label}</p>
-          <Badge variant="outline" className="text-[10px] uppercase">
-            {field.type}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Bound in {usageCount} widget {usageCount === 1 ? "property" : "properties"}.
-        </p>
-      </div>
-      <FieldRenderer
-        field={field}
-        value={value}
-        onChange={onChange}
-        relationTargets={relationTargets}
-        display="compact"
-      />
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
-  );
 }
 
 export function CustomScreenEntryEditor() {
@@ -137,6 +95,7 @@ export function CustomScreenEntryEditor() {
           blocks: initialScreen.blocks,
           bindings: initialScreen.bindings,
           saveMode: "entry",
+          interactionMode: "inline",
         },
       });
     }
@@ -147,6 +106,7 @@ export function CustomScreenEntryEditor() {
         blocks: initialScreen.blocks,
         bindings: initialScreen.bindings,
         saveMode: "entry",
+        interactionMode: "inline",
       },
       entry: initialEntry,
     });
@@ -183,22 +143,6 @@ export function CustomScreenEntryEditor() {
   );
 
   const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
-  const writableFieldNames = editableFields;
-  const writableFieldUsage = useMemo(() => {
-    if (!screen) return new Map<string, number>();
-    return screen.bindings.reduce((result, binding) => {
-      if (binding.mode === "read") return result;
-      result.set(binding.field, (result.get(binding.field) ?? 0) + 1);
-      return result;
-    }, new Map<string, number>());
-  }, [screen]);
-  const writableFields = useMemo(
-    () =>
-      writableFieldNames
-        .map((name) => fields.find((field) => field.name === name) ?? null)
-        .filter((field): field is ContentField => Boolean(field)),
-    [fields, writableFieldNames]
-  );
   const readOnlyBindingCount = useMemo(
     () => screen?.bindings.filter((binding) => binding.mode === "read").length ?? 0,
     [screen]
@@ -213,9 +157,7 @@ export function CustomScreenEntryEditor() {
       }),
     [screen]
   );
-  const canEditInScreen = screenCapabilities.mode === "editor";
-  const isDashboardScreen = screenCapabilities.mode === "dashboard";
-  const isCollectionOnlyScreen = screenCapabilities.mode === "collection-only";
+  const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
 
   useEffect(() => {
     if (!screen || !screenId || !entryId) {
@@ -251,6 +193,7 @@ export function CustomScreenEntryEditor() {
         blocks: nextScreen.blocks,
         bindings: nextScreen.bindings,
         saveMode: "entry" as const,
+        interactionMode: "inline" as const,
       };
       const nextDraft = nextEntry
         ? hydrateEditorViewDraft({
@@ -479,6 +422,7 @@ export function CustomScreenEntryEditor() {
           blocks: screen?.blocks ?? [],
           bindings: screen?.bindings ?? [],
           saveMode: "entry",
+          interactionMode: "inline",
         },
         entry: saved,
       });
@@ -516,41 +460,23 @@ export function CustomScreenEntryEditor() {
   const detailsPanel = (
     <div className="space-y-4 p-6">
       <div className="space-y-1">
-        <p className="text-sm font-medium">
-          {canEditInScreen ? "Bound fields" : "Screen workflow"}
-        </p>
+        <p className="text-sm font-medium">Workspace details</p>
         <p className="text-xs text-muted-foreground">
           {canEditInScreen
-            ? "Edit only the content fields mapped by the custom screen bindings."
-            : isDashboardScreen
-              ? "This screen can preview mapped record data, but edits stay in the classic editor until writable bindings are added."
-              : "This shortcut currently narrows the records list. Add bound screen widgets if you want a dedicated record screen."}
+            ? "This record is edited directly through the screen-owned canvas."
+            : "This screen is not yet ready for the screen-owned editor workflow."}
         </p>
       </div>
 
       {!canEditInScreen ? (
         <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          {isDashboardScreen
-            ? "Use the builder to add writable bindings when this preview screen should become an editor."
-            : "Use the builder to add dedicated screen widgets and field bindings before replacing the classic editor."}
-        </div>
-      ) : writableFields.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          This screen has no writable bindings yet. Use the builder to map widget props to content
-          fields.
+          Use the builder to add writable screen widgets and bindings before using this record route
+          as the active editor flow.
         </div>
       ) : (
-        writableFields.map((field) => (
-          <BoundFieldCard
-            key={field.name}
-            field={field}
-            usageCount={writableFieldUsage.get(field.name) ?? 1}
-            value={values[field.name]}
-            error={fieldErrors[field.name]}
-            onChange={(next) => handleFieldChange(field.name, next)}
-            relationTargets={relationTargets}
-          />
-        ))
+        <div className="rounded-lg border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
+          Inline canvas editing is active. Save writes through the shared content entry contract.
+        </div>
       )}
 
       {readOnlyBindingCount > 0 ? (
@@ -562,10 +488,6 @@ export function CustomScreenEntryEditor() {
     </div>
   );
 
-  const classicEditorHref =
-    contentType && entryId && !isCreateMode
-      ? `/advanced/entries/${encodeURIComponent(contentType.slug)}/${encodeURIComponent(entryId)}`
-      : "/advanced/entries";
   const screenRecordsHref = screenId
     ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
     : "/advanced/custom-screens";
@@ -617,16 +539,6 @@ export function CustomScreenEntryEditor() {
               <ArrowLeft className="h-4 w-4" />
               Back to records
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => navigate(classicEditorHref)}
-              disabled={!contentType || !entryId || isCreateMode}
-            >
-              <SquareArrowOutUpRight className="h-4 w-4" />
-              Classic editor
-            </Button>
             {canEditInScreen ? (
               <Button
                 size="sm"
@@ -635,7 +547,7 @@ export function CustomScreenEntryEditor() {
                 disabled={isSaving || isLoading || !contentType}
               >
                 <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : isCreateMode ? "Create record" : "Save record"}
+                {isSaving ? "Saving..." : "Save"}
               </Button>
             ) : null}
           </div>
@@ -645,14 +557,12 @@ export function CustomScreenEntryEditor() {
           <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Custom screen preview
+                Screen-owned record editor
               </p>
               <p className="text-xs text-muted-foreground">
                 {canEditInScreen
-                  ? "The canvas reflects the current entry data through widget bindings."
-                  : isDashboardScreen
-                    ? "This screen previews the current record state, while edits stay in the classic editor."
-                    : "This screen currently acts as a records shortcut and does not replace the classic editor yet."}
+                  ? "The canvas is the active editing surface for this record."
+                  : "This screen still needs writable bindings before it can replace legacy editing paths."}
               </p>
             </div>
             <Button
@@ -684,21 +594,12 @@ export function CustomScreenEntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
-            {isCollectionOnlyScreen ? (
+            {!canEditInScreen ? (
               <Alert>
-                <AlertTitle>Collection-only screen</AlertTitle>
+                <AlertTitle>Workspace upgrade required</AlertTitle>
                 <AlertDescription>
-                  This shortcut currently narrows the records list for this content type. Open the
-                  classic editor to edit the record, or add dedicated screen widgets and field
-                  bindings in the builder to create a custom record screen.
-                </AlertDescription>
-              </Alert>
-            ) : isDashboardScreen ? (
-              <Alert>
-                <AlertTitle>Read-only record screen</AlertTitle>
-                <AlertDescription>
-                  This screen can preview mapped data for the current record, but edits still happen
-                  in the classic editor until writable bindings are added.
+                  This screen is not yet ready for the dedicated editor workflow. Add writable
+                  bindings in the builder before using this route as the active screen-owned editor.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -767,21 +668,23 @@ export function CustomScreenEntryEditor() {
               <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
                 Loading custom screen record...
               </div>
-            ) : screen && isCollectionOnlyScreen ? (
-              <CustomScreenPreview
-                blocks={[]}
-                bindings={[]}
-                data={{}}
-                emptyTitle="Classic editor required"
-                emptyMessage="This screen does not define a dedicated record view yet. Use the classic editor for edits, or add bound screen widgets in the builder."
+            ) : screen && canEditInScreen ? (
+              <CustomScreenEntryCanvas
+                blocks={screen.definition?.editorView.blocks ?? screen.blocks}
+                bindings={screen.definition?.editorView.bindings ?? screen.bindings}
+                fieldValues={buildPayloadData()}
+                fieldErrors={fieldErrors}
+                fields={fields}
+                relationTargets={relationTargets}
+                onFieldChange={handleFieldChange}
               />
             ) : screen ? (
               <CustomScreenPreview
                 blocks={screen.definition?.editorView.blocks ?? screen.blocks}
                 bindings={screen.definition?.editorView.bindings ?? screen.bindings}
                 data={buildPayloadData()}
-                emptyTitle="No preview widgets yet"
-                emptyMessage="Add dedicated screen widgets to preview this custom screen."
+                emptyTitle="Editor upgrade required"
+                emptyMessage="Add writable screen widgets and bindings in the builder before using this route as the dedicated record editor."
               />
             ) : (
               <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">

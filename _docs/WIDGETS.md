@@ -393,7 +393,8 @@ Widget availability is surface-scoped:
 - `custom-screen-builder` - legacy Custom Screens surface kept for V1
   compatibility.
 - `admin-list-view` - Custom Screens `List View` configuration surface.
-- `admin-editor-view` - Custom Screens `Editor View` canvas.
+- `admin-editor-view` - Custom Screens `Editor View` canvas and screen-owned
+  inline record editing surface.
 
 Admin-only widgets may declare `dataAccess` metadata:
 
@@ -402,6 +403,9 @@ Admin-only widgets may declare `dataAccess` metadata:
 - `source: "selected-entry"` for widgets that read or write the active record.
 - `modes: ["read"]`, `["write"]`, or `["read", "write"]` describe the expected
   data direction.
+- Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
+  and `screen-two-column` widgets can be reused in `admin-editor-view` for
+  screen-owned inline editing when their bindings target writable entry fields.
 
 `listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
 widgets until the current Custom Screen has a resolved content type. This keeps

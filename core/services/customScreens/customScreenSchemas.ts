@@ -21,9 +21,7 @@ export const customScreenListFilterOperators = ["equals"] as const;
 
 export type CustomScreenBindingMode = (typeof customScreenBindingModes)[number];
 export type CustomScreenStatus = (typeof customScreenStatusValues)[number];
-export type CustomScreenDefinitionVersion = 1 | 2;
-export type CustomScreenRowClickMode = (typeof customScreenRowClickModes)[number];
-export type CustomScreenCreateMode = (typeof customScreenCreateModes)[number];
+export type CustomScreenDefinitionVersion = 1 | 2 | 3;
 export type CustomScreenListColumnSource = (typeof customScreenListColumnSources)[number];
 export type CustomScreenListFormatter = (typeof customScreenListFormatters)[number];
 export type CustomScreenSortDirection = (typeof customScreenSortDirections)[number];
@@ -68,8 +66,6 @@ export type CustomScreenListViewDefinition = {
     field: string;
     direction: CustomScreenSortDirection;
   };
-  rowClick: CustomScreenRowClickMode;
-  createMode: CustomScreenCreateMode;
   bulkActions: {
     delete: boolean;
     publish: boolean;
@@ -77,19 +73,35 @@ export type CustomScreenListViewDefinition = {
   };
 };
 
+export type CustomScreenListViewDefinitionV2 = CustomScreenListViewDefinition & {
+  rowClick: (typeof customScreenRowClickModes)[number];
+  createMode: (typeof customScreenCreateModes)[number];
+};
+
 export type CustomScreenEditorViewDefinition = {
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
   saveMode: "entry";
+  interactionMode: "inline";
 };
 
 export type CustomScreenDefinitionV2 = {
   schemaVersion: 2;
+  listView: CustomScreenListViewDefinitionV2;
+  editorView: {
+    blocks: WidgetBlock[];
+    bindings: CustomScreenBinding[];
+    saveMode: "entry";
+  };
+};
+
+export type CustomScreenDefinitionV3 = {
+  schemaVersion: 3;
   listView: CustomScreenListViewDefinition;
   editorView: CustomScreenEditorViewDefinition;
 };
 
-export type CustomScreenDefinition = CustomScreenDefinitionV2;
+export type CustomScreenDefinition = CustomScreenDefinitionV3;
 
 export type CustomScreenSidebarConfig = {
   showInSidebar: boolean;
@@ -108,11 +120,9 @@ export type CustomScreenDefinitionContext = {
   } | null;
 };
 
-const supportedDefinitionVersions = new Set<CustomScreenDefinitionVersion>([1, 2]);
+const supportedDefinitionVersions = new Set<CustomScreenDefinitionVersion>([1, 2, 3]);
 const bindingModes = new Set<CustomScreenBindingMode>(customScreenBindingModes);
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
-const rowClickModes = new Set<CustomScreenRowClickMode>(customScreenRowClickModes);
-const createModes = new Set<CustomScreenCreateMode>(customScreenCreateModes);
 const columnSources = new Set<CustomScreenListColumnSource>(customScreenListColumnSources);
 const listFormatters = new Set<CustomScreenListFormatter>(customScreenListFormatters);
 const sortDirections = new Set<CustomScreenSortDirection>(customScreenSortDirections);
@@ -386,8 +396,6 @@ export function buildDefaultListViewDefinition(
     columns,
     filters: statusField ? [fieldFilter(statusField, properties[statusField])] : [],
     defaultSort: { field: "updatedAt", direction: "desc" },
-    rowClick: "editor-view",
-    createMode: "editor-view",
     bulkActions: {
       delete: true,
       publish: true,
@@ -464,14 +472,7 @@ export function normalizeCustomScreenListViewDefinition(
     return buildDefaultListViewDefinition(context?.contentType);
   }
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
-  rejectUnknownKeys(input, [
-    "columns",
-    "filters",
-    "defaultSort",
-    "rowClick",
-    "createMode",
-    "bulkActions",
-  ]);
+  rejectUnknownKeys(input, ["columns", "filters", "defaultSort", "bulkActions"]);
 
   const defaults = buildDefaultListViewDefinition(context?.contentType);
   const columns =
@@ -526,8 +527,6 @@ export function normalizeCustomScreenListViewDefinition(
     columns,
     filters,
     defaultSort,
-    rowClick: normalizeStringEnum(input.rowClick, rowClickModes, defaults.rowClick),
-    createMode: normalizeStringEnum(input.createMode, createModes, defaults.createMode),
     bulkActions,
   };
 }
@@ -537,30 +536,126 @@ export function normalizeCustomScreenEditorViewDefinition(
   context?: CustomScreenDefinitionContext
 ): CustomScreenEditorViewDefinition {
   if (input === undefined || input === null) {
-    return { blocks: [], bindings: [], saveMode: "entry" };
+    return { blocks: [], bindings: [], saveMode: "entry", interactionMode: "inline" };
   }
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
-  rejectUnknownKeys(input, ["blocks", "bindings", "saveMode"]);
+  rejectUnknownKeys(input, ["blocks", "bindings", "saveMode", "interactionMode"]);
   const saveMode = normalizeText(input.saveMode) ?? "entry";
   if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
+  const interactionMode = normalizeText(input.interactionMode) ?? "inline";
+  if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
   return {
     blocks: normalizeCustomScreenBlocks(input.blocks),
     bindings: normalizeCustomScreenBindings(input.bindings, context),
     saveMode: "entry",
+    interactionMode: "inline",
   };
 }
 
-export function migrateV1DefinitionToV2(
+const normalizeCustomScreenBindingsForRead = (
+  value: unknown,
+  context?: CustomScreenDefinitionContext
+) => {
+  try {
+    return normalizeCustomScreenBindings(value, context);
+  } catch {
+    return normalizeCustomScreenBindings(value);
+  }
+};
+
+const normalizeCustomScreenListViewDefinitionForRead = (
+  input: unknown,
+  context?: CustomScreenDefinitionContext
+): CustomScreenListViewDefinition => {
+  const defaults = buildDefaultListViewDefinition(context?.contentType);
+  if (!isRecord(input)) {
+    return defaults;
+  }
+
+  const columns = Array.isArray(input.columns)
+    ? normalizeUniqueIds(
+        input.columns.flatMap((item, index) => {
+          try {
+            return [normalizeListColumn(item, index, context)];
+          } catch {
+            return [];
+          }
+        })
+      )
+    : defaults.columns;
+
+  const filters = Array.isArray(input.filters)
+    ? normalizeUniqueIds(
+        input.filters.flatMap((item, index) => {
+          try {
+            return [normalizeListFilter(item, index, context)];
+          } catch {
+            return [];
+          }
+        })
+      )
+    : defaults.filters;
+
+  let defaultSort = defaults.defaultSort;
+  if (isRecord(input.defaultSort)) {
+    try {
+      const field = normalizePath(input.defaultSort.field);
+      if (systemListFields.has(field) || getSchemaFieldNames(context).has(field)) {
+        defaultSort = {
+          field,
+          direction: normalizeStringEnum(input.defaultSort.direction, sortDirections, "desc"),
+        };
+      }
+    } catch {
+      defaultSort = defaults.defaultSort;
+    }
+  }
+
+  const bulkActions = isRecord(input.bulkActions)
+    ? {
+        delete: normalizeBoolean(input.bulkActions.delete, true),
+        publish: normalizeBoolean(input.bulkActions.publish, true),
+        unpublish: normalizeBoolean(input.bulkActions.unpublish, true),
+      }
+    : defaults.bulkActions;
+
+  return {
+    columns: columns.length > 0 ? columns : defaults.columns,
+    filters,
+    defaultSort,
+    bulkActions,
+  };
+};
+
+export function migrateV1DefinitionToV3(
   definition: CustomScreenDefinitionV1,
   context?: CustomScreenDefinitionContext
-): CustomScreenDefinitionV2 {
+): CustomScreenDefinitionV3 {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     listView: buildDefaultListViewDefinition(context?.contentType),
     editorView: {
       blocks: definition.blocks,
       bindings: definition.bindings,
       saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+}
+
+export function migrateV2DefinitionToV3(
+  definition: CustomScreenDefinitionV2,
+  context?: CustomScreenDefinitionContext
+): CustomScreenDefinitionV3 {
+  const { rowClick: _rowClick, createMode: _createMode, ...listViewInput } = definition.listView;
+  return {
+    schemaVersion: 3,
+    listView: normalizeCustomScreenListViewDefinitionForRead(listViewInput, context),
+    editorView: {
+      blocks: normalizeCustomScreenBlocks(definition.editorView.blocks),
+      bindings: normalizeCustomScreenBindingsForRead(definition.editorView.bindings, context),
+      saveMode: "entry",
+      interactionMode: "inline",
     },
   };
 }
@@ -581,20 +676,29 @@ export function normalizeCustomScreenDefinition(
   if ("contentTypeId" in rawInput) {
     throw new Error("custom_screen_definition_invalid");
   }
+  const hasV2ListViewKeys =
+    isRecord(rawInput.listView) &&
+    ("rowClick" in rawInput.listView || "createMode" in rawInput.listView);
   const version =
     "listView" in rawInput || "editorView" in rawInput
-      ? 2
+      ? hasV2ListViewKeys
+        ? 2
+        : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? 3)
       : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion);
 
   if (version === 1) {
-    return migrateV1DefinitionToV2(normalizeCustomScreenV1Definition(rawInput, context), context);
+    return migrateV1DefinitionToV3(normalizeCustomScreenV1Definition(rawInput, context), context);
+  }
+
+  if (version === 2) {
+    throw new Error("custom_screen_definition_invalid");
   }
 
   rejectUnknownKeys(rawInput, ["schemaVersion", "listView", "editorView"]);
-  const schemaVersion = normalizeCustomScreenSchemaVersion(rawInput.schemaVersion);
-  if (schemaVersion !== 2) throw new Error("custom_screen_definition_invalid");
+  const schemaVersion = normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? 3);
+  if (schemaVersion !== 3) throw new Error("custom_screen_definition_invalid");
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context),
     editorView: normalizeCustomScreenEditorViewDefinition(rawInput.editorView, context),
   };
@@ -618,23 +722,99 @@ export function normalizeCustomScreenDefinitionForRead(
     if (isRecord(rawInput)) {
       const version =
         "listView" in rawInput || "editorView" in rawInput
-          ? 2
+          ? isRecord(rawInput.listView) &&
+            ("rowClick" in rawInput.listView || "createMode" in rawInput.listView)
+            ? 2
+            : 3
           : typeof rawInput.schemaVersion === "number"
             ? rawInput.schemaVersion
             : null;
 
       if (version === 2) {
-        const listView = (() => {
+        const legacyListView = (() => {
           try {
-            return normalizeCustomScreenListViewDefinition(rawInput.listView);
+            if (!isRecord(rawInput.listView)) {
+              return {
+                ...buildDefaultListViewDefinition(context?.contentType),
+                rowClick: "editor-view" as const,
+                createMode: "editor-view" as const,
+              };
+            }
+            const columns =
+              Array.isArray(rawInput.listView.columns) && rawInput.listView.columns.length > 0
+                ? rawInput.listView.columns
+                : buildDefaultListViewDefinition(context?.contentType).columns;
+            const filters = Array.isArray(rawInput.listView.filters)
+              ? rawInput.listView.filters
+              : [];
+            const defaultSort = isRecord(rawInput.listView.defaultSort)
+              ? {
+                  field:
+                    typeof rawInput.listView.defaultSort.field === "string"
+                      ? rawInput.listView.defaultSort.field
+                      : buildDefaultListViewDefinition(context?.contentType).defaultSort.field,
+                  direction:
+                    rawInput.listView.defaultSort.direction === "asc" ||
+                    rawInput.listView.defaultSort.direction === "desc"
+                      ? rawInput.listView.defaultSort.direction
+                      : buildDefaultListViewDefinition(context?.contentType).defaultSort.direction,
+                }
+              : buildDefaultListViewDefinition(context?.contentType).defaultSort;
+            const bulkActions = isRecord(rawInput.listView.bulkActions)
+              ? {
+                  delete:
+                    typeof rawInput.listView.bulkActions.delete === "boolean"
+                      ? rawInput.listView.bulkActions.delete
+                      : true,
+                  publish:
+                    typeof rawInput.listView.bulkActions.publish === "boolean"
+                      ? rawInput.listView.bulkActions.publish
+                      : true,
+                  unpublish:
+                    typeof rawInput.listView.bulkActions.unpublish === "boolean"
+                      ? rawInput.listView.bulkActions.unpublish
+                      : true,
+                }
+              : buildDefaultListViewDefinition(context?.contentType).bulkActions;
+            return {
+              columns,
+              filters,
+              defaultSort,
+              rowClick:
+                rawInput.listView.rowClick === "classic-editor" ||
+                rawInput.listView.rowClick === "editor-view"
+                  ? rawInput.listView.rowClick
+                  : "editor-view",
+              createMode:
+                rawInput.listView.createMode === "drawer" ||
+                rawInput.listView.createMode === "editor-view"
+                  ? rawInput.listView.createMode
+                  : "editor-view",
+              bulkActions,
+            } satisfies CustomScreenDefinitionV2["listView"];
           } catch {
-            return buildDefaultListViewDefinition(context?.contentType);
+            return {
+              ...buildDefaultListViewDefinition(context?.contentType),
+              rowClick: "editor-view" as const,
+              createMode: "editor-view" as const,
+            };
           }
         })();
 
-        const editorView = (() => {
+        const legacyEditorView = (() => {
           try {
-            return normalizeCustomScreenEditorViewDefinition(rawInput.editorView);
+            if (!isRecord(rawInput.editorView)) {
+              return {
+                blocks: normalizeCustomScreenBlocks(input.blocks),
+                bindings: normalizeCustomScreenBindings(input.bindings),
+                saveMode: "entry" as const,
+              };
+            }
+            return {
+              blocks: normalizeCustomScreenBlocks(rawInput.editorView.blocks),
+              bindings: normalizeCustomScreenBindings(rawInput.editorView.bindings),
+              saveMode: "entry" as const,
+            } satisfies CustomScreenDefinitionV2["editorView"];
           } catch {
             return {
               blocks: normalizeCustomScreenBlocks(input.blocks),
@@ -644,18 +824,21 @@ export function normalizeCustomScreenDefinitionForRead(
           }
         })();
 
-        return {
-          schemaVersion: 2,
-          listView,
-          editorView,
-        };
+        return migrateV2DefinitionToV3(
+          {
+            schemaVersion: 2,
+            listView: legacyListView,
+            editorView: legacyEditorView,
+          },
+          context
+        );
       }
     }
 
     try {
       return normalizeCustomScreenDefinition(input);
     } catch {
-      return migrateV1DefinitionToV2(
+      return migrateV1DefinitionToV3(
         normalizeCustomScreenV1Definition({
           schemaVersion: 1,
           blocks: input.blocks,
@@ -704,7 +887,7 @@ export const customScreenBindingSchema = {
   additionalProperties: false,
 } as const;
 
-const customScreenLegacyDefinitionSchema = {
+const _customScreenLegacyDefinitionSchema = {
   type: "object",
   required: ["schemaVersion", "blocks", "bindings"],
   properties: {
@@ -751,7 +934,7 @@ const customScreenListFilterSchema = {
   additionalProperties: false,
 } as const;
 
-const customScreenV2DefinitionSchema = {
+const _customScreenV2DefinitionSchema = {
   type: "object",
   required: ["schemaVersion", "listView", "editorView"],
   properties: {
@@ -816,8 +999,72 @@ const customScreenV2DefinitionSchema = {
   additionalProperties: false,
 } as const;
 
+const customScreenV3DefinitionSchema = {
+  type: "object",
+  required: ["schemaVersion", "listView", "editorView"],
+  properties: {
+    schemaVersion: { enum: [3] },
+    listView: {
+      type: "object",
+      required: ["columns", "filters", "defaultSort", "bulkActions"],
+      properties: {
+        columns: {
+          type: "array",
+          maxItems: 50,
+          items: customScreenListColumnSchema,
+        },
+        filters: {
+          type: "array",
+          maxItems: 30,
+          items: customScreenListFilterSchema,
+        },
+        defaultSort: {
+          type: "object",
+          required: ["field", "direction"],
+          properties: {
+            field: { type: "string", minLength: 1, maxLength: 160 },
+            direction: { enum: customScreenSortDirections },
+          },
+          additionalProperties: false,
+        },
+        bulkActions: {
+          type: "object",
+          required: ["delete", "publish", "unpublish"],
+          properties: {
+            delete: { type: "boolean" },
+            publish: { type: "boolean" },
+            unpublish: { type: "boolean" },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+    editorView: {
+      type: "object",
+      required: ["blocks", "bindings", "saveMode", "interactionMode"],
+      properties: {
+        blocks: {
+          type: "array",
+          maxItems: 500,
+          items: { type: "object" },
+        },
+        bindings: {
+          type: "array",
+          maxItems: 200,
+          items: customScreenBindingSchema,
+        },
+        saveMode: { enum: ["entry"] },
+        interactionMode: { enum: ["inline"] },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
 export const customScreenDefinitionSchema = {
-  oneOf: [customScreenLegacyDefinitionSchema, customScreenV2DefinitionSchema],
+  oneOf: [customScreenV3DefinitionSchema],
 } as const;
 
 export const customScreenCreateSchema = {
@@ -831,7 +1078,7 @@ export const customScreenCreateSchema = {
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
-    schemaVersion: { enum: [1, 2] },
+    schemaVersion: { enum: [1, 2, 3] },
     definition: customScreenDefinitionSchema,
     blocks: {
       type: "array",
@@ -858,7 +1105,7 @@ export const customScreenUpdateSchema = {
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
-    schemaVersion: { enum: [1, 2] },
+    schemaVersion: { enum: [1, 2, 3] },
     definition: customScreenDefinitionSchema,
     blocks: {
       type: "array",

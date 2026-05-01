@@ -22,11 +22,9 @@ import {
   Blocks,
 } from "lucide-react";
 import type { CustomScreenRecord } from "@/services/customScreensClient";
+import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
-import {
-  buildAdvancedNavItems,
-  type AdvancedFeatureFlags,
-} from "@/ui/navigation/advancedModules";
+import { buildAdvancedNavItems, type AdvancedFeatureFlags } from "@/ui/navigation/advancedModules";
 
 export type NavItem = {
   label: string;
@@ -111,11 +109,22 @@ export const buildDefaultNavSections = (
 
 export const defaultNavSections: NavSection[] = buildDefaultNavSections();
 
-export const buildCustomScreenShortcutNavItems = (
-  screens: CustomScreenRecord[]
-): NavItem[] =>
+export const buildCustomScreenShortcutNavItems = (screens: CustomScreenRecord[]): NavItem[] =>
   screens
-    .filter((screen) => screen.status === "active" && screen.showInSidebar === true)
+    .filter((screen) => {
+      const capabilities =
+        screen.capabilities ??
+        resolveCustomScreenCapabilities({
+          definition: screen.definition,
+          blocks: screen.blocks,
+          bindings: screen.bindings,
+        });
+      return (
+        screen.status === "active" &&
+        screen.showInSidebar === true &&
+        capabilities.supportsDedicatedEditor === true
+      );
+    })
     .map((screen) => ({
       label: screen.sidebarLabel?.trim() || screen.name,
       href: `/admin/advanced/custom-screens/${encodeURIComponent(screen.id)}/entries`,

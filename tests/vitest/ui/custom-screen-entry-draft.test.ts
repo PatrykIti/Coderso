@@ -53,6 +53,7 @@ const contentType: ContentTypeSummary = {
 
 const editorView: CustomScreenEditorViewDefinition = {
   saveMode: "entry",
+  interactionMode: "inline",
   blocks: [
     {
       id: "field-project-status",
@@ -92,6 +93,7 @@ const editorView: CustomScreenEditorViewDefinition = {
 
 const readOnlyEditorView: CustomScreenEditorViewDefinition = {
   saveMode: "entry",
+  interactionMode: "inline",
   blocks: [],
   bindings: [
     {

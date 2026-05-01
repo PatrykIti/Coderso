@@ -149,3 +149,20 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   `Layout`, `Content`, `Forms`, `Navigation`, `Media`.
 - After a widget is inserted, the canvas scrolls to the new block and applies a
   short-lived visual highlight.
+
+## Custom Screens workspace UX
+
+- The builder header uses one workspace control model:
+  `Preview`, `List View`, `Editor View`, and `Save`.
+- `Open records`, `Builder`, and the center-canvas `Settings` tab are not part
+  of the active Custom Screens workspace flow.
+- `List View` is edited from a table-preview canvas with:
+  - left rail list element library,
+  - center table preview,
+  - right inspector for screen settings and the selected column.
+- `Editor View` keeps the widget canvas, but the active palette is restricted to
+  `admin-editor-view` widgets and the right inspector owns screen/data/selected
+  widget controls.
+- The record editor route uses the screen-owned canvas as the active editing
+  surface; bound screen widgets can edit the underlying entry inline instead of
+  showing a preview card plus a separate classic-editor fallback.

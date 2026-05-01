@@ -12,9 +12,7 @@ import {
 } from "../../../core/admin/ui/custom-screens/customScreenListModel";
 
 const customScreensState = vi.hoisted(() => {
-  const makeScreen = (
-    overrides: Partial<CustomScreenRecord> = {}
-  ): CustomScreenRecord => ({
+  const makeScreen = (overrides: Partial<CustomScreenRecord> = {}): CustomScreenRecord => ({
     id: "screen-1",
     name: "Product workspace",
     contentTypeId: "ct-products",
@@ -28,9 +26,7 @@ const customScreensState = vi.hoisted(() => {
     updatedAt: "2026-03-05T00:00:00.000Z",
     ...overrides,
   });
-  const makeContentType = (
-    overrides: Partial<ContentTypeSummary> = {}
-  ): ContentTypeSummary => ({
+  const makeContentType = (overrides: Partial<ContentTypeSummary> = {}): ContentTypeSummary => ({
     id: "ct-products",
     name: "Products",
     slug: "products",
@@ -140,13 +136,8 @@ vi.mock("@/components/ui/checkbox", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div data-dialog-open="true">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -204,15 +195,11 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
-        return [
-          { value: child.props.value, label: flattenText(child.props.children) },
-        ];
+        return [{ value: child.props.value, label: flattenText(child.props.children) }];
       }
       return collectOptions(child.props.children);
     });
@@ -275,13 +262,9 @@ vi.mock("@/components/ui/sheet", () => ({
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({
-    children,
-    colSpan,
-  }: {
-    children: React.ReactNode;
-    colSpan?: number;
-  }) => <td colSpan={colSpan}>{children}</td>,
+  TableCell: ({ children, colSpan }: { children: React.ReactNode; colSpan?: number }) => (
+    <td colSpan={colSpan}>{children}</td>
+  ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
   TableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
@@ -316,8 +299,7 @@ vi.mock("@/services/customScreensClient", () => ({
       contentTypeId: String(input.contentTypeId),
       status: input.status === "active" ? "active" : "draft",
       showInSidebar: input.showInSidebar === true,
-      sidebarLabel:
-        typeof input.sidebarLabel === "string" ? input.sidebarLabel : null,
+      sidebarLabel: typeof input.sidebarLabel === "string" ? input.sidebarLabel : null,
     });
     customScreensState.screens = [created, ...customScreensState.screens];
     return created;
@@ -331,9 +313,7 @@ vi.mock("@/services/customScreensClient", () => ({
   }),
   deleteCustomScreen: vi.fn(async (id: string) => {
     customScreensState.deleteCalls.push(id);
-    customScreensState.screens = customScreensState.screens.filter(
-      (screen) => screen.id !== id
-    );
+    customScreensState.screens = customScreensState.screens.filter((screen) => screen.id !== id);
     return { ok: true };
   }),
 }));
@@ -386,11 +366,9 @@ vi.mock("@/ui/shared/AdminLink", () => ({
 }));
 
 vi.mock("@/ui/shared/ListPaginationFooter", () => ({
-  ListPaginationFooter: ({
-    resourceLabel,
-  }: {
-    resourceLabel: string;
-  }) => <footer>{resourceLabel}</footer>,
+  ListPaginationFooter: ({ resourceLabel }: { resourceLabel: string }) => (
+    <footer>{resourceLabel}</footer>
+  ),
 }));
 
 vi.mock("@/ui/shared/PageHeader", () => ({
@@ -429,9 +407,8 @@ vi.mock("sonner", () => ({
   },
 }));
 
-const { CustomScreenListPage } = await import(
-  "../../../core/admin/ui/custom-screens/CustomScreenListPage"
-);
+const { CustomScreenListPage } =
+  await import("../../../core/admin/ui/custom-screens/CustomScreenListPage");
 
 const flushAsync = async () => {
   await Promise.resolve();
@@ -453,10 +430,7 @@ const renderPage = async () => {
 
 const updateInput = async (input: HTMLInputElement, value: string) => {
   await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value"
-    )?.set;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
     setter?.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
@@ -464,10 +438,7 @@ const updateInput = async (input: HTMLInputElement, value: string) => {
 
 const updateSelect = async (select: HTMLSelectElement, value: string) => {
   await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      "value"
-    )?.set;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
     setter?.call(select, value);
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -505,7 +476,7 @@ test("custom screen list view model enriches labels without mutating records", (
 
   expect(rows[0]).toMatchObject({
     contentTypeLabel: "missing-type",
-    modeLabel: "Collection",
+    modeLabel: "Setup required",
     sidebarShortcutState: "configured_after_activation",
     sidebarShortcutLabel: "Catalog",
   });
@@ -556,9 +527,7 @@ test("CustomScreenListPage create drawer submits schema fields and navigates by 
     throw new Error("Create drawer did not open");
   }
 
-  const nameInput = drawer.querySelector(
-    "input[placeholder='e.g. Product workspace']"
-  );
+  const nameInput = drawer.querySelector("input[placeholder='e.g. Product workspace']");
   if (!(nameInput instanceof HTMLInputElement)) {
     throw new Error("Missing custom screen name input");
   }
@@ -584,9 +553,7 @@ test("CustomScreenListPage create drawer submits schema fields and navigates by 
   expect(customScreensState.toastSuccess).toHaveBeenCalledWith(
     'Custom screen "Inventory dashboard" created.'
   );
-  expect(customScreensState.navigateCalls).toEqual([
-    "/advanced/custom-screens/created-screen",
-  ]);
+  expect(customScreensState.navigateCalls).toEqual(["/advanced/custom-screens/created-screen"]);
 
   await act(async () => root.unmount());
 });
@@ -604,9 +571,7 @@ test("CustomScreenListPage status and delete actions use existing contracts and 
     id: "screen-1",
     input: { status: "active" },
   });
-  expect(customScreensState.toastSuccess).toHaveBeenCalledWith(
-    "Custom screen activated."
-  );
+  expect(customScreensState.toastSuccess).toHaveBeenCalledWith("Custom screen activated.");
 
   await clickButton(findButton(container, "Delete"));
   expect(customScreensState.deleteCalls).toEqual([]);
@@ -614,9 +579,7 @@ test("CustomScreenListPage status and delete actions use existing contracts and 
 
   await clickButton(findButton(container, "Delete custom screen"));
   expect(customScreensState.deleteCalls).toEqual(["screen-1"]);
-  expect(customScreensState.toastSuccess).toHaveBeenCalledWith(
-    "Custom screen deleted."
-  );
+  expect(customScreensState.toastSuccess).toHaveBeenCalledWith("Custom screen deleted.");
 
   await act(async () => root.unmount());
 });
@@ -655,12 +618,8 @@ test("CustomScreenListPage bulk actions stay scoped to selected visible rows", a
   await updateSelect(bulkSelect, "moveToDraft");
   await clickButton(findButton(container, "Apply"));
 
-  expect(customScreensState.updateCalls).toEqual([
-    { id: "screen-1", input: { status: "draft" } },
-  ]);
-  expect(customScreensState.toastSuccess).toHaveBeenCalledWith(
-    "1 custom screen moved to draft."
-  );
+  expect(customScreensState.updateCalls).toEqual([{ id: "screen-1", input: { status: "draft" } }]);
+  expect(customScreensState.toastSuccess).toHaveBeenCalledWith("1 custom screen moved to draft.");
 
   await act(async () => root.unmount());
 });

@@ -124,7 +124,7 @@ test("listCustomScreens falls back to legacy blocks and bindings when persisted 
   const result = await listCustomScreens();
 
   expect(result).toHaveLength(1);
-  expect(result[0]?.schemaVersion).toBe(2);
+  expect(result[0]?.schemaVersion).toBe(3);
   expect(result[0]?.definition.editorView.blocks[0]).toMatchObject({
     id: "section-1",
     type: "section",
@@ -164,9 +164,9 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     status: "draft",
     showInSidebar: true,
     sidebarLabel: "Catalog Tools",
-    schemaVersion: 2,
+    schemaVersion: 3,
     definition: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       editorView: {
         blocks: [{ id: "section-1", type: "section", data: {} }],
         bindings: [
@@ -179,17 +179,17 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
           },
         ],
         saveMode: "entry",
+        interactionMode: "inline",
       },
       listView: expect.objectContaining({
-        rowClick: "editor-view",
-        createMode: "editor-view",
+        defaultSort: { field: "updatedAt", direction: "desc" },
       }),
     },
   });
   expect(mockDb.state.lastInsertValues?.createdAt).toBeInstanceOf(Date);
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
   expect(result.status).toBe("draft");
-  expect(result.schemaVersion).toBe(2);
+  expect(result.schemaVersion).toBe(3);
   expect(result.bindings[0]?.id).toBe("section-1-title");
   expect(result.capabilities.mode).toBe("editor");
 });
@@ -248,13 +248,14 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
     status: "active",
     showInSidebar: false,
     sidebarLabel: null,
-    schemaVersion: 2,
+    schemaVersion: 3,
     definition: expect.objectContaining({
-      schemaVersion: 2,
+      schemaVersion: 3,
       editorView: expect.objectContaining({
         blocks: [expect.objectContaining({ id: "section-1", type: "section" })],
         bindings: [],
         saveMode: "entry",
+        interactionMode: "inline",
       }),
     }),
   });

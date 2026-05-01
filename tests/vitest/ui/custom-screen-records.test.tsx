@@ -184,9 +184,9 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
       path: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
     });
 
-    expect(html).toContain("Bound fields");
+    expect(html).toContain("Workspace details");
     expect(html).toContain("Headline");
-    expect(html).toContain("Classic editor");
+    expect(html).toContain("Screen-owned record editor");
     expect(html).toContain("Ocean View");
   } finally {
     if (originalLocal === undefined) {
@@ -197,7 +197,7 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
   }
 });
 
-test("CustomScreenEntriesPage explains collection-only screens and keeps workspace row links", () => {
+test("CustomScreenEntriesPage blocks non-ready screens from the active workspace flow", () => {
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const storage = createLocalStorage();
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
@@ -209,8 +209,8 @@ test("CustomScreenEntriesPage explains collection-only screens and keeps workspa
       path: "/admin/advanced/custom-screens/screen-1/entries",
     });
 
-    expect(html).toContain("Collection-only screen");
-    expect(html).toContain("classic editor remains available from row actions");
+    expect(html).toContain("Workspace upgrade required");
+    expect(html).toContain("not yet ready for the dedicated editor workflow");
     expect(html).toContain("/admin/advanced/custom-screens/screen-1/entries/entry-1");
   } finally {
     if (originalLocal === undefined) {
@@ -221,7 +221,7 @@ test("CustomScreenEntriesPage explains collection-only screens and keeps workspa
   }
 });
 
-test("CustomScreenEntryEditor keeps collection-only screens read-only", () => {
+test("CustomScreenEntryEditor shows upgrade-required state for non-ready screens", () => {
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const storage = createLocalStorage();
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
@@ -233,10 +233,9 @@ test("CustomScreenEntryEditor keeps collection-only screens read-only", () => {
       path: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
     });
 
-    expect(html).toContain("Collection-only screen");
-    expect(html).not.toContain("Save record");
-    expect(html).not.toContain("Bound fields");
-    expect(html).toContain("Classic editor");
+    expect(html).toContain("Workspace upgrade required");
+    expect(html).not.toContain("Save");
+    expect(html).not.toContain("Classic editor");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

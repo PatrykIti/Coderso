@@ -80,18 +80,15 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
     path: "/admin/advanced/custom-screens/new",
   });
 
-  expect(html).toContain("Create screen");
-  expect(html).toContain("Bindings");
+  expect(html).toContain("Save");
   expect(html).toContain("Sidebar shortcut");
   expect(html).toContain("Sidebar label");
   expect(html).toContain("Screen name");
   expect(html).toContain("List View");
   expect(html).toContain("Editor View");
+  expect(html).toContain("Selected Column");
   expect(html).toContain("Select a content type before configuring List View.");
-  expect(html).toContain("Back to list");
-  expect(html).toContain("Screen Record Header");
-  expect(html).toContain("Screen Field Value");
-  expect(html).not.toContain(">Hero<");
+  expect(html).toContain("Preview");
 });
 
 test("CustomScreenListPage renders list shell", () => {
@@ -108,9 +105,10 @@ test("CustomScreenEditorPage renders builder canvas and save action", () => {
     path: "/admin/advanced/custom-screens/new",
   });
 
-  expect(html).toContain("Create screen");
+  expect(html).toContain("Save");
   expect(html).toContain("List View");
   expect(html).toContain("Editor View");
-  expect(html).toContain("Builder");
   expect(html).toContain("Preview");
+  expect(html).not.toContain("Open records");
+  expect(html).not.toContain("Back to list");
 });

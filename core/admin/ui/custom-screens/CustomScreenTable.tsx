@@ -26,6 +26,7 @@ const statusLabels = {
 const sidebarStateLabels = {
   visible: "Visible",
   configured_after_activation: "Configured after activation",
+  requires_editor_setup: "Requires editor setup",
   hidden: "Not shown",
 } as const;
 
@@ -106,10 +107,7 @@ export function CustomScreenTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={8}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
+              <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                 {emptyMessage ?? "No custom screens yet."}
               </TableCell>
             </TableRow>
@@ -119,10 +117,7 @@ export function CustomScreenTable({
             const isSelected = selectedIds.includes(screen.id);
             const sidebarLabel = sidebarStateLabels[row.sidebarShortcutState];
             return (
-              <TableRow
-                key={screen.id}
-                className={isSelected ? "bg-muted/30" : undefined}
-              >
+              <TableRow key={screen.id} className={isSelected ? "bg-muted/30" : undefined}>
                 <TableCell className="pl-4">
                   <Checkbox
                     aria-label={`Select ${screen.name}`}
@@ -146,10 +141,7 @@ export function CustomScreenTable({
                       </span>
                     ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                      <Badge
-                        variant="outline"
-                        className={statusStyles[screen.status]}
-                      >
+                      <Badge variant="outline" className={statusStyles[screen.status]}>
                         {statusLabels[screen.status]}
                       </Badge>
                       <span className="text-muted-foreground/60">•</span>
@@ -160,10 +152,7 @@ export function CustomScreenTable({
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <Badge
-                    variant="outline"
-                    className={statusStyles[screen.status]}
-                  >
+                  <Badge variant="outline" className={statusStyles[screen.status]}>
                     {statusLabels[screen.status]}
                   </Badge>
                 </TableCell>

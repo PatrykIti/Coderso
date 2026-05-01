@@ -33,7 +33,6 @@ import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
-import { EntryCreateDrawer } from "../entries/EntryCreateDrawer";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
   CustomScreenEntriesBulkActionsBar,
@@ -48,15 +47,10 @@ import {
 } from "./customScreenListModel";
 import { buildCustomScreenWorkspacePath, resolveCustomScreenId } from "./routeParams";
 
-const buildClassicEditorHref = (typeSlug: string, entryId: string) =>
-  `/advanced/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entryId)}`;
-
 const fallbackListView = {
   columns: [],
   filters: [],
   defaultSort: { field: "updatedAt", direction: "desc" as const },
-  rowClick: "classic-editor" as const,
-  createMode: "drawer" as const,
   bulkActions: { delete: true, publish: true, unpublish: true },
 };
 
@@ -117,7 +111,6 @@ export function CustomScreenEntriesPage() {
   const [isBulkWorking, setIsBulkWorking] = useState(false);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const screenCapabilities = useMemo(
     () =>
       screen?.capabilities ??
@@ -130,6 +123,7 @@ export function CustomScreenEntriesPage() {
   const listView = screen?.definition?.listView ?? fallbackListView;
   const hasBulkActions =
     listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish;
+  const supportsWorkspaceEditor = screenCapabilities.supportsDedicatedEditor;
   const filterOptions = useMemo(
     () => buildCustomScreenEntriesFilterOptions({ entries, listView }),
     [entries, listView]
@@ -350,28 +344,10 @@ export function CustomScreenEntriesPage() {
     }
   };
 
-  const handleCreated = (entry: { id: string }, _: string, openAfterCreate: boolean) => {
-    if (!contentTypeSlug) return;
-    if (openAfterCreate) {
-      if (screenId && screenCapabilities.mode === "editor") {
-        navigate(
-          `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entry.id)}`
-        );
-      } else {
-        navigate(buildClassicEditorHref(contentTypeSlug, entry.id));
-      }
-      return;
-    }
-    refresh(true, { background: true }).catch(() => undefined);
-  };
-
   const handleCreate = () => {
     if (!screenId || !screen) return;
-    if (screenCapabilities.mode === "editor" && listView.createMode === "editor-view") {
-      navigate(buildCustomScreenWorkspacePath({ screenId, entryId: "new" }));
-      return;
-    }
-    setCreateOpen(true);
+    if (!supportsWorkspaceEditor) return;
+    navigate(buildCustomScreenWorkspacePath({ screenId, entryId: "new" }));
   };
 
   const handlePublish = async (entryId: string) => {
@@ -481,11 +457,9 @@ export function CustomScreenEntriesPage() {
           title={screen?.name ? `${screen.name} Records` : "Custom Screen Records"}
           description={
             contentTypeName
-              ? screenCapabilities.mode === "collection-only"
-                ? `Manage ${contentTypeName} entries through a dedicated records shortcut.`
-                : screenCapabilities.mode === "dashboard"
-                  ? `Manage ${contentTypeName} entries with a read-only screen preview and classic editing fallback.`
-                  : `Manage ${contentTypeName} entries through the dedicated screen workflow.`
+              ? supportsWorkspaceEditor
+                ? `Manage ${contentTypeName} entries through the dedicated screen workflow.`
+                : `This screen is not yet ready for the dedicated editor workflow. Upgrade the editor view before using it as an active records workspace.`
               : "Load the bound content type to start working with records."
           }
           actions={
@@ -507,7 +481,11 @@ export function CustomScreenEntriesPage() {
               <Button variant="outline" onClick={() => navigate(baseHref)}>
                 Open builder
               </Button>
-              <Button className="gap-2" disabled={!contentTypeSlug} onClick={handleCreate}>
+              <Button
+                className="gap-2"
+                disabled={!contentTypeSlug || !supportsWorkspaceEditor}
+                onClick={handleCreate}
+              >
                 <Plus className="h-4 w-4" />
                 New record
               </Button>
@@ -527,21 +505,13 @@ export function CustomScreenEntriesPage() {
             <AlertDescription>{actionError}</AlertDescription>
           </Alert>
         ) : null}
-        {screenCapabilities.mode === "collection-only" ? (
+        {!supportsWorkspaceEditor ? (
           <Alert>
-            <AlertTitle>Collection-only screen</AlertTitle>
+            <AlertTitle>Workspace upgrade required</AlertTitle>
             <AlertDescription>
-              This shortcut narrows the records list for the selected content type. Add dedicated
-              screen widgets and field bindings in the builder if you want a richer Editor View; the
-              classic editor remains available from row actions.
-            </AlertDescription>
-          </Alert>
-        ) : screenCapabilities.mode === "dashboard" ? (
-          <Alert>
-            <AlertTitle>Read-only record screen</AlertTitle>
-            <AlertDescription>
-              This screen can preview mapped data for each record, but edits still happen in the
-              classic editor until writable bindings are added.
+              This screen is not yet ready for the screen-owned editor flow. Add writable screen
+              widgets and bindings in the builder before using this records workspace as the active
+              editing path.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -558,15 +528,8 @@ export function CustomScreenEntriesPage() {
           listView={listView}
           buildRowHref={(entry) => {
             if (!screenId || !contentTypeSlug) return "/advanced/custom-screens";
-            return listView.rowClick === "classic-editor"
-              ? buildClassicEditorHref(contentTypeSlug, entry.id)
-              : buildCustomScreenWorkspacePath({ screenId, entryId: entry.id });
+            return buildCustomScreenWorkspacePath({ screenId, entryId: entry.id });
           }}
-          buildClassicHref={(entry) =>
-            contentTypeSlug
-              ? buildClassicEditorHref(contentTypeSlug, entry.id)
-              : "/advanced/entries"
-          }
           selectedIds={visibleSelectedIds}
           isAllSelected={isAllSelected}
           isIndeterminate={isIndeterminate}
@@ -589,24 +552,6 @@ export function CustomScreenEntriesPage() {
           isLoading={isLoading}
         />
       </div>
-
-      <EntryCreateDrawer
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        types={
-          contentTypeSlug && contentTypeName && screen?.contentTypeId
-            ? [
-                {
-                  id: screen.contentTypeId,
-                  slug: contentTypeSlug,
-                  name: contentTypeName,
-                },
-              ]
-            : []
-        }
-        defaultTypeSlug={contentTypeSlug}
-        onCreated={handleCreated}
-      />
       <ConfirmActionDialog
         open={Boolean(deleteRequest)}
         onOpenChange={(open) => {

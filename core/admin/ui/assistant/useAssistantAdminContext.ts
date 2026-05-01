@@ -91,16 +91,23 @@ const resolveSurface = (route: string | null): RuntimeSurface => {
   if (route.startsWith("/admin/posts")) return { area: "posts", advancedModule: null };
   if (route.startsWith("/admin/settings")) return { area: "settings", advancedModule: null };
   if (!route.startsWith("/admin/advanced")) return { area: "other", advancedModule: null };
-  if (route.startsWith("/admin/advanced/engine")) return { area: "advanced", advancedModule: "engine" };
-  if (route.startsWith("/admin/advanced/entries")) return { area: "advanced", advancedModule: "entries" };
+  if (route.startsWith("/admin/advanced/engine"))
+    return { area: "advanced", advancedModule: "engine" };
+  if (route.startsWith("/admin/advanced/entries"))
+    return { area: "advanced", advancedModule: "entries" };
   if (route.startsWith("/admin/advanced/custom-screens")) {
     return { area: "advanced", advancedModule: "custom-screens" };
   }
-  if (route.startsWith("/admin/advanced/widgets")) return { area: "advanced", advancedModule: "widgets" };
-  if (route.startsWith("/admin/advanced/forms")) return { area: "advanced", advancedModule: "forms" };
-  if (route.startsWith("/admin/advanced/listings")) return { area: "advanced", advancedModule: "listings" };
-  if (route.startsWith("/admin/advanced/booking")) return { area: "advanced", advancedModule: "booking" };
-  if (route.startsWith("/admin/advanced/commerce")) return { area: "advanced", advancedModule: "commerce" };
+  if (route.startsWith("/admin/advanced/widgets"))
+    return { area: "advanced", advancedModule: "widgets" };
+  if (route.startsWith("/admin/advanced/forms"))
+    return { area: "advanced", advancedModule: "forms" };
+  if (route.startsWith("/admin/advanced/listings"))
+    return { area: "advanced", advancedModule: "listings" };
+  if (route.startsWith("/admin/advanced/booking"))
+    return { area: "advanced", advancedModule: "booking" };
+  if (route.startsWith("/admin/advanced/commerce"))
+    return { area: "advanced", advancedModule: "commerce" };
   return { area: "advanced", advancedModule: "other" };
 };
 
@@ -149,7 +156,13 @@ const selectedResourceFromRoute = (
   if (segments[1] === "forms" && segments[2]) {
     return { kind: "form", id: safeDecode(segments[2]) ?? segments[2] };
   }
-  if (segments[1] === "custom-screens" && segments[2] && segments[3] === "entries" && segments[4]) {
+  if (
+    segments[1] === "custom-screens" &&
+    segments[2] &&
+    segments[3] === "entries" &&
+    segments[4] &&
+    segments[4] !== "new"
+  ) {
     return { kind: "custom-screen-entry", id: safeDecode(segments[4]) ?? segments[4] };
   }
   if (segments[1] === "custom-screens" && segments[2]) {
@@ -186,112 +199,136 @@ const actionsForRoute = (
   const surface = resolveSurface(route);
   const actions: Array<AssistantAdminRuntimeVisibleAction | null> = [];
   if (surface.area === "pages") {
-    actions.push(action({
-      id: "page.create",
-      label: "Create page",
-      kind: "create",
-      href: "/admin/pages/new",
-      requiredPermission: "content:write",
-    }));
+    actions.push(
+      action({
+        id: "page.create",
+        label: "Create page",
+        kind: "create",
+        href: "/admin/pages/new",
+        requiredPermission: "content:write",
+      })
+    );
     if (selectedResource?.kind === "page") {
-      actions.push(action({
-        id: "page.publish",
-        label: "Publish page",
-        kind: "publish",
-        href: null,
-        requiredPermission: "content:publish",
-      }));
+      actions.push(
+        action({
+          id: "page.publish",
+          label: "Publish page",
+          kind: "publish",
+          href: null,
+          requiredPermission: "content:publish",
+        })
+      );
     }
   }
   if (surface.area === "advanced" && surface.advancedModule === "engine") {
-    actions.push(action({
-      id: "content-type.create",
-      label: "Create content type",
-      kind: "create",
-      href: "/admin/advanced/engine",
-      requiredPermission: "content:write",
-    }));
+    actions.push(
+      action({
+        id: "content-type.create",
+        label: "Create content type",
+        kind: "create",
+        href: "/admin/advanced/engine",
+        requiredPermission: "content:write",
+      })
+    );
   }
   if (surface.area === "advanced" && surface.advancedModule === "entries") {
-    actions.push(action({
-      id: "entry.create",
-      label: "Create entry",
-      kind: "create",
-      href: "/admin/advanced/entries",
-      requiredPermission: "content:write",
-    }));
+    actions.push(
+      action({
+        id: "entry.create",
+        label: "Create entry",
+        kind: "create",
+        href: "/admin/advanced/entries",
+        requiredPermission: "content:write",
+      })
+    );
     if (selectedResource?.kind === "entry") {
-      actions.push(action({
-        id: "entry.publish",
-        label: "Publish entry",
-        kind: "publish",
-        href: null,
-        requiredPermission: "content:publish",
-      }));
+      actions.push(
+        action({
+          id: "entry.publish",
+          label: "Publish entry",
+          kind: "publish",
+          href: null,
+          requiredPermission: "content:publish",
+        })
+      );
     }
   }
   if (surface.area === "advanced" && surface.advancedModule === "custom-screens") {
-    actions.push(action({
-      id: "custom-screen.create",
-      label: "Create custom screen",
-      kind: "create",
-      href: "/admin/advanced/custom-screens",
-      requiredPermission: "content:write",
-    }));
+    actions.push(
+      action({
+        id: "custom-screen.create",
+        label: "Create custom screen",
+        kind: "create",
+        href: "/admin/advanced/custom-screens",
+        requiredPermission: "content:write",
+      })
+    );
   }
   if (surface.area === "advanced" && surface.advancedModule === "forms") {
-    actions.push(action({
-      id: "form.create",
-      label: "Create form",
-      kind: "create",
-      href: "/admin/advanced/forms",
-      requiredPermission: "forms:write",
-    }));
+    actions.push(
+      action({
+        id: "form.create",
+        label: "Create form",
+        kind: "create",
+        href: "/admin/advanced/forms",
+        requiredPermission: "forms:write",
+      })
+    );
   }
   if (surface.area === "advanced" && surface.advancedModule === "listings") {
-    actions.push(action({
-      id: "listing.create",
-      label: "Create listing",
-      kind: "create",
-      href: "/admin/advanced/listings",
-      requiredPermission: "content:write",
-    }));
+    actions.push(
+      action({
+        id: "listing.create",
+        label: "Create listing",
+        kind: "create",
+        href: "/admin/advanced/listings",
+        requiredPermission: "content:write",
+      })
+    );
   }
   if (surface.area === "advanced" && surface.advancedModule === "widgets") {
-    actions.push(action({
-      id: "widget-template.create",
-      label: "Create widget template",
-      kind: "create",
-      href: "/admin/advanced/widgets",
-      requiredPermission: "widgets:write",
-    }));
+    actions.push(
+      action({
+        id: "widget-template.create",
+        label: "Create widget template",
+        kind: "create",
+        href: "/admin/advanced/widgets",
+        requiredPermission: "widgets:write",
+      })
+    );
   }
   if (surface.area === "advanced" && surface.advancedModule === "booking") {
-    actions.push(action({
-      id: "booking.configure",
-      label: "Configure booking",
-      kind: "configure",
-      href: "/admin/advanced/booking",
-      requiredPermission: "booking:write",
-    }));
+    actions.push(
+      action({
+        id: "booking.configure",
+        label: "Configure booking",
+        kind: "configure",
+        href: "/admin/advanced/booking",
+        requiredPermission: "booking:write",
+      })
+    );
   }
   if (surface.area === "advanced" && surface.advancedModule === "commerce") {
-    actions.push(action({
-      id: "commerce.configure",
-      label: "Configure commerce",
-      kind: "configure",
-      href: "/admin/advanced/commerce",
-      requiredPermission: "commerce:write",
-    }));
+    actions.push(
+      action({
+        id: "commerce.configure",
+        label: "Configure commerce",
+        kind: "configure",
+        href: "/admin/advanced/commerce",
+        requiredPermission: "commerce:write",
+      })
+    );
   }
   if (surface.area === "settings") {
-    actions.push(action({
-      id: "settings.configure",
-      label: "Configure settings",
-      kind: "configure",
-      href: route,
-      requiredPermission: "settings:write",
-    }));
+    actions.push(
+      action({
+        id: "settings.configure",
+        label: "Configure settings",
+        kind: "configure",
+        href: route,
+        requiredPermission: "settings:write",
+      })
+    );
   }
   return actions.filter((item): item is AssistantAdminRuntimeVisibleAction => Boolean(item));
 };
