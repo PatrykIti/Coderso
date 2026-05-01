@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Domain Contract + Admin Routing
 **Estimated Effort:** Large
 **Dependencies:** TASK-248
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -22,8 +23,8 @@ leaf tasks.
 
 ## Sub-Tasks
 
-- [ ] TASK-248-01-01: Definition Schema, Normalizer, and V1 Migration
-- [ ] TASK-248-01-02: Workspace Routes, Client Cache, and Entry Error Mapping
+- [x] TASK-248-01-01: Definition Schema, Normalizer, and V1 Migration
+- [x] TASK-248-01-02: Workspace Routes, Client Cache, and Entry Error Mapping
 
 ## Files to Change
 

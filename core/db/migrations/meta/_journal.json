@@ -372,6 +372,13 @@
       "when": 1776975841769,
       "tag": "0052_lumpy_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1777631208955,
+      "tag": "0053_custom_screen_definition_v2",
+      "breakpoints": true
     }
   ]
 }

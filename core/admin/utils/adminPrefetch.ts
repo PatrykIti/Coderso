@@ -1,6 +1,6 @@
 import { listContentTypesCached } from "@/services/contentTypesClient";
-import { listAllEntriesCached } from "@/services/entriesClient";
-import { listCustomScreensCached } from "@/services/customScreensClient";
+import { getEntryCached, listAllEntriesCached, listEntriesCached } from "@/services/entriesClient";
+import { getCustomScreenCached, listCustomScreensCached } from "@/services/customScreensClient";
 import { listMenusCached } from "@/services/menusClient";
 import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
@@ -11,20 +11,14 @@ import {
   listBookingResourcesCached,
   listBookingServicesCached,
 } from "@/services/bookingClient";
-import {
-  listListingQueriesCached,
-  listListingTemplatesCached,
-} from "@/services/listingsClient";
+import { listListingQueriesCached, listListingTemplatesCached } from "@/services/listingsClient";
 import {
   listCommerceCollectionsCached,
   listCommerceProductsCached,
 } from "@/services/commerceClient";
 import { listPopupsCached } from "@/services/popupsClient";
 import { listReviewsCached } from "@/services/reviewsClient";
-import {
-  listSolutionKitRunsCached,
-  listSolutionKitsCached,
-} from "@/services/solutionKitsClient";
+import { listSolutionKitRunsCached, listSolutionKitsCached } from "@/services/solutionKitsClient";
 import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
@@ -38,10 +32,19 @@ import {
   resolveAdminBasePath,
   stripAdminBasePath,
 } from "@/utils/adminPaths";
+import { resolveCustomScreenWorkspacePrefetchTarget } from "@/ui/custom-screens/routeParams";
 
 export type AdminPrefetchEntry = {
-  match: string;
-  run: () => Promise<unknown> | void;
+  match: string | ((path: string) => boolean);
+  resolveKey?: (context: AdminPrefetchRunContext) => string;
+  run: (context: AdminPrefetchRunContext) => Promise<unknown> | void;
+};
+
+export type AdminPrefetchRunContext = {
+  href: string;
+  basePath: string;
+  path: string;
+  activePath?: string;
 };
 
 type PrefetchOptions = {
@@ -59,6 +62,7 @@ export type AdminPrefetchRequestOptions = {
 type QueuedPrefetch = {
   key: string;
   entry: AdminPrefetchEntry;
+  context: AdminPrefetchRunContext;
 };
 
 export const prefetchWarmupOptions = { force: false } as const;
@@ -71,10 +75,7 @@ const defaultSchedule = (callback: () => void) => {
   setTimeout(callback, 0);
 };
 
-export const createAdminPrefetcher = (
-  entries: AdminPrefetchEntry[],
-  options?: PrefetchOptions
-) => {
+export const createAdminPrefetcher = (entries: AdminPrefetchEntry[], options?: PrefetchOptions) => {
   const cooldownMs = options?.cooldownMs ?? 15000;
   const freshMs = options?.freshMs ?? cooldownMs;
   const maxConcurrency = Math.max(1, options?.maxConcurrency ?? 2);
@@ -88,8 +89,14 @@ export const createAdminPrefetcher = (
   let activeCount = 0;
   let drainScheduled = false;
 
+  const matchesEntry = (entry: AdminPrefetchEntry, path: string) =>
+    typeof entry.match === "string" ? path.startsWith(entry.match) : entry.match(path);
+
+  const entryMatchKey = (entry: AdminPrefetchEntry) =>
+    typeof entry.match === "string" ? entry.match : "dynamic";
+
   const findEntryByPath = (path: string) =>
-    entries.find((item) => path.startsWith(item.match)) ?? null;
+    entries.find((item) => matchesEntry(item, path)) ?? null;
 
   const drainQueue = () => {
     while (activeCount < maxConcurrency && queue.length > 0) {
@@ -99,7 +106,7 @@ export const createAdminPrefetcher = (
       activeCount += 1;
       const startedAt = now();
       const promise = Promise.resolve()
-        .then(() => next.entry.run())
+        .then(() => next.entry.run(next.context))
         .then(() => {
           lastSuccess.set(next.key, startedAt);
         })
@@ -131,20 +138,25 @@ export const createAdminPrefetcher = (
     const path = resolveAdminRoutePath(stripAdminBasePath(href, resolvedBase));
     const entry = findEntryByPath(path);
     if (!entry) return;
+    let activePath: string | undefined;
 
     const activeHref = request?.activeHref;
     if (activeHref && !isExternalHref(activeHref)) {
       const activeBase = resolveAdminBasePath(activeHref);
-      const activePath = resolveAdminRoutePath(
-        stripAdminBasePath(activeHref, activeBase)
-      );
+      activePath = resolveAdminRoutePath(stripAdminBasePath(activeHref, activeBase));
       const activeEntry = findEntryByPath(activePath);
-      if (activeEntry?.match === entry.match) {
+      if (activeEntry && entryMatchKey(activeEntry) === entryMatchKey(entry) && !entry.resolveKey) {
         return;
       }
     }
 
-    const key = entry.match;
+    const context: AdminPrefetchRunContext = {
+      href,
+      basePath: resolvedBase,
+      path,
+      activePath,
+    };
+    const key = entry.resolveKey?.(context) ?? entryMatchKey(entry);
     const currentTs = now();
     const successTs = lastSuccess.get(key);
     if (successTs != null && currentTs - successTs < freshMs) return;
@@ -156,11 +168,31 @@ export const createAdminPrefetcher = (
     if (queued.has(key)) return;
     lastAttempt.set(key, currentTs);
 
-    queue.push({ key, entry });
+    queue.push({ key, entry, context });
     queued.add(key);
     scheduleDrain();
   };
 };
+
+export async function prefetchCustomScreenWorkspace(path: string) {
+  const target = resolveCustomScreenWorkspacePrefetchTarget(path);
+  if (!target) return false;
+
+  await listCustomScreensCached(prefetchWarmupOptions);
+  const screen = await getCustomScreenCached(target.screenId).catch(() => null);
+  if (!screen) return true;
+
+  const contentTypes = await listContentTypesCached(prefetchWarmupOptions);
+  const contentType = contentTypes.find((item) => item.id === screen.contentTypeId);
+  if (!contentType) return true;
+
+  await listEntriesCached(contentType.slug, prefetchWarmupOptions);
+  if (target.entryId && target.entryId !== "new") {
+    await getEntryCached(contentType.slug, target.entryId).catch(() => null);
+  }
+
+  return true;
+}
 
 const defaultEntries: AdminPrefetchEntry[] = [
   {
@@ -190,11 +222,22 @@ const defaultEntries: AdminPrefetchEntry[] = [
   },
   {
     match: "/advanced/custom-screens",
-    run: () =>
-      Promise.all([
+    resolveKey: ({ path }) => {
+      const target = resolveCustomScreenWorkspacePrefetchTarget(path);
+      if (!target) return "/advanced/custom-screens";
+      return target.entryId
+        ? `/advanced/custom-screens/${target.screenId}/entries/${target.entryId}`
+        : `/advanced/custom-screens/${target.screenId}/entries`;
+    },
+    run: ({ path }) => {
+      if (resolveCustomScreenWorkspacePrefetchTarget(path)) {
+        return prefetchCustomScreenWorkspace(path);
+      }
+      return Promise.all([
         listCustomScreensCached(prefetchWarmupOptions),
         listContentTypesCached(prefetchWarmupOptions),
-      ]),
+      ]);
+    },
   },
   {
     match: "/advanced/forms",

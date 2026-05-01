@@ -108,9 +108,21 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Prefetch: `/advanced/custom-screens` warms both `customScreens:list` and
     `contentTypes:list`
 - Custom screen builder and records workflow
-  - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`, `CustomScreenEntriesPage.tsx`, `CustomScreenEntryEditor.tsx`
-  - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`, `listCustomScreensCached`
-  - Cache bus: `customScreens:list`, `customScreens:detail:<id>`
+  - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`,
+    `ListViewDesigner.tsx`, `EditorViewDesigner.tsx`,
+    `CustomScreenEntriesPage.tsx`, `CustomScreenEntriesTable.tsx`,
+    `CustomScreenEntryEditor.tsx`
+  - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,
+    `listCustomScreensCached`, `listContentTypesCached`, `listEntriesCached`,
+    `getEntryCached`
+  - Mutations: `updateCustomScreen`, `createEntry`, `updateEntry`,
+    `deleteEntry`
+  - Cache bus: `customScreens:list`, `customScreens:detail:<id>`,
+    `contentTypes:list`, `entries:list:<typeSlug>`,
+    `entries:detail:<typeSlug>:<entryId>`
+  - Prefetch: `/advanced/custom-screens/:screenId/entries` warms screen,
+    content type list, and the assigned entries list. Detail routes warm the
+    entry detail cache except for `entries/new`.
 - Advanced sidebar shortcuts
   - UI: `core/admin/ui/layouts/AdminShell.tsx`
   - Cached APIs: `listCustomScreensCached`

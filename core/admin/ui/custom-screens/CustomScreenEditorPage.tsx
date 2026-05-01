@@ -11,12 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
@@ -26,10 +21,13 @@ import {
   getCachedCustomScreen,
   getCustomScreenCached,
   updateCustomScreen,
-  type CustomScreenBinding,
   type CustomScreenRecord,
   type CustomScreenStatus,
 } from "@/services/customScreensClient";
+import {
+  normalizeCustomScreenDefinition,
+  type CustomScreenDefinition,
+} from "../../../services/customScreens/customScreenSchemas";
 import {
   getCachedContentTypes,
   listContentTypesCached,
@@ -46,12 +44,15 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
   listRegisteredScreenWidgets,
   listRegisteredWidgets,
+  listRegisteredWidgetsForSurface,
 } from "@/ui/widgets/registry";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
 import { CustomScreenPreview } from "./CustomScreenPreview";
+import { EditorViewDesigner } from "./EditorViewDesigner";
 import { FieldBindingPanel } from "./FieldBindingPanel";
+import { ListViewDesigner } from "./ListViewDesigner";
 import { resolveCustomScreenId } from "./routeParams";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { BlockList } from "@/ui/pages/builder/BlockList";
@@ -128,13 +129,20 @@ const buildPreviewData = (contentType: ContentTypeSummary | null) => {
   if (!contentType) return {};
   const fields = fieldsFromSchema(contentType.schema);
   return fields.reduce<Record<string, unknown>>((result, field) => {
-    result[field.name] = buildPreviewValue(
-      field,
-      contentType.schema.properties[field.name]
-    );
+    result[field.name] = buildPreviewValue(field, contentType.schema.properties[field.name]);
     return result;
   }, {});
 };
+
+const resolveScreenDefinition = (
+  screen: CustomScreenRecord | null | undefined
+): CustomScreenDefinition =>
+  normalizeCustomScreenDefinition({
+    definition: screen?.definition,
+    schemaVersion: screen?.schemaVersion,
+    blocks: screen?.blocks,
+    bindings: screen?.bindings,
+  });
 
 export function CustomScreenEditorPage() {
   const { path, navigate } = useAdminRouter();
@@ -153,12 +161,13 @@ export function CustomScreenEditorPage() {
   const [status, setStatus] = useState<CustomScreenStatus>(screen?.status ?? "draft");
   const [showInSidebar, setShowInSidebar] = useState(screen?.showInSidebar ?? false);
   const [sidebarLabel, setSidebarLabel] = useState(screen?.sidebarLabel ?? "");
-  const [blocks, setBlocks] = useState<Block[]>(() => screen?.blocks ?? []);
-  const [bindings, setBindings] = useState<CustomScreenBinding[]>(
-    () => screen?.bindings ?? []
+  const [definition, setDefinition] = useState<CustomScreenDefinition>(() =>
+    resolveScreenDefinition(screen)
   );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    () => getFirstBlockId(screen?.blocks ?? [])
+  const blocks = definition.editorView.blocks as Block[];
+  const bindings = definition.editorView.bindings;
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    getFirstBlockId(resolveScreenDefinition(screen).editorView.blocks as Block[])
   );
   const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
   const [isSaving, setIsSaving] = useState(false);
@@ -168,8 +177,22 @@ export function CustomScreenEditorPage() {
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [canvasMode, setCanvasMode] = useState<"builder" | "preview">("builder");
+  const [activeBuilderTab, setActiveBuilderTab] = useState<
+    "list-view" | "editor-view" | "settings"
+  >("list-view");
 
-  const screenWidgetRegistry = useMemo(() => listRegisteredScreenWidgets(), []);
+  const selectedContentType = useMemo(
+    () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
+    [contentTypeId, contentTypes]
+  );
+  const legacyScreenWidgetRegistry = useMemo(() => listRegisteredScreenWidgets(), []);
+  const screenWidgetRegistry = useMemo(() => {
+    if (!selectedContentType) return legacyScreenWidgetRegistry;
+    return listRegisteredWidgetsForSurface({
+      surface: "admin-editor-view",
+      contentType: selectedContentType,
+    });
+  }, [legacyScreenWidgetRegistry, selectedContentType]);
   const allWidgetRegistry = useMemo(() => listRegisteredWidgets(), []);
   const widgetRegistry = useMemo(() => {
     const byType = new Map(screenWidgetRegistry.map((widget) => [widget.type, widget]));
@@ -183,18 +206,11 @@ export function CustomScreenEditorPage() {
     });
     return Array.from(byType.values());
   }, [allWidgetRegistry, blocks, screenWidgetRegistry]);
-  const selectedContentType = useMemo(
-    () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
-    [contentTypeId, contentTypes]
-  );
   const contentFields = useMemo(
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
     [selectedContentType]
   );
-  const previewData = useMemo(
-    () => buildPreviewData(selectedContentType),
-    [selectedContentType]
-  );
+  const previewData = useMemo(() => buildPreviewData(selectedContentType), [selectedContentType]);
   const previewCapabilities = useMemo(
     () => resolveCustomScreenCapabilities({ blocks, bindings }),
     [bindings, blocks]
@@ -244,6 +260,7 @@ export function CustomScreenEditorPage() {
           status,
           showInSidebar,
           sidebarLabel: sidebarLabel.trim() || null,
+          definition,
           blocks,
           bindings,
         },
@@ -265,6 +282,7 @@ export function CustomScreenEditorPage() {
     bindings,
     blocks,
     contentTypeId,
+    definition,
     hasUnsavedChanges,
     isCreateMode,
     name,
@@ -283,24 +301,37 @@ export function CustomScreenEditorPage() {
     setError(null);
   }, []);
 
-  const updateBlocks = useCallback(
-    (next: Block[]) => {
-      setBlocks(next);
+  const updateDefinition = useCallback(
+    (next: CustomScreenDefinition) => {
+      setDefinition(next);
       markDirty();
     },
     [markDirty]
   );
 
+  const updateBlocks = useCallback(
+    (next: Block[]) => {
+      updateDefinition({
+        ...definition,
+        editorView: {
+          ...definition.editorView,
+          blocks: next,
+        },
+      });
+    },
+    [definition, updateDefinition]
+  );
+
   const applyScreen = useCallback((record: CustomScreenRecord) => {
+    const nextDefinition = resolveScreenDefinition(record);
     setScreen(record);
     setName(record.name);
     setContentTypeId(record.contentTypeId);
     setStatus(record.status);
     setShowInSidebar(record.showInSidebar ?? false);
     setSidebarLabel(record.sidebarLabel ?? "");
-    setBlocks(record.blocks ?? []);
-    setBindings(record.bindings ?? []);
-    setSelectedId(getFirstBlockId(record.blocks ?? []));
+    setDefinition(nextDefinition);
+    setSelectedId(getFirstBlockId(nextDefinition.editorView.blocks as Block[]));
     setHasUnsavedChanges(false);
   }, []);
 
@@ -316,9 +347,7 @@ export function CustomScreenEditorPage() {
         applyScreen(detail);
         setError(null);
       } catch (err) {
-        setError(
-          isApiClientError(err) ? err.message : "Failed to load custom screen."
-        );
+        setError(isApiClientError(err) ? err.message : "Failed to load custom screen.");
       } finally {
         setIsLoading(false);
       }
@@ -344,9 +373,7 @@ export function CustomScreenEditorPage() {
       })
       .catch((err) => {
         if (!active) return;
-        setError(
-          isApiClientError(err) ? err.message : "Failed to load custom screen."
-        );
+        setError(isApiClientError(err) ? err.message : "Failed to load custom screen.");
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -430,8 +457,9 @@ export function CustomScreenEditorPage() {
       status,
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
-      blocks,
-      bindings,
+      definition,
+      blocks: definition.editorView.blocks,
+      bindings: definition.editorView.bindings,
     };
 
     try {
@@ -536,9 +564,7 @@ export function CustomScreenEditorPage() {
           Sidebar shortcut
         </p>
         <div className="flex h-10 items-center justify-between rounded-md border px-3">
-          <span className="text-sm text-muted-foreground">
-            Show records workflow in left menu
-          </span>
+          <span className="text-sm text-muted-foreground">Show records workflow in left menu</span>
           <Switch
             checked={showInSidebar}
             onCheckedChange={(checked) => {
@@ -584,17 +610,18 @@ export function CustomScreenEditorPage() {
           value={bindings}
           fields={contentFields}
           onChange={(next) => {
-            setBindings(next);
-            markDirty();
+            updateDefinition({
+              ...definition,
+              editorView: {
+                ...definition.editorView,
+                bindings: next,
+              },
+            });
           }}
         />
       </TabsContent>
       <TabsContent value="block" className="mt-4">
-        <BlockSettings
-          block={selectedBlock}
-          widget={selectedWidget}
-          onChange={handleChangeBlock}
-        />
+        <BlockSettings block={selectedBlock} widget={selectedWidget} onChange={handleChangeBlock} />
       </TabsContent>
     </Tabs>
   );
@@ -631,9 +658,7 @@ export function CustomScreenEditorPage() {
                   size="sm"
                   className="gap-2"
                   onClick={() =>
-                    navigate(
-                      `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
-                    )
+                    navigate(`/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`)
                   }
                 >
                   <SquarePen className="h-4 w-4" />
@@ -668,9 +693,7 @@ export function CustomScreenEditorPage() {
                   size="sm"
                   className="gap-2 sm:hidden"
                   onClick={() =>
-                    setCanvasMode((current) =>
-                      current === "builder" ? "preview" : "builder"
-                    )
+                    setCanvasMode((current) => (current === "builder" ? "preview" : "builder"))
                   }
                 >
                   {canvasMode === "builder" ? (
@@ -736,21 +759,97 @@ export function CustomScreenEditorPage() {
             </Alert>
           ) : null}
 
+          <Tabs
+            value={activeBuilderTab}
+            onValueChange={(value) =>
+              setActiveBuilderTab(value as "list-view" | "editor-view" | "settings")
+            }
+          >
+            <TabsList variant="line">
+              <TabsTrigger value="list-view">List View</TabsTrigger>
+              <TabsTrigger value="editor-view">Editor View</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {isLoading ? (
             <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
               Loading custom screen...
+            </div>
+          ) : activeBuilderTab === "list-view" ? (
+            <ListViewDesigner
+              contentType={selectedContentType}
+              value={definition.listView}
+              onChange={(listView) =>
+                updateDefinition({
+                  ...definition,
+                  listView,
+                })
+              }
+            />
+          ) : activeBuilderTab === "settings" ? (
+            <div className="rounded-xl border bg-background p-6">{screenSettingsPanel}</div>
+          ) : activeBuilderTab === "editor-view" && canvasMode === "builder" ? (
+            <div className="space-y-4">
+              <EditorViewDesigner
+                contentType={selectedContentType}
+                value={definition.editorView}
+                onChange={(editorView) =>
+                  updateDefinition({
+                    ...definition,
+                    editorView,
+                  })
+                }
+              />
+              {showEmptyState ? (
+                <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                    <Settings2 className="h-10 w-10" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    Build your custom screen
+                  </h2>
+                  <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                    Add dedicated screen widgets from the library to compose the admin experience
+                    for this content type.
+                  </p>
+                </div>
+              ) : (
+                <div
+                  className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const type = event.dataTransfer.getData("widget-type");
+                    if (type) handleAddBlock(type);
+                  }}
+                >
+                  <BlockList
+                    blocks={blocks}
+                    className="p-4"
+                    widgetRegistry={widgetRegistry}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    onMove={handleMove}
+                    onDuplicate={handleDuplicate}
+                    onDelete={handleDelete}
+                    onInsert={handleInsertIntoSlot}
+                    onMoveToSlot={handleMoveIntoSlot}
+                  />
+                </div>
+              )}
             </div>
           ) : showEmptyState ? (
             <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
                 <Settings2 className="h-10 w-10" />
               </div>
-              <h2 className="text-2xl font-semibold text-foreground">
-                Build your custom screen
-              </h2>
+              <h2 className="text-2xl font-semibold text-foreground">Build your custom screen</h2>
               <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                Add dedicated screen widgets from the library to compose the admin
-                experience for this content type.
+                Add dedicated screen widgets from the library to compose the admin experience for
+                this content type.
               </p>
             </div>
           ) : canvasMode === "preview" ? (
@@ -763,15 +862,15 @@ export function CustomScreenEditorPage() {
                 emptyMessage={previewState.message}
               />
             ) : (
-            <CustomScreenPreview
-              blocks={blocks}
-              bindings={bindings}
-              data={previewData}
-              emptyTitle="Preview unavailable"
-              emptyMessage={
-                "Add dedicated screen widgets and bindings to preview the custom screen."
-              }
-            />
+              <CustomScreenPreview
+                blocks={blocks}
+                bindings={bindings}
+                data={previewData}
+                emptyTitle="Preview unavailable"
+                emptyMessage={
+                  "Add dedicated screen widgets and bindings to preview the custom screen."
+                }
+              />
             )
           ) : (
             <div

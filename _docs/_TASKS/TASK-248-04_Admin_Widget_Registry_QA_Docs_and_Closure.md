@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Widgets + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-248-01, TASK-248-02; TASK-248-04-02 depends on TASK-248-03-03
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -34,8 +35,8 @@ is implemented and remains the final closure/replay leaf.
 
 ## Sub-Tasks
 
-- [ ] TASK-248-04-01: Admin Widget Registry Surface Split
-- [ ] TASK-248-04-02: Playwright Replay, Docs, Changelog, and Board Closure
+- [x] TASK-248-04-01: Admin Widget Registry Surface Split
+- [x] TASK-248-04-02: Playwright Replay, Docs, Changelog, and Board Closure
 
 ## Files to Change
 

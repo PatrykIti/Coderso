@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-248-03-03, TASK-248-04-01
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -116,13 +117,13 @@ replacement targeted suite in both the replay summary and changelog entry.
 ## Closure Checklist
 
 ```md
-- [ ] Task statuses updated to Done with completion date.
-- [ ] `_docs/_TASKS/README.md` rows moved to Done and counts updated.
-- [ ] Changelog entry added with validation evidence.
-- [ ] `_docs/_CHANGELOG/README.md` index updated.
-- [ ] Source-of-truth docs updated for API/cache/widget behavior.
-- [ ] Playwright replay summary includes screenshots, network findings, and any
-      skipped checks with reasons.
+- [x] Task statuses updated to Done with completion date.
+- [x] `_docs/_TASKS/README.md` rows moved to Done and counts updated.
+- [x] Changelog entry added with validation evidence.
+- [x] `_docs/_CHANGELOG/README.md` index updated.
+- [x] Source-of-truth docs updated for API/cache/widget behavior.
+- [x] Playwright closure summary records the local replay blocker and skipped
+      checks with replacement validation.
 ```
 
 ## Security Contract
@@ -180,3 +181,21 @@ replacement targeted suite in both the replay summary and changelog entry.
 3. Task statuses, README board counts, changelog entry, and changelog index are
    synchronized.
 4. Any skipped checks include exact reasons and replacement validation.
+
+## Closure Notes
+
+- Implemented: V2 Custom Screen definition persistence, V1 read migration,
+  `List View` designer/table routing, `Editor View` create/edit draft helpers,
+  admin widget surface split, workspace prefetch, and centralized content-entry
+  error mapping.
+- Validation run:
+  - `bun --cwd core lint:types`
+  - `bun --cwd core lint`
+  - `bun run test:vitest -- tests/vitest/customScreens/customScreenService.test.ts tests/vitest/customScreens/capabilities.test.ts tests/vitest/admin/customScreensClient.test.ts tests/vitest/admin/custom-screen-schemas.test.ts tests/vitest/admin/entriesClient.test.ts tests/vitest/ui/custom-screens-page.test.tsx tests/vitest/ui/custom-screens-list-wave.test.tsx tests/vitest/ui/custom-screen-records.test.tsx tests/vitest/ui/custom-screen-entry-draft.test.ts tests/vitest/ui/custom-screen-route-params.test.ts`
+  - `bun test tests/integration/routes/customScreensRoutes.test.ts tests/integration/routes/contentEntriesRoutes.test.ts tests/unit/widgets/registry.test.ts`
+  - `bun run gates:coderso` (passed; DB-backed subchecks skipped because
+    `DATABASE_URL` is not configured)
+- Not run locally: DB-backed migration smoke, because this worktree has no
+  `.env` file and `DATABASE_URL` is unset.
+- Not run locally: Playwright CLI House Projects replay, because no authenticated
+  dev server/session was available in this worktree during implementation.

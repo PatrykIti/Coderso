@@ -1094,7 +1094,7 @@ Public runtime safety:
 - runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
 - public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
 
-## Coderso Custom Screens (v1 foundation)
+## Coderso Custom Screens (workspace builder V2)
 
 Permissions (internal, routes in TASK-054-22-02): `content:read`, `content:write`
 
@@ -1107,35 +1107,90 @@ Custom screen payload (summary):
   "status": "draft",
   "showInSidebar": true,
   "sidebarLabel": "Katalog domow",
-  "schemaVersion": 1,
-  "blocks": [
-    {
-      "id": "section-1",
-      "type": "section",
-      "variant": "default",
-      "data": {},
-      "slots": {
-        "region-1": []
+  "schemaVersion": 2,
+  "definition": {
+    "schemaVersion": 2,
+    "listView": {
+      "columns": [
+        {
+          "id": "system-title",
+          "source": "system",
+          "field": "title",
+          "label": "Record",
+          "formatter": "text",
+          "visible": true
+        },
+        {
+          "id": "field-projectstatus",
+          "source": "field",
+          "field": "projectStatus",
+          "label": "Project status",
+          "formatter": "select",
+          "visible": true
+        }
+      ],
+      "filters": [
+        {
+          "id": "filter-projectstatus",
+          "source": "field",
+          "field": "projectStatus",
+          "label": "Project status",
+          "operator": "equals",
+          "enabled": true
+        }
+      ],
+      "defaultSort": { "field": "updatedAt", "direction": "desc" },
+      "rowClick": "editor-view",
+      "createMode": "editor-view",
+      "bulkActions": {
+        "delete": true,
+        "publish": true,
+        "unpublish": true
       }
+    },
+    "editorView": {
+      "saveMode": "entry",
+      "blocks": [
+        {
+          "id": "field-1",
+          "type": "screen-field-value",
+          "data": {}
+        }
+      ],
+      "bindings": [
+        {
+          "id": "field-1-value",
+          "widgetId": "field-1",
+          "propPath": "value",
+          "field": "projectStatus",
+          "mode": "readwrite"
+        }
+      ]
     }
-  ],
-  "bindings": [
-    {
-      "id": "title",
-      "widgetId": "section-1",
-      "propPath": "heading.title",
-      "field": "title",
-      "mode": "readwrite"
-    }
-  ]
+  }
 }
 ```
 
 Notes:
+- `contentTypeId` pozostaje stanem rekordu `custom_screens.content_type_id`;
+  persisted `definition` odrzuca top-level `contentTypeId`.
+- `definition.schemaVersion=2` jest zrodlem prawdy dla nowych Custom Screens.
+  Legacy `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
+  `definition.editorView` oraz kompatybilnoscia dla V1 rows.
+- V1 rows bez `definition` sa migrowane przy odczycie do V2:
+  `listView` dostaje deterministyczne domyslne kolumny/filtry z wybranego
+  content type, a dawne `blocks`/`bindings` trafiaja do `editorView`.
+- `definition.listView` jest wlascicielem tabeli rekordow: system/field
+  columns, filters, `defaultSort`, `rowClick`, `createMode`, i bulk action
+  visibility.
+- `definition.editorView` jest wlascicielem canvasa create/edit:
+  `blocks`, `bindings`, i `saveMode: "entry"`.
 - `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
-- builder insert library filtruje do widget surface `custom-screen-builder`; screen-only widgets nie sa zwracane przez widget library/catalog endpoints.
-- `bindings` mapuja `widgetId + propPath` do `contentType` field key.
-- `schemaVersion` jest wersjonowany (aktualnie `1`).
+- builder insert library filtruje do admin surface `admin-editor-view`; public
+  page builder i widget library nadal uzywaja swoich powierzchni.
+- `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
+  do dozwolonych system fields.
+- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `2`.
 - `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
 - lista `/admin/advanced/custom-screens` wzbogaca wiersze o nazwy content type
@@ -1154,7 +1209,7 @@ Notes:
   - `hasBlocks`, `hasBindings`, `hasReadableBindings`, `hasWritableBindings`
   - `supportsDedicatedPreview`, `supportsDedicatedEditor`
 - admin record workflow korzysta z `capabilities`:
-  - `collection-only` -> entries list shortcut + classic editor fallback,
+  - `collection-only` -> entries workspace with no bound fields yet,
   - `dashboard` -> read-only record screen + classic editor CTA,
   - `editor` -> dedicated screen editor with writable bound fields.
 - dedicated record workflow nie dodaje nowego API `custom-screen entries`; reuse is through existing internal entry endpoints:
@@ -1165,6 +1220,7 @@ Notes:
 - admin UI routes for the workflow:
   - `/admin/advanced/custom-screens/:screenId/entries`
   - `/admin/advanced/custom-screens/:screenId/entries/:entryId`
+  - `/admin/advanced/custom-screens/:screenId/entries/new`
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ## Coderso Filters & Search (v2 beta)
@@ -1985,6 +2041,19 @@ Entry response fields include:
 - `tags` (string[])
 - `scheduledAt` (timestamp | null)
 - `seo` (object with `title`, `description`, `canonicalUrl`, `robots`)
+
+Content entry route errors are mapped at the route boundary and remain
+machine-readable for Custom Screens, Entries, and any other internal admin
+client reusing these endpoints:
+
+- `entry_validation_failed` -> HTTP 400 with bounded `validation` details when
+  schema validation fails.
+- `entry_slug_conflict` -> HTTP 409.
+- `content_type_not_found`, `entry_not_found`, `media_asset_missing`,
+  `relation_target_not_found`, and `relation_entry_missing` -> HTTP 404.
+- `media_value_invalid`, `media_type_not_allowed`, `relation_value_invalid`,
+  and `entry_duplicate_failed` -> HTTP 400.
+- `auth_required` -> HTTP 401.
 
 Preview response (example):
 

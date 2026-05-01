@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Admin Lists + Builder UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-248-01
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -22,8 +23,8 @@ not a generic table builder over arbitrary data.
 
 ## Sub-Tasks
 
-- [ ] TASK-248-02-01: List View Designer and Persisted Configuration
-- [ ] TASK-248-02-02: Records Table Renderer, Actions, and Cache Behavior
+- [x] TASK-248-02-01: List View Designer and Persisted Configuration
+- [x] TASK-248-02-02: Records Table Renderer, Actions, and Cache Behavior
 
 ## Files to Change
 

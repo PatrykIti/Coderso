@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 62 tasks
+- **To Do:** 48 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1394 tasks
+- **Done:** 1408 tasks
 
 ---
 
@@ -38,20 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-248 | Custom Screens Workspace Builder V2 | High | Very Large | Rebuild Custom Screens as content-type workspaces with `List View` and `Editor View` builder tabs |
-| TASK-248-01 | Custom Screen Definition V2 and Workspace Routing | High | Large | Add `schemaVersion: 2` with `listView`/`editorView`, migration, routes, and cache contracts |
-| TASK-248-01-01 | Definition Schema, Normalizer, and V1 Migration | High | Medium | Add strict V2 definition normalization, V1 migration/defaults, and capability coverage |
-| TASK-248-01-02 | Workspace Routes, Client Cache, and Entry Error Mapping | High | Medium | Wire V2 route/client/cache seams and map content-entry validation failures to 400-level errors |
-| TASK-248-02 | Custom Screen List View Builder and Records Table | High | Large | Configure Pages-like records tables, columns, filters, row actions, and create entry routing |
-| TASK-248-02-01 | List View Designer and Persisted Configuration | High | Medium | Build the schema-bound `List View` designer and save persisted list configuration |
-| TASK-248-02-02 | Records Table Renderer, Actions, and Cache Behavior | High | Medium | Render records from `listView`, preserve Pages-like action/cache behavior, and avoid mount refetch loops |
-| TASK-248-03 | Custom Screen Editor View Canvas and Entry Create Mode | High | Very Large | Build schema-bound create/edit canvases for entries using `Editor View` blocks and bindings |
-| TASK-248-03-01 | Editor View Designer and Admin Field Widget Controls | High | Medium | Build the `Editor View` designer and schema-bound admin field widget controls |
-| TASK-248-03-02 | Editor View Create Mode Draft, Save, and Validation | High | Medium | Route V2 `New record` to create mode and submit normalized entry data instead of `data: {}` |
-| TASK-248-03-03 | Editor View Edit Mode Hydration, Save, and Dirty State | High | Medium | Hydrate typed entry values, save non-destructively, and preserve dirty-state/cache semantics |
-| TASK-248-04 | Admin Widget Registry, QA, Docs, and Closure | Medium | Large | Split admin/public widget registry behavior and close with Playwright CLI workspace replay |
-| TASK-248-04-01 | Admin Widget Registry Surface Split | High | Medium | Scope widget availability by `page-builder`, `admin-list-view`, and `admin-editor-view` surfaces |
-| TASK-248-04-02 | Playwright Replay, Docs, Changelog, and Board Closure | Medium | Small | Replay House Projects end to end and synchronize docs, changelog, task statuses, and board counts |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -118,6 +104,20 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-248 | Custom Screens Workspace Builder V2 | High | Very Large | Done: Custom Screens now persist V2 `definition`, expose `List View` and `Editor View` builder surfaces, and reuse existing entry routes/cache contracts |
+| TASK-248-01 | Custom Screen Definition V2 and Workspace Routing | High | Large | Done: V2 definition storage, V1 read migration, workspace route helpers, and prefetch contract landed |
+| TASK-248-01-01 | Definition Schema, Normalizer, and V1 Migration | High | Medium | Done: strict V2 normalizer, default list view generation, V1 migration, migration artifacts, and service projections shipped |
+| TASK-248-01-02 | Workspace Routes, Client Cache, and Entry Error Mapping | High | Medium | Done: workspace helpers, custom screen client normalization, prefetch warmup, and centralized content-entry error mapping shipped |
+| TASK-248-02 | Custom Screen List View Builder and Records Table | High | Large | Done: `List View` designer, persisted table config, row routing, and existing entry action reuse shipped |
+| TASK-248-02-01 | List View Designer and Persisted Configuration | High | Medium | Done: schema-bound column/filter/sort/create-mode controls save through `definition.listView` |
+| TASK-248-02-02 | Records Table Renderer, Actions, and Cache Behavior | High | Medium | Done: records table renders from `definition.listView`, keeps entries cache behavior, and routes rows/create by V2 config |
+| TASK-248-03 | Custom Screen Editor View Canvas and Entry Create Mode | High | Very Large | Done: `Editor View` owns schema-bound entry create/edit canvases without a parallel custom-screen entries API |
+| TASK-248-03-01 | Editor View Designer and Admin Field Widget Controls | High | Medium | Done: editor designer adds field widgets/bindings through existing screen widget contracts |
+| TASK-248-03-02 | Editor View Create Mode Draft, Save, and Validation | High | Medium | Done: `entries/new` create mode builds schema defaults and submits normalized entry data through existing create route |
+| TASK-248-03-03 | Editor View Edit Mode Hydration, Save, and Dirty State | High | Medium | Done: edit mode hydrates typed data, preserves unrelated fields on save, and keeps cache/dirty semantics |
+| TASK-248-04 | Admin Widget Registry, QA, Docs, and Closure | Medium | Large | Done: admin widget surfaces/data access, focused tests, gates, docs, changelog 782, and board closure synced |
+| TASK-248-04-01 | Admin Widget Registry Surface Split | High | Medium | Done: `admin-list-view` and `admin-editor-view` surfaces with data-access filtering landed |
+| TASK-248-04-02 | Playwright Replay, Docs, Changelog, and Board Closure | Medium | Small | Done: docs/changelog/board closure completed; Playwright and DB replay blockers recorded with targeted replacement validation |
 | TASK-244 | Widget Visual Surface Clear Controls | High | Very Large | Done: `Clear` controls now remove configured surface/background/overlay style keys across widget runtime and editor contracts without transparent or empty-string sentinels |
 | TASK-244-01 | Widget Surface Inventory and Clear Semantics | High | Medium | Done: clear-required surfaces, exclusions, and clear-as-removal semantics were locked before rollout |
 | TASK-244-01-01 | Widget Surface Background Inventory | High | Medium | Done: every rendered widget surface was classified as clear-required, already-clearable, intentional-state, or excluded |

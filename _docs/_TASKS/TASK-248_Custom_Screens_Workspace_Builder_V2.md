@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Entries + Admin/UI + Builder UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-209, TASK-202, TASK-226
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -178,19 +179,19 @@ must consume that field instead of reconstructing the definition from legacy
 
 ## Sub-Tasks
 
-- [ ] TASK-248-01: Custom Screen Definition V2 and Workspace Routing
-- [ ] TASK-248-01-01: Definition Schema, Normalizer, and V1 Migration
-- [ ] TASK-248-01-02: Workspace Routes, Client Cache, and Entry Error Mapping
-- [ ] TASK-248-02: Custom Screen List View Builder and Records Table
-- [ ] TASK-248-02-01: List View Designer and Persisted Configuration
-- [ ] TASK-248-02-02: Records Table Renderer, Actions, and Cache Behavior
-- [ ] TASK-248-03: Custom Screen Editor View Canvas and Entry Create Mode
-- [ ] TASK-248-03-01: Editor View Designer and Admin Field Widget Controls
-- [ ] TASK-248-03-02: Editor View Create Mode Draft, Save, and Validation
-- [ ] TASK-248-03-03: Editor View Edit Mode Hydration, Save, and Dirty State
-- [ ] TASK-248-04: Admin Widget Registry, QA, Docs, and Closure
-- [ ] TASK-248-04-01: Admin Widget Registry Surface Split
-- [ ] TASK-248-04-02: Playwright Replay, Docs, Changelog, and Board Closure
+- [x] TASK-248-01: Custom Screen Definition V2 and Workspace Routing
+- [x] TASK-248-01-01: Definition Schema, Normalizer, and V1 Migration
+- [x] TASK-248-01-02: Workspace Routes, Client Cache, and Entry Error Mapping
+- [x] TASK-248-02: Custom Screen List View Builder and Records Table
+- [x] TASK-248-02-01: List View Designer and Persisted Configuration
+- [x] TASK-248-02-02: Records Table Renderer, Actions, and Cache Behavior
+- [x] TASK-248-03: Custom Screen Editor View Canvas and Entry Create Mode
+- [x] TASK-248-03-01: Editor View Designer and Admin Field Widget Controls
+- [x] TASK-248-03-02: Editor View Create Mode Draft, Save, and Validation
+- [x] TASK-248-03-03: Editor View Edit Mode Hydration, Save, and Dirty State
+- [x] TASK-248-04: Admin Widget Registry, QA, Docs, and Closure
+- [x] TASK-248-04-01: Admin Widget Registry Surface Split
+- [x] TASK-248-04-02: Playwright Replay, Docs, Changelog, and Board Closure
 
 ## Implementation Order
 

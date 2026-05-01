@@ -1,19 +1,17 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { customScreens } from "../../db/schema";
+import { contentTypes, customScreens } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
 import {
   normalizeCustomScreenDefinition,
   type CustomScreenBinding,
+  type CustomScreenDefinition,
   type CustomScreenDefinitionVersion,
   normalizeCustomScreenSidebarConfig,
   type CustomScreenStatus,
 } from "./customScreenSchemas";
-import {
-  resolveCustomScreenCapabilities,
-  type CustomScreenCapabilities,
-} from "./capabilities";
+import { resolveCustomScreenCapabilities, type CustomScreenCapabilities } from "./capabilities";
 
 export type CustomScreenRecord = {
   id: string;
@@ -23,6 +21,7 @@ export type CustomScreenRecord = {
   showInSidebar: boolean;
   sidebarLabel: string | null;
   schemaVersion: CustomScreenDefinitionVersion;
+  definition: CustomScreenDefinition;
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
   capabilities: CustomScreenCapabilities;
@@ -37,6 +36,7 @@ export type CustomScreenCreateInput = {
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
   schemaVersion?: number;
+  definition?: CustomScreenDefinition | null;
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
 };
@@ -48,6 +48,7 @@ export type CustomScreenUpdateInput = {
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
   schemaVersion?: number;
+  definition?: CustomScreenDefinition | null;
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
 };
@@ -80,12 +81,29 @@ const normalizeStatus = (value: unknown): CustomScreenStatus => {
   return status as CustomScreenStatus;
 };
 
-const mapRow = (row: typeof customScreens.$inferSelect): CustomScreenRecord => {
-  const definition = normalizeCustomScreenDefinition({
-    schemaVersion: row.schemaVersion,
-    blocks: row.blocks,
-    bindings: row.bindings,
-  });
+type ContentTypeDefinitionContext = {
+  id: string;
+  slug: string;
+  name: string;
+  schema: {
+    required?: string[];
+    properties?: Record<string, unknown>;
+  };
+};
+
+const mapRow = (
+  row: typeof customScreens.$inferSelect,
+  context?: { contentType?: ContentTypeDefinitionContext | null }
+): CustomScreenRecord => {
+  const definition = normalizeCustomScreenDefinition(
+    {
+      definition: row.definition,
+      schemaVersion: row.schemaVersion,
+      blocks: row.blocks,
+      bindings: row.bindings,
+    },
+    context
+  );
 
   return {
     id: row.id,
@@ -95,39 +113,65 @@ const mapRow = (row: typeof customScreens.$inferSelect): CustomScreenRecord => {
     showInSidebar: row.showInSidebar,
     sidebarLabel: row.sidebarLabel ?? null,
     schemaVersion: definition.schemaVersion,
-    blocks: definition.blocks,
-    bindings: definition.bindings,
+    definition,
+    blocks: definition.editorView.blocks,
+    bindings: definition.editorView.bindings,
     capabilities: resolveCustomScreenCapabilities(definition),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 };
 
+const mapContentTypeContext = (
+  row: typeof contentTypes.$inferSelect | undefined
+): ContentTypeDefinitionContext | null => {
+  if (!row) return null;
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    schema: row.schema as ContentTypeDefinitionContext["schema"],
+  };
+};
+
+async function loadContentTypesById(ids: string[]) {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return new Map<string, ContentTypeDefinitionContext>();
+  const rows = await db.select().from(contentTypes).where(inArray(contentTypes.id, uniqueIds));
+  return new Map(rows.map((row) => [row.id, mapContentTypeContext(row)!]));
+}
+
 export async function listCustomScreens(): Promise<CustomScreenRecord[]> {
-  const rows = await db
-    .select()
-    .from(customScreens)
-    .orderBy(desc(customScreens.updatedAt));
-  return rows.map(mapRow);
+  const rows = await db.select().from(customScreens).orderBy(desc(customScreens.updatedAt));
+  const contentTypesById = await loadContentTypesById(rows.map((row) => row.contentTypeId));
+  return rows.map((row) =>
+    mapRow(row, { contentType: contentTypesById.get(row.contentTypeId) ?? null })
+  );
 }
 
 export async function getCustomScreen(id: string) {
-  const [row] = await db
-    .select()
-    .from(customScreens)
-    .where(eq(customScreens.id, id));
+  const [row] = await db.select().from(customScreens).where(eq(customScreens.id, id));
   if (!row) return null;
-  return mapRow(row);
+  const contentTypesById = await loadContentTypesById([row.contentTypeId]);
+  return mapRow(row, {
+    contentType: contentTypesById.get(row.contentTypeId) ?? null,
+  });
 }
 
 export async function createCustomScreen(input: CustomScreenCreateInput) {
   const name = normalizeName(input.name);
   const contentTypeId = normalizeContentTypeId(input.contentTypeId);
-  const definition = normalizeCustomScreenDefinition({
-    schemaVersion: input.schemaVersion,
-    blocks: input.blocks,
-    bindings: input.bindings,
-  });
+  const contentTypesById = await loadContentTypesById([contentTypeId]);
+  const contentType = contentTypesById.get(contentTypeId) ?? null;
+  const definition = normalizeCustomScreenDefinition(
+    {
+      definition: input.definition,
+      schemaVersion: input.schemaVersion,
+      blocks: input.blocks,
+      bindings: input.bindings,
+    },
+    { contentType }
+  );
   const sidebar = normalizeCustomScreenSidebarConfig({
     showInSidebar: input.showInSidebar,
     sidebarLabel: input.sidebarLabel,
@@ -143,49 +187,47 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
       showInSidebar: sidebar.showInSidebar,
       sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
-      blocks: definition.blocks,
-      bindings: definition.bindings,
+      definition,
+      blocks: definition.editorView.blocks,
+      bindings: definition.editorView.bindings,
       createdAt: now,
       updatedAt: now,
     })
     .returning();
 
   if (!row) throw new Error("custom_screen_invalid");
-  return mapRow(row);
+  return mapRow(row, { contentType });
 }
 
-export async function updateCustomScreen(
-  id: string,
-  input: CustomScreenUpdateInput
-) {
-  const [existing] = await db
-    .select()
-    .from(customScreens)
-    .where(eq(customScreens.id, id));
+export async function updateCustomScreen(id: string, input: CustomScreenUpdateInput) {
+  const [existing] = await db.select().from(customScreens).where(eq(customScreens.id, id));
   if (!existing) return null;
 
-  const definition = normalizeCustomScreenDefinition({
-    schemaVersion: input.schemaVersion ?? existing.schemaVersion,
-    blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
-    bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
-  });
+  const nextContentTypeId =
+    input.contentTypeId !== undefined
+      ? normalizeContentTypeId(input.contentTypeId)
+      : existing.contentTypeId;
+  const contentTypesById = await loadContentTypesById([nextContentTypeId]);
+  const contentType = contentTypesById.get(nextContentTypeId) ?? null;
+  const definition = normalizeCustomScreenDefinition(
+    {
+      definition: input.definition !== undefined ? input.definition : existing.definition,
+      schemaVersion: input.schemaVersion ?? existing.schemaVersion,
+      blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
+      bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
+    },
+    { contentType }
+  );
   const sidebar = normalizeCustomScreenSidebarConfig({
-    showInSidebar:
-      input.showInSidebar !== undefined
-        ? input.showInSidebar
-        : existing.showInSidebar,
-    sidebarLabel:
-      input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
+    showInSidebar: input.showInSidebar !== undefined ? input.showInSidebar : existing.showInSidebar,
+    sidebarLabel: input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
   });
 
   const [row] = await db
     .update(customScreens)
     .set({
       name: input.name !== undefined ? normalizeName(input.name) : existing.name,
-      contentTypeId:
-        input.contentTypeId !== undefined
-          ? normalizeContentTypeId(input.contentTypeId)
-          : existing.contentTypeId,
+      contentTypeId: nextContentTypeId,
       status:
         input.status !== undefined
           ? normalizeStatus(input.status)
@@ -193,22 +235,23 @@ export async function updateCustomScreen(
       showInSidebar: sidebar.showInSidebar,
       sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
-      blocks: definition.blocks,
-      bindings: definition.bindings,
+      definition,
+      blocks: definition.editorView.blocks,
+      bindings: definition.editorView.bindings,
       updatedAt: new Date(),
     })
     .where(eq(customScreens.id, id))
     .returning();
 
   if (!row) return null;
-  return mapRow(row);
+  return mapRow(row, { contentType });
 }
 
 export async function deleteCustomScreen(id: string) {
-  const [row] = await db
-    .delete(customScreens)
-    .where(eq(customScreens.id, id))
-    .returning();
+  const [row] = await db.delete(customScreens).where(eq(customScreens.id, id)).returning();
   if (!row) return null;
-  return mapRow(row);
+  const contentTypesById = await loadContentTypesById([row.contentTypeId]);
+  return mapRow(row, {
+    contentType: contentTypesById.get(row.contentTypeId) ?? null,
+  });
 }

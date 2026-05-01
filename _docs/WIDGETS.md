@@ -384,6 +384,30 @@ Flow:
 - Panel Wizard/Visual/Advanced renderuje `definition.editor.*`.
 - Zmiana wariantu aktualizuje `block.variant`.
 
+## Admin Widget Surfaces
+
+Widget availability is surface-scoped:
+
+- `page-builder` - public page builder canvas.
+- `widget-library` - reusable widget/template catalog.
+- `custom-screen-builder` - legacy Custom Screens surface kept for V1
+  compatibility.
+- `admin-list-view` - Custom Screens `List View` configuration surface.
+- `admin-editor-view` - Custom Screens `Editor View` canvas.
+
+Admin-only widgets may declare `dataAccess` metadata:
+
+- `source: "selected-content-type"` for widgets that need the assigned content
+  type schema.
+- `source: "selected-entry"` for widgets that read or write the active record.
+- `modes: ["read"]`, `["write"]`, or `["read", "write"]` describe the expected
+  data direction.
+
+`listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
+widgets until the current Custom Screen has a resolved content type. This keeps
+public widgets out of admin record editors and prevents schema-bound controls
+from rendering against missing context.
+
 ---
 
 ## Widget Catalog API

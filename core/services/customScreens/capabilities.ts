@@ -1,6 +1,6 @@
 import type { WidgetBlock } from "../../widgets/types";
 
-import type { CustomScreenBinding } from "./customScreenSchemas";
+import type { CustomScreenBinding, CustomScreenDefinition } from "./customScreenSchemas";
 
 export type CustomScreenMode = "collection-only" | "dashboard" | "editor";
 
@@ -22,9 +22,21 @@ export type CustomScreenCapabilities = {
 export function resolveCustomScreenCapabilities(input: {
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
+  definition?: CustomScreenDefinition | null;
+  listView?: CustomScreenDefinition["listView"] | null;
+  editorView?: CustomScreenDefinition["editorView"] | null;
 }): CustomScreenCapabilities {
-  const blocks = Array.isArray(input.blocks) ? input.blocks : [];
-  const bindings = Array.isArray(input.bindings) ? input.bindings : [];
+  const editorView = input.definition?.editorView ?? input.editorView ?? null;
+  const blocks = Array.isArray(input.blocks)
+    ? input.blocks
+    : Array.isArray(editorView?.blocks)
+      ? editorView.blocks
+      : [];
+  const bindings = Array.isArray(input.bindings)
+    ? input.bindings
+    : Array.isArray(editorView?.bindings)
+      ? editorView.bindings
+      : [];
   const readable = bindings.filter((binding) => binding.mode !== "write").length;
   const writable = bindings.filter((binding) => binding.mode !== "read").length;
   const hasBlocks = blocks.length > 0;

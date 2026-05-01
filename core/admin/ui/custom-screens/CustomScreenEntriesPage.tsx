@@ -1,27 +1,16 @@
-import { MoreHorizontal, Pencil, Plus, SquarePen, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedContentTypes, listContentTypesCached } from "@/services/contentTypesClient";
-import { getCachedCustomScreen, getCustomScreenCached, type CustomScreenRecord } from "@/services/customScreensClient";
+import {
+  getCachedCustomScreen,
+  getCustomScreenCached,
+  type CustomScreenRecord,
+} from "@/services/customScreensClient";
 import {
   deleteEntry,
   getCachedEntries,
@@ -35,194 +24,36 @@ import {
 } from "@/ui/assistant/activeSurfaceContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { AdminLink } from "@/ui/shared/AdminLink";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { EntryCreateDrawer } from "../entries/EntryCreateDrawer";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
-import { resolveCustomScreenId } from "./routeParams";
-
-const formatDate = (value: string) => {
-  try {
-    return new Date(value).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return value;
-  }
-};
-
-type CustomScreenEntriesTableProps = {
-  screenId: string;
-  items: EntrySummary[];
-  typeSlug: string;
-  screenMode: "collection-only" | "dashboard" | "editor";
-  emptyMessage?: string;
-  onDelete: (id: string) => void;
-};
+import { CustomScreenEntriesTable } from "./CustomScreenEntriesTable";
+import { buildCustomScreenWorkspacePath, resolveCustomScreenId } from "./routeParams";
 
 const buildClassicEditorHref = (typeSlug: string, entryId: string) =>
   `/advanced/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entryId)}`;
-
-const buildScreenRecordHref = (
-  screenId: string,
-  typeSlug: string,
-  entryId: string,
-  mode: "collection-only" | "dashboard" | "editor"
-) =>
-  mode === "collection-only"
-    ? buildClassicEditorHref(typeSlug, entryId)
-    : `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}`;
-
-const resolvePrimaryActionLabel = (
-  mode: "collection-only" | "dashboard" | "editor"
-) => {
-  if (mode === "collection-only") return "Classic editor";
-  if (mode === "dashboard") return "Open screen";
-  return "Edit record";
-};
-
-function CustomScreenEntriesTable({
-  screenId,
-  items,
-  typeSlug,
-  screenMode,
-  emptyMessage,
-  onDelete,
-}: CustomScreenEntriesTableProps) {
-  return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
-            <TableHead className="min-w-[18rem] pl-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Record
-            </TableHead>
-            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-              Status
-            </TableHead>
-            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
-              Updated
-            </TableHead>
-            <TableHead className="w-12 pr-6 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={4}
-                className="px-6 py-12 text-center text-sm text-muted-foreground"
-              >
-                {emptyMessage ?? "No records yet."}
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="py-6 pl-6">
-                <div className="flex flex-col gap-1">
-                  <AdminLink
-                    href={buildScreenRecordHref(
-                      screenId,
-                      typeSlug,
-                      item.id,
-                      screenMode
-                    )}
-                    className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                  >
-                    {item.title}
-                  </AdminLink>
-                  <span className="text-xs text-muted-foreground">/{item.slug}</span>
-                </div>
-              </TableCell>
-              <TableCell className="hidden px-4 py-6 md:table-cell">
-                <Badge
-                  variant={item.status === "published" ? "default" : "outline"}
-                  className="capitalize"
-                >
-                  {item.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden px-4 py-6 text-sm text-muted-foreground lg:table-cell">
-                {formatDate(item.updatedAt)}
-              </TableCell>
-              <TableCell className="w-12 py-6 pr-6 text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem asChild>
-                      <AdminLink
-                        href={buildScreenRecordHref(
-                          screenId,
-                          typeSlug,
-                          item.id,
-                          screenMode
-                        )}
-                        className="w-full"
-                      >
-                        <SquarePen className="h-4 w-4" />
-                        {resolvePrimaryActionLabel(screenMode)}
-                      </AdminLink>
-                    </DropdownMenuItem>
-                    {screenMode === "collection-only" ? null : (
-                      <DropdownMenuItem asChild>
-                        <AdminLink
-                          href={buildClassicEditorHref(typeSlug, item.id)}
-                          className="w-full"
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Classic editor
-                        </AdminLink>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => onDelete(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 export function CustomScreenEntriesPage() {
   const { path, navigate } = useAdminRouter();
   const screenId = useMemo(() => resolveCustomScreenId(path), [path]);
   const initialScreen = useMemo(
-    () => (screenId ? getCachedCustomScreen(screenId) ?? null : null),
+    () => (screenId ? (getCachedCustomScreen(screenId) ?? null) : null),
     [screenId]
   );
   const initialContentType = useMemo(
     () =>
       initialScreen
-        ? getCachedContentTypes()?.find(
-            (item) => item.id === initialScreen.contentTypeId
-          ) ?? null
+        ? (getCachedContentTypes()?.find((item) => item.id === initialScreen.contentTypeId) ?? null)
         : null,
     [initialScreen]
   );
   const initialEntries = useMemo(
-    () => (initialContentType ? getCachedEntries(initialContentType.slug) ?? [] : []),
+    () => (initialContentType ? (getCachedEntries(initialContentType.slug) ?? []) : []),
     [initialContentType]
   );
+  const hasInitialCache = Boolean(initialScreen && initialContentType);
   const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
   const [entries, setEntries] = useState<EntrySummary[]>(initialEntries);
   const [contentTypeSlug, setContentTypeSlug] = useState<string | null>(
@@ -264,9 +95,11 @@ export function CustomScreenEntriesPage() {
   }, [screen, screenCapabilities, screenId]);
 
   const refresh = useCallback(
-    async (force = false) => {
+    async (force = false, options?: { background?: boolean }) => {
       if (!screenId) return;
-      setIsLoading(true);
+      if (!options?.background) {
+        setIsLoading(true);
+      }
       try {
         const nextScreen = await getCustomScreenCached(screenId, { force });
         if (!nextScreen) {
@@ -275,7 +108,7 @@ export function CustomScreenEntriesPage() {
           return;
         }
 
-        const contentTypes = await listContentTypesCached({ force: true });
+        const contentTypes = await listContentTypesCached({ force });
         const contentType =
           contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
         if (!contentType) {
@@ -287,7 +120,7 @@ export function CustomScreenEntriesPage() {
           return;
         }
 
-        const nextEntries = await listEntriesCached(contentType.slug, { force: true });
+        const nextEntries = await listEntriesCached(contentType.slug, { force });
         setScreen(nextScreen);
         setContentTypeSlug(contentType.slug);
         setContentTypeName(contentType.name);
@@ -300,7 +133,9 @@ export function CustomScreenEntriesPage() {
           setError("Failed to load custom screen records.");
         }
       } finally {
-        setIsLoading(false);
+        if (!options?.background) {
+          setIsLoading(false);
+        }
       }
     },
     [screenId]
@@ -309,7 +144,7 @@ export function CustomScreenEntriesPage() {
   useEffect(() => {
     if (!screenId) return;
     let active = true;
-    getCustomScreenCached(screenId, { force: true })
+    getCustomScreenCached(screenId, { force: !hasInitialCache })
       .then(async (nextScreen) => {
         if (!active) return;
         if (!nextScreen) {
@@ -317,7 +152,7 @@ export function CustomScreenEntriesPage() {
           setEntries([]);
           return;
         }
-        const contentTypes = await listContentTypesCached({ force: true });
+        const contentTypes = await listContentTypesCached({ force: !hasInitialCache });
         if (!active) return;
         const contentType =
           contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
@@ -329,7 +164,7 @@ export function CustomScreenEntriesPage() {
           setError("Content type not found.");
           return;
         }
-        const nextEntries = await listEntriesCached(contentType.slug, { force: true });
+        const nextEntries = await listEntriesCached(contentType.slug, { force: !hasInitialCache });
         if (!active) return;
         setScreen(nextScreen);
         setContentTypeSlug(contentType.slug);
@@ -346,12 +181,12 @@ export function CustomScreenEntriesPage() {
         }
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (active && !hasInitialCache) setIsLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [screenId]);
+  }, [hasInitialCache, screenId]);
 
   useEffect(() => {
     if (!screenId) return undefined;
@@ -361,7 +196,7 @@ export function CustomScreenEntriesPage() {
         event.key === cacheKeys.customScreenDetail(screenId) ||
         (contentTypeSlug && event.key === cacheKeys.entriesList(contentTypeSlug))
       ) {
-        refresh(true).catch(() => undefined);
+        refresh(true, { background: true }).catch(() => undefined);
       }
     });
   }, [contentTypeSlug, refresh, screenId]);
@@ -381,11 +216,7 @@ export function CustomScreenEntriesPage() {
     }
   };
 
-  const handleCreated = (
-    entry: { id: string },
-    _: string,
-    openAfterCreate: boolean
-  ) => {
+  const handleCreated = (entry: { id: string }, _: string, openAfterCreate: boolean) => {
     if (!screenId) return;
     if (openAfterCreate) {
       navigate(
@@ -394,6 +225,15 @@ export function CustomScreenEntriesPage() {
       return;
     }
     refresh(true).catch(() => undefined);
+  };
+
+  const handleCreate = () => {
+    if (!screenId || !screen) return;
+    if (screen.definition?.listView.createMode === "editor-view") {
+      navigate(buildCustomScreenWorkspacePath({ screenId, entryId: "new" }));
+      return;
+    }
+    setCreateOpen(true);
   };
 
   const baseHref = screenId
@@ -436,11 +276,7 @@ export function CustomScreenEntriesPage() {
               <Button variant="outline" onClick={() => navigate(baseHref)}>
                 Open builder
               </Button>
-              <Button
-                className="gap-2"
-                disabled={!contentTypeSlug}
-                onClick={() => setCreateOpen(true)}
-              >
+              <Button className="gap-2" disabled={!contentTypeSlug} onClick={handleCreate}>
                 <Plus className="h-4 w-4" />
                 New record
               </Button>
@@ -464,26 +300,44 @@ export function CustomScreenEntriesPage() {
           <Alert>
             <AlertTitle>Collection-only screen</AlertTitle>
             <AlertDescription>
-              This shortcut narrows the records list for the selected content type. Add
-              dedicated screen widgets and field bindings in the builder if you want a
-              custom record screen instead of the classic editor.
+              This shortcut narrows the records list for the selected content type. Add dedicated
+              screen widgets and field bindings in the builder if you want a richer Editor View; the
+              classic editor remains available from row actions.
             </AlertDescription>
           </Alert>
         ) : screenCapabilities.mode === "dashboard" ? (
           <Alert>
             <AlertTitle>Read-only record screen</AlertTitle>
             <AlertDescription>
-              This screen can preview mapped data for each record, but edits still happen
-              in the classic editor until writable bindings are added.
+              This screen can preview mapped data for each record, but edits still happen in the
+              classic editor until writable bindings are added.
             </AlertDescription>
           </Alert>
         ) : null}
 
         <CustomScreenEntriesTable
-          screenId={screen?.id ?? ""}
           items={entries}
-          typeSlug={contentTypeSlug ?? ""}
-          screenMode={screenCapabilities.mode}
+          listView={
+            screen?.definition?.listView ?? {
+              columns: [],
+              filters: [],
+              defaultSort: { field: "updatedAt", direction: "desc" },
+              rowClick: "classic-editor",
+              createMode: "drawer",
+              bulkActions: { delete: true, publish: true, unpublish: true },
+            }
+          }
+          buildRowHref={(entry) => {
+            if (!screenId || !contentTypeSlug) return "/advanced/custom-screens";
+            return screen?.definition?.listView.rowClick === "classic-editor"
+              ? buildClassicEditorHref(contentTypeSlug, entry.id)
+              : buildCustomScreenWorkspacePath({ screenId, entryId: entry.id });
+          }}
+          buildClassicHref={(entry) =>
+            contentTypeSlug
+              ? buildClassicEditorHref(contentTypeSlug, entry.id)
+              : "/advanced/entries"
+          }
           onDelete={handleDelete}
           emptyMessage={isLoading ? "Loading records..." : undefined}
         />

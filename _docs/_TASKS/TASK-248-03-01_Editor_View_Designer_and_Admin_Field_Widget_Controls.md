@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Builder UX + Admin Widgets
 **Estimated Effort:** Medium
 **Dependencies:** TASK-248-02-02, TASK-248-04-01
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 

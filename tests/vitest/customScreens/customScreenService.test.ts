@@ -109,7 +109,9 @@ test("getCustomScreen returns null when the row is missing", async () => {
 });
 
 test("createCustomScreen normalizes defaults, sidebar config, and definitions", async () => {
-  mockDb.state.insertRows = [createRow({ status: "draft", showInSidebar: true, sidebarLabel: "Catalog Tools" })];
+  mockDb.state.insertRows = [
+    createRow({ status: "draft", showInSidebar: true, sidebarLabel: "Catalog Tools" }),
+  ];
 
   const result = await createCustomScreen({
     name: "  Catalog Tools  ",
@@ -134,11 +136,32 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     status: "draft",
     showInSidebar: true,
     sidebarLabel: "Catalog Tools",
-    schemaVersion: 1,
+    schemaVersion: 2,
+    definition: {
+      schemaVersion: 2,
+      editorView: {
+        blocks: [{ id: "section-1", type: "section", data: {} }],
+        bindings: [
+          {
+            id: "binding-1",
+            widgetId: "section-1",
+            propPath: "title",
+            field: "name",
+            mode: "read",
+          },
+        ],
+        saveMode: "entry",
+      },
+      listView: expect.objectContaining({
+        rowClick: "editor-view",
+        createMode: "editor-view",
+      }),
+    },
   });
   expect(mockDb.state.lastInsertValues?.createdAt).toBeInstanceOf(Date);
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
   expect(result.status).toBe("draft");
+  expect(result.schemaVersion).toBe(2);
   expect(result.bindings[0]?.id).toBe("section-1-title");
   expect(result.capabilities.mode).toBe("editor");
 });
@@ -197,7 +220,15 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
     status: "active",
     showInSidebar: false,
     sidebarLabel: null,
-    schemaVersion: 1,
+    schemaVersion: 2,
+    definition: expect.objectContaining({
+      schemaVersion: 2,
+      editorView: expect.objectContaining({
+        blocks: [expect.objectContaining({ id: "section-1", type: "section" })],
+        bindings: [],
+        saveMode: "entry",
+      }),
+    }),
   });
   expect(mockDb.state.lastUpdateValues?.updatedAt).toBeInstanceOf(Date);
   expect(result?.name).toBe("Updated catalog");

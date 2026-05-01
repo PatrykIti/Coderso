@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Entry Editor + Builder UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-248-01, TASK-248-02, TASK-248-04-01
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-01
 
 ---
 
@@ -27,9 +28,9 @@ widgets as a workaround. It should use field-aware admin widgets.
 
 ## Sub-Tasks
 
-- [ ] TASK-248-03-01: Editor View Designer and Admin Field Widget Controls
-- [ ] TASK-248-03-02: Editor View Create Mode Draft, Save, and Validation
-- [ ] TASK-248-03-03: Editor View Edit Mode Hydration, Save, and Dirty State
+- [x] TASK-248-03-01: Editor View Designer and Admin Field Widget Controls
+- [x] TASK-248-03-02: Editor View Create Mode Draft, Save, and Validation
+- [x] TASK-248-03-03: Editor View Edit Mode Hydration, Save, and Dirty State
 
 ## Files to Change
 

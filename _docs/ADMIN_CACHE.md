@@ -325,6 +325,11 @@ Clients update caches and broadcast events on:
 - `/admin/advanced/custom-screens` prefetch warms both `customScreens:list` and
   `contentTypes:list` because the first-screen table and filters display
   content-type labels.
+- `/admin/advanced/custom-screens/:screenId/entries` prefetch resolves the
+  selected screen from `customScreens:list` / `customScreens:detail:<screenId>`,
+  warms `contentTypes:list`, and warms `entries:list:<typeSlug>` for the
+  assigned content type. Detail workspace routes additionally warm
+  `entries:detail:<typeSlug>:<entryId>` when `entryId` is not `new`.
 - `contentTypesClient` also uses TTL-backed memory for `contentTypes:list`, so
   Custom Screens label projection cannot be pinned to stale module memory after
   the shared list TTL expires.
@@ -335,6 +340,10 @@ Clients update caches and broadcast events on:
   update or invalidate `customScreens:list` / `customScreens:detail:<id>` and
   broadcast cache events for the list, sidebar shortcuts, builder, and records
   workflow.
+- `CustomScreenEntryEditor` create/edit mode reuses the existing entry cache
+  contract. Create/update/delete writes update or invalidate
+  `entries:list:<typeSlug>` and `entries:detail:<typeSlug>:<entryId>` through
+  `entriesClient`; no Custom Screens-specific entry cache is introduced.
 
 ### Forms list/detail cache note
 

@@ -197,7 +197,7 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
   }
 });
 
-test("CustomScreenEntriesPage explains collection-only screens and links to classic editor", () => {
+test("CustomScreenEntriesPage explains collection-only screens and keeps workspace row links", () => {
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const storage = createLocalStorage();
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
@@ -210,8 +210,8 @@ test("CustomScreenEntriesPage explains collection-only screens and links to clas
     });
 
     expect(html).toContain("Collection-only screen");
-    expect(html).toContain("/admin/advanced/entries/properties/entry-1");
-    expect(html).not.toContain("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+    expect(html).toContain("classic editor remains available from row actions");
+    expect(html).toContain("/admin/advanced/custom-screens/screen-1/entries/entry-1");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

@@ -6,18 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import { getCachedContentTypes, listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
-import { getCachedCustomScreen, getCustomScreenCached, type CustomScreenRecord } from "@/services/customScreensClient";
 import {
+  getCachedContentTypes,
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
+import {
+  getCachedCustomScreen,
+  getCustomScreenCached,
+  type CustomScreenRecord,
+} from "@/services/customScreensClient";
+import {
+  createEntry,
   getCachedEntryDetail,
   getEntryCached,
   updateEntry,
@@ -36,35 +40,16 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenEntryParams } from "./routeParams";
-import { collectWritableBindingFields } from "../../../services/customScreens/bindingResolver";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 import type { ContentField } from "../content-types/SchemaBuilder";
-
-const normalizeText = (value: string) => value.trim();
-
-function resolveDefaultValue(field: ContentField) {
-  if (field.defaultValue === undefined || field.defaultValue === "") return null;
-  if (field.type === "number") {
-    const parsed = Number(field.defaultValue);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  if (field.type === "boolean") {
-    return field.defaultValue === "true";
-  }
-  return field.defaultValue;
-}
-
-function buildInitialValues(fields: ContentField[], data: Record<string, unknown>) {
-  return fields.reduce<Record<string, unknown>>((acc, field) => {
-    if (data[field.name] !== undefined) {
-      acc[field.name] = data[field.name];
-      return acc;
-    }
-    const fallback = field.type === "boolean" ? false : "";
-    acc[field.name] = resolveDefaultValue(field) ?? fallback;
-    return acc;
-  }, {});
-}
+import {
+  buildEditorViewCreatePayload,
+  buildEditorViewUpdatePayload,
+  buildInitialEntryDraft,
+  hydrateEditorViewDraft,
+  validateEntryDraft,
+  type CustomScreenEntryDraft,
+} from "./customScreenEntryDraft";
 
 function slugify(value: string) {
   return value
@@ -78,6 +63,7 @@ type BoundFieldCardProps = {
   field: ContentField;
   usageCount: number;
   value: unknown;
+  error?: string;
   onChange: (value: unknown) => void;
   relationTargets: Array<{ slug: string; name: string }>;
 };
@@ -86,6 +72,7 @@ function BoundFieldCard({
   field,
   usageCount,
   value,
+  error,
   onChange,
   relationTargets,
 }: BoundFieldCardProps) {
@@ -109,75 +96,93 @@ function BoundFieldCard({
         relationTargets={relationTargets}
         display="compact"
       />
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
 
 export function CustomScreenEntryEditor() {
   const { path, navigate } = useAdminRouter();
-  const { screenId, entryId } = useMemo(
-    () => resolveCustomScreenEntryParams(path),
-    [path]
-  );
+  const { screenId, entryId } = useMemo(() => resolveCustomScreenEntryParams(path), [path]);
+  const isCreateMode = entryId === "new";
   const initialScreen = useMemo(
-    () => (screenId ? getCachedCustomScreen(screenId) ?? null : null),
+    () => (screenId ? (getCachedCustomScreen(screenId) ?? null) : null),
     [screenId]
   );
   const initialContentType = useMemo(
     () =>
       initialScreen
-        ? getCachedContentTypes()?.find(
-            (item) => item.id === initialScreen.contentTypeId
-          ) ?? null
+        ? (getCachedContentTypes()?.find((item) => item.id === initialScreen.contentTypeId) ?? null)
         : null,
     [initialScreen]
   );
   const initialEntry = useMemo(
     () =>
-      initialContentType && entryId
-        ? getCachedEntryDetail(initialContentType.slug, entryId) ?? null
+      initialContentType && entryId && !isCreateMode
+        ? (getCachedEntryDetail(initialContentType.slug, entryId) ?? null)
         : null,
-    [entryId, initialContentType]
+    [entryId, initialContentType, isCreateMode]
   );
   const initialFields = useMemo(
     () => (initialContentType ? fieldsFromSchema(initialContentType.schema) : []),
     [initialContentType]
   );
+  const initialDraft = useMemo<CustomScreenEntryDraft | null>(() => {
+    if (!initialScreen || !initialContentType) return null;
+    if (isCreateMode) {
+      return buildInitialEntryDraft({
+        contentType: initialContentType,
+        editorView: initialScreen.definition?.editorView ?? {
+          blocks: initialScreen.blocks,
+          bindings: initialScreen.bindings,
+          saveMode: "entry",
+        },
+      });
+    }
+    if (!initialEntry) return null;
+    return hydrateEditorViewDraft({
+      contentType: initialContentType,
+      editorView: initialScreen.definition?.editorView ?? {
+        blocks: initialScreen.blocks,
+        bindings: initialScreen.bindings,
+        saveMode: "entry",
+      },
+      entry: initialEntry,
+    });
+  }, [initialContentType, initialEntry, initialScreen, isCreateMode]);
 
   const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
-  const [contentType, setContentType] = useState<ContentTypeSummary | null>(
-    initialContentType
-  );
+  const [contentType, setContentType] = useState<ContentTypeSummary | null>(initialContentType);
   const [entry, setEntry] = useState<EntryDetail | null>(initialEntry);
   const [fields, setFields] = useState<ContentField[]>(initialFields);
-  const [values, setValues] = useState<Record<string, unknown>>(
-    initialEntry ? buildInitialValues(initialFields, initialEntry.data ?? {}) : {}
+  const [values, setValues] = useState<Record<string, unknown>>(initialDraft?.data ?? {});
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
+  const [slug, setSlug] = useState(initialDraft?.slug ?? "");
+  const [editableFields, setEditableFields] = useState<string[]>(
+    initialDraft?.editableFields ?? []
   );
-  const [title, setTitle] = useState(initialEntry?.title ?? "");
-  const [slug, setSlug] = useState(initialEntry?.slug ?? "");
+  const [originalData, setOriginalData] = useState<Record<string, unknown>>(
+    initialDraft?.originalData ?? {}
+  );
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isLoading, setIsLoading] = useState(() => !(initialScreen && initialContentType && initialEntry));
+  const [isLoading, setIsLoading] = useState(
+    () => !(initialScreen && initialContentType && (isCreateMode || initialEntry))
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [relationTargets, setRelationTargets] = useState<
-    Array<{ slug: string; name: string }>
-  >(() =>
-    (getCachedContentTypes() ?? []).map((item) => ({
-      slug: item.slug,
-      name: item.name,
-    }))
+  const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
+    () =>
+      (getCachedContentTypes() ?? []).map((item) => ({
+        slug: item.slug,
+        name: item.name,
+      }))
   );
 
-  const schemaFieldNames = useMemo(
-    () => new Set(fields.map((field) => field.name)),
-    [fields]
-  );
-  const writableFieldNames = useMemo(
-    () => (screen ? collectWritableBindingFields(screen.bindings) : []),
-    [screen]
-  );
+  const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
+  const writableFieldNames = editableFields;
   const writableFieldUsage = useMemo(() => {
     if (!screen) return new Map<string, number>();
     return screen.bindings.reduce((result, binding) => {
@@ -194,20 +199,20 @@ export function CustomScreenEntryEditor() {
     [fields, writableFieldNames]
   );
   const readOnlyBindingCount = useMemo(
-    () =>
-      screen?.bindings.filter((binding) => binding.mode === "read").length ?? 0,
+    () => screen?.bindings.filter((binding) => binding.mode === "read").length ?? 0,
     [screen]
   );
   const screenCapabilities = useMemo(
     () =>
       screen?.capabilities ??
       resolveCustomScreenCapabilities({
+        definition: screen?.definition,
         blocks: screen?.blocks,
         bindings: screen?.bindings,
       }),
     [screen]
   );
-  const canEditInScreen = screenCapabilities.mode === "editor";
+  const canEditInScreen = Boolean(screen?.definition) || screenCapabilities.mode === "editor";
   const isDashboardScreen = screenCapabilities.mode === "dashboard";
   const isCollectionOnlyScreen = screenCapabilities.mode === "collection-only";
 
@@ -238,16 +243,34 @@ export function CustomScreenEntryEditor() {
     (
       nextScreen: CustomScreenRecord,
       nextContentType: ContentTypeSummary,
-      nextEntry: EntryDetail
+      nextEntry: EntryDetail | null
     ) => {
       const nextFields = fieldsFromSchema(nextContentType.schema);
+      const editorView = nextScreen.definition?.editorView ?? {
+        blocks: nextScreen.blocks,
+        bindings: nextScreen.bindings,
+        saveMode: "entry" as const,
+      };
+      const nextDraft = nextEntry
+        ? hydrateEditorViewDraft({
+            contentType: nextContentType,
+            editorView,
+            entry: nextEntry,
+          })
+        : buildInitialEntryDraft({
+            contentType: nextContentType,
+            editorView,
+          });
       setScreen(nextScreen);
       setContentType(nextContentType);
       setEntry(nextEntry);
       setFields(nextFields);
-      setTitle(nextEntry.title);
-      setSlug(nextEntry.slug);
-      setValues(buildInitialValues(nextFields, nextEntry.data ?? {}));
+      setTitle(nextDraft.title);
+      setSlug(nextDraft.slug);
+      setValues(nextDraft.data);
+      setEditableFields(nextDraft.editableFields);
+      setOriginalData(nextDraft.originalData);
+      setFieldErrors({});
       setHasUnsavedChanges(false);
       setRemoteUpdatePending(false);
       setError(null);
@@ -274,12 +297,15 @@ export function CustomScreenEntryEditor() {
           return;
         }
 
-        const nextEntry = await getEntryCached(nextContentType.slug, entryId, {
-          force,
-        });
-        if (!nextEntry) {
-          setError("Record not found.");
-          return;
+        let nextEntry: EntryDetail | null = null;
+        if (!isCreateMode) {
+          nextEntry = await getEntryCached(nextContentType.slug, entryId, {
+            force,
+          });
+          if (!nextEntry) {
+            setError("Record not found.");
+            return;
+          }
         }
 
         if (options?.keepUnsaved && hasUnsavedChanges) {
@@ -298,7 +324,7 @@ export function CustomScreenEntryEditor() {
         setIsLoading(false);
       }
     },
-    [applyLoadedState, entryId, hasUnsavedChanges, screenId]
+    [applyLoadedState, entryId, hasUnsavedChanges, isCreateMode, screenId]
   );
 
   useEffect(() => {
@@ -319,13 +345,16 @@ export function CustomScreenEntryEditor() {
           setError("Content type not found.");
           return;
         }
-        const nextEntry = await getEntryCached(nextContentType.slug, entryId, {
-          force: true,
-        });
-        if (!active) return;
-        if (!nextEntry) {
-          setError("Record not found.");
-          return;
+        let nextEntry: EntryDetail | null = null;
+        if (!isCreateMode) {
+          nextEntry = await getEntryCached(nextContentType.slug, entryId, {
+            force: true,
+          });
+          if (!active) return;
+          if (!nextEntry) {
+            setError("Record not found.");
+            return;
+          }
         }
         applyLoadedState(nextScreen, nextContentType, nextEntry);
       })
@@ -343,7 +372,7 @@ export function CustomScreenEntryEditor() {
     return () => {
       active = false;
     };
-  }, [applyLoadedState, entryId, screenId]);
+  }, [applyLoadedState, entryId, isCreateMode, screenId]);
 
   useEffect(() => {
     listContentTypesCached({ force: true })
@@ -359,21 +388,31 @@ export function CustomScreenEntryEditor() {
       if (
         event.key === cacheKeys.customScreensList ||
         event.key === cacheKeys.customScreenDetail(screenId) ||
-        event.key === cacheKeys.entryDetail(contentType.slug, entryId)
+        (!isCreateMode && event.key === cacheKeys.entryDetail(contentType.slug, entryId))
       ) {
         refresh(true, { keepUnsaved: true }).catch(() => undefined);
       }
     });
-  }, [contentType, entryId, refresh, screenId]);
+  }, [contentType, entryId, isCreateMode, refresh, screenId]);
 
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
     setHasUnsavedChanges(true);
     setError(null);
   };
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.title;
+      return next;
+    });
     if (schemaFieldNames.has("title")) {
       setValues((current) => ({ ...current, title: value }));
     }
@@ -382,6 +421,11 @@ export function CustomScreenEntryEditor() {
 
   const handleSlugChange = (value: string) => {
     setSlug(value);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.slug;
+      return next;
+    });
     if (schemaFieldNames.has("slug")) {
       setValues((current) => ({ ...current, slug: value }));
     }
@@ -389,11 +433,9 @@ export function CustomScreenEntryEditor() {
   };
 
   const buildPayloadData = () => {
-    const data: Record<string, unknown> = {};
-    Object.keys(contentType?.schema.properties ?? {}).forEach((key) => {
-      if (values[key] !== undefined) {
-        data[key] = values[key];
-      }
+    const data: Record<string, unknown> = { ...originalData };
+    editableFields.forEach((key) => {
+      data[key] = values[key];
     });
     if (schemaFieldNames.has("title")) data.title = title;
     if (schemaFieldNames.has("slug")) data.slug = slug;
@@ -402,20 +444,53 @@ export function CustomScreenEntryEditor() {
 
   const handleSave = async () => {
     if (!contentType || !entryId) return;
+    const draft: CustomScreenEntryDraft = {
+      title,
+      slug,
+      data: values,
+      editableFields,
+      originalData,
+      fieldErrors,
+    };
+    const nextFieldErrors = validateEntryDraft({ contentType, draft });
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setError("Fix the highlighted fields before saving.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
-      const updated = await updateEntry(contentType.slug, entryId, {
-        title: normalizeText(title),
-        slug: normalizeText(slug),
-        data: buildPayloadData(),
+      const saved = isCreateMode
+        ? await createEntry(contentType.slug, buildEditorViewCreatePayload({ contentType, draft }))
+        : await updateEntry(
+            contentType.slug,
+            entryId,
+            buildEditorViewUpdatePayload({ contentType, draft })
+          );
+      setEntry(saved);
+      setTitle(saved.title);
+      setSlug(saved.slug);
+      const savedDraft = hydrateEditorViewDraft({
+        contentType,
+        editorView: screen?.definition?.editorView ?? {
+          blocks: screen?.blocks ?? [],
+          bindings: screen?.bindings ?? [],
+          saveMode: "entry",
+        },
+        entry: saved,
       });
-      setEntry(updated);
-      setTitle(updated.title);
-      setSlug(updated.slug);
-      setValues(buildInitialValues(fields, updated.data ?? {}));
+      setValues(savedDraft.data);
+      setEditableFields(savedDraft.editableFields);
+      setOriginalData(savedDraft.originalData);
+      setFieldErrors({});
       setHasUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      if (isCreateMode && screenId) {
+        navigate(
+          `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(saved.id)}`
+        );
+      }
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -450,8 +525,8 @@ export function CustomScreenEntryEditor() {
         </div>
       ) : writableFields.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          This screen has no writable bindings yet. Use the builder to map widget props to
-          content fields.
+          This screen has no writable bindings yet. Use the builder to map widget props to content
+          fields.
         </div>
       ) : (
         writableFields.map((field) => (
@@ -460,6 +535,7 @@ export function CustomScreenEntryEditor() {
             field={field}
             usageCount={writableFieldUsage.get(field.name) ?? 1}
             value={values[field.name]}
+            error={fieldErrors[field.name]}
             onChange={(next) => handleFieldChange(field.name, next)}
             relationTargets={relationTargets}
           />
@@ -468,19 +544,20 @@ export function CustomScreenEntryEditor() {
 
       {readOnlyBindingCount > 0 ? (
         <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-          {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are
-          preview-only and remain read-only in this screen workflow.
+          {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only and
+          remain read-only in this screen workflow.
         </div>
       ) : null}
     </div>
   );
 
   const classicEditorHref =
-    contentType && entryId
+    contentType && entryId && !isCreateMode
       ? `/advanced/entries/${encodeURIComponent(contentType.slug)}/${encodeURIComponent(entryId)}`
       : "/advanced/entries";
-  const screenRecordsHref =
-    screenId ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries` : "/advanced/custom-screens";
+  const screenRecordsHref = screenId
+    ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
+    : "/advanced/custom-screens";
 
   return (
     <>
@@ -501,7 +578,7 @@ export function CustomScreenEntryEditor() {
             ) : null}
             <span>/</span>
             <span className="text-foreground">
-              {entry?.title?.trim() ? entry.title : "Record"}
+              {isCreateMode ? "New record" : entry?.title?.trim() ? entry.title : "Record"}
             </span>
             {entry ? (
               <Badge
@@ -534,7 +611,7 @@ export function CustomScreenEntryEditor() {
               size="sm"
               className="gap-2"
               onClick={() => navigate(classicEditorHref)}
-              disabled={!contentType || !entryId}
+              disabled={!contentType || !entryId || isCreateMode}
             >
               <SquareArrowOutUpRight className="h-4 w-4" />
               Classic editor
@@ -547,7 +624,7 @@ export function CustomScreenEntryEditor() {
                 disabled={isSaving || isLoading || !contentType}
               >
                 <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save record"}
+                {isSaving ? "Saving..." : isCreateMode ? "Create record" : "Save record"}
               </Button>
             ) : null}
           </div>
@@ -590,11 +667,7 @@ export function CustomScreenEntryEditor() {
                 <AlertTitle>Updated in another tab</AlertTitle>
                 <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <span>New changes are available. Refresh to load the latest version.</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refresh(true)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => refresh(true)}>
                     Refresh
                   </Button>
                 </AlertDescription>
@@ -604,18 +677,17 @@ export function CustomScreenEntryEditor() {
               <Alert>
                 <AlertTitle>Collection-only screen</AlertTitle>
                 <AlertDescription>
-                  This shortcut currently narrows the records list for this content type.
-                  Open the classic editor to edit the record, or add dedicated screen
-                  widgets and field bindings in the builder to create a custom record
-                  screen.
+                  This shortcut currently narrows the records list for this content type. Open the
+                  classic editor to edit the record, or add dedicated screen widgets and field
+                  bindings in the builder to create a custom record screen.
                 </AlertDescription>
               </Alert>
             ) : isDashboardScreen ? (
               <Alert>
                 <AlertTitle>Read-only record screen</AlertTitle>
                 <AlertDescription>
-                  This screen can preview mapped data for the current record, but edits
-                  still happen in the classic editor until writable bindings are added.
+                  This screen can preview mapped data for the current record, but edits still happen
+                  in the classic editor until writable bindings are added.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -630,6 +702,9 @@ export function CustomScreenEntryEditor() {
                     className="min-h-0 resize-none overflow-hidden border-0 px-0 py-0 text-3xl font-semibold leading-tight tracking-tight shadow-none focus-visible:ring-0"
                     placeholder="Record title"
                   />
+                  {fieldErrors.title ? (
+                    <p className="text-xs text-destructive">{fieldErrors.title}</p>
+                  ) : null}
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Slug
@@ -651,6 +726,9 @@ export function CustomScreenEntryEditor() {
                       </Button>
                     </div>
                   </div>
+                  {fieldErrors.slug ? (
+                    <p className="text-xs text-destructive">{fieldErrors.slug}</p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -688,8 +766,8 @@ export function CustomScreenEntryEditor() {
               />
             ) : screen ? (
               <CustomScreenPreview
-                blocks={screen.blocks}
-                bindings={screen.bindings}
+                blocks={screen.definition?.editorView.blocks ?? screen.blocks}
+                bindings={screen.definition?.editorView.bindings ?? screen.bindings}
                 data={buildPayloadData()}
                 emptyTitle="No preview widgets yet"
                 emptyMessage="Add dedicated screen widgets to preview this custom screen."
