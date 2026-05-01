@@ -386,6 +386,16 @@ export function CustomScreenEntryEditor() {
     return data;
   };
 
+  const buildCanvasFieldValues = () => ({
+    ...buildPayloadData(),
+    title,
+    slug,
+    status: entry?.status ?? "draft",
+    createdAt: entry?.createdAt ?? null,
+    updatedAt: entry?.updatedAt ?? null,
+    publishedAt: entry?.publishedAt ?? null,
+  });
+
   const handleSave = async () => {
     if (!contentType || !entryId) return;
     const draft: CustomScreenEntryDraft = {
@@ -672,11 +682,13 @@ export function CustomScreenEntryEditor() {
               <CustomScreenEntryCanvas
                 blocks={screen.definition?.editorView.blocks ?? screen.blocks}
                 bindings={screen.definition?.editorView.bindings ?? screen.bindings}
-                fieldValues={buildPayloadData()}
+                fieldValues={buildCanvasFieldValues()}
                 fieldErrors={fieldErrors}
                 fields={fields}
                 relationTargets={relationTargets}
                 onFieldChange={handleFieldChange}
+                onTitleChange={handleTitleChange}
+                onSlugChange={handleSlugChange}
               />
             ) : screen ? (
               <CustomScreenPreview

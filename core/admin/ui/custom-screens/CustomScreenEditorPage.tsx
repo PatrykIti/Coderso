@@ -44,7 +44,6 @@ import { listRegisteredWidgets, listRegisteredWidgetsForSurface } from "@/ui/wid
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
-import { EditorViewDesigner } from "./EditorViewDesigner";
 import { FieldBindingPanel } from "./FieldBindingPanel";
 import { ListViewDesigner } from "./ListViewDesigner";
 import { ListViewCanvas } from "./ListViewCanvas";
@@ -799,16 +798,6 @@ export function CustomScreenEditorPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <EditorViewDesigner
-                contentType={selectedContentType}
-                value={definition.editorView}
-                onChange={(editorView) =>
-                  updateDefinition({
-                    ...definition,
-                    editorView,
-                  })
-                }
-              />
               <div
                 className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
                 onDragOver={(event) => {

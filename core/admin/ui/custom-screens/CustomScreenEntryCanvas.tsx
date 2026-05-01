@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import type { WidgetBlock } from "../../../widgets/types";
@@ -33,6 +35,8 @@ type CustomScreenEntryCanvasProps = {
   fields: ContentField[];
   relationTargets: Array<{ slug: string; name: string }>;
   onFieldChange: (field: string, value: unknown) => void;
+  onTitleChange: (value: string) => void;
+  onSlugChange: (value: string) => void;
 };
 
 const fieldTypeLabels = {
@@ -66,8 +70,30 @@ export function CustomScreenEntryCanvas({
   fields,
   relationTargets,
   onFieldChange,
+  onTitleChange,
+  onSlugChange,
 }: CustomScreenEntryCanvasProps) {
   const fieldMap = new Map(fields.map((field) => [field.name, field] as const));
+  const systemFieldMap = new Map<string, ContentField>([
+    [
+      "title",
+      {
+        id: "system-title",
+        name: "title",
+        type: "text",
+        label: "Title",
+      },
+    ],
+    [
+      "slug",
+      {
+        id: "system-slug",
+        name: "slug",
+        type: "text",
+        label: "Slug",
+      },
+    ],
+  ]);
 
   const renderBlock = (block: WidgetBlock): ReactNode => {
     const blockBindings = getWidgetBindings(bindings, block.id, {
@@ -88,9 +114,11 @@ export function CustomScreenEntryCanvas({
         (binding) =>
           (binding.mode === "write" || binding.mode === "readwrite") &&
           binding.propPath === "value" &&
-          fieldMap.has(binding.field)
+          (fieldMap.has(binding.field) || systemFieldMap.has(binding.field))
       );
-      const field = writeBinding ? (fieldMap.get(writeBinding.field) ?? null) : null;
+      const field = writeBinding
+        ? (fieldMap.get(writeBinding.field) ?? systemFieldMap.get(writeBinding.field) ?? null)
+        : null;
 
       return (
         <div key={block.id} className="rounded-2xl border p-4 shadow-sm">
@@ -106,13 +134,27 @@ export function CustomScreenEntryCanvas({
           </div>
           <div className="mt-3">
             {field && writeBinding ? (
-              <FieldRenderer
-                field={field}
-                value={fieldValues[writeBinding.field]}
-                onChange={(next) => onFieldChange(writeBinding.field, next)}
-                relationTargets={relationTargets}
-                display="compact"
-              />
+              writeBinding.field === "title" ? (
+                <input
+                  value={String(fieldValues.title ?? "")}
+                  onChange={(event) => onTitleChange(event.target.value)}
+                  className="h-9 w-full rounded-md border px-3 py-2 text-sm"
+                />
+              ) : writeBinding.field === "slug" ? (
+                <input
+                  value={String(fieldValues.slug ?? "")}
+                  onChange={(event) => onSlugChange(event.target.value)}
+                  className="h-9 w-full rounded-md border px-3 py-2 text-sm"
+                />
+              ) : (
+                <FieldRenderer
+                  field={field}
+                  value={fieldValues[writeBinding.field]}
+                  onChange={(next) => onFieldChange(writeBinding.field, next)}
+                  relationTargets={relationTargets}
+                  display="compact"
+                />
+              )
             ) : (
               <p className="text-sm text-foreground">{data.value}</p>
             )}
@@ -233,4 +275,3 @@ export function CustomScreenEntryCanvas({
 
   return <div className="space-y-6">{blocks.map((block) => renderBlock(block) as ReactNode)}</div>;
 }
-import type { ReactNode } from "react";

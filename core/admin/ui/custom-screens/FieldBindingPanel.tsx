@@ -29,6 +29,13 @@ type FieldBindingPanelProps = {
   onChange: (next: CustomScreenBinding[]) => void;
 };
 
+type BindingFieldOption = {
+  value: string;
+  label: string;
+  type: string;
+  writable: boolean;
+};
+
 const modeOptions: Array<{ value: CustomScreenBindingMode; label: string }> = [
   { value: "readwrite", label: "Read / write" },
   { value: "read", label: "Read only" },
@@ -36,6 +43,15 @@ const modeOptions: Array<{ value: CustomScreenBindingMode; label: string }> = [
 ];
 
 const createBindingId = () => `binding-${crypto.randomUUID().slice(0, 8)}`;
+
+const systemFieldOptions: BindingFieldOption[] = [
+  { value: "title", label: "Title", type: "system", writable: true },
+  { value: "slug", label: "Slug", type: "system", writable: true },
+  { value: "status", label: "Status", type: "system", writable: false },
+  { value: "createdAt", label: "Created", type: "system", writable: false },
+  { value: "updatedAt", label: "Updated", type: "system", writable: false },
+  { value: "publishedAt", label: "Published", type: "system", writable: false },
+];
 
 export function FieldBindingPanel({
   selectedBlock,
@@ -55,11 +71,15 @@ export function FieldBindingPanel({
   );
   const fieldOptions = useMemo(
     () =>
-      fields.map((field) => ({
-        value: field.name,
-        label: field.label,
-        type: field.type,
-      })),
+      [
+        ...systemFieldOptions,
+        ...fields.map((field) => ({
+          value: field.name,
+          label: field.label,
+          type: field.type,
+          writable: true,
+        })),
+      ] satisfies BindingFieldOption[],
     [fields]
   );
   const propPathSuggestions = useMemo(() => {
@@ -74,9 +94,7 @@ export function FieldBindingPanel({
 
   const updateBinding = (bindingId: string, updates: Partial<CustomScreenBinding>) => {
     onChange(
-      value.map((binding) =>
-        binding.id === bindingId ? { ...binding, ...updates } : binding
-      )
+      value.map((binding) => (binding.id === bindingId ? { ...binding, ...updates } : binding))
     );
   };
 
@@ -86,14 +104,16 @@ export function FieldBindingPanel({
 
   const addBinding = () => {
     if (!selectedBlock) return;
+    const firstOption = fieldOptions[0];
+    if (!firstOption) return;
     onChange([
       ...value,
       {
         id: createBindingId(),
         widgetId: selectedBlock.id,
-        propPath: propPathSuggestions[0] ?? "",
-        field: fieldOptions[0]?.value ?? "",
-        mode: "readwrite",
+        propPath: propPathSuggestions[0] ?? "value",
+        field: firstOption.value,
+        mode: firstOption.writable ? "readwrite" : "read",
       },
     ]);
   };
@@ -124,13 +144,7 @@ export function FieldBindingPanel({
             to content fields.
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="gap-1.5"
-          onClick={addBinding}
-        >
+        <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={addBinding}>
           <Plus className="h-4 w-4" />
           Add binding
         </Button>
@@ -144,88 +158,112 @@ export function FieldBindingPanel({
 
       {selectedBindings.map((binding, index) => (
         <div key={binding.id} className="space-y-3 rounded-lg border p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Link2 className="h-4 w-4 text-muted-foreground" />
-              <span>Binding {index + 1}</span>
-            </div>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              onClick={() => removeBinding(binding.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {(() => {
+            const selectedFieldOption =
+              fieldOptions.find((field) => field.value === binding.field) ?? null;
+            const allowedModeOptions = selectedFieldOption?.writable
+              ? modeOptions
+              : modeOptions.filter((option) => option.value === "read");
+            return (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Link2 className="h-4 w-4 text-muted-foreground" />
+                    <span>Binding {index + 1}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={() => removeBinding(binding.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Widget prop path
-            </label>
-            <Input
-              value={binding.propPath}
-              list={`binding-props-${selectedBlock.id}`}
-              placeholder="heading.title"
-              onChange={(event) =>
-                updateBinding(binding.id, { propPath: event.target.value })
-              }
-            />
-            <datalist id={`binding-props-${selectedBlock.id}`}>
-              {propPathSuggestions.map((path) => (
-                <option key={path} value={path} />
-              ))}
-            </datalist>
-            <p className="text-xs text-muted-foreground">
-              {propPathSuggestions.length > 0
-                ? "Suggestions come from the current widget defaults."
-                : "This widget has no detectable data paths yet. You can type one manually."}
-            </p>
-          </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Widget prop path
+                  </label>
+                  <Input
+                    value={binding.propPath}
+                    list={`binding-props-${selectedBlock.id}`}
+                    placeholder="heading.title"
+                    onChange={(event) =>
+                      updateBinding(binding.id, { propPath: event.target.value })
+                    }
+                  />
+                  <datalist id={`binding-props-${selectedBlock.id}`}>
+                    {propPathSuggestions.map((path) => (
+                      <option key={path} value={path} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-muted-foreground">
+                    {propPathSuggestions.length > 0
+                      ? "Suggestions come from the current widget defaults."
+                      : "This widget has no detectable data paths yet. You can type one manually."}
+                  </p>
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Content field
-            </label>
-            <Select
-              value={binding.field}
-              onValueChange={(next) => updateBinding(binding.id, { field: next })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select content field" />
-              </SelectTrigger>
-              <SelectContent>
-                {fieldOptions.map((field) => (
-                  <SelectItem key={field.value} value={field.value}>
-                    {field.label} ({field.type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Content field
+                  </label>
+                  <Select
+                    value={binding.field}
+                    onValueChange={(next) =>
+                      updateBinding(binding.id, {
+                        field: next,
+                        mode:
+                          fieldOptions.find((field) => field.value === next)?.writable === false
+                            ? "read"
+                            : binding.mode,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select content field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fieldOptions.map((field) => (
+                        <SelectItem key={field.value} value={field.value}>
+                          {field.label} ({field.type})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Mode
-            </label>
-            <Select
-              value={binding.mode}
-              onValueChange={(next) =>
-                updateBinding(binding.id, { mode: next as CustomScreenBindingMode })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {modeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Mode
+                  </label>
+                  <Select
+                    value={binding.mode}
+                    onValueChange={(next) =>
+                      updateBinding(binding.id, { mode: next as CustomScreenBindingMode })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allowedModeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedFieldOption?.writable === false ? (
+                    <p className="text-xs text-muted-foreground">
+                      This system field is read-only in the screen-owned editor workflow.
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            );
+          })()}
         </div>
       ))}
     </div>
