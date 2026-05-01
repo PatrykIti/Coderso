@@ -220,3 +220,28 @@ test("CustomScreenEntriesPage explains collection-only screens and keeps workspa
     }
   }
 });
+
+test("CustomScreenEntryEditor keeps collection-only screens read-only", () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    seedCollectionOnlyCache(storage);
+
+    const html = renderAdminUi(<CustomScreenEntryEditor />, {
+      path: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
+    });
+
+    expect(html).toContain("Collection-only screen");
+    expect(html).not.toContain("Save record");
+    expect(html).not.toContain("Bound fields");
+    expect(html).toContain("Classic editor");
+  } finally {
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});

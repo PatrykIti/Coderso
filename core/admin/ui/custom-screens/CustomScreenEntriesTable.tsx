@@ -1,10 +1,12 @@
 import { MoreHorizontal, Pencil, SquarePen, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -26,6 +28,13 @@ type CustomScreenEntriesTableProps = {
   emptyMessage?: string;
   buildRowHref: (entry: EntrySummary) => string;
   buildClassicHref: (entry: EntrySummary) => string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onToggleEntry?: (id: string) => void;
+  onPublish?: (id: string) => void;
+  onUnpublish?: (id: string) => void;
   onDelete: (id: string) => void;
 };
 
@@ -35,17 +44,48 @@ export function CustomScreenEntriesTable({
   emptyMessage,
   buildRowHref,
   buildClassicHref,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onToggleEntry,
+  onPublish,
+  onUnpublish,
   onDelete,
 }: CustomScreenEntriesTableProps) {
+  const hasSelection =
+    listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish;
   const columns = getVisibleListColumns(listView);
-  const colSpan = Math.max(columns.length + 1, 2);
+  const resolvedColumns =
+    columns.length > 0
+      ? columns
+      : [
+          {
+            id: "fallback-title",
+            source: "system" as const,
+            field: "title",
+            label: "Record",
+            formatter: "text" as const,
+            visible: true,
+          },
+        ];
+  const colSpan = Math.max(resolvedColumns.length + (hasSelection ? 2 : 1), 2);
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
-            {columns.map((column) => (
+            {hasSelection ? (
+              <TableHead className="w-10 pl-4">
+                <Checkbox
+                  aria-label="Select all records"
+                  checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                  onCheckedChange={() => onToggleAll?.()}
+                />
+              </TableHead>
+            ) : null}
+            {resolvedColumns.map((column) => (
               <TableHead
                 key={column.id}
                 className="px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground first:pl-6"
@@ -71,9 +111,19 @@ export function CustomScreenEntriesTable({
           ) : null}
           {items.map((item) => {
             const rowHref = buildRowHref(item);
+            const isSelected = selectedIds.includes(item.id);
             return (
               <TableRow key={item.id}>
-                {columns.map((column, index) => (
+                {hasSelection ? (
+                  <TableCell className="pl-4">
+                    <Checkbox
+                      aria-label={`Select ${item.title}`}
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleEntry?.(item.id)}
+                    />
+                  </TableCell>
+                ) : null}
+                {resolvedColumns.map((column, index) => (
                   <TableCell key={column.id} className="px-4 py-5 text-sm first:pl-6">
                     {index === 0 ? (
                       <div className="flex flex-col gap-1">
@@ -110,6 +160,16 @@ export function CustomScreenEntriesTable({
                           Classic editor
                         </AdminLink>
                       </DropdownMenuItem>
+                      {item.status === "published" ? (
+                        <DropdownMenuItem onClick={() => onUnpublish?.(item.id)}>
+                          Move to Draft
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => onPublish?.(item.id)}>
+                          Publish
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem variant="destructive" onClick={() => onDelete(item.id)}>
                         <Trash2 className="h-4 w-4" />
                         Delete

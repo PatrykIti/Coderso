@@ -134,7 +134,11 @@ Cache subscriptions must refresh on:
   - records table renders configured labels and formatted values,
   - hidden columns stay hidden,
   - invalid/stale configured fields are skipped or surfaced without crashing,
-  - `New record` routes to `/entries/new` when `createMode` is `editor-view`,
+  - records page search, enabled `List View` filters, and default sort are
+    applied from persisted `definition.listView`,
+  - `New record` opens Custom Screen `Editor View` only when the screen has a
+    writable editor contract and `createMode` is `editor-view`; otherwise it
+    falls back to the existing drawer/classic flow,
   - row click uses `Editor View` or classic editor based on `rowClick`,
   - row and bulk actions remain permission-aware,
   - cache events refresh the table without mount-force refetch loops.
@@ -155,6 +159,6 @@ Cache subscriptions must refresh on:
 
 1. Custom Screen records render from `definition.listView`.
 2. The table uses only entries for the assigned content type.
-3. Row/create/bulk actions use existing entry service contracts.
+3. Row/create/filter/sort/bulk actions use existing entry service contracts.
 4. Cache hydration and background revalidation match Pages-list expectations
    without dirty-state overwrites.

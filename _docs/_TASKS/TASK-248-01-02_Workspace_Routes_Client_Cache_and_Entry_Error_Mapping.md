@@ -104,9 +104,13 @@ export const mapContentEntryError = (error: unknown) => {
     case "entry_validation_failed":
       return new ApiError("entry_validation_failed", "Entry validation failed.", 400);
     case "entry_slug_conflict":
-      return new ApiError("entry_slug_conflict", "Entry slug already exists.", 409);
+      return new ApiError("entry_slug_conflict", "Entry slug already exists.", 409, {
+        field: "slug",
+      });
     case "media_value_invalid":
-      return new ApiError("media_value_invalid", "Media field value is invalid.", 400);
+      return new ApiError("media_value_invalid", "Media field value is invalid.", 400, {
+        field,
+      });
     case "media_asset_missing":
       return new ApiError("media_asset_missing", "Selected media asset was not found.", 404);
     case "media_type_not_allowed":
@@ -114,9 +118,13 @@ export const mapContentEntryError = (error: unknown) => {
     case "relation_target_not_found":
       return new ApiError("relation_target_not_found", "Relation target content type was not found.", 404);
     case "relation_value_invalid":
-      return new ApiError("relation_value_invalid", "Relation field value is invalid.", 400);
+      return new ApiError("relation_value_invalid", "Relation field value is invalid.", 400, {
+        field,
+      });
     case "relation_entry_missing":
-      return new ApiError("relation_entry_missing", "Related entry was not found.", 404);
+      return new ApiError("relation_entry_missing", "Related entry was not found.", 404, {
+        field,
+      });
     case "entry_duplicate_failed":
       return new ApiError("entry_duplicate_failed", "Entry could not be duplicated.", 400);
     case "auth_required":

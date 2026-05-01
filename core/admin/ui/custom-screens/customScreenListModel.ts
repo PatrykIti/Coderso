@@ -30,6 +30,12 @@ export type CustomScreenContentTypeFilterOption = {
   label: string;
 };
 
+export type CustomScreenEntriesFilterOption = {
+  id: string;
+  label: string;
+  options: Array<{ value: string; label: string }>;
+};
+
 const modeLabels = {
   "collection-only": "Collection",
   dashboard: "Dashboard",
@@ -186,6 +192,13 @@ export function buildListFilterFromOption(
   };
 }
 
+const entryStatusLabels: Record<EntrySummary["status"], string> = {
+  published: "Published",
+  draft: "Draft",
+  scheduled: "Scheduled",
+  archived: "Archived",
+};
+
 const formatDate = (value: unknown) => {
   if (typeof value !== "string" && !(value instanceof Date)) return "";
   try {
@@ -229,17 +242,172 @@ export function readSystemEntryField(entry: EntrySummary, field: string) {
   }
 }
 
+const readEntryFieldValue = (input: {
+  entry: EntrySummary;
+  source: "system" | "field";
+  field: string;
+}) =>
+  input.source === "system"
+    ? readSystemEntryField(input.entry, input.field)
+    : input.entry.data?.[input.field];
+
+const normalizeFilterToken = (value: unknown): string | null => {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return value;
+  return String(value);
+};
+
+const resolveFilterOptionLabel = (rawValue: string, field: string) => {
+  if (field === "status" && rawValue in entryStatusLabels) {
+    return entryStatusLabels[rawValue as EntrySummary["status"]];
+  }
+  if (rawValue === "true") return "Yes";
+  if (rawValue === "false") return "No";
+  return rawValue;
+};
+
+const compareEntryValues = (left: unknown, right: unknown) => {
+  if (left === right) return 0;
+  if (left === undefined || left === null || left === "") return 1;
+  if (right === undefined || right === null || right === "") return -1;
+  if (typeof left === "number" && typeof right === "number") return left - right;
+  if (typeof left === "boolean" && typeof right === "boolean") {
+    return Number(left) - Number(right);
+  }
+
+  const leftDate = left instanceof Date ? left.getTime() : Date.parse(String(left));
+  const rightDate = right instanceof Date ? right.getTime() : Date.parse(String(right));
+  if (!Number.isNaN(leftDate) && !Number.isNaN(rightDate)) {
+    return leftDate - rightDate;
+  }
+
+  return String(left).localeCompare(String(right), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+};
+
+const resolveDefaultSortSource = (
+  listView: CustomScreenListViewDefinition,
+  field: string
+): "system" | "field" => {
+  const columnSource = listView.columns.find((column) => column.field === field)?.source;
+  if (columnSource) return columnSource;
+  const filterSource = listView.filters.find((filter) => filter.field === field)?.source;
+  if (filterSource) return filterSource;
+  return systemFieldOptions.some((option) => option.field === field) ? "system" : "field";
+};
+
 export function resolveEntryColumnValue(input: {
   entry: EntrySummary;
   column: CustomScreenListColumn;
 }) {
-  const rawValue =
-    input.column.source === "system"
-      ? readSystemEntryField(input.entry, input.column.field)
-      : input.entry.data?.[input.column.field];
+  const rawValue = readEntryFieldValue({
+    entry: input.entry,
+    source: input.column.source,
+    field: input.column.field,
+  });
   return formatListValue(rawValue, input.column.formatter);
 }
 
 export function getVisibleListColumns(listView: CustomScreenListViewDefinition) {
   return listView.columns.filter((column) => column.visible !== false);
+}
+
+export function buildCustomScreenEntriesFilterOptions(input: {
+  entries: EntrySummary[];
+  listView: CustomScreenListViewDefinition;
+}) {
+  return input.listView.filters
+    .filter((filter) => filter.enabled === true)
+    .map((filter): CustomScreenEntriesFilterOption => {
+      const values = new Map<string, string>();
+      input.entries.forEach((entry) => {
+        const rawValue = readEntryFieldValue({
+          entry,
+          source: filter.source,
+          field: filter.field,
+        });
+        if (Array.isArray(rawValue)) {
+          rawValue.forEach((item) => {
+            const token = normalizeFilterToken(item);
+            if (!token) return;
+            values.set(token, resolveFilterOptionLabel(token, filter.field));
+          });
+          return;
+        }
+        const token = normalizeFilterToken(rawValue);
+        if (!token) return;
+        values.set(token, resolveFilterOptionLabel(token, filter.field));
+      });
+
+      const options = Array.from(values.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((left, right) =>
+          left.label.localeCompare(right.label, undefined, { sensitivity: "base" })
+        );
+
+      return {
+        id: filter.id,
+        label: filter.label,
+        options,
+      };
+    })
+    .filter((filter) => filter.options.length > 0);
+}
+
+export function filterCustomScreenEntries(input: {
+  entries: EntrySummary[];
+  listView: CustomScreenListViewDefinition;
+  query: string;
+  filters: Record<string, string>;
+}) {
+  const normalizedQuery = input.query.trim().toLowerCase();
+  const enabledFilters = input.listView.filters.filter((filter) => filter.enabled === true);
+
+  return input.entries.filter((entry) => {
+    const matchesQuery =
+      !normalizedQuery ||
+      entry.title.toLowerCase().includes(normalizedQuery) ||
+      entry.slug.toLowerCase().includes(normalizedQuery);
+    if (!matchesQuery) return false;
+
+    return enabledFilters.every((filter) => {
+      const selectedValue = input.filters[filter.id];
+      if (!selectedValue || selectedValue === "all") return true;
+      const rawValue = readEntryFieldValue({
+        entry,
+        source: filter.source,
+        field: filter.field,
+      });
+      if (Array.isArray(rawValue)) {
+        return rawValue.some((item) => normalizeFilterToken(item) === selectedValue);
+      }
+      return normalizeFilterToken(rawValue) === selectedValue;
+    });
+  });
+}
+
+export function sortCustomScreenEntries(
+  entries: EntrySummary[],
+  listView: CustomScreenListViewDefinition
+) {
+  const source = resolveDefaultSortSource(listView, listView.defaultSort.field);
+  const direction = listView.defaultSort.direction === "asc" ? 1 : -1;
+
+  return [...entries].sort((left, right) => {
+    const leftValue = readEntryFieldValue({
+      entry: left,
+      source,
+      field: listView.defaultSort.field,
+    });
+    const rightValue = readEntryFieldValue({
+      entry: right,
+      source,
+      field: listView.defaultSort.field,
+    });
+    return compareEntryValues(leftValue, rightValue) * direction;
+  });
 }

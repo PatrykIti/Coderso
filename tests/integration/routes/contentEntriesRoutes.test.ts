@@ -89,6 +89,18 @@ test("mapContentEntryError maps entry domain errors to route ApiErrors", () => {
   expect(mapContentEntryError(new Error("other_error"))).toBeNull();
 });
 
+test("mapContentEntryError preserves field details for domain field errors", () => {
+  const mapped = mapContentEntryError(
+    Object.assign(new Error("entry_slug_conflict"), {
+      field: "slug",
+    })
+  );
+
+  expect(mapped?.details).toEqual({
+    field: "slug",
+  });
+});
+
 test("mapContentEntryError preserves content validation details", () => {
   const mapped = mapContentEntryError(
     new ContentValidationError("entry_validation_failed", [

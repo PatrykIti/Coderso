@@ -2048,11 +2048,14 @@ client reusing these endpoints:
 
 - `entry_validation_failed` -> HTTP 400 with bounded `validation` details when
   schema validation fails.
-- `entry_slug_conflict` -> HTTP 409.
+- `entry_slug_conflict` -> HTTP 409 with `details.field = "slug"` when the UI
+  can bind the conflict to the slug input.
 - `content_type_not_found`, `entry_not_found`, `media_asset_missing`,
   `relation_target_not_found`, and `relation_entry_missing` -> HTTP 404.
 - `media_value_invalid`, `media_type_not_allowed`, `relation_value_invalid`,
-  and `entry_duplicate_failed` -> HTTP 400.
+  and `entry_duplicate_failed` -> HTTP 400. Media/relation field errors may
+  also include `details.field` so admin clients can render inline field
+  feedback without parsing backend-only messages.
 - `auth_required` -> HTTP 401.
 
 Preview response (example):

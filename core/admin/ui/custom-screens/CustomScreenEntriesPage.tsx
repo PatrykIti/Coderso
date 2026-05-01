@@ -15,6 +15,8 @@ import {
   deleteEntry,
   getCachedEntries,
   listEntriesCached,
+  publishEntry,
+  unpublishEntry,
   type EntrySummary,
 } from "@/services/entriesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -23,17 +25,60 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
+import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { EntryCreateDrawer } from "../entries/EntryCreateDrawer";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
+import {
+  CustomScreenEntriesBulkActionsBar,
+  type CustomScreenEntriesBulkActionValue,
+} from "./CustomScreenEntriesBulkActionsBar";
+import { CustomScreenEntriesFilters } from "./CustomScreenEntriesFilters";
 import { CustomScreenEntriesTable } from "./CustomScreenEntriesTable";
+import {
+  buildCustomScreenEntriesFilterOptions,
+  filterCustomScreenEntries,
+  sortCustomScreenEntries,
+} from "./customScreenListModel";
 import { buildCustomScreenWorkspacePath, resolveCustomScreenId } from "./routeParams";
 
 const buildClassicEditorHref = (typeSlug: string, entryId: string) =>
   `/advanced/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entryId)}`;
+
+const fallbackListView = {
+  columns: [],
+  filters: [],
+  defaultSort: { field: "updatedAt", direction: "desc" as const },
+  rowClick: "classic-editor" as const,
+  createMode: "drawer" as const,
+  bulkActions: { delete: true, publish: true, unpublish: true },
+};
+
+const customScreenRecordToasts = createListActionToastAdapter<"publish" | "unpublish" | "delete">({
+  labels: { singular: "record", plural: "records" },
+  actions: {
+    publish: { pastTense: "published", failureVerb: "publish" },
+    unpublish: {
+      pastTense: "moved to draft",
+      failureVerb: "move to draft",
+      errorFallback: "Failed to move record to draft.",
+    },
+    delete: { pastTense: "deleted", failureVerb: "delete" },
+  },
+});
+
+type DeleteRequest = {
+  ids: string[];
+  title: string;
+  description: string;
+  confirmLabel: string;
+};
 
 export function CustomScreenEntriesPage() {
   const { path, navigate } = useAdminRouter();
@@ -65,6 +110,13 @@ export function CustomScreenEntriesPage() {
   const [isLoading, setIsLoading] = useState(() => !(initialScreen && initialContentType));
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<CustomScreenEntriesBulkActionValue | "">("");
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const screenCapabilities = useMemo(
     () =>
@@ -75,6 +127,57 @@ export function CustomScreenEntriesPage() {
       }),
     [screen]
   );
+  const listView = screen?.definition?.listView ?? fallbackListView;
+  const hasBulkActions =
+    listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish;
+  const filterOptions = useMemo(
+    () => buildCustomScreenEntriesFilterOptions({ entries, listView }),
+    [entries, listView]
+  );
+  const activeFilterValues = useMemo(() => {
+    const validIds = new Set(filterOptions.map((filter) => filter.id));
+    return Object.fromEntries(
+      Object.entries(filterValues).filter(([id, value]) => {
+        if (!validIds.has(id)) return false;
+        const options = filterOptions.find((filter) => filter.id === id)?.options ?? [];
+        return value === "all" || options.some((option) => option.value === value);
+      })
+    );
+  }, [filterOptions, filterValues]);
+  const filteredEntries = useMemo(
+    () =>
+      filterCustomScreenEntries({
+        entries,
+        listView,
+        query: searchQuery,
+        filters: activeFilterValues,
+      }),
+    [activeFilterValues, entries, listView, searchQuery]
+  );
+  const sortedEntries = useMemo(
+    () => sortCustomScreenEntries(filteredEntries, listView),
+    [filteredEntries, listView]
+  );
+  const pagination = useListPagination(sortedEntries, {
+    resetKey: JSON.stringify({
+      searchQuery,
+      filterValues: activeFilterValues,
+      filterIds: filterOptions.map((filter) => filter.id),
+      defaultSort: listView.defaultSort,
+    }),
+  });
+  const visibleIds = useMemo(
+    () => pagination.visibleRows.map((entry) => entry.id),
+    [pagination.visibleRows]
+  );
+  const visibleSelectedIds = useMemo(
+    () => selectedIds.filter((id) => visibleIds.includes(id)),
+    [selectedIds, visibleIds]
+  );
+  const selectedCount = visibleSelectedIds.length;
+  const isAllSelected =
+    hasBulkActions && visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   useEffect(() => {
     if (!screen || !screenId) {
@@ -201,39 +304,153 @@ export function CustomScreenEntriesPage() {
     });
   }, [contentTypeSlug, refresh, screenId]);
 
-  const handleDelete = async (entryId: string) => {
+  const handleToggleEntry = (entryId: string) => {
+    setSelectedIds((current) =>
+      current.includes(entryId) ? current.filter((id) => id !== entryId) : [...current, entryId]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedIds(isAllSelected ? [] : visibleIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setBulkAction("");
+  };
+
+  const handleFilterChange = (filterId: string, value: string) => {
+    setFilterValues((current) => ({
+      ...current,
+      [filterId]: value,
+    }));
+  };
+
+  const runDelete = async (ids: string[]) => {
     if (!contentTypeSlug) return;
+    setIsDeleting(true);
     try {
-      await deleteEntry(contentTypeSlug, entryId);
-      await refresh(true);
-      setActionError(null);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setActionError(err.message);
+      const results = await Promise.allSettled(
+        ids.map((entryId) => deleteEntry(contentTypeSlug, entryId))
+      );
+      const summary = customScreenRecordToasts.summarizeBulkAction("delete", ids, results);
+      customScreenRecordToasts.emitBulk(summary);
+      await refresh(true, { background: true });
+      if (!summary.ok) {
+        setActionError(summary.inlineMessage);
       } else {
-        setActionError("Failed to delete record.");
+        setActionError(null);
       }
+      setSelectedIds((current) => current.filter((id) => !ids.includes(id)));
+      setDeleteRequest(null);
+    } catch (err) {
+      setActionError(customScreenRecordToasts.error("delete", err));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleCreated = (entry: { id: string }, _: string, openAfterCreate: boolean) => {
-    if (!screenId) return;
+    if (!contentTypeSlug) return;
     if (openAfterCreate) {
-      navigate(
-        `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entry.id)}`
-      );
+      if (screenId && screenCapabilities.mode === "editor") {
+        navigate(
+          `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entry.id)}`
+        );
+      } else {
+        navigate(buildClassicEditorHref(contentTypeSlug, entry.id));
+      }
       return;
     }
-    refresh(true).catch(() => undefined);
+    refresh(true, { background: true }).catch(() => undefined);
   };
 
   const handleCreate = () => {
     if (!screenId || !screen) return;
-    if (screen.definition?.listView.createMode === "editor-view") {
+    if (screenCapabilities.mode === "editor" && listView.createMode === "editor-view") {
       navigate(buildCustomScreenWorkspacePath({ screenId, entryId: "new" }));
       return;
     }
     setCreateOpen(true);
+  };
+
+  const handlePublish = async (entryId: string) => {
+    if (!contentTypeSlug) return;
+    setActionError(null);
+    try {
+      await publishEntry(contentTypeSlug, entryId);
+      await refresh(true, { background: true });
+      customScreenRecordToasts.success("publish");
+    } catch (err) {
+      setActionError(customScreenRecordToasts.error("publish", err));
+    }
+  };
+
+  const handleUnpublish = async (entryId: string) => {
+    if (!contentTypeSlug) return;
+    setActionError(null);
+    try {
+      await unpublishEntry(contentTypeSlug, entryId);
+      await refresh(true, { background: true });
+      customScreenRecordToasts.success("unpublish");
+    } catch (err) {
+      setActionError(customScreenRecordToasts.error("unpublish", err));
+    }
+  };
+
+  const handleDeleteRequest = (entryId: string) => {
+    setDeleteRequest({
+      ids: [entryId],
+      title: "Delete record?",
+      description: "Delete this record? This cannot be undone.",
+      confirmLabel: "Delete record",
+    });
+  };
+
+  const runBulkAction = async (action: Exclude<CustomScreenEntriesBulkActionValue, "delete">) => {
+    if (!contentTypeSlug || visibleSelectedIds.length === 0) return;
+    setIsBulkWorking(true);
+    setActionError(null);
+    try {
+      const results = await Promise.allSettled(
+        visibleSelectedIds.map((entryId) =>
+          action === "publish"
+            ? publishEntry(contentTypeSlug, entryId)
+            : unpublishEntry(contentTypeSlug, entryId)
+        )
+      );
+      const summary = customScreenRecordToasts.summarizeBulkAction(
+        action,
+        visibleSelectedIds,
+        results
+      );
+      customScreenRecordToasts.emitBulk(summary);
+      await refresh(true, { background: true });
+      if (!summary.ok) {
+        setActionError(summary.inlineMessage);
+      }
+      handleClearSelection();
+    } catch (err) {
+      setActionError(customScreenRecordToasts.error(action, err));
+    } finally {
+      setIsBulkWorking(false);
+    }
+  };
+
+  const handleBulkApply = () => {
+    if (!bulkAction || visibleSelectedIds.length === 0) return;
+    if (bulkAction === "delete") {
+      setDeleteRequest({
+        ids: visibleSelectedIds,
+        title: `Delete ${visibleSelectedIds.length} record${
+          visibleSelectedIds.length === 1 ? "" : "s"
+        }?`,
+        description: "Selected records will be removed permanently.",
+        confirmLabel: visibleSelectedIds.length === 1 ? "Delete record" : "Delete records",
+      });
+      return;
+    }
+    void runBulkAction(bulkAction);
   };
 
   const baseHref = screenId
@@ -273,6 +490,20 @@ export function CustomScreenEntriesPage() {
           }
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              {hasBulkActions && selectedCount > 0 ? (
+                <CustomScreenEntriesBulkActionsBar
+                  selectedCount={selectedCount}
+                  action={bulkAction}
+                  allowPublish={listView.bulkActions.publish}
+                  allowUnpublish={listView.bulkActions.unpublish}
+                  allowDelete={listView.bulkActions.delete}
+                  onActionChange={setBulkAction}
+                  onApply={handleBulkApply}
+                  onClear={handleClearSelection}
+                  isApplying={isBulkWorking}
+                  variant="inline"
+                />
+              ) : null}
               <Button variant="outline" onClick={() => navigate(baseHref)}>
                 Open builder
               </Button>
@@ -315,21 +546,19 @@ export function CustomScreenEntriesPage() {
           </Alert>
         ) : null}
 
+        <CustomScreenEntriesFilters
+          query={searchQuery}
+          filters={activeFilterValues}
+          filterOptions={filterOptions}
+          onQueryChange={setSearchQuery}
+          onFilterChange={handleFilterChange}
+        />
         <CustomScreenEntriesTable
-          items={entries}
-          listView={
-            screen?.definition?.listView ?? {
-              columns: [],
-              filters: [],
-              defaultSort: { field: "updatedAt", direction: "desc" },
-              rowClick: "classic-editor",
-              createMode: "drawer",
-              bulkActions: { delete: true, publish: true, unpublish: true },
-            }
-          }
+          items={pagination.visibleRows}
+          listView={listView}
           buildRowHref={(entry) => {
             if (!screenId || !contentTypeSlug) return "/advanced/custom-screens";
-            return screen?.definition?.listView.rowClick === "classic-editor"
+            return listView.rowClick === "classic-editor"
               ? buildClassicEditorHref(contentTypeSlug, entry.id)
               : buildCustomScreenWorkspacePath({ screenId, entryId: entry.id });
           }}
@@ -338,8 +567,26 @@ export function CustomScreenEntriesPage() {
               ? buildClassicEditorHref(contentTypeSlug, entry.id)
               : "/advanced/entries"
           }
-          onDelete={handleDelete}
-          emptyMessage={isLoading ? "Loading records..." : undefined}
+          selectedIds={visibleSelectedIds}
+          isAllSelected={isAllSelected}
+          isIndeterminate={isIndeterminate}
+          onToggleAll={hasBulkActions ? handleToggleAll : undefined}
+          onToggleEntry={hasBulkActions ? handleToggleEntry : undefined}
+          onPublish={handlePublish}
+          onUnpublish={handleUnpublish}
+          onDelete={handleDeleteRequest}
+          emptyMessage={
+            isLoading
+              ? "Loading records..."
+              : entries.length > 0
+                ? "No records match your current view."
+                : undefined
+          }
+        />
+        <ListPaginationFooter
+          resourceLabel="records"
+          pagination={pagination}
+          isLoading={isLoading}
         />
       </div>
 
@@ -359,6 +606,20 @@ export function CustomScreenEntriesPage() {
         }
         defaultTypeSlug={contentTypeSlug}
         onCreated={handleCreated}
+      />
+      <ConfirmActionDialog
+        open={Boolean(deleteRequest)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteRequest(null);
+        }}
+        title={deleteRequest?.title ?? "Delete record?"}
+        description={deleteRequest?.description ?? "Delete this record? This cannot be undone."}
+        confirmLabel={deleteRequest?.confirmLabel ?? "Delete record"}
+        confirmingLabel="Deleting..."
+        isConfirming={isDeleting}
+        onConfirm={() => {
+          if (deleteRequest) return runDelete(deleteRequest.ids);
+        }}
       />
     </AdminShell>
   );

@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 
+import { ApiClientError } from "../../../core/admin/services/apiClient";
 import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
 import type { EntryDetail } from "../../../core/admin/services/entriesClient";
 import {
@@ -7,6 +8,7 @@ import {
   buildEditorViewUpdatePayload,
   buildInitialEntryDraft,
   hydrateEditorViewDraft,
+  resolveEntryFieldErrorsFromApiError,
   validateEntryDraft,
 } from "../../../core/admin/ui/custom-screens/customScreenEntryDraft";
 import type { CustomScreenEditorViewDefinition } from "../../../core/services/customScreens/customScreenSchemas";
@@ -88,6 +90,20 @@ const editorView: CustomScreenEditorViewDefinition = {
   ],
 };
 
+const readOnlyEditorView: CustomScreenEditorViewDefinition = {
+  saveMode: "entry",
+  blocks: [],
+  bindings: [
+    {
+      id: "notes-value",
+      widgetId: "field-notes",
+      propPath: "value",
+      field: "internalNotes",
+      mode: "read",
+    },
+  ],
+};
+
 test("buildInitialEntryDraft initializes defaults for writable Editor View fields only", () => {
   const draft = buildInitialEntryDraft({ contentType, editorView });
 
@@ -97,6 +113,16 @@ test("buildInitialEntryDraft initializes defaults for writable Editor View field
     budget: 100000,
   });
   expect(draft.originalData).toEqual({});
+});
+
+test("buildInitialEntryDraft does not fall back to the whole schema without writable bindings", () => {
+  const draft = buildInitialEntryDraft({
+    contentType,
+    editorView: readOnlyEditorView,
+  });
+
+  expect(draft.editableFields).toEqual([]);
+  expect(draft.data).toEqual({});
 });
 
 test("hydrateEditorViewDraft preserves existing data and does not overwrite defaults with undefined", () => {
@@ -189,6 +215,37 @@ test("validateEntryDraft reports title, slug, and required editable fields", () 
   ).toEqual({
     title: "Title is required.",
     slug: "Slug is required.",
+    projectStatus: "Project Status is required.",
+  });
+});
+
+test("resolveEntryFieldErrorsFromApiError maps slug conflicts and validation details", () => {
+  expect(
+    resolveEntryFieldErrorsFromApiError({
+      contentType,
+      error: new ApiClientError("entry_slug_conflict", "Entry slug already exists.", 409, {
+        field: "slug",
+      }),
+    })
+  ).toEqual({
+    slug: "Slug already exists.",
+  });
+
+  expect(
+    resolveEntryFieldErrorsFromApiError({
+      contentType,
+      error: new ApiClientError("entry_validation_failed", "Entry validation failed.", 400, {
+        validation: [
+          {
+            instancePath: "",
+            keyword: "required",
+            params: { missingProperty: "projectStatus" },
+            message: "must have required property 'projectStatus'",
+          },
+        ],
+      }),
+    })
+  ).toEqual({
     projectStatus: "Project Status is required.",
   });
 });

@@ -47,6 +47,7 @@ import {
   buildEditorViewUpdatePayload,
   buildInitialEntryDraft,
   hydrateEditorViewDraft,
+  resolveEntryFieldErrorsFromApiError,
   validateEntryDraft,
   type CustomScreenEntryDraft,
 } from "./customScreenEntryDraft";
@@ -212,7 +213,7 @@ export function CustomScreenEntryEditor() {
       }),
     [screen]
   );
-  const canEditInScreen = Boolean(screen?.definition) || screenCapabilities.mode === "editor";
+  const canEditInScreen = screenCapabilities.mode === "editor";
   const isDashboardScreen = screenCapabilities.mode === "dashboard";
   const isCollectionOnlyScreen = screenCapabilities.mode === "collection-only";
 
@@ -460,6 +461,7 @@ export function CustomScreenEntryEditor() {
     }
     setIsSaving(true);
     setError(null);
+    setFieldErrors({});
     try {
       const saved = isCreateMode
         ? await createEntry(contentType.slug, buildEditorViewCreatePayload({ contentType, draft }))
@@ -493,7 +495,16 @@ export function CustomScreenEntryEditor() {
       }
     } catch (err) {
       if (isApiClientError(err)) {
-        setError(err.message);
+        const nextFieldErrors = resolveEntryFieldErrorsFromApiError({
+          contentType,
+          error: err,
+        });
+        if (Object.keys(nextFieldErrors).length > 0) {
+          setFieldErrors(nextFieldErrors);
+          setError("Fix the highlighted fields before saving.");
+        } else {
+          setError(err.message);
+        }
       } else {
         setError("Failed to save record.");
       }

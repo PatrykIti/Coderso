@@ -1,3 +1,4 @@
+import type { ApiClientError } from "@/services/apiClient";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import type { EntryDetail, EntryPayload } from "@/services/entriesClient";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
@@ -12,6 +13,13 @@ export type CustomScreenEntryDraft = {
   editableFields: string[];
   originalData: Record<string, unknown>;
   fieldErrors: Record<string, string>;
+};
+
+type ApiValidationDetail = {
+  instancePath?: string;
+  keyword?: string;
+  message?: string;
+  params?: Record<string, unknown>;
 };
 
 const isEmptyValue = (value: unknown) =>
@@ -50,7 +58,7 @@ export function collectEditorViewWritableFields(
   const configured = collectWritableBindingFields(editorView.bindings).filter((field) =>
     allowed.has(field)
   );
-  return configured.length > 0 ? configured : schemaFields;
+  return configured;
 }
 
 export function buildSchemaDefaultData(input: {
@@ -162,4 +170,98 @@ export function buildEditorViewUpdatePayload(input: {
       ...editedData,
     },
   };
+}
+
+const resolveFieldLabelMap = (contentType: ContentTypeSummary) =>
+  new Map(fieldsFromSchema(contentType.schema).map((field) => [field.name, field.label] as const));
+
+const resolveValidationField = (detail: ApiValidationDetail): string | null => {
+  if (detail.keyword === "required" && typeof detail.params?.missingProperty === "string") {
+    return detail.params.missingProperty;
+  }
+
+  if (!detail.instancePath) return null;
+  const path = detail.instancePath.replace(/^\//, "").split("/")[0];
+  return path ? path.trim() : null;
+};
+
+const resolveValidationMessage = (fieldLabel: string, detail: ApiValidationDetail) => {
+  if (detail.keyword === "required") {
+    return `${fieldLabel} is required.`;
+  }
+  if (detail.keyword === "enum") {
+    return `${fieldLabel} has an invalid value.`;
+  }
+  if (detail.keyword === "type") {
+    return `${fieldLabel} has an invalid value.`;
+  }
+  if (detail.message) {
+    const normalized = detail.message.replace(/^must\s+/i, "must ");
+    return `${fieldLabel} ${normalized}.`;
+  }
+  return `${fieldLabel} is invalid.`;
+};
+
+export function resolveEntryFieldErrorsFromApiError(input: {
+  contentType: ContentTypeSummary;
+  error: ApiClientError;
+}) {
+  const fieldErrors: Record<string, string> = {};
+  const fieldLabels = resolveFieldLabelMap(input.contentType);
+
+  if (input.error.code === "entry_slug_conflict") {
+    fieldErrors.slug = "Slug already exists.";
+    return fieldErrors;
+  }
+
+  if (input.error.code === "entry_validation_failed") {
+    const details = input.error.details;
+    const validationDetails = Array.isArray((details as { validation?: unknown })?.validation)
+      ? (((details as { validation?: unknown }).validation as ApiValidationDetail[]) ?? [])
+      : [];
+
+    validationDetails.forEach((detail) => {
+      const field = resolveValidationField(detail);
+      if (!field || fieldErrors[field]) return;
+      const fieldLabel =
+        field === "title" ? "Title" : field === "slug" ? "Slug" : (fieldLabels.get(field) ?? field);
+      fieldErrors[field] = resolveValidationMessage(fieldLabel, detail);
+    });
+    return fieldErrors;
+  }
+
+  const detailField =
+    typeof (input.error.details as { field?: unknown } | undefined)?.field === "string"
+      ? ((input.error.details as { field?: string }).field ?? null)
+      : null;
+  if (!detailField) return fieldErrors;
+
+  const fieldLabel =
+    detailField === "title"
+      ? "Title"
+      : detailField === "slug"
+        ? "Slug"
+        : (fieldLabels.get(detailField) ?? detailField);
+
+  switch (input.error.code) {
+    case "media_value_invalid":
+      fieldErrors[detailField] = `${fieldLabel} has an invalid media value.`;
+      break;
+    case "media_asset_missing":
+      fieldErrors[detailField] = `${fieldLabel} references a missing media asset.`;
+      break;
+    case "media_type_not_allowed":
+      fieldErrors[detailField] = `${fieldLabel} uses a media type that is not allowed.`;
+      break;
+    case "relation_value_invalid":
+      fieldErrors[detailField] = `${fieldLabel} has an invalid relation value.`;
+      break;
+    case "relation_entry_missing":
+      fieldErrors[detailField] = `${fieldLabel} references a missing related entry.`;
+      break;
+    default:
+      break;
+  }
+
+  return fieldErrors;
 }

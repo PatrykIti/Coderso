@@ -474,7 +474,8 @@ Custom Screens workspace builder V2 can derive default `List View` and
   such as `name`, `summary`, and `projectStatus`;
 - default filters use schema-backed status/select-like fields when available;
 - create/edit drafts initialize writable `Editor View` fields from schema
-  defaults and safe type fallbacks;
+  defaults and safe type fallbacks; screens without writable bindings stay
+  read-only and must not fall back to editing the whole content type schema;
 - persisted Custom Screen definitions validate field references against the
   selected content type schema when that context is available.
 

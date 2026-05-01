@@ -53,6 +53,8 @@ No child task files.
 - Invalid create must surface the route-boundary machine-readable error from
   TASK-248-01-02. Do not add a Custom Screens-only catch-all message that hides
   `entry_validation_failed`, `entry_slug_conflict`, media, or relation errors.
+  When route/domain details include a concrete field, render the feedback
+  inline on that field instead of collapsing everything into a generic banner.
 
 ## Implementation Pseudocode
 

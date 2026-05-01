@@ -46,6 +46,13 @@ export type ContentEntryRouteDeps = {
   validate: (schema: unknown, payload: unknown) => void;
 };
 
+const readDomainField = (error: unknown) =>
+  typeof (error as { field?: unknown } | undefined)?.field === "string"
+    ? ((error as { field?: string }).field ?? undefined)
+    : undefined;
+
+const maybeFieldDetails = (field?: string) => (field ? { field } : undefined);
+
 const mapEntryMetadataError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
@@ -88,6 +95,7 @@ export const mapContentEntryError = (error: unknown) => {
   }
 
   if (!(error instanceof Error)) return null;
+  const field = readDomainField(error);
   switch (error.message) {
     case "content_type_not_found":
       return new ApiError("content_type_not_found", "Content type not found.", 404);
@@ -96,13 +104,30 @@ export const mapContentEntryError = (error: unknown) => {
     case "entry_validation_failed":
       return new ApiError("entry_validation_failed", "Entry validation failed.", 400);
     case "entry_slug_conflict":
-      return new ApiError("entry_slug_conflict", "Entry slug already exists.", 409);
+      return new ApiError("entry_slug_conflict", "Entry slug already exists.", 409, {
+        field: field ?? "slug",
+      });
     case "media_value_invalid":
-      return new ApiError("media_value_invalid", "Media field value is invalid.", 400);
+      return new ApiError(
+        "media_value_invalid",
+        "Media field value is invalid.",
+        400,
+        maybeFieldDetails(field)
+      );
     case "media_asset_missing":
-      return new ApiError("media_asset_missing", "Selected media asset was not found.", 404);
+      return new ApiError(
+        "media_asset_missing",
+        "Selected media asset was not found.",
+        404,
+        maybeFieldDetails(field)
+      );
     case "media_type_not_allowed":
-      return new ApiError("media_type_not_allowed", "Selected media type is not allowed.", 400);
+      return new ApiError(
+        "media_type_not_allowed",
+        "Selected media type is not allowed.",
+        400,
+        maybeFieldDetails(field)
+      );
     case "relation_target_not_found":
       return new ApiError(
         "relation_target_not_found",
@@ -110,9 +135,19 @@ export const mapContentEntryError = (error: unknown) => {
         404
       );
     case "relation_value_invalid":
-      return new ApiError("relation_value_invalid", "Relation field value is invalid.", 400);
+      return new ApiError(
+        "relation_value_invalid",
+        "Relation field value is invalid.",
+        400,
+        maybeFieldDetails(field)
+      );
     case "relation_entry_missing":
-      return new ApiError("relation_entry_missing", "Related entry was not found.", 404);
+      return new ApiError(
+        "relation_entry_missing",
+        "Related entry was not found.",
+        404,
+        maybeFieldDetails(field)
+      );
     case "entry_duplicate_failed":
       return new ApiError("entry_duplicate_failed", "Entry could not be duplicated.", 400);
     case "auth_required":

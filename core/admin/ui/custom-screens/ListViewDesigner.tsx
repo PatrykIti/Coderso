@@ -298,6 +298,59 @@ export function ListViewDesigner({ contentType, value, onChange }: ListViewDesig
             })}
         </div>
       </section>
+
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Bulk actions
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={value.bulkActions.publish}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...value,
+                  bulkActions: {
+                    ...value.bulkActions,
+                    publish: checked === true,
+                  },
+                })
+              }
+            />
+            Publish
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={value.bulkActions.unpublish}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...value,
+                  bulkActions: {
+                    ...value.bulkActions,
+                    unpublish: checked === true,
+                  },
+                })
+              }
+            />
+            Move to Draft
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={value.bulkActions.delete}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...value,
+                  bulkActions: {
+                    ...value.bulkActions,
+                    delete: checked === true,
+                  },
+                })
+              }
+            />
+            Delete
+          </label>
+        </div>
+      </section>
     </div>
   );
 }
