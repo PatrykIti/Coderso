@@ -14,10 +14,20 @@
 Synchronize every route and client seam around the hard-cut workspace flow so
 the admin always treats Custom Screens as `records list -> record editor`.
 
+This leaf owns canonicalization on the admin/client/navigation side. The shared
+`contentEntryRoutes.ts` seam remains generic content-entry CRUD and error
+mapping; include it only where preserving centralized `mapContentEntryError`
+coverage or route registration coverage requires it.
+
+## Sub-Tasks
+
+No child task files.
+
 ## Files to Change
 
 - `core/server/routes/customScreenRoutes.ts`
-- `core/server/routes/contentEntryRoutes.ts`
+- `core/server/routes/contentEntryRoutes.ts` only if shared error mapping or
+  route-registration coverage must change
 - `core/admin/services/customScreensClient.ts`
 - `core/admin/services/entriesClient.ts`
 - `core/admin/ui/custom-screens/routeParams.ts`
@@ -48,18 +58,8 @@ the admin always treats Custom Screens as `records list -> record editor`.
 ## Implementation Pseudocode
 
 ```ts
-export function buildCustomScreenWorkspacePath(input: {
-  screenId: string;
-  entryId?: string;
-}) {
-  if (!input.entryId) {
-    return `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
-  }
-  if (input.entryId === "new") {
-    return `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries/new`;
-  }
-  return `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries/${encodeURIComponent(input.entryId)}`;
-}
+// routeParams.ts remains the owner of the workspace path builder.
+export const buildCustomScreenWorkspacePath = (input) => { ... };
 ```
 
 ```ts
@@ -76,12 +76,23 @@ function normalizeCustomScreenRecord(item: CustomScreenRecord) {
 ```
 
 ```ts
-function buildCustomScreenShortcutNavItem(screen: CustomScreenRecord) {
+function buildCustomScreenShortcutNavItem(basePath: string, screen: CustomScreenRecord) {
   return {
     id: screen.id,
     label: screen.sidebarLabel ?? screen.name,
-    href: buildCustomScreenWorkspacePath({ screenId: screen.id }),
+    href: buildCustomScreenWorkspaceHref(basePath, { screenId: screen.id }),
   };
+}
+```
+
+```ts
+function prefetchCustomScreenWorkspace(basePath: string, screenId: string, entryId?: string) {
+  return prefetchAdminRoute(
+    buildCustomScreenWorkspaceHref(basePath, {
+      screenId,
+      entryId,
+    })
+  );
 }
 ```
 
@@ -110,6 +121,10 @@ function buildCustomScreenShortcutNavItem(screen: CustomScreenRecord) {
   - nav shortcuts and prefetch target the canonical workspace list route,
   - assistant active-surface context resolves the same canonical resources,
   - client cache normalization no longer depends on capability-mode parsing,
+  - `customScreenRoutes` registration and `mapCustomScreenError` coverage stay
+    explicit if the route family changes,
+  - `mapContentEntryError` coverage stays explicit if the shared content-entry
+    seam changes,
   - content-entry route error details remain available to the new editor UI.
 
 ## Documentation Updates Required

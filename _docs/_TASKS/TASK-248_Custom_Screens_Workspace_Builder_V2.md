@@ -33,10 +33,12 @@ evidence, but they should be solved by the V2 workspace model rather than by
 spending time on soon-to-be-legacy UI paths.
 
 Numbering note: this checkout materializes the workspace-builder family as
-`TASK-248`. Do not create a parallel `TASK-249` family unless the whole set is
-renumbered first: filenames, header lines, dependencies, `_docs/_TASKS/README.md`
-rows, internal task references, and later changelog references must move
-together.
+`TASK-248`. Do not create a parallel `TASK-249` family for the same V2
+renumbering pass unless the whole set is renumbered first: filenames, header
+lines, dependencies, `_docs/_TASKS/README.md` rows, internal task references,
+and later changelog references must move together. This does not block a later
+post-closure follow-up family for new Custom Screens scope after `TASK-248` is
+closed.
 
 ## Live Discovery Evidence
 

@@ -18,6 +18,11 @@ This task owns the service/schema/client/route/navigation hard cutover. It does
 not own the visual redesign of the builder or the interactive record canvas;
 those are split into TASK-249-02 and TASK-249-03.
 
+Legacy rows without an existing dedicated editor contract must not be silently
+promoted into writable V3 screens by the read normalizer alone. This area owns
+the explicit migration or rollout gate that separates “V3 shape is readable”
+from “screen is eligible for the canonical active workspace flow.”
+
 ## Sub-Tasks
 
 - [ ] TASK-249-01-01: Definition Schema, Read Migration, and Persistence Hard Cutover

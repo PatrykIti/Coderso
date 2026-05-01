@@ -15,6 +15,10 @@ Turn `List View` into a real table-builder canvas so the user can grow the
 actual records table from the left panel and inspect selected columns on the
 right.
 
+## Sub-Tasks
+
+No child task files.
+
 ## Files to Change
 
 - `core/admin/ui/custom-screens/ListViewDesigner.tsx`

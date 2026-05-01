@@ -14,6 +14,10 @@
 Replay the final workflow end to end, capture the validation matrix, and update
 the source docs and task board only after the V3 workspace cutover is proven.
 
+## Sub-Tasks
+
+No child task files.
+
 ## Files to Change
 
 - `_docs/CMS_API.md`
@@ -22,6 +26,7 @@ the source docs and task board only after the V3 workspace cutover is proven.
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
 - `_docs/_TASKS/TASK-249*.md`
@@ -103,6 +108,7 @@ const validationMatrix = {
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
 

@@ -32,6 +32,9 @@ The delivered contract should be explicit enough that the implementation no
 longer needs `classic-editor`, `drawer`, `collection-only`, or `dashboard`
 escape hatches for active workspace screens.
 
+This family is a post-closure follow-up to `TASK-248`, not a parallel
+renumbering of the same V2 planning pass.
+
 ## Target Workspace UX
 
 The desired screen builder and runtime should behave as follows:
@@ -88,6 +91,9 @@ workspace contract:
 
 - `schemaVersion: 1` and mixed `schemaVersion: 2` records are normalized on
   read into a complete V3 workspace definition,
+- legacy rows without an existing dedicated editor contract must not silently
+  become writable V3 editor screens; this family must define an explicit
+  upgrade or rollout gate before they join the canonical active workspace flow,
 - V3 active workspaces no longer persist or expose `classic-editor`,
   `drawer`, `collection-only`, or `dashboard` branches,
 - V3 records remain tied to a single record-level `contentTypeId`; the content

@@ -27,6 +27,7 @@ and board state.
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
 - task-family docs under `_docs/_TASKS/TASK-249*.md`
@@ -66,6 +67,7 @@ and board state.
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
 

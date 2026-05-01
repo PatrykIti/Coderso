@@ -12,14 +12,20 @@
 ## Overview
 
 Build the admin-editor widget layer needed for a real inline-editable record
-canvas. The goal is to stop relying on `screen-field-value` plus loose bindings
-as the main editing contract.
+canvas. The goal is to extend and harden the existing `screen-*` admin widget
+contract into a real inline-editable record surface, not to replace it with an
+unrelated parallel widget platform.
+
+## Sub-Tasks
+
+No child task files.
 
 ## Files to Change
 
 - `core/admin/ui/custom-screens/EditorViewDesigner.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/registry.ts`
+- `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `core/widgets/registry.ts`
 - `core/widgets/types.ts`
 - `core/widgets/core/index.ts`
@@ -27,8 +33,8 @@ as the main editing contract.
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
-- new admin-editor widgets for inline title, text, number, select, media,
-  gallery, and supported relation editing where needed
+- new `core/widgets/core/screenEntry*.tsx` owner files only when the current
+  `screen-*` contract cannot express the required inline editing behavior
 - `tests/unit/widgets/registry.test.ts`
 - `tests/vitest/ui/screen-widgets-editor-wave.test.tsx`
 - `tests/vitest/customScreens/bindingResolver.test.ts`
@@ -37,6 +43,8 @@ as the main editing contract.
 
 - `admin-editor-view` becomes the only palette surface for new V3 editor
   widgets.
+- Extend the current `screen-record-header`, `screen-field-value`,
+  `screen-field-group`, and `screen-two-column` contracts first.
 - New editing widgets declare explicit selected-entry read/write data access.
 - Legacy `custom-screen-builder` fallback is not used for new V3 create/edit
   insertions.
@@ -45,31 +53,39 @@ as the main editing contract.
   - supported scalar fields,
   - media and gallery content,
   - supported relation summaries/selectors.
+- Every newly introduced widget owner must include:
+  - runtime/schema/defaults/normalizer ownership in `core/widgets/core/*`,
+  - editor surfaces in `core/admin/ui/widgets/editors/ScreenEditors.tsx`,
+  - registry wiring in `core/widgets/core/index.ts` and `core/widgets/registry.ts`.
+- If any widget becomes module-facing instead of admin-only, update
+  `core/widgets/modulePackMatrix.ts`, `_docs/WIDGET_PACK_MATRIX.md`, and the
+  relevant `_docs/_WIDGETS/*` docs in the same slice. Otherwise document that
+  the widget remains admin-only.
 
 ## Implementation Pseudocode
 
 ```ts
 registerWidget({
-  type: "screen-entry-title",
-  title: "Entry Title",
+  type: "screen-record-header",
+  title: "Record Header",
   category: "Entry",
   surfaces: ["admin-editor-view"],
   dataAccess: {
     source: "selected-entry",
     modes: ["read", "write"],
   },
-  schema: screenEntryTitleSchema,
-  defaults: screenEntryTitleDefaults,
+  schema: screenRecordHeaderSchema,
+  defaults: screenRecordHeaderDefaults,
 });
 ```
 
 ```tsx
 function renderAdminEditorWidget(node: ScreenEditorNode) {
   switch (node.type) {
-    case "screen-entry-title":
-      return <InlineTitleControl {...nodeProps} />;
-    case "screen-entry-media":
-      return <InlineMediaControl {...nodeProps} />;
+    case "screen-record-header":
+      return <InlineRecordHeaderControl {...nodeProps} />;
+    case "screen-field-value":
+      return <InlineFieldValueControl {...nodeProps} />;
     default:
       return <WidgetRenderer block={node.block} />;
   }
@@ -105,6 +121,7 @@ function renderAdminEditorWidget(node: ScreenEditorNode) {
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
+- `_docs/WIDGET_PACK_MATRIX.md` when any widget becomes module-facing
 - relevant `_docs/_WIDGETS/*` docs
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion

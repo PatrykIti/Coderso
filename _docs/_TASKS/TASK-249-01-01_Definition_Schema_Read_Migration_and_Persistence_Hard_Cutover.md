@@ -15,6 +15,10 @@ Promote Custom Screens to a strict `schemaVersion: 3` workspace contract and
 ensure that every readable active screen lands in a complete workspace state
 without `collection-only`, `dashboard`, `classic-editor`, or `drawer` residue.
 
+## Sub-Tasks
+
+No child task files.
+
 ## Files to Change
 
 - `core/services/customScreens/customScreenSchemas.ts`
@@ -30,9 +34,10 @@ without `collection-only`, `dashboard`, `classic-editor`, or `drawer` residue.
 - Add `schemaVersion: 3` as the active workspace contract.
 - `schemaVersion: 1` reads must migrate to a complete V3 definition:
   - default `List View` from the selected content type,
-  - default `Editor View` from the selected content type plus supported system
-    fields,
-  - no mode-based fallback states.
+  - preserve or migrate only the editor contract already expressed by the
+    screen's current blocks/bindings,
+  - do not auto-generate a writable `Editor View` for every legacy row,
+  - no mode-based fallback states in the active V3 flow.
 - `schemaVersion: 2` reads must strip removed legacy keys and normalize into V3.
 - V3 writes reject:
   - `rowClick`,
@@ -40,7 +45,8 @@ without `collection-only`, `dashboard`, `classic-editor`, or `drawer` residue.
   - capability-mode persistence,
   - definition-owned `contentTypeId`.
 - Replace capability-mode branching with definition readiness guaranteed by the
-  read normalizer.
+  read normalizer plus an explicit upgrade or rollout gate for legacy rows that
+  are not yet editor-ready.
 
 ## Implementation Pseudocode
 
@@ -70,18 +76,6 @@ type CustomScreenDefinitionV3 = {
 ```
 
 ```ts
-function buildDefaultEditorViewDefinition(contentType: ContentTypeSummary) {
-  const orderedFields = listInlineEditableScreenFields(contentType.schema);
-  return {
-    blocks: orderedFields.map((field) => createDefaultAdminEntryBlock(field)),
-    bindings: orderedFields.map((field) => createDefaultAdminEntryBinding(field)),
-    saveMode: "entry",
-    interactionMode: "inline",
-  };
-}
-```
-
-```ts
 function normalizeCustomScreenDefinitionForRead(input, context) {
   switch (resolveInputVersion(input)) {
     case 1:
@@ -98,6 +92,12 @@ function normalizeCustomScreenDefinitionForRead(input, context) {
 
 ```ts
 function migrateV2ToWorkspaceV3(input, context) {
+  const migratedEditorView = migrateExistingEditorView({
+    blocks: input.editorView?.blocks ?? input.blocks,
+    bindings: input.editorView?.bindings ?? input.bindings,
+    context,
+  });
+
   return {
     schemaVersion: 3,
     listView: normalizeListViewV3(
@@ -109,15 +109,22 @@ function migrateV2ToWorkspaceV3(input, context) {
       },
       context
     ),
-    editorView: normalizeEditorViewV3(
-      {
-        blocks: input.editorView?.blocks,
-        bindings: input.editorView?.bindings,
-        saveMode: "entry",
-        interactionMode: "inline",
-      },
-      context
-    ),
+    editorView: migratedEditorView,
+  };
+}
+```
+
+```ts
+function validateWorkspaceCutoverEligibility(definition: CustomScreenDefinitionV3) {
+  const hasInteractiveEditor =
+    definition.editorView.blocks.length > 0 &&
+    definition.editorView.bindings.some(
+      (binding) => binding.mode === "write" || binding.mode === "readwrite"
+    );
+
+  return {
+    definition,
+    workspaceReady: hasInteractiveEditor,
   };
 }
 ```
@@ -141,9 +148,11 @@ function migrateV2ToWorkspaceV3(input, context) {
 - `bun --cwd core lint:types`
 - Vitest:
   - V1 rows normalize to full V3 list/editor views,
+  - V1/V2 rows without an existing dedicated editor contract do not silently
+    become writable editor screens,
   - V2 rows with `rowClick` / `createMode` normalize to V3 without those keys,
   - V3 writes reject removed keys,
-  - default editor view generation is deterministic by content type,
+  - readiness or upgrade gating remains deterministic and explicit,
   - capability-mode tests are replaced with readiness-focused tests.
 
 ## Documentation Updates Required

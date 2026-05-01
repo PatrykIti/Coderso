@@ -14,6 +14,10 @@
 Make the screen-owned record editor the only active V3 create/edit surface and
 map the shared content-entry contract cleanly into inline widget/form errors.
 
+## Sub-Tasks
+
+No child task files.
+
 ## Files to Change
 
 - `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx`
@@ -113,6 +117,9 @@ function applyEntryRouteErrorsToDraft(error: ApiClientError, draft: EntryDraft) 
   - records list no longer renders or imports `EntryCreateDrawer`,
   - no `Classic editor` action renders for active V3 screens,
   - row/create navigation always uses the screen-owned editor route,
+  - changed route families keep explicit route-registration coverage,
+  - changed route families keep explicit `mapContentEntryError` and
+    `mapCustomScreenError` coverage where those seams are touched,
   - inline errors map correctly from shared entry route responses,
   - dirty-state and cache-refresh protection still hold after the cutover.
 
