@@ -68,8 +68,60 @@ import {
 import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
 import type { Block } from "@/ui/pages/builder/types";
 import { buildListColumnFromOption, listSelectableListFields } from "./customScreenListModel";
+import { applyBindingsToBlocks } from "../../../services/customScreens/bindingResolver";
 
 const normalizeText = (value: string) => value.trim();
+
+const buildPreviewValue = (field: {
+  label: string;
+  type: string;
+  options?: Array<{ value: string } | string>;
+  relation?: { multiple?: boolean };
+}) => {
+  switch (field.type) {
+    case "number":
+      return 120;
+    case "boolean":
+      return true;
+    case "select": {
+      const firstOption = Array.isArray(field.options) ? field.options[0] : undefined;
+      if (typeof firstOption === "string") return firstOption;
+      return firstOption?.value ?? `${field.label} option`;
+    }
+    case "media":
+      return "Hero image";
+    case "relation":
+      return field.relation?.multiple ? ["Related item"] : "Related item";
+    case "richtext":
+      return `${field.label} example content`;
+    default:
+      return `${field.label} preview`;
+  }
+};
+
+const buildEditorPreviewData = (contentType: ContentTypeSummary | null) => {
+  if (!contentType) {
+    return {
+      title: "Project title",
+      slug: "project-title",
+      status: "draft",
+      createdAt: "2026-05-01T08:00:00.000Z",
+      updatedAt: "2026-05-01T09:00:00.000Z",
+      publishedAt: null,
+    };
+  }
+
+  const schemaFields = fieldsFromSchema(contentType.schema);
+  return {
+    title: "Project title",
+    slug: "project-title",
+    status: "draft",
+    createdAt: "2026-05-01T08:00:00.000Z",
+    updatedAt: "2026-05-01T09:00:00.000Z",
+    publishedAt: null,
+    ...Object.fromEntries(schemaFields.map((field) => [field.name, buildPreviewValue(field)])),
+  };
+};
 
 const collectBlockTypes = (blocks: Block[]): string[] => {
   const result = new Set<string>();
@@ -170,6 +222,14 @@ export function CustomScreenEditorPage() {
   const contentFields = useMemo(
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
     [selectedContentType]
+  );
+  const editorPreviewData = useMemo(
+    () => buildEditorPreviewData(selectedContentType),
+    [selectedContentType]
+  );
+  const editorPreviewBlocks = useMemo(
+    () => applyBindingsToBlocks(blocks, bindings, editorPreviewData) as Block[],
+    [bindings, blocks, editorPreviewData]
   );
   const previewCapabilities = useMemo(
     () => resolveCustomScreenCapabilities({ blocks, bindings }),
@@ -810,7 +870,7 @@ export function CustomScreenEditorPage() {
                 }}
               >
                 <BlockList
-                  blocks={blocks}
+                  blocks={editorPreviewBlocks}
                   className="p-4"
                   widgetRegistry={widgetRegistry}
                   selectedId={selectedId}
