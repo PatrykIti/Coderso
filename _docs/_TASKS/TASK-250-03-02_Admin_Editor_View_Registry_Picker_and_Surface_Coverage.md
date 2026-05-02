@@ -65,7 +65,8 @@ expect(leftPicker).not.toContain("Feature Grid");
 const pickerContract = {
   whenNoContentType: "empty or gated admin-editor-view set",
   whenContentTypeSelected: "only concrete screen widgets for admin-editor-view",
-  legacyCompatibility: "custom-screen-builder remains separate and does not leak Hero into admin-editor-view",
+  pickerIsolation: "Hero/public widgets do not appear in the left admin-editor-view picker",
+  selectedWidgetCompatibility: "existing non-screen blocks already present on a legacy screen may still resolve in widget settings without being re-exposed in the left picker",
 };
 ```
 
@@ -88,7 +89,9 @@ const pickerContract = {
   - concrete `screen-*` metadata is asserted for `admin-editor-view`,
   - picker composition is asserted through `CustomScreenEditorPage`,
   - runtime registry re-registration still covers screen widgets,
-  - selected-content-type gating is asserted for widgets that require it.
+  - selected-content-type gating is asserted for widgets that require it,
+  - tests distinguish left-picker isolation from already-present legacy block
+    compatibility in the selected-widget/settings path.
 
 ## Documentation Updates Required
 
@@ -102,3 +105,5 @@ const pickerContract = {
 2. The actual left picker for `admin-editor-view` is test-covered.
 3. Data-access and content-type gating for concrete screen widgets are
    explicitly asserted.
+4. Left-picker isolation is covered without deleting legacy selected-widget
+   compatibility for existing screens.

@@ -35,6 +35,7 @@ No child task files.
 ## Files to Change
 
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
+- `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
@@ -54,6 +55,17 @@ function BindingFriendlyTextControl(props: {
 }) {
   // show the literal value editor, current binding state, and a direct affordance
   // to focus the matching prop path in the existing FieldBindingPanel flow
+}
+```
+
+```tsx
+function focusEditorDataTab(input: {
+  propPath: string;
+  setActiveInspectorTab: (tab: "screen" | "data" | "widget") => void;
+  setFocusedBindingPropPath: (propPath: string | null) => void;
+}) {
+  input.setActiveInspectorTab("data");
+  input.setFocusedBindingPropPath(input.propPath);
 }
 ```
 
@@ -120,5 +132,7 @@ function summarizeScreenWidgetBindingState(input: {
    literal-only widgets.
 2. The widget editor layer complements the existing binding panel instead of
    reimplementing it.
-3. Existing removable style controls stay removable through explicit `clear` /
+3. The “jump to binding” affordance is wired to the real `Data` tab owner in
+   `CustomScreenEditorPage`, not only mocked inside widget-local state.
+4. Existing removable style controls stay removable through explicit `clear` /
    `none` semantics.

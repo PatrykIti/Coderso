@@ -11,9 +11,24 @@
 
 ## Overview
 
-Close the most obvious configuration-surface gap between screen layout widgets
-and mature public widgets by expanding the editor affordances for
+Close the remaining concrete configuration-surface gaps between screen layout
+widgets and mature shared widgets by expanding the editor affordances for
 `screen-field-group` and `screen-two-column`.
+
+Live code already has a baseline here:
+
+- variant selection exists,
+- label/content inputs exist,
+- gap control already exists for `screen-two-column`,
+- clearable chrome already exists.
+
+This leaf is therefore not generic “Hero parity for everything”. It is about
+the next concrete layer above the current baseline:
+
+- better slot intent guidance,
+- stronger density/spacing/chrome affordances,
+- more deliberate editor ergonomics for layout widgets that already have the
+  basics.
 
 Any newly added layout chrome controls must preserve the repo standard that
 non-essential colors, borders, and similar styles can be removed through
@@ -131,7 +146,8 @@ const regressionMatrix = [
 ## Acceptance Criteria
 
 1. `screen-field-group` and `screen-two-column` stop feeling like thin MVP
-   editors.
+   editors in the specific areas above, not through indiscriminate public-widget
+   scope growth.
 2. Their editor surface becomes materially closer to other mature shared
    widgets.
 3. Added style/chrome controls can be removed cleanly with `none` / `clear`.
