@@ -39,7 +39,11 @@ intentionally differs from public widgets.
 
 - Visibility: internal admin QA flow and source docs only.
 - Auth model: authenticated admin session for any replay step.
-- RBAC: replay uses only existing content permissions.
+- RBAC:
+  - replayed screen-definition save paths use `content:write`,
+  - replayed record-save paths use `content:write`,
+  - any publish-state replay remains under `content:publish`,
+  - docs-only updates do not introduce any new permission boundary.
 - CSRF: unchanged current admin clients for any replayed write.
 - Rate-limit bucket: unchanged current admin buckets.
 - Reject-unknown validation: docs and replay evidence must match the final

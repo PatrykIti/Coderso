@@ -47,9 +47,11 @@ const validationMatrix = {
     "screenLayoutEditors",
     "screenWidgets",
     "custom-screen-binding-panel",
+    "custom-screen-editor-binding-flow",
     "custom-screens-page",
     "custom-screen-workspace-preview-dialog",
     "custom-screen-records",
+    "custom-screen-record-interactions",
     "custom-screen-widget-picker",
   ],
   bunBaseline: [
@@ -75,7 +77,11 @@ Record the lane intent explicitly in the closure note:
 
 - Visibility: internal QA/docs flow only.
 - Auth model: authenticated admin session if replay is used.
-- RBAC: unchanged existing content permissions.
+- RBAC:
+  - replayed screen-definition save paths use `content:write`,
+  - replayed record-save paths use `content:write`,
+  - any publish-state replay remains under `content:publish`,
+  - docs-only updates do not introduce any new permission boundary.
 - CSRF: unchanged existing admin clients.
 - Rate-limit bucket: unchanged current admin buckets.
 - Reject-unknown validation: closure docs must match the final `screen-*`

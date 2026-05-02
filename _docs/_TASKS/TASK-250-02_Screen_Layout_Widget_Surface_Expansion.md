@@ -34,7 +34,11 @@ editing in the record canvas.
 
 - Visibility: internal admin UI only.
 - Auth model: authenticated admin session.
-- RBAC: screen config and record writes keep existing `content:*` permissions.
+- RBAC:
+  - screen definition / widget configuration writes require `content:write`,
+  - inline record edits in the dedicated editor continue to require
+    `content:write`,
+  - no new publish action is introduced by this leaf.
 - CSRF: unchanged current admin client path.
 - Rate-limit bucket: existing `admin_write`.
 - Reject-unknown validation: all widget surface expansion must remain within

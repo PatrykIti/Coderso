@@ -51,6 +51,7 @@ No child task files.
 - `core/widgets/core/screenFieldValue.tsx`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- new `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 
 ## Implementation Pseudocode
 
@@ -168,6 +169,9 @@ function summarizeScreenWidgetBindingState(input: {
     duplicating binding state management,
   - “jump to binding” focuses the real `Data` tab and prop-path owner in
     `CustomScreenEditorPage` / `FieldBindingPanel`,
+  - page-level handoff from selected widget settings into the `Data` tab is
+    covered by a happy-dom/ui-integration flow instead of only by static page
+    rendering,
   - no invalid prop targets such as `align` or `style.*` reappear in the
     record-header flow,
   - touched style controls keep `clear` / `none` behavior.

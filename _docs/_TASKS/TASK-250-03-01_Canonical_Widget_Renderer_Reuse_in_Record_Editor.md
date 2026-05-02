@@ -109,7 +109,12 @@ const parityFixtures = [
 
 - Visibility: internal admin UI only.
 - Auth model: authenticated admin session.
-- RBAC: unchanged; this area does not change permissions.
+- RBAC:
+  - no new permissioned mutation is introduced by this leaf,
+  - surrounding screen-definition writes remain under `content:write` if any
+    screen save seam is touched,
+  - surrounding entry-save flows remain under `content:write` for the dedicated
+    editor.
 - CSRF: unchanged current entry/screen write path.
 - Rate-limit bucket: unchanged current admin buckets.
 - Reject-unknown validation: all rendering remains backed by shared widget

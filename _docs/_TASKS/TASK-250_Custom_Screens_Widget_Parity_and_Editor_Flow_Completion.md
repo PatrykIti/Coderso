@@ -103,8 +103,10 @@ rendering behavior and instead use the canonical widget runtime path.
    keeping the binding panel as the owner of binding state.
 3. Expand the layout/config surface for screen layout widgets where the current
    admin UX is too limited.
-4. Remove runtime duplication between preview and dedicated record editor by
-   reusing the canonical widget render path.
+4. Remove unnecessary runtime duplication between preview and dedicated record
+   editor by reusing one canonical read-only widget render path while keeping
+   dedicated writable editor behavior where the record flow intentionally
+   differs.
 5. Add registry, picker, editor, runtime, and interaction coverage before
    closing docs/changelog.
 
@@ -178,8 +180,9 @@ rendering behavior and instead use the canonical widget runtime path.
    one generic form.
 3. Screen widgets with `selected-entry` semantics expose binding-aware editor
    affordances instead of text-only literal forms.
-4. The dedicated record editor stops drifting away from canonical preview/widget
-   rendering behavior.
+4. The dedicated record editor stops drifting away from shared read-only
+   preview/widget rendering behavior while preserving its dedicated writable
+   editing UX.
 5. Screen widget test coverage is materially expanded for registry, picker,
    runtime, preview, editor interaction, and `none` / `clear` style-removal
    seams.

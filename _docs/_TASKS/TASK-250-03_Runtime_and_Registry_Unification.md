@@ -28,8 +28,8 @@ stack:
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
+- `core/widgets/registry.ts`
 - `core/admin/ui/widgets/registry.ts`
-- `core/widgets/core/index.ts`
 - `tests/vitest/widgets/screenWidgets.test.tsx`
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `tests/unit/widgets/registry.test.ts`
@@ -39,7 +39,11 @@ stack:
 
 - Visibility: internal admin UI and shared widget runtime only.
 - Auth model: unchanged authenticated admin session.
-- RBAC: unchanged; this area should not invent new write channels.
+- RBAC:
+  - no new permissioned mutation is introduced by this task area,
+  - existing screen-definition writes remain under `content:write`,
+  - existing entry-save flows remain under `content:write` where surrounding
+    editor behavior is touched.
 - CSRF: unchanged current admin clients.
 - Rate-limit bucket: unchanged current admin buckets.
 - Reject-unknown validation:
@@ -61,6 +65,6 @@ stack:
 
 ## Acceptance Criteria
 
-1. Preview and dedicated record editor stop maintaining divergent rendering
-   behavior for the same `screen-*` widgets.
+1. Preview and dedicated record editor stop maintaining unnecessary divergent
+   read-only rendering behavior for the same `screen-*` widgets.
 2. `admin-editor-view` registry/picker metadata is asserted end to end.

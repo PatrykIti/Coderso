@@ -33,6 +33,7 @@ No child task files.
 - `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`
 - `tests/vitest/ui/custom-screen-records.test.tsx`
+- new `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 
 ## Implementation Pseudocode
 
@@ -83,6 +84,9 @@ function preserveSelectedElementAcrossRefresh(input: {
   - selected-element rail focuses the correct bound fields,
   - pencil affordance opens element-scoped editing flow,
   - selection remains stable through save/refresh where expected,
+  - the interaction-heavy flow is covered by a dedicated happy-dom /
+    ui-integration suite instead of only by static `renderAdminUi` smoke
+    assertions,
   - current behavior regressions are distinguished from genuinely new behavior.
 
 ## Documentation Updates Required
