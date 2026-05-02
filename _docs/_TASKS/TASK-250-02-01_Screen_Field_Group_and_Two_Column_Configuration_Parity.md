@@ -34,21 +34,66 @@ No child task files.
 ## Implementation Pseudocode
 
 ```tsx
-<ScreenTwoColumnVisualEditor
-  variantCards
-  gapScaleControl
-  columnChromeControls
-  slotGuidance
-/>
+function ScreenTwoColumnVisualEditor(props) {
+  // 1. choose variant (`balanced` / `aside`)
+  // 2. configure gap through token-friendly controls
+  // 3. configure left/right labels and column chrome
+  // 4. explain slot intent so the user knows what belongs in each column
+}
 ```
 
 ```tsx
-<ScreenFieldGroupVisualEditor
-  titleDescriptionControls
-  surfacePresetControls
-  spacingOrDensityControls
-  slotIntentGuidance
-/>
+function ScreenFieldGroupVisualEditor(props) {
+  // 1. edit group label/description
+  // 2. configure panel chrome and any density/spacing controls
+  // 3. explain the slot intent for grouped screen fields
+}
+```
+
+```ts
+function updateScreenTwoColumnData(input: {
+  current: ScreenTwoColumnData;
+  patch: Partial<ScreenTwoColumnData>;
+}) {
+  return normalizeScreenTwoColumnData({
+    ...input.current,
+    ...input.patch,
+  });
+}
+```
+
+```ts
+function updateScreenFieldGroupData(input: {
+  current: ScreenFieldGroupData;
+  patch: Partial<ScreenFieldGroupData>;
+}) {
+  return normalizeScreenFieldGroupData({
+    ...input.current,
+    ...input.patch,
+  });
+}
+```
+
+```ts
+const regressionMatrix = [
+  {
+    widget: "screen-two-column",
+    assertions: [
+      "variant switch updates visual state",
+      "gap control persists normalized token",
+      "column chrome supports none/clear",
+      "slot guidance remains visible",
+    ],
+  },
+  {
+    widget: "screen-field-group",
+    assertions: [
+      "title/description persist normalized values",
+      "panel chrome supports none/clear",
+      "slot guidance remains visible",
+    ],
+  },
+];
 ```
 
 ## Security Contract
@@ -73,7 +118,9 @@ No child task files.
   - group/two-column editors cover more than style-clear regressions,
   - gap, variant, and layout-oriented controls are asserted,
   - runtime widgets remain valid through shared schema normalization,
-  - any new chrome controls are covered for `none` / `clear` behavior.
+  - any new chrome controls are covered for `none` / `clear` behavior,
+  - the regression matrix above is represented in concrete editor tests rather
+    than left implicit.
 
 ## Documentation Updates Required
 
@@ -88,3 +135,5 @@ No child task files.
 2. Their editor surface becomes materially closer to other mature shared
    widgets.
 3. Added style/chrome controls can be removed cleanly with `none` / `clear`.
+4. The implementer can follow explicit helper/data-flow/test expectations
+   without rediscovering the layout widget strategy during coding.
