@@ -26,6 +26,9 @@
 - `CONTENT_LIST.md` - Dynamic content list
 - `POSTS_FEED.md` - Dynamic posts feed (latest/featured/category/manual)
 - `ENTRY_TEASER.md` - Dynamic single-entry teaser
+- `SCREEN_RECORD_HEADER.md` - Screen record summary header
+- `SCREEN_FIELD_VALUE.md` - Screen field value row/card
+- `SCREEN_FIELD_GROUP.md` - Screen field-group layout panel
 - `SCREEN_TWO_COLUMN.md` - Screen two-column layout
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

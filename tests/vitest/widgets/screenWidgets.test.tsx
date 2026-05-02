@@ -4,6 +4,7 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import { CustomScreenPreview } from "../../../core/admin/ui/custom-screens/CustomScreenPreview";
+import { ScreenWidgetReadOnlyBlock } from "../../../core/admin/ui/custom-screens/screenWidgetRenderBridge";
 
 import { ScreenFieldValueBlock } from "../../../core/widgets/core/screenFieldValue";
 import { ScreenRecordHeaderBlock } from "../../../core/widgets/core/screenRecordHeader";
@@ -166,4 +167,57 @@ test("CustomScreenPreview applies bindings before rendering screen widgets", () 
   expect(html).toContain("Villa Aurora");
   expect(html).not.toContain("Untitled record");
   expect(html).not.toContain("Invalid widget data");
+});
+
+test("ScreenWidgetReadOnlyBlock reuses WidgetRenderer visibility rules for screen widgets", () => {
+  const html = renderAdminUi(
+    <ScreenWidgetReadOnlyBlock
+      block={{
+        id: "header-hidden",
+        type: "screen-record-header",
+        data: {
+          title: "Hidden header",
+        },
+        visibility: {
+          enabled: false,
+          devices: ["desktop"],
+        },
+      }}
+    />
+  );
+
+  expect(html).toBe("");
+});
+
+test("ScreenWidgetReadOnlyBlock preserves nested override rendering for slotted screen layouts", () => {
+  const html = renderAdminUi(
+    <ScreenWidgetReadOnlyBlock
+      block={{
+        id: "group-1",
+        type: "screen-field-group",
+        variant: "card",
+        data: {
+          title: "Details",
+        },
+        slots: {
+          content: [
+            {
+              id: "field-1",
+              type: "screen-field-value",
+              variant: "stacked",
+              data: {
+                label: "Headline",
+                value: "Project Aurora",
+              },
+            },
+          ],
+        },
+      }}
+      renderNestedBlock={(child) => <div data-nested-id={child.id}>nested:{child.id}</div>}
+    />
+  );
+
+  expect(html).toContain('data-nested-id="field-1"');
+  expect(html).toContain("nested:");
+  expect(html).toContain("field-1");
 });

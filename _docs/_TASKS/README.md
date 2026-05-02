@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 68 tasks
+- **To Do:** 87 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1420 tasks
+- **Done:** 1453 tasks
 
 ---
 
@@ -47,18 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-251-03 | Binding Panel Prop Coverage and Prop-Centric Cards | High | Large | Business area: replace ordinal binding cards with widget-prop-centric mapping and full bindable prop coverage |
 | TASK-251-03-01 | Widget-Owned Bindable Prop Targets and Data-Tab Cards | High | Large | Technical leaf: declare bindable prop targets in widget contracts and render prop-labeled Data tab cards from that shared source of truth |
 | TASK-251-04 | QA, Docs, and Closure | Medium | Medium | Business area: targeted preview/binding/list-canvas validation plus docs, board, and changelog synchronization |
-| TASK-250 | Custom Screens Widget Parity and Editor Flow Completion | High | Very Large | Follow-up: keep the shared widget foundation but bring `screen-*` editor depth, binding UX, runtime parity, and coverage closer to mature widgets like Hero |
-| TASK-250-01 | Screen Widget Editor Architecture and Mode Parity | High | Large | Business area: stop aliasing one form across `wizard/visual/advanced` and make screen widget editors meaningfully mode-aware |
-| TASK-250-01-01 | Distinct Wizard, Visual, and Advanced Flows for `screen-*` | High | Large | Technical leaf: split editor modes for screen widgets instead of reusing one shared editor implementation |
-| TASK-250-01-02 | Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value` | High | Large | Technical leaf: make the widget editors themselves aware of bindings and selected-entry semantics |
-| TASK-250-02 | Screen Layout Widget Surface Expansion | High | Large | Business area: expand screen layout widget configurability and strengthen selected-element editing flow in the record canvas |
-| TASK-250-02-01 | `screen-field-group` and `screen-two-column` Configuration Parity | High | Medium | Technical leaf: bring layout widget controls closer to mature shared widget editors |
-| TASK-250-02-02 | Selected Element Interaction and Element-Scoped Editing Flow | High | Large | Technical leaf: strengthen canvas element activation and element-scoped editing in the screen-owned record editor |
-| TASK-250-03 | Runtime and Registry Unification | High | Large | Business area: remove preview/runtime drift and add end-to-end assertions for the real `admin-editor-view` widget contract |
-| TASK-250-03-01 | Canonical Widget Renderer Reuse in the Dedicated Record Editor | High | Large | Technical leaf: reduce duplicated screen-widget rendering logic between preview and record editor |
-| TASK-250-03-02 | `admin-editor-view` Registry, Picker, and Surface Contract Coverage | High | Medium | Technical leaf: assert concrete screen widget metadata and the actual left picker composition end to end |
-| TASK-250-04 | QA, Docs, and Closure | Medium | Medium | Business area: validation matrix, docs, board, and changelog closure for screen widget parity work |
-| TASK-250-04-01 | Screen Widget Editor/Runtime Test Matrix and Documentation Closure | Medium | Medium | Technical leaf: record the parity validation matrix and sync docs/changelog/board |
 | TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
@@ -125,6 +113,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-250 | Custom Screens Widget Parity and Editor Flow Completion | High | Very Large | Done: screen widgets now use mode-specific editors, binding-aware controls, canonical read-only rendering, nested selected-element ownership, and broader parity coverage |
+| TASK-250-02 | Screen Layout Widget Surface Expansion | High | Large | Done: layout editor surface work is paired with nested selected-element rail ownership in the record editor |
+| TASK-250-02-02 | Selected Element Interaction and Element-Scoped Editing Flow | High | Large | Done: nested child selection now hydrates the right-side rail correctly and survives refresh without snapping back to the parent |
+| TASK-250-03 | Runtime and Registry Unification | High | Large | Done: preview and record-editor read paths now reuse the canonical renderer contract, with stronger registry coverage for `admin-editor-view` |
+| TASK-250-03-01 | Canonical Widget Renderer Reuse in the Dedicated Record Editor | High | Large | Done: `ScreenWidgetReadOnlyBlock` is now a thin `WidgetRenderer` pass-through while writable `screen-field-value` stays screen-owned |
+| TASK-250-03-02 | `admin-editor-view` Registry, Picker, and Surface Contract Coverage | High | Medium | Done: runtime-registry assertions now cover concrete `screen-*` surfaces/data-access and the picker remains screen-widget-only |
+| TASK-250-04 | QA, Docs, and Closure | Medium | Medium | Done: docs, board, changelog, targeted tests, and `gates:coderso` are synchronized for the finished parity follow-up |
+| TASK-250-04-01 | Screen Widget Editor/Runtime Test Matrix and Documentation Closure | Medium | Medium | Done: closure notes now reflect the final renderer path, nested element flow, widget docs, and validation matrix |
+| TASK-250-01 | Screen Widget Editor Architecture and Mode Parity | High | Large | Done: screen widget editors no longer alias one form; `wizard`, `visual`, and `advanced` now have distinct responsibilities |
+| TASK-250-01-01 | Distinct Wizard, Visual, and Advanced Flows for `screen-*` | High | Large | Done: each screen widget now exposes separate onboarding, day-to-day editing, and expert-control surfaces |
+| TASK-250-01-02 | Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value` | High | Large | Done: header/value editors now expose binding-state hints and `Data` tab shortcuts without duplicating binding ownership |
+| TASK-250-02-01 | `screen-field-group` and `screen-two-column` Configuration Parity | High | Medium | Done: layout shells now document slot guidance, gap control, and clearable chrome closer to mature shared widget editors |
 | TASK-249 | Custom Screens Workspace V3 Legacy Path Removal | High | Very Large | Done: Custom Screens now use a workspace-first V3 contract, table-canvas List View, screen-owned editor runtime, sidebar readiness gating, and no active classic-editor or drawer fallback |
 | TASK-249-01 | Workspace V3 Contract, Routes, and Legacy Path Removal | High | Large | Done: V3 read/write contract, canonical workspace routing, sidebar shortcut gate, and assistant route parsing were hard-cut away from legacy active-path branches |
 | TASK-249-01-01 | Definition Schema, Read Migration, and Persistence Hard Cutover | High | Large | Done: `schemaVersion: 3` is active, V1/V2 reads migrate safely, explicit V2 write payloads are rejected, and legacy rows no longer auto-promote to writable editors |

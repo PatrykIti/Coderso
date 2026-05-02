@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Widget Editors
 **Estimated Effort:** Large
 **Dependencies:** TASK-250
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-02
 
 ---
 
@@ -20,8 +21,8 @@ the same editor implementation. This task makes those modes meaningful.
 
 ## Sub-Tasks
 
-- [ ] TASK-250-01-01: Distinct Wizard, Visual, and Advanced Flows for `screen-*`
-- [ ] TASK-250-01-02: Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value`
+- [x] TASK-250-01-01: Distinct Wizard, Visual, and Advanced Flows for `screen-*`
+- [x] TASK-250-01-02: Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value`
 
 ## Files to Change
 

@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Widget Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-250-01, TASK-250-02
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-02
 
 ---
 
@@ -20,8 +21,8 @@ stack:
 
 ## Sub-Tasks
 
-- [ ] TASK-250-03-01: Canonical Widget Renderer Reuse in the Dedicated Record Editor
-- [ ] TASK-250-03-02: `admin-editor-view` Registry, Picker, and Surface Contract Coverage
+- [x] TASK-250-03-01: Canonical Widget Renderer Reuse in the Dedicated Record Editor
+- [x] TASK-250-03-02: `admin-editor-view` Registry, Picker, and Surface Contract Coverage
 
 ## Files to Change
 

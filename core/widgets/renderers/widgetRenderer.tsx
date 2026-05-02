@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { getWidget } from "../registry";
 import { normalizeWidgetBlock } from "../validator";
@@ -107,10 +107,12 @@ export function WidgetRenderer({
   block,
   pageDefaults,
   previewDevice,
+  renderBlock,
 }: {
   block: WidgetBlock;
   pageDefaults?: WidgetRendererPageDefaults;
   previewDevice?: DeviceTarget;
+  renderBlock?: (block: WidgetBlock) => ReactNode;
 }) {
   const def = getWidget(block.type);
   if (!def) {
@@ -121,8 +123,7 @@ export function WidgetRenderer({
   try {
     normalized = normalizeWidgetBlock(block);
   } catch (error) {
-    const detail =
-      error instanceof Error && error.message ? ` (${error.message})` : "";
+    const detail = error instanceof Error && error.message ? ` (${error.message})` : "";
     const isDev = process.env.NODE_ENV !== "production";
     return (
       <MissingWidget
@@ -135,10 +136,8 @@ export function WidgetRenderer({
   if (
     previewDevice &&
     Array.isArray(normalized.visibility?.devices) &&
-    (
-      normalized.visibility.devices.length === 0 ||
-      !normalized.visibility.devices.includes(previewDevice)
-    )
+    (normalized.visibility.devices.length === 0 ||
+      !normalized.visibility.devices.includes(previewDevice))
   ) {
     return null;
   }
@@ -147,22 +146,16 @@ export function WidgetRenderer({
   const slots = normalized.slots;
   const legacyChildren = Array.isArray(normalized.children)
     ? normalized.children
-    : slots?.default ?? [];
+    : (slots?.default ?? []);
   const hasSlotDefinitions = Array.isArray(def.slots) && def.slots.length > 0;
   const backgroundStyle: CSSProperties = {
     backgroundColor: layout.background?.color ?? "transparent",
-    backgroundImage: layout.background?.image
-      ? `url(${layout.background.image})`
-      : undefined,
+    backgroundImage: layout.background?.image ? `url(${layout.background.image})` : undefined,
     backgroundSize: layout.background?.image ? "cover" : undefined,
     backgroundPosition: layout.background?.image ? "center" : undefined,
   };
 
-  const container = resolveContainerToken(
-    layout.container,
-    defaultLayout.container,
-    pageDefaults
-  );
+  const container = resolveContainerToken(layout.container, defaultLayout.container, pageDefaults);
   const paddingTop = resolveSpacingToken(
     layout.padding.top,
     defaultLayout.padding.top,
@@ -205,16 +198,22 @@ export function WidgetRenderer({
           previewDevice={previewDevice}
           pageDefaults={pageDefaults}
           blockId={normalized.id}
+          renderBlock={renderBlock}
         />
         {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">
             {legacyChildren.map((child) => (
-              <WidgetRenderer
-                key={child.id}
-                block={child}
-                pageDefaults={pageDefaults}
-                previewDevice={previewDevice}
-              />
+              <div key={child.id}>
+                {renderBlock ? (
+                  renderBlock(child)
+                ) : (
+                  <WidgetRenderer
+                    block={child}
+                    pageDefaults={pageDefaults}
+                    previewDevice={previewDevice}
+                  />
+                )}
+              </div>
             ))}
           </div>
         ) : null}

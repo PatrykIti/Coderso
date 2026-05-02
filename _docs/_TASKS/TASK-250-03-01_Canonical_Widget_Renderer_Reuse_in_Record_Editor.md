@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Widget Runtime Parity
 **Estimated Effort:** Large
 **Dependencies:** TASK-250-03
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-02
 
 ---
 

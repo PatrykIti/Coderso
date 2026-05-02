@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Widgets + Admin/UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-249, TASK-220, TASK-242, TASK-244
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-02
 
 ---
 
@@ -82,17 +83,17 @@ rendering behavior and instead use the canonical widget runtime path.
 
 ## Sub-Tasks
 
-- [ ] TASK-250-01: Screen Widget Editor Architecture and Mode Parity
-- [ ] TASK-250-01-01: Distinct Wizard, Visual, and Advanced Flows for `screen-*`
-- [ ] TASK-250-01-02: Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value`
-- [ ] TASK-250-02: Screen Layout Widget Surface Expansion
-- [ ] TASK-250-02-01: `screen-field-group` and `screen-two-column` Configuration Parity
-- [ ] TASK-250-02-02: Selected Element Interaction and Element-Scoped Editing Flow
-- [ ] TASK-250-03: Runtime and Registry Unification
-- [ ] TASK-250-03-01: Canonical Widget Renderer Reuse in the Dedicated Record Editor
-- [ ] TASK-250-03-02: `admin-editor-view` Registry, Picker, and Surface Contract Coverage
-- [ ] TASK-250-04: QA, Docs, and Closure
-- [ ] TASK-250-04-01: Screen Widget Editor/Runtime Test Matrix and Documentation Closure
+- [x] TASK-250-01: Screen Widget Editor Architecture and Mode Parity
+- [x] TASK-250-01-01: Distinct Wizard, Visual, and Advanced Flows for `screen-*`
+- [x] TASK-250-01-02: Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value`
+- [x] TASK-250-02: Screen Layout Widget Surface Expansion
+- [x] TASK-250-02-01: `screen-field-group` and `screen-two-column` Configuration Parity
+- [x] TASK-250-02-02: Selected Element Interaction and Element-Scoped Editing Flow
+- [x] TASK-250-03: Runtime and Registry Unification
+- [x] TASK-250-03-01: Canonical Widget Renderer Reuse in the Dedicated Record Editor
+- [x] TASK-250-03-02: `admin-editor-view` Registry, Picker, and Surface Contract Coverage
+- [x] TASK-250-04: QA, Docs, and Closure
+- [x] TASK-250-04-01: Screen Widget Editor/Runtime Test Matrix and Documentation Closure
 
 ## Implementation Order
 

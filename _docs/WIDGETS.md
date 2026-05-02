@@ -108,6 +108,10 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
 - `_docs/_WIDGETS/FORM_EMBED.md`
+- `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
@@ -178,6 +182,8 @@ Kazdy widget powinien zdefiniowac:
   - `page-builder`
   - `widget-library`
   - `custom-screen-builder`
+  - `admin-list-view`
+  - `admin-editor-view`
 
 ## Surface scoping
 
@@ -185,7 +191,9 @@ Widget registry nie jest juz jedna plaska lista dla wszystkich surface'ow.
 
 Zasady:
 - public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
-- screen-only widgets naleza do `custom-screen-builder`,
+- screen-only widgets moga nalezec do `custom-screen-builder`,
+  `admin-list-view`, i `admin-editor-view` zalezne od realnej surface
+  odpowiedzialnosci,
 - tylko jawnie dopuszczone prymitywy layoutowe moga byc wspoldzielone miedzy wszystkimi surface'ami,
 - `Advanced/Widgets` pokazuje tylko surface `widget-library`,
 - `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
@@ -221,6 +229,20 @@ Minimalny screen widget pack dla admin UI:
 - `screen-field-value`
 - `screen-field-group`
 - `screen-two-column`
+
+Current intent for that pack:
+- `screen-record-header` is a selected-entry summary surface with binding-aware
+  content controls in Visual mode.
+- `screen-field-value` is the record-row/card primitive that can stay read-only
+  or become inline-editable when its `value` binding targets a writable field.
+- `screen-field-group` is the fixed-slot section wrapper for related field
+  widgets.
+- `screen-two-column` is the left/right layout shell for primary vs supporting
+  record content.
+- Detailed per-widget docs live in `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`,
+  `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`,
+  `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`, and
+  `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`.
 
 ---
 
@@ -267,7 +289,17 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
-  surfaces?: ("page-builder" | "widget-library" | "custom-screen-builder")[];
+  surfaces?: (
+    | "page-builder"
+    | "widget-library"
+    | "custom-screen-builder"
+    | "admin-list-view"
+    | "admin-editor-view"
+  )[];
+  dataAccess?: {
+    source: "none" | "selected-content-type" | "selected-entry";
+    modes: ("read" | "write")[];
+  };
   canHaveChildren?: boolean;
   slots?: {
     id: string;
@@ -292,6 +324,9 @@ type WidgetDefinition<T = Record<string, unknown>> = {
     data: T;
     variant: string;
     slots?: Record<string, WidgetBlock[]>;
+    previewDevice?: DeviceTarget;
+    pageDefaults?: WidgetLayoutDefaults;
+    blockId?: string;
   }>;
 };
 ```
@@ -316,6 +351,13 @@ type WidgetEditorProps<T> = {
   onChange: (next: T) => void;
   variant: string;
   onVariantChange?: (next: string) => void;
+  context?: WidgetEditorContext;
+};
+
+type WidgetEditorContext = {
+  surface: WidgetSurface;
+  jumpToBindingPropPath?: (propPath: string) => void;
+  getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
 };
 ```
 
@@ -411,6 +453,26 @@ Admin-only widgets may declare `dataAccess` metadata:
 widgets until the current Custom Screen has a resolved content type. This keeps
 public widgets out of admin record editors and prevents schema-bound controls
 from rendering against missing context.
+
+### Screen widget editor parity
+
+The `screen-*` family now follows the same three-mode editor bundle contract as
+the mature public widgets:
+
+- `wizard` owns variant choice plus the primary structure/content fields.
+- `visual` owns the day-to-day content controls. For
+  `screen-record-header` and `screen-field-value`, Visual mode can use
+  `WidgetEditorContext` to show binding-state badges and jump directly into the
+  existing `Data` tab card for a specific `propPath`.
+- `advanced` owns alignment, tone, spacing, and clearable chrome tokens. Clear
+  actions remove the nested style key instead of writing `transparent` or other
+  sentinel strings.
+
+Custom Screens preview and the read-only portions of the inline record editor
+reuse one shared screen-widget render bridge for nested `screen-field-group`
+and `screen-two-column` layouts. The editable record canvas can still swap a
+bound `screen-field-value` into an inline field control when the `value`
+binding targets a writable schema or system field.
 
 ---
 

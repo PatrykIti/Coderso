@@ -92,6 +92,29 @@ const preserveSelectedElementAcrossRefresh = (input: {
     : (input.nextBlocks[0]?.id ?? null);
 };
 
+const findBlockById = <
+  T extends { id: string; slots?: Record<string, unknown>; children?: unknown },
+>(
+  blocks: T[],
+  targetId: string | null
+): T | null => {
+  if (!targetId) return null;
+  for (const block of blocks) {
+    if (block.id === targetId) {
+      return block;
+    }
+    const slotBlocks = block.slots
+      ? Object.values(block.slots).flatMap((value) => (Array.isArray(value) ? (value as T[]) : []))
+      : [];
+    const childBlocks = Array.isArray(block.children) ? (block.children as T[]) : [];
+    const nestedMatch = findBlockById([...slotBlocks, ...childBlocks], targetId);
+    if (nestedMatch) {
+      return nestedMatch;
+    }
+  }
+  return null;
+};
+
 export function CustomScreenEntryEditor() {
   const { path, navigate } = useAdminRouter();
   const { screenId, entryId } = useMemo(() => resolveCustomScreenEntryParams(path), [path]);
@@ -201,10 +224,7 @@ export function CustomScreenEntryEditor() {
     [screen]
   );
   const selectedRuntimeBlock = useMemo(
-    () =>
-      (runtimeBlocks.find((block) => block.id === selectedRuntimeBlockId) as
-        | (typeof runtimeBlocks)[number]
-        | undefined) ?? null,
+    () => findBlockById(runtimeBlocks, selectedRuntimeBlockId),
     [runtimeBlocks, selectedRuntimeBlockId]
   );
   const selectedRuntimeWidget = selectedRuntimeBlock
@@ -230,7 +250,10 @@ export function CustomScreenEntryEditor() {
     setActiveAssistantSurfaceContext(
       buildCustomScreenAssistantSurface({
         screen,
+        blocks: runtimeBlocks,
+        bindings: runtimeBindings,
         capabilities: screenCapabilities,
+        selectedBlockId: selectedRuntimeBlockId,
         selectedEntryId: entryId,
         warnings: [
           ...(hasUnsavedChanges ? ["custom_screen_entry_has_unsaved_changes"] : []),
@@ -242,7 +265,17 @@ export function CustomScreenEntryEditor() {
     return () => {
       clearActiveAssistantSurfaceContext();
     };
-  }, [entryId, hasUnsavedChanges, remoteUpdatePending, screen, screenCapabilities, screenId]);
+  }, [
+    entryId,
+    hasUnsavedChanges,
+    remoteUpdatePending,
+    screen,
+    screenCapabilities,
+    screenId,
+    runtimeBlocks,
+    runtimeBindings,
+    selectedRuntimeBlockId,
+  ]);
 
   const applyLoadedState = useCallback(
     (

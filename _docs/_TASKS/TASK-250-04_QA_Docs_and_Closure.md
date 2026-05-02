@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-250-01, TASK-250-02, TASK-250-03
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-02
 
 ---
 
@@ -18,7 +19,7 @@ intentionally differs from public widgets.
 
 ## Sub-Tasks
 
-- [ ] TASK-250-04-01: Screen Widget Editor/Runtime Test Matrix and Documentation Closure
+- [x] TASK-250-04-01: Screen Widget Editor/Runtime Test Matrix and Documentation Closure
 
 ## Files to Change
 

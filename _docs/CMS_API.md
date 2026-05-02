@@ -1189,6 +1189,16 @@ Notes:
   page builder i widget library nadal uzywaja swoich powierzchni.
 - `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
+- screen widget editor bundles nadal uzywaja wspolnego kontraktu
+  `wizard -> visual -> advanced`:
+  `wizard` ustawia wariant i glowna strukture, `visual` jest binding-aware dla
+  codziennej edycji tresci, a `advanced` trzyma alignment/tone oraz clearable
+  chrome tokens.
+- builder preview i read-only fragmenty record editora renderuja
+  `definition.editorView.blocks` przez wspolny screen-widget read bridge, wiec
+  ten sam payload blokow zasila preview dialog, nested layout widgets, i
+  readonly runtime record surface. Inline write pozostaje zachowaniem widgetow
+  takich jak `screen-field-value`, gdy `value` binding wskazuje writable field.
 - `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `3`.
 - `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
   pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.

@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 export type WidgetCategory = "layout" | "content" | "forms" | "navigation" | "media";
 
@@ -86,6 +86,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     previewDevice?: DeviceTarget;
     pageDefaults?: WidgetLayoutDefaults;
     blockId?: string;
+    renderBlock?: (block: WidgetBlock) => ReactNode;
   }>;
 };
 

@@ -5,7 +5,9 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
+  ScreenFieldGroupWizardEditor,
   ScreenFieldGroupVisualEditor,
+  ScreenTwoColumnWizardEditor,
   ScreenTwoColumnVisualEditor,
 } from "../../../core/admin/ui/widgets/editors/ScreenEditors";
 import type { ScreenTwoColumnData } from "../../../core/widgets/core/screenTwoColumn";
@@ -163,5 +165,52 @@ test("screen two column visual editor updates normalized gap tokens", () => {
     expect(view.container.textContent).toContain("supporting fields");
   } finally {
     view.cleanup();
+  }
+});
+
+test("screen layout wizard editors delegate variant changes", () => {
+  const groupVariantChange = vi.fn();
+  const twoColumnVariantChange = vi.fn();
+
+  const groupView = mount(
+    <ScreenFieldGroupWizardEditor
+      value={{ title: "Details", description: "Important fields" }}
+      onChange={() => undefined}
+      variant="card"
+      onVariantChange={groupVariantChange}
+    />
+  );
+
+  try {
+    const subtleButton = Array.from(groupView.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Subtle")
+    );
+    act(() => {
+      subtleButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(groupVariantChange).toHaveBeenCalledWith("subtle");
+  } finally {
+    groupView.cleanup();
+  }
+
+  const twoColumnView = mount(
+    <ScreenTwoColumnWizardEditor
+      value={{ leftTitle: "Main", rightTitle: "Aside", gap: "md" }}
+      onChange={() => undefined}
+      variant="balanced"
+      onVariantChange={twoColumnVariantChange}
+    />
+  );
+
+  try {
+    const asideButton = Array.from(twoColumnView.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Aside")
+    );
+    act(() => {
+      asideButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(twoColumnVariantChange).toHaveBeenCalledWith("aside");
+  } finally {
+    twoColumnView.cleanup();
   }
 });

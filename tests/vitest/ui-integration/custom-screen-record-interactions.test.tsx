@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { setActiveAssistantSurfaceContext } from "../../../core/admin/ui/assistant/activeSurfaceContext";
 import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
@@ -29,7 +30,7 @@ const contentType = {
   updatedAt: "2026-05-02T00:00:00.000Z",
 };
 
-const screenRecord = {
+const createScreenRecord = () => ({
   id: "screen-1",
   name: "Project Screen",
   contentTypeId: "type-1",
@@ -118,7 +119,9 @@ const screenRecord = {
   ],
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
-};
+});
+
+let currentScreenRecord = createScreenRecord();
 
 const entryDetail = {
   id: "entry-1",
@@ -136,10 +139,10 @@ const entryDetail = {
 let cacheListener: ((event: { key: string }) => void) | null = null;
 
 vi.mock("@/services/customScreensClient", () => ({
-  getCachedCustomScreens: vi.fn(() => [screenRecord]),
-  listCustomScreensCached: vi.fn(async () => [screenRecord]),
-  getCachedCustomScreen: vi.fn(() => screenRecord),
-  getCustomScreenCached: vi.fn(async () => screenRecord),
+  getCachedCustomScreens: vi.fn(() => [currentScreenRecord]),
+  listCustomScreensCached: vi.fn(async () => [currentScreenRecord]),
+  getCachedCustomScreen: vi.fn(() => currentScreenRecord),
+  getCustomScreenCached: vi.fn(async () => currentScreenRecord),
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({
@@ -221,6 +224,7 @@ const findButton = (container: ParentNode, text: string) =>
 
 beforeEach(() => {
   cacheListener = null;
+  currentScreenRecord = createScreenRecord();
   window.history.replaceState({}, "", "/admin/advanced/custom-screens/screen-1/entries/entry-1");
 });
 
@@ -250,6 +254,10 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(findButton(view.container, "Selected Element")?.getAttribute("data-state")).toBe(
       "active"
     );
+    expect(vi.mocked(setActiveAssistantSurfaceContext).mock.calls.at(-1)?.[0]).toMatchObject({
+      selectedBlockId: "field-1",
+    });
+    expect(view.container.textContent).toContain("Screen Field Value");
     expect(view.container.textContent).toContain("Headline");
 
     const childEditButton = child?.querySelector("button");
@@ -274,6 +282,39 @@ test("record editor keeps child selection scoped and preserves it across refresh
         .querySelector('[data-selected-block-id="field-1"]')
         ?.getAttribute("data-selected")
     ).toBe("true");
+    expect(view.container.textContent).toContain("Screen Field Value");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("assistant surface uses editorView blocks and bindings even when legacy root copies drift", async () => {
+  currentScreenRecord = {
+    ...createScreenRecord(),
+    blocks: [],
+    bindings: [],
+  };
+
+  const view = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+
+    expect(vi.mocked(setActiveAssistantSurfaceContext).mock.calls.at(-1)?.[0]).toMatchObject({
+      selectedBlockId: "group-1",
+      bindings: [
+        {
+          field: "headline",
+          mode: "readwrite",
+          propPath: "value",
+          widgetId: "field-1",
+        },
+      ],
+      blocks: expect.arrayContaining([
+        expect.objectContaining({ id: "group-1", type: "screen-field-group" }),
+        expect.objectContaining({ id: "field-1", type: "screen-field-value" }),
+      ]),
+    });
   } finally {
     view.cleanup();
   }

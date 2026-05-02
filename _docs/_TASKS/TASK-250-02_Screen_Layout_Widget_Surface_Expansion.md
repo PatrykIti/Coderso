@@ -5,7 +5,8 @@
 **Category:** Coderso Custom Screens + Widget Surface Design
 **Estimated Effort:** Large
 **Dependencies:** TASK-250-01
-**Status:** To Do
+**Status:** Done
+**Completed:** 2026-05-02
 
 ---
 
@@ -17,8 +18,8 @@ editing in the record canvas.
 
 ## Sub-Tasks
 
-- [ ] TASK-250-02-01: `screen-field-group` and `screen-two-column` Configuration Parity
-- [ ] TASK-250-02-02: Selected Element Interaction and Element-Scoped Editing Flow
+- [x] TASK-250-02-01: `screen-field-group` and `screen-two-column` Configuration Parity
+- [x] TASK-250-02-02: Selected Element Interaction and Element-Scoped Editing Flow
 
 ## Files to Change
 
