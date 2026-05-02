@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import type { WidgetBlock } from "../../../widgets/types";
 import { WidgetRenderer } from "../../../widgets/renderers/widgetRenderer";
@@ -37,6 +39,9 @@ type CustomScreenEntryCanvasProps = {
   onFieldChange: (field: string, value: unknown) => void;
   onTitleChange: (value: string) => void;
   onSlugChange: (value: string) => void;
+  selectedBlockId?: string | null;
+  onSelectBlock?: (blockId: string) => void;
+  onEditBlock?: (blockId: string) => void;
 };
 
 const fieldTypeLabels = {
@@ -72,6 +77,9 @@ export function CustomScreenEntryCanvas({
   onFieldChange,
   onTitleChange,
   onSlugChange,
+  selectedBlockId,
+  onSelectBlock,
+  onEditBlock,
 }: CustomScreenEntryCanvasProps) {
   const fieldMap = new Map(fields.map((field) => [field.name, field] as const));
   const systemFieldMap = new Map<string, ContentField>([
@@ -94,6 +102,35 @@ export function CustomScreenEntryCanvas({
       },
     ],
   ]);
+
+  const wrapSelectableBlock = (block: WidgetBlock, content: ReactNode) => {
+    const isSelected = selectedBlockId === block.id;
+    return (
+      <div
+        key={block.id}
+        className={`group relative rounded-3xl transition ${
+          isSelected ? "ring-2 ring-primary/30" : "hover:ring-2 hover:ring-primary/15"
+        }`}
+        onClick={() => onSelectBlock?.(block.id)}
+      >
+        <div className="absolute right-3 top-3 z-10 opacity-0 transition group-hover:opacity-100 group-hover:pointer-events-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            className="bg-background/90 backdrop-blur"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEditBlock?.(block.id);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+        {content}
+      </div>
+    );
+  };
 
   const renderBlock = (block: WidgetBlock): ReactNode => {
     const blockBindings = getWidgetBindings(bindings, block.id, {
@@ -120,8 +157,9 @@ export function CustomScreenEntryCanvas({
         ? (fieldMap.get(writeBinding.field) ?? systemFieldMap.get(writeBinding.field) ?? null)
         : null;
 
-      return (
-        <div key={block.id} className="rounded-2xl border p-4 shadow-sm">
+      return wrapSelectableBlock(
+        block,
+        <div className="rounded-2xl border p-4 shadow-sm">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {data.label}
@@ -179,8 +217,9 @@ export function CustomScreenEntryCanvas({
         ) as ScreenRecordHeaderData
       );
 
-      return (
-        <div key={block.id} className="rounded-3xl border p-6 shadow-sm">
+      return wrapSelectableBlock(
+        block,
+        <div className="rounded-3xl border p-6 shadow-sm">
           {data.eyebrow?.trim() ? (
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               {data.eyebrow}
@@ -208,8 +247,9 @@ export function CustomScreenEntryCanvas({
       const data = normalizeScreenFieldGroupData((block.data ?? {}) as ScreenFieldGroupData);
       const content = Array.isArray(block.slots?.content) ? block.slots?.content : [];
 
-      return (
-        <div key={block.id} className="space-y-4 rounded-3xl border p-5 shadow-sm">
+      return wrapSelectableBlock(
+        block,
+        <div className="space-y-4 rounded-3xl border p-5 shadow-sm">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">{data.title}</p>
             {data.description?.trim() ? (
@@ -254,15 +294,16 @@ export function CustomScreenEntryCanvas({
         </div>
       );
 
-      return (
-        <div key={block.id} className="grid gap-6 lg:grid-cols-2">
+      return wrapSelectableBlock(
+        block,
+        <div className="grid gap-6 lg:grid-cols-2">
           {renderColumn(data.leftTitle, left, "left")}
           {renderColumn(data.rightTitle, right, "right")}
         </div>
       );
     }
 
-    return <div key={block.id}>{renderFallbackBlock(block, bindings, fieldValues)}</div>;
+    return wrapSelectableBlock(block, renderFallbackBlock(block, bindings, fieldValues));
   };
 
   if (blocks.length === 0) {

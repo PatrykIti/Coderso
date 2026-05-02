@@ -1207,6 +1207,11 @@ Notes:
 - builder topbar uzywa `Preview`, `List View`, `Editor View`, i `Save`; aktywny
   runtime flow nie uzywa juz `Builder / Preview`, `Open records`, ani
   classic-editor / drawer branches.
+- `Preview` w builderze otwiera dedykowany dialog:
+  - `List View` preview pokazuje zywy widok tabeli rekordow dla aktualnej
+    konfiguracji,
+  - `Editor View` preview pokazuje widgetowy record surface z aktualnymi
+    bindings i sample data bez opuszczania builder route.
 - response record niesie tez derived `capabilities`:
   - `mode: "collection-only" | "dashboard" | "editor"`
   - `hasBlocks`, `hasBindings`, `hasReadableBindings`, `hasWritableBindings`
@@ -1225,6 +1230,9 @@ Notes:
 - `New record` z records workspace zawsze otwiera
   `/admin/advanced/custom-screens/:screenId/entries/new`; active V3 runtime nie
   otwiera juz shared `EntryCreateDrawer`.
+- screen-owned record editor renderuje widgetowy layout jako glowny surface i
+  pozwala aktywowac widgety na canvasie, a prawy panel `Selected Element`
+  pokazuje bound field editors dla wybranego elementu.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ## Coderso Filters & Search (v2 beta)

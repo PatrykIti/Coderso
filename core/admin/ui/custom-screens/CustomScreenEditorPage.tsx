@@ -49,6 +49,7 @@ import { ListViewDesigner } from "./ListViewDesigner";
 import { ListViewCanvas } from "./ListViewCanvas";
 import { ListViewColumnInspector } from "./ListViewColumnInspector";
 import { ListViewElementLibrary } from "./ListViewElementLibrary";
+import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { BlockList } from "@/ui/pages/builder/BlockList";
@@ -188,6 +189,7 @@ export function CustomScreenEditorPage() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
     "list-view"
   );
@@ -752,12 +754,7 @@ export function CustomScreenEditorPage() {
                 variant="secondary"
                 size="sm"
                 className="gap-2"
-                onClick={() =>
-                  screenId
-                    ? navigate(`/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`)
-                    : undefined
-                }
-                disabled={!screenId || hasUnsavedChanges || isCreateMode}
+                onClick={() => setPreviewOpen(true)}
               >
                 <Eye className="h-4 w-4" />
                 Preview
@@ -906,6 +903,17 @@ export function CustomScreenEditorPage() {
           {detailsPanel}
         </SheetContent>
       </Sheet>
+
+      <CustomScreenWorkspacePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        mode={activeBuilderTab}
+        contentType={selectedContentType}
+        listView={definition.listView}
+        blocks={blocks}
+        bindings={bindings}
+        previewData={editorPreviewData}
+      />
     </>
   );
 }

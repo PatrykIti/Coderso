@@ -111,7 +111,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`,
     `ListViewDesigner.tsx`, `ListViewCanvas.tsx`,
     `ListViewElementLibrary.tsx`, `ListViewColumnInspector.tsx`,
-    `EditorViewDesigner.tsx`,
+    `CustomScreenWorkspacePreviewDialog.tsx`,
     `CustomScreenEntriesPage.tsx`, `CustomScreenEntriesTable.tsx`,
     `CustomScreenEntryEditor.tsx`, `CustomScreenEntryCanvas.tsx`
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,

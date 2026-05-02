@@ -27,6 +27,7 @@ type CustomScreenEntriesTableProps = {
   listView: CustomScreenListViewDefinition;
   emptyMessage?: string;
   buildRowHref: (entry: EntrySummary) => string;
+  preview?: boolean;
   selectedIds?: string[];
   isAllSelected?: boolean;
   isIndeterminate?: boolean;
@@ -42,6 +43,7 @@ export function CustomScreenEntriesTable({
   listView,
   emptyMessage,
   buildRowHref,
+  preview = false,
   selectedIds = [],
   isAllSelected = false,
   isIndeterminate = false,
@@ -52,7 +54,8 @@ export function CustomScreenEntriesTable({
   onDelete,
 }: CustomScreenEntriesTableProps) {
   const hasSelection =
-    listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish;
+    !preview &&
+    (listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish);
   const columns = getVisibleListColumns(listView);
   const resolvedColumns =
     columns.length > 0
@@ -67,7 +70,8 @@ export function CustomScreenEntriesTable({
             visible: true,
           },
         ];
-  const colSpan = Math.max(resolvedColumns.length + (hasSelection ? 2 : 1), 2);
+  const hasActions = !preview;
+  const colSpan = Math.max(resolvedColumns.length + (hasSelection ? 2 : hasActions ? 1 : 0), 2);
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -91,9 +95,11 @@ export function CustomScreenEntriesTable({
                 {column.label}
               </TableHead>
             ))}
-            <TableHead className="w-12 pr-6 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </TableHead>
+            {hasActions ? (
+              <TableHead className="w-12 pr-6 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Actions
+              </TableHead>
+            ) : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -123,7 +129,7 @@ export function CustomScreenEntriesTable({
                 ) : null}
                 {resolvedColumns.map((column, index) => (
                   <TableCell key={column.id} className="px-4 py-5 text-sm first:pl-6">
-                    {index === 0 ? (
+                    {index === 0 && !preview ? (
                       <div className="flex flex-col gap-1">
                         <AdminLink
                           href={rowHref}
@@ -138,37 +144,39 @@ export function CustomScreenEntriesTable({
                     )}
                   </TableCell>
                 ))}
-                <TableCell className="w-12 py-5 pr-6 text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" aria-label="Record actions">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuItem asChild>
-                        <AdminLink href={rowHref} className="w-full">
-                          <SquarePen className="h-4 w-4" />
-                          Edit record
-                        </AdminLink>
-                      </DropdownMenuItem>
-                      {item.status === "published" ? (
-                        <DropdownMenuItem onClick={() => onUnpublish?.(item.id)}>
-                          Move to Draft
+                {hasActions ? (
+                  <TableCell className="w-12 py-5 pr-6 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" aria-label="Record actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem asChild>
+                          <AdminLink href={rowHref} className="w-full">
+                            <SquarePen className="h-4 w-4" />
+                            Edit record
+                          </AdminLink>
                         </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={() => onPublish?.(item.id)}>
-                          Publish
+                        {item.status === "published" ? (
+                          <DropdownMenuItem onClick={() => onUnpublish?.(item.id)}>
+                            Move to Draft
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => onPublish?.(item.id)}>
+                            Publish
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onClick={() => onDelete(item.id)}>
+                          <Trash2 className="h-4 w-4" />
+                          Delete
                         </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" onClick={() => onDelete(item.id)}>
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                ) : null}
               </TableRow>
             );
           })}

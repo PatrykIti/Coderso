@@ -1,4 +1,4 @@
-import { ArrowLeft, RefreshCcw, Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -33,14 +33,17 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { getRegisteredWidget } from "@/ui/widgets/registry";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenEntryParams } from "./routeParams";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
+import { getWidgetBindings } from "../../../services/customScreens/bindingResolver";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import {
   buildEditorViewCreatePayload,
@@ -51,14 +54,6 @@ import {
   validateEntryDraft,
   type CustomScreenEntryDraft,
 } from "./customScreenEntryDraft";
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
 
 export function CustomScreenEntryEditor() {
   const { path, navigate } = useAdminRouter();
@@ -134,6 +129,7 @@ export function CustomScreenEntryEditor() {
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
   const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
     () =>
       (getCachedContentTypes() ?? []).map((item) => ({
@@ -158,6 +154,34 @@ export function CustomScreenEntryEditor() {
     [screen]
   );
   const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
+  const runtimeBlocks = useMemo(
+    () => screen?.definition?.editorView.blocks ?? screen?.blocks ?? [],
+    [screen]
+  );
+  const runtimeBindings = useMemo(
+    () => screen?.definition?.editorView.bindings ?? screen?.bindings ?? [],
+    [screen]
+  );
+  const selectedRuntimeBlock = useMemo(
+    () =>
+      (runtimeBlocks.find((block) => block.id === selectedRuntimeBlockId) as
+        | (typeof runtimeBlocks)[number]
+        | undefined) ?? null,
+    [runtimeBlocks, selectedRuntimeBlockId]
+  );
+  const selectedRuntimeWidget = selectedRuntimeBlock
+    ? getRegisteredWidget(selectedRuntimeBlock.type)
+    : null;
+  const selectedRuntimeBindings = useMemo(
+    () =>
+      selectedRuntimeBlock
+        ? getWidgetBindings(runtimeBindings, selectedRuntimeBlock.id, {
+            includeRead: true,
+            includeWrite: true,
+          })
+        : [],
+    [runtimeBindings, selectedRuntimeBlock]
+  );
 
   useEffect(() => {
     if (!screen || !screenId || !entryId) {
@@ -217,6 +241,7 @@ export function CustomScreenEntryEditor() {
       setFieldErrors({});
       setHasUnsavedChanges(false);
       setRemoteUpdatePending(false);
+      setSelectedRuntimeBlockId(nextScreen.definition?.editorView.blocks[0]?.id ?? nextScreen.blocks[0]?.id ?? null);
       setError(null);
     },
     []
@@ -396,6 +421,96 @@ export function CustomScreenEntryEditor() {
     publishedAt: entry?.publishedAt ?? null,
   });
 
+  const renderSelectedBlockBindingEditor = () => {
+    if (!selectedRuntimeBlock) {
+      return (
+        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+          Click a widget on the canvas to inspect and edit its bound content fields.
+        </div>
+      );
+    }
+
+    if (selectedRuntimeBindings.length === 0) {
+      return (
+        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+          This widget has no bindings yet. Add them in the builder `Data` tab.
+        </div>
+      );
+    }
+
+    const systemFieldMap = new Map<string, { label: string; editable: boolean }>([
+      ["title", { label: "Title", editable: true }],
+      ["slug", { label: "Slug", editable: true }],
+      ["status", { label: "Status", editable: false }],
+      ["createdAt", { label: "Created", editable: false }],
+      ["updatedAt", { label: "Updated", editable: false }],
+      ["publishedAt", { label: "Published", editable: false }],
+    ]);
+
+    return (
+      <div className="space-y-3">
+        {selectedRuntimeBindings.map((binding) => {
+          const field = fields.find((item) => item.name === binding.field) ?? null;
+          const systemField = systemFieldMap.get(binding.field) ?? null;
+
+          if (field) {
+            return (
+              <div key={binding.id} className="rounded-lg border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {binding.propPath}
+                </p>
+                <p className="mb-3 text-sm font-medium">{field.label}</p>
+                <FieldRenderer
+                  field={field}
+                  value={values[binding.field]}
+                  onChange={(next: unknown) => handleFieldChange(binding.field, next)}
+                  relationTargets={relationTargets}
+                  display="compact"
+                />
+                {fieldErrors[binding.field] ? (
+                  <p className="mt-2 text-xs text-destructive">{fieldErrors[binding.field]}</p>
+                ) : null}
+              </div>
+            );
+          }
+
+          if (systemField?.editable) {
+            const value = binding.field === "title" ? title : slug;
+            const onChange = binding.field === "title" ? handleTitleChange : handleSlugChange;
+            return (
+              <div key={binding.id} className="rounded-lg border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {binding.propPath}
+                </p>
+                <p className="mb-3 text-sm font-medium">{systemField.label}</p>
+                <Input
+                  value={value}
+                  onChange={(event) => onChange(event.target.value)}
+                  className="h-9"
+                />
+                {fieldErrors[binding.field] ? (
+                  <p className="mt-2 text-xs text-destructive">{fieldErrors[binding.field]}</p>
+                ) : null}
+              </div>
+            );
+          }
+
+          return (
+            <div key={binding.id} className="rounded-lg border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {binding.propPath}
+              </p>
+              <p className="mb-1 text-sm font-medium">{systemField?.label ?? binding.field}</p>
+              <p className="text-sm text-muted-foreground">
+                {String((buildCanvasFieldValues() as Record<string, unknown>)[binding.field] ?? "—")}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const handleSave = async () => {
     if (!contentType || !entryId) return;
     const draft: CustomScreenEntryDraft = {
@@ -468,34 +583,62 @@ export function CustomScreenEntryEditor() {
   };
 
   const detailsPanel = (
-    <div className="space-y-4 p-6">
-      <div className="space-y-1">
-        <p className="text-sm font-medium">Workspace details</p>
-        <p className="text-xs text-muted-foreground">
-          {canEditInScreen
-            ? "This record is edited directly through the screen-owned canvas."
-            : "This screen is not yet ready for the screen-owned editor workflow."}
-        </p>
-      </div>
+    <Tabs defaultValue="record" className="flex h-full flex-col p-6">
+      <TabsList variant="line" className="px-1">
+        <TabsTrigger value="record">Record</TabsTrigger>
+        <TabsTrigger value="element">Selected Element</TabsTrigger>
+      </TabsList>
+      <TabsContent value="record" className="mt-4 space-y-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Workspace details</p>
+          <p className="text-xs text-muted-foreground">
+            {canEditInScreen
+              ? "This record is edited directly through the screen-owned canvas."
+              : "This screen is not yet ready for the screen-owned editor workflow."}
+          </p>
+        </div>
 
-      {!canEditInScreen ? (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          Use the builder to add writable screen widgets and bindings before using this record route
-          as the active editor flow.
-        </div>
-      ) : (
-        <div className="rounded-lg border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
-          Inline canvas editing is active. Save writes through the shared content entry contract.
-        </div>
-      )}
+        {!canEditInScreen ? (
+          <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+            Use the builder to add writable screen widgets and bindings before using this record
+            route as the active editor flow.
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Title
+              </label>
+              <Input value={title} onChange={(event) => handleTitleChange(event.target.value)} />
+            </div>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Slug
+              </label>
+              <Input value={slug} onChange={(event) => handleSlugChange(event.target.value)} />
+            </div>
+          </>
+        )}
 
-      {readOnlyBindingCount > 0 ? (
-        <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-          {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only and
-          remain read-only in this screen workflow.
+        {readOnlyBindingCount > 0 ? (
+          <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+            {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only
+            and remain read-only in this screen workflow.
+          </div>
+        ) : null}
+      </TabsContent>
+      <TabsContent value="element" className="mt-4 space-y-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            {selectedRuntimeWidget?.title ?? "Selected element"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Click a widget on the canvas and use the pencil action to focus its bound content here.
+          </p>
         </div>
-      ) : null}
-    </div>
+        {renderSelectedBlockBindingEditor()}
+      </TabsContent>
+    </Tabs>
   );
 
   const screenRecordsHref = screenId
@@ -614,66 +757,6 @@ export function CustomScreenEntryEditor() {
               </Alert>
             ) : null}
 
-            <div className="space-y-4 rounded-2xl border bg-background p-6 shadow-sm">
-              {canEditInScreen ? (
-                <div className="space-y-3">
-                  <Textarea
-                    value={title}
-                    onChange={(event) => handleTitleChange(event.target.value)}
-                    rows={1}
-                    className="min-h-0 resize-none overflow-hidden border-0 px-0 py-0 text-3xl font-semibold leading-tight tracking-tight shadow-none focus-visible:ring-0"
-                    placeholder="Record title"
-                  />
-                  {fieldErrors.title ? (
-                    <p className="text-xs text-destructive">{fieldErrors.title}</p>
-                  ) : null}
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Slug
-                    </span>
-                    <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                      <span className="text-xs text-muted-foreground">/</span>
-                      <Input
-                        value={slug}
-                        onChange={(event) => handleSlugChange(event.target.value)}
-                        className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => handleSlugChange(slugify(title))}
-                      >
-                        <RefreshCcw className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  {fieldErrors.slug ? (
-                    <p className="text-xs text-destructive">{fieldErrors.slug}</p>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Record title
-                    </p>
-                    <p className="text-3xl font-semibold leading-tight tracking-tight text-foreground">
-                      {title || "Untitled record"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Slug
-                    </p>
-                    <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono text-muted-foreground">
-                      /{slug || "draft-slug"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {isLoading ? (
               <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
                 Loading custom screen record...
@@ -689,6 +772,12 @@ export function CustomScreenEntryEditor() {
                 onFieldChange={handleFieldChange}
                 onTitleChange={handleTitleChange}
                 onSlugChange={handleSlugChange}
+                selectedBlockId={selectedRuntimeBlockId}
+                onSelectBlock={setSelectedRuntimeBlockId}
+                onEditBlock={(blockId) => {
+                  setSelectedRuntimeBlockId(blockId);
+                  setDetailsOpen(true);
+                }}
               />
             ) : screen ? (
               <CustomScreenPreview

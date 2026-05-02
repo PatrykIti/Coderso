@@ -37,7 +37,7 @@ const buildPreviewEntryValue = (fieldType: string) => {
   }
 };
 
-const buildPreviewRows = (contentType: ContentTypeSummary): EntrySummary[] => {
+export const buildCustomScreenPreviewEntries = (contentType: ContentTypeSummary): EntrySummary[] => {
   const fieldOptions = listSelectableListFields(contentType).filter(
     (option) => option.source === "field"
   );
@@ -95,7 +95,7 @@ export function ListViewCanvas({
   }
 
   const columns = getVisibleListColumns(listView);
-  const previewRows = buildPreviewRows(contentType);
+  const previewRows = buildCustomScreenPreviewEntries(contentType);
   const resolvedColumns =
     columns.length > 0
       ? columns

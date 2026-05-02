@@ -15,12 +15,16 @@
   `Editor View`, and `Save`.
 - Replaced the old list-view form with a table-preview canvas, left-panel list
   element library, and selected-column inspector.
+- Added dedicated builder preview dialogs so `List View` can preview the live
+  records table and `Editor View` can preview the widget-based record surface
+  without leaving the builder route.
 - Removed active-path `Classic editor` and `EntryCreateDrawer` branches from the
   records workflow. `New record` and row edit now route only through the
   screen-owned editor.
 - Added an inline screen-owned record canvas built on the existing `screen-*`
   widget contract instead of introducing a parallel Custom Screens widget
-  platform.
+  platform, and added selected-element activation in the record editor details
+  rail.
 
 ### Admin contracts and navigation
 
