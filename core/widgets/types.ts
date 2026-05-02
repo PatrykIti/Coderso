@@ -43,6 +43,13 @@ export type WidgetEditorProps<T> = {
   onChange: (next: T) => void;
   variant: string;
   onVariantChange?: (next: string) => void;
+  context?: WidgetEditorContext;
+};
+
+export type WidgetEditorContext = {
+  surface: WidgetSurface;
+  jumpToBindingPropPath?: (propPath: string) => void;
+  getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
 };
 
 export type WidgetEditorCapabilities = {

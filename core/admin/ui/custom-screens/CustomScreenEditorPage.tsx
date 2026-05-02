@@ -67,11 +67,24 @@ import {
   type BlockPath,
 } from "@/ui/pages/builder/blockUtils";
 import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
-import type { Block } from "@/ui/pages/builder/types";
+import type { Block, WidgetEditorContext } from "@/ui/pages/builder/types";
 import { buildListColumnFromOption, listSelectableListFields } from "./customScreenListModel";
 import { applyBindingsToBlocks } from "../../../services/customScreens/bindingResolver";
 
 const normalizeText = (value: string) => value.trim();
+type EditorDetailsTab = "screen" | "data" | "widget";
+
+const resolveBindingState = (
+  bindings: CustomScreenDefinition["editorView"]["bindings"],
+  selectedBlockId: string | null,
+  propPath: string
+): "literal" | "bound" | "mixed" => {
+  const matching = bindings.filter(
+    (binding) => binding.widgetId === selectedBlockId && binding.propPath === propPath
+  );
+  if (matching.length > 1) return "mixed";
+  return matching.length === 1 ? "bound" : "literal";
+};
 
 const buildPreviewValue = (field: {
   label: string;
@@ -193,6 +206,8 @@ export function CustomScreenEditorPage() {
   const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
     "list-view"
   );
+  const [activeEditorDetailsTab, setActiveEditorDetailsTab] = useState<EditorDetailsTab>("screen");
+  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
   const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
     () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
   );
@@ -246,6 +261,17 @@ export function CustomScreenEditorPage() {
     () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
     [definition.listView.columns, selectedListColumnId]
   );
+  const adminEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (activeBuilderTab !== "editor-view" || !selectedBlock) return undefined;
+    return {
+      surface: "admin-editor-view",
+      jumpToBindingPropPath: (propPath: string) => {
+        setActiveEditorDetailsTab("data");
+        setFocusedBindingPropPath(propPath);
+      },
+      getBindingState: (propPath: string) => resolveBindingState(bindings, selectedId, propPath),
+    };
+  }, [activeBuilderTab, bindings, selectedBlock, selectedId]);
   const availableListFieldOptions = useMemo(() => {
     if (!selectedContentType) return [];
     const selectedKeys = new Set(
@@ -356,6 +382,7 @@ export function CustomScreenEditorPage() {
     setSidebarLabel(record.sidebarLabel ?? "");
     setDefinition(nextDefinition);
     setSelectedId(getFirstBlockId(nextDefinition.editorView.blocks as Block[]));
+    setFocusedBindingPropPath(null);
     setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
     setHasUnsavedChanges(false);
   }, []);
@@ -379,6 +406,11 @@ export function CustomScreenEditorPage() {
     },
     [applyScreen, isCreateMode, screenId]
   );
+
+  const handleSelectBlock = useCallback((id: string) => {
+    setSelectedId(id);
+    setFocusedBindingPropPath(null);
+  }, []);
 
   useEffect(() => {
     listContentTypesCached({ force: true })
@@ -429,12 +461,14 @@ export function CustomScreenEditorPage() {
     const nextBlock = createBlock(type);
     updateBlocks([...blocks, nextBlock]);
     setSelectedId(nextBlock.id);
+    setFocusedBindingPropPath(null);
   };
 
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
     const nextBlock = createBlock(type);
     updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
     setSelectedId(nextBlock.id);
+    setFocusedBindingPropPath(null);
   };
 
   const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
@@ -456,6 +490,7 @@ export function CustomScreenEditorPage() {
     updateBlocks(result.blocks);
     if (selectedId && !findBlockById(result.blocks, selectedId)) {
       setSelectedId(getFirstBlockId(result.blocks));
+      setFocusedBindingPropPath(null);
     }
   };
 
@@ -675,7 +710,7 @@ export function CustomScreenEditorPage() {
 
   const detailsPanel =
     activeBuilderTab === "list-view" ? (
-      <Tabs defaultValue="screen" className="flex h-full flex-col">
+      <Tabs key="list-view-details" defaultValue="screen" className="flex h-full flex-col">
         <TabsList variant="line" className="px-1">
           <TabsTrigger value="screen">Screen</TabsTrigger>
           <TabsTrigger value="column">Selected Column</TabsTrigger>
@@ -699,7 +734,12 @@ export function CustomScreenEditorPage() {
         </TabsContent>
       </Tabs>
     ) : (
-      <Tabs defaultValue="screen" className="flex h-full flex-col">
+      <Tabs
+        key="editor-view-details"
+        value={activeEditorDetailsTab}
+        onValueChange={(next) => setActiveEditorDetailsTab(next as EditorDetailsTab)}
+        className="flex h-full flex-col"
+      >
         <TabsList variant="line" className="px-1">
           <TabsTrigger value="screen">Screen</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
@@ -713,6 +753,8 @@ export function CustomScreenEditorPage() {
             selectedBlock={selectedBlock}
             value={bindings}
             fields={contentFields}
+            focusedPropPath={focusedBindingPropPath}
+            onFocusedPropPathChange={setFocusedBindingPropPath}
             onChange={(next) => {
               updateDefinition({
                 ...definition,
@@ -729,6 +771,7 @@ export function CustomScreenEditorPage() {
             block={selectedBlock}
             widget={selectedWidget}
             onChange={handleChangeBlock}
+            editorContext={adminEditorWidgetContext}
           />
         </TabsContent>
       </Tabs>
@@ -871,7 +914,7 @@ export function CustomScreenEditorPage() {
                   className="p-4"
                   widgetRegistry={widgetRegistry}
                   selectedId={selectedId}
-                  onSelect={setSelectedId}
+                  onSelect={handleSelectBlock}
                   onMove={handleMove}
                   onDuplicate={handleDuplicate}
                   onDelete={handleDelete}

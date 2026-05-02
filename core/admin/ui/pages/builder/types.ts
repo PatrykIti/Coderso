@@ -7,6 +7,7 @@ export {
   type SpacingToken,
   type WidgetBlock as Block,
   type WidgetDefinition,
+  type WidgetEditorContext,
   type WidgetEditorState,
   type WidgetLayout as LayoutValue,
   type WidgetVariant,

@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -36,6 +37,8 @@ import {
 } from "../../../../widgets/core/screenTwoColumn";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+
+type BindingState = "literal" | "bound" | "mixed";
 
 function EditorSection({
   title,
@@ -120,6 +123,100 @@ function ClearableStyleInput({
   );
 }
 
+function ModeHint({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-2">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function resolveBindingState(
+  context: WidgetEditorProps<unknown>["context"],
+  propPath: string | null | undefined
+): BindingState {
+  if (!context?.getBindingState || !propPath) return "literal";
+  return context.getBindingState(propPath);
+}
+
+function BindingStateBadge({ state }: { state: BindingState }) {
+  const label = state === "bound" ? "Bound" : state === "mixed" ? "Mixed" : "Literal";
+  const variant = state === "literal" ? "outline" : "default";
+  return <Badge variant={variant}>{label}</Badge>;
+}
+
+function BindingFriendlyTextControl({
+  label,
+  value,
+  placeholder,
+  onValueChange,
+  suggestedBindingPropPath,
+  context,
+  multiline = false,
+  rows = 3,
+}: {
+  label: string;
+  value: string | undefined;
+  placeholder: string;
+  onValueChange: (next: string) => void;
+  suggestedBindingPropPath?: string | null;
+  context?: WidgetEditorProps<unknown>["context"];
+  multiline?: boolean;
+  rows?: number;
+}) {
+  const bindingState = resolveBindingState(context, suggestedBindingPropPath);
+  const canJump = Boolean(context?.jumpToBindingPropPath && suggestedBindingPropPath);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </p>
+          {suggestedBindingPropPath ? <BindingStateBadge state={bindingState} /> : null}
+        </div>
+        {canJump ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[11px]"
+            data-binding-prop-path={suggestedBindingPropPath ?? undefined}
+            onClick={() => context?.jumpToBindingPropPath?.(suggestedBindingPropPath ?? "")}
+          >
+            Data
+          </Button>
+        ) : null}
+      </div>
+      {multiline ? (
+        <Textarea
+          rows={rows}
+          value={value ?? ""}
+          onChange={(event) => onValueChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      ) : (
+        <Input
+          value={value ?? ""}
+          onChange={(event) => onValueChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      )}
+      {suggestedBindingPropPath ? (
+        <p className="text-xs text-muted-foreground">
+          {bindingState === "literal"
+            ? "Literal value only until you map this prop in Data."
+            : "This prop already has a field binding in Data."}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 const screenHeaderVariantOptions: Array<{
   id: ScreenRecordHeaderVariantId;
   label: string;
@@ -142,7 +239,7 @@ const alignOptions: Array<{ id: ScreenRecordHeaderAlign; label: string }> = [
   { id: "center", label: "Center" },
 ];
 
-function ScreenRecordHeaderEditor({
+export function ScreenRecordHeaderWizardEditor({
   value,
   onChange,
   variant,
@@ -151,6 +248,123 @@ function ScreenRecordHeaderEditor({
   const normalized = normalizeScreenRecordHeaderData(value);
   const resolvedVariant = resolveScreenRecordHeaderVariant(variant);
 
+  const update = (patch: Partial<ScreenRecordHeaderData>) =>
+    onChange(normalizeScreenRecordHeaderData({ ...normalized, ...patch }));
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Start here"
+        description="Pick the header density and shape the main record summary before fine-tuning styles."
+      />
+      <EditorSection title="Header Variant" description="Choose the density of the record hero.">
+        <VariantCards
+          value={resolvedVariant}
+          options={screenHeaderVariantOptions}
+          onChange={onVariantChange}
+        />
+      </EditorSection>
+      <EditorSection title="Primary content" description="Set up the most visible fields first.">
+        <Input
+          value={normalized.title ?? ""}
+          onChange={(event) => update({ title: event.target.value })}
+          placeholder="Title"
+        />
+        <Input
+          value={normalized.subtitle ?? ""}
+          onChange={(event) => update({ subtitle: event.target.value })}
+          placeholder="Subtitle"
+        />
+      </EditorSection>
+      <EditorSection
+        title="Optional areas"
+        description="Add secondary chrome only if this header needs it."
+      >
+        <Input
+          value={normalized.eyebrow ?? ""}
+          onChange={(event) => update({ eyebrow: event.target.value })}
+          placeholder="Eyebrow"
+        />
+        <Input
+          value={normalized.badge ?? ""}
+          onChange={(event) => update({ badge: event.target.value })}
+          placeholder="Badge"
+        />
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenRecordHeaderVisualEditor({
+  value,
+  onChange,
+  context,
+}: WidgetEditorProps<ScreenRecordHeaderData>) {
+  const normalized = normalizeScreenRecordHeaderData(value);
+  const update = (patch: Partial<ScreenRecordHeaderData>) =>
+    onChange(normalizeScreenRecordHeaderData({ ...normalized, ...patch }));
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Main content"
+        description="Tune the visible record copy and use Data shortcuts when a field should come from bindings."
+      />
+      <EditorSection
+        title="Content"
+        description="These controls shape the editor-facing header content."
+      >
+        <BindingFriendlyTextControl
+          label="Eyebrow"
+          value={normalized.eyebrow}
+          onValueChange={(next) => update({ eyebrow: next })}
+          suggestedBindingPropPath="eyebrow"
+          placeholder="Eyebrow"
+          context={context}
+        />
+        <BindingFriendlyTextControl
+          label="Title"
+          value={normalized.title}
+          onValueChange={(next) => update({ title: next })}
+          suggestedBindingPropPath="title"
+          placeholder="Title"
+          context={context}
+        />
+        <BindingFriendlyTextControl
+          label="Subtitle"
+          value={normalized.subtitle}
+          onValueChange={(next) => update({ subtitle: next })}
+          suggestedBindingPropPath="subtitle"
+          placeholder="Subtitle"
+          context={context}
+        />
+        <BindingFriendlyTextControl
+          label="Description"
+          value={normalized.description}
+          onValueChange={(next) => update({ description: next })}
+          suggestedBindingPropPath="description"
+          placeholder="Description"
+          context={context}
+          multiline
+        />
+        <BindingFriendlyTextControl
+          label="Badge"
+          value={normalized.badge}
+          onValueChange={(next) => update({ badge: next })}
+          suggestedBindingPropPath="badge"
+          placeholder="Badge"
+          context={context}
+        />
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenRecordHeaderAdvancedEditor({
+  value,
+  onChange,
+}: WidgetEditorProps<ScreenRecordHeaderData>) {
+  const normalized = normalizeScreenRecordHeaderData(value);
   const update = (patch: Partial<ScreenRecordHeaderData>) =>
     onChange(normalizeScreenRecordHeaderData({ ...normalized, ...patch }));
   const updateStyle = (patch: Partial<NonNullable<ScreenRecordHeaderData["style"]>>) =>
@@ -162,41 +376,10 @@ function ScreenRecordHeaderEditor({
 
   return (
     <div className="space-y-3">
-      <EditorSection title="Header Variant" description="Choose the density of the record hero.">
-        <VariantCards
-          value={resolvedVariant}
-          options={screenHeaderVariantOptions}
-          onChange={onVariantChange}
-        />
-      </EditorSection>
-      <EditorSection title="Content">
-        <Input
-          value={normalized.eyebrow ?? ""}
-          onChange={(event) => update({ eyebrow: event.target.value })}
-          placeholder="Eyebrow"
-        />
-        <Input
-          value={normalized.title ?? ""}
-          onChange={(event) => update({ title: event.target.value })}
-          placeholder="Title"
-        />
-        <Input
-          value={normalized.subtitle ?? ""}
-          onChange={(event) => update({ subtitle: event.target.value })}
-          placeholder="Subtitle"
-        />
-        <Textarea
-          rows={3}
-          value={normalized.description ?? ""}
-          onChange={(event) => update({ description: event.target.value })}
-          placeholder="Description"
-        />
-        <Input
-          value={normalized.badge ?? ""}
-          onChange={(event) => update({ badge: event.target.value })}
-          placeholder="Badge"
-        />
-      </EditorSection>
+      <ModeHint
+        title="Expert controls"
+        description="Use alignment and raw surface tokens for layout polish or chrome removal."
+      />
       <EditorSection title="Alignment">
         <Select
           value={normalized.align ?? "start"}
@@ -278,7 +461,7 @@ const toneOptions: Array<{ id: ScreenFieldValueTone; label: string }> = [
   { id: "muted", label: "Muted" },
 ];
 
-function ScreenFieldValueEditor({
+export function ScreenFieldValueWizardEditor({
   value,
   onChange,
   variant,
@@ -287,6 +470,89 @@ function ScreenFieldValueEditor({
   const normalized = normalizeScreenFieldValueData(value);
   const resolvedVariant = resolveScreenFieldValueVariant(variant);
 
+  const update = (patch: Partial<ScreenFieldValueData>) =>
+    onChange(normalizeScreenFieldValueData({ ...normalized, ...patch }));
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Start here"
+        description="Pick the row shape and define the basic label/value pairing for this record field."
+      />
+      <EditorSection title="Field Variant">
+        <VariantCards
+          value={resolvedVariant}
+          options={fieldValueVariantOptions}
+          onChange={onVariantChange}
+        />
+      </EditorSection>
+      <EditorSection title="Primary content">
+        <Input
+          value={normalized.label ?? ""}
+          onChange={(event) => update({ label: event.target.value })}
+          placeholder="Label"
+        />
+        <Input
+          value={normalized.value ?? ""}
+          onChange={(event) => update({ value: event.target.value })}
+          placeholder="Value"
+        />
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenFieldValueVisualEditor({
+  value,
+  onChange,
+  context,
+}: WidgetEditorProps<ScreenFieldValueData>) {
+  const normalized = normalizeScreenFieldValueData(value);
+  const update = (patch: Partial<ScreenFieldValueData>) =>
+    onChange(normalizeScreenFieldValueData({ ...normalized, ...patch }));
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Main content"
+        description="Use Data shortcuts for bound fields and keep literal values only where the screen should override them."
+      />
+      <EditorSection title="Content">
+        <BindingFriendlyTextControl
+          label="Label"
+          value={normalized.label}
+          onValueChange={(next) => update({ label: next })}
+          suggestedBindingPropPath="label"
+          placeholder="Label"
+          context={context}
+        />
+        <BindingFriendlyTextControl
+          label="Value"
+          value={normalized.value}
+          onValueChange={(next) => update({ value: next })}
+          suggestedBindingPropPath="value"
+          placeholder="Value"
+          context={context}
+        />
+        <BindingFriendlyTextControl
+          label="Helper"
+          value={normalized.helper}
+          onValueChange={(next) => update({ helper: next })}
+          suggestedBindingPropPath="helper"
+          placeholder="Helper text"
+          context={context}
+          multiline
+        />
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenFieldValueAdvancedEditor({
+  value,
+  onChange,
+}: WidgetEditorProps<ScreenFieldValueData>) {
+  const normalized = normalizeScreenFieldValueData(value);
   const update = (patch: Partial<ScreenFieldValueData>) =>
     onChange(normalizeScreenFieldValueData({ ...normalized, ...patch }));
   const updateStyle = (patch: Partial<NonNullable<ScreenFieldValueData["style"]>>) =>
@@ -298,31 +564,10 @@ function ScreenFieldValueEditor({
 
   return (
     <div className="space-y-3">
-      <EditorSection title="Field Variant">
-        <VariantCards
-          value={resolvedVariant}
-          options={fieldValueVariantOptions}
-          onChange={onVariantChange}
-        />
-      </EditorSection>
-      <EditorSection title="Content">
-        <Input
-          value={normalized.label ?? ""}
-          onChange={(event) => update({ label: event.target.value })}
-          placeholder="Label"
-        />
-        <Input
-          value={normalized.value ?? ""}
-          onChange={(event) => update({ value: event.target.value })}
-          placeholder="Value"
-        />
-        <Textarea
-          rows={3}
-          value={normalized.helper ?? ""}
-          onChange={(event) => update({ helper: event.target.value })}
-          placeholder="Helper text"
-        />
-      </EditorSection>
+      <ModeHint
+        title="Expert controls"
+        description="Adjust tone and removable surface tokens without changing the binding ownership."
+      />
       <EditorSection title="Tone">
         <Select
           value={normalized.tone ?? "default"}
@@ -373,7 +618,7 @@ const fieldGroupVariantOptions = [
   },
 ] as const;
 
-function ScreenFieldGroupEditor({
+export function ScreenFieldGroupWizardEditor({
   value,
   onChange,
   variant,
@@ -383,15 +628,13 @@ function ScreenFieldGroupEditor({
 
   const update = (patch: Partial<ScreenFieldGroupData>) =>
     onChange(normalizeScreenFieldGroupData({ ...normalized, ...patch }));
-  const updateStyle = (patch: Partial<NonNullable<ScreenFieldGroupData["style"]>>) =>
-    update({ style: { ...normalized.style, ...patch } });
-  const clearStyle = (key: keyof NonNullable<ScreenFieldGroupData["style"]>) => {
-    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
-    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
-  };
 
   return (
     <div className="space-y-3">
+      <ModeHint
+        title="Start here"
+        description="Pick the group treatment and define the section heading before you fine-tune chrome."
+      />
       <EditorSection title="Group Variant">
         <VariantCards
           value={(variant === "subtle" ? "subtle" : "card") as "card" | "subtle"}
@@ -412,6 +655,68 @@ function ScreenFieldGroupEditor({
           placeholder="Group description"
         />
       </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenFieldGroupVisualEditor({
+  value,
+  onChange,
+}: WidgetEditorProps<ScreenFieldGroupData>) {
+  const normalized = normalizeScreenFieldGroupData(value);
+  const update = (patch: Partial<ScreenFieldGroupData>) =>
+    onChange(normalizeScreenFieldGroupData({ ...normalized, ...patch }));
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Main content"
+        description="Use this panel for group copy and slot guidance, not low-level chrome tokens."
+      />
+      <EditorSection title="Content">
+        <Input
+          value={normalized.title ?? ""}
+          onChange={(event) => update({ title: event.target.value })}
+          placeholder="Group title"
+        />
+        <Textarea
+          rows={3}
+          value={normalized.description ?? ""}
+          onChange={(event) => update({ description: event.target.value })}
+          placeholder="Group description"
+        />
+      </EditorSection>
+      <EditorSection title="Slot guidance">
+        <p className="text-sm text-muted-foreground">
+          Group related `screen-field-value` widgets in the `content` slot so the selected record
+          reads as one deliberate section.
+        </p>
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenFieldGroupAdvancedEditor({
+  value,
+  onChange,
+}: WidgetEditorProps<ScreenFieldGroupData>) {
+  const normalized = normalizeScreenFieldGroupData(value);
+
+  const update = (patch: Partial<ScreenFieldGroupData>) =>
+    onChange(normalizeScreenFieldGroupData({ ...normalized, ...patch }));
+  const updateStyle = (patch: Partial<NonNullable<ScreenFieldGroupData["style"]>>) =>
+    update({ style: { ...normalized.style, ...patch } });
+  const clearStyle = (key: keyof NonNullable<ScreenFieldGroupData["style"]>) => {
+    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Expert controls"
+        description="Tune removable panel chrome after the group structure and copy are already set."
+      />
       <EditorSection title="Surface">
         <ClearableStyleInput
           label="Frame background"
@@ -456,7 +761,7 @@ const gapOptions: Array<{ id: ScreenTwoColumnGap; label: string }> = [
   { id: "lg", label: "Spacious" },
 ];
 
-function ScreenTwoColumnEditor({
+export function ScreenTwoColumnWizardEditor({
   value,
   onChange,
   variant,
@@ -467,15 +772,13 @@ function ScreenTwoColumnEditor({
 
   const update = (patch: Partial<ScreenTwoColumnData>) =>
     onChange(normalizeScreenTwoColumnData({ ...normalized, ...patch }));
-  const updateStyle = (patch: Partial<NonNullable<ScreenTwoColumnData["style"]>>) =>
-    update({ style: { ...normalized.style, ...patch } });
-  const clearStyle = (key: keyof NonNullable<ScreenTwoColumnData["style"]>) => {
-    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
-    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
-  };
 
   return (
     <div className="space-y-3">
+      <ModeHint
+        title="Start here"
+        description="Choose the overall column balance and name the two regions before styling them."
+      />
       <EditorSection title="Layout Variant">
         <VariantCards
           value={resolvedVariant}
@@ -483,7 +786,37 @@ function ScreenTwoColumnEditor({
           onChange={onVariantChange}
         />
       </EditorSection>
-      <EditorSection title="Column Labels">
+      <EditorSection title="Column labels">
+        <Input
+          value={normalized.leftTitle ?? ""}
+          onChange={(event) => update({ leftTitle: event.target.value })}
+          placeholder="Left column label"
+        />
+        <Input
+          value={normalized.rightTitle ?? ""}
+          onChange={(event) => update({ rightTitle: event.target.value })}
+          placeholder="Right column label"
+        />
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenTwoColumnVisualEditor({
+  value,
+  onChange,
+}: WidgetEditorProps<ScreenTwoColumnData>) {
+  const normalized = normalizeScreenTwoColumnData(value);
+  const update = (patch: Partial<ScreenTwoColumnData>) =>
+    onChange(normalizeScreenTwoColumnData({ ...normalized, ...patch }));
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Main content"
+        description="Tune spacing and slot intent so editors know what belongs in each column."
+      />
+      <EditorSection title="Column labels">
         <Input
           value={normalized.leftTitle ?? ""}
           onChange={(event) => update({ leftTitle: event.target.value })}
@@ -510,6 +843,36 @@ function ScreenTwoColumnEditor({
           </SelectContent>
         </Select>
       </EditorSection>
+      <EditorSection title="Slot guidance">
+        <p className="text-sm text-muted-foreground">
+          Use the left slot for the primary editable stack and the right slot for supporting fields,
+          summaries, or review-only context.
+        </p>
+      </EditorSection>
+    </div>
+  );
+}
+
+export function ScreenTwoColumnAdvancedEditor({
+  value,
+  onChange,
+}: WidgetEditorProps<ScreenTwoColumnData>) {
+  const normalized = normalizeScreenTwoColumnData(value);
+  const update = (patch: Partial<ScreenTwoColumnData>) =>
+    onChange(normalizeScreenTwoColumnData({ ...normalized, ...patch }));
+  const updateStyle = (patch: Partial<NonNullable<ScreenTwoColumnData["style"]>>) =>
+    update({ style: { ...normalized.style, ...patch } });
+  const clearStyle = (key: keyof NonNullable<ScreenTwoColumnData["style"]>) => {
+    const { [key]: _removed, ...nextStyle } = normalized.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
+
+  return (
+    <div className="space-y-3">
+      <ModeHint
+        title="Expert controls"
+        description="Use removable column chrome only after the content split and spacing are already settled."
+      />
       <EditorSection title="Column Surface">
         <ClearableStyleInput
           label="Column background"
@@ -529,19 +892,3 @@ function ScreenTwoColumnEditor({
     </div>
   );
 }
-
-export const ScreenRecordHeaderWizardEditor = ScreenRecordHeaderEditor;
-export const ScreenRecordHeaderVisualEditor = ScreenRecordHeaderEditor;
-export const ScreenRecordHeaderAdvancedEditor = ScreenRecordHeaderEditor;
-
-export const ScreenFieldValueWizardEditor = ScreenFieldValueEditor;
-export const ScreenFieldValueVisualEditor = ScreenFieldValueEditor;
-export const ScreenFieldValueAdvancedEditor = ScreenFieldValueEditor;
-
-export const ScreenFieldGroupWizardEditor = ScreenFieldGroupEditor;
-export const ScreenFieldGroupVisualEditor = ScreenFieldGroupEditor;
-export const ScreenFieldGroupAdvancedEditor = ScreenFieldGroupEditor;
-
-export const ScreenTwoColumnWizardEditor = ScreenTwoColumnEditor;
-export const ScreenTwoColumnVisualEditor = ScreenTwoColumnEditor;
-export const ScreenTwoColumnAdvancedEditor = ScreenTwoColumnEditor;

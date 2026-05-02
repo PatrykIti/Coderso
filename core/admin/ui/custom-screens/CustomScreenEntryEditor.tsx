@@ -55,6 +55,43 @@ import {
   type CustomScreenEntryDraft,
 } from "./customScreenEntryDraft";
 
+type DetailsTab = "record" | "element";
+
+const hasBlockId = (
+  blocks: Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>,
+  targetId: string
+): boolean =>
+  blocks.some((block) => {
+    if (block.id === targetId) return true;
+    const slotBlocks = block.slots
+      ? Object.values(block.slots).flatMap((value) =>
+          Array.isArray(value)
+            ? (value as Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>)
+            : []
+        )
+      : [];
+    const childBlocks = Array.isArray(block.children)
+      ? (block.children as Array<{
+          id: string;
+          slots?: Record<string, unknown>;
+          children?: unknown;
+        }>)
+      : [];
+    return hasBlockId([...slotBlocks, ...childBlocks], targetId);
+  });
+
+const preserveSelectedElementAcrossRefresh = (input: {
+  selectedBlockId: string | null;
+  nextBlocks: Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>;
+}) => {
+  if (!input.selectedBlockId) {
+    return input.nextBlocks[0]?.id ?? null;
+  }
+  return hasBlockId(input.nextBlocks, input.selectedBlockId)
+    ? input.selectedBlockId
+    : (input.nextBlocks[0]?.id ?? null);
+};
+
 export function CustomScreenEntryEditor() {
   const { path, navigate } = useAdminRouter();
   const { screenId, entryId } = useMemo(() => resolveCustomScreenEntryParams(path), [path]);
@@ -129,6 +166,7 @@ export function CustomScreenEntryEditor() {
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activeDetailsTab, setActiveDetailsTab] = useState<DetailsTab>("record");
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
   const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
     () =>
@@ -241,7 +279,13 @@ export function CustomScreenEntryEditor() {
       setFieldErrors({});
       setHasUnsavedChanges(false);
       setRemoteUpdatePending(false);
-      setSelectedRuntimeBlockId(nextScreen.definition?.editorView.blocks[0]?.id ?? nextScreen.blocks[0]?.id ?? null);
+      const nextBlocks = nextScreen.definition?.editorView.blocks ?? nextScreen.blocks;
+      setSelectedRuntimeBlockId((current) =>
+        preserveSelectedElementAcrossRefresh({
+          selectedBlockId: current,
+          nextBlocks,
+        })
+      );
       setError(null);
     },
     []
@@ -502,7 +546,9 @@ export function CustomScreenEntryEditor() {
               </p>
               <p className="mb-1 text-sm font-medium">{systemField?.label ?? binding.field}</p>
               <p className="text-sm text-muted-foreground">
-                {String((buildCanvasFieldValues() as Record<string, unknown>)[binding.field] ?? "—")}
+                {String(
+                  (buildCanvasFieldValues() as Record<string, unknown>)[binding.field] ?? "—"
+                )}
               </p>
             </div>
           );
@@ -583,7 +629,11 @@ export function CustomScreenEntryEditor() {
   };
 
   const detailsPanel = (
-    <Tabs defaultValue="record" className="flex h-full flex-col p-6">
+    <Tabs
+      value={activeDetailsTab}
+      onValueChange={(next) => setActiveDetailsTab(next as DetailsTab)}
+      className="flex h-full flex-col p-6"
+    >
       <TabsList variant="line" className="px-1">
         <TabsTrigger value="record">Record</TabsTrigger>
         <TabsTrigger value="element">Selected Element</TabsTrigger>
@@ -773,9 +823,13 @@ export function CustomScreenEntryEditor() {
                 onTitleChange={handleTitleChange}
                 onSlugChange={handleSlugChange}
                 selectedBlockId={selectedRuntimeBlockId}
-                onSelectBlock={setSelectedRuntimeBlockId}
+                onSelectBlock={(blockId) => {
+                  setSelectedRuntimeBlockId(blockId);
+                  setActiveDetailsTab("element");
+                }}
                 onEditBlock={(blockId) => {
                   setSelectedRuntimeBlockId(blockId);
+                  setActiveDetailsTab("element");
                   setDetailsOpen(true);
                 }}
               />

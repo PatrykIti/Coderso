@@ -5,10 +5,10 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
-  ScreenFieldGroupVisualEditor,
-  ScreenFieldValueVisualEditor,
-  ScreenRecordHeaderVisualEditor,
-  ScreenTwoColumnVisualEditor,
+  ScreenFieldGroupAdvancedEditor,
+  ScreenFieldValueAdvancedEditor,
+  ScreenRecordHeaderAdvancedEditor,
+  ScreenTwoColumnAdvancedEditor,
 } from "../../../core/admin/ui/widgets/editors/ScreenEditors";
 import type { ScreenFieldGroupData } from "../../../core/widgets/core/screenFieldGroup";
 import type { ScreenFieldValueData } from "../../../core/widgets/core/screenFieldValue";
@@ -168,7 +168,7 @@ afterEach(() => {
 
 test("screen widget editors clear style keys instead of writing transparent sentinels", () => {
   const recordHeader = renderEditor<ScreenRecordHeaderData>({
-    editor: ScreenRecordHeaderVisualEditor,
+    editor: ScreenRecordHeaderAdvancedEditor,
     variant: "card",
     value: {
       title: "Entry",
@@ -188,7 +188,7 @@ test("screen widget editors clear style keys instead of writing transparent sent
   }
 
   const fieldValue = renderEditor<ScreenFieldValueData>({
-    editor: ScreenFieldValueVisualEditor,
+    editor: ScreenFieldValueAdvancedEditor,
     variant: "inline",
     value: {
       label: "Status",
@@ -208,7 +208,7 @@ test("screen widget editors clear style keys instead of writing transparent sent
   }
 
   const fieldGroup = renderEditor<ScreenFieldGroupData>({
-    editor: ScreenFieldGroupVisualEditor,
+    editor: ScreenFieldGroupAdvancedEditor,
     variant: "default",
     value: {
       title: "Details",
@@ -227,7 +227,7 @@ test("screen widget editors clear style keys instead of writing transparent sent
   }
 
   const twoColumn = renderEditor<ScreenTwoColumnData>({
-    editor: ScreenTwoColumnVisualEditor,
+    editor: ScreenTwoColumnAdvancedEditor,
     variant: "balanced",
     value: {
       leftTitle: "Left",

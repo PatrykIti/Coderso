@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
@@ -83,12 +83,14 @@ export function ScreenFieldGroupBlock({
   slots,
   previewDevice,
   pageDefaults,
+  renderBlock,
 }: {
   data: ScreenFieldGroupData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
   pageDefaults?: WidgetLayoutDefaults;
+  renderBlock?: (block: WidgetBlock) => ReactNode;
 }) {
   const normalized = normalizeScreenFieldGroupData(data);
   const resolvedVariant = resolveScreenFieldGroupVariant(variant);
@@ -125,12 +127,17 @@ export function ScreenFieldGroupBlock({
       <div className="space-y-4">
         {content.length > 0 ? (
           content.map((block) => (
-            <WidgetRenderer
-              key={block.id}
-              block={block}
-              previewDevice={previewDevice}
-              pageDefaults={pageDefaults}
-            />
+            <div key={block.id}>
+              {renderBlock ? (
+                renderBlock(block)
+              ) : (
+                <WidgetRenderer
+                  block={block}
+                  previewDevice={previewDevice}
+                  pageDefaults={pageDefaults}
+                />
+              )}
+            </div>
           ))
         ) : (
           <div className="rounded-2xl border border-dashed border-border/60 bg-background/50 px-4 py-5 text-sm text-muted-foreground">

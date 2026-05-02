@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   collectBindingPropPaths,
   getWidgetBindings,
@@ -27,6 +28,8 @@ type FieldBindingPanelProps = {
   value: CustomScreenBinding[];
   fields: ContentField[];
   onChange: (next: CustomScreenBinding[]) => void;
+  focusedPropPath?: string | null;
+  onFocusedPropPathChange?: (propPath: string | null) => void;
 };
 
 type BindingFieldOption = {
@@ -93,6 +96,8 @@ export function FieldBindingPanel({
   value,
   fields,
   onChange,
+  focusedPropPath,
+  onFocusedPropPathChange,
 }: FieldBindingPanelProps) {
   const selectedBindings = useMemo(
     () =>
@@ -211,24 +216,45 @@ export function FieldBindingPanel({
             {unboundPropPaths.map((path) => (
               <div
                 key={path}
-                className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2"
+                data-prop-path={path}
+                data-focused={focusedPropPath === path ? "true" : "false"}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2",
+                  focusedPropPath === path && "border-primary bg-primary/5"
+                )}
               >
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium">{path}</p>
                   <p className="text-xs text-muted-foreground">
-                    Add a binding for this widget prop.
+                    {focusedPropPath === path
+                      ? "Focused from widget settings."
+                      : "Add a binding for this widget prop."}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => addBinding(path)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1.5"
+                    onClick={() => onFocusedPropPathChange?.(path)}
+                  >
+                    Focus
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => {
+                      onFocusedPropPathChange?.(path);
+                      addBinding(path);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -236,7 +262,15 @@ export function FieldBindingPanel({
       ) : null}
 
       {selectedBindings.map((binding, index) => (
-        <div key={binding.id} className="space-y-3 rounded-lg border p-3">
+        <div
+          key={binding.id}
+          data-prop-path={binding.propPath}
+          data-focused={focusedPropPath === binding.propPath ? "true" : "false"}
+          className={cn(
+            "space-y-3 rounded-lg border p-3",
+            focusedPropPath === binding.propPath && "border-primary bg-primary/5"
+          )}
+        >
           {(() => {
             const selectedFieldOption =
               fieldOptions.find((field) => field.value === binding.field) ?? null;
@@ -268,9 +302,10 @@ export function FieldBindingPanel({
                     value={binding.propPath}
                     list={`binding-props-${selectedBlock.id}`}
                     placeholder="heading.title"
-                    onChange={(event) =>
-                      updateBinding(binding.id, { propPath: event.target.value })
-                    }
+                    onChange={(event) => {
+                      onFocusedPropPathChange?.(event.target.value);
+                      updateBinding(binding.id, { propPath: event.target.value });
+                    }}
                   />
                   <datalist id={`binding-props-${selectedBlock.id}`}>
                     {propPathSuggestions.map((path) => (

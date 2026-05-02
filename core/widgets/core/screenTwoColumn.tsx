@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
@@ -97,12 +97,14 @@ export function ScreenTwoColumnBlock({
   slots,
   previewDevice,
   pageDefaults,
+  renderBlock,
 }: {
   data: ScreenTwoColumnData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
   pageDefaults?: WidgetLayoutDefaults;
+  renderBlock?: (block: WidgetBlock) => ReactNode;
 }) {
   const normalized = normalizeScreenTwoColumnData(data);
   const resolvedVariant = resolveScreenTwoColumnVariant(variant);
@@ -133,12 +135,17 @@ export function ScreenTwoColumnBlock({
       ) : null}
       {items.length > 0 ? (
         items.map((block) => (
-          <WidgetRenderer
-            key={block.id}
-            block={block}
-            previewDevice={previewDevice}
-            pageDefaults={pageDefaults}
-          />
+          <div key={block.id}>
+            {renderBlock ? (
+              renderBlock(block)
+            ) : (
+              <WidgetRenderer
+                block={block}
+                previewDevice={previewDevice}
+                pageDefaults={pageDefaults}
+              />
+            )}
+          </div>
         ))
       ) : (
         <div className="rounded-2xl border border-dashed border-border/60 bg-background/50 px-4 py-5 text-sm text-muted-foreground">
