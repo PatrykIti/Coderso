@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 60 tasks
+- **To Do:** 68 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1420 tasks
 
@@ -38,6 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Residual follow-up after the delivered `TASK-250` code: preview shell size, List View header interactions, record-backed Editor View preview, and prop-complete Data tab bindings |
+| TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Business area: align workspace preview sizing with Pages and hydrate Editor View preview from real records |
+| TASK-251-01-01 | Preview Dialog Shell Width and Device Framing Parity | High | Medium | Technical leaf: widen the workspace preview modal and remove the current double clamp around list/editor preview surfaces |
+| TASK-251-01-02 | First-Record Preview Data for Editor View Canvas | High | Medium | Technical leaf: drive builder preview from cached-first real entry data with an explicit fallback when no records exist |
+| TASK-251-02 | List View Canvas Column Interaction Alignment | High | Medium | Business area: keep selection and column movement inside the table header and remove the redundant card strip below the table |
+| TASK-251-02-01 | Inline Table-Header Column Reordering | High | Medium | Technical leaf: move left/right ordering controls into header cells while preserving selected-column inspector flow |
+| TASK-251-03 | Binding Panel Prop Coverage and Prop-Centric Cards | High | Large | Business area: replace ordinal binding cards with widget-prop-centric mapping and full bindable prop coverage |
+| TASK-251-03-01 | Widget-Owned Bindable Prop Targets and Data-Tab Cards | High | Large | Technical leaf: declare bindable prop targets in widget contracts and render prop-labeled Data tab cards from that shared source of truth |
+| TASK-251-04 | QA, Docs, and Closure | Medium | Medium | Business area: targeted preview/binding/list-canvas validation plus docs, board, and changelog synchronization |
 | TASK-250 | Custom Screens Widget Parity and Editor Flow Completion | High | Very Large | Follow-up: keep the shared widget foundation but bring `screen-*` editor depth, binding UX, runtime parity, and coverage closer to mature widgets like Hero |
 | TASK-250-01 | Screen Widget Editor Architecture and Mode Parity | High | Large | Business area: stop aliasing one form across `wizard/visual/advanced` and make screen widget editors meaningfully mode-aware |
 | TASK-250-01-01 | Distinct Wizard, Visual, and Advanced Flows for `screen-*` | High | Large | Technical leaf: split editor modes for screen widgets instead of reusing one shared editor implementation |
