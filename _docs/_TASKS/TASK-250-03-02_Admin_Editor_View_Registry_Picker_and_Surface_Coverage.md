@@ -31,14 +31,23 @@ No child task files.
 ## Implementation Pseudocode
 
 ```ts
-expect(listRegisteredWidgetsForSurface({
+const widgets = listRegisteredWidgetsForSurface({
   surface: "admin-editor-view",
   contentType,
-}).map((widget) => widget.type)).toEqual([
+});
+
+expect(widgets.map((widget) => widget.type)).toEqual([
   "screen-record-header",
   "screen-field-value",
   "screen-field-group",
   "screen-two-column",
+]);
+
+expect(widgets.map((widget) => widget.dataAccess)).toEqual([
+  { source: "selected-entry", modes: ["read"] },
+  { source: "selected-entry", modes: ["read", "write"] },
+  { source: "selected-content-type", modes: ["read"] },
+  { source: "selected-content-type", modes: ["read"] },
 ]);
 ```
 
@@ -46,7 +55,18 @@ expect(listRegisteredWidgetsForSurface({
 render(<CustomScreenEditorPage />);
 expect(leftPicker).toContain("Screen Record Header");
 expect(leftPicker).toContain("Screen Field Value");
+expect(leftPicker).toContain("Screen Field Group");
+expect(leftPicker).toContain("Screen Two Column");
 expect(leftPicker).not.toContain("Hero");
+expect(leftPicker).not.toContain("Feature Grid");
+```
+
+```ts
+const pickerContract = {
+  whenNoContentType: "empty or gated admin-editor-view set",
+  whenContentTypeSelected: "only concrete screen widgets for admin-editor-view",
+  legacyCompatibility: "custom-screen-builder remains separate and does not leak Hero into admin-editor-view",
+};
 ```
 
 ## Security Contract
@@ -67,7 +87,8 @@ expect(leftPicker).not.toContain("Hero");
 - Bun/Vitest:
   - concrete `screen-*` metadata is asserted for `admin-editor-view`,
   - picker composition is asserted through `CustomScreenEditorPage`,
-  - runtime registry re-registration still covers screen widgets.
+  - runtime registry re-registration still covers screen widgets,
+  - selected-content-type gating is asserted for widgets that require it.
 
 ## Documentation Updates Required
 
@@ -79,3 +100,5 @@ expect(leftPicker).not.toContain("Hero");
 1. Concrete `screen-*` registry metadata is covered, not only generic registry
    normalization.
 2. The actual left picker for `admin-editor-view` is test-covered.
+3. Data-access and content-type gating for concrete screen widgets are
+   explicitly asserted.

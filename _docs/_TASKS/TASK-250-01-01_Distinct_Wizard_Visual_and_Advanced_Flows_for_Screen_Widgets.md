@@ -31,28 +31,57 @@ No child task files.
 
 ```tsx
 export function ScreenRecordHeaderWizardEditor(props) {
-  // fast onboarding: choose variant, pick which bound content areas are visible,
-  // set a compact starter chrome, and surface "next step" guidance
+  // fast onboarding: choose a starter variant, decide which major content
+  // regions are present, and surface a clear next step into Visual
 }
 
 export function ScreenRecordHeaderVisualEditor(props) {
-  // content + variant + surface controls with concrete preview-oriented affordances
+  // content + variant + style controls with the main product-facing editing
+  // affordances exposed here
 }
 
 export function ScreenRecordHeaderAdvancedEditor(props) {
-  // low-level style/layout switches and any expert-only overrides
+  // low-level tokens, expert-only overrides, and any validation-heavy options
 }
 ```
 
 ```ts
-registerWidget({
-  ...screenRecordHeaderDef,
-  editor: {
-    wizard: ScreenRecordHeaderWizardEditor,
-    visual: ScreenRecordHeaderVisualEditor,
-    advanced: ScreenRecordHeaderAdvancedEditor,
+function registerScreenWidgetEditors() {
+  return {
+    recordHeader: {
+      wizard: ScreenRecordHeaderWizardEditor,
+      visual: ScreenRecordHeaderVisualEditor,
+      advanced: ScreenRecordHeaderAdvancedEditor,
+    },
+    fieldValue: {
+      wizard: ScreenFieldValueWizardEditor,
+      visual: ScreenFieldValueVisualEditor,
+      advanced: ScreenFieldValueAdvancedEditor,
+    },
+    fieldGroup: {
+      wizard: ScreenFieldGroupWizardEditor,
+      visual: ScreenFieldGroupVisualEditor,
+      advanced: ScreenFieldGroupAdvancedEditor,
+    },
+    twoColumn: {
+      wizard: ScreenTwoColumnWizardEditor,
+      visual: ScreenTwoColumnVisualEditor,
+      advanced: ScreenTwoColumnAdvancedEditor,
+    },
+  };
+}
+```
+
+```ts
+const modeParityMatrix = [
+  {
+    widget: "screen-record-header",
+    wizard: ["variant choice", "visible content areas", "next-step hint"],
+    visual: ["content", "surface styling", "preview-oriented controls"],
+    advanced: ["expert overrides", "raw token controls"],
   },
-});
+  // repeat for field-value / field-group / two-column
+];
 ```
 
 ## Security Contract
@@ -74,7 +103,9 @@ registerWidget({
   - each touched screen widget exposes distinct `wizard`, `visual`, and
     `advanced` outputs/controls,
   - mode-specific controls are asserted instead of only checking shared style
-    clear behavior.
+    clear behavior,
+  - regression tests verify that `wizard`, `visual`, and `advanced` are no
+    longer aliases of the same component export.
 
 ## Documentation Updates Required
 
@@ -86,3 +117,5 @@ registerWidget({
 
 1. Mode separation for `screen-*` is observable and test-covered.
 2. Screen widget editors stop aliasing one shared component across all modes.
+3. The implementer can map which controls belong to each mode without
+   rediscovering the split during coding.

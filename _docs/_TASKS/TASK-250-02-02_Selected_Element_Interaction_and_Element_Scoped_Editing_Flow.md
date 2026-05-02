@@ -11,9 +11,18 @@
 
 ## Overview
 
-Turn the current selected-element behavior in the screen-owned record editor
-into a stronger, more coherent editing model so the admin record surface feels
-closer to a page-like composed editor.
+Take the current selected-element behavior in the screen-owned record editor
+and harden it into a stronger, more coherent editing model so the admin record
+surface feels closer to a page-like composed editor.
+
+The baseline flow already exists today:
+
+- the record editor keeps selected runtime block state,
+- the canvas supports click-to-select and pencil-to-focus,
+- the details rail already exposes a `Selected Element` area.
+
+This leaf is about turning that baseline into a more deliberate, better-covered
+interaction model instead of claiming the feature does not exist yet.
 
 ## Sub-Tasks
 
@@ -42,6 +51,17 @@ function handleSelectBlock(blockId: string) {
 />
 ```
 
+```ts
+function preserveSelectedElementAcrossRefresh(input: {
+  selectedBlockId: string | null;
+  nextBlocks: WidgetBlock[];
+}) {
+  return input.nextBlocks.some((block) => block.id === input.selectedBlockId)
+    ? input.selectedBlockId
+    : input.nextBlocks[0]?.id ?? null;
+}
+```
+
 ## Security Contract
 
 - Visibility: internal admin UI only.
@@ -62,7 +82,8 @@ function handleSelectBlock(blockId: string) {
   - clicking a widget activates it,
   - selected-element rail focuses the correct bound fields,
   - pencil affordance opens element-scoped editing flow,
-  - selection remains stable through save/refresh where expected.
+  - selection remains stable through save/refresh where expected,
+  - current behavior regressions are distinguished from genuinely new behavior.
 
 ## Documentation Updates Required
 
@@ -71,6 +92,6 @@ function handleSelectBlock(blockId: string) {
 
 ## Acceptance Criteria
 
-1. The record editor has a deliberate selected-element workflow, not just a
-   light hover affordance.
+1. The existing selected-element workflow is hardened into a more deliberate and
+   more resilient interaction model.
 2. Element-scoped editing flow is stronger and better tested.

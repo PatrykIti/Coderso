@@ -39,7 +39,8 @@ The current editor/runtime problems for `admin-editor-view` are:
 2. `wizard`, `visual`, and `advanced` for screen widgets are currently aliases
    of the same editor instead of distinct editing experiences.
 3. Screen widget metadata and runtime copy imply binding-aware record editing,
-   but the widget editors themselves are still mostly literal-value forms.
+   but the widget editors themselves are still mostly literal-value forms and do
+   not complement the current binding-panel contract well enough.
 4. The dedicated record editor still contains renderer-specific branches instead
    of reusing one canonical widget render path end to end.
 5. Screen widget registry/picker/test coverage is too thin, so UX drift is not
@@ -67,8 +68,8 @@ The target state is:
 The intended direction from this review is:
 
 1. extend the screen widget family rather than replace it,
-2. keep only constraints that come from real record-editing semantics, not from
-   arbitrary editor minimalism,
+2. improve the split between widget settings and data mapping instead of
+   duplicating the binding panel inside every widget editor,
 3. add significant test coverage,
 4. explicitly close the identified editor/runtime/registry gaps.
 
@@ -97,8 +98,9 @@ rendering behavior and instead use the canonical widget runtime path.
 
 1. Separate screen widget editor modes so the widget family stops using one
    shared catch-all form for every editor mode.
-2. Add binding-aware editing controls to the screen widgets that currently
-   pretend to be mapping-friendly but only expose literal text inputs.
+2. Add binding-friendly editor affordances to the screen widgets that currently
+   pretend to be mapping-friendly but only expose literal text inputs, while
+   keeping the binding panel as the owner of binding state.
 3. Expand the layout/config surface for screen layout widgets where the current
    admin UX is too limited.
 4. Remove runtime duplication between preview and dedicated record editor by

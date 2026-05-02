@@ -15,6 +15,15 @@ Make the widget editors for `screen-record-header` and `screen-field-value`
 respect the fact that these widgets are `selected-entry` / binding-aware
 surfaces instead of literal-only content forms.
 
+This does not mean duplicating the current `FieldBindingPanel` contract inside
+every widget editor. The binding panel remains the owner of `propPath -> field`
+mapping state. This leaf improves the widget editors so they:
+
+- expose clearer literal-vs-bound intent,
+- surface which areas are typically driven by bindings,
+- guide the user into the existing `Data` tab flow instead of forcing blind
+  trial-and-error with plain text inputs.
+
 The same pass must keep or improve the existing `clear` semantics for any
 surface, border, badge, or similar style controls already owned by these
 widgets.
@@ -35,24 +44,39 @@ No child task files.
 ## Implementation Pseudocode
 
 ```tsx
-function BindingAwareTextControl(props: {
+function BindingFriendlyTextControl(props: {
   label: string;
   value: string;
-  bindingTarget?: string | null;
-  mode: "literal" | "binding";
-  onModeChange: (next: "literal" | "binding") => void;
+  suggestedBindingPropPath?: string | null;
+  bindingState: "literal" | "bound" | "mixed";
   onValueChange: (next: string) => void;
+  onJumpToBindingPanel?: (propPath: string) => void;
 }) {
-  // explicit literal/binding toggle and field-aware affordance
+  // show the literal value editor, current binding state, and a direct affordance
+  // to focus the matching prop path in the existing FieldBindingPanel flow
 }
 ```
 
 ```tsx
 <ScreenRecordHeaderVisualEditor
-  titleControl={<BindingAwareTextControl label="Title" ... />}
-  subtitleControl={<BindingAwareTextControl label="Subtitle" ... />}
-  descriptionControl={<BindingAwareTextControl label="Description" ... />}
+  titleControl={<BindingFriendlyTextControl label="Title" suggestedBindingPropPath="title" ... />}
+  subtitleControl={<BindingFriendlyTextControl label="Subtitle" suggestedBindingPropPath="subtitle" ... />}
+  descriptionControl={<BindingFriendlyTextControl label="Description" suggestedBindingPropPath="description" ... />}
 />
+```
+
+```ts
+function summarizeScreenWidgetBindingState(input: {
+  widgetType: string;
+  bindings: CustomScreenBinding[];
+}) {
+  return {
+    title: findBindingForPropPath(input.bindings, "title"),
+    subtitle: findBindingForPropPath(input.bindings, "subtitle"),
+    description: findBindingForPropPath(input.bindings, "description"),
+    badge: findBindingForPropPath(input.bindings, "badge"),
+  };
+}
 ```
 
 ## Security Contract
@@ -77,8 +101,9 @@ function BindingAwareTextControl(props: {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Vitest:
-  - header/value editors expose visible binding-aware affordances,
-  - binding-aware controls respect the selected-entry model,
+  - header/value editors expose visible binding-friendly affordances,
+  - widget editors guide users toward the existing binding-panel flow instead of
+    duplicating binding state management,
   - no invalid prop targets such as `align` or `style.*` reappear in the
     record-header flow,
   - touched style controls keep `clear` / `none` behavior.
@@ -93,7 +118,7 @@ function BindingAwareTextControl(props: {
 
 1. `screen-record-header` and `screen-field-value` no longer feel like
    literal-only widgets.
-2. Binding-aware editing is reflected directly in the widget editor layer, not
-   only in the external binding panel.
+2. The widget editor layer complements the existing binding panel instead of
+   reimplementing it.
 3. Existing removable style controls stay removable through explicit `clear` /
    `none` semantics.

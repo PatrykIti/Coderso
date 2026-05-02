@@ -43,6 +43,46 @@ function renderScreenWidgetSurface(input: {
 }
 ```
 
+```tsx
+function ScreenWidgetRendererBridge(input: {
+  block: WidgetBlock;
+  bindings: CustomScreenBinding[];
+  fieldValues: Record<string, unknown>;
+  interaction?: ScreenInteractionContext;
+}) {
+  const resolvedBlock = applyBindingsToBlocks(
+    [input.block],
+    input.bindings,
+    input.fieldValues
+  )[0];
+
+  return (
+    <WidgetRenderer
+      block={resolvedBlock}
+      interaction={input.interaction}
+    />
+  );
+}
+```
+
+```ts
+const parityFixtures = [
+  {
+    widget: "screen-record-header",
+    bindings: [
+      { propPath: "title", field: "title" },
+      { propPath: "subtitle", field: "projectTitle" },
+    ],
+    expectedText: ["Project title", "Villa Aurora"],
+  },
+  {
+    widget: "screen-two-column",
+    bindings: [],
+    expectedLayout: "same slot output in preview and record editor",
+  },
+];
+```
+
 ## Security Contract
 
 - Visibility: internal admin UI only.
@@ -61,7 +101,8 @@ function renderScreenWidgetSurface(input: {
 - Vitest:
   - preview and record-editor paths assert the same screen widget output for the
     same bindings/data,
-  - interaction hooks can differ, but not bound content rendering semantics.
+  - interaction hooks can differ, but not bound content rendering semantics,
+  - parity fixtures exist for header, field-value, field-group, and two-column.
 
 ## Documentation Updates Required
 
@@ -73,3 +114,5 @@ function renderScreenWidgetSurface(input: {
 
 1. Screen widget rendering parity is enforced between preview and record editor.
 2. The main record editor stops carrying unnecessary renderer-specific drift.
+3. The implementer has an explicit parity fixture set instead of rediscovering
+   drift case by case.
