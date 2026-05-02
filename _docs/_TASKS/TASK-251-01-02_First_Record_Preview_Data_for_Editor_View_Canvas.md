@@ -35,6 +35,9 @@ No child task files.
   messaging is rendered inside the preview frame
 - `core/admin/services/entriesClient.ts` only if a dedicated helper is truly
   needed; prefer existing cache/list owners first
+- `core/admin/services/cachePolicy.ts` and `@/utils/cacheBus` owners as
+  reference seams only; reuse `cacheKeys.entriesList(typeSlug)` instead of
+  creating a preview-only invalidation channel
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
@@ -44,6 +47,11 @@ No child task files.
 ## Implementation Pseudocode
 
 ```ts
+export type PreviewEntriesState = {
+  typeSlug: string | null;
+  items: EntrySummary[] | null;
+};
+
 export type CustomScreenPreviewRecordState = {
   source: "entry" | "fallback";
   entryId: string | null;
@@ -86,13 +94,50 @@ export function buildFallbackPreviewRecordState(
 ```
 
 ```tsx
-const [previewRecordState, setPreviewRecordState] = useState<CustomScreenPreviewRecordState>(() =>
-  selectedContentType && getCachedEntries(selectedContentType.slug)?.[0]
-    ? buildPreviewRecordStateFromEntry(
-        selectedContentType,
-        getCachedEntries(selectedContentType.slug)![0]!
-      )
-    : buildFallbackPreviewRecordState(selectedContentType)
+function useCustomScreenPreviewEntries(contentType: ContentTypeSummary | null) {
+  const [state, setState] = useState<PreviewEntriesState>(() => ({
+    typeSlug: contentType?.slug ?? null,
+    items: contentType ? (getCachedEntries(contentType.slug) ?? null) : null,
+  }));
+
+  useEffect(() => {
+    if (!contentType) return;
+
+    let active = true;
+    const typeSlug = contentType.slug;
+    const hasCachedItems = getCachedEntries(typeSlug) !== null;
+
+    const refreshPreviewEntries = async (force: boolean) => {
+      const nextItems = await listEntriesCached(typeSlug, { force });
+      if (!active) return;
+      setState({
+        typeSlug,
+        items: nextItems,
+      });
+    };
+
+    void refreshPreviewEntries(hasCachedItems === false);
+
+    const unsubscribe = subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.entriesList(typeSlug)) return;
+      void refreshPreviewEntries(true);
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [contentType?.id, contentType?.slug]);
+
+  return state;
+}
+
+const previewEntriesOwnerKey = selectedContentType?.slug ?? "no-content-type";
+const previewEntriesState = useCustomScreenPreviewEntries(selectedContentType);
+
+const previewRecordState = useMemo(
+  () => buildPreviewRecordState({ contentType: selectedContentType, entries: previewEntriesState.items }),
+  [previewEntriesState.items, selectedContentType]
 );
 
 const editorPreviewBlocks = useMemo(
@@ -101,20 +146,21 @@ const editorPreviewBlocks = useMemo(
 );
 ```
 
-```ts
-// Background refresh path keyed only by content type, not by widget edits.
-listEntriesCached(typeSlug, { force: !cached?.length }).then((items) => {
-  setPreviewRecordState(
-    items[0]
-      ? buildPreviewRecordStateFromEntry(selectedContentType, items[0])
-      : buildFallbackPreviewRecordState(selectedContentType)
-  );
-});
+```tsx
+<PreviewRecordBridge key={previewEntriesOwnerKey}>
+  <EditorViewCanvas previewRecordState={previewRecordState} blocks={editorPreviewBlocks} />
+</PreviewRecordBridge>
 ```
+
+`PreviewRecordBridge` is conceptual: use a keyed child owner or an equivalent
+keyed preview-state seam so cache seeding stays in lazy initialization for the
+active content type and the effect remains async-only.
 
 If a background fetch fails, keep the last good preview state instead of
 breaking the builder. The screen editor should not show a destructive error for
-preview-only read failures.
+preview-only read failures. The preview ownership should mirror the
+cached-first/background-refresh contract already used by
+`CustomScreenEntriesPage.tsx`.
 
 ## Security Contract
 
@@ -143,6 +189,8 @@ preview-only read failures.
   - cached entry preview appearing without a blocking loader,
   - fallback copy when no entries exist,
   - a background refresh replacing fallback data with a real first record,
+  - `cacheBus` updates for `cacheKeys.entriesList(typeSlug)` refreshing the
+    preview entry after list mutations,
   - bound widgets rendering real first-record values on the builder canvas and
     in the preview dialog.
 

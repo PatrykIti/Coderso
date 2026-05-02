@@ -34,6 +34,9 @@ state so the same record-backed data drives both surfaces.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx`
 - new `core/admin/ui/custom-screens/customScreenPreviewData.ts`
+- `core/admin/services/cachePolicy.ts` and `@/utils/cacheBus` owners as
+  reference seams only; reuse the existing entry-list cache keys and
+  subscription flow instead of inventing preview-only cache channels
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx` if fallback/meta copy
   is surfaced inside the preview frame
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
@@ -56,6 +59,11 @@ state so the same record-backed data drives both surfaces.
 ## Implementation Pseudocode
 
 ```ts
+type PreviewEntriesState = {
+  typeSlug: string | null;
+  items: EntrySummary[] | null;
+};
+
 type PreviewRecordState = {
   source: "entry" | "fallback";
   entry: EntrySummary | null;
@@ -63,53 +71,73 @@ type PreviewRecordState = {
   note: string | null;
 };
 
-const [previewRecordState, setPreviewRecordState] = useState<PreviewRecordState>(() =>
-  buildInitialPreviewRecordState(selectedContentType, getCachedEntries(selectedContentType?.slug ?? ""))
-);
+function useCustomScreenPreviewEntries(contentType: ContentTypeSummary | null) {
+  const [state, setState] = useState<PreviewEntriesState>(() => ({
+    typeSlug: contentType?.slug ?? null,
+    items: contentType ? (getCachedEntries(contentType.slug) ?? null) : null,
+  }));
 
-useEffect(() => {
-  if (!selectedContentType) {
-    setPreviewRecordState(buildFallbackPreviewRecordState(null));
-    return;
-  }
+  useEffect(() => {
+    if (!contentType) return;
 
-  const cached = getCachedEntries(selectedContentType.slug);
-  if (cached?.[0]) {
-    setPreviewRecordState(buildPreviewRecordStateFromEntry(selectedContentType, cached[0]));
-  } else {
-    setPreviewRecordState(buildFallbackPreviewRecordState(selectedContentType));
-  }
+    let active = true;
+    const typeSlug = contentType.slug;
+    const hasCachedItems = getCachedEntries(typeSlug) !== null;
 
-  let active = true;
-  listEntriesCached(selectedContentType.slug, { force: !cached?.length })
-    .then((items) => {
+    const refreshPreviewEntries = async (force: boolean) => {
+      const nextItems = await listEntriesCached(typeSlug, { force });
       if (!active) return;
-      setPreviewRecordState(
-        items[0]
-          ? buildPreviewRecordStateFromEntry(selectedContentType, items[0])
-          : buildFallbackPreviewRecordState(selectedContentType)
-      );
-    })
-    .catch(() => {
-      if (!active) return;
-      setPreviewRecordState((current) => current);
+      setState({
+        typeSlug,
+        items: nextItems,
+      });
+    };
+
+    void refreshPreviewEntries(hasCachedItems === false);
+
+    const unsubscribe = subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.entriesList(typeSlug)) return;
+      void refreshPreviewEntries(true);
     });
 
-  return () => {
-    active = false;
-  };
-}, [selectedContentType?.id, selectedContentType?.slug]);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [contentType?.id, contentType?.slug]);
+
+  return state;
+}
+
+const previewEntriesOwnerKey = selectedContentType?.slug ?? "no-content-type";
+
+const previewEntriesState = useCustomScreenPreviewEntries(selectedContentType);
+
+const previewRecordState = useMemo(
+  () => buildPreviewRecordState({ contentType: selectedContentType, entries: previewEntriesState.items }),
+  [previewEntriesState.items, selectedContentType]
+);
 ```
 
 ```tsx
-<CustomScreenWorkspacePreviewDialog
-  mode={activeBuilderTab}
-  previewRecordState={previewRecordState}
-  listView={definition.listView}
-  blocks={blocks}
-  bindings={bindings}
-/>
+<PreviewRecordBridge key={previewEntriesOwnerKey}>
+  <CustomScreenWorkspacePreviewDialog
+    mode={activeBuilderTab}
+    previewRecordState={previewRecordState}
+    listView={definition.listView}
+    blocks={blocks}
+    bindings={bindings}
+  />
+</PreviewRecordBridge>
 ```
+
+`PreviewRecordBridge` here is conceptual: use either a keyed child owner or an
+equivalent keyed preview-state seam so cache seeding happens in a lazy
+initializer for the current content type, while the effect remains async-only.
+
+Reference seam: mirror the cached-first plus background-refresh ownership style
+already used by `CustomScreenEntriesPage.tsx` instead of inventing a one-off
+preview fetch loop.
 
 ## Security Contract
 
@@ -137,6 +165,8 @@ useEffect(() => {
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
   - background refresh can replace fallback preview with a real first record,
+  - `cacheBus` invalidation for `cacheKeys.entriesList(typeSlug)` refreshes the
+    preview record after entry mutations elsewhere,
   - the same preview record is visible on the builder canvas and inside the
     preview dialog.
 

@@ -28,6 +28,7 @@ This follow-up should make the binding flow prop-first:
 
 ## Files to Change
 
+- `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `core/widgets/types.ts`
@@ -47,8 +48,11 @@ This follow-up should make the binding flow prop-first:
    position.
 3. Existing persisted custom prop paths that are not part of the declared
    widget target list must remain editable under a compatibility section.
-4. Widget settings and Data-tab suggestions must read from the same widget-owned
-   target contract so they do not drift.
+4. `CustomScreenEditorPage` remains the owner of the resolved selected widget
+   and must pass that resolved metadata into the Data tab instead of forcing
+   `FieldBindingPanel` to rediscover registry state on its own.
+5. Widget settings and Data-tab suggestions must read from the same
+   widget-owned target contract so they do not drift.
 
 ## Implementation Pseudocode
 
@@ -81,6 +85,16 @@ function listSelectedWidgetBindingTargets(input: {
 
   return [...declared, ...existingCustomOnly];
 }
+```
+
+```tsx
+<FieldBindingPanel
+  selectedBlock={selectedBlock}
+  selectedWidget={selectedWidget ?? null}
+  value={bindings}
+  fields={contentFields}
+  onChange={setBindings}
+/>
 ```
 
 ```tsx
@@ -124,6 +138,8 @@ function listSelectedWidgetBindingTargets(input: {
   - all declared bindable props for `screen-record-header` render in Data,
   - cards are labeled by prop name/path instead of `Binding 1`,
   - an existing unknown prop path remains visible as a compatibility row,
+  - `CustomScreenEditorPage` passes the resolved selected widget into the Data
+    tab instead of requiring registry re-resolution in the panel,
   - widget-editor `Data` jump buttons still target the same declared prop paths.
 
 ## Documentation Updates Required

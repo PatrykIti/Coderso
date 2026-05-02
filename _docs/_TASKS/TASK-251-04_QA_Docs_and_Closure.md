@@ -31,10 +31,50 @@ No child task files.
 - `_docs/_CHANGELOG/README.md`
 - `_docs/CONTENT_EDITOR_UX.md` if updated
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if updated
+- `_docs/WIDGETS.md` if widget-owned binding targets become canonical source of
+  truth
 - widget docs updated by TASK-251-03-01 if binding-target metadata becomes
   documented source of truth
 
-## Validation Matrix
+## Implementation Pseudocode
+
+```md
+1. Re-run the exact targeted Vitest suites collected by TASK-251-01 through
+   TASK-251-03.
+2. Confirm the final doc set includes every source-of-truth file promised by
+   the implementation leaves: cache docs, content-editor UX docs, widget docs,
+   board rows, and changelog index.
+3. Update `TASK-251*` statuses, checkbox lists, board counts, and changelog
+   references in one closure pass after validation is complete.
+4. Run `git diff --check` and `bun run precommit` before the final manual
+   commit so docs-only drift does not slip through.
+```
+
+## Security Contract
+
+- Visibility: internal admin UI, internal docs, and existing internal admin API
+  contracts only.
+- Auth model: unchanged authenticated admin session for all runtime behavior
+  covered by the family.
+- RBAC:
+  - no closure step may weaken the `content:read` / `content:write` /
+    `content:publish` boundaries defined in TASK-251-01 through TASK-251-03,
+  - docs updates must reflect the existing runtime permissions accurately.
+- CSRF:
+  - no new route is introduced in closure,
+  - any validation note that references writes must continue to describe the
+    current CSRF-backed admin client path.
+- Rate-limit bucket:
+  - no closure step changes current admin read/write bucket ownership.
+- Reject-unknown validation:
+  - closure docs must keep widget binding-target metadata, preview data, and
+    screen-definition updates aligned with the strict schema-first contract
+    defined in the implementation leaves.
+- Anti-abuse:
+  - no public endpoint, nonce flow, or reCAPTCHA change is introduced by this
+    family.
+
+## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -46,8 +86,9 @@ No child task files.
 - mounted list-canvas suite created for TASK-251-02-01
 - additional pure helper coverage for preview-state shaping or widget target
   resolution if new helpers were introduced
-- `bun run gates:coderso` if the final diff changes release-gated admin UX
-  beyond the targeted suites above
+- `bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
 
 ## Documentation Updates Required
 
@@ -59,6 +100,7 @@ No child task files.
   - `_docs/CONTENT_EDITOR_UX.md`
   - `_docs/ADMIN_CACHE.md`
   - `_docs/ADMIN_CACHE_MAP.md`
+  - `_docs/WIDGETS.md`
   - widget docs under `_docs/_WIDGETS/*` if bindable prop targets become
     documented source-of-truth.
 

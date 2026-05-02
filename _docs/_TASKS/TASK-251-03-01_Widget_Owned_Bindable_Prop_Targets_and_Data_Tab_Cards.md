@@ -31,6 +31,7 @@ No child task files.
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
+- `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
@@ -60,6 +61,19 @@ export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
   { propPath: "description", label: "Description" },
   { propPath: "badge", label: "Badge" },
 ];
+```
+
+```tsx
+// CustomScreenEditorPage.tsx
+<FieldBindingPanel
+  selectedBlock={selectedBlock}
+  selectedWidget={selectedWidget ?? null}
+  value={bindings}
+  fields={contentFields}
+  focusedPropPath={focusedBindingPropPath}
+  onFocusedPropPathChange={setFocusedBindingPropPath}
+  onChange={setBindings}
+/>
 ```
 
 ```tsx
@@ -98,6 +112,11 @@ return (
 If a persisted binding path is not in the declared target list, show it in a
 separate `Custom bindings` section instead of dropping it.
 
+Do not make `FieldBindingPanel` reach back into the global widget registry with
+only a block type string unless that ownership is made explicit in the same
+slice. The execution-ready path here is: `CustomScreenEditorPage` resolves the
+active widget once, then passes that owner into the panel.
+
 ## Security Contract
 
 - Visibility: internal admin UI only.
@@ -121,6 +140,8 @@ separate `Custom bindings` section instead of dropping it.
   - `screen-record-header` exposes five target cards,
   - `screen-field-value` still exposes `value`, `label`, and `helper`,
   - a saved custom prop path still renders in compatibility mode,
+  - `CustomScreenEditorPage` passes the resolved selected widget into the panel
+    and the panel consumes that owner directly,
   - widget-editor `Data` buttons and Data-tab cards stay aligned on the same
     target names.
 
