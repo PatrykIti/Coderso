@@ -36,6 +36,7 @@ No child task files.
 ## Files to Change
 
 - `core/widgets/types.ts`
+- `core/widgets/registry.ts`
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
@@ -46,7 +47,7 @@ No child task files.
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
-- optional new pure helper test if target resolution is extracted
+- `tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 
 ## Implementation Pseudocode
 
@@ -61,6 +62,14 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   // existing fields...
   bindingTargets?: WidgetBindingTarget[];
 };
+
+function normalizeBindingTargets(targets: WidgetBindingTarget[] | undefined) {
+  return (targets ?? []).map((target) => ({
+    propPath: target.propPath.trim(),
+    label: target.label.trim(),
+    description: target.description?.trim() || undefined,
+  }));
+}
 ```
 
 ```ts
@@ -130,7 +139,9 @@ separate `Custom bindings` section instead of dropping it.
 Do not make `FieldBindingPanel` reach back into the global widget registry with
 only a block type string unless that ownership is made explicit in the same
 slice. The execution-ready path here is: `CustomScreenEditorPage` resolves the
-active widget once, then passes that owner into the panel.
+active widget once, then passes that owner into the panel. Registry
+normalization must preserve the declared `bindingTargets` so the panel and the
+widget editors read the same contract after registration, not only before it.
 
 ## Security Contract
 
@@ -152,6 +163,7 @@ active widget once, then passes that owner into the panel.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - Add assertions for:
   - `screen-record-header` exposes five target cards,
   - `screen-field-value` still exposes `value`, `label`, and `helper`,
@@ -160,15 +172,18 @@ active widget once, then passes that owner into the panel.
   - a saved custom prop path still renders in compatibility mode,
   - `CustomScreenEditorPage` passes the resolved selected widget into the panel
     and the panel consumes that owner directly,
+  - registry-level normalization preserves `bindingTargets` metadata for
+    `screen-record-header` and `screen-field-value`,
   - widget-editor `Data` buttons and Data-tab cards stay aligned on the same
     target names.
 
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
-- relevant `_docs/_WIDGETS/SCREEN_*` docs
 - `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.

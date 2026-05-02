@@ -29,21 +29,32 @@ No child task files.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- new mounted suite such as `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+- `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 
 ## Implementation Pseudocode
 
 ```ts
 const handleMoveListColumn = (columnId: string, direction: "left" | "right") => {
+  const visibleColumns = getVisibleListColumns(definition.listView);
+  const visibleIds = visibleColumns.map((column) => column.id);
+  const currentVisibleIndex = visibleIds.indexOf(columnId);
+  if (currentVisibleIndex === -1) return;
+
+  const nextVisibleId =
+    direction === "left"
+      ? visibleIds[currentVisibleIndex - 1]
+      : visibleIds[currentVisibleIndex + 1];
+  if (!nextVisibleId) return;
+
   const currentIndex = definition.listView.columns.findIndex((column) => column.id === columnId);
-  if (currentIndex === -1) return;
-  const nextIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
-  if (nextIndex < 0 || nextIndex >= definition.listView.columns.length) return;
+  const swapIndex = definition.listView.columns.findIndex((column) => column.id === nextVisibleId);
+  if (currentIndex === -1 || swapIndex === -1) return;
 
   const nextColumns = [...definition.listView.columns];
-  const [column] = nextColumns.splice(currentIndex, 1);
-  if (!column) return;
-  nextColumns.splice(nextIndex, 0, column);
+  [nextColumns[currentIndex], nextColumns[swapIndex]] = [
+    nextColumns[swapIndex]!,
+    nextColumns[currentIndex]!,
+  ];
   updateListView({ ...definition.listView, columns: nextColumns });
 };
 ```
@@ -106,10 +117,13 @@ secondary hidden-column affordance so `visible=false` columns stay selectable.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 - mounted list-canvas coverage asserting:
   - left boundary disables the left button,
   - right boundary disables the right button,
   - header-level movement changes rendered column order,
+  - hidden columns interleaved in the persisted array do not break visible
+    header movement semantics,
   - hidden columns remain selectable from the secondary compact tray,
   - selected-column styling follows the moved column.
 - `tests/vitest/ui/custom-screens-page.test.tsx` may remain a secondary

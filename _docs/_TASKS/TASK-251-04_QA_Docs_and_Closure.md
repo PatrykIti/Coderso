@@ -81,12 +81,14 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
-- mounted list-canvas suite created for TASK-251-02-01
-- mounted editor preview-owner suite created for TASK-251-01-02
-- additional pure helper coverage for preview-state shaping or widget target
-  resolution if new helpers were introduced
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts`
 - `bun run gates:coderso`
 - `git diff --check`
 - `bun run precommit`
@@ -103,8 +105,10 @@ No child task files.
   - `_docs/ADMIN_CACHE_MAP.md`
   - `_docs/WIDGETS.md`
   - `_docs/_WIDGETS/README.md`
-  - widget docs under `_docs/_WIDGETS/*` if bindable prop targets become
-    documented source-of-truth.
+  - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+  - `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
+  - `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+  - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 
 ## Acceptance Criteria
 

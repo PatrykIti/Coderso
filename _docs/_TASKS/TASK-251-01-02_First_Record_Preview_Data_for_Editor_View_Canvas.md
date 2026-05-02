@@ -38,16 +38,20 @@ No child task files.
   messaging is rendered inside the preview frame
 - `core/admin/services/entriesClient.ts` only if a dedicated helper is truly
   needed; prefer existing cache/list owners first
+- `core/admin/ui/custom-screens/routeParams.ts` and
+  `core/admin/utils/adminPrefetch.ts` if direct builder-route navigation must
+  warm `entries:list:<typeSlug>` for cached-first preview paint
 - `core/admin/services/cachePolicy.ts` and `@/utils/cacheBus` owners as
   reference seams only; reuse `cacheKeys.entriesList(typeSlug)` instead of
   creating a preview-only invalidation channel
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` or a new
-  mounted editor-page preview-owner suite
+- `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - new pure helper suite such as
   `tests/vitest/ui/custom-screen-preview-data.test.ts`
+- `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
+  changes
 
 ## Implementation Pseudocode
 
@@ -101,10 +105,10 @@ export function buildFallbackPreviewRecordState(
 ```tsx
 function CustomScreenPreviewRecordOwner({
   contentType,
-  onPreviewRecordState,
+  children,
 }: {
   contentType: ContentTypeSummary | null;
-  onPreviewRecordState: (state: CustomScreenPreviewRecordState) => void;
+  children: (state: CustomScreenPreviewRecordState) => ReactNode;
 }) {
   const typeSlug = contentType?.slug ?? null;
   const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
@@ -116,66 +120,68 @@ function CustomScreenPreviewRecordOwner({
   );
 
   useEffect(() => {
-    onPreviewRecordState(previewRecordState);
-  }, [onPreviewRecordState, previewRecordState]);
-
-  useEffect(() => {
     if (!contentType || !typeSlug) return;
 
     let active = true;
 
-    const refreshPreviewEntries = async (force: boolean) => {
-      const nextItems = await listEntriesCached(typeSlug, { force });
+    const refreshPreviewEntries = async () => {
+      const nextItems = await listEntriesCached(typeSlug, { force: true });
       if (!active) return;
       setEntries(nextItems);
     };
 
-    // Lazy state init already seeded current cached rows. The effect stays
-    // async-only and revalidates through the shared entry-list contract.
-    void refreshPreviewEntries(true);
+    // Lazy state init already seeded current cached rows. Keep the effect
+    // async-only after mount so the preview owner stays aligned with the React
+    // Hooks rules and the shared entry-list contract.
+    void refreshPreviewEntries();
 
     const unsubscribe = subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.entriesList(typeSlug)) return;
-      void refreshPreviewEntries(true);
+      void refreshPreviewEntries();
     });
 
     return () => {
       active = false;
       unsubscribe();
     };
-  }, [contentType?.id, onPreviewRecordState, typeSlug]);
+  }, [contentType, typeSlug]);
 
-  return null;
+  return children(previewRecordState);
 }
 
 const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
-const [previewRecordState, setPreviewRecordState] = useState<CustomScreenPreviewRecordState>(() =>
-  buildPreviewRecordState({
-    contentType: selectedContentType,
-    entries: selectedContentType ? getCachedEntries(selectedContentType.slug) : null,
-  })
-);
-
-const editorPreviewBlocks = useMemo(
-  () => applyBindingsToBlocks(blocks, bindings, previewRecordState.data) as Block[],
-  [bindings, blocks, previewRecordState.data]
-);
 ```
 
 ```tsx
 <CustomScreenPreviewRecordOwner
   key={previewOwnerKey}
   contentType={selectedContentType}
-  onPreviewRecordState={setPreviewRecordState}
-/>
+>
+  {(previewRecordState) => {
+    const editorPreviewBlocks = applyBindingsToBlocks(
+      blocks,
+      bindings,
+      previewRecordState.data
+    ) as Block[];
 
-<PreviewRecordBridge>
-  <EditorViewCanvas previewRecordState={previewRecordState} blocks={editorPreviewBlocks} />
-</PreviewRecordBridge>
+    return (
+      <>
+        <EditorViewCanvas
+          previewRecordState={previewRecordState}
+          blocks={editorPreviewBlocks}
+        />
+        <CustomScreenWorkspacePreviewDialog
+          previewRecordState={previewRecordState}
+          blocks={blocks}
+          bindings={bindings}
+        />
+      </>
+    );
+  }}
+</CustomScreenPreviewRecordOwner>
 ```
 
-`CustomScreenPreviewRecordOwner` and `PreviewRecordBridge` are conceptual names.
-The required behavior is:
+`CustomScreenPreviewRecordOwner` is a conceptual name. The required behavior is:
 
 - keyed ownership by `selectedContentType.slug`,
 - lazy cache seed for the active type,
@@ -187,7 +193,10 @@ If a background fetch fails, keep the last good preview state instead of
 breaking the builder. The screen editor should not show a destructive error for
 preview-only read failures. The preview ownership should mirror the
 cached-first/background-refresh contract already used by
-`CustomScreenEntriesPage.tsx`.
+`CustomScreenEntriesPage.tsx`. If cached-first paint on direct builder-route
+navigation is required, extend the existing prefetch owner for
+`/advanced/custom-screens/:screenId` instead of inventing a preview-only cache
+channel.
 
 ## Security Contract
 
@@ -210,10 +219,11 @@ cached-first/background-refresh contract already used by
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership changes
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain a
-  render-only smoke, but the mounted owner should be
-  `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` or a new
-  dedicated mounted suite such as
+  render-only smoke, but the mounted owner is
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - Add assertions for:
   - cached entry preview appearing without a blocking loader,
@@ -224,15 +234,17 @@ cached-first/background-refresh contract already used by
     before the next async result resolves,
   - `cacheBus` updates for `cacheKeys.entriesList(typeSlug)` refreshing the
     preview entry after list mutations,
+  - direct `/advanced/custom-screens/:screenId` navigation keeps cached-first
+    preview behavior aligned with the prefetch contract when builder-route
+    warmup is added,
   - bound widgets rendering real first-record values on the builder canvas and
     in the preview dialog.
 
 ## Documentation Updates Required
 
-- `_docs/CONTENT_EDITOR_UX.md` if record-backed builder preview becomes a
-  source-of-truth behavior.
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if preview-entry cache
-  ownership is documented separately.
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/ADMIN_CACHE.md`
+- `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 

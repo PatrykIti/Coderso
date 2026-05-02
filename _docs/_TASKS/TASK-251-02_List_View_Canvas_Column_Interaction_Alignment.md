@@ -34,7 +34,7 @@ the per-item reorder arrows move into the header.
   column affordance copy changes
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- new mounted suite such as `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+- `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 
 ## Product Contract
 
@@ -91,8 +91,9 @@ the per-item reorder arrows move into the header.
 ```
 
 ```tsx
+const visibleColumnIds = resolvedColumns.map((column) => column.id);
 const hiddenColumns = listView.columns.filter(
-  (column) => !resolvedColumns.some((visibleColumn) => visibleColumn.id === column.id)
+  (column) => !visibleColumnIds.includes(column.id)
 );
 
 {hiddenColumns.length > 0 ? (
@@ -106,7 +107,9 @@ const hiddenColumns = listView.columns.filter(
 
 Replace the old lower `listView.columns.map(...)` reorder strip with a compact
 all-columns / hidden-columns affordance. Do not leave hidden columns
-unreachable after `visible=false`.
+unreachable after `visible=false`. Reordering must operate against the visible
+header order, then translate that move back into `definition.listView.columns`
+without letting hidden columns corrupt the left/right semantics for users.
 
 ## Security Contract
 
@@ -123,9 +126,12 @@ unreachable after `visible=false`.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- new mounted list-canvas suite asserting:
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+- mounted list-canvas coverage asserting:
   - header click selects the column,
   - left/right controls reorder columns,
+  - hidden columns positioned between visible columns do not break visible
+    left/right movement,
   - hidden columns still appear in the secondary compact tray after
     `visible=false`,
   - the old lower reorder arrows are gone,

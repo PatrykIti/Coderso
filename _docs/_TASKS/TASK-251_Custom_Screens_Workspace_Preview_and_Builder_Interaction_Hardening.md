@@ -142,14 +142,13 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
-    for mounted `CustomScreenEditorPage` preview/data-tab seams
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
-  - new or expanded mounted list-canvas suite for inline header reordering, for
-    example `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
-  - new mounted editor preview-owner suite if the existing widget-picker suite
-    is not enough to prove content-type switching, cache-bus refresh, and
-    preview-owner reset
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a render-only
   smoke test, but it is not the mounted owner for async preview or header
   interaction contracts.
@@ -157,18 +156,19 @@ primitives.
   implementation adds new entry-preview helpers or cached read-model helpers,
   add focused Vitest coverage in `tests/vitest/admin/entriesClient.test.ts` or
   a new pure helper suite.
-- `bun run gates:coderso` before closure if the final diff changes release-gated
-  admin UX behavior beyond the targeted suites above.
+- `bun run gates:coderso`
 
 ## Documentation Updates Required
 
-- `_docs/CONTENT_EDITOR_UX.md` if the builder preview/data-tab contract becomes
-  source-of-truth there.
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if preview-entry cache
-  semantics or invalidation ownership changes.
-- `_docs/WIDGETS.md` and `_docs/_WIDGETS/README.md` if widget-owned binding
-  targets or the selected-entry vs selected-content-type split becomes
-  source-of-truth there.
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/ADMIN_CACHE.md`
+- `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/README.md`
+- `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 

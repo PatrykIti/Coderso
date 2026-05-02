@@ -34,6 +34,9 @@ state so the same record-backed data drives both surfaces.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx`
 - new `core/admin/ui/custom-screens/customScreenPreviewData.ts`
+- `core/admin/ui/custom-screens/routeParams.ts` and
+  `core/admin/utils/adminPrefetch.ts` if direct builder-route prefetch must warm
+  `entries:list:<typeSlug>` for cached-first preview paint
 - `core/admin/services/cachePolicy.ts` and `@/utils/cacheBus` owners as
   reference seams only; reuse the existing entry-list cache keys and
   subscription flow instead of inventing preview-only cache channels
@@ -42,10 +45,10 @@ state so the same record-backed data drives both surfaces.
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` or a new
-  mounted editor-page preview-owner suite
-- new pure helper suite for preview-state shaping if the data logic is
-  extracted
+- `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
+- `tests/vitest/ui/custom-screen-preview-data.test.ts`
+- `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
+  changes
 
 ## Product Contract
 
@@ -74,10 +77,10 @@ type PreviewRecordState = {
 
 function CustomScreenPreviewRecordOwner({
   contentType,
-  onPreviewRecordState,
+  children,
 }: {
   contentType: ContentTypeSummary | null;
-  onPreviewRecordState: (state: PreviewRecordState) => void;
+  children: (state: PreviewRecordState) => ReactNode;
 }) {
   const typeSlug = contentType?.slug ?? null;
   const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
@@ -89,68 +92,56 @@ function CustomScreenPreviewRecordOwner({
   );
 
   useEffect(() => {
-    onPreviewRecordState(previewRecordState);
-  }, [onPreviewRecordState, previewRecordState]);
-
-  useEffect(() => {
     if (!contentType || !typeSlug) return;
 
     let active = true;
 
-    const refreshPreviewEntries = async (force: boolean) => {
-      const nextEntries = await listEntriesCached(typeSlug, { force });
+    const refreshPreviewEntries = async () => {
+      const nextEntries = await listEntriesCached(typeSlug, { force: true });
       if (!active) return;
       setEntries(nextEntries);
     };
 
-    // Lazy state init already seeded current cached rows. The effect stays
-    // async-only: revalidate in the background when cache exists, fetch in the
-    // foreground when it does not.
-    void refreshPreviewEntries(true);
+    // Lazy state init already seeded current cached rows. Keep the effect
+    // async-only after mount so the preview owner stays aligned with the React
+    // Hooks rules and the shared entry-list contract.
+    void refreshPreviewEntries();
 
     const unsubscribe = subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.entriesList(typeSlug)) return;
-      void refreshPreviewEntries(true);
+      void refreshPreviewEntries();
     });
 
     return () => {
       active = false;
       unsubscribe();
     };
-  }, [contentType?.id, onPreviewRecordState, typeSlug]);
+  }, [contentType, typeSlug]);
 
-  return null;
+  return children(previewRecordState);
 }
 
 const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
-const [previewRecordState, setPreviewRecordState] = useState<PreviewRecordState>(() =>
-  buildPreviewRecordState({
-    contentType: selectedContentType,
-    entries: selectedContentType ? getCachedEntries(selectedContentType.slug) : null,
-  })
-);
 ```
 
 ```tsx
 <CustomScreenPreviewRecordOwner
   key={previewOwnerKey}
   contentType={selectedContentType}
-  onPreviewRecordState={setPreviewRecordState}
-/>
-
-<PreviewRecordBridge>
-  <CustomScreenWorkspacePreviewDialog
-    mode={activeBuilderTab}
-    previewRecordState={previewRecordState}
-    listView={definition.listView}
-    blocks={blocks}
-    bindings={bindings}
-  />
-</PreviewRecordBridge>
+>
+  {(previewRecordState) => (
+    <CustomScreenWorkspacePreviewDialog
+      mode={activeBuilderTab}
+      previewRecordState={previewRecordState}
+      listView={definition.listView}
+      blocks={blocks}
+      bindings={bindings}
+    />
+  )}
+</CustomScreenPreviewRecordOwner>
 ```
 
-`CustomScreenPreviewRecordOwner` and `PreviewRecordBridge` are conceptual names.
-The required seam is:
+`CustomScreenPreviewRecordOwner` is a conceptual name. The required seam is:
 
 - keyed owner by `selectedContentType.slug`,
 - lazy cache seed for the active content type,
@@ -161,7 +152,10 @@ The required seam is:
 
 Reference seam: mirror the cached-first plus background-refresh ownership style
 already used by `CustomScreenEntriesPage.tsx` instead of inventing a one-off
-preview fetch loop.
+preview fetch loop. If cached-first paint on direct builder-route navigation is
+required, extend the existing admin prefetch owner for
+`/advanced/custom-screens/:id` instead of inventing a preview-only cache
+channel.
 
 ## Security Contract
 
@@ -189,10 +183,7 @@ preview fetch loop.
 - Existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a
   render-only smoke test, but it is not the owner for mounted preview-state
   behavior.
-- The mounted owner for `CustomScreenEditorPage` preview flow should be an
-  editor-page integration suite, reusing
-  `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` or a new
-  dedicated mounted suite such as
+- The mounted owner for `CustomScreenEditorPage` preview flow is
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`.
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
@@ -203,13 +194,16 @@ preview fetch loop.
   - `cacheBus` invalidation for `cacheKeys.entriesList(typeSlug)` refreshes the
     preview record after entry mutations elsewhere,
   - the same preview record is visible on the builder canvas and inside the
-    preview dialog.
+    preview dialog,
+  - direct `/advanced/custom-screens/:id` navigation keeps cached-first preview
+    behavior aligned with the shared admin prefetch contract when builder-route
+    warmup is added.
 
 ## Documentation Updates Required
 
-- `_docs/CONTENT_EDITOR_UX.md` if preview-state behavior becomes canonical.
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if preview-entry
-  invalidation is documented explicitly.
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/ADMIN_CACHE.md`
+- `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 

@@ -33,6 +33,7 @@ This follow-up should make the binding flow prop-first:
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `core/widgets/types.ts`
+- `core/widgets/registry.ts`
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
@@ -40,7 +41,7 @@ This follow-up should make the binding flow prop-first:
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
-- additional widget metadata tests if a shared helper is extracted
+- `tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 
 ## Product Contract
 
@@ -73,6 +74,14 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   // existing fields...
   bindingTargets?: WidgetBindingTarget[];
 };
+
+function normalizeBindingTargets(targets: WidgetBindingTarget[] | undefined) {
+  return (targets ?? []).map((target) => ({
+    propPath: target.propPath.trim(),
+    label: target.label.trim(),
+    description: target.description?.trim() || undefined,
+  }));
+}
 ```
 
 ```ts
@@ -145,12 +154,16 @@ function listSelectedWidgetBindingTargets(input: {
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - Add assertions for:
   - all declared bindable props for `screen-record-header` render in Data,
   - cards are labeled by prop name/path instead of `Binding 1`,
   - an existing unknown prop path remains visible as a compatibility row,
   - `CustomScreenEditorPage` passes the resolved selected widget into the Data
     tab instead of requiring registry re-resolution in the panel,
+  - registry normalization preserves widget-owned `bindingTargets` for
+    `admin-editor-view` widgets and keeps layout-only widgets out of the
+    selected-entry binding contract,
   - `screen-field-group` and `screen-two-column` no longer surface selected-entry
     binding cards unless their documented data-access contract changes in the
     same slice,
@@ -159,8 +172,10 @@ function listSelectedWidgetBindingTargets(input: {
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/SCREEN_*` files when bindable prop targets become
-  explicit source-of-truth metadata
+- `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
