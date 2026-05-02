@@ -58,18 +58,25 @@ primitives.
    shell comparable to Pages, with enough room for the actual preview content
    before device-specific clamps are applied.
 2. `List View` column selection and left/right reordering should happen
-   directly in the table header row. The separate column-card reorder grid
-   under the table should be removed.
+   directly in the table header row for visible columns. The old lower
+   reorder-card strip should be replaced by a compact all-columns /
+   hidden-columns affordance so `visible=false` columns remain reachable for
+   reselection and re-enable flows.
 3. `Editor View` builder canvas and preview dialog should hydrate from the
    first available record of the selected content type, using cached entries
    first and background refresh second. When no record exists, the fallback
-   must be explicit.
+   must be explicit, and changing or clearing `contentTypeId` must immediately
+   drop the previous preview owner.
 4. The Data tab should become prop-centric:
-   - expose the full bindable prop list for the selected widget,
+   - expose the full bindable prop list for widgets whose contract is
+     explicitly `selected-entry`,
    - label cards by prop path / prop label rather than by ordinal position,
    - preserve existing custom prop paths that are already persisted,
    - keep widget settings and binding-panel suggestions driven from one shared
-     widget-owned contract.
+     widget-owned contract,
+   - keep `screen-field-group` and `screen-two-column` on their current
+     `selected-content-type` read-only layout contract unless that contract is
+     explicitly changed in the same slice.
 5. The work must stay inside the current internal admin API contract. No new
    public endpoint or weaker validation path is allowed.
 
@@ -118,10 +125,11 @@ primitives.
 
 1. Align widget-owned bindable prop metadata before changing Data-tab rendering
    so the prop list has one source of truth.
-2. Move `List View` column reordering into the table header and remove the
-   redundant lower card grid.
+2. Move `List View` column reordering into the table header while preserving a
+   compact hidden-columns affordance for non-visible columns.
 3. Add cached-first first-record preview hydration for `Editor View` builder
-   canvas and preview dialog.
+   canvas and preview dialog, with keyed owner reset when the content type
+   changes or clears.
 4. Resize the workspace preview dialog around the real preview surfaces after
    the new preview data model is in place.
 5. Close targeted tests, docs, board, and changelog updates.
@@ -131,14 +139,20 @@ primitives.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Targeted Vitest:
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
-    if widget-owned binding metadata changes picker/editor composition
+    for mounted `CustomScreenEditorPage` preview/data-tab seams
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
   - new or expanded mounted list-canvas suite for inline header reordering, for
     example `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+  - new mounted editor preview-owner suite if the existing widget-picker suite
+    is not enough to prove content-type switching, cache-bus refresh, and
+    preview-owner reset
+- `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a render-only
+  smoke test, but it is not the mounted owner for async preview or header
+  interaction contracts.
 - Reuse existing cached-entry contracts wherever possible. If the
   implementation adds new entry-preview helpers or cached read-model helpers,
   add focused Vitest coverage in `tests/vitest/admin/entriesClient.test.ts` or
@@ -152,6 +166,9 @@ primitives.
   source-of-truth there.
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if preview-entry cache
   semantics or invalidation ownership changes.
+- `_docs/WIDGETS.md` and `_docs/_WIDGETS/README.md` if widget-owned binding
+  targets or the selected-entry vs selected-content-type split becomes
+  source-of-truth there.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
@@ -160,8 +177,11 @@ primitives.
 1. Workspace preview dialogs no longer feel materially smaller than the Pages
    preview surface for the same viewport.
 2. `List View` header cells own column selection and left/right movement
-   without redundant reorder cards below the table.
+   without losing access to hidden columns.
 3. `Editor View` preview shows a real first record when one exists and clearly
-   falls back when none exists.
+   falls back when none exists, while dropping stale preview ownership after a
+   content-type change.
 4. The Data tab exposes full bindable prop coverage for the selected widget and
-   labels binding cards by prop instead of by ordinal position.
+   labels binding cards by prop instead of by ordinal position, without
+   promoting layout-only widgets into the selected-entry binding contract by
+   accident.
