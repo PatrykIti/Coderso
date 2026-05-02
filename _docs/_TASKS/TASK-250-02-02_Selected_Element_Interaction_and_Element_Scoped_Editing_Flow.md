@@ -1,0 +1,76 @@
+# TASK-250-02-02: Selected Element Interaction and Element-Scoped Editing Flow
+# FileName: TASK-250-02-02_Selected_Element_Interaction_and_Element_Scoped_Editing_Flow.md
+
+**Priority:** High
+**Category:** Coderso Custom Screens + Record Editor UX
+**Estimated Effort:** Large
+**Dependencies:** TASK-250-02-01
+**Status:** To Do
+
+---
+
+## Overview
+
+Turn the current selected-element behavior in the screen-owned record editor
+into a stronger, more coherent editing model so the admin record surface feels
+closer to a page-like composed editor.
+
+## Sub-Tasks
+
+No child task files.
+
+## Files to Change
+
+- `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
+- `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`
+- `tests/vitest/ui/custom-screen-records.test.tsx`
+
+## Implementation Pseudocode
+
+```tsx
+function handleSelectBlock(blockId: string) {
+  setSelectedRuntimeBlockId(blockId);
+  openSelectedElementPanelIfNeeded();
+}
+```
+
+```tsx
+<SelectedElementPanel
+  widget={selectedRuntimeWidget}
+  bindings={selectedRuntimeBindings}
+  renderBoundEditors={renderSelectedBlockBindingEditor}
+/>
+```
+
+## Security Contract
+
+- Visibility: internal admin UI only.
+- Auth model: authenticated admin session.
+- RBAC: record editing keeps existing `content:write` / `content:publish`
+  boundaries.
+- CSRF: unchanged existing entry client path.
+- Rate-limit bucket: existing `admin_write`.
+- Reject-unknown validation: element-scoped editors still emit only normalized
+  record payload changes.
+- Anti-abuse: no public endpoint is introduced.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- Vitest:
+  - clicking a widget activates it,
+  - selected-element rail focuses the correct bound fields,
+  - pencil affordance opens element-scoped editing flow,
+  - selection remains stable through save/refresh where expected.
+
+## Documentation Updates Required
+
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/_CHANGELOG/*` on completion
+
+## Acceptance Criteria
+
+1. The record editor has a deliberate selected-element workflow, not just a
+   light hover affordance.
+2. Element-scoped editing flow is stronger and better tested.
