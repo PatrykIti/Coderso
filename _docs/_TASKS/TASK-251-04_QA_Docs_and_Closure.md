@@ -78,12 +78,13 @@ No child task files.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
 - mounted list-canvas suite created for TASK-251-02-01
+- mounted editor preview-owner suite created for TASK-251-01-02
 - additional pure helper coverage for preview-state shaping or widget target
   resolution if new helpers were introduced
 - `bun run gates:coderso`
@@ -101,6 +102,7 @@ No child task files.
   - `_docs/ADMIN_CACHE.md`
   - `_docs/ADMIN_CACHE_MAP.md`
   - `_docs/WIDGETS.md`
+  - `_docs/_WIDGETS/README.md`
   - widget docs under `_docs/_WIDGETS/*` if bindable prop targets become
     documented source-of-truth.
 

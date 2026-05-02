@@ -20,6 +20,15 @@ bindable fields outnumber the defaults currently surfaced in the panel. The
 fix must make the widget contract explicit while remaining backward-compatible
 with already-saved custom prop paths.
 
+Scope decision for this leaf:
+
+- `screen-record-header` and `screen-field-value` join the widget-owned
+  selected-entry binding-target contract.
+- `screen-field-group` and `screen-two-column` keep their current
+  `selected-content-type` read-only layout contract and therefore do not expose
+  entry binding cards in the Data tab unless their source docs and widget
+  metadata are explicitly changed in the same slice.
+
 ## Sub-Tasks
 
 No child task files.
@@ -35,6 +44,7 @@ No child task files.
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - optional new pure helper test if target resolution is extracted
 
@@ -78,9 +88,10 @@ export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
 
 ```tsx
 // FieldBindingPanel.tsx
+const isSelectedEntryBindable = selectedWidget?.dataAccess?.source === "selected-entry";
 const bindingTargets = resolveBindingTargets(selectedWidget, selectedBindings);
 
-return (
+return isSelectedEntryBindable ? (
   <div className="space-y-3">
     {bindingTargets.map((target) => {
       const existing = selectedBindings.find((binding) => binding.propPath === target.propPath) ?? null;
@@ -105,6 +116,10 @@ return (
         </div>
       );
     })}
+  </div>
+) : (
+  <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+    This widget exposes layout and content-type settings only. Entry field bindings are not available here.
   </div>
 );
 ```
@@ -135,10 +150,13 @@ active widget once, then passes that owner into the panel.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - Add assertions for:
   - `screen-record-header` exposes five target cards,
   - `screen-field-value` still exposes `value`, `label`, and `helper`,
+  - `screen-field-group` and `screen-two-column` render the non-bindable layout
+    empty state unless their documented contract changes in the same slice,
   - a saved custom prop path still renders in compatibility mode,
   - `CustomScreenEditorPage` passes the resolved selected widget into the panel
     and the panel consumes that owner directly,
@@ -148,6 +166,8 @@ active widget once, then passes that owner into the panel.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - relevant `_docs/_WIDGETS/SCREEN_*` docs
 - `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`

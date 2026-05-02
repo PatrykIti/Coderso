@@ -40,8 +40,10 @@ state so the same record-backed data drives both surfaces.
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx` if fallback/meta copy
   is surfaced inside the preview frame
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
-- `tests/vitest/ui/custom-screens-page.test.tsx`
-- `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
+  render smoke
+- `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` or a new
+  mounted editor-page preview-owner suite
 - new pure helper suite for preview-state shaping if the data logic is
   extracted
 
@@ -55,15 +57,14 @@ state so the same record-backed data drives both surfaces.
    state for the selected content type.
 4. The preview should prefer the first cached/current record and clearly signal
    when it falls back because no records exist yet.
+5. Changing or clearing `contentTypeId` in the builder must immediately drop the
+   previous content type's preview ownership. The screen must never keep showing
+   a stale first record from another type while the new preview state is
+   resolving.
 
 ## Implementation Pseudocode
 
 ```ts
-type PreviewEntriesState = {
-  typeSlug: string | null;
-  items: EntrySummary[] | null;
-};
-
 type PreviewRecordState = {
   source: "entry" | "fallback";
   entry: EntrySummary | null;
@@ -71,29 +72,41 @@ type PreviewRecordState = {
   note: string | null;
 };
 
-function useCustomScreenPreviewEntries(contentType: ContentTypeSummary | null) {
-  const [state, setState] = useState<PreviewEntriesState>(() => ({
-    typeSlug: contentType?.slug ?? null,
-    items: contentType ? (getCachedEntries(contentType.slug) ?? null) : null,
-  }));
+function CustomScreenPreviewRecordOwner({
+  contentType,
+  onPreviewRecordState,
+}: {
+  contentType: ContentTypeSummary | null;
+  onPreviewRecordState: (state: PreviewRecordState) => void;
+}) {
+  const typeSlug = contentType?.slug ?? null;
+  const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
+    typeSlug ? (getCachedEntries(typeSlug) ?? null) : null
+  );
+  const previewRecordState = useMemo(
+    () => buildPreviewRecordState({ contentType, entries }),
+    [contentType, entries]
+  );
 
   useEffect(() => {
-    if (!contentType) return;
+    onPreviewRecordState(previewRecordState);
+  }, [onPreviewRecordState, previewRecordState]);
+
+  useEffect(() => {
+    if (!contentType || !typeSlug) return;
 
     let active = true;
-    const typeSlug = contentType.slug;
-    const hasCachedItems = getCachedEntries(typeSlug) !== null;
 
     const refreshPreviewEntries = async (force: boolean) => {
-      const nextItems = await listEntriesCached(typeSlug, { force });
+      const nextEntries = await listEntriesCached(typeSlug, { force });
       if (!active) return;
-      setState({
-        typeSlug,
-        items: nextItems,
-      });
+      setEntries(nextEntries);
     };
 
-    void refreshPreviewEntries(hasCachedItems === false);
+    // Lazy state init already seeded current cached rows. The effect stays
+    // async-only: revalidate in the background when cache exists, fetch in the
+    // foreground when it does not.
+    void refreshPreviewEntries(true);
 
     const unsubscribe = subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.entriesList(typeSlug)) return;
@@ -104,23 +117,28 @@ function useCustomScreenPreviewEntries(contentType: ContentTypeSummary | null) {
       active = false;
       unsubscribe();
     };
-  }, [contentType?.id, contentType?.slug]);
+  }, [contentType?.id, onPreviewRecordState, typeSlug]);
 
-  return state;
+  return null;
 }
 
-const previewEntriesOwnerKey = selectedContentType?.slug ?? "no-content-type";
-
-const previewEntriesState = useCustomScreenPreviewEntries(selectedContentType);
-
-const previewRecordState = useMemo(
-  () => buildPreviewRecordState({ contentType: selectedContentType, entries: previewEntriesState.items }),
-  [previewEntriesState.items, selectedContentType]
+const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
+const [previewRecordState, setPreviewRecordState] = useState<PreviewRecordState>(() =>
+  buildPreviewRecordState({
+    contentType: selectedContentType,
+    entries: selectedContentType ? getCachedEntries(selectedContentType.slug) : null,
+  })
 );
 ```
 
 ```tsx
-<PreviewRecordBridge key={previewEntriesOwnerKey}>
+<CustomScreenPreviewRecordOwner
+  key={previewOwnerKey}
+  contentType={selectedContentType}
+  onPreviewRecordState={setPreviewRecordState}
+/>
+
+<PreviewRecordBridge>
   <CustomScreenWorkspacePreviewDialog
     mode={activeBuilderTab}
     previewRecordState={previewRecordState}
@@ -131,9 +149,15 @@ const previewRecordState = useMemo(
 </PreviewRecordBridge>
 ```
 
-`PreviewRecordBridge` here is conceptual: use either a keyed child owner or an
-equivalent keyed preview-state seam so cache seeding happens in a lazy
-initializer for the current content type, while the effect remains async-only.
+`CustomScreenPreviewRecordOwner` and `PreviewRecordBridge` are conceptual names.
+The required seam is:
+
+- keyed owner by `selectedContentType.slug`,
+- lazy cache seed for the active content type,
+- async-only effect body after lazy seed,
+- `force: true` background revalidation when cache exists,
+- `force: true` foreground fetch when cache is absent,
+- immediate fallback state when the content type is cleared.
 
 Reference seam: mirror the cached-first plus background-refresh ownership style
 already used by `CustomScreenEntriesPage.tsx` instead of inventing a one-off
@@ -162,9 +186,20 @@ preview fetch loop.
 ## Testing Requirements
 
 - Run the focused suites required by TASK-251-01-01 and TASK-251-01-02.
+- Existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a
+  render-only smoke test, but it is not the owner for mounted preview-state
+  behavior.
+- The mounted owner for `CustomScreenEditorPage` preview flow should be an
+  editor-page integration suite, reusing
+  `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` or a new
+  dedicated mounted suite such as
+  `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`.
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
+  - cached rows trigger a true `force: true` background revalidation,
   - background refresh can replace fallback preview with a real first record,
+  - changing or clearing `contentTypeId` immediately drops the old type's
+    preview owner before the next async result resolves,
   - `cacheBus` invalidation for `cacheKeys.entriesList(typeSlug)` refreshes the
     preview record after entry mutations elsewhere,
   - the same preview record is visible on the builder canvas and inside the

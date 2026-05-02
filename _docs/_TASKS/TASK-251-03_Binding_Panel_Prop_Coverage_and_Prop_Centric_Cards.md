@@ -17,7 +17,8 @@ generic `Binding N` cards.
 
 This follow-up should make the binding flow prop-first:
 
-- the widget owns which props are bindable,
+- only widgets whose contract is explicitly `selected-entry` own bindable
+  record props,
 - the Data tab renders cards/rows for those props,
 - existing persisted bindings outside the declared target list remain visible as
   compatibility rows instead of silently disappearing.
@@ -37,6 +38,7 @@ This follow-up should make the binding flow prop-first:
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - additional widget metadata tests if a shared helper is extracted
 
@@ -51,7 +53,11 @@ This follow-up should make the binding flow prop-first:
 4. `CustomScreenEditorPage` remains the owner of the resolved selected widget
    and must pass that resolved metadata into the Data tab instead of forcing
    `FieldBindingPanel` to rediscover registry state on its own.
-5. Widget settings and Data-tab suggestions must read from the same
+5. `screen-field-group` and `screen-two-column` remain layout widgets with the
+   current `selected-content-type` read-only contract. Their `title`,
+   `description`, `leftTitle`, and `rightTitle` stay in widget settings and do
+   not become selected-entry binding cards in the Data tab.
+6. Widget settings and Data-tab suggestions must read from the same
    widget-owned target contract so they do not drift.
 
 ## Implementation Pseudocode
@@ -74,6 +80,10 @@ function listSelectedWidgetBindingTargets(input: {
   widget: WidgetDefinition | null;
   existingBindings: CustomScreenBinding[];
 }) {
+  if (input.widget?.dataAccess?.source !== "selected-entry") {
+    return [];
+  }
+
   const declared = input.widget?.bindingTargets ?? [];
   const existingCustomOnly = input.existingBindings
     .filter((binding) => !declared.some((target) => target.propPath === binding.propPath))
@@ -133,6 +143,7 @@ function listSelectedWidgetBindingTargets(input: {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - Add assertions for:
   - all declared bindable props for `screen-record-header` render in Data,
@@ -140,6 +151,9 @@ function listSelectedWidgetBindingTargets(input: {
   - an existing unknown prop path remains visible as a compatibility row,
   - `CustomScreenEditorPage` passes the resolved selected widget into the Data
     tab instead of requiring registry re-resolution in the panel,
+  - `screen-field-group` and `screen-two-column` no longer surface selected-entry
+    binding cards unless their documented data-access contract changes in the
+    same slice,
   - widget-editor `Data` jump buttons still target the same declared prop paths.
 
 ## Documentation Updates Required

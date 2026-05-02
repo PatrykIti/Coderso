@@ -16,7 +16,8 @@ actual `List View` table header.
 
 This leaf is intentionally narrow. It does not reopen filter, formatter, or
 visible-column rules. It only changes where selection and order movement live
-so the builder interaction matches the visible table.
+for visible columns, while preserving a secondary affordance for hidden columns
+so they remain reachable.
 
 ## Sub-Tasks
 
@@ -26,7 +27,8 @@ No child task files.
 
 - `core/admin/ui/custom-screens/ListViewCanvas.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
-- `tests/vitest/ui/custom-screens-page.test.tsx`
+- existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
+  render smoke
 - new mounted suite such as `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 
 ## Implementation Pseudocode
@@ -68,8 +70,27 @@ const handleMoveListColumn = (columnId: string, direction: "left" | "right") => 
 ))}
 ```
 
-Delete the existing lower `grid gap-2 md:grid-cols-2` reorder strip once the
-header controls are in place.
+```tsx
+const hiddenColumns = listView.columns.filter(
+  (column) => !resolvedColumns.some((visibleColumn) => visibleColumn.id === column.id)
+);
+
+{hiddenColumns.length > 0 ? (
+  <div className="rounded-lg border border-dashed p-3">
+    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      Hidden columns
+    </p>
+    {hiddenColumns.map((column) => (
+      <button key={column.id} type="button" onClick={() => onSelectColumn(column.id)}>
+        {column.label}
+      </button>
+    ))}
+  </div>
+) : null}
+```
+
+Delete only the old lower reorder-arrow strip. Replace it with a compact
+secondary hidden-column affordance so `visible=false` columns stay selectable.
 
 ## Security Contract
 
@@ -85,12 +106,15 @@ header controls are in place.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - mounted list-canvas coverage asserting:
   - left boundary disables the left button,
   - right boundary disables the right button,
   - header-level movement changes rendered column order,
+  - hidden columns remain selectable from the secondary compact tray,
   - selected-column styling follows the moved column.
+- `tests/vitest/ui/custom-screens-page.test.tsx` may remain a secondary
+  render-only smoke, but it is not sufficient for mounted column interaction
+  proof.
 
 ## Documentation Updates Required
 
@@ -102,4 +126,5 @@ header controls are in place.
 1. Column movement lives in the header row, not in a second card list.
 2. Buttons are directional (`left` / `right`) and visually tied to the column
    they move.
-3. Selection and inspector ownership remain stable after reorder operations.
+3. Hidden columns remain reachable for reselection after `visible=false`.
+4. Selection and inspector ownership remain stable after reorder operations.

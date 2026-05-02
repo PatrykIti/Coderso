@@ -18,7 +18,9 @@ surface.
 
 Selection and ordering should happen directly in the header cell where the
 column lives. The existing right-panel inspector remains the owner of deeper
-column edits such as label, formatter, and visibility.
+column edits such as label, formatter, and visibility. Hidden or non-visible
+columns must remain reachable from a secondary compact tray or outline; only
+the per-item reorder arrows move into the header.
 
 ## Sub-Tasks
 
@@ -30,7 +32,8 @@ column edits such as label, formatter, and visibility.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/ListViewColumnInspector.tsx` if the selected
   column affordance copy changes
-- `tests/vitest/ui/custom-screens-page.test.tsx`
+- existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
+  render smoke
 - new mounted suite such as `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 
 ## Product Contract
@@ -39,7 +42,10 @@ column edits such as label, formatter, and visibility.
    that column.
 2. Small left/right controls in the header move the column without forcing the
    user to interact with a second card list below the table.
-3. The lower reorder card strip is removed entirely.
+3. The old lower reorder strip is replaced, not deleted blindly:
+   - visible columns own reorder controls in the header,
+   - hidden/non-visible columns stay reachable in a secondary compact list
+     without reorder arrows so users can reselect or re-enable them.
 4. Column label/formatter/visibility edits remain in the existing inspector, not
    inline inside the header.
 
@@ -84,8 +90,23 @@ column edits such as label, formatter, and visibility.
 </TableHead>
 ```
 
-Remove the lower `listView.columns.map(...)` card grid from `ListViewCanvas`
-once the header owns reorder actions.
+```tsx
+const hiddenColumns = listView.columns.filter(
+  (column) => !resolvedColumns.some((visibleColumn) => visibleColumn.id === column.id)
+);
+
+{hiddenColumns.length > 0 ? (
+  <HiddenColumnsTray
+    title="Hidden columns"
+    columns={hiddenColumns}
+    onSelectColumn={(columnId) => onSelectColumn(columnId)}
+  />
+) : null}
+```
+
+Replace the old lower `listView.columns.map(...)` reorder strip with a compact
+all-columns / hidden-columns affordance. Do not leave hidden columns
+unreachable after `visible=false`.
 
 ## Security Contract
 
@@ -102,12 +123,16 @@ once the header owns reorder actions.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx`
 - new mounted list-canvas suite asserting:
   - header click selects the column,
   - left/right controls reorder columns,
-  - the lower reorder card strip is gone,
+  - hidden columns still appear in the secondary compact tray after
+    `visible=false`,
+  - the old lower reorder arrows are gone,
   - selected-column inspector still tracks the active column after reordering.
+- `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a secondary
+  render-only smoke test, but it is not the mounted owner for header click or
+  reorder interactions.
 
 ## Documentation Updates Required
 
@@ -117,5 +142,5 @@ once the header owns reorder actions.
 ## Acceptance Criteria
 
 1. Users can reorder columns from the table header itself.
-2. The lower reorder card strip no longer exists.
+2. Hidden columns remain reachable after they are made non-visible.
 3. Inspector-driven column editing still works after reordering.
