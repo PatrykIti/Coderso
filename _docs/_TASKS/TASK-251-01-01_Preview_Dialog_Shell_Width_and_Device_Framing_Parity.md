@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Custom Screens + Preview + Dialog UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-251-01
+**Dependencies:** TASK-251-01, TASK-251-01-02
 **Status:** To Do
 
 ---
@@ -32,23 +32,43 @@ No child task files.
 
 ## Implementation Pseudocode
 
-```tsx
-const dialogClassName =
-  mode === "list-view"
-    ? "w-[min(96vw,1600px)] max-w-none overflow-hidden p-0"
-    : "w-[min(96vw,1600px)] max-w-none overflow-hidden p-0";
+```ts
+type PreviewShellLayout = {
+  dialogClassName: string;
+  bodyClassName: string;
+  listMinWidth: number;
+  editorFrameMinHeight: number;
+};
 
-<DialogContent className={dialogClassName}>
+function resolvePreviewShellLayout(): PreviewShellLayout {
+  return {
+    dialogClassName: "w-[min(96vw,1600px)] max-w-none overflow-hidden p-0",
+    bodyClassName: "min-h-0 max-h-[88vh] overflow-auto bg-muted/20 p-6",
+    listMinWidth: 1100,
+    editorFrameMinHeight: 720,
+  };
+}
+```
+
+```tsx
+const layout = resolvePreviewShellLayout();
+
+<DialogContent className={layout.dialogClassName}>
   <DialogHeader ... />
-  <div className="min-h-0 max-h-[88vh] overflow-auto bg-muted/20 p-6">
+  <div className={layout.bodyClassName}>
     {mode === "list-view" ? (
-      <div className="mx-auto w-full min-w-[1100px]">{/* table preview */}</div>
+      <div className="mx-auto w-full" style={{ minWidth: layout.listMinWidth }}>
+        <CustomScreenEntriesTable ... />
+      </div>
     ) : (
       <div className="mx-auto w-full">
         <div
           data-preview-device={device.id}
           className="mx-auto rounded-3xl border bg-background shadow-sm"
-          style={{ width: resolvedDeviceWidth, minHeight: resolvedDeviceMinHeight }}
+          style={{
+            width: resolvedDeviceWidth,
+            minHeight: layout.editorFrameMinHeight,
+          }}
         >
           <CustomScreenPreview ... />
         </div>
@@ -58,8 +78,18 @@ const dialogClassName =
 </DialogContent>
 ```
 
-If extracting shared constants helps, keep the ownership small and avoid
-coupling the local Custom Screens preview to iframe-only Pages runtime logic.
+Execution notes for the implementer:
+
+- Keep one roomy outer shell policy for both modes; the dialog must stop
+  applying a narrower editor-only clamp before the device frame is rendered.
+- The list preview may overflow horizontally inside the body scroll container;
+  do not solve smaller laptop viewports by reintroducing a tighter modal clamp.
+- The editor preview may keep device-specific inner widths, but only the inner
+  frame owns that constraint; the outer dialog remains desktop-sized.
+- No async data flow or new error path is introduced in this leaf. Regression
+  risk lives in layout classes, body scroll behavior, and device toggle wiring.
+- If extracting shared constants helps, keep ownership local and avoid coupling
+  this dialog to iframe-only Pages preview internals.
 
 ## Security Contract
 
@@ -77,8 +107,12 @@ coupling the local Custom Screens preview to iframe-only Pages runtime logic.
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - Add mounted assertions for:
-  - list-view preview using the roomy shell without the old narrow clamp,
-  - editor-view preview exposing the device frame inside the larger dialog,
+  - list-view preview using the roomy shell without the old `max-w-[1200px]`
+    clamp,
+  - editor-view preview exposing the device frame inside the larger dialog
+    shell instead of shrinking both shell and frame,
+  - the body scroll container preserving access when the table or device frame
+    exceeds the viewport width/height,
   - desktop/tablet/mobile controls still toggling the editor preview device.
 
 ## Documentation Updates Required

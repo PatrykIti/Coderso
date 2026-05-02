@@ -20,6 +20,9 @@ This follow-up should make the binding flow prop-first:
 - only widgets whose contract is explicitly `selected-entry` own bindable
   record props,
 - the Data tab renders cards/rows for those props,
+- already-saved legacy blocks that still survive through the current fallback
+  registry path keep a manual compatibility mode instead of becoming
+  non-editable,
 - existing persisted bindings outside the declared target list remain visible as
   compatibility rows instead of silently disappearing.
 
@@ -40,6 +43,7 @@ This follow-up should make the binding flow prop-first:
 - `core/widgets/core/screenTwoColumn.tsx`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 
@@ -54,11 +58,15 @@ This follow-up should make the binding flow prop-first:
 4. `CustomScreenEditorPage` remains the owner of the resolved selected widget
    and must pass that resolved metadata into the Data tab instead of forcing
    `FieldBindingPanel` to rediscover registry state on its own.
-5. `screen-field-group` and `screen-two-column` remain layout widgets with the
+5. If the selected block is preserved only through the current legacy fallback
+   widget registry path and does not declare widget-owned binding targets, the
+   panel must keep a manual binding editor for that block instead of collapsing
+   into a non-bindable empty state.
+6. `screen-field-group` and `screen-two-column` remain layout widgets with the
    current `selected-content-type` read-only contract. Their `title`,
    `description`, `leftTitle`, and `rightTitle` stay in widget settings and do
    not become selected-entry binding cards in the Data tab.
-6. Widget settings and Data-tab suggestions must read from the same
+7. Widget settings and Data-tab suggestions must read from the same
    widget-owned target contract so they do not drift.
 
 ## Implementation Pseudocode
@@ -103,6 +111,36 @@ function listSelectedWidgetBindingTargets(input: {
     }));
 
   return [...declared, ...existingCustomOnly];
+}
+```
+
+```ts
+type BindingPanelModel =
+  | { mode: "declared-targets"; targets: WidgetBindingTarget[] }
+  | { mode: "legacy-manual"; suggestedPaths: string[] }
+  | { mode: "layout-read-only" };
+
+function resolveBindingPanelModel(input: {
+  selectedWidget: WidgetDefinition | null;
+  selectedBlock: Block | null;
+  selectedBindings: CustomScreenBinding[];
+}) {
+  if (input.selectedWidget?.dataAccess?.source === "selected-entry") {
+    return {
+      mode: "declared-targets",
+      targets: listSelectedWidgetBindingTargets({
+        widget: input.selectedWidget,
+        existingBindings: input.selectedBindings,
+      }),
+    } satisfies BindingPanelModel;
+  }
+
+  const suggestedPaths = collectBindingPropPaths(input.selectedBlock?.data ?? {});
+  if (input.selectedBindings.length > 0 || suggestedPaths.length > 0) {
+    return { mode: "legacy-manual", suggestedPaths } satisfies BindingPanelModel;
+  }
+
+  return { mode: "layout-read-only" } satisfies BindingPanelModel;
 }
 ```
 
@@ -153,12 +191,15 @@ function listSelectedWidgetBindingTargets(input: {
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - Add assertions for:
   - all declared bindable props for `screen-record-header` render in Data,
   - cards are labeled by prop name/path instead of `Binding 1`,
   - an existing unknown prop path remains visible as a compatibility row,
+  - a preserved legacy widget without `bindingTargets` metadata keeps a manual
+    compatibility editor instead of a non-bindable empty state,
   - `CustomScreenEditorPage` passes the resolved selected widget into the Data
     tab instead of requiring registry re-resolution in the panel,
   - registry normalization preserves widget-owned `bindingTargets` for
@@ -167,6 +208,11 @@ function listSelectedWidgetBindingTargets(input: {
   - `screen-field-group` and `screen-two-column` no longer surface selected-entry
     binding cards unless their documented data-access contract changes in the
     same slice,
+  - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` still
+    proves legacy widget preservation in the picker/selected-widget flow,
+  - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+    owns the mounted `Data` jump/focus behavior after the selected-widget handoff
+    is introduced,
   - widget-editor `Data` jump buttons still target the same declared prop paths.
 
 ## Documentation Updates Required

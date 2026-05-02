@@ -45,7 +45,10 @@ No child task files.
    the implementation leaves: cache docs, content-editor UX docs, widget docs,
    board rows, and changelog index.
 3. Update `TASK-251*` statuses, checkbox lists, board counts, and changelog
-   references in one closure pass after validation is complete.
+   references in one closure pass after validation is complete, including the
+   required task-file date fields used in this repo when a task moves to
+   `In Progress` or `Done` (for example `**Started:** YYYY-MM-DD` and
+   `**Completed:** YYYY-MM-DD` where applicable).
 4. Run `git diff --check` and `bun run precommit` before the final manual
    commit so docs-only drift does not slip through.
 ```

@@ -45,12 +45,17 @@ primitives.
   through `buildEditorPreviewData(selectedContentType)`, which synthesizes
   values from schema field types instead of reusing current records.
 - `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` already proves the
-  repo-native records source: `listEntriesCached(contentType.slug, { force })`
-  plus cached-first/background-refresh semantics.
+  repo-native records source plus the shared cache contract: render from cache
+  first, fetch in foreground on cache miss, and use `force: true` only on
+  explicit refresh or cache-bus driven revalidation.
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx` mixes a local
   hard-coded `preferredBindingPropPaths` map with `collectBindingPropPaths` and
   labels bound rows as `Binding 1`, `Binding 2`, etc. The bindable-prop
   contract is not owned by the widgets themselves.
+- `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` still preserves
+  legacy blocks through fallback widget resolution, so task work must not strand
+  existing bindings on already-saved non-screen widgets that remain editable on
+  the current canvas.
 
 ## Required Product Behavior
 
@@ -72,6 +77,9 @@ primitives.
      explicitly `selected-entry`,
    - label cards by prop path / prop label rather than by ordinal position,
    - preserve existing custom prop paths that are already persisted,
+   - preserve manual binding editability for already-saved legacy blocks that
+     still survive through the current fallback registry path, even when they do
+     not declare widget-owned binding targets,
    - keep widget settings and binding-panel suggestions driven from one shared
      widget-owned contract,
    - keep `screen-field-group` and `screen-two-column` on their current
@@ -126,10 +134,13 @@ primitives.
 1. Align widget-owned bindable prop metadata before changing Data-tab rendering
    so the prop list has one source of truth.
 2. Move `List View` column reordering into the table header while preserving a
-   compact hidden-columns affordance for non-visible columns.
+   compact hidden-columns affordance for non-visible columns. This track is
+   independent from the binding-metadata work and does not need to wait on the
+   preview-data slice.
 3. Add cached-first first-record preview hydration for `Editor View` builder
    canvas and preview dialog, with keyed owner reset when the content type
-   changes or clears.
+   changes or clears, while staying aligned with the shared entries cache
+   contract instead of inventing a preview-only mount refresh loop.
 4. Resize the workspace preview dialog around the real preview surfaces after
    the new preview data model is in place.
 5. Close targeted tests, docs, board, and changelog updates.
@@ -142,6 +153,7 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
@@ -152,6 +164,12 @@ primitives.
 - `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a render-only
   smoke test, but it is not the mounted owner for async preview or header
   interaction contracts.
+- Ownership split for existing integration suites:
+  - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` owns the
+    screen-only picker surface plus legacy-widget preservation expectations,
+  - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+    owns `Data` tab jump/focus flow and selected-widget handoff into
+    `FieldBindingPanel`.
 - Reuse existing cached-entry contracts wherever possible. If the
   implementation adds new entry-preview helpers or cached read-model helpers,
   add focused Vitest coverage in `tests/vitest/admin/entriesClient.test.ts` or

@@ -28,6 +28,9 @@ Scope decision for this leaf:
   `selected-content-type` read-only layout contract and therefore do not expose
   entry binding cards in the Data tab unless their source docs and widget
   metadata are explicitly changed in the same slice.
+- already-saved legacy blocks that remain editable through the current fallback
+  registry path keep a manual compatibility editor when they do not declare
+  widget-owned binding targets.
 
 ## Sub-Tasks
 
@@ -46,6 +49,7 @@ No child task files.
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 
@@ -97,12 +101,15 @@ export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
 
 ```tsx
 // FieldBindingPanel.tsx
-const isSelectedEntryBindable = selectedWidget?.dataAccess?.source === "selected-entry";
-const bindingTargets = resolveBindingTargets(selectedWidget, selectedBindings);
+const panelModel = resolveBindingPanelModel({
+  selectedWidget,
+  selectedBlock,
+  selectedBindings,
+});
 
-return isSelectedEntryBindable ? (
+return panelModel.mode === "declared-targets" ? (
   <div className="space-y-3">
-    {bindingTargets.map((target) => {
+    {panelModel.targets.map((target) => {
       const existing = selectedBindings.find((binding) => binding.propPath === target.propPath) ?? null;
       return (
         <div key={target.propPath} data-prop-path={target.propPath} className="rounded-lg border p-3">
@@ -126,6 +133,13 @@ return isSelectedEntryBindable ? (
       );
     })}
   </div>
+) : panelModel.mode === "legacy-manual" ? (
+  <LegacyBindingEditor
+    selectedBindings={selectedBindings}
+    propPathSuggestions={panelModel.suggestedPaths}
+    onAddBinding={addBinding}
+    onUpdateBinding={updateBinding}
+  />
 ) : (
   <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
     This widget exposes layout and content-type settings only. Entry field bindings are not available here.
@@ -142,6 +156,13 @@ slice. The execution-ready path here is: `CustomScreenEditorPage` resolves the
 active widget once, then passes that owner into the panel. Registry
 normalization must preserve the declared `bindingTargets` so the panel and the
 widget editors read the same contract after registration, not only before it.
+To keep the leaf execution-ready, implement `resolveBindingPanelModel()` before
+rewiring render branches so the panel can decide between declared-target cards,
+legacy manual mode, and layout-only read-only mode from one explicit owner.
+Preserved legacy blocks are the only exception: when the selected block remains
+editable through the current fallback registry path but exposes no
+`bindingTargets`, the panel should stay in manual compatibility mode instead of
+dropping existing bindings.
 
 ## Security Contract
 
@@ -162,6 +183,7 @@ widget editors read the same contract after registration, not only before it.
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - Add assertions for:
@@ -170,12 +192,18 @@ widget editors read the same contract after registration, not only before it.
   - `screen-field-group` and `screen-two-column` render the non-bindable layout
     empty state unless their documented contract changes in the same slice,
   - a saved custom prop path still renders in compatibility mode,
+  - a preserved legacy widget keeps manual binding editability even without
+    widget-owned `bindingTargets`,
   - `CustomScreenEditorPage` passes the resolved selected widget into the panel
     and the panel consumes that owner directly,
   - registry-level normalization preserves `bindingTargets` metadata for
     `screen-record-header` and `screen-field-value`,
   - widget-editor `Data` buttons and Data-tab cards stay aligned on the same
-    target names.
+    target names,
+  - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+    owns the mounted jump/focus proof for the selected-widget to `Data` tab flow,
+  - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
+    continues to prove legacy widget preservation in the editor surface.
 
 ## Documentation Updates Required
 
@@ -194,3 +222,5 @@ widget editors read the same contract after registration, not only before it.
    local suggestion map.
 2. The Data tab exposes cards for every declared bindable prop.
 3. Existing custom prop paths remain editable and visible.
+4. Preserved legacy blocks do not lose manual binding editability while the
+   fallback registry path still exists.

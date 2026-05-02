@@ -64,6 +64,11 @@ state so the same record-backed data drives both surfaces.
    previous content type's preview ownership. The screen must never keep showing
    a stale first record from another type while the new preview state is
    resolving.
+6. The preview owner must stay aligned with the shared entries-list cache
+   contract:
+   - no preview-only cache family,
+   - no forced mount refresh when a warm cache already exists,
+   - `force: true` only for explicit invalidation/revalidation flows.
 
 ## Implementation Pseudocode
 
@@ -95,9 +100,10 @@ function CustomScreenPreviewRecordOwner({
     if (!contentType || !typeSlug) return;
 
     let active = true;
+    const hasInitialCache = entries !== null;
 
-    const refreshPreviewEntries = async () => {
-      const nextEntries = await listEntriesCached(typeSlug, { force: true });
+    const hydratePreviewEntries = async (force: boolean) => {
+      const nextEntries = await listEntriesCached(typeSlug, { force });
       if (!active) return;
       setEntries(nextEntries);
     };
@@ -105,11 +111,13 @@ function CustomScreenPreviewRecordOwner({
     // Lazy state init already seeded current cached rows. Keep the effect
     // async-only after mount so the preview owner stays aligned with the React
     // Hooks rules and the shared entry-list contract.
-    void refreshPreviewEntries();
+    if (!hasInitialCache) {
+      void hydratePreviewEntries(false);
+    }
 
     const unsubscribe = subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.entriesList(typeSlug)) return;
-      void refreshPreviewEntries();
+      void hydratePreviewEntries(true);
     });
 
     return () => {
@@ -146,16 +154,18 @@ const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 - keyed owner by `selectedContentType.slug`,
 - lazy cache seed for the active content type,
 - async-only effect body after lazy seed,
-- `force: true` background revalidation when cache exists,
-- `force: true` foreground fetch when cache is absent,
+- foreground fetch on cache miss through `listEntriesCached(typeSlug)`,
+- no preview-only forced mount refresh when cache already exists,
+- `force: true` only when the shared cache contract already expects
+  revalidation, such as cache-bus updates or an explicit refresh entry point,
 - immediate fallback state when the content type is cleared.
 
-Reference seam: mirror the cached-first plus background-refresh ownership style
-already used by `CustomScreenEntriesPage.tsx` instead of inventing a one-off
-preview fetch loop. If cached-first paint on direct builder-route navigation is
-required, extend the existing admin prefetch owner for
-`/advanced/custom-screens/:id` instead of inventing a preview-only cache
-channel.
+Reference seam: mirror the shared entries-list cache contract already used by
+`CustomScreenEntriesPage.tsx` instead of inventing a preview-only fetch loop.
+If cached-first paint on direct builder-route navigation is required, add a
+builder-route aware resolver/warmup path for `/advanced/custom-screens/:id`
+explicitly. The current prefetch special case only covers the records workspace
+route family under `/advanced/custom-screens/:id/entries...`.
 
 ## Security Contract
 
@@ -187,7 +197,7 @@ channel.
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`.
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
-  - cached rows trigger a true `force: true` background revalidation,
+  - cached rows do not trigger a preview-only forced mount refresh,
   - background refresh can replace fallback preview with a real first record,
   - changing or clearing `contentTypeId` immediately drops the old type's
     preview owner before the next async result resolves,
@@ -196,8 +206,8 @@ channel.
   - the same preview record is visible on the builder canvas and inside the
     preview dialog,
   - direct `/advanced/custom-screens/:id` navigation keeps cached-first preview
-    behavior aligned with the shared admin prefetch contract when builder-route
-    warmup is added.
+    behavior aligned with the shared admin prefetch contract when an explicit
+    builder-route warmup is added.
 
 ## Documentation Updates Required
 
