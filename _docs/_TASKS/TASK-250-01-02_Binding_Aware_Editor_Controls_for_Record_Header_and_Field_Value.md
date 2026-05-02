@@ -73,7 +73,9 @@ type WidgetEditorProps<T> = {
 
 ```tsx
 function buildAdminEditorViewContext(input: {
+  activeInspectorTab: "screen" | "data" | "widget";
   setActiveInspectorTab: (tab: "screen" | "data" | "widget") => void;
+  focusedBindingPropPath: string | null;
   setFocusedBindingPropPath: (propPath: string | null) => void;
   bindings: CustomScreenBinding[];
   selectedBlockId: string | null;
@@ -88,6 +90,23 @@ function buildAdminEditorViewContext(input: {
       resolveBindingState(input.bindings, input.selectedBlockId, propPath),
   } satisfies WidgetEditorContext;
 }
+```
+
+```tsx
+const [activeInspectorTab, setActiveInspectorTab] = useState<"screen" | "data" | "widget">(
+  "screen"
+);
+const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
+
+<Tabs value={activeInspectorTab} onValueChange={(next) => setActiveInspectorTab(next as typeof activeInspectorTab)}>
+  <TabsContent value="data">
+    <FieldBindingPanel
+      focusedPropPath={focusedBindingPropPath}
+      onFocusedPropPathChange={setFocusedBindingPropPath}
+      ...
+    />
+  </TabsContent>
+</Tabs>
 ```
 
 ```tsx
@@ -164,6 +183,8 @@ function summarizeScreenWidgetBindingState(input: {
   - shared builder panels pass optional editor context only for
     `admin-editor-view`, while non-screen surfaces still mount without binding
     context,
+  - `CustomScreenEditorPage` owns the inspector tab as controlled state so a
+    jump action can deterministically activate `data`,
   - header/value editors expose visible binding-friendly affordances,
   - widget editors guide users toward the existing binding-panel flow instead of
     duplicating binding state management,

@@ -28,7 +28,7 @@ No child task files.
 - `tests/unit/widgets/registry.test.ts`
 - `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screens-page.test.tsx`
-- new `tests/vitest/ui/custom-screen-widget-picker.test.tsx`
+- new `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 
 ## Implementation Pseudocode
 
@@ -54,7 +54,9 @@ expect(coreWidgets.map((widget) => widget.dataAccess)).toEqual([
 ```
 
 ```tsx
-render(<CustomScreenEditorPage />);
+seedScreenWithContentType();
+renderMountedEditorView(<CustomScreenEditorPage />);
+switchBuilderTab("Editor View");
 expect(leftPicker).toContain("Screen Record Header");
 expect(leftPicker).toContain("Screen Field Value");
 expect(leftPicker).toContain("Screen Field Group");
@@ -95,7 +97,10 @@ const pickerContract = {
   - concrete `screen-*` metadata is asserted for `admin-editor-view`,
   - surface gating is asserted at the real owner
     `core/widgets/registry.ts::listWidgetsForSurfaceContext`,
-  - picker composition is asserted through `CustomScreenEditorPage`,
+  - picker composition is asserted through `CustomScreenEditorPage`, but the
+    actual picker-isolation proof lives in a dedicated mounted
+    `custom-screen-widget-picker` suite because bare page rendering defaults to
+    create-mode shell state,
   - the page-level `widgetRegistry` merge path keeps legacy selected-widget
     compatibility without leaking public widgets back into the left picker,
   - runtime registry re-registration still covers screen widgets,

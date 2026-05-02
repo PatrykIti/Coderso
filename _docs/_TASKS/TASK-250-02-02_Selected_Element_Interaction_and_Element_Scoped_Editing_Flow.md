@@ -18,8 +18,10 @@ surface feels closer to a page-like composed editor.
 The baseline flow already exists today:
 
 - the record editor keeps selected runtime block state,
-- the canvas supports click-to-select and pencil-to-focus,
-- the details rail already exposes a `Selected Element` area.
+- the canvas already wraps runtime blocks in selectable affordances, but nested
+  block clicks can still bubble back into ancestor wrappers,
+- the details rail already exposes a `Selected Element` area, but the pencil
+  path does not yet force that tab to become the active owner.
 
 This leaf is about turning that baseline into a more deliberate, better-covered
 interaction model instead of claiming the feature does not exist yet.
@@ -38,18 +40,20 @@ No child task files.
 ## Implementation Pseudocode
 
 ```tsx
-function handleSelectBlock(blockId: string) {
+function handleSelectBlock(event: React.MouseEvent, blockId: string) {
+  event.stopPropagation();
   setSelectedRuntimeBlockId(blockId);
-  openSelectedElementPanelIfNeeded();
+  setActiveDetailsTab("element");
 }
 ```
 
 ```tsx
-<SelectedElementPanel
-  widget={selectedRuntimeWidget}
-  bindings={selectedRuntimeBindings}
-  renderBoundEditors={renderSelectedBlockBindingEditor}
-/>
+<div
+  onClick={(event) => handleSelectBlock(event, block.id)}
+  data-selected-block-id={block.id}
+>
+  {content}
+</div>
 ```
 
 ```ts
@@ -60,6 +64,14 @@ function preserveSelectedElementAcrossRefresh(input: {
   return input.nextBlocks.some((block) => block.id === input.selectedBlockId)
     ? input.selectedBlockId
     : input.nextBlocks[0]?.id ?? null;
+}
+```
+
+```tsx
+function handleEditBlock(blockId: string) {
+  setSelectedRuntimeBlockId(blockId);
+  setActiveDetailsTab("element");
+  setDetailsOpen(true);
 }
 ```
 
@@ -81,12 +93,15 @@ function preserveSelectedElementAcrossRefresh(input: {
 - `bun --cwd core lint:types`
 - Vitest:
   - clicking a widget activates it,
+  - nested child clicks do not reselect an ancestor wrapper through bubbling,
   - selected-element rail focuses the correct bound fields,
-  - pencil affordance opens element-scoped editing flow,
+  - pencil affordance opens element-scoped editing flow and activates the
+    `Selected Element` tab instead of leaving `record` active,
   - selection remains stable through save/refresh where expected,
   - the interaction-heavy flow is covered by a dedicated happy-dom /
     ui-integration suite instead of only by static `renderAdminUi` smoke
-    assertions,
+    assertions; keep `custom-screen-records.test.tsx` as static shell/regression
+    coverage and prove interaction semantics in the new mounted suite,
   - current behavior regressions are distinguished from genuinely new behavior.
 
 ## Documentation Updates Required

@@ -33,7 +33,7 @@ stack:
 - `tests/vitest/widgets/screenWidgets.test.tsx`
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `tests/unit/widgets/registry.test.ts`
-- new `tests/vitest/ui/custom-screen-widget-picker.test.tsx` if needed
+- new `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 
 ## Security Contract
 
