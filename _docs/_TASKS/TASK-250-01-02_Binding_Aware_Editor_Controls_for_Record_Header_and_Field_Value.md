@@ -24,6 +24,11 @@ mapping state. This leaf improves the widget editors so they:
 - guide the user into the existing `Data` tab flow instead of forcing blind
   trial-and-error with plain text inputs.
 
+Because `screen-*` editors are mounted through the shared `BlockSettings` and
+builder panel stack, this leaf must extend that shared editor-prop seam
+additively. The implementation should not invent screen-local props that only
+`ScreenEditors.tsx` can see.
+
 The same pass must keep or improve the existing `clear` semantics for any
 surface, border, badge, or similar style controls already owned by these
 widgets.
@@ -34,6 +39,11 @@ No child task files.
 
 ## Files to Change
 
+- `core/widgets/types.ts`
+- `core/admin/ui/pages/builder/BlockSettings.tsx`
+- `core/admin/ui/pages/builder/WizardPanel.tsx`
+- `core/admin/ui/pages/builder/VisualPanel.tsx`
+- `core/admin/ui/pages/builder/AdvancedPanel.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
@@ -44,6 +54,41 @@ No child task files.
 
 ## Implementation Pseudocode
 
+```ts
+type WidgetEditorContext = {
+  surface: WidgetSurface;
+  jumpToBindingPropPath?: (propPath: string) => void;
+  getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
+};
+
+type WidgetEditorProps<T> = {
+  value: T;
+  onChange: (next: T) => void;
+  variant: string;
+  onVariantChange?: (next: string) => void;
+  context?: WidgetEditorContext;
+};
+```
+
+```tsx
+function buildAdminEditorViewContext(input: {
+  setActiveInspectorTab: (tab: "screen" | "data" | "widget") => void;
+  setFocusedBindingPropPath: (propPath: string | null) => void;
+  bindings: CustomScreenBinding[];
+  selectedBlockId: string | null;
+}) {
+  return {
+    surface: "admin-editor-view",
+    jumpToBindingPropPath: (propPath: string) => {
+      input.setActiveInspectorTab("data");
+      input.setFocusedBindingPropPath(propPath);
+    },
+    getBindingState: (propPath: string) =>
+      resolveBindingState(input.bindings, input.selectedBlockId, propPath),
+  } satisfies WidgetEditorContext;
+}
+```
+
 ```tsx
 function BindingFriendlyTextControl(props: {
   label: string;
@@ -53,31 +98,24 @@ function BindingFriendlyTextControl(props: {
   onValueChange: (next: string) => void;
   onJumpToBindingPanel?: (propPath: string) => void;
 }) {
-  // show the literal value editor, current binding state, and a direct affordance
-  // to focus the matching prop path in the existing FieldBindingPanel flow
+  // show current literal value + binding badge
+  // when editor context is missing, render the literal control only
+  // do not create or mutate bindings implicitly from this button
 }
-```
-
-```tsx
-function focusEditorDataTab(input: {
-  propPath: string;
-  setActiveInspectorTab: (tab: "screen" | "data" | "widget") => void;
-  setFocusedBindingPropPath: (propPath: string | null) => void;
-}) {
-  input.setActiveInspectorTab("data");
-  input.setFocusedBindingPropPath(input.propPath);
-}
-```
-
-```tsx
-<ScreenRecordHeaderVisualEditor
-  titleControl={<BindingFriendlyTextControl label="Title" suggestedBindingPropPath="title" ... />}
-  subtitleControl={<BindingFriendlyTextControl label="Subtitle" suggestedBindingPropPath="subtitle" ... />}
-  descriptionControl={<BindingFriendlyTextControl label="Description" suggestedBindingPropPath="description" ... />}
-/>
 ```
 
 ```ts
+function resolveBindingState(
+  bindings: CustomScreenBinding[];
+  selectedBlockId: string | null;
+  propPath: string
+) {
+  const binding = bindings.find(
+    (entry) => entry.widgetId === selectedBlockId && entry.propPath === propPath
+  );
+  return binding ? "bound" : "literal";
+}
+
 function summarizeScreenWidgetBindingState(input: {
   widgetType: string;
   bindings: CustomScreenBinding[];
@@ -89,6 +127,15 @@ function summarizeScreenWidgetBindingState(input: {
     badge: findBindingForPropPath(input.bindings, "badge"),
   };
 }
+```
+
+```tsx
+<FieldBindingPanel
+  selectedBlock={selectedBlock}
+  focusedPropPath={focusedBindingPropPath}
+  onFocusedPropPathChange={setFocusedBindingPropPath}
+  ...
+/>
 ```
 
 ## Security Contract
@@ -113,9 +160,14 @@ function summarizeScreenWidgetBindingState(input: {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Vitest:
+  - shared builder panels pass optional editor context only for
+    `admin-editor-view`, while non-screen surfaces still mount without binding
+    context,
   - header/value editors expose visible binding-friendly affordances,
   - widget editors guide users toward the existing binding-panel flow instead of
     duplicating binding state management,
+  - “jump to binding” focuses the real `Data` tab and prop-path owner in
+    `CustomScreenEditorPage` / `FieldBindingPanel`,
   - no invalid prop targets such as `align` or `style.*` reappear in the
     record-header flow,
   - touched style controls keep `clear` / `none` behavior.
@@ -123,7 +175,9 @@ function summarizeScreenWidgetBindingState(input: {
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- create/update `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/_CHANGELOG/*` on completion
 
 ## Acceptance Criteria
@@ -136,3 +190,5 @@ function summarizeScreenWidgetBindingState(input: {
    `CustomScreenEditorPage`, not only mocked inside widget-local state.
 4. Existing removable style controls stay removable through explicit `clear` /
    `none` semantics.
+5. The shared widget editor contract remains additive: non-screen surfaces can
+   keep omitting binding-aware context without breaking editor mounting.

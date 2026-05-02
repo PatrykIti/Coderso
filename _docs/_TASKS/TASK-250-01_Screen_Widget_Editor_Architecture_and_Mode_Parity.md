@@ -26,7 +26,11 @@ the same editor implementation. This task makes those modes meaningful.
 ## Files to Change
 
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
-- `core/widgets/core/index.ts`
+- `core/widgets/types.ts`
+- `core/admin/ui/pages/builder/BlockSettings.tsx`
+- `core/admin/ui/pages/builder/WizardPanel.tsx`
+- `core/admin/ui/pages/builder/VisualPanel.tsx`
+- `core/admin/ui/pages/builder/AdvancedPanel.tsx`
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
@@ -40,6 +44,9 @@ the same editor implementation. This task makes those modes meaningful.
   screen-only editor framework.
 - `wizard`, `visual`, and `advanced` must become meaningfully different editing
   experiences where the widget warrants it.
+- Any screen-specific binding or inspector affordance must travel through an
+  additive shared editor-prop/context seam so `BlockSettings` and the shared
+  builder panels stay the owner of editor mounting.
 - Any newly introduced screen-widget helper must still feed the shared widget
   schema/defaults/normalizer/render contract.
 
@@ -64,7 +71,11 @@ the same editor implementation. This task makes those modes meaningful.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- create/update `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` on completion
 

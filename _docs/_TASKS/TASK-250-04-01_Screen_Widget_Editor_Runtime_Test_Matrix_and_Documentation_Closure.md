@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Coderso Custom Screens + QA Closure
 **Estimated Effort:** Medium
-**Dependencies:** TASK-250-03-02
+**Dependencies:** TASK-250-01, TASK-250-02, TASK-250-03
 **Status:** To Do
 
 ---
@@ -22,7 +22,11 @@ No child task files.
 ## Files to Change
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- create/update `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
@@ -38,19 +42,34 @@ const validationMatrix = {
   types: "bun --cwd core lint:types",
   vitest: [
     "screen-widgets-editor-wave",
+    "screenEditorsModeParity",
+    "screenEditorsBindingAware",
+    "screenLayoutEditors",
     "screenWidgets",
     "custom-screen-binding-panel",
+    "custom-screens-page",
     "custom-screen-workspace-preview-dialog",
     "custom-screen-records",
     "custom-screen-widget-picker",
   ],
-  bun: [
+  bunBaseline: [
     "tests/unit/widgets/registry.test.ts",
     "tests/unit/widgets/runtimeRegistry.test.ts",
+  ],
+  extraVitestWhenSharedRendererChanges: [
+    "tests/vitest/widgets/renderer.test.tsx",
   ],
   gates: "bun run gates:coderso",
 };
 ```
+
+Record the lane intent explicitly in the closure note:
+
+- rerun the current shipped Bun registry baseline while those suites remain the
+  repo-owned contract today,
+- if this family migrates Bun-free registry coverage to Vitest, replace the
+  closure entry with the new Vitest equivalent and note the lane transition
+  against `_docs/TESTING_STRATEGY.md`.
 
 ## Security Contract
 
@@ -67,14 +86,22 @@ const validationMatrix = {
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- targeted Vitest suites from TASK-250-01 through TASK-250-03
-- targeted Bun registry/runtime suites for the touched widget foundation
+- targeted Vitest suites from TASK-250-01 through TASK-250-03, including all
+  newly added editor-mode / binding-aware / layout / picker suites
+- current shipped Bun registry/runtime baseline for the touched widget
+  foundation until lane ownership changes explicitly
+- `tests/vitest/widgets/renderer.test.tsx` if TASK-250-03-01 changes the shared
+  `WidgetRenderer` contract
 - `bun run gates:coderso`
 
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- create/update `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`

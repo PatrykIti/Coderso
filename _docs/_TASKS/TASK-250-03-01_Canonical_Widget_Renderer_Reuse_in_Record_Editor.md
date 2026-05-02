@@ -11,9 +11,14 @@
 
 ## Overview
 
-Reduce or eliminate the current duplication between `CustomScreenPreview` and
-`CustomScreenEntryCanvas` so screen widget behavior cannot silently drift
-between preview and the dedicated record editor.
+Reduce the current duplication between `CustomScreenPreview` and the read-only
+branches inside `CustomScreenEntryCanvas` so shared screen-widget binding and
+render behavior cannot silently drift.
+
+This leaf does not force full output parity for writable `screen-field-value`
+blocks. The dedicated record editor intentionally replaces those branches with
+live `FieldRenderer` / title / slug inputs and validation UI, and that
+interactive behavior remains part of the contract.
 
 ## Sub-Tasks
 
@@ -23,10 +28,16 @@ No child task files.
 
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
-- `core/widgets/renderers/widgetRenderer.tsx`
+- `core/services/customScreens/bindingResolver.ts`
 - `tests/vitest/widgets/screenWidgets.test.tsx`
 - `tests/vitest/ui/custom-screen-records.test.tsx`
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
+
+## New Files to Create
+
+- `core/admin/ui/custom-screens/screenWidgetRenderBridge.tsx` if extracting a
+  shared helper keeps reuse local to Custom Screens instead of widening the
+  generic `WidgetRenderer` contract
 
 ## Implementation Pseudocode
 
@@ -38,17 +49,28 @@ function renderScreenWidgetSurface(input: {
   fieldValues: Record<string, unknown>;
   interaction?: ScreenInteractionContext;
 }) {
-  // one canonical path with editor-specific interaction hooks,
-  // not two hand-maintained widget trees
+  const resolvedBlock = applyBindingsToBlocks(
+    [input.block],
+    input.bindings,
+    input.fieldValues
+  )[0];
+
+  if (
+    input.mode === "record-editor" &&
+    shouldUseWritableInlineEditor(resolvedBlock, input.bindings)
+  ) {
+    return renderWritableInlineFieldEditor(resolvedBlock, input);
+  }
+
+  return <WidgetRenderer block={resolvedBlock} />;
 }
 ```
 
 ```tsx
-function ScreenWidgetRendererBridge(input: {
+function ScreenWidgetReadOnlyBridge(input: {
   block: WidgetBlock;
   bindings: CustomScreenBinding[];
   fieldValues: Record<string, unknown>;
-  interaction?: ScreenInteractionContext;
 }) {
   const resolvedBlock = applyBindingsToBlocks(
     [input.block],
@@ -56,12 +78,7 @@ function ScreenWidgetRendererBridge(input: {
     input.fieldValues
   )[0];
 
-  return (
-    <WidgetRenderer
-      block={resolvedBlock}
-      interaction={input.interaction}
-    />
-  );
+  return <WidgetRenderer block={resolvedBlock} />;
 }
 ```
 
@@ -74,6 +91,11 @@ const parityFixtures = [
       { propPath: "subtitle", field: "projectTitle" },
     ],
     expectedText: ["Project title", "Villa Aurora"],
+  },
+  {
+    widget: "screen-field-value",
+    bindings: [{ propPath: "value", field: "projectStatus", mode: "read" }],
+    expectedText: ["Project status", "Published"],
   },
   {
     widget: "screen-two-column",
@@ -99,20 +121,29 @@ const parityFixtures = [
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Vitest:
-  - preview and record-editor paths assert the same screen widget output for the
-    same bindings/data,
-  - interaction hooks can differ, but not bound content rendering semantics,
-  - parity fixtures exist for header, field-value, field-group, and two-column.
+  - preview and record-editor paths assert the same bound output for read-only
+    screen-widget branches rendered through the shared bridge,
+  - writable `screen-field-value` branches explicitly keep live input /
+    `FieldRenderer` behavior instead of being forced through preview-only
+    rendering,
+  - parity fixtures exist for record-header, read-only field-value,
+    field-group, and two-column,
+  - if the implementation must widen the shared `WidgetRenderer` contract, also
+    rerun and extend `tests/vitest/widgets/renderer.test.tsx`.
 
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
 - `_docs/CMS_API.md` if semantics change
+- `_docs/CONTENT_EDITOR_UX.md` if dedicated editor behavior wording changes
 - `_docs/_CHANGELOG/*` on completion
 
 ## Acceptance Criteria
 
-1. Screen widget rendering parity is enforced between preview and record editor.
-2. The main record editor stops carrying unnecessary renderer-specific drift.
-3. The implementer has an explicit parity fixture set instead of rediscovering
-   drift case by case.
+1. Shared read-only screen-widget rendering parity is enforced between preview
+   and the dedicated editor where both surfaces intentionally use the same
+   runtime presentation.
+2. The main record editor keeps its dedicated writable widget UX while shedding
+   unnecessary read-only renderer drift.
+3. The implementer has an explicit parity fixture set, including the boundary
+   where writable inline editing intentionally differs from preview rendering.

@@ -23,7 +23,11 @@ intentionally differs from public widgets.
 ## Files to Change
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- create/update `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
@@ -51,7 +55,11 @@ intentionally differs from public widgets.
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- create/update `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md` if missing
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`

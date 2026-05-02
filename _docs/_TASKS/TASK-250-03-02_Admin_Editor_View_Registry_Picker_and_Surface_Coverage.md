@@ -21,7 +21,9 @@ No child task files.
 
 ## Files to Change
 
+- `core/widgets/registry.ts`
 - `core/admin/ui/widgets/registry.ts`
+- `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/widgets/core/index.ts`
 - `tests/unit/widgets/registry.test.ts`
 - `tests/unit/widgets/runtimeRegistry.test.ts`
@@ -31,19 +33,19 @@ No child task files.
 ## Implementation Pseudocode
 
 ```ts
-const widgets = listRegisteredWidgetsForSurface({
+const coreWidgets = listWidgetsForSurfaceContext({
   surface: "admin-editor-view",
-  contentType,
+  hasSelectedContentType: true,
 });
 
-expect(widgets.map((widget) => widget.type)).toEqual([
+expect(coreWidgets.map((widget) => widget.type)).toEqual([
   "screen-record-header",
   "screen-field-value",
   "screen-field-group",
   "screen-two-column",
 ]);
 
-expect(widgets.map((widget) => widget.dataAccess)).toEqual([
+expect(coreWidgets.map((widget) => widget.dataAccess)).toEqual([
   { source: "selected-entry", modes: ["read"] },
   { source: "selected-entry", modes: ["read", "write"] },
   { source: "selected-content-type", modes: ["read"] },
@@ -66,7 +68,8 @@ const pickerContract = {
   whenNoContentType: "empty or gated admin-editor-view set",
   whenContentTypeSelected: "only concrete screen widgets for admin-editor-view",
   pickerIsolation: "Hero/public widgets do not appear in the left admin-editor-view picker",
-  selectedWidgetCompatibility: "existing non-screen blocks already present on a legacy screen may still resolve in widget settings without being re-exposed in the left picker",
+  selectedWidgetCompatibility:
+    "existing non-screen blocks already present on a legacy screen may still resolve in widget settings without being re-exposed in the left picker",
 };
 ```
 
@@ -86,8 +89,15 @@ const pickerContract = {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Bun/Vitest:
+  - current shipped baseline reruns `tests/unit/widgets/registry.test.ts` and
+    `tests/unit/widgets/runtimeRegistry.test.ts` for registry / re-registration
+    behavior,
   - concrete `screen-*` metadata is asserted for `admin-editor-view`,
+  - surface gating is asserted at the real owner
+    `core/widgets/registry.ts::listWidgetsForSurfaceContext`,
   - picker composition is asserted through `CustomScreenEditorPage`,
+  - the page-level `widgetRegistry` merge path keeps legacy selected-widget
+    compatibility without leaking public widgets back into the left picker,
   - runtime registry re-registration still covers screen widgets,
   - selected-content-type gating is asserted for widgets that require it,
   - tests distinguish left-picker isolation from already-present legacy block

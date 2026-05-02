@@ -140,7 +140,9 @@ const regressionMatrix = [
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
-- relevant `_docs/_WIDGETS/*`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- create/update `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` if missing
+- `_docs/_WIDGETS/README.md`
 - `_docs/_CHANGELOG/*` on completion
 
 ## Acceptance Criteria
