@@ -28,9 +28,11 @@ In the current UI, this route includes:
 
 # Medium
 
-Use Integrations when the product needs a provider connection that is broader
-than a single API key or webhook. The current route is designed for:
+Use Integrations when the product needs a managed provider connection, whether
+that is a full service setup or a single encrypted provider secret such as an
+LLM API key. The current route is designed for:
 - browsing the available service catalog,
+- searching by provider name or description,
 - narrowing the list by category,
 - opening a provider-specific configuration drawer,
 - reviewing required fields and security scopes,
@@ -49,34 +51,39 @@ workspace that balances catalog review with configuration and procurement.
    - `Communication`
    - `Automation`
    - `Developer Tools`
-4. Review each integration card for:
+4. Use the `Search integrations...` field when you already know the provider
+   name or want to narrow the list by description keywords.
+5. Review each integration card for:
    - connection status,
    - service name,
    - service description,
    - `Connect` or `Configure` action.
-5. Open the integration you actually need rather than configuring multiple
+6. Open the integration you actually need rather than configuring multiple
    services at once.
-6. In the drawer, review:
+7. In the drawer, review:
    - connection status,
    - required fields,
    - secret-field behavior,
    - security scopes.
-7. Treat required fields as the minimum viable contract for that provider.
-8. Treat secret updates carefully; the drawer explicitly distinguishes regular
+8. Treat required fields as the minimum viable contract for that provider.
+9. Treat secret updates carefully; the drawer explicitly distinguishes regular
    fields from secret fields that may already be configured.
-9. Review `Security scopes` before saving so the provider’s access model is
+10. Review `Security scopes` before saving so the provider’s access model is
    understood.
-10. Use `Save Changes` only when the provider configuration is coherent.
-11. Use `Request new` when the catalog does not contain the integration you need.
-12. In the request dialog, provide:
+11. Use `Save Changes` only when the provider configuration is coherent.
+12. Use `Request new` when the catalog does not contain the integration you need.
+13. In the request dialog, provide:
     - service name,
     - website URL,
     - notes.
-13. Use the request flow when a real product need exists, not as a substitute
+14. Submit the request when the need is real:
+    - success closes the dialog,
+    - validation or backend failures stay inline in the dialog until corrected.
+15. Use the request flow when a real product need exists, not as a substitute
     for choosing from the existing catalog.
 
 Use this safe integrations workflow when you want fewer misconfigurations:
-1. Filter the catalog.
+1. Search or filter the catalog.
 2. Open the right provider.
 3. Review required fields and scopes.
 4. Save only after the config is coherent.
@@ -99,12 +106,15 @@ Use this safe integrations workflow when you want fewer misconfigurations:
 
 - The service is not in the list:
   use `Request new` instead of trying to force another integration to fit.
+- Search returns no result:
+  clear the current category chip or broaden the search term because matching is
+  based on provider name and description.
 - The drawer feels incomplete:
   check whether the provider is disconnected and still needs all required
   values.
 - A field is already configured but should change:
-  update the field intentionally instead of assuming the stored value will be
-  shown plainly.
+  update the field intentionally; only secret fields stay masked behind
+  `Update secret`, while plain text and URL fields remain visible.
 - Too many services look relevant:
   filter by category first, then compare description and scope expectations.
 
