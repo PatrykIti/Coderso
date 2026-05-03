@@ -5,8 +5,11 @@ import {
   applyBindingsToBlockData,
   collectBindingPropPaths,
   collectWritableBindingFields,
+  isBindingWriteAllowed,
   mergeBindingValuesIntoEntryData,
   readBindingPathValue,
+  resolveCustomScreenBindingContracts,
+  sanitizeUnsupportedWriteBindings,
   writeBindingPathValue,
 } from "../../../core/services/customScreens/bindingResolver";
 import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
@@ -37,10 +40,7 @@ const bindings: CustomScreenBinding[] = [
 
 test("readBindingPathValue reads nested objects and arrays", () => {
   expect(
-    readBindingPathValue(
-      { heading: { title: "Catalog" }, items: [{ score: 42 }] },
-      "items.0.score"
-    )
+    readBindingPathValue({ heading: { title: "Catalog" }, items: [{ score: 42 }] }, "items.0.score")
   ).toBe(42);
 });
 
@@ -133,4 +133,110 @@ test("collectBindingPropPaths flattens nested data into dot paths", () => {
 
 test("collectWritableBindingFields returns unique write targets", () => {
   expect(collectWritableBindingFields(bindings)).toEqual(["title", "score"]);
+});
+
+test("widget-aware write helpers only expose screen-field-value.value as writable", () => {
+  const screenBindings: CustomScreenBinding[] = [
+    {
+      id: "header-title",
+      widgetId: "header-1",
+      propPath: "title",
+      field: "title",
+      mode: "readwrite",
+    },
+    {
+      id: "field-value",
+      widgetId: "field-1",
+      propPath: "value",
+      field: "headline",
+      mode: "readwrite",
+    },
+    {
+      id: "legacy-hero",
+      widgetId: "hero-1",
+      propPath: "heading.title",
+      field: "legacyTitle",
+      mode: "readwrite",
+    },
+  ];
+  const blocks = [
+    { id: "header-1", type: "screen-record-header", data: {} },
+    { id: "field-1", type: "screen-field-value", data: {} },
+    { id: "hero-1", type: "hero", data: {} },
+  ];
+  const contracts = resolveCustomScreenBindingContracts(blocks);
+
+  expect(
+    isBindingWriteAllowed(screenBindings[0]!, {
+      contracts,
+      fallbackToModeOnly: false,
+    })
+  ).toBe(true);
+  expect(
+    isBindingWriteAllowed(screenBindings[1]!, {
+      contracts,
+      fallbackToModeOnly: false,
+    })
+  ).toBe(true);
+  expect(
+    isBindingWriteAllowed(screenBindings[2]!, {
+      contracts,
+      fallbackToModeOnly: false,
+    })
+  ).toBe(false);
+  expect(
+    collectWritableBindingFields(screenBindings, {
+      contracts,
+      fallbackToModeOnly: false,
+    })
+  ).toEqual(["title", "headline"]);
+});
+
+test("sanitizeUnsupportedWriteBindings downgrades stale screen-widget write modes to read", () => {
+  const bindingsToSanitize: CustomScreenBinding[] = [
+    {
+      id: "header-title",
+      widgetId: "header-1",
+      propPath: "title",
+      field: "title",
+      mode: "readwrite",
+    },
+    {
+      id: "field-value",
+      widgetId: "field-1",
+      propPath: "value",
+      field: "headline",
+      mode: "readwrite",
+    },
+    {
+      id: "legacy-hero",
+      widgetId: "hero-1",
+      propPath: "heading.title",
+      field: "legacyTitle",
+      mode: "readwrite",
+    },
+  ];
+
+  expect(
+    sanitizeUnsupportedWriteBindings(bindingsToSanitize, {
+      blocks: [
+        { id: "header-1", type: "screen-record-header", data: {} },
+        { id: "field-1", type: "screen-field-value", data: {} },
+        { id: "hero-1", type: "hero", data: {} },
+      ],
+    })
+  ).toEqual([
+    expect.objectContaining({
+      id: "header-title",
+      mode: "readwrite",
+    }),
+    expect.objectContaining({
+      id: "field-value",
+      mode: "readwrite",
+    }),
+    expect.objectContaining({
+      id: "legacy-hero",
+      mode: "readwrite",
+    }),
+  ]);
 });

@@ -17,6 +17,13 @@ export type WidgetDataAccess = {
   modes: Array<"read" | "write">;
 };
 
+export type WidgetBindingTarget = {
+  propPath: string;
+  label: string;
+  description?: string;
+  modes?: Array<"read" | "write">;
+};
+
 export type WidgetPreset = {
   id: string;
   label: string;
@@ -68,6 +75,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   requires?: string[];
   surfaces?: WidgetSurface[];
   dataAccess?: WidgetDataAccess;
+  bindingTargets?: WidgetBindingTarget[];
   canHaveChildren?: boolean;
   slots?: WidgetSlotDefinition[];
   variants: WidgetVariant[];

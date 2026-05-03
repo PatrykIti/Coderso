@@ -344,10 +344,16 @@ Clients update caches and broadcast events on:
   update or invalidate `customScreens:list` / `customScreens:detail:<id>` and
   broadcast cache events for the list, sidebar shortcuts, builder, and records
   workflow.
-- Builder previews for `List View` and `Editor View` are local derived views
-  over the already-hydrated screen/content-type state; opening the preview
-  dialog does not introduce a separate Custom Screens preview API or extra cache
-  family.
+- Builder previews do not introduce a separate Custom Screens preview API or
+  preview-only cache family.
+- `Editor View` preview and the mounted builder canvas now share one
+  cached-first preview-record owner over `entries:list:<typeSlug>`:
+  - warm cache -> render the first cached record immediately,
+  - cold cache -> fetch `listEntriesCached(typeSlug, { force: false })` once
+    and show schema fallback values until records resolve,
+  - cache-bus `entries:list:<typeSlug>` events -> revalidate with
+    `force: true` while keeping the last good preview record on background
+    refresh failures.
 - `CustomScreenEntryEditor` create/edit mode reuses the existing entry cache
   contract. Create/update/delete writes update or invalidate
   `entries:list:<typeSlug>` and `entries:detail:<typeSlug>:<entryId>` through

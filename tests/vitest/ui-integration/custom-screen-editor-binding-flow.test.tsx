@@ -59,7 +59,7 @@ function Harness() {
       widgetId: "header-1",
       propPath: "title",
       field: "projectTitle",
-      mode: "readwrite",
+      mode: "read",
     },
   ]);
   const widget = getRegisteredWidget(block.type);
@@ -91,6 +91,8 @@ function Harness() {
       <TabsContent value="data">
         <FieldBindingPanel
           selectedBlock={block}
+          selectedWidget={widget ?? null}
+          selectedWidgetSource="screen-registry"
           value={bindings}
           fields={[
             {

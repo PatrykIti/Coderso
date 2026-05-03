@@ -5,7 +5,9 @@
 **Category:** Coderso Custom Screens + Preview + Builder UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-251
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-03
+**Completed:** 2026-05-03
 
 ---
 
@@ -27,8 +29,8 @@ state so the same record-backed data drives both surfaces.
 
 ## Sub-Tasks
 
-- [ ] TASK-251-01-02: First-Record Preview Data for Editor View Canvas
-- [ ] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
+- [x] TASK-251-01-02: First-Record Preview Data for Editor View Canvas
+- [x] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
 
 ## Files to Change
 

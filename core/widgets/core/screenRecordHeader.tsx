@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetBindingTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ScreenRecordHeaderVariantId = "card" | "compact";
@@ -62,6 +62,39 @@ export const screenRecordHeaderDefaults: ScreenRecordHeaderData = {
     badgeBorderColor: "color-mix(in srgb, var(--color-border) 70%, transparent)",
   },
 };
+
+export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
+  {
+    propPath: "eyebrow",
+    label: "Eyebrow",
+    description: "Compact context label above the main record title.",
+    modes: ["read", "write"],
+  },
+  {
+    propPath: "title",
+    label: "Title",
+    description: "Primary record title shown in the header.",
+    modes: ["read", "write"],
+  },
+  {
+    propPath: "subtitle",
+    label: "Subtitle",
+    description: "Supporting summary line below the main title.",
+    modes: ["read", "write"],
+  },
+  {
+    propPath: "description",
+    label: "Description",
+    description: "Longer supporting context for the selected record.",
+    modes: ["read", "write"],
+  },
+  {
+    propPath: "badge",
+    label: "Badge",
+    description: "Short status badge rendered next to the title.",
+    modes: ["read", "write"],
+  },
+];
 
 const stringifyPrimitive = (value: unknown) => {
   if (typeof value === "string") return value;

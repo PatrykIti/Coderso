@@ -231,14 +231,18 @@ Minimalny screen widget pack dla admin UI:
 - `screen-two-column`
 
 Current intent for that pack:
-- `screen-record-header` is a selected-entry summary surface with binding-aware
-  content controls in Visual mode.
+- `screen-record-header` is a selected-entry summary surface with widget-owned
+  binding targets for `eyebrow`, `title`, `subtitle`, `description`, and
+  `badge`; those props can participate in write-capable record editing again.
 - `screen-field-value` is the record-row/card primitive that can stay read-only
-  or become inline-editable when its `value` binding targets a writable field.
+  or become inline-editable when its widget-owned `value` target points at a
+  writable field; `label` and `helper` remain read-only binding targets.
 - `screen-field-group` is the fixed-slot section wrapper for related field
-  widgets.
+  widgets and keeps its `selected-content-type` layout contract without
+  selected-entry binding cards.
 - `screen-two-column` is the left/right layout shell for primary vs supporting
-  record content.
+  record content and keeps its `selected-content-type` layout contract without
+  selected-entry binding cards.
 - Detailed per-widget docs live in `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`,
   `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`,
   `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`, and
@@ -445,6 +449,9 @@ Admin-only widgets may declare `dataAccess` metadata:
 - `source: "selected-entry"` for widgets that read or write the active record.
 - `modes: ["read"]`, `["write"]`, or `["read", "write"]` describe the expected
   data direction.
+- `bindingTargets` let a selected-entry widget own the prop paths surfaced in
+  Custom Screens `Data`; they define labels, descriptions, and per-prop read vs
+  write capability instead of leaving the panel to infer paths from defaults.
 - Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
   and `screen-two-column` widgets can be reused in `admin-editor-view` for
   screen-owned inline editing when their bindings target writable entry fields.
@@ -464,6 +471,10 @@ the mature public widgets:
   `screen-record-header` and `screen-field-value`, Visual mode can use
   `WidgetEditorContext` to show binding-state badges and jump directly into the
   existing `Data` tab card for a specific `propPath`.
+- The `Data` tab renders prop-centric cards from widget-owned binding targets
+  instead of ordinal binding rows. Compatibility rows keep already-saved custom
+  prop paths visible, but only declared write-capable targets count toward
+  `supportsDedicatedEditor` and `writableBindingFields`.
 - `advanced` owns alignment, tone, spacing, and clearable chrome tokens. Clear
   actions remove the nested style key instead of writing `transparent` or other
   sentinel strings.

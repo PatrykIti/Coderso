@@ -5,7 +5,9 @@
 **Category:** Coderso Custom Screens + Admin/UI + List View
 **Estimated Effort:** Medium
 **Dependencies:** TASK-248-02, TASK-249-02-02, TASK-251
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-03
+**Completed:** 2026-05-03
 
 ---
 
@@ -24,7 +26,7 @@ the per-item reorder arrows move into the header.
 
 ## Sub-Tasks
 
-- [ ] TASK-251-02-01: Inline Table-Header Column Reordering
+- [x] TASK-251-02-01: Inline Table-Header Column Reordering
 
 ## Files to Change
 

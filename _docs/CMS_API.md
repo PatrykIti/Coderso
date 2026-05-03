@@ -1189,6 +1189,11 @@ Notes:
   page builder i widget library nadal uzywaja swoich powierzchni.
 - `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
+- Dla screen widgets kontrakt zapisuje tez widget-owned binding targets:
+  `screen-record-header` wystawia tylko read-only props
+  (`eyebrow`, `title`, `subtitle`, `description`, `badge`), a
+  `screen-field-value` pozwala na write-capable binding tylko dla `value`;
+  `label` i `helper` pozostaja read-only.
 - screen widget editor bundles nadal uzywaja wspolnego kontraktu
   `wizard -> visual -> advanced`:
   `wizard` ustawia wariant i glowna strukture, `visual` jest binding-aware dla
@@ -1219,9 +1224,13 @@ Notes:
   classic-editor / drawer branches.
 - `Preview` w builderze otwiera dedykowany dialog:
   - `List View` preview pokazuje zywy widok tabeli rekordow dla aktualnej
-    konfiguracji,
-  - `Editor View` preview pokazuje widgetowy record surface z aktualnymi
-    bindings i sample data bez opuszczania builder route.
+    konfiguracji z inline header reorder controls zachowanymi w canvasie,
+  - `Editor View` preview pokazuje widgetowy record surface w szerszym,
+    Pages-like shell i startuje od desktop frame na first open,
+  - `Editor View` preview oraz mounted builder canvas wspoldziela cached-first
+    owner nad `entries:list:<typeSlug>`; przy braku rekordow albo cold-cache
+    read failure UI pokazuje jawny schema-fallback note zamiast udawac realny
+    rekord sample data.
 - response record niesie tez derived `capabilities`:
   - `mode: "collection-only" | "dashboard" | "editor"`
   - `hasBlocks`, `hasBindings`, `hasReadableBindings`, `hasWritableBindings`

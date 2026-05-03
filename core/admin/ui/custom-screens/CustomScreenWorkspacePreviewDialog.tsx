@@ -19,6 +19,7 @@ import type { Block } from "@/ui/pages/builder/types";
 import { CustomScreenEntriesTable } from "./CustomScreenEntriesTable";
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { buildCustomScreenPreviewEntries } from "./ListViewCanvas";
+import type { CustomScreenPreviewRecordState } from "./customScreenPreviewData";
 
 const previewDevices = [
   { id: "desktop", label: "Desktop", width: "100%", icon: Monitor },
@@ -36,7 +37,8 @@ type CustomScreenWorkspacePreviewDialogProps = {
   listView: CustomScreenListViewDefinition;
   blocks: Block[];
   bindings: CustomScreenBinding[];
-  previewData: Record<string, unknown>;
+  previewRecordState: CustomScreenPreviewRecordState;
+  previewLoading?: boolean;
 };
 
 export function CustomScreenWorkspacePreviewDialog({
@@ -47,9 +49,10 @@ export function CustomScreenWorkspacePreviewDialog({
   listView,
   blocks,
   bindings,
-  previewData,
+  previewRecordState,
+  previewLoading = false,
 }: CustomScreenWorkspacePreviewDialogProps) {
-  const [deviceId, setDeviceId] = useState<PreviewDeviceId>("tablet");
+  const [deviceId, setDeviceId] = useState<PreviewDeviceId>("desktop");
   const resolvedDeviceId = mode === "list-view" ? "desktop" : deviceId;
   const device = previewDevices.find((entry) => entry.id === resolvedDeviceId) ?? previewDevices[0];
   const title = mode === "list-view" ? "List View Preview" : "Editor View Preview";
@@ -60,7 +63,10 @@ export function CustomScreenWorkspacePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1200px] overflow-hidden p-0">
+      <DialogContent
+        className="w-[min(96vw,1600px)] max-w-none overflow-hidden p-0"
+        data-preview-shell="roomy"
+      >
         <DialogHeader className="border-b px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -89,15 +95,15 @@ export function CustomScreenWorkspacePreviewDialog({
             </div>
           </div>
         </DialogHeader>
-        <div className="max-h-[75vh] overflow-auto bg-muted/20 p-6">
-          {!contentType ? (
+        <div className="max-h-[88vh] overflow-auto bg-muted/20 p-6" data-preview-body="scrollable">
+          {mode === "list-view" && !contentType ? (
             <div className="rounded-xl border border-dashed bg-background p-8 text-center text-sm text-muted-foreground">
               Select a content type to preview this screen.
             </div>
           ) : mode === "list-view" ? (
-            <div className="mx-auto w-full max-w-6xl">
+            <div className="mx-auto w-full min-w-[1100px]" data-preview-list-shell="wide">
               <CustomScreenEntriesTable
-                items={buildCustomScreenPreviewEntries(contentType)}
+                items={buildCustomScreenPreviewEntries(contentType!)}
                 listView={listView}
                 buildRowHref={() => "#"}
                 onDelete={() => undefined}
@@ -105,17 +111,28 @@ export function CustomScreenWorkspacePreviewDialog({
               />
             </div>
           ) : (
-            <div
-              className="mx-auto rounded-3xl border bg-background p-6 shadow-sm"
-              style={{ width: typeof device.width === "number" ? device.width : undefined }}
-            >
-              <CustomScreenPreview
-                blocks={blocks}
-                bindings={bindings}
-                data={previewData}
-                emptyTitle="Preview unavailable"
-                emptyMessage="Add screen widgets and bindings to preview the editor view."
-              />
+            <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4">
+              <div className="rounded-lg border border-dashed bg-background/80 px-4 py-3 text-sm text-muted-foreground">
+                {previewLoading
+                  ? `Loading the first record for ${contentType?.name ?? "this content type"}. Schema fallback values are shown until preview data is ready.`
+                  : (previewRecordState.note ?? "Previewing the current screen definition.")}
+              </div>
+              <div
+                className="mx-auto w-full rounded-3xl border bg-background p-6 shadow-sm"
+                data-preview-device={device.id}
+                style={{
+                  width: typeof device.width === "number" ? device.width : undefined,
+                  minHeight: 720,
+                }}
+              >
+                <CustomScreenPreview
+                  blocks={blocks}
+                  bindings={bindings}
+                  data={previewRecordState.data}
+                  emptyTitle="Preview unavailable"
+                  emptyMessage="Add screen widgets and bindings to preview the editor view."
+                />
+              </div>
             </div>
           )}
         </div>

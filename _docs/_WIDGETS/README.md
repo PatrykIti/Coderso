@@ -26,9 +26,13 @@
 - `CONTENT_LIST.md` - Dynamic content list
 - `POSTS_FEED.md` - Dynamic posts feed (latest/featured/category/manual)
 - `ENTRY_TEASER.md` - Dynamic single-entry teaser
-- `SCREEN_RECORD_HEADER.md` - Screen record summary header
-- `SCREEN_FIELD_VALUE.md` - Screen field value row/card
-- `SCREEN_FIELD_GROUP.md` - Screen field-group layout panel
-- `SCREEN_TWO_COLUMN.md` - Screen two-column layout
+- `SCREEN_RECORD_HEADER.md` - Screen record summary header with read-only
+  selected-entry binding targets
+- `SCREEN_FIELD_VALUE.md` - Screen field value row/card with widget-owned
+  `value` write target
+- `SCREEN_FIELD_GROUP.md` - Screen field-group layout panel without
+  selected-entry binding cards
+- `SCREEN_TWO_COLUMN.md` - Screen two-column layout without selected-entry
+  binding cards
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

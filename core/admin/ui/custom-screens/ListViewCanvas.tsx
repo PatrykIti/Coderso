@@ -1,6 +1,7 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -37,7 +38,9 @@ const buildPreviewEntryValue = (fieldType: string) => {
   }
 };
 
-export const buildCustomScreenPreviewEntries = (contentType: ContentTypeSummary): EntrySummary[] => {
+export const buildCustomScreenPreviewEntries = (
+  contentType: ContentTypeSummary
+): EntrySummary[] => {
   const fieldOptions = listSelectableListFields(contentType).filter(
     (option) => option.source === "field"
   );
@@ -107,6 +110,9 @@ export function ListViewCanvas({
             formatter: "text",
           }),
         ];
+  const hiddenColumns = listView.columns.filter(
+    (column) => !resolvedColumns.some((visibleColumn) => visibleColumn.id === column.id)
+  );
 
   return (
     <div className="space-y-4">
@@ -114,20 +120,49 @@ export function ListViewCanvas({
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
-              {resolvedColumns.map((column) => (
+              {resolvedColumns.map((column, index) => (
                 <TableHead key={column.id} className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => onSelectColumn(column.id)}
-                    className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs font-semibold uppercase tracking-wider ${
+                  <div
+                    data-selected-column={selectedColumnId === column.id ? "true" : "false"}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-2 py-1",
                       selectedColumnId === column.id
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted"
-                    }`}
+                    )}
                   >
-                    <span>{column.label}</span>
-                    <span className="text-[10px] normal-case">{column.formatter}</span>
-                  </button>
+                    <button
+                      type="button"
+                      data-column-select={column.id}
+                      onClick={() => onSelectColumn(column.id)}
+                      className="min-w-0 flex-1 text-left text-xs font-semibold uppercase tracking-wider"
+                    >
+                      <span>{column.label}</span>
+                      <span className="ml-2 text-[10px] normal-case">{column.formatter}</span>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => onMoveColumn(column.id, "left")}
+                        disabled={columns.length === 0 || index === 0}
+                        aria-label={`Move ${column.label} left`}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => onMoveColumn(column.id, "right")}
+                        disabled={columns.length === 0 || index === resolvedColumns.length - 1}
+                        aria-label={`Move ${column.label} right`}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </TableHead>
               ))}
             </TableRow>
@@ -146,50 +181,35 @@ export function ListViewCanvas({
         </Table>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-2">
-        {listView.columns.map((column, index) => {
-          const isSelected = selectedColumnId === column.id;
-          return (
-            <div
-              key={column.id}
-              className={`rounded-lg border p-3 ${
-                isSelected ? "border-primary bg-primary/5" : "border-border"
-              }`}
-            >
-              <button
-                type="button"
-                className="w-full text-left"
-                onClick={() => onSelectColumn(column.id)}
-              >
-                <p className="text-sm font-medium">{column.label}</p>
-                <p className="text-xs text-muted-foreground">
-                  {column.field} · {column.formatter}
-                </p>
-              </button>
-              <div className="mt-3 flex items-center gap-2">
-                <Button
+      {hiddenColumns.length > 0 ? (
+        <div className="rounded-lg border border-dashed p-3" data-hidden-columns-tray="true">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Hidden columns
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {hiddenColumns.map((column) => {
+              const isSelected = selectedColumnId === column.id;
+              return (
+                <button
+                  key={column.id}
                   type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={() => onMoveColumn(column.id, "left")}
-                  disabled={index === 0}
+                  data-hidden-column-id={column.id}
+                  onClick={() => onSelectColumn(column.id)}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-left",
+                    isSelected ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/50"
+                  )}
                 >
-                  <ArrowUp className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={() => onMoveColumn(column.id, "right")}
-                  disabled={index === listView.columns.length - 1}
-                >
-                  <ArrowDown className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  <p className="text-sm font-medium">{column.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {column.field} · {column.formatter}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

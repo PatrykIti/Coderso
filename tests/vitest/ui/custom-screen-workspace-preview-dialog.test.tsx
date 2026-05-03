@@ -76,7 +76,13 @@ test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
       }}
       blocks={[]}
       bindings={[]}
-      previewData={{}}
+      previewRecordState={{
+        source: "fallback",
+        entryId: null,
+        fallbackReason: "no-records",
+        note: "No records exist for this content type yet. Preview is using schema fallback values.",
+        data: {},
+      }}
     />
   );
 
@@ -84,6 +90,8 @@ test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
     expect(document.body.textContent).toContain("List View Preview");
     expect(document.body.textContent).toContain("House Aurora");
     expect(document.body.textContent).toContain("House Nova");
+    expect(document.body.querySelector('[data-preview-shell="roomy"]')).not.toBeNull();
+    expect(document.body.querySelector('[data-preview-list-shell="wide"]')).not.toBeNull();
   } finally {
     view.cleanup();
   }
@@ -118,19 +126,24 @@ test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bind
           widgetId: "header-1",
           propPath: "title",
           field: "title",
-          mode: "readwrite",
+          mode: "read",
         },
         {
           id: "binding-subtitle",
           widgetId: "header-1",
           propPath: "subtitle",
           field: "projectTitle",
-          mode: "readwrite",
+          mode: "read",
         },
       ]}
-      previewData={{
-        title: "Project title",
-        projectTitle: "Villa Aurora",
+      previewRecordState={{
+        source: "entry",
+        entryId: "entry-1",
+        note: "Previewing the first record from Projects.",
+        data: {
+          title: "Project title",
+          projectTitle: "Villa Aurora",
+        },
       }}
     />
   );
@@ -140,6 +153,8 @@ test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bind
     expect(document.body.textContent).toContain("Project title");
     expect(document.body.textContent).toContain("Villa Aurora");
     expect(document.body.textContent).not.toContain("Untitled record");
+    expect(document.body.querySelector('[data-preview-device="desktop"]')).not.toBeNull();
+    expect(document.body.textContent).toContain("Previewing the first record from Projects.");
   } finally {
     view.cleanup();
   }

@@ -13,6 +13,9 @@ supporting admin panel.
 
 - surfaces: `custom-screen-builder`, `admin-editor-view`
 - data access: `selected-content-type` (`read`)
+- selected-entry binding cards: not exposed; column labels stay layout-owned
+  copy unless an old saved binding is being preserved only as compatibility
+  data.
 
 ## Variants (v1)
 

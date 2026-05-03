@@ -64,3 +64,26 @@ test("resolveCustomScreenCapabilities returns editor when writable bindings exis
     supportsDedicatedEditor: true,
   });
 });
+
+test("resolveCustomScreenCapabilities treats writable header bindings as editor-capable", () => {
+  expect(
+    resolveCustomScreenCapabilities({
+      blocks: [{ id: "header-1", type: "screen-record-header", data: {} }],
+      bindings: [
+        {
+          id: "header-1-title",
+          widgetId: "header-1",
+          propPath: "title",
+          field: "headline",
+          mode: "readwrite",
+        },
+      ],
+    })
+  ).toMatchObject({
+    mode: "editor",
+    hasReadableBindings: true,
+    hasWritableBindings: true,
+    supportsDedicatedPreview: true,
+    supportsDedicatedEditor: true,
+  });
+});

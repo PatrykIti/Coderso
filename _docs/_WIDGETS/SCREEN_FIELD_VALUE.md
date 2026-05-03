@@ -41,12 +41,17 @@ Screens `Editor View` runtime.
 
 ## Inline Record Editing Contract
 
+- Widget-owned binding targets:
+  - `label` -> read-only
+  - `value` -> read/write
+  - `helper` -> read-only
 - In builder preview and other read-only contexts, the widget renders the
   normalized label/value card or row.
 - In the dedicated record editor, the widget can switch into an inline field
-  control when the `value` prop has a `write` or `readwrite` binding to a
+  control only when the `value` prop has a `write` or `readwrite` binding to a
   writable schema or system field.
-- `label` and `helper` stay widget-owned copy even when `value` is field-bound.
+- `label` and `helper` stay widget-owned copy even when `value` is field-bound,
+  and unsupported write modes on those props are rejected at save time.
 
 ## Clear Controls
 

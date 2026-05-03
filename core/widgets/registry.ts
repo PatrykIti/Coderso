@@ -1,4 +1,4 @@
-import type { WidgetDefinition, WidgetSurface } from "./types";
+import type { WidgetBindingTarget, WidgetDefinition, WidgetSurface } from "./types";
 import { getWidgetSlotKind } from "./slots";
 import {
   listWidgetPackMatrix,
@@ -22,6 +22,8 @@ const widgetSurfaceValues = new Set<WidgetSurface>([
 const defaultWidgetSurfaces: WidgetSurface[] = ["page-builder", "widget-library"];
 const widgetDataAccessSources = new Set(["none", "selected-content-type", "selected-entry"]);
 const widgetDataAccessModes = new Set(["read", "write"]);
+const widgetBindingPathPattern = /^[a-zA-Z0-9_.-]+$/;
+const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
 
 export type ModulePackStatus = {
   module: string;
@@ -79,6 +81,73 @@ function normalizeWidgetSurfaces(value: unknown): WidgetSurface[] {
 
 function isValidType(type: string) {
   return coreTypePattern.test(type) || pluginTypePattern.test(type);
+}
+
+function normalizeWidgetBindingTargets(
+  targets: unknown,
+  dataAccessModes: Array<"read" | "write">,
+  dataAccessSource: string | undefined
+): WidgetBindingTarget[] {
+  if (targets === undefined) {
+    return [];
+  }
+  if (dataAccessSource !== "selected-entry") {
+    throw new Error("widget_binding_targets_invalid");
+  }
+  if (!Array.isArray(targets)) {
+    throw new Error("widget_binding_targets_invalid");
+  }
+
+  const seen = new Set<string>();
+  return targets.map((target) => {
+    if (!target || typeof target !== "object" || Array.isArray(target)) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+    const record = target as Record<string, unknown>;
+
+    const propPath = typeof record.propPath === "string" ? record.propPath.trim() : "";
+    const label = typeof record.label === "string" ? record.label.trim() : "";
+    const description =
+      typeof record.description === "string" && record.description.trim()
+        ? record.description.trim()
+        : undefined;
+    if (!propPath || !label || !widgetBindingPathPattern.test(propPath)) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+    if (
+      propPath
+        .split(".")
+        .some((segment: string) => segment.length === 0 || unsafePathSegments.has(segment))
+    ) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+    if (seen.has(propPath)) {
+      throw new Error("widget_binding_targets_duplicate");
+    }
+    seen.add(propPath);
+
+    const requestedModes = Array.isArray(record.modes) ? record.modes : dataAccessModes;
+    const modes = Array.from(
+      new Set(
+        requestedModes.filter(
+          (mode: unknown): mode is "read" | "write" =>
+            typeof mode === "string" &&
+            widgetDataAccessModes.has(mode) &&
+            dataAccessModes.includes(mode as "read" | "write")
+        )
+      )
+    );
+    if (modes.length === 0) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+
+    return {
+      propPath,
+      label,
+      ...(description ? { description } : {}),
+      modes,
+    };
+  });
 }
 
 export function registerWidget(def: WidgetDefinition<any>) {
@@ -146,6 +215,11 @@ export function registerWidget(def: WidgetDefinition<any>) {
       throw new Error("widget_data_access_invalid");
     }
   }
+  const normalizedBindingTargets = normalizeWidgetBindingTargets(
+    def.bindingTargets,
+    def.dataAccess?.modes ?? ["read"],
+    def.dataAccess?.source
+  );
   if (!def.schema || typeof def.schema !== "object" || Array.isArray(def.schema)) {
     throw new Error("widget_schema_invalid");
   }
@@ -240,6 +314,7 @@ export function registerWidget(def: WidgetDefinition<any>) {
           modes: Array.from(new Set(def.dataAccess.modes)),
         }
       : undefined,
+    bindingTargets: normalizedBindingTargets,
   });
 }
 

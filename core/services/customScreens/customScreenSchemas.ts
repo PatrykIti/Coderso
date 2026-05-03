@@ -1,6 +1,10 @@
 import type { WidgetBlock } from "../../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlocks } from "../../widgets/validator";
+import {
+  isBindingWriteModeSupported,
+  resolveCustomScreenBindingContracts,
+} from "./bindingResolver";
 
 export const customScreenBindingModes = ["read", "write", "readwrite"] as const;
 export const customScreenStatusValues = ["draft", "active"] as const;
@@ -544,9 +548,22 @@ export function normalizeCustomScreenEditorViewDefinition(
   if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
   const interactionMode = normalizeText(input.interactionMode) ?? "inline";
   if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
+  const blocks = normalizeCustomScreenBlocks(input.blocks);
+  const bindings = normalizeCustomScreenBindings(input.bindings, context);
+  const contracts = resolveCustomScreenBindingContracts(blocks);
+  if (
+    bindings.some(
+      (binding) =>
+        !isBindingWriteModeSupported(binding, {
+          contracts,
+        })
+    )
+  ) {
+    throw new Error("custom_screen_definition_invalid");
+  }
   return {
-    blocks: normalizeCustomScreenBlocks(input.blocks),
-    bindings: normalizeCustomScreenBindings(input.bindings, context),
+    blocks,
+    bindings,
     saveMode: "entry",
     interactionMode: "inline",
   };

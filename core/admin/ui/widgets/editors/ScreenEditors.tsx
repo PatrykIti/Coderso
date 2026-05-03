@@ -16,6 +16,7 @@ import {
 } from "../../../../widgets/core/screenFieldGroup";
 import {
   normalizeScreenFieldValueData,
+  screenFieldValueBindingTargets,
   resolveScreenFieldValueVariant,
   type ScreenFieldValueData,
   type ScreenFieldValueTone,
@@ -23,6 +24,7 @@ import {
 } from "../../../../widgets/core/screenFieldValue";
 import {
   normalizeScreenRecordHeaderData,
+  screenRecordHeaderBindingTargets,
   resolveScreenRecordHeaderVariant,
   type ScreenRecordHeaderAlign,
   type ScreenRecordHeaderData,
@@ -217,6 +219,9 @@ function BindingFriendlyTextControl({
   );
 }
 
+const resolveOwnedBindingPropPath = (targets: Array<{ propPath: string }>, propPath: string) =>
+  targets.find((target) => target.propPath === propPath)?.propPath;
+
 const screenHeaderVariantOptions: Array<{
   id: ScreenRecordHeaderVariantId;
   label: string;
@@ -318,7 +323,10 @@ export function ScreenRecordHeaderVisualEditor({
           label="Eyebrow"
           value={normalized.eyebrow}
           onValueChange={(next) => update({ eyebrow: next })}
-          suggestedBindingPropPath="eyebrow"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenRecordHeaderBindingTargets,
+            "eyebrow"
+          )}
           placeholder="Eyebrow"
           context={context}
         />
@@ -326,7 +334,10 @@ export function ScreenRecordHeaderVisualEditor({
           label="Title"
           value={normalized.title}
           onValueChange={(next) => update({ title: next })}
-          suggestedBindingPropPath="title"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenRecordHeaderBindingTargets,
+            "title"
+          )}
           placeholder="Title"
           context={context}
         />
@@ -334,7 +345,10 @@ export function ScreenRecordHeaderVisualEditor({
           label="Subtitle"
           value={normalized.subtitle}
           onValueChange={(next) => update({ subtitle: next })}
-          suggestedBindingPropPath="subtitle"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenRecordHeaderBindingTargets,
+            "subtitle"
+          )}
           placeholder="Subtitle"
           context={context}
         />
@@ -342,7 +356,10 @@ export function ScreenRecordHeaderVisualEditor({
           label="Description"
           value={normalized.description}
           onValueChange={(next) => update({ description: next })}
-          suggestedBindingPropPath="description"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenRecordHeaderBindingTargets,
+            "description"
+          )}
           placeholder="Description"
           context={context}
           multiline
@@ -351,7 +368,10 @@ export function ScreenRecordHeaderVisualEditor({
           label="Badge"
           value={normalized.badge}
           onValueChange={(next) => update({ badge: next })}
-          suggestedBindingPropPath="badge"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenRecordHeaderBindingTargets,
+            "badge"
+          )}
           placeholder="Badge"
           context={context}
         />
@@ -522,7 +542,10 @@ export function ScreenFieldValueVisualEditor({
           label="Label"
           value={normalized.label}
           onValueChange={(next) => update({ label: next })}
-          suggestedBindingPropPath="label"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenFieldValueBindingTargets,
+            "label"
+          )}
           placeholder="Label"
           context={context}
         />
@@ -530,7 +553,10 @@ export function ScreenFieldValueVisualEditor({
           label="Value"
           value={normalized.value}
           onValueChange={(next) => update({ value: next })}
-          suggestedBindingPropPath="value"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenFieldValueBindingTargets,
+            "value"
+          )}
           placeholder="Value"
           context={context}
         />
@@ -538,7 +564,10 @@ export function ScreenFieldValueVisualEditor({
           label="Helper"
           value={normalized.helper}
           onValueChange={(next) => update({ helper: next })}
-          suggestedBindingPropPath="helper"
+          suggestedBindingPropPath={resolveOwnedBindingPropPath(
+            screenFieldValueBindingTargets,
+            "helper"
+          )}
           placeholder="Helper text"
           context={context}
           multiline

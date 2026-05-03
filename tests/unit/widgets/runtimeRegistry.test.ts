@@ -37,12 +37,24 @@ test("runtime registry exposes the concrete admin-editor-view screen widget cont
   ]);
   expect(getWidget("screen-record-header")?.dataAccess).toEqual({
     source: "selected-entry",
-    modes: ["read"],
+    modes: ["read", "write"],
   });
+  expect(getWidget("screen-record-header")?.bindingTargets).toEqual([
+    expect.objectContaining({ propPath: "eyebrow", modes: ["read", "write"] }),
+    expect.objectContaining({ propPath: "title", modes: ["read", "write"] }),
+    expect.objectContaining({ propPath: "subtitle", modes: ["read", "write"] }),
+    expect.objectContaining({ propPath: "description", modes: ["read", "write"] }),
+    expect.objectContaining({ propPath: "badge", modes: ["read", "write"] }),
+  ]);
   expect(getWidget("screen-field-value")?.dataAccess).toEqual({
     source: "selected-entry",
     modes: ["read", "write"],
   });
+  expect(getWidget("screen-field-value")?.bindingTargets).toEqual([
+    expect.objectContaining({ propPath: "label", modes: ["read"] }),
+    expect.objectContaining({ propPath: "value", modes: ["read", "write"] }),
+    expect.objectContaining({ propPath: "helper", modes: ["read"] }),
+  ]);
   expect(getWidget("screen-field-group")?.dataAccess).toEqual({
     source: "selected-content-type",
     modes: ["read"],

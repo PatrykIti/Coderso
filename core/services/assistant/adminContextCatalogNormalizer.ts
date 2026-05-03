@@ -25,6 +25,8 @@ import type {
   AssistantWidgetSlotSummary,
   AssistantWidgetSummary,
 } from "./adminContextTypes";
+import { collectWritableBindingFields } from "../customScreens/bindingResolver";
+import type { WidgetBlock } from "../../widgets/types";
 import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
 
 export type AssistantResourceCatalogRawInput = {
@@ -235,7 +237,9 @@ const normalizeBindingMode = (value: unknown): AssistantCustomScreenBindingSumma
   return "readwrite";
 };
 
-const normalizeCustomScreen = (value: Record<string, unknown>): AssistantCustomScreenSummary | null => {
+const normalizeCustomScreen = (
+  value: Record<string, unknown>
+): AssistantCustomScreenSummary | null => {
   const id = readString(value.id);
   const name = readString(value.name);
   const contentTypeId = readString(value.contentTypeId);
@@ -257,14 +261,14 @@ const normalizeCustomScreen = (value: Record<string, unknown>): AssistantCustomS
       };
     })
     .filter((binding): binding is AssistantCustomScreenBindingSummary => Boolean(binding))
-    .sort((left, right) => `${left.widgetId}:${left.field}`.localeCompare(`${right.widgetId}:${right.field}`));
-  const writableBindingFields = [
-    ...new Set(
-      bindings
-        .filter((binding) => binding.mode === "write" || binding.mode === "readwrite")
-        .map((binding) => binding.field)
-    ),
-  ].sort((left, right) => left.localeCompare(right));
+    .sort((left, right) =>
+      `${left.widgetId}:${left.field}`.localeCompare(`${right.widgetId}:${right.field}`)
+    );
+  const blocks = Array.isArray(value.blocks) ? (value.blocks as WidgetBlock[]) : [];
+  const writableBindingFields = collectWritableBindingFields(bindings, {
+    blocks,
+    fallbackToModeOnly: blocks.length === 0,
+  }).sort((left, right) => left.localeCompare(right));
 
   return {
     id,
@@ -288,7 +292,9 @@ const normalizeListingSort = (value: unknown) =>
     })
     .filter((entry): entry is AssistantListingSortSummary => Boolean(entry));
 
-const normalizeListingQuery = (value: Record<string, unknown>): AssistantListingQuerySummary | null => {
+const normalizeListingQuery = (
+  value: Record<string, unknown>
+): AssistantListingQuerySummary | null => {
   const id = readString(value.id);
   const name = readString(value.name);
   if (!id || !name) return null;
@@ -382,10 +388,7 @@ const normalizeForm = (
   };
 };
 
-const normalizeMenuItems = (
-  value: unknown,
-  depth = 0
-): AssistantMenuItemSummary[] =>
+const normalizeMenuItems = (value: unknown, depth = 0): AssistantMenuItemSummary[] =>
   readRecordArray(value)
     .flatMap((item): AssistantMenuItemSummary[] => {
       const id = readString(item.id);
@@ -423,7 +426,9 @@ const normalizeMenu = (value: Record<string, unknown>): AssistantMenuSummary | n
   };
 };
 
-const normalizeSeoDocument = (value: Record<string, unknown>): AssistantSeoDocumentSummary | null => {
+const normalizeSeoDocument = (
+  value: Record<string, unknown>
+): AssistantSeoDocumentSummary | null => {
   const id = readString(value.id);
   const targetType = readString(value.targetType);
   const targetId = readString(value.targetId);
@@ -791,12 +796,7 @@ export function normalizeAssistantReferencedWidgetTemplate(
   const group = `widget_template_${id}`;
   const settings = normalizeWidgetTemplateSettings(value.settings);
   const settingsSummary = isRecord(value.settings) ? value.settings : {};
-  const blockSummary = normalizeReferencedTemplateBlocks(
-    value.blocks,
-    limits,
-    warnings,
-    group
-  );
+  const blockSummary = normalizeReferencedTemplateBlocks(value.blocks, limits, warnings, group);
 
   return {
     id,

@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetBindingTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ScreenFieldValueVariantId = "stacked" | "inline";
@@ -56,6 +56,27 @@ export const screenFieldValueDefaults: ScreenFieldValueData = {
     frameBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
 };
+
+export const screenFieldValueBindingTargets: WidgetBindingTarget[] = [
+  {
+    propPath: "label",
+    label: "Label",
+    description: "Field label shown above or beside the mapped value.",
+    modes: ["read"],
+  },
+  {
+    propPath: "value",
+    label: "Value",
+    description: "Primary field value rendered from the selected record.",
+    modes: ["read", "write"],
+  },
+  {
+    propPath: "helper",
+    label: "Helper",
+    description: "Supporting helper copy rendered below the mapped value.",
+    modes: ["read"],
+  },
+];
 
 const stringifyPrimitive = (value: unknown) => {
   if (typeof value === "string") return value;

@@ -5,7 +5,9 @@
 **Category:** Coderso Custom Screens + Admin/UI + Builder UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-248, TASK-249, TASK-250
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-03
+**Completed:** 2026-05-03
 
 ---
 
@@ -114,14 +116,14 @@ primitives.
 
 ## Sub-Tasks
 
-- [ ] TASK-251-01: Workspace Preview Parity and Record-Backed Editor Preview
-- [ ] TASK-251-01-02: First-Record Preview Data for Editor View Canvas
-- [ ] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
-- [ ] TASK-251-02: List View Canvas Column Interaction Alignment
-- [ ] TASK-251-02-01: Inline Table-Header Column Reordering
-- [ ] TASK-251-03: Binding Panel Prop Coverage and Prop-Centric Cards
-- [ ] TASK-251-03-01: Widget-Owned Bindable Prop Targets and Data-Tab Cards
-- [ ] TASK-251-04: QA, Docs, and Closure
+- [x] TASK-251-01: Workspace Preview Parity and Record-Backed Editor Preview
+- [x] TASK-251-01-02: First-Record Preview Data for Editor View Canvas
+- [x] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
+- [x] TASK-251-02: List View Canvas Column Interaction Alignment
+- [x] TASK-251-02-01: Inline Table-Header Column Reordering
+- [x] TASK-251-03: Binding Panel Prop Coverage and Prop-Centric Cards
+- [x] TASK-251-03-01: Widget-Owned Bindable Prop Targets and Data-Tab Cards
+- [x] TASK-251-04: QA, Docs, and Closure
 
 ## Non-Goals
 

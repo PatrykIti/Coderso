@@ -5,7 +5,9 @@
 **Category:** Coderso Custom Screens + Bindings + Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-249-03, TASK-250, TASK-251
-**Status:** To Do
+**Status:** Done
+**Started:** 2026-05-03
+**Completed:** 2026-05-03
 
 ---
 
@@ -28,7 +30,7 @@ This follow-up should make the binding flow prop-first:
 
 ## Sub-Tasks
 
-- [ ] TASK-251-03-01: Widget-Owned Bindable Prop Targets and Data-Tab Cards
+- [x] TASK-251-03-01: Widget-Owned Bindable Prop Targets and Data-Tab Cards
 
 ## Files to Change
 

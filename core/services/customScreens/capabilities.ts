@@ -1,6 +1,7 @@
 import type { WidgetBlock } from "../../widgets/types";
 
 import type { CustomScreenBinding, CustomScreenDefinition } from "./customScreenSchemas";
+import { isBindingWriteAllowed, resolveCustomScreenBindingContracts } from "./bindingResolver";
 
 export type CustomScreenMode = "collection-only" | "dashboard" | "editor";
 
@@ -38,7 +39,13 @@ export function resolveCustomScreenCapabilities(input: {
       ? editorView.bindings
       : [];
   const readable = bindings.filter((binding) => binding.mode !== "write").length;
-  const writable = bindings.filter((binding) => binding.mode !== "read").length;
+  const contracts = blocks.length > 0 ? resolveCustomScreenBindingContracts(blocks) : null;
+  const writable = bindings.filter((binding) =>
+    isBindingWriteAllowed(binding, {
+      contracts,
+      fallbackToModeOnly: blocks.length === 0,
+    })
+  ).length;
   const hasBlocks = blocks.length > 0;
   const hasBindings = bindings.length > 0;
   const hasReadableBindings = readable > 0;

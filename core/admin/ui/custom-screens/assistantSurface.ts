@@ -5,6 +5,10 @@ import {
   type CustomScreenCapabilities,
 } from "../../../services/customScreens/capabilities";
 import type { CustomScreenBinding } from "../../../services/customScreens/customScreenSchemas";
+import {
+  collectWritableBindingFields,
+  resolveCustomScreenBindingContracts,
+} from "../../../services/customScreens/bindingResolver";
 import type { Block } from "@/ui/pages/builder/types";
 
 const readBlockDataText = (block: Block, key: string) => {
@@ -38,8 +42,10 @@ const summarizeBlocks = (blocks: Block[], options: { maxBlocks?: number } = {}) 
         path,
         childCount: childBlocks.length + slotChildCount,
         slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
-        templateId: block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
-        templateName: block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
+        templateId:
+          block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
+        templateName:
+          block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
       });
 
       if (result.length >= maxBlocks) return;
@@ -84,13 +90,11 @@ export const buildCustomScreenAssistantSurface = (input: {
     input.capabilities ??
     input.screen.capabilities ??
     resolveCustomScreenCapabilities({ blocks, bindings });
-  const writableBindingFields = [
-    ...new Set(
-      bindings
-        .filter((binding) => binding.mode === "write" || binding.mode === "readwrite")
-        .map((binding) => binding.field)
-    ),
-  ];
+  const contracts = resolveCustomScreenBindingContracts(blocks);
+  const writableBindingFields = collectWritableBindingFields(bindings, {
+    contracts,
+    fallbackToModeOnly: false,
+  });
 
   return {
     kind: "custom-screen",
@@ -107,9 +111,7 @@ export const buildCustomScreenAssistantSurface = (input: {
     selectedBlockId: input.selectedBlockId ?? null,
     blocks: summarizeBlocks(blocks),
     bindings: normalizeBindings(bindings),
-    writableBindingFields: writableBindingFields.sort((left, right) =>
-      left.localeCompare(right)
-    ),
+    writableBindingFields: writableBindingFields.sort((left, right) => left.localeCompare(right)),
     warnings: input.warnings ?? [],
   };
 };

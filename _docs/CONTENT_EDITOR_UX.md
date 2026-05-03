@@ -159,15 +159,27 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
 - `List View` is edited from a table-preview canvas with:
   - left rail list element library,
   - center table preview,
+  - inline header selection/reorder controls for visible columns,
+  - compact hidden-column tray for reselecting `visible=false` columns,
   - right inspector for screen settings and the selected column.
 - `Preview` in the builder opens a dedicated modal preview:
   - `List View` preview renders the records table live, without mutating the
     active builder route,
-  - `Editor View` preview renders the widget-based record surface with current
-    bindings and sample content values.
+  - `Editor View` preview renders the widget-based record surface inside a
+    wider Pages-like shell, defaults to a desktop device frame on first open,
+    and hydrates from the first real record when `entries:list:<typeSlug>` is
+    available,
+  - when no records exist or the first preview read fails, the builder and the
+    preview dialog keep a shared schema-fallback note instead of silently
+    pretending the sample data is a real record.
 - `Editor View` keeps the widget canvas, but the active palette is restricted to
   `admin-editor-view` widgets and the right inspector owns screen/data/selected
   widget controls.
+- `Data` now renders prop-centric cards from widget-owned binding targets:
+  `screen-record-header` exposes read-only header props, `screen-field-value`
+  keeps only `value` as the write-capable target, and compatibility rows keep
+  already-saved custom prop paths visible without reopening ordinal `Binding N`
+  cards.
 - `Selected Widget` controls for `screen-record-header` and
   `screen-field-value` are binding-aware in Visual mode:
   they can show `Literal` / `Bound` / `Mixed` status and jump to the matching

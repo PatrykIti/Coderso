@@ -171,3 +171,53 @@ test("registerWidget rejects invalid data access metadata", () => {
     })
   ).toThrow("widget_data_access_invalid");
 });
+
+test("registerWidget normalizes widget-owned binding targets", () => {
+  registerWidget({
+    ...baseDef,
+    type: "screen-field-value",
+    surfaces: ["admin-editor-view"],
+    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+    bindingTargets: [
+      { propPath: "label", label: "Label", modes: ["read"] },
+      { propPath: "value", label: "Value" },
+    ],
+  });
+
+  expect(listWidgets()[0]?.bindingTargets).toEqual([
+    { propPath: "label", label: "Label", modes: ["read"] },
+    { propPath: "value", label: "Value", modes: ["read", "write"] },
+  ]);
+});
+
+test("registerWidget rejects invalid binding target metadata", () => {
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-binding-target-source",
+      dataAccess: { source: "selected-content-type", modes: ["read"] },
+      bindingTargets: [{ propPath: "title", label: "Title" }],
+    })
+  ).toThrow("widget_binding_targets_invalid");
+
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-binding-target-path",
+      dataAccess: { source: "selected-entry", modes: ["read"] },
+      bindingTargets: [{ propPath: "__proto__.title", label: "Title" }],
+    })
+  ).toThrow("widget_binding_targets_invalid");
+
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-binding-target-duplicate",
+      dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+      bindingTargets: [
+        { propPath: "value", label: "Value" },
+        { propPath: "value", label: "Value duplicate" },
+      ],
+    })
+  ).toThrow("widget_binding_targets_duplicate");
+});

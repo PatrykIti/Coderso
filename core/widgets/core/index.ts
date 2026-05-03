@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type {
   WidgetAudience,
+  WidgetBindingTarget,
   WidgetComplexity,
   WidgetDefinition,
   WidgetEditorProps,
@@ -48,8 +49,16 @@ import { createTemplateSectionWidget, type TemplateSectionData } from "./templat
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
 import { createScreenFieldGroupWidget, type ScreenFieldGroupData } from "./screenFieldGroup";
-import { createScreenFieldValueWidget, type ScreenFieldValueData } from "./screenFieldValue";
-import { createScreenRecordHeaderWidget, type ScreenRecordHeaderData } from "./screenRecordHeader";
+import {
+  createScreenFieldValueWidget,
+  screenFieldValueBindingTargets,
+  type ScreenFieldValueData,
+} from "./screenFieldValue";
+import {
+  createScreenRecordHeaderWidget,
+  screenRecordHeaderBindingTargets,
+  type ScreenRecordHeaderData,
+} from "./screenRecordHeader";
 import { createScreenTwoColumnWidget, type ScreenTwoColumnData } from "./screenTwoColumn";
 
 type EditorBundle<T> = {
@@ -66,6 +75,7 @@ type CoreWidgetMetadata = {
   requires?: string[];
   surfaces?: WidgetSurface[];
   dataAccess?: WidgetDataAccess;
+  bindingTargets?: WidgetBindingTarget[];
 };
 
 const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
@@ -277,7 +287,8 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     audience: "beginner",
     module: "screens",
     surfaces: ["custom-screen-builder", "admin-editor-view"],
-    dataAccess: { source: "selected-entry", modes: ["read"] },
+    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+    bindingTargets: screenRecordHeaderBindingTargets,
   },
   "screen-field-value": {
     complexity: "composite",
@@ -285,6 +296,7 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     module: "screens",
     surfaces: ["custom-screen-builder", "admin-editor-view"],
     dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+    bindingTargets: screenFieldValueBindingTargets,
   },
   "screen-field-group": {
     complexity: "atomic",
@@ -409,6 +421,7 @@ export function createCoreWidgetDefinitions(
       requires: metadata.requires,
       surfaces: metadata.surfaces,
       dataAccess: metadata.dataAccess,
+      bindingTargets: metadata.bindingTargets,
     };
   });
 }

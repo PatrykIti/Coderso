@@ -74,11 +74,11 @@ const createRow = (overrides: Record<string, unknown> = {}) => ({
   showInSidebar: true,
   sidebarLabel: " Catalog ",
   schemaVersion: 1,
-  blocks: [{ id: "section-1", type: "section", data: {} }],
+  blocks: [{ id: "field-1", type: "screen-field-value", data: {} }],
   bindings: [
     {
-      widgetId: "section-1",
-      propPath: "title",
+      widgetId: "field-1",
+      propPath: "value",
       field: "name",
       mode: "readwrite",
     },
@@ -99,7 +99,7 @@ test("listCustomScreens maps normalized custom screen records", async () => {
 
   expect(result).toHaveLength(1);
   expect(result[0]?.id).toBe("screen-1");
-  expect(result[0]?.bindings[0]?.id).toBe("section-1-title");
+  expect(result[0]?.bindings[0]?.id).toBe("field-1-value");
   expect(result[0]?.sidebarLabel).toBe(" Catalog ");
   expect(result[0]?.capabilities.mode).toBe("editor");
 });
@@ -129,7 +129,7 @@ test("listCustomScreens falls back to legacy blocks and bindings when persisted 
     id: "section-1",
     type: "section",
   });
-  expect(result[0]?.capabilities.mode).toBe("editor");
+  expect(result[0]?.capabilities.mode).toBe("dashboard");
 });
 
 test("getCustomScreen returns null when the row is missing", async () => {
@@ -190,7 +190,7 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
   expect(result.status).toBe("draft");
   expect(result.schemaVersion).toBe(3);
-  expect(result.bindings[0]?.id).toBe("section-1-title");
+  expect(result.bindings[0]?.id).toBe("field-1-value");
   expect(result.capabilities.mode).toBe("editor");
 });
 

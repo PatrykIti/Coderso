@@ -12,7 +12,7 @@ dedicated record editor.
 ## Surfaces and Data Access
 
 - surfaces: `custom-screen-builder`, `admin-editor-view`
-- data access: `selected-entry` (`read`)
+- data access: `selected-entry` (`read`, `write`)
 
 ## Variants (v1)
 
@@ -46,10 +46,19 @@ dedicated record editor.
 
 ## Binding Behavior
 
+- Widget-owned binding targets:
+  - `eyebrow` -> read/write
+  - `title` -> read/write
+  - `subtitle` -> read/write
+  - `description` -> read/write
+  - `badge` -> read/write
 - The widget itself stays literal-safe, but Visual mode is aware of the current
   binding state for each displayed prop.
 - Binding ownership remains in the shared `Data` tab; the widget editor only
   exposes jump/focus affordances and state hints.
+- Those write-capable props now count toward dedicated-editor readiness and can
+  be edited through the screen-owned record workflow instead of forcing the
+  same structure to be rebuilt with multiple `screen-field-value` blocks.
 
 ## Clear Controls
 

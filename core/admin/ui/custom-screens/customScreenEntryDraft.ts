@@ -55,9 +55,10 @@ export function collectEditorViewWritableFields(
 ) {
   const schemaFields = fieldsFromSchema(contentType.schema).map((field) => field.name);
   const allowed = new Set(schemaFields);
-  const configured = collectWritableBindingFields(editorView.bindings).filter((field) =>
-    allowed.has(field)
-  );
+  const configured = collectWritableBindingFields(editorView.bindings, {
+    blocks: editorView.blocks,
+    fallbackToModeOnly: false,
+  }).filter((field) => allowed.has(field));
   return configured;
 }
 

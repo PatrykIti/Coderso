@@ -74,6 +74,53 @@ test("normalizeCustomScreenDefinition normalizes blocks", () => {
   expect(definition.editorView.interactionMode).toBe("inline");
 });
 
+test("normalizeCustomScreenDefinition accepts writable header bindings", () => {
+  expect(() =>
+    normalizeCustomScreenDefinition(
+      {
+        definition: {
+          schemaVersion: 3,
+          listView: {
+            columns: [],
+            filters: [],
+            defaultSort: { field: "updatedAt", direction: "desc" },
+            bulkActions: { delete: true, publish: true, unpublish: true },
+          },
+          editorView: {
+            blocks: [{ id: "header-1", type: "screen-record-header", data: {} }],
+            bindings: [
+              {
+                id: "binding-1",
+                widgetId: "header-1",
+                propPath: "title",
+                field: "projectStatus",
+                mode: "readwrite",
+              },
+            ],
+            saveMode: "entry",
+            interactionMode: "inline",
+          },
+        },
+      },
+      {
+        contentType: {
+          id: "house-projects",
+          slug: "house-projects",
+          name: "House Projects",
+          schema: {
+            properties: {
+              projectStatus: {
+                type: "string",
+                enum: ["planned", "active"],
+              },
+            },
+          },
+        },
+      }
+    )
+  ).not.toThrow();
+});
+
 test("normalizeCustomScreenDefinition rejects explicit v2 write definitions", () => {
   expect(() =>
     normalizeCustomScreenDefinition(

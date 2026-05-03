@@ -117,6 +117,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,
     `listCustomScreensCached`, `listContentTypesCached`, `listEntriesCached`,
     `getEntryCached`
+  - Preview owner: `customScreenPreviewData.ts` reuses
+    `entries:list:<typeSlug>` for cached-first first-record hydration in both
+    the builder canvas and the preview dialog
   - Mutations: `updateCustomScreen`, `createEntry`, `updateEntry`,
     `deleteEntry`
   - Cache bus: `customScreens:list`, `customScreens:detail:<id>`,
