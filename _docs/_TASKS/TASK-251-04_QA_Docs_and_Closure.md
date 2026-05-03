@@ -30,8 +30,12 @@ No child task files.
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/CONTENT_EDITOR_UX.md`
-- `_docs/ADMIN_CACHE.md`
-- `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when the family changes
+  builder-route warmup, entries-cache ownership, or any documented cache
+  contract
+- `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
+  active-surface summaries, `writableBindingFields`, or assistant validation
+  expectations
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
@@ -51,11 +55,18 @@ No child task files.
    builder-route prefetch changes, `entriesClient.test.ts` only when new
    preview/cache helpers are introduced, `custom-screen-entry-draft.test.ts`
    and `capabilities.test.ts` when binding-target modes change which bindings
-   count as writable, and the newly named owner suites only after their
-   implementing leaves add them to the branch.
+   count as writable, `custom-screen-schemas.test.ts` and
+   `customScreenService.test.ts` when save-time reject rules or persistence-path
+   handling changes, `admin-context-service.test.ts` and
+   `admin-context-catalog-normalizer.test.ts` when assistant binding summaries
+   or `writableBindingFields` change, `custom-screen-records.test.tsx` when
+   route-level workspace gating or preview-only copy changes, and the newly
+   named owner suites only after their implementing leaves add them to the
+   branch.
 3. Confirm the final doc set includes every source-of-truth file promised by
-   the implementation leaves: cache docs, content-editor UX docs, widget docs,
-   board rows, and changelog index.
+   the implementation leaves: content-editor UX docs, widget docs, assistant
+   workflow docs when the assistant contract moves, cache docs only when cache
+   ownership/behavior changes, board rows, and changelog index.
 4. Update `TASK-251*` statuses, checkbox lists, board counts, and changelog
    references in one closure pass after validation is complete, including the
    required task-file date fields used in this repo when a task moves to
@@ -96,6 +107,7 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx` when route-level workspace gating, preview-only messaging, or dedicated-editor readiness copy changes in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - Re-run the owner suites introduced by `TASK-251-01-02`, `TASK-251-02-01`, and
@@ -113,6 +125,10 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when preview messaging or core `screen-*` render/normalization ownership moves
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts` when the set of write-capable `screen-field-value` targets or dedicated-editor support rules changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts` when persisted binding normalization or save-time reject rules change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/customScreenService.test.ts` when persisted definition rejection or save-path error handling changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts` when assistant surface binding summaries or `writableBindingFields` change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts` when assistant catalog snapshots or secret-safe binding filtering change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen surface summaries or `writableBindingFields` change in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract or when direct `/advanced/custom-screens/:screenId` builder warmup is introduced in the same slice
@@ -131,8 +147,12 @@ No child task files.
 - Add the matching changelog entry and README index update.
 - Update the source-of-truth docs promised by the implemented leaves:
   - `_docs/CONTENT_EDITOR_UX.md`
-  - `_docs/ADMIN_CACHE.md`
-  - `_docs/ADMIN_CACHE_MAP.md`
+  - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` only when the family
+    changes builder-route warmup, entries-cache ownership, or any documented
+    cache contract
+  - `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
+    active-surface summaries, `writableBindingFields`, or assistant validation
+    expectations
   - `_docs/WIDGETS.md`
   - `_docs/_WIDGETS/README.md`
   - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
@@ -142,9 +162,11 @@ No child task files.
 
 ## Acceptance Criteria
 
-1. Targeted preview/list-canvas/binding tests pass in the correct Vitest lane.
+1. Targeted preview/list-canvas/binding Vitest suites and the required Bun
+   smoke/regression lanes for touched seams pass, including `gates:coderso`.
 2. Any new pure helpers or metadata owners have focused regression coverage,
-   including write/readiness owners when the binding contract narrows writable
-   prop paths.
-3. Task docs, board rows, statistics, changelog, and touched source docs are
-   synchronized on closure.
+   including persistence-path owners, route-level workspace gating owners, and
+   write/readiness owners when the binding contract narrows writable prop
+   paths.
+3. Task docs, board rows, statistics, changelog, and only the source-of-truth
+   docs whose contracts actually changed are synchronized on closure.

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Custom Screens + Admin/UI + List View
 **Estimated Effort:** Medium
-**Dependencies:** TASK-248-02, TASK-251
+**Dependencies:** TASK-248-02, TASK-249-02-02, TASK-251
 **Status:** To Do
 
 ---

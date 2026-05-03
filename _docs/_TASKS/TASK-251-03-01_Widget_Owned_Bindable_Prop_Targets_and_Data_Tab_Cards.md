@@ -50,14 +50,20 @@ No child task files.
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
 - `core/services/customScreens/capabilities.ts`
+- `core/services/customScreens/bindingResolver.ts` as the current shared owner
+  for widget-binding reads/writes and writable-field derivation
 - `core/services/customScreens/customScreenSchemas.ts`
-- `core/server/validation/assistantActionSchemas.ts` when assistant-surface
-  payload validation must mirror narrowed write-capable binding rules
+- `core/services/customScreens/customScreenService.ts` when save-time
+  definition rejection or persistence-path error handling changes
+- `core/server/validation/assistantActionSchemas.ts` as the internal assistant
+  validation seam that must mirror narrowed write-capable binding rules
 - `core/admin/ui/custom-screens/customScreenEntryDraft.ts`
 - `core/admin/ui/custom-screens/assistantSurface.ts`
 - `core/admin/ui/custom-screens/customScreenListModel.ts`
 - `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` when dedicated
   editor readiness labels or workspace gating change with the same slice
+- `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` when route-level
+  workspace gating, preview-only copy, or writable-binding summaries change
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/registry.ts` as the admin consumer seam for
@@ -69,13 +75,20 @@ No child task files.
 - `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui/custom-screen-entry-draft.test.ts`
+- `tests/vitest/ui/custom-screen-records.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `tests/vitest/customScreens/capabilities.test.ts`
+- `tests/vitest/admin/custom-screen-schemas.test.ts`
+- `tests/vitest/customScreens/customScreenService.test.ts`
+- `tests/vitest/assistant/admin-context-service.test.ts`
+- `tests/vitest/assistant/admin-context-catalog-normalizer.test.ts`
 - `tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom
   screen surface `writableBindingFields` or binding summaries change
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `tests/vitest/widgets/screenLayoutEditors.test.tsx` when layout-widget editor
+  guidance or non-bindable state copy changes in the same slice
 
 ## New Files to Create
 
@@ -302,16 +315,32 @@ Actual owner seam notes:
   consumption seams that must keep surfacing the same registered contract. Do
   not replace the core-widget owner with a new UI-local `preferredBinding*`
   map.
+- Keep the explicit write-allow helper in `core/services/customScreens/bindingResolver.ts`
+  and reuse that seam from UI, readiness, draft, runtime, assistant, and
+  route-level workspace consumers instead of creating parallel helpers in page
+  or editor components.
 - The mounted page seam is the existing `screenWidgetRegistry` plus legacy
   fallback merge in `CustomScreenEditorPage`. `selectedWidgetSource` should be
   derived from that real merge, not reconstructed inside `FieldBindingPanel`.
+- If `supportsDedicatedEditor`, preview-only binding counts, or route-level
+  fallback copy move in the same slice, keep `CustomScreenEntryEditor.tsx`
+  aligned with the same write/readiness owner contract instead of letting the
+  route drift from `capabilities.ts` or `customScreenListModel.ts`.
 
 ## Security Contract
 
-- Visibility: internal admin UI only.
-- Auth model: unchanged authenticated admin session.
+- Visibility: internal admin UI plus internal assistant/admin validation
+  payloads only.
+- Auth model:
+  - authenticated admin session for builder, workspace, and record-editor
+    surfaces,
+  - existing internal assistant validation/normalization path stays server-side
+    and scoped to the same authenticated admin context; no public assistant
+    payload contract is introduced.
 - RBAC: unchanged `content:write` for persisted binding changes.
-- CSRF: no new write route.
+- CSRF:
+  - no new write route,
+  - existing screen saves remain CSRF-backed through the admin client path.
 - Rate-limit bucket: unchanged `admin_write` for screen saves.
 - Reject-unknown validation:
   - binding-target metadata extends widget definitions only,
@@ -330,12 +359,18 @@ Actual owner seam notes:
 - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx` when route-level workspace gating, preview-only messaging, or dedicated-editor readiness copy changes in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts` when persisted binding normalization or save-time reject rules change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/customScreenService.test.ts` when persisted definition rejection or save-path error handling changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts` when assistant surface binding summaries or `writableBindingFields` change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts` when assistant catalog snapshots or secret-safe binding filtering change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen context or `writableBindingFields` changes in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx` when `screen-field-group` or `screen-two-column` editor guidance/non-bindable layout messaging changes in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when the touched `screen-*` widget files also move their render or preview-bridge behavior
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
@@ -348,6 +383,9 @@ Actual owner seam notes:
   - unsupported write-capable combinations are rejected or downgraded before
     they can drive `supportsDedicatedEditor`, `Workspace ready`, or
     `editableFields`,
+  - persisted save paths reject unsupported write-capable combinations before
+    they can survive `normalizeCustomScreenBindings()` or the current service
+    save flow,
   - `screen-field-group` and `screen-two-column` render the non-bindable layout
     empty state unless their documented contract changes in the same slice,
   - a saved custom prop path still renders in compatibility mode,
@@ -364,6 +402,9 @@ Actual owner seam notes:
     keeps mounted `CustomScreenEntryEditor` screen-widget binding/render
     compatibility covered when shared widget metadata changes flow into the
     record-editor surface,
+  - `tests/vitest/ui/custom-screen-records.test.tsx` keeps route-level
+    workspace gating and preview-only copy aligned with the same
+    write/readiness contract,
   - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
     proves the mounted jump/focus flow and must be extended, or paired with
     adjacent mounted coverage, if this leaf rewires the page-level selected
@@ -377,6 +418,9 @@ Actual owner seam notes:
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md`
+- `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
+  active-surface summaries, `writableBindingFields`, or assistant validation
+  expectations
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`

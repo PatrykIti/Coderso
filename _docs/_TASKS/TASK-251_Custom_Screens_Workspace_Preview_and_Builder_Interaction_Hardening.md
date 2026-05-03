@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Coderso Custom Screens + Admin/UI + Builder UX
 **Estimated Effort:** Large
-**Dependencies:** TASK-248, TASK-250
+**Dependencies:** TASK-248, TASK-249, TASK-250
 **Status:** To Do
 
 ---
@@ -187,12 +187,17 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/customScreenService.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-records.test.tsx`
   - treat `custom-screen-preview-owner`, `custom-screen-preview-data`,
     `custom-screen-list-view-canvas`, and `widgetRegistryBindingTargets` as
     implementation-deliverable suites until the owning leaves create them in
@@ -245,8 +250,12 @@ primitives.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
-- `_docs/ADMIN_CACHE.md`
-- `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` only when the family
+  changes builder-route warmup, entries-cache ownership, or any documented
+  cache contract
+- `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
+  active-surface summaries, `writableBindingFields`, or assistant validation
+  expectations
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`

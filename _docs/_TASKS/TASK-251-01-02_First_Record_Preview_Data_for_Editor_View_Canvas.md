@@ -309,8 +309,9 @@ the dialog remain on the same state contract.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
-- `_docs/ADMIN_CACHE.md`
-- `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` only when this slice
+  changes builder-route warmup, entries-cache ownership, or any documented
+  cache contract
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
