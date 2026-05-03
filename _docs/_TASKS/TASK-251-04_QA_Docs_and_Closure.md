@@ -102,12 +102,15 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- Re-run the existing owner suites below when their touched seams move in the
+  same slice:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` when shared `screen-*` widget contract or record-editor binding refresh seams change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when preview messaging or core `screen-*` render/normalization ownership moves
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when builder-route prefetch ownership changes
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when builder-route prefetch changes the `/advanced/custom-screens/:screenId` matcher contract
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` when new preview/cache helpers are introduced
 - `bun test tests/unit/widgets/registry.test.ts`
 - `bun test tests/unit/widgets/runtimeRegistry.test.ts`

@@ -58,6 +58,7 @@ No child task files.
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 
 ## New Files to Create
@@ -247,6 +248,7 @@ Actual owner seam notes:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when the touched `screen-*` widget files also move their render or preview-bridge behavior
@@ -268,6 +270,10 @@ Actual owner seam notes:
     `screen-record-header` and `screen-field-value`,
   - widget-editor `Data` buttons and Data-tab cards stay aligned on the same
     target names,
+  - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+    keeps mounted `CustomScreenEntryEditor` screen-widget binding/render
+    compatibility covered when shared widget metadata changes flow into the
+    record-editor surface,
   - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
     proves the mounted jump/focus flow and must be extended, or paired with
     adjacent mounted coverage, if this leaf rewires the page-level selected

@@ -135,6 +135,7 @@ secondary hidden-column affordance so `visible=false` columns stay selectable.
 
 ## Documentation Updates Required
 
+- `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.

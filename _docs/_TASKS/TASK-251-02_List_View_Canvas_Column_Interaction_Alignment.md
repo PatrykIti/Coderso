@@ -147,6 +147,7 @@ without letting hidden columns corrupt the left/right semantics for users.
 
 ## Documentation Updates Required
 
+- `_docs/CONTENT_EDITOR_UX.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.

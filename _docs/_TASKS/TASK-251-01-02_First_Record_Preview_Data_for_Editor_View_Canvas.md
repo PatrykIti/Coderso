@@ -37,19 +37,23 @@ No child task files.
   messaging is rendered inside the preview frame
 - `core/admin/services/entriesClient.ts` only if a dedicated helper is truly
   needed; prefer existing cache/list owners first
+- `tests/vitest/admin/entriesClient.test.ts` if a new preview/cache helper or
+  cached list-owner path is introduced in `entriesClient.ts`
 - `core/admin/ui/custom-screens/routeParams.ts` and
-  `core/admin/utils/adminPrefetch.ts` if direct builder-route navigation must
-  warm `entries:list:<typeSlug>` for cached-first preview paint
+  `core/admin/utils/adminPrefetch.ts` if the broader
+  `/advanced/custom-screens` prefetch entry must warm `entries:list:<typeSlug>`
+  for cached-first preview paint
 - `core/admin/services/cachePolicy.ts` and `@/utils/cacheBus` owners as
   reference seams only; reuse `cacheKeys.entriesList(typeSlug)` instead of
   creating a preview-only invalidation channel
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
-  changes
-- `tests/vitest/ui/custom-screen-route-params.test.ts` if builder-route prefetch
-  changes the `/advanced/custom-screens/:screenId` matcher contract
+- `tests/vitest/admin/adminPrefetch.test.ts` if the broader
+  `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
+- `tests/vitest/ui/custom-screen-route-params.test.ts` if
+  `resolveCustomScreenWorkspacePrefetchTarget()` changes the
+  `/advanced/custom-screens/:screenId/entries...` matcher contract
 
 ## New Files to Create
 
@@ -239,8 +243,9 @@ channel.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership changes
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` if builder-route prefetch changes the `/advanced/custom-screens/:screenId` matcher contract
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` if `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` if a new preview/cache helper or cached list-owner path is introduced in `entriesClient.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` if fallback/source messaging or bound render bridging moves into `CustomScreenPreview.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain a
   render-only smoke, but the mounted owner is

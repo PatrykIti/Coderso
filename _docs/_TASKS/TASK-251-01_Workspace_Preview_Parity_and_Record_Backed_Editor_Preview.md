@@ -33,10 +33,10 @@ state so the same record-backed data drives both surfaces.
 
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx`
-- new `core/admin/ui/custom-screens/customScreenPreviewData.ts`
 - `core/admin/ui/custom-screens/routeParams.ts` and
-  `core/admin/utils/adminPrefetch.ts` if direct builder-route prefetch must warm
-  `entries:list:<typeSlug>` for cached-first preview paint
+  `core/admin/utils/adminPrefetch.ts` if the broader
+  `/advanced/custom-screens` prefetch entry must warm `entries:list:<typeSlug>`
+  for cached-first preview paint
 - `core/admin/services/cachePolicy.ts` and `@/utils/cacheBus` owners as
   reference seams only; reuse the existing entry-list cache keys and
   subscription flow instead of inventing preview-only cache channels
@@ -45,13 +45,15 @@ state so the same record-backed data drives both surfaces.
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
-  changes
-- `tests/vitest/ui/custom-screen-route-params.test.ts` if builder-route prefetch
-  changes the `/advanced/custom-screens/:screenId` matcher contract
+- `tests/vitest/admin/adminPrefetch.test.ts` if the broader
+  `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
+- `tests/vitest/ui/custom-screen-route-params.test.ts` if
+  `resolveCustomScreenWorkspacePrefetchTarget()` changes the
+  `/advanced/custom-screens/:screenId/entries...` matcher contract
 
 ## New Files to Create
 
+- `core/admin/ui/custom-screens/customScreenPreviewData.ts`
 - `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `tests/vitest/ui/custom-screen-preview-data.test.ts`
 
@@ -168,9 +170,12 @@ const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 Reference seam: mirror the shared entries-list cache contract already used by
 `CustomScreenEntriesPage.tsx` instead of inventing a preview-only fetch loop.
 If cached-first paint on direct builder-route navigation is required, add a
-builder-route aware resolver/warmup path for `/advanced/custom-screens/:id`
-explicitly. The current prefetch special case only covers the records workspace
-route family under `/advanced/custom-screens/:id/entries...`.
+builder-route aware warmup path for `/advanced/custom-screens/:screenId`
+explicitly. The current `resolveCustomScreenWorkspacePrefetchTarget()` helper
+only covers the records workspace route family under
+`/advanced/custom-screens/:screenId/entries...`, while the broader
+`/advanced/custom-screens` prefetch branch is owned separately in
+`adminPrefetch.test.ts`.
 
 ## Security Contract
 
@@ -202,10 +207,13 @@ route family under `/advanced/custom-screens/:id/entries...`.
   behavior.
 - The mounted owner for `CustomScreenEditorPage` preview flow is
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`.
-- If builder-route warmup is expanded from `/advanced/custom-screens/:id/entries`
-  to `/advanced/custom-screens/:id`, also rerun
-  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
-  because that suite currently owns the prefetch-target matcher contract.
+- If the broader `/advanced/custom-screens` prefetch entry or workspace warmup
+  branch changes, extend and rerun
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+  because the current repo only proves list-level Custom Screens prefetch there.
+- If `resolveCustomScreenWorkspacePrefetchTarget()` changes its
+  `/advanced/custom-screens/:screenId/entries...` matcher, rerun
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`.
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
   - cached rows do not trigger a preview-only forced mount refresh,
@@ -216,9 +224,9 @@ route family under `/advanced/custom-screens/:id/entries...`.
     preview record after entry mutations elsewhere,
   - the same preview record is visible on the builder canvas and inside the
     preview dialog,
-  - direct `/advanced/custom-screens/:id` navigation keeps cached-first preview
-    behavior aligned with the shared admin prefetch contract when an explicit
-    builder-route warmup is added.
+  - direct `/advanced/custom-screens/:screenId` navigation keeps cached-first
+    preview behavior aligned with the shared admin prefetch contract when an
+    explicit builder-route warmup is added.
 - If fallback/source messaging is moved into `CustomScreenPreview.tsx`, rerun
   `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx`
   because that suite is the current owner of the bound screen-widget preview

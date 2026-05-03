@@ -53,6 +53,7 @@ This follow-up should make the binding flow prop-first:
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 
 ## New Files to Create
@@ -228,6 +229,7 @@ Execution notes for the implementer:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when `CustomScreenPreview.tsx` or the core `screen-*` widget render/normalization files move in the same slice
@@ -255,6 +257,10 @@ Execution notes for the implementer:
     proves the mounted `Data` tab jump/focus flow and must be extended, or
     paired with adjacent mounted coverage, if this slice rewires the page-level
     selected-widget handoff inside `CustomScreenEditorPage`,
+  - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+    keeps mounted `CustomScreenEntryEditor` screen-widget runtime/binding
+    refresh compatibility covered when shared widget contract changes touch
+    `screen-*` metadata or fallback behavior,
   - widget-editor `Data` jump buttons still target the same declared prop paths.
 
 ## Documentation Updates Required

@@ -155,6 +155,7 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
@@ -166,8 +167,12 @@ primitives.
     implementation-deliverable suites until the owning leaves create them in
     the branch
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
-  and `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
-  only if builder-route prefetch ownership changes from the current
+  when the broader `/advanced/custom-screens` prefetch entry or workspace
+  warmup branch changes; extend it with explicit workspace-path assertions in
+  the same slice because the current repo only proves list-level Custom Screens
+  prefetch
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
+  when `resolveCustomScreenWorkspacePrefetchTarget()` changes its
   `/advanced/custom-screens/:screenId/entries...` matcher contract
 - `bun test tests/unit/widgets/registry.test.ts` and
   `bun test tests/unit/widgets/runtimeRegistry.test.ts` as comparison smoke if
@@ -184,6 +189,10 @@ primitives.
     `FieldBindingPanel`; if this family extends proof to the page-level
     selected-widget handoff in `CustomScreenEditorPage`, extend this suite or
     add adjacent mounted coverage in the same slice.
+  - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+    owns mounted `CustomScreenEntryEditor` compatibility for `screen-*`
+    renderer/binding refresh seams and should be rerun when shared screen-widget
+    contract or binding metadata changes bleed into the record-editor surface.
 - Reuse existing cached-entry contracts wherever possible. If the
   implementation adds new entry-preview helpers or cached read-model helpers,
   add focused Vitest coverage in `tests/vitest/admin/entriesClient.test.ts` or
