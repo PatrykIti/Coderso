@@ -135,6 +135,7 @@ type BindingPanelModel =
 
 function resolveBindingPanelModel(input: {
   selectedWidget: WidgetDefinition | null;
+  selectedWidgetSource: "screen-registry" | "legacy-fallback" | null;
   selectedBlock: Block | null;
   selectedBindings: CustomScreenBinding[];
 }) {
@@ -148,9 +149,11 @@ function resolveBindingPanelModel(input: {
     } satisfies BindingPanelModel;
   }
 
-  const suggestedPaths = collectBindingPropPaths(input.selectedBlock?.data ?? {});
-  if (input.selectedBindings.length > 0 || suggestedPaths.length > 0) {
-    return { mode: "legacy-manual", suggestedPaths } satisfies BindingPanelModel;
+  if (input.selectedWidgetSource === "legacy-fallback") {
+    return {
+      mode: "legacy-manual",
+      suggestedPaths: collectBindingPropPaths(input.selectedBlock?.data ?? {}),
+    } satisfies BindingPanelModel;
   }
 
   return { mode: "layout-read-only" } satisfies BindingPanelModel;

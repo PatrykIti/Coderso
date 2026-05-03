@@ -48,6 +48,8 @@ No child task files.
   render smoke
 - `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
   changes
+- `tests/vitest/ui/custom-screen-route-params.test.ts` if builder-route prefetch
+  changes the `/advanced/custom-screens/:screenId` matcher contract
 
 ## New Files to Create
 
@@ -116,6 +118,7 @@ function CustomScreenPreviewRecordOwner({
   const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
     typeSlug ? (getCachedEntries(typeSlug) ?? null) : null
   );
+  const seededFromCacheRef = useRef(entries !== null);
   const previewRecordState = useMemo(
     () => buildPreviewRecordState({ contentType, entries }),
     [contentType, entries]
@@ -125,7 +128,6 @@ function CustomScreenPreviewRecordOwner({
     if (!contentType || !typeSlug) return;
 
     let active = true;
-    const hasInitialCache = entries !== null;
 
     const hydratePreviewEntries = async (force: boolean) => {
       const nextItems = await listEntriesCached(typeSlug, { force });
@@ -136,7 +138,7 @@ function CustomScreenPreviewRecordOwner({
     // Lazy state init already seeded current cached rows. Keep the effect
     // async-only after mount so the preview owner stays aligned with the React
     // Hooks rules and the shared entry-list contract.
-    if (!hasInitialCache) {
+    if (!seededFromCacheRef.current) {
       void hydratePreviewEntries(false);
     }
 
@@ -238,6 +240,7 @@ channel.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` if builder-route prefetch changes the `/advanced/custom-screens/:screenId` matcher contract
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` if fallback/source messaging or bound render bridging moves into `CustomScreenPreview.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain a
   render-only smoke, but the mounted owner is

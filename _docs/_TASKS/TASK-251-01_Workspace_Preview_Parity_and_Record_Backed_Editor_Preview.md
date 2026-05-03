@@ -47,6 +47,8 @@ state so the same record-backed data drives both surfaces.
   render smoke
 - `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
   changes
+- `tests/vitest/ui/custom-screen-route-params.test.ts` if builder-route prefetch
+  changes the `/advanced/custom-screens/:screenId` matcher contract
 
 ## New Files to Create
 
@@ -94,6 +96,7 @@ function CustomScreenPreviewRecordOwner({
   const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
     typeSlug ? (getCachedEntries(typeSlug) ?? null) : null
   );
+  const seededFromCacheRef = useRef(entries !== null);
   const previewRecordState = useMemo(
     () => buildPreviewRecordState({ contentType, entries }),
     [contentType, entries]
@@ -103,7 +106,6 @@ function CustomScreenPreviewRecordOwner({
     if (!contentType || !typeSlug) return;
 
     let active = true;
-    const hasInitialCache = entries !== null;
 
     const hydratePreviewEntries = async (force: boolean) => {
       const nextEntries = await listEntriesCached(typeSlug, { force });
@@ -114,7 +116,7 @@ function CustomScreenPreviewRecordOwner({
     // Lazy state init already seeded current cached rows. Keep the effect
     // async-only after mount so the preview owner stays aligned with the React
     // Hooks rules and the shared entry-list contract.
-    if (!hasInitialCache) {
+    if (!seededFromCacheRef.current) {
       void hydratePreviewEntries(false);
     }
 
@@ -200,6 +202,10 @@ route family under `/advanced/custom-screens/:id/entries...`.
   behavior.
 - The mounted owner for `CustomScreenEditorPage` preview flow is
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`.
+- If builder-route warmup is expanded from `/advanced/custom-screens/:id/entries`
+  to `/advanced/custom-screens/:id`, also rerun
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
+  because that suite currently owns the prefetch-target matcher contract.
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
   - cached rows do not trigger a preview-only forced mount refresh,

@@ -29,12 +29,15 @@ No child task files.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
-- `_docs/CONTENT_EDITOR_UX.md` if updated
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if updated
-- `_docs/WIDGETS.md` if widget-owned binding targets become canonical source of
-  truth
-- widget docs updated by TASK-251-03-01 if binding-target metadata becomes
-  documented source of truth
+- `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/ADMIN_CACHE.md`
+- `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/README.md`
+- `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 
 ## Implementation Pseudocode
 
@@ -42,9 +45,12 @@ No child task files.
 1. When the family or any owned leaf moves to `In Progress`, update the task
    headers plus `_docs/_TASKS/README.md` tables/statistics immediately instead
    of waiting for final closure.
-2. Re-run the exact targeted suites collected by TASK-251-01 through
-   TASK-251-03 after the new suites introduced by those leaves exist in the
-   branch.
+2. Re-run the exact leaf-owned suites collected by TASK-251-01 through
+   TASK-251-03, but keep conditional suites conditional:
+   `adminPrefetch.test.ts` and `custom-screen-route-params.test.ts` only when
+   builder-route prefetch changes, `entriesClient.test.ts` only when new
+   preview/cache helpers are introduced, and the newly named owner suites only
+   after their implementing leaves add them to the branch.
 3. Confirm the final doc set includes every source-of-truth file promised by
    the implementation leaves: cache docs, content-editor UX docs, widget docs,
    board rows, and changelog index.
@@ -85,23 +91,24 @@ No child task files.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Re-run the new suites introduced by `TASK-251-01-02`, `TASK-251-02-01`, and
-  `TASK-251-03-01` only after they exist in the branch; until then, treat their
-  paths as implementation deliverables rather than ready validation proof.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- Re-run the owner suites introduced by `TASK-251-01-02`, `TASK-251-02-01`, and
+  `TASK-251-03-01` only after they exist in the branch; until then, treat their
+  paths as implementation deliverables rather than ready validation proof:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when preview messaging or core `screen-*` render/normalization ownership moves
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when builder-route prefetch ownership changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when builder-route prefetch changes the `/advanced/custom-screens/:screenId` matcher contract
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` when new preview/cache helpers are introduced
 - `bun test tests/unit/widgets/registry.test.ts`
 - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `bun run gates:coderso`
@@ -114,7 +121,7 @@ No child task files.
 - Move `TASK-251*` rows in `_docs/_TASKS/README.md` to `Done` and synchronize
   board statistics.
 - Add the matching changelog entry and README index update.
-- Update source-of-truth docs touched by the implementation:
+- Update the source-of-truth docs promised by the implemented leaves:
   - `_docs/CONTENT_EDITOR_UX.md`
   - `_docs/ADMIN_CACHE.md`
   - `_docs/ADMIN_CACHE_MAP.md`

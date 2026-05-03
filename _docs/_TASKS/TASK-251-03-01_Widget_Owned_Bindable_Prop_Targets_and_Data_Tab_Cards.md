@@ -113,6 +113,37 @@ export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
 
 ```tsx
 // FieldBindingPanel.tsx
+function resolveBindingPanelModel({
+  selectedWidget,
+  selectedWidgetSource,
+  selectedBlock,
+  selectedBindings,
+}: {
+  selectedWidget: WidgetDefinition | null;
+  selectedWidgetSource: "screen-registry" | "legacy-fallback" | null;
+  selectedBlock: Block | null;
+  selectedBindings: CustomScreenBinding[];
+}) {
+  if (selectedWidget?.dataAccess?.source === "selected-entry") {
+    return {
+      mode: "declared-targets" as const,
+      targets: listSelectedWidgetBindingTargets({
+        widget: selectedWidget,
+        existingBindings: selectedBindings,
+      }),
+    };
+  }
+
+  if (selectedWidgetSource === "legacy-fallback") {
+    return {
+      mode: "legacy-manual" as const,
+      suggestedPaths: collectBindingPropPaths(selectedBlock?.data ?? {}),
+    };
+  }
+
+  return { mode: "layout-read-only" as const };
+}
+
 const panelModel = resolveBindingPanelModel({
   selectedWidget,
   selectedWidgetSource,

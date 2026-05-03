@@ -161,7 +161,14 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
-  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+  - treat `custom-screen-preview-owner`, `custom-screen-preview-data`,
+    `custom-screen-list-view-canvas`, and `widgetRegistryBindingTargets` as
+    implementation-deliverable suites until the owning leaves create them in
+    the branch
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+  and `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
+  only if builder-route prefetch ownership changes from the current
+  `/advanced/custom-screens/:screenId/entries...` matcher contract
 - `bun test tests/unit/widgets/registry.test.ts` and
   `bun test tests/unit/widgets/runtimeRegistry.test.ts` as comparison smoke if
   `TASK-251-03-01` changes widget-registry normalization or introduces a new
