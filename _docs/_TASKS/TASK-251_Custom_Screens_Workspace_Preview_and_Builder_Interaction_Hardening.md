@@ -193,6 +193,7 @@ primitives.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/bindingResolver.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/customScreenService.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts`
@@ -212,10 +213,18 @@ primitives.
   builder-route warmup contract changes; if `/advanced/custom-screens/:screenId`
   becomes a warmup target in this family, replace the current `null` assertion
   for that route with the new explicit owner contract in the same slice
+- `bun test tests/integration/routes/customScreensRoutes.test.ts` when
+  `TASK-251-03` narrows persisted binding write rules or otherwise changes the
+  `custom_screen_definition_invalid` route boundary / `mapCustomScreenError`
+  proof
 - `bun test tests/unit/widgets/registry.test.ts` and
   `bun test tests/unit/widgets/runtimeRegistry.test.ts` as comparison smoke if
   `TASK-251-03-01` changes widget-registry normalization or introduces a new
   Vitest owner for binding-target metadata
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/advanced-modules.test.ts`
+  and `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/admin-shell-nav.test.tsx`
+  when the binding slice changes `supportsDedicatedEditor` / sidebar shortcut
+  gating for active Custom Screens
 - `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a render-only
   smoke test, but it is not the mounted owner for async preview or header
   interaction contracts.
@@ -250,9 +259,11 @@ primitives.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` only when the family
-  changes builder-route warmup, entries-cache ownership, or any documented
-  cache contract
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when the family adds
+  builder-side cached-first preview ownership, changes builder-route warmup, or
+  otherwise changes the documented entries-cache contract; under the planned
+  first-record preview-owner path from `TASK-251-01-02`, treat this docs update
+  as expected rather than optional
 - `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
   active-surface summaries, `writableBindingFields`, or assistant validation
   expectations

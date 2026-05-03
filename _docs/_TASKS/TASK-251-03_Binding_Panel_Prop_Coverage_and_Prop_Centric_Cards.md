@@ -34,17 +34,27 @@ This follow-up should make the binding flow prop-first:
 
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
+- `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx` as the current
+  runtime owner of the dedicated-editor write seam for
+  `screen-field-value.value`
 - `core/services/customScreens/bindingResolver.ts` as the current shared owner
   for widget-binding reads/writes and writable-field derivation
 - `core/admin/ui/custom-screens/customScreenEntryDraft.ts` as the current owner
   of `editableFields` derived from writable bindings
 - `core/admin/ui/custom-screens/assistantSurface.ts` as the owner of assistant
   surface `writableBindingFields`
+- `core/services/assistant/adminContextService.ts` and
+  `core/services/assistant/adminContextCatalogNormalizer.ts` as the live server
+  owners that normalize custom-screen assistant context, binding summaries, and
+  secret-safe `writableBindingFields`
 - `core/admin/ui/custom-screens/customScreenListModel.ts`
 - `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` when dedicated
   editor readiness labels or workspace gating change with the same slice
 - `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` when route-level
   workspace gating, preview-only copy, or writable-binding summaries change
+- `core/admin/ui/navigation/sidebarConfig.ts` when
+  `supportsDedicatedEditor` changes sidebar shortcut availability for active
+  Custom Screens
 - `core/admin/ui/widgets/registry.ts` as the admin consumer seam that exposes
   registered widget metadata to the picker, selected-widget resolution, and
   mounted UI tests
@@ -53,16 +63,22 @@ This follow-up should make the binding flow prop-first:
 - `core/services/customScreens/customScreenSchemas.ts`
 - `core/services/customScreens/customScreenService.ts` when save-time
   definition rejection or persistence-path error handling changes
-- `core/server/validation/assistantActionSchemas.ts` as the internal assistant
-  validation seam that must mirror narrowed write-capable binding rules
+- `core/server/routes/customScreenRoutes.ts` when the slice changes
+  `custom_screen_definition_invalid` mapping or the write-route boundary proof
+- `core/server/validation/assistantActionSchemas.ts` only when assistant action
+  payload shape changes in the same slice; assistant custom-screen summary
+  normalization remains owned by `adminContextService.ts` /
+  `adminContextCatalogNormalizer.ts`
 - `core/widgets/types.ts`
 - `core/widgets/registry.ts`
 - `core/widgets/core/index.ts` as the actual owner seam where core widget
   metadata is attached during registration
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
-- `core/widgets/core/screenFieldGroup.tsx`
-- `core/widgets/core/screenTwoColumn.tsx`
+- `core/widgets/core/screenFieldGroup.tsx` and
+  `core/widgets/core/screenTwoColumn.tsx` as reference seams only when the
+  slice actually changes their layout-only data-access metadata or non-bindable
+  guidance
 - `core/widgets/runtime.tsx` as a reference seam for the runtime registration
   contract proven by the Bun comparison smoke
 - `tests/unit/widgets/registry.test.ts`
@@ -74,15 +90,22 @@ This follow-up should make the binding flow prop-first:
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `tests/vitest/customScreens/capabilities.test.ts`
+- `tests/vitest/customScreens/bindingResolver.test.ts`
 - `tests/vitest/admin/custom-screen-schemas.test.ts`
 - `tests/vitest/customScreens/customScreenService.test.ts`
 - `tests/vitest/assistant/admin-context-service.test.ts`
 - `tests/vitest/assistant/admin-context-catalog-normalizer.test.ts`
+- `tests/integration/routes/customScreensRoutes.test.ts` when persisted reject
+  rules or `mapCustomScreenError("custom_screen_definition_invalid")` change in
+  the same slice
 - `tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom
   screen surface `writableBindingFields` or binding summaries change
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `tests/vitest/widgets/screenLayoutEditors.test.tsx` when layout-widget editor
   guidance or non-bindable state copy changes in the same slice
+- `tests/vitest/admin/advanced-modules.test.ts` and
+  `tests/vitest/ui/admin-shell-nav.test.tsx` when
+  `supportsDedicatedEditor` changes Custom Screen sidebar shortcut gating
 
 ## New Files to Create
 
@@ -119,8 +142,9 @@ This follow-up should make the binding flow prop-first:
    widget-owned target contract so they do not drift.
 9. The same per-prop write contract must be enforced by save/readiness owners:
    unsupported write combinations must not survive persisted definition
-   validation, drive `supportsDedicatedEditor`, populate `editableFields`, or
-   surface as writable assistant context.
+   validation, drive `supportsDedicatedEditor`, populate `editableFields`,
+   surface as writable assistant context, or leave sidebar shortcut gating out
+   of sync with workspace readiness.
 
 ## Implementation Pseudocode
 
@@ -261,6 +285,34 @@ function resolveBindingPanelModel(input: {
 />
 ```
 
+```ts
+type WidgetBindingContract = {
+  widgetId: string;
+  widgetType: string;
+  widgetSource: "screen-registry" | "legacy-fallback";
+  accessSource: WidgetDefinition["dataAccess"]["source"] | null;
+  allowedTargets: Map<string, Set<CustomScreenBindingMode>>;
+};
+
+function resolveWidgetBindingContracts(input: {
+  blocks: Block[];
+  screenWidgets: WidgetDefinition[];
+  fallbackWidgets: WidgetDefinition[];
+}) {
+  // Build one widget-aware contract per persisted block id from the actual
+  // editor block tree plus the registered screen-widget metadata.
+}
+
+function assertBindingAllowed(input: {
+  binding: CustomScreenBinding;
+  contract: WidgetBindingContract | null;
+}) {
+  // Declared targets keep their per-prop mode rules.
+  // Unknown prop paths may remain readable compatibility rows, but write-capable
+  // combinations without an explicit owner contract fail fast.
+}
+```
+
 ```tsx
 {bindingTargets.map((target) => {
   const binding = selectedBindings.find((item) => item.propPath === target.propPath) ?? null;
@@ -294,6 +346,13 @@ Execution notes for the implementer:
   and reuse that seam from UI, readiness, draft, runtime, and assistant
   consumers instead of creating parallel helpers in `FieldBindingPanel`,
   `capabilities.ts`, or `CustomScreenEntryEditor.tsx`.
+- Persisted save-time validation must be widget-aware, not `contentType`-only:
+  thread the resolved widget-binding contracts from the normalized block tree
+  into `normalizeCustomScreenBindings()` or an adjacent post-normalization
+  validator before `customScreenService.ts` writes definition changes. The same
+  failure must still surface through the existing
+  `custom_screen_definition_invalid` route boundary in
+  `core/server/routes/customScreenRoutes.ts`.
 - When rewiring the Data tab, keep the explicit ownership split visible in
   `CustomScreenEditorPage`: `screenWidgetRegistry` remains the primary source
   for current screen widgets, while the merged fallback path preserves already
@@ -303,9 +362,23 @@ Execution notes for the implementer:
   (`supportsDedicatedEditor` / workspace labels), draft `editableFields`, and
   assistant surface `writableBindingFields` so the same invalid write pair
   cannot be blocked in the UI but still survive in saved definitions.
+- `CustomScreenEntryCanvas.tsx` remains the live runtime write seam for
+  `screen-field-value.value`; if this slice changes which prop paths are
+  write-capable, keep that runtime owner aligned in the same patch instead of
+  assuming `CustomScreenEntryEditor.tsx` owns the edit bridge by itself.
+- Assistant-side custom-screen summaries are normalized in
+  `core/services/assistant/adminContextService.ts` and
+  `core/services/assistant/adminContextCatalogNormalizer.ts`; update those
+  owners together with `assistantSurface.ts` when narrowed write-capable fields
+  change secret-safe context, while `assistantActionSchemas.ts` only changes if
+  the assistant action payload shape moves in the same slice.
 - Keep `CustomScreenEntryEditor.tsx` aligned with the same owner contract so
   route-level workspace gating, preview-only binding counts, and fallback copy
   do not drift from `capabilities.ts` or `customScreenListModel.ts`.
+- `core/admin/ui/navigation/sidebarConfig.ts` consumes the same
+  `supportsDedicatedEditor` readiness flag when building active sidebar
+  shortcuts, so sidebar availability must stay aligned with the updated
+  readiness contract in the same slice.
 
 ## Security Contract
 
@@ -345,8 +418,13 @@ Execution notes for the implementer:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/bindingResolver.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts` when persisted binding normalization or save-time reject rules change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/customScreenService.test.ts` when persisted definition rejection or save-path error handling changes
+- `bun test tests/integration/routes/customScreensRoutes.test.ts` when
+  persisted binding reject rules, route validation wiring, or
+  `mapCustomScreenError("custom_screen_definition_invalid")` behavior changes in
+  the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts` when assistant surface binding summaries or `writableBindingFields` change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts` when assistant catalog snapshots or secret-safe binding filtering change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen context or `writableBindingFields` changes in the same slice
@@ -355,6 +433,10 @@ Execution notes for the implementer:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when `CustomScreenPreview.tsx` or the core `screen-*` widget render/normalization files move in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/advanced-modules.test.ts`
+  and `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/admin-shell-nav.test.tsx`
+  when `supportsDedicatedEditor` changes the availability of active Custom
+  Screen sidebar shortcuts
 - The Bun suites above remain the current registry-owner comparison smoke until
   the new Vitest binding-target suite is introduced and the lane cutover is
   made explicit in the same slice.
@@ -370,6 +452,9 @@ Execution notes for the implementer:
   - persisted save paths reject unsupported write-capable combinations before
     they can survive `normalizeCustomScreenBindings()` or the current service
     save flow,
+  - `tests/integration/routes/customScreensRoutes.test.ts` keeps the
+    `custom_screen_definition_invalid` route boundary and `mapCustomScreenError`
+    coverage aligned when save-time reject rules change,
   - cards are labeled by prop name/path instead of `Binding 1`,
   - an existing unknown prop path remains visible as a compatibility row,
   - a preserved legacy widget without `bindingTargets` metadata keeps a manual
@@ -398,6 +483,9 @@ Execution notes for the implementer:
   - `tests/vitest/ui/use-assistant-admin-context.test.tsx` and adjacent
     assistant-context owners keep `writableBindingFields` aligned with the same
     per-prop write contract when active custom screen surface summaries change,
+  - `tests/vitest/admin/advanced-modules.test.ts` and
+    `tests/vitest/ui/admin-shell-nav.test.tsx` keep sidebar shortcut gating
+    aligned with the same `supportsDedicatedEditor` contract,
   - widget-editor `Data` jump buttons still target the same declared prop paths.
 
 ## Documentation Updates Required
@@ -408,8 +496,10 @@ Execution notes for the implementer:
   expectations
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
-- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
-- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` and
+  `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md` only when their layout-only
+  `selected-content-type` contract or non-bindable guidance changes in the same
+  slice
 - `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
@@ -421,4 +511,5 @@ Execution notes for the implementer:
 2. Binding cards are prop-centric instead of ordinal.
 3. Widget editors and the Data tab share one binding-target contract.
 4. Unsupported write combinations cannot be persisted or surfaced as dedicated
-   editor readiness, writable draft fields, or writable assistant context.
+   editor readiness, sidebar shortcut availability, writable draft fields, or
+   writable assistant context.

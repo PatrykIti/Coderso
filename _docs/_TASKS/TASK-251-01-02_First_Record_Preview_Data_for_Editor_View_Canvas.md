@@ -252,6 +252,12 @@ dialog renders the note inside the preview frame, add the matching owner around
 the `BlockList` surface in `CustomScreenEditorPage.tsx` so the live canvas and
 the dialog remain on the same state contract.
 
+Because this slice turns the builder preview into a cached-first owner of
+`entries:list:<typeSlug>` rather than a purely local derived view, treat the
+matching `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` updates as part
+of the expected closure path whenever that owner lands, even if builder-route
+warmup stays unchanged.
+
 ## Security Contract
 
 - Visibility: internal admin UI and existing internal entry list read route
@@ -309,9 +315,10 @@ the dialog remain on the same state contract.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` only when this slice
-  changes builder-route warmup, entries-cache ownership, or any documented
-  cache contract
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when this slice adds
+  builder-side cached-first preview ownership, changes builder-route warmup, or
+  otherwise changes the documented entries-cache contract; under the planned
+  first-record preview-owner implementation, this update is expected
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
