@@ -98,6 +98,9 @@ This follow-up should make the binding flow prop-first:
 - `tests/integration/routes/customScreensRoutes.test.ts` when persisted reject
   rules or `mapCustomScreenError("custom_screen_definition_invalid")` change in
   the same slice
+- `tests/vitest/ui/custom-screens-list-wave.test.tsx` when
+  `supportsDedicatedEditor`, `modeLabel`, or `sidebarShortcutState` change in
+  the Custom Screens list/readiness flow
 - `tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom
   screen surface `writableBindingFields` or binding summaries change
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
@@ -427,6 +430,9 @@ Execution notes for the implementer:
   the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts` when assistant surface binding summaries or `writableBindingFields` change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts` when assistant catalog snapshots or secret-safe binding filtering change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-list-wave.test.tsx`
+  when `supportsDedicatedEditor`, `modeLabel`, or `sidebarShortcutState` change
+  in the Custom Screens list/readiness flow
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen context or `writableBindingFields` changes in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx` when `screen-field-group` or `screen-two-column` editor guidance/non-bindable layout messaging changes in the same slice
@@ -455,6 +461,9 @@ Execution notes for the implementer:
   - `tests/integration/routes/customScreensRoutes.test.ts` keeps the
     `custom_screen_definition_invalid` route boundary and `mapCustomScreenError`
     coverage aligned when save-time reject rules change,
+  - `tests/vitest/ui/custom-screens-list-wave.test.tsx` keeps list-surface
+    `modeLabel` / `sidebarShortcutState` aligned with the same readiness
+    contract when `supportsDedicatedEditor` changes,
   - cards are labeled by prop name/path instead of `Binding 1`,
   - an existing unknown prop path remains visible as a compatibility row,
   - a preserved legacy widget without `bindingTargets` metadata keeps a manual
@@ -494,6 +503,12 @@ Execution notes for the implementer:
 - `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
   active-surface summaries, `writableBindingFields`, or assistant validation
   expectations
+- `_docs/CMS_API.md` when the binding slice changes active custom-screen
+  summaries, documented assistant payloads, or workspace readiness/sidebar
+  gating described in the admin API docs
+- `_docs/ARCHITECTURE.md` and `_docs/CONTENT_LIST_UX.md` when
+  `supportsDedicatedEditor`, active custom-screen context, or sidebar shortcut
+  gating contracts change in the same slice
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md` and

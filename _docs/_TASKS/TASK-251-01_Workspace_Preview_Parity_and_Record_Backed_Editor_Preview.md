@@ -265,6 +265,9 @@ canvas still shows the same state source.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/CMS_API.md` when the editor-preview contract changes from schema sample
+  data to real first-record hydration or otherwise changes the documented
+  Custom Screens preview behavior
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`

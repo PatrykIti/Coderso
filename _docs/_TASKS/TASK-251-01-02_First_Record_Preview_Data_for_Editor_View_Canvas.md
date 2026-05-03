@@ -38,7 +38,9 @@ No child task files.
 - `core/admin/services/entriesClient.ts` only if a dedicated helper is truly
   needed; prefer existing cache/list owners first
 - `tests/vitest/admin/entriesClient.test.ts` if a new preview/cache helper or
-  cached list-owner path is introduced in `entriesClient.ts`
+  cached list-owner path is introduced in `entriesClient.ts`, or if this slice
+  changes the existing `listEntriesCached(..., { force })` cache/revalidation
+  semantics that the preview owner depends on
 - `core/admin/ui/custom-screens/routeParams.ts` and
   `core/admin/utils/adminPrefetch.ts` if the broader
   `/advanced/custom-screens` prefetch entry must warm `entries:list:<typeSlug>`
@@ -286,7 +288,11 @@ warmup stays unchanged.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` if `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract or if direct `/advanced/custom-screens/:screenId` builder warmup is introduced in the same slice
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` if a new preview/cache helper or cached list-owner path is introduced in `entriesClient.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts`
+  if a new preview/cache helper or cached list-owner path is introduced in
+  `entriesClient.ts`, or if this slice changes the existing
+  `listEntriesCached(..., { force })` cache/revalidation semantics that the
+  preview owner depends on
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` if fallback/source messaging or bound render bridging moves into `CustomScreenPreview.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain a
   render-only smoke, but the mounted owner is
@@ -315,6 +321,9 @@ warmup stays unchanged.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/CMS_API.md` because the current Custom Screens `Editor View` preview
+  contract documents schema sample data today and must be updated when this leaf
+  moves to first-record preview ownership
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when this slice adds
   builder-side cached-first preview ownership, changes builder-route warmup, or
   otherwise changes the documented entries-cache contract; under the planned

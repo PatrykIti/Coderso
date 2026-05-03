@@ -30,12 +30,18 @@ No child task files.
 - `_docs/_CHANGELOG/*`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/CMS_API.md` when the family changes Custom Screens preview behavior,
+  active custom-screen summaries, or readiness/sidebar contracts described in
+  the admin API docs
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when the family adds
   builder-side cached-first preview ownership, changes builder-route warmup, or
   otherwise changes the documented entries-cache contract
 - `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
   active-surface summaries, `writableBindingFields`, or assistant validation
   expectations
+- `_docs/ARCHITECTURE.md` and `_docs/CONTENT_LIST_UX.md` when
+  `supportsDedicatedEditor`, active custom-screen context, or sidebar shortcut
+  gating contracts change in the same family
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
@@ -62,12 +68,12 @@ No child task files.
    save-time reject rules / `custom_screen_definition_invalid` route mapping
    change, `admin-context-service.test.ts` and
    `admin-context-catalog-normalizer.test.ts` when assistant binding summaries
-   or `writableBindingFields` change, `advanced-modules.test.ts` and
-   `admin-shell-nav.test.tsx` when `supportsDedicatedEditor` changes active
-   Custom Screen shortcut gating, `custom-screen-records.test.tsx` when
-   route-level workspace gating or preview-only copy changes, and the newly
-   named owner suites only after their implementing leaves add them to the
-   branch.
+   or `writableBindingFields` change, `advanced-modules.test.ts`,
+   `admin-shell-nav.test.tsx`, and `custom-screens-list-wave.test.tsx` when
+   `supportsDedicatedEditor` changes active Custom Screen readiness / shortcut
+   gating, `custom-screen-records.test.tsx` when route-level workspace gating
+   or preview-only copy changes, and the newly named owner suites only after
+   their implementing leaves add them to the branch.
 3. Confirm the final doc set includes every source-of-truth file promised by
    the implementation leaves: content-editor UX docs, widget docs, assistant
    workflow docs when the assistant contract moves, cache docs only when cache
@@ -139,13 +145,19 @@ No child task files.
   the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-service.test.ts` when assistant surface binding summaries or `writableBindingFields` change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/admin-context-catalog-normalizer.test.ts` when assistant catalog snapshots or secret-safe binding filtering change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-list-wave.test.tsx`
+  when `supportsDedicatedEditor`, `modeLabel`, or `sidebarShortcutState` change
+  in the Custom Screens list/readiness flow
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen surface summaries or `writableBindingFields` change in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/advanced-modules.test.ts`
   and `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/admin-shell-nav.test.tsx`
   when `supportsDedicatedEditor` changes active Custom Screen shortcut gating
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract or when direct `/advanced/custom-screens/:screenId` builder warmup is introduced in the same slice
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` when new preview/cache helpers are introduced
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts`
+  when new preview/cache helpers are introduced or when the slice changes
+  existing `listEntriesCached(..., { force })` cache/revalidation semantics that
+  the preview owner now depends on
 - `bun test tests/unit/widgets/registry.test.ts`
 - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `bun run gates:coderso`
@@ -160,12 +172,18 @@ No child task files.
 - Add the matching changelog entry and README index update.
 - Update the source-of-truth docs promised by the implemented leaves:
   - `_docs/CONTENT_EDITOR_UX.md`
+  - `_docs/CMS_API.md` when the family changes Custom Screens preview behavior,
+    active custom-screen summaries, or readiness/sidebar contracts described in
+    the admin API docs
   - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when the family adds
     builder-side cached-first preview ownership, changes builder-route warmup,
     or otherwise changes the documented entries-cache contract
   - `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
     active-surface summaries, `writableBindingFields`, or assistant validation
     expectations
+  - `_docs/ARCHITECTURE.md` and `_docs/CONTENT_LIST_UX.md` when
+    `supportsDedicatedEditor`, active custom-screen context, or sidebar
+    shortcut gating contracts change in the same family
   - `_docs/WIDGETS.md`
   - `_docs/_WIDGETS/README.md`
   - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`

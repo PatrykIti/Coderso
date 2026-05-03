@@ -225,6 +225,9 @@ primitives.
   and `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/admin-shell-nav.test.tsx`
   when the binding slice changes `supportsDedicatedEditor` / sidebar shortcut
   gating for active Custom Screens
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-list-wave.test.tsx`
+  when the binding slice changes `supportsDedicatedEditor`, `modeLabel`, or
+  `sidebarShortcutState` in the Custom Screens list/readiness flow
 - `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a render-only
   smoke test, but it is not the mounted owner for async preview or header
   interaction contracts.
@@ -244,9 +247,10 @@ primitives.
     renderer/binding refresh seams and should be rerun when shared screen-widget
     contract or binding metadata changes bleed into the record-editor surface.
 - Reuse existing cached-entry contracts wherever possible. If the
-  implementation adds new entry-preview helpers or cached read-model helpers,
-  add focused Vitest coverage in `tests/vitest/admin/entriesClient.test.ts` or
-  a new pure helper suite.
+  implementation adds new entry-preview helpers, cached read-model helpers, or
+  changes the existing `listEntriesCached(..., { force })` cache/revalidation
+  semantics that the preview owner depends on, add focused Vitest coverage in
+  `tests/vitest/admin/entriesClient.test.ts` or a new pure helper suite.
 - If `CustomScreenPreview.tsx` becomes the owner of fallback/source messaging,
   rerun `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx`
   so the bound screen-widget render bridge stays covered.
@@ -259,6 +263,9 @@ primitives.
 ## Documentation Updates Required
 
 - `_docs/CONTENT_EDITOR_UX.md`
+- `_docs/CMS_API.md` when the family changes the documented Custom Screens
+  preview contract, active custom-screen summary contract, or workspace
+  readiness/sidebar semantics described in the admin API docs
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` when the family adds
   builder-side cached-first preview ownership, changes builder-route warmup, or
   otherwise changes the documented entries-cache contract; under the planned
@@ -267,6 +274,9 @@ primitives.
 - `_docs/ASSISTANT_SITE_BUILDER.md` when the binding slice changes assistant
   active-surface summaries, `writableBindingFields`, or assistant validation
   expectations
+- `_docs/ARCHITECTURE.md` and `_docs/CONTENT_LIST_UX.md` when the binding slice
+  changes active custom-screen context, `supportsDedicatedEditor`, or sidebar
+  shortcut gating contracts that are described there
 - `_docs/WIDGETS.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
