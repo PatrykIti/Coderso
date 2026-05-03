@@ -24,6 +24,9 @@ Scope decision for this leaf:
 
 - `screen-record-header` and `screen-field-value` join the widget-owned
   selected-entry binding-target contract.
+- `screen-field-value` keeps the current per-prop mode split: `value` remains
+  read/write, while `label` and `helper` remain read-only until the
+  dedicated-editor/runtime contract is explicitly widened in the same slice.
 - `screen-field-group` and `screen-two-column` keep their current
   `selected-content-type` read-only layout contract and therefore do not expose
   entry binding cards in the Data tab unless their source docs and widget
@@ -72,6 +75,7 @@ export type WidgetBindingTarget = {
   propPath: string;
   label: string;
   description?: string;
+  modes?: Array<"read" | "write">;
 };
 
 export type WidgetDefinition<T = Record<string, unknown>> = {
@@ -79,22 +83,53 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   bindingTargets?: WidgetBindingTarget[];
 };
 
-function normalizeBindingTargets(targets: WidgetBindingTarget[] | undefined) {
-  return (targets ?? []).map((target) => ({
-    propPath: target.propPath.trim(),
-    label: target.label.trim(),
-    description: target.description?.trim() || undefined,
-  }));
+function normalizeBindingTargets(
+  targets: WidgetBindingTarget[] | undefined,
+  widgetModes: Array<"read" | "write">
+) {
+  const seen = new Set<string>();
+  return (targets ?? []).map((target) => {
+    const propPath = target.propPath.trim();
+    const label = target.label.trim();
+    if (!propPath || !label) {
+      throw new Error("widget_binding_target_invalid");
+    }
+    if (seen.has(propPath)) {
+      throw new Error("widget_binding_target_duplicate");
+    }
+    seen.add(propPath);
+
+    const requestedModes = target.modes ?? widgetModes;
+    const modes = Array.from(
+      new Set(requestedModes.filter((mode) => widgetModes.includes(mode)))
+    );
+    if (modes.length === 0) {
+      throw new Error("widget_binding_target_modes_invalid");
+    }
+
+    return {
+      propPath,
+      label,
+      description: target.description?.trim() || undefined,
+      modes,
+    };
+  });
 }
 ```
 
 ```ts
 export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
-  { propPath: "eyebrow", label: "Eyebrow" },
-  { propPath: "title", label: "Title" },
-  { propPath: "subtitle", label: "Subtitle" },
-  { propPath: "description", label: "Description" },
-  { propPath: "badge", label: "Badge" },
+  { propPath: "eyebrow", label: "Eyebrow", modes: ["read"] },
+  { propPath: "title", label: "Title", modes: ["read"] },
+  { propPath: "subtitle", label: "Subtitle", modes: ["read"] },
+  { propPath: "description", label: "Description", modes: ["read"] },
+  { propPath: "badge", label: "Badge", modes: ["read"] },
+];
+
+export const screenFieldValueBindingTargets: WidgetBindingTarget[] = [
+  { propPath: "label", label: "Label", modes: ["read"] },
+  { propPath: "value", label: "Value", modes: ["read", "write"] },
+  { propPath: "helper", label: "Helper", modes: ["read"] },
 ];
 ```
 
@@ -151,6 +186,15 @@ const panelModel = resolveBindingPanelModel({
   selectedBlock,
   selectedBindings,
 });
+
+function resolveAllowedBindingModes(input: {
+  target: WidgetBindingTarget;
+  field: BindingFieldOption | null;
+}) {
+  const canWrite =
+    input.target.modes?.includes("write") === true && input.field?.writable === true;
+  return canWrite ? modeOptions : modeOptions.filter((option) => option.value === "read");
+}
 
 return panelModel.mode === "declared-targets" ? (
   <div className="space-y-3">
@@ -210,6 +254,14 @@ the current fallback registry path but exposes no `bindingTargets`, the panel
 should stay in manual compatibility mode instead of dropping existing bindings.
 Layout widgets that remain on `selected-content-type` must resolve to the
 read-only state even if their defaults contain writable-looking string fields.
+Target-level modes are the per-prop contract inside that broader widget owner:
+`WidgetDefinition.dataAccess.modes` remains the widget-level ceiling, while
+`bindingTargets[].modes` narrows individual prop paths. Under the current live
+contract this means `screen-record-header` remains read-only and
+`screen-field-value` keeps `value` as the only write-capable target in the
+dedicated record editor. Do not widen `label` or `helper` into writable
+record-editor paths unless `CustomScreenEntryCanvas` and dedicated-editor
+capability ownership move in the same slice.
 
 Actual owner seam notes:
 
@@ -253,11 +305,13 @@ Actual owner seam notes:
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when the touched `screen-*` widget files also move their render or preview-bridge behavior
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts` when the set of write-capable `screen-field-value` targets or dedicated-editor support rules changes
 - The Bun suites above stay as current registry-owner comparison smoke while the
   new Vitest binding-target suite is introduced in this slice.
 - Add assertions for:
-  - `screen-record-header` exposes five target cards,
-  - `screen-field-value` still exposes `value`, `label`, and `helper`,
+  - `screen-record-header` exposes five target cards and keeps them read-only,
+  - `screen-field-value` still exposes `value`, `label`, and `helper`, but only
+    `value` remains write-capable under the current dedicated-editor contract,
   - `screen-field-group` and `screen-two-column` render the non-bindable layout
     empty state unless their documented contract changes in the same slice,
   - a saved custom prop path still renders in compatibility mode,

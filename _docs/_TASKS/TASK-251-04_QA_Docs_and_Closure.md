@@ -70,8 +70,8 @@ No child task files.
 - Auth model: unchanged authenticated admin session for all runtime behavior
   covered by the family.
 - RBAC:
-  - no closure step may weaken the `content:read` / `content:write` /
-    `content:publish` boundaries defined in TASK-251-01 through TASK-251-03,
+  - no closure step may weaken the `content:read` / `content:write`
+    boundaries defined in TASK-251-01 through TASK-251-03,
   - docs updates must reflect the existing runtime permissions accurately.
 - CSRF:
   - no new route is introduced in closure,
@@ -109,6 +109,7 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` when shared `screen-*` widget contract or record-editor binding refresh seams change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when preview messaging or core `screen-*` render/normalization ownership moves
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts` when the set of write-capable `screen-field-value` targets or dedicated-editor support rules changes
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` when new preview/cache helpers are introduced

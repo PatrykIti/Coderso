@@ -72,6 +72,7 @@ export type PreviewEntriesState = {
 export type CustomScreenPreviewRecordState = {
   source: "entry" | "fallback";
   entryId: string | null;
+  fallbackReason?: "no-content-type" | "no-records" | "read-failed";
   data: Record<string, unknown>;
   note: string | null;
 };
@@ -97,14 +98,19 @@ export function buildPreviewRecordStateFromEntry(
 }
 
 export function buildFallbackPreviewRecordState(
-  contentType: ContentTypeSummary | null
+  contentType: ContentTypeSummary | null,
+  reason: "no-content-type" | "no-records" | "read-failed"
 ): CustomScreenPreviewRecordState {
   return {
     source: "fallback",
     entryId: null,
-    note: contentType
-      ? "No records exist for this content type yet. Preview is using schema fallback values."
-      : "Select a content type to preview this screen.",
+    fallbackReason: reason,
+    note:
+      reason === "no-content-type"
+        ? "Select a content type to preview this screen."
+        : reason === "read-failed"
+          ? "Preview data could not be loaded. Showing schema fallback values until records can be read."
+          : "No records exist for this content type yet. Preview is using schema fallback values.",
     data: buildSchemaFallbackPreviewData(contentType),
   };
 }
@@ -122,10 +128,12 @@ function CustomScreenPreviewRecordOwner({
   const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
     typeSlug ? (getCachedEntries(typeSlug) ?? null) : null
   );
+  const [readFailed, setReadFailed] = useState(false);
   const seededFromCacheRef = useRef(entries !== null);
+  const hasResolvedEntriesRef = useRef(entries !== null);
   const previewRecordState = useMemo(
-    () => buildPreviewRecordState({ contentType, entries }),
-    [contentType, entries]
+    () => buildPreviewRecordState({ contentType, entries, readFailed }),
+    [contentType, entries, readFailed]
   );
 
   useEffect(() => {
@@ -134,9 +142,21 @@ function CustomScreenPreviewRecordOwner({
     let active = true;
 
     const hydratePreviewEntries = async (force: boolean) => {
-      const nextItems = await listEntriesCached(typeSlug, { force });
-      if (!active) return;
-      setEntries(nextItems);
+      try {
+        const nextItems = await listEntriesCached(typeSlug, { force });
+        if (!active) return;
+        setEntries(nextItems);
+        setReadFailed(false);
+        hasResolvedEntriesRef.current = true;
+      } catch {
+        if (!active) return;
+        // Cold-cache failures fall back to schema-driven preview data with an
+        // explicit note. Background refresh failures keep the last good record
+        // state instead of tearing the preview down.
+        if (!hasResolvedEntriesRef.current) {
+          setReadFailed(true);
+        }
+      }
     };
 
     // Lazy state init already seeded current cached rows. Keep the effect
@@ -200,6 +220,9 @@ const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 - no preview-only forced mount refresh when warm cache already exists,
 - `force: true` only on shared cache invalidation/revalidation paths such as
   `cacheBus` updates or an explicit refresh owner,
+- cold-cache read failure resolves to explicit schema-fallback preview messaging
+  instead of a destructive editor error,
+- background refresh failure keeps the last good preview state,
 - immediate owner reset when the content type changes or clears.
 
 `CustomScreenPreviewRecordState` is part of the required seam, not an optional
@@ -208,10 +231,12 @@ view concern. The builder canvas and preview dialog need the same
 one preview contract instead of being inferred from raw `Record<string, unknown>`
 data in multiple places.
 
-If a background fetch fails, keep the last good preview state instead of
-breaking the builder. The screen editor should not show a destructive error for
-preview-only read failures. The preview ownership should mirror the
-cached-first/background-refresh contract already used by
+If the first read for a selected content type fails and no cached rows exist,
+fall back to schema preview data with a `read-failed` note instead of leaving
+preview ownership undefined. If a background fetch fails, keep the last good
+preview state instead of breaking the builder. The screen editor should not
+show a destructive error for preview-only read failures. The preview ownership
+should mirror the cached-first/background-refresh contract already used by
 `CustomScreenEntriesPage.tsx`. If cached-first paint on direct builder-route
 navigation is required, extend the existing prefetch owner for
 `/advanced/custom-screens/:screenId` instead of inventing a preview-only cache
@@ -254,6 +279,8 @@ channel.
   - cached entry preview appearing without a blocking loader,
   - warm cached rows not triggering a preview-only forced mount refresh,
   - fallback copy when no entries exist,
+  - cold-cache fetch failure yielding an explicit `read-failed` fallback note
+    instead of a destructive error state,
   - a background refresh replacing fallback data with a real first record,
   - changing or clearing `contentTypeId` dropping the previous preview owner
     before the next async result resolves,

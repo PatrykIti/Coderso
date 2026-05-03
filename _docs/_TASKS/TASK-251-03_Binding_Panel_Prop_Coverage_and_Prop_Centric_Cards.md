@@ -63,24 +63,31 @@ This follow-up should make the binding flow prop-first:
 ## Product Contract
 
 1. The Data tab must expose all supported bindable prop paths for the selected
-   widget.
-2. Binding cards must be labeled by prop label / prop path, not by ordinal
+   widget together with explicit per-prop read/write modes.
+2. Declaring a bindable prop does not automatically make it writable. The
+   shared contract must preserve the current runtime/editor ownership:
+   - `screen-record-header` remains read-only,
+   - `screen-field-value.value` remains the only write-capable target in the
+     dedicated record editor,
+   - `screen-field-value.label` and `helper` remain read-only unless runtime
+     ownership changes in the same slice.
+3. Binding cards must be labeled by prop label / prop path, not by ordinal
    position.
-3. Existing persisted custom prop paths that are not part of the declared
+4. Existing persisted custom prop paths that are not part of the declared
    widget target list must remain editable under a compatibility section.
-4. `CustomScreenEditorPage` remains the owner of the resolved selected widget
+5. `CustomScreenEditorPage` remains the owner of the resolved selected widget
    and must pass that resolved metadata plus an explicit ownership signal
    (`screen-registry` vs `legacy-fallback`) into the Data tab instead of
    forcing `FieldBindingPanel` to rediscover registry state on its own.
-5. If the selected block is preserved only through the current legacy fallback
+6. If the selected block is preserved only through the current legacy fallback
    widget registry path and does not declare widget-owned binding targets, the
    panel must keep a manual binding editor for that block instead of collapsing
    into a non-bindable empty state.
-6. `screen-field-group` and `screen-two-column` remain layout widgets with the
+7. `screen-field-group` and `screen-two-column` remain layout widgets with the
    current `selected-content-type` read-only contract. Their `title`,
    `description`, `leftTitle`, and `rightTitle` stay in widget settings and do
    not become selected-entry binding cards in the Data tab.
-7. Widget settings and Data-tab suggestions must read from the same
+8. Widget settings and Data-tab suggestions must read from the same
    widget-owned target contract so they do not drift.
 
 ## Implementation Pseudocode
@@ -90,6 +97,7 @@ export type WidgetBindingTarget = {
   propPath: string;
   label: string;
   description?: string;
+  modes?: Array<"read" | "write">;
 };
 
 export type WidgetDefinition<T = Record<string, unknown>> = {
@@ -97,12 +105,37 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   bindingTargets?: WidgetBindingTarget[];
 };
 
-function normalizeBindingTargets(targets: WidgetBindingTarget[] | undefined) {
-  return (targets ?? []).map((target) => ({
-    propPath: target.propPath.trim(),
-    label: target.label.trim(),
-    description: target.description?.trim() || undefined,
-  }));
+function normalizeBindingTargets(
+  targets: WidgetBindingTarget[] | undefined,
+  widgetModes: Array<"read" | "write">
+) {
+  const seen = new Set<string>();
+  return (targets ?? []).map((target) => {
+    const propPath = target.propPath.trim();
+    const label = target.label.trim();
+    if (!propPath || !label) {
+      throw new Error("widget_binding_target_invalid");
+    }
+    if (seen.has(propPath)) {
+      throw new Error("widget_binding_target_duplicate");
+    }
+    seen.add(propPath);
+
+    const requestedModes = target.modes ?? widgetModes;
+    const modes = Array.from(
+      new Set(requestedModes.filter((mode) => widgetModes.includes(mode)))
+    );
+    if (modes.length === 0) {
+      throw new Error("widget_binding_target_modes_invalid");
+    }
+
+    return {
+      propPath,
+      label,
+      description: target.description?.trim() || undefined,
+      modes,
+    };
+  });
 }
 ```
 
@@ -125,6 +158,17 @@ function listSelectedWidgetBindingTargets(input: {
     }));
 
   return [...declared, ...existingCustomOnly];
+}
+```
+
+```ts
+function resolveAllowedBindingModes(input: {
+  target: WidgetBindingTarget;
+  field: BindingFieldOption | null;
+}) {
+  const canWrite =
+    input.target.modes?.includes("write") === true && input.field?.writable === true;
+  return canWrite ? modeOptions : modeOptions.filter((option) => option.value === "read");
 }
 ```
 
@@ -239,6 +283,10 @@ Execution notes for the implementer:
   made explicit in the same slice.
 - Add assertions for:
   - all declared bindable props for `screen-record-header` render in Data,
+  - `screen-record-header` target cards remain read-only under the current
+    widget-level `dataAccess.modes`,
+  - `screen-field-value` exposes `value`, `label`, and `helper`, but only
+    `value` remains write-capable under the current dedicated-editor contract,
   - cards are labeled by prop name/path instead of `Binding 1`,
   - an existing unknown prop path remains visible as a compatibility row,
   - a preserved legacy widget without `bindingTargets` metadata keeps a manual

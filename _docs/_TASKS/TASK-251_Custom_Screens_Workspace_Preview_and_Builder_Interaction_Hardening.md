@@ -45,13 +45,19 @@ primitives.
   through `buildEditorPreviewData(selectedContentType)`, which synthesizes
   values from schema field types instead of reusing current records.
 - `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` already proves the
-  repo-native records source plus the shared cache contract: render from cache
-  first, fetch in foreground on cache miss, and use `force: true` only on
-  explicit refresh or cache-bus driven revalidation.
+  repo-native records source plus the shared cache contract: seed from cache
+  when screen/content-type context is already warm, fetch with
+  `force: !hasInitialCache` on the initial direct load, and use `force: true`
+  only on explicit refresh or cache-bus driven revalidation.
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx` mixes a local
   hard-coded `preferredBindingPropPaths` map with `collectBindingPropPaths` and
   labels bound rows as `Binding 1`, `Binding 2`, etc. The bindable-prop
   contract is not owned by the widgets themselves.
+- `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx` still treats
+  `screen-field-value` as the only dedicated record-editor write seam and only
+  for `propPath === "value"`, so any new widget-owned binding-target metadata
+  must stay aligned with that live write contract unless runtime/editor
+  ownership changes in the same slice.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` still preserves
   legacy blocks through fallback widget resolution, so task work must not strand
   existing bindings on already-saved non-screen widgets that remain editable on
@@ -76,6 +82,11 @@ primitives.
    - expose the full bindable prop list for widgets whose contract is
      explicitly `selected-entry`,
    - label cards by prop path / prop label rather than by ordinal position,
+   - keep per-prop binding modes aligned with the current runtime/editor owner
+     seams: `screen-record-header` stays read-only, and `screen-field-value`
+     keeps `value` as the only write-capable dedicated-editor target while
+     `label` and `helper` remain read-only unless runtime ownership changes in
+     the same slice,
    - preserve existing custom prop paths that are already persisted,
    - preserve manual binding editability for already-saved legacy blocks that
      still survive through the current fallback registry path, even when they do
