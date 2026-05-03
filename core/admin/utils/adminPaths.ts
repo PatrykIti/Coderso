@@ -9,8 +9,7 @@ const normalizePath = (input: string) => {
 
 export const resolveAdminBasePath = (pathname?: string) => {
   const source =
-    pathname ??
-    (typeof window !== "undefined" ? window.location.pathname : DEFAULT_ADMIN_PATH);
+    pathname ?? (typeof window !== "undefined" ? window.location.pathname : DEFAULT_ADMIN_PATH);
   const normalized = normalizePath(source);
   const parts = normalized.split("/").filter(Boolean);
   if (parts.length === 0) return DEFAULT_ADMIN_PATH;
@@ -37,9 +36,7 @@ export const withAdminBasePath = (basePath: string, path: string) => {
 };
 
 export const isExternalHref = (href: string) =>
-  href.startsWith("http://") ||
-  href.startsWith("https://") ||
-  href.startsWith("mailto:");
+  href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:");
 
 const splitPathSuffix = (href: string) => {
   const hashIndex = href.indexOf("#");
@@ -103,19 +100,20 @@ export const resolveAdminHref = (basePath: string, href: string) =>
 
 const normalizeComparableHref = (href: string) => normalizePath(splitPathSuffix(href).path);
 
-export const isAdminHrefActive = (
-  basePath: string,
-  itemHref: string,
-  activeHref?: string
-) => {
+const isCustomScreenRecordsWorkspaceHref = (href: string) =>
+  /\/advanced\/custom-screens\/[^/]+\/entries(?:\/|$)/.test(href);
+
+export const isAdminHrefActive = (basePath: string, itemHref: string, activeHref?: string) => {
   if (!activeHref) return false;
-  const itemResolved = normalizeComparableHref(
-    toCanonicalAdminHref(basePath, itemHref)
-  );
-  const activeResolved = normalizeComparableHref(
-    toCanonicalAdminHref(basePath, activeHref)
-  );
+  const itemResolved = normalizeComparableHref(toCanonicalAdminHref(basePath, itemHref));
+  const activeResolved = normalizeComparableHref(toCanonicalAdminHref(basePath, activeHref));
   if (itemResolved === activeResolved) return true;
+  if (
+    itemResolved.endsWith("/advanced/custom-screens") &&
+    isCustomScreenRecordsWorkspaceHref(activeResolved)
+  ) {
+    return false;
+  }
   if (itemResolved === basePath) return false;
   return activeResolved.startsWith(`${itemResolved}/`);
 };

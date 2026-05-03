@@ -162,7 +162,8 @@ test("CustomScreenEntriesPage renders cached records", () => {
 
     expect(html).toContain("Property Catalog Records");
     expect(html).toContain("Ocean View");
-    expect(html).toContain("New record");
+    expect(html).toContain("New");
+    expect(html).not.toContain("Open builder");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;
@@ -184,10 +185,11 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
       path: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
     });
 
-    expect(html).toContain("Workspace details");
     expect(html).toContain("Headline");
     expect(html).toContain("Screen-owned record editor");
     expect(html).toContain("Ocean View");
+    expect(html).toContain("Bound fields");
+    expect(html).not.toContain("Workspace details");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

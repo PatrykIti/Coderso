@@ -429,13 +429,13 @@ export function CustomScreenEntriesPage() {
     void runBulkAction(bulkAction);
   };
 
-  const baseHref = screenId
-    ? `/advanced/custom-screens/${encodeURIComponent(screenId)}`
+  const screenRecordsHref = screenId
+    ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
     : "/advanced/custom-screens";
 
   return (
     <AdminShell
-      activeHref="/admin/advanced/custom-screens"
+      activeHref={screenRecordsHref}
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Coderso</span>
@@ -478,16 +478,13 @@ export function CustomScreenEntriesPage() {
                   variant="inline"
                 />
               ) : null}
-              <Button variant="outline" onClick={() => navigate(baseHref)}>
-                Open builder
-              </Button>
               <Button
                 className="gap-2"
                 disabled={!contentTypeSlug || !supportsWorkspaceEditor}
                 onClick={handleCreate}
               >
                 <Plus className="h-4 w-4" />
-                New record
+                New
               </Button>
             </div>
           }

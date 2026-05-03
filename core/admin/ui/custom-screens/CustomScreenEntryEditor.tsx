@@ -731,9 +731,7 @@ export function CustomScreenEntryEditor() {
   return (
     <>
       <EditorShell
-        activeHref="/admin/advanced/custom-screens"
-        rightPanel={detailsPanel}
-        rightPanelClassName="w-[360px]"
+        activeHref={screenRecordsHref}
         breadcrumbs={
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Coderso</span>
@@ -775,6 +773,14 @@ export function CustomScreenEntryEditor() {
               <ArrowLeft className="h-4 w-4" />
               Back to records
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setDetailsOpen(true)}
+            >
+              {canEditInScreen ? "Bound fields" : "Screen details"}
+            </Button>
             {canEditInScreen ? (
               <Button
                 size="sm"
@@ -801,14 +807,6 @@ export function CustomScreenEntryEditor() {
                   : "This screen still needs writable bindings before it can replace legacy editing paths."}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 lg:hidden"
-              onClick={() => setDetailsOpen(true)}
-            >
-              {canEditInScreen ? "Bound fields" : "Screen details"}
-            </Button>
           </div>
         </div>
         <ScrollArea className="flex-1 min-h-0">

@@ -217,11 +217,6 @@ const flush = async () => {
   });
 };
 
-const findButton = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("button")).find((button) =>
-    button.textContent?.includes(text)
-  ) as HTMLButtonElement | undefined;
-
 beforeEach(() => {
   cacheListener = null;
   currentScreenRecord = createScreenRecord();
@@ -251,13 +246,9 @@ test("record editor keeps child selection scoped and preserves it across refresh
 
     expect(parent?.getAttribute("data-selected")).toBe("false");
     expect(child?.getAttribute("data-selected")).toBe("true");
-    expect(findButton(view.container, "Selected Element")?.getAttribute("data-state")).toBe(
-      "active"
-    );
     expect(vi.mocked(setActiveAssistantSurfaceContext).mock.calls.at(-1)?.[0]).toMatchObject({
       selectedBlockId: "field-1",
     });
-    expect(view.container.textContent).toContain("Screen Field Value");
     expect(view.container.textContent).toContain("Headline");
 
     const childEditButton = child?.querySelector("button");
@@ -267,9 +258,8 @@ test("record editor keeps child selection scoped and preserves it across refresh
     });
     await flush();
 
-    expect(findButton(view.container, "Selected Element")?.getAttribute("data-state")).toBe(
-      "active"
-    );
+    expect(document.body.textContent).toContain("Selected Element");
+    expect(document.body.textContent).toContain("Screen Field Value");
 
     await act(async () => {
       cacheListener?.({ key: cacheKeys.customScreenDetail("screen-1") });
@@ -282,7 +272,6 @@ test("record editor keeps child selection scoped and preserves it across refresh
         .querySelector('[data-selected-block-id="field-1"]')
         ?.getAttribute("data-selected")
     ).toBe("true");
-    expect(view.container.textContent).toContain("Screen Field Value");
   } finally {
     view.cleanup();
   }
