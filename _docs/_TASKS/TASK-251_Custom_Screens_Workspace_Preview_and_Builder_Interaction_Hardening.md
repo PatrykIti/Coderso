@@ -91,8 +91,8 @@ primitives.
 ## Sub-Tasks
 
 - [ ] TASK-251-01: Workspace Preview Parity and Record-Backed Editor Preview
-- [ ] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
 - [ ] TASK-251-01-02: First-Record Preview Data for Editor View Canvas
+- [ ] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
 - [ ] TASK-251-02: List View Canvas Column Interaction Alignment
 - [ ] TASK-251-02-01: Inline Table-Header Column Reordering
 - [ ] TASK-251-03: Binding Panel Prop Coverage and Prop-Centric Cards
@@ -173,12 +173,21 @@ primitives.
   - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` owns the
     screen-only picker surface plus legacy-widget preservation expectations,
   - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
-    owns `Data` tab jump/focus flow and selected-widget handoff into
-    `FieldBindingPanel`.
+    currently owns `Data` tab jump/focus flow from widget settings into
+    `FieldBindingPanel`; if this family extends proof to the page-level
+    selected-widget handoff in `CustomScreenEditorPage`, extend this suite or
+    add adjacent mounted coverage in the same slice.
 - Reuse existing cached-entry contracts wherever possible. If the
   implementation adds new entry-preview helpers or cached read-model helpers,
   add focused Vitest coverage in `tests/vitest/admin/entriesClient.test.ts` or
   a new pure helper suite.
+- If `CustomScreenPreview.tsx` becomes the owner of fallback/source messaging,
+  rerun `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx`
+  so the bound screen-widget render bridge stays covered.
+- If `screen-two-column` render/normalization keys move while binding-target
+  metadata is being threaded through the same family, rerun
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx`
+  in addition to the binding-focused suites.
 - `bun run gates:coderso`
 
 ## Documentation Updates Required

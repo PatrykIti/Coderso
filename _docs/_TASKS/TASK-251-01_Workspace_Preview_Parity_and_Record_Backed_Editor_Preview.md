@@ -26,8 +26,8 @@ state so the same record-backed data drives both surfaces.
 
 ## Sub-Tasks
 
-- [ ] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
 - [ ] TASK-251-01-02: First-Record Preview Data for Editor View Canvas
+- [ ] TASK-251-01-01: Preview Dialog Shell Width and Device Framing Parity
 
 ## Files to Change
 
@@ -213,6 +213,10 @@ route family under `/advanced/custom-screens/:id/entries...`.
   - direct `/advanced/custom-screens/:id` navigation keeps cached-first preview
     behavior aligned with the shared admin prefetch contract when an explicit
     builder-route warmup is added.
+- If fallback/source messaging is moved into `CustomScreenPreview.tsx`, rerun
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx`
+  because that suite is the current owner of the bound screen-widget preview
+  bridge.
 
 ## Documentation Updates Required
 

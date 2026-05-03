@@ -238,6 +238,7 @@ channel.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` if fallback/source messaging or bound render bridging moves into `CustomScreenPreview.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain a
   render-only smoke, but the mounted owner is
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`

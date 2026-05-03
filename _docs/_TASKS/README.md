@@ -40,8 +40,8 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Residual follow-up after the delivered `TASK-250` code: preview shell size, List View header interactions, record-backed Editor View preview, and prop-complete Data tab bindings |
 | TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Business area: align workspace preview sizing with Pages and hydrate Editor View preview from real records |
-| TASK-251-01-01 | Preview Dialog Shell Width and Device Framing Parity | High | Medium | Technical leaf: widen the workspace preview modal and remove the current double clamp around list/editor preview surfaces |
 | TASK-251-01-02 | First-Record Preview Data for Editor View Canvas | High | Medium | Technical leaf: drive builder preview from cached-first real entry data with an explicit fallback when no records exist |
+| TASK-251-01-01 | Preview Dialog Shell Width and Device Framing Parity | High | Medium | Technical leaf: widen the workspace preview modal and remove the current double clamp around list/editor preview surfaces |
 | TASK-251-02 | List View Canvas Column Interaction Alignment | High | Medium | Business area: keep selection and column movement inside the table header and remove the redundant card strip below the table |
 | TASK-251-02-01 | Inline Table-Header Column Reordering | High | Medium | Technical leaf: move left/right ordering controls into header cells while preserving selected-column inspector flow |
 | TASK-251-03 | Binding Panel Prop Coverage and Prop-Centric Cards | High | Large | Business area: replace ordinal binding cards with widget-prop-centric mapping and full bindable prop coverage |

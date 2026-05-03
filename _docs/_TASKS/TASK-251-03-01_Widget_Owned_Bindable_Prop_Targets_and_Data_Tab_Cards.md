@@ -40,13 +40,19 @@ No child task files.
 
 - `core/widgets/types.ts`
 - `core/widgets/registry.ts`
+- `core/widgets/core/index.ts` as the actual owner seam where core screen-widget
+  metadata is attached during registration
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
+- `core/admin/ui/widgets/registry.ts` as the admin consumer seam for
+  `getRegisteredWidget()` / `listRegisteredWidgetsForSurface()`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
+- `core/widgets/runtime.tsx` as a reference seam for the runtime registration
+  contract proven by Bun comparison smoke
 - `tests/unit/widgets/registry.test.ts`
 - `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
@@ -173,6 +179,21 @@ should stay in manual compatibility mode instead of dropping existing bindings.
 Layout widgets that remain on `selected-content-type` must resolve to the
 read-only state even if their defaults contain writable-looking string fields.
 
+Actual owner seam notes:
+
+- Add `bindingTargets` to `WidgetDefinition` and preserve it during
+  normalization in `core/widgets/registry.ts`, but attach the concrete
+  screen-widget metadata in `core/widgets/core/index.ts`, where the repo
+  already materializes `surfaces` and `dataAccess` for `screen-*` widgets
+  during `createCoreWidgetDefinitions()`.
+- Treat `core/admin/ui/widgets/registry.ts` and `core/widgets/runtime.tsx` as
+  consumption seams that must keep surfacing the same registered contract. Do
+  not replace the core-widget owner with a new UI-local `preferredBinding*`
+  map.
+- The mounted page seam is the existing `screenWidgetRegistry` plus legacy
+  fallback merge in `CustomScreenEditorPage`. `selectedWidgetSource` should be
+  derived from that real merge, not reconstructed inside `FieldBindingPanel`.
+
 ## Security Contract
 
 - Visibility: internal admin UI only.
@@ -197,6 +218,8 @@ read-only state even if their defaults contain writable-looking string fields.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when the touched `screen-*` widget files also move their render or preview-bridge behavior
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
 - The Bun suites above stay as current registry-owner comparison smoke while the
   new Vitest binding-target suite is introduced in this slice.
 - Add assertions for:
@@ -215,7 +238,9 @@ read-only state even if their defaults contain writable-looking string fields.
   - widget-editor `Data` buttons and Data-tab cards stay aligned on the same
     target names,
   - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
-    owns the mounted jump/focus proof for the selected-widget to `Data` tab flow,
+    proves the mounted jump/focus flow and must be extended, or paired with
+    adjacent mounted coverage, if this leaf rewires the page-level selected
+    widget handoff in `CustomScreenEditorPage`,
   - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
     continues to prove legacy widget preservation in the editor surface.
 

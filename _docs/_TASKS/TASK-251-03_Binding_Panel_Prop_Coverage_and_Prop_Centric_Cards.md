@@ -34,13 +34,20 @@ This follow-up should make the binding flow prop-first:
 
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
+- `core/admin/ui/widgets/registry.ts` as the admin consumer seam that exposes
+  registered widget metadata to the picker, selected-widget resolution, and
+  mounted UI tests
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
 - `core/widgets/types.ts`
 - `core/widgets/registry.ts`
+- `core/widgets/core/index.ts` as the actual owner seam where core widget
+  metadata is attached during registration
 - `core/widgets/core/screenRecordHeader.tsx`
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
+- `core/widgets/runtime.tsx` as a reference seam for the runtime registration
+  contract proven by the Bun comparison smoke
 - `tests/unit/widgets/registry.test.ts`
 - `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
@@ -178,6 +185,23 @@ function resolveBindingPanelModel(input: {
 })}
 ```
 
+Execution notes for the implementer:
+
+- The selected-entry versus selected-content-type contract is not owned by a
+  UI-only map. Extend `WidgetDefinition` in `core/widgets/types.ts`, preserve it
+  through normalization in `core/widgets/registry.ts`, and attach the concrete
+  screen-widget metadata in `core/widgets/core/index.ts` alongside the existing
+  `surfaces` and `dataAccess` fields.
+- `core/admin/ui/widgets/registry.ts` and `core/widgets/runtime.tsx` are
+  consumption seams. They should continue to surface the same widget-owned
+  contract after registration; do not duplicate `selected-entry` versus
+  `selected-content-type` branching in `FieldBindingPanel` or other UI-only
+  helper maps.
+- When rewiring the Data tab, keep the explicit ownership split visible in
+  `CustomScreenEditorPage`: `screenWidgetRegistry` remains the primary source
+  for current screen widgets, while the merged fallback path preserves already
+  saved legacy blocks.
+
 ## Security Contract
 
 - Visibility: internal admin UI only.
@@ -203,6 +227,8 @@ function resolveBindingPanelModel(input: {
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when `CustomScreenPreview.tsx` or the core `screen-*` widget render/normalization files move in the same slice
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
 - The Bun suites above remain the current registry-owner comparison smoke until
   the new Vitest binding-target suite is introduced and the lane cutover is
   made explicit in the same slice.
@@ -223,8 +249,9 @@ function resolveBindingPanelModel(input: {
   - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx` still
     proves legacy widget preservation in the picker/selected-widget flow,
   - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
-    owns the mounted `Data` jump/focus behavior after the selected-widget handoff
-    is introduced,
+    proves the mounted `Data` tab jump/focus flow and must be extended, or
+    paired with adjacent mounted coverage, if this slice rewires the page-level
+    selected-widget handoff inside `CustomScreenEditorPage`,
   - widget-editor `Data` jump buttons still target the same declared prop paths.
 
 ## Documentation Updates Required
