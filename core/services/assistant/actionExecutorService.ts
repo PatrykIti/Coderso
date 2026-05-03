@@ -69,10 +69,7 @@ import {
   setFormFields,
   updateForm,
 } from "../forms/formsService";
-import {
-  listFormActions,
-  setFormActions,
-} from "../forms/formActionsService";
+import { listFormActions, setFormActions } from "../forms/formActionsService";
 import {
   deleteMenuItem,
   listMenuItems,
@@ -137,10 +134,7 @@ import type {
 } from "./actionPlanTypes";
 import { createPreviewChange } from "./actionDiffService";
 import { isAssistantActionPlan } from "./actionPlanTypes";
-import {
-  createAssistantActionRegistry,
-  getAssistantActionHandler,
-} from "./actionRegistry";
+import { createAssistantActionRegistry, getAssistantActionHandler } from "./actionRegistry";
 import {
   executeGuidedSiteBuilder,
   previewGuidedSiteBuilderPlan,
@@ -257,10 +251,7 @@ type ListingResourceReference = {
   adminHref: string;
 };
 
-const valueReferencesListingResource = (
-  value: unknown,
-  target: ListingResourceReferenceTarget
-) => {
+const valueReferencesListingResource = (value: unknown, target: ListingResourceReferenceTarget) => {
   const visited = new WeakSet<object>();
   let inspected = 0;
   const maxInspected = 5_000;
@@ -337,9 +328,7 @@ const formatListingReferenceSummary = (references: ListingResourceReference[]) =
   ).length;
   return [
     pageCount > 0 ? `${pageCount} page${pageCount === 1 ? "" : "s"}` : null,
-    templateCount > 0
-      ? `${templateCount} widget template${templateCount === 1 ? "" : "s"}`
-      : null,
+    templateCount > 0 ? `${templateCount} widget template${templateCount === 1 ? "" : "s"}` : null,
   ]
     .filter((entry): entry is string => Boolean(entry))
     .join(" and ");
@@ -691,8 +680,7 @@ const buildContentRoutePreview = async (
   action: AssistantContentRouteUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const current =
-    ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  const current = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
   const existing = current.find((entry) => entry.type === action.input.typeSlug) ?? null;
   const nextValue = {
     type: action.input.typeSlug,
@@ -774,9 +762,7 @@ const buildContentTypeDeletePreview = async (
                     : "Content type was not found.",
             },
           ],
-    beforeValue: existing
-      ? { id: existing.id, name: existing.name, slug: existing.slug }
-      : null,
+    beforeValue: existing ? { id: existing.id, name: existing.name, slug: existing.slug } : null,
     nextValue: null,
   });
 };
@@ -787,10 +773,32 @@ const buildCustomScreenPreview = async (
 ) => {
   const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
   const existing = contentType
-    ? (await deps.listCustomScreens()).find(
-        (entry) =>
-          entry.contentTypeId === contentType.id && entry.name === action.input.name
-      ) ?? null
+    ? ((await deps.listCustomScreens()).find(
+        (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
+      ) ?? null)
+    : null;
+  const comparableExisting = existing
+    ? {
+        name: existing.name,
+        contentTypeSlug: action.input.contentTypeSlug,
+        status: existing.status,
+        showInSidebar: existing.showInSidebar,
+        sidebarLabel: existing.sidebarLabel,
+        blocks:
+          "definition" in existing &&
+          isRecord(existing.definition) &&
+          isRecord(existing.definition.editorView) &&
+          Array.isArray(existing.definition.editorView.blocks)
+            ? (existing.definition.editorView.blocks as WidgetBlock[])
+            : existing.blocks,
+        bindings:
+          "definition" in existing &&
+          isRecord(existing.definition) &&
+          isRecord(existing.definition.editorView) &&
+          Array.isArray(existing.definition.editorView.bindings)
+            ? (existing.definition.editorView.bindings as CustomScreenBinding[])
+            : existing.bindings,
+      }
     : null;
 
   return createPreviewChange({
@@ -801,7 +809,7 @@ const buildCustomScreenPreview = async (
     warnings: contentType
       ? []
       : ["The content type does not exist yet and will be created earlier in the plan."],
-    beforeValue: existing,
+    beforeValue: comparableExisting,
     nextValue: action.input,
   });
 };
@@ -877,10 +885,8 @@ const applyCustomScreenUpdatePatch = (
   return {
     name: patch.name ?? existing.name,
     status: patch.status ?? existing.status,
-    showInSidebar:
-      patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
-    sidebarLabel:
-      patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
+    showInSidebar: patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
+    sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
     bindings,
   };
 };
@@ -896,12 +902,12 @@ const buildCustomScreenUpdatePreview = async (
     existing?.name === action.input.name &&
     (!expectedStatus || existing.status === expectedStatus) &&
     (!expectedContentTypeId || existing.contentTypeId === expectedContentTypeId);
-  const binding = existing && action.input.patch.binding
-    ? findCustomScreenBinding(existing.bindings, action.input.patch.binding)
-    : null;
-  const nextValue = existing && matches
-    ? applyCustomScreenUpdatePatch(existing, action.input.patch)
-    : null;
+  const binding =
+    existing && action.input.patch.binding
+      ? findCustomScreenBinding(existing.bindings, action.input.patch.binding)
+      : null;
+  const nextValue =
+    existing && matches ? applyCustomScreenUpdatePatch(existing, action.input.patch) : null;
   const conflictMessage =
     existing && matches && action.input.patch.binding && !binding
       ? "Custom screen binding target was not found."
@@ -950,8 +956,7 @@ const buildCustomScreenWidgetPatchPreview = async (
   const existing = await deps.getCustomScreen(action.input.id);
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
   const matches =
-    existing?.name === action.input.name &&
-    (!expectedStatus || existing.status === expectedStatus);
+    existing?.name === action.input.name && (!expectedStatus || existing.status === expectedStatus);
   const patch =
     existing && matches
       ? applyPageWidgetDataPatch(existing.blocks, {
@@ -1284,7 +1289,7 @@ const buildListingTemplateUpdatePreview = async (
           ...existing.config,
           card: action.input.patch.card,
         }
-      : existing?.config ?? null;
+      : (existing?.config ?? null);
 
   return createPreviewChange({
     action,
@@ -1330,10 +1335,7 @@ const normalizeAssistantPagePatchBlock = (block: WidgetBlock) => {
   return normalizeWidgetBlock(block);
 };
 
-const applyPageWidgetPatch = (
-  blocks: WidgetBlock[],
-  patchBlock: WidgetBlock
-) => {
+const applyPageWidgetPatch = (blocks: WidgetBlock[], patchBlock: WidgetBlock) => {
   const normalized = normalizeAssistantPagePatchBlock(patchBlock);
   const existingIndex = blocks.findIndex((block) => block?.id === normalized.id);
   if (existingIndex >= 0) {
@@ -1434,9 +1436,7 @@ const buildFormAutomationPreview = async (
   const actions = form ? await deps.listFormActions(action.input.formId) : [];
   const existing = actions.find((entry) => entry.id === action.input.action.id) ?? null;
   const nextActions = existing
-    ? actions.map((entry) =>
-        entry.id === action.input.action.id ? action.input.action : entry
-      )
+    ? actions.map((entry) => (entry.id === action.input.action.id ? action.input.action : entry))
     : [...actions, { ...action.input.action, orderIndex: actions.length }];
 
   return createPreviewChange({
@@ -1467,10 +1467,7 @@ const buildFormAutomationPreview = async (
   });
 };
 
-const buildFormPreview = async (
-  action: AssistantFormUpsertAction,
-  deps: ActionExecutorDeps
-) => {
+const buildFormPreview = async (action: AssistantFormUpsertAction, deps: ActionExecutorDeps) => {
   const existing =
     (await deps.listForms()).find((entry) => entry.slug === action.input.slug) ?? null;
   return createPreviewChange({
@@ -1672,8 +1669,9 @@ const buildEntryDeletePreview = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getEntry(action.input.id);
-  const contentType =
-    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  const contentType = action.input.contentTypeSlug
+    ? await deps.getContentTypeBySlug(action.input.contentTypeSlug)
+    : null;
   const matches =
     Boolean(existing) &&
     (!action.input.expectedTitle || existing?.title === action.input.expectedTitle) &&
@@ -1691,18 +1689,17 @@ const buildEntryDeletePreview = async (
       existing?.status === "published"
         ? ["This entry is published and may be visible on the public site."]
         : [],
-    conflicts:
-      matches
-        ? []
-        : [
-            {
-              code: "assistant_action_dependency_missing",
-              severity: "error",
-              message: existing
-                ? "Entry no longer matches the planned delete target."
-                : "Entry was not found.",
-            },
-          ],
+    conflicts: matches
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: existing
+              ? "Entry no longer matches the planned delete target."
+              : "Entry was not found.",
+          },
+        ],
     beforeValue: existing
       ? {
           id: existing.id,
@@ -1721,8 +1718,9 @@ const buildEntryUpdatePreview = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getEntry(action.input.id);
-  const contentType =
-    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  const contentType = action.input.contentTypeSlug
+    ? await deps.getContentTypeBySlug(action.input.contentTypeSlug)
+    : null;
   const matches =
     Boolean(existing) &&
     (!action.input.expectedTitle || existing?.title === action.input.expectedTitle) &&
@@ -1739,18 +1737,17 @@ const buildEntryUpdatePreview = async (
       action.input.patch.status === "published"
         ? ["Publishing this entry may make it visible on the public site."]
         : [],
-    conflicts:
-      matches
-        ? []
-        : [
-            {
-              code: "assistant_action_dependency_missing",
-              severity: "error",
-              message: existing
-                ? "Entry no longer matches the planned update target."
-                : "Entry was not found.",
-            },
-          ],
+    conflicts: matches
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: existing
+              ? "Entry no longer matches the planned update target."
+              : "Entry was not found.",
+          },
+        ],
     beforeValue: existing
       ? {
           id: existing.id,
@@ -1769,7 +1766,9 @@ const buildEntryUpdatePreview = async (
           data: action.input.patch.values
             ? { ...existing.data, ...action.input.patch.values }
             : existing.data,
-          seo: action.input.patch.seo ? { ...(existing.seo ?? {}), ...action.input.patch.seo } : existing.seo,
+          seo: action.input.patch.seo
+            ? { ...(existing.seo ?? {}), ...action.input.patch.seo }
+            : existing.seo,
         }
       : null,
   });
@@ -1781,10 +1780,8 @@ const flattenMenuNodes = (nodes: MenuItemNode[]): MenuItemRecord[] =>
     return [record, ...flattenMenuNodes(node.children)];
   });
 
-const findMenuItemForAction = (
-  items: MenuItemRecord[],
-  action: AssistantMenuItemUpsertAction
-) => items.find((item) => item.href === action.input.href) ?? null;
+const findMenuItemForAction = (items: MenuItemRecord[], action: AssistantMenuItemUpsertAction) =>
+  items.find((item) => item.href === action.input.href) ?? null;
 
 const collectMenuItemDeleteIds = (items: MenuItemRecord[], itemId: string) => {
   const deleteIds = new Set([itemId]);
@@ -1810,7 +1807,8 @@ const buildNextMenuItem = (
   label: action.input.label,
   href: action.input.href,
   pageId: null,
-  parentId: action.input.parentId !== undefined ? action.input.parentId : existing?.parentId ?? null,
+  parentId:
+    action.input.parentId !== undefined ? action.input.parentId : (existing?.parentId ?? null),
   orderIndex: action.input.orderIndex ?? existing?.orderIndex ?? orderIndex,
   settings: action.input.settings ?? existing?.settings ?? {},
 });
@@ -1847,7 +1845,9 @@ const buildMenuItemDeletePreview = async (
 ) => {
   const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
   const existing = existingItems.find((item) => item.id === action.input.itemId) ?? null;
-  const deleteIds = existing ? collectMenuItemDeleteIds(existingItems, existing.id) : new Set<string>();
+  const deleteIds = existing
+    ? collectMenuItemDeleteIds(existingItems, existing.id)
+    : new Set<string>();
   const matches =
     existing?.label === action.input.label &&
     (action.input.expectedHref === undefined || existing.href === action.input.expectedHref) &&
@@ -1862,7 +1862,9 @@ const buildMenuItemDeletePreview = async (
     summary: `Delete menu item "${action.input.label}"`,
     warnings:
       deleteIds.size > 1
-        ? [`This menu item has ${deleteIds.size - 1} nested child item(s) that will also be removed.`]
+        ? [
+            `This menu item has ${deleteIds.size - 1} nested child item(s) that will also be removed.`,
+          ]
         : [],
     conflicts:
       existing && matches
@@ -1970,21 +1972,24 @@ const buildSeoNextValue = (
 ) => ({
   targetType: action.input.targetType,
   targetId: action.input.targetId,
-  slug: action.input.seo.slug !== undefined
-    ? normalizeSeoSlugForAction(action.input.seo.slug)
-    : existing?.slug ?? target.slug,
-  title: action.input.seo.title !== undefined
-    ? action.input.seo.title
-    : existing?.title ?? target.title,
-  description: action.input.seo.description !== undefined
-    ? action.input.seo.description
-    : existing?.description ?? null,
-  canonicalUrl: action.input.seo.canonicalUrl !== undefined
-    ? action.input.seo.canonicalUrl
-    : existing?.canonicalUrl ?? null,
-  robots: action.input.seo.robots !== undefined
-    ? action.input.seo.robots
-    : existing?.robots ?? null,
+  slug:
+    action.input.seo.slug !== undefined
+      ? normalizeSeoSlugForAction(action.input.seo.slug)
+      : (existing?.slug ?? target.slug),
+  title:
+    action.input.seo.title !== undefined
+      ? action.input.seo.title
+      : (existing?.title ?? target.title),
+  description:
+    action.input.seo.description !== undefined
+      ? action.input.seo.description
+      : (existing?.description ?? null),
+  canonicalUrl:
+    action.input.seo.canonicalUrl !== undefined
+      ? action.input.seo.canonicalUrl
+      : (existing?.canonicalUrl ?? null),
+  robots:
+    action.input.seo.robots !== undefined ? action.input.seo.robots : (existing?.robots ?? null),
 });
 
 const buildSeoDocumentPreview = async (
@@ -2192,7 +2197,8 @@ const buildMediaReferencePreview = async (
             {
               code: "assistant_action_dependency_missing",
               severity: "error",
-              message: "Media asset and entry target are required before the reference can be attached.",
+              message:
+                "Media asset and entry target are required before the reference can be attached.",
             },
           ],
     beforeValue: entry
@@ -2210,58 +2216,56 @@ const buildMediaReferencePreview = async (
   });
 };
 
-const buildPagePreview = async (
-  action: AssistantPageUpsertAction,
-  deps: ActionExecutorDeps
-) => {
+const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionExecutorDeps) => {
   const existing = await deps.getPageBySlug(action.input.slug);
   const simplePageMode =
-    Boolean(action.input.blocks) || !action.input.listingQueryName || !action.input.listingTemplateSlug;
+    Boolean(action.input.blocks) ||
+    !action.input.listingQueryName ||
+    !action.input.listingTemplateSlug;
   const existingData = isRecord(existing?.currentData) ? existing.currentData : {};
   const forms = action.input.formEmbed ? await deps.listForms() : [];
   const form = action.input.formEmbed
-    ? forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
+    ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
       (readFormEmbedSource(existing)?.formId
         ? forms.find((entry) => entry.id === readFormEmbedSource(existing)?.formId)
         : null) ??
-      null
+      null)
     : null;
-  const nextValue =
-    simplePageMode
-      ? {
-          title: action.input.title,
-          slug: action.input.slug,
-          status: action.input.status,
-          blocks: [
-            ...(action.input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
-            ...(action.input.formEmbed
-              ? [
-                  normalizeAssistantPagePatchBlock({
-                    id: "lead-capture-form",
-                    type: "form-embed",
-                    data: {
-                      ...(form ? { formId: form.id } : {}),
-                      title: action.input.formEmbed.title,
-                      description: action.input.formEmbed.description,
-                      submitLabel: action.input.formEmbed.submitLabel,
-                      successMessage: action.input.formEmbed.successMessage,
-                    },
-                  }),
-                ]
-              : []),
-          ],
-          formEmbed: action.input.formEmbed ?? null,
-        }
-      : {
-          title: action.input.title,
-          slug: action.input.slug,
-          status: action.input.status,
-          listingQueryName: action.input.listingQueryName,
-          listingTemplateSlug: action.input.listingTemplateSlug,
-          contentListStyle: action.input.contentListStyle,
-          listingFilters: action.input.listingFilters,
-          formEmbed: action.input.formEmbed,
-        };
+  const nextValue = simplePageMode
+    ? {
+        title: action.input.title,
+        slug: action.input.slug,
+        status: action.input.status,
+        blocks: [
+          ...(action.input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
+          ...(action.input.formEmbed
+            ? [
+                normalizeAssistantPagePatchBlock({
+                  id: "lead-capture-form",
+                  type: "form-embed",
+                  data: {
+                    ...(form ? { formId: form.id } : {}),
+                    title: action.input.formEmbed.title,
+                    description: action.input.formEmbed.description,
+                    submitLabel: action.input.formEmbed.submitLabel,
+                    successMessage: action.input.formEmbed.successMessage,
+                  },
+                }),
+              ]
+            : []),
+        ],
+        formEmbed: action.input.formEmbed ?? null,
+      }
+    : {
+        title: action.input.title,
+        slug: action.input.slug,
+        status: action.input.status,
+        listingQueryName: action.input.listingQueryName,
+        listingTemplateSlug: action.input.listingTemplateSlug,
+        contentListStyle: action.input.contentListStyle,
+        listingFilters: action.input.listingFilters,
+        formEmbed: action.input.formEmbed,
+      };
   return createPreviewChange({
     action,
     targetType: "page",
@@ -2369,8 +2373,7 @@ const buildPageDeletePreview = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getPage(action.input.id);
-  const matches =
-    existing?.title === action.input.title && existing.slug === action.input.slug;
+  const matches = existing?.title === action.input.title && existing.slug === action.input.slug;
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
   const statusMatches = !expectedStatus || existing?.status === expectedStatus;
 
@@ -2464,9 +2467,7 @@ const applyWidgetTemplateSettingsPatch = (
       ...normalized.layout,
       wrapper: {
         ...normalized.layout.wrapper,
-        ...(patch.wrapperContainer !== undefined
-          ? { container: patch.wrapperContainer }
-          : {}),
+        ...(patch.wrapperContainer !== undefined ? { container: patch.wrapperContainer } : {}),
       },
       sections: {
         ...normalized.layout.sections,
@@ -2484,7 +2485,7 @@ const applyWidgetTemplateUpdatePatch = (
   return {
     name: patch.name ?? existing.name,
     description:
-      patch.description !== undefined ? patch.description : existing.description ?? null,
+      patch.description !== undefined ? patch.description : (existing.description ?? null),
     category: patch.category ?? existing.category,
     status: (patch.status ?? existing.status) as "draft" | "published",
     settings: patch.settings
@@ -2548,8 +2549,7 @@ const buildWidgetTemplateBlockPatchPreview = async (
   const existing = await deps.getWidgetTemplate(action.input.id);
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
   const matches =
-    existing?.name === action.input.name &&
-    (!expectedStatus || existing.status === expectedStatus);
+    existing?.name === action.input.name && (!expectedStatus || existing.status === expectedStatus);
   const patch =
     existing && matches
       ? applyPageWidgetDataPatch(existing.blocks, {
@@ -2652,9 +2652,7 @@ const buildSiteKitInstallPreview = async (
   });
 };
 
-const buildSiteKitValidatePreview = async (
-  action: AssistantSiteKitValidateAction
-) =>
+const buildSiteKitValidatePreview = async (action: AssistantSiteKitValidateAction) =>
   createPreviewChange({
     action,
     targetType: "site-kit-run",
@@ -2685,10 +2683,7 @@ const unexpectedAction = (): never => {
   throw new Error("assistant_action_unsupported");
 };
 
-const mergeContentRoute = (
-  current: ContentRouteSetting[],
-  nextRoute: ContentRouteSetting
-) => {
+const mergeContentRoute = (current: ContentRouteSetting[], nextRoute: ContentRouteSetting) => {
   const filtered = current.filter((entry) => entry.type !== nextRoute.type);
   return [...filtered, nextRoute].sort((left, right) => left.type.localeCompare(right.type));
 };
@@ -2698,8 +2693,7 @@ const executeContentRouteAction = async (
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
 ): Promise<AssistantActionExecutionItem> => {
-  const current =
-    ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  const current = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
   const nextRoute: ContentRouteSetting = {
     type: action.input.typeSlug,
     listPath: action.input.listPath,
@@ -2769,7 +2763,12 @@ const executeContentTypeDeleteAction = async (
 ): Promise<AssistantActionExecutionItem> => {
   const entryCount = Math.max(0, Math.floor(action.input.expectedEntryCount ?? 0));
   const existing = await deps.getContentTypeBySlug(action.input.slug);
-  if (!existing || existing.id !== action.input.id || existing.name !== action.input.name || entryCount > 0) {
+  if (
+    !existing ||
+    existing.id !== action.input.id ||
+    existing.name !== action.input.name ||
+    entryCount > 0
+  ) {
     throw new Error("assistant_action_dependency_missing");
   }
   const deleted = await deps.deleteContentType(existing.id);
@@ -3209,9 +3208,12 @@ const executeListingTemplateDeleteAction = async (
   ) {
     throw new Error("assistant_action_dependency_missing");
   }
-  const references = await collectListingResourceReferences({
-    listingTemplateId: existing.id,
-  }, deps);
+  const references = await collectListingResourceReferences(
+    {
+      listingTemplateId: existing.id,
+    },
+    deps
+  );
   if (references.length > 0) {
     throw new Error("assistant_action_dependency_conflict");
   }
@@ -3369,9 +3371,7 @@ const executePageWidgetPatchAction = async (
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
-    adminHref: record
-      ? `/admin/pages/${encodeURIComponent(record.id)}`
-      : "/admin/pages",
+    adminHref: record ? `/admin/pages/${encodeURIComponent(record.id)}` : "/admin/pages",
     publicHref: action.input.pageSlug,
     message:
       preview.operation === "noop"
@@ -3392,9 +3392,7 @@ const executeFormAutomationAction = async (
   const actions = await deps.listFormActions(action.input.formId);
   const existing = actions.find((entry) => entry.id === action.input.action.id) ?? null;
   const nextActions = existing
-    ? actions.map((entry) =>
-        entry.id === action.input.action.id ? action.input.action : entry
-      )
+    ? actions.map((entry) => (entry.id === action.input.action.id ? action.input.action : entry))
     : [...actions, { ...action.input.action, orderIndex: actions.length }];
   const saved =
     preview.operation === "noop"
@@ -3635,8 +3633,9 @@ const executeEntryDeleteAction = async (
   deps: ActionExecutorDeps
 ): Promise<AssistantActionExecutionItem> => {
   const existing = await deps.getEntry(action.input.id);
-  const contentType =
-    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  const contentType = action.input.contentTypeSlug
+    ? await deps.getContentTypeBySlug(action.input.contentTypeSlug)
+    : null;
   if (
     !existing ||
     (action.input.expectedTitle && existing.title !== action.input.expectedTitle) ||
@@ -3671,8 +3670,9 @@ const executeEntryUpdateAction = async (
   deps: ActionExecutorDeps
 ): Promise<AssistantActionExecutionItem> => {
   const existing = await deps.getEntry(action.input.id);
-  const contentType =
-    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  const contentType = action.input.contentTypeSlug
+    ? await deps.getContentTypeBySlug(action.input.contentTypeSlug)
+    : null;
   if (
     !existing ||
     (action.input.expectedTitle && existing.title !== action.input.expectedTitle) ||
@@ -3739,13 +3739,12 @@ const executeMenuItemAction = async (
       ? [...existingItems, nextItem]
       : existingItems.map((item) => (existing && item.id === existing.id ? nextItem : item));
 
-  const tree = preview.operation === "noop"
-    ? await deps.listMenuItems(action.input.menuId)
-    : await deps.replaceMenuItems(action.input.menuId, nextItems);
+  const tree =
+    preview.operation === "noop"
+      ? await deps.listMenuItems(action.input.menuId)
+      : await deps.replaceMenuItems(action.input.menuId, nextItems);
   const saved =
-    flattenMenuNodes(tree).find((item) => item.href === action.input.href) ??
-    existing ??
-    null;
+    flattenMenuNodes(tree).find((item) => item.href === action.input.href) ?? existing ?? null;
 
   return {
     actionId: action.id,
@@ -3862,10 +3861,7 @@ const executeSeoDocumentAction = async (
     action.input.targetId
   );
   const nextValue = buildSeoNextValue(action, existing, target);
-  const record =
-    preview.operation === "noop"
-      ? existing
-      : await deps.upsertSeoDocument(nextValue);
+  const record = preview.operation === "noop" ? existing : await deps.upsertSeoDocument(nextValue);
 
   return {
     actionId: action.id,
@@ -4013,41 +4009,50 @@ const executePageAction = async (
   const listingTemplates = await deps.listListingTemplates();
   const forms = action.input.formEmbed ? await deps.listForms() : [];
   const simplePageMode =
-    Boolean(action.input.blocks) || !action.input.listingQueryName || !action.input.listingTemplateSlug;
+    Boolean(action.input.blocks) ||
+    !action.input.listingQueryName ||
+    !action.input.listingTemplateSlug;
 
   const listingQueryByName = action.input.listingQueryName
-    ? listingQueries.find((entry) => entry.name === action.input.listingQueryName) ?? null
+    ? (listingQueries.find((entry) => entry.name === action.input.listingQueryName) ?? null)
     : null;
   const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
-    ? listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null
+    ? (listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null)
     : null;
   const listingQuery = listingQueryByName ?? listingQueryFromCurrent;
   const listingTemplateBySlug = action.input.listingTemplateSlug
-    ? listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ?? null
+    ? (listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ?? null)
     : null;
   const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
-    ? listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ?? null
+    ? (listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ??
+      null)
     : null;
   const listingTemplate = listingTemplateBySlug ?? listingTemplateFromCurrent;
   const form = action.input.formEmbed
-    ? forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
-      (currentFormSource?.formId ? forms.find((entry) => entry.id === currentFormSource.formId) : null) ??
-      null
+    ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
+      (currentFormSource?.formId
+        ? forms.find((entry) => entry.id === currentFormSource.formId)
+        : null) ??
+      null)
     : null;
 
-  if ((!simplePageMode && (!listingQuery || !listingTemplate)) || (action.input.formEmbed && !form)) {
+  if (
+    (!simplePageMode && (!listingQuery || !listingTemplate)) ||
+    (action.input.formEmbed && !form)
+  ) {
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const resolvedFormEmbed = form && action.input.formEmbed
-    ? {
-        formId: form.id,
-        title: action.input.formEmbed.title,
-        description: action.input.formEmbed.description,
-        submitLabel: action.input.formEmbed.submitLabel,
-        successMessage: action.input.formEmbed.successMessage,
-      }
-    : null;
+  const resolvedFormEmbed =
+    form && action.input.formEmbed
+      ? {
+          formId: form.id,
+          title: action.input.formEmbed.title,
+          description: action.input.formEmbed.description,
+          submitLabel: action.input.formEmbed.submitLabel,
+          successMessage: action.input.formEmbed.successMessage,
+        }
+      : null;
   const data = simplePageMode
     ? buildSimplePageData({
         introTitle: action.input.introTitle,
@@ -4606,9 +4611,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "form.upsert": {
     preview: (action, ctx) =>
-      action.type === "form.upsert"
-        ? buildFormPreview(action, ctx.deps)
-        : unexpectedAction(),
+      action.type === "form.upsert" ? buildFormPreview(action, ctx.deps) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "form.upsert"
         ? executeFormAction(action, preview, ctx.deps)
@@ -4616,9 +4619,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "form.delete": {
     preview: (action, ctx) =>
-      action.type === "form.delete"
-        ? buildFormDeletePreview(action, ctx.deps)
-        : unexpectedAction(),
+      action.type === "form.delete" ? buildFormDeletePreview(action, ctx.deps) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "form.delete"
         ? executeFormDeleteAction(action, preview, ctx.deps)
@@ -4636,9 +4637,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "form.update": {
     preview: (action, ctx) =>
-      action.type === "form.update"
-        ? buildFormUpdatePreview(action, ctx.deps)
-        : unexpectedAction(),
+      action.type === "form.update" ? buildFormUpdatePreview(action, ctx.deps) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "form.update"
         ? executeFormUpdateAction(action, preview, ctx.deps)
@@ -4746,9 +4745,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "page.upsert": {
     preview: (action, ctx) =>
-      action.type === "page.upsert"
-        ? buildPagePreview(action, ctx.deps)
-        : unexpectedAction(),
+      action.type === "page.upsert" ? buildPagePreview(action, ctx.deps) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "page.upsert"
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
@@ -4756,9 +4753,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "page.update": {
     preview: (action, ctx) =>
-      action.type === "page.update"
-        ? buildPageUpdatePreview(action, ctx.deps)
-        : unexpectedAction(),
+      action.type === "page.update" ? buildPageUpdatePreview(action, ctx.deps) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "page.update"
         ? executePageUpdateAction(action, preview, ctx.actorId, ctx.deps)
@@ -4766,9 +4761,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "page.delete": {
     preview: (action, ctx) =>
-      action.type === "page.delete"
-        ? buildPageDeletePreview(action, ctx.deps)
-        : unexpectedAction(),
+      action.type === "page.delete" ? buildPageDeletePreview(action, ctx.deps) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "page.delete"
         ? executePageDeleteAction(action, preview, ctx.deps)
@@ -4858,7 +4851,8 @@ export const dryRunAssistantActionPlan = async (
     plan,
     changes,
     warnings: changes.flatMap((change) => change.warnings),
-    readyToExecute: plan.status === "ready" && plan.questions.length === 0 && plan.actions.length > 0,
+    readyToExecute:
+      plan.status === "ready" && plan.questions.length === 0 && plan.actions.length > 0,
   };
 };
 
@@ -4898,7 +4892,7 @@ export const executeAssistantActionPlan = async (
         planId: plan.id,
         planHash,
       })
-    : executionCache.get(input.idempotencyKey)?.result ?? null;
+    : (executionCache.get(input.idempotencyKey)?.result ?? null);
   if (cached) {
     recordAssistantActionMetric({
       failedCount: cached.summary.failed,
