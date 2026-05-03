@@ -118,6 +118,7 @@ Execution notes for the implementer:
 ## Documentation Updates Required
 
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

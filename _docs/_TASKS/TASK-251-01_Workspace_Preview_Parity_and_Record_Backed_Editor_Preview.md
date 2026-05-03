@@ -45,10 +45,13 @@ state so the same record-backed data drives both surfaces.
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
-- `tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
   changes
+
+## New Files to Create
+
+- `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
+- `tests/vitest/ui/custom-screen-preview-data.test.ts`
 
 ## Product Contract
 
@@ -190,6 +193,8 @@ route family under `/advanced/custom-screens/:id/entries...`.
 ## Testing Requirements
 
 - Run the focused suites required by TASK-251-01-01 and TASK-251-01-02.
+- The mounted/helper owners introduced by this area are created in
+  `TASK-251-01-02`, then rerun here as part of the final validation pass.
 - Existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a
   render-only smoke test, but it is not the owner for mounted preview-state
   behavior.
@@ -215,6 +220,7 @@ route family under `/advanced/custom-screens/:id/entries...`.
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

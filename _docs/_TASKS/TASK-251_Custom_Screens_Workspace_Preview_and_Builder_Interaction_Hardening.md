@@ -149,7 +149,8 @@ primitives.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Targeted Vitest:
+- Post-implementation targeted Vitest for this family, including the new suites
+  introduced by `TASK-251-01-02`, `TASK-251-02-01`, and `TASK-251-03-01`:
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
@@ -161,6 +162,10 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
+- `bun test tests/unit/widgets/registry.test.ts` and
+  `bun test tests/unit/widgets/runtimeRegistry.test.ts` as comparison smoke if
+  `TASK-251-03-01` changes widget-registry normalization or introduces a new
+  Vitest owner for binding-target metadata
 - `tests/vitest/ui/custom-screens-page.test.tsx` may remain as a render-only
   smoke test, but it is not the mounted owner for async preview or header
   interaction contracts.
@@ -188,6 +193,7 @@ primitives.
 - `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

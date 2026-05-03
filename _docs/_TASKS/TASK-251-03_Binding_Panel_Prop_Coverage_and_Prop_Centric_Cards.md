@@ -41,10 +41,15 @@ This follow-up should make the binding flow prop-first:
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
+- `tests/unit/widgets/registry.test.ts`
+- `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+
+## New Files to Create
+
 - `tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 
 ## Product Contract
@@ -56,8 +61,9 @@ This follow-up should make the binding flow prop-first:
 3. Existing persisted custom prop paths that are not part of the declared
    widget target list must remain editable under a compatibility section.
 4. `CustomScreenEditorPage` remains the owner of the resolved selected widget
-   and must pass that resolved metadata into the Data tab instead of forcing
-   `FieldBindingPanel` to rediscover registry state on its own.
+   and must pass that resolved metadata plus an explicit ownership signal
+   (`screen-registry` vs `legacy-fallback`) into the Data tab instead of
+   forcing `FieldBindingPanel` to rediscover registry state on its own.
 5. If the selected block is preserved only through the current legacy fallback
    widget registry path and does not declare widget-owned binding targets, the
    panel must keep a manual binding editor for that block instead of collapsing
@@ -148,6 +154,7 @@ function resolveBindingPanelModel(input: {
 <FieldBindingPanel
   selectedBlock={selectedBlock}
   selectedWidget={selectedWidget ?? null}
+  selectedWidgetSource={selectedWidgetSource}
   value={bindings}
   fields={contentFields}
   onChange={setBindings}
@@ -189,11 +196,16 @@ function resolveBindingPanelModel(input: {
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun test tests/unit/widgets/registry.test.ts`
+- `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- The Bun suites above remain the current registry-owner comparison smoke until
+  the new Vitest binding-target suite is introduced and the lane cutover is
+  made explicit in the same slice.
 - Add assertions for:
   - all declared bindable props for `screen-record-header` render in Data,
   - cards are labeled by prop name/path instead of `Binding 1`,
@@ -224,6 +236,7 @@ function resolveBindingPanelModel(input: {
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

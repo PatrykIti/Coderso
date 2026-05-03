@@ -47,10 +47,15 @@ No child task files.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/editors/ScreenEditors.tsx`
+- `tests/unit/widgets/registry.test.ts`
+- `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
+
+## New Files to Create
+
 - `tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 
 ## Implementation Pseudocode
@@ -91,6 +96,7 @@ export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
 <FieldBindingPanel
   selectedBlock={selectedBlock}
   selectedWidget={selectedWidget ?? null}
+  selectedWidgetSource={selectedWidgetSource}
   value={bindings}
   fields={contentFields}
   focusedPropPath={focusedBindingPropPath}
@@ -103,6 +109,7 @@ export const screenRecordHeaderBindingTargets: WidgetBindingTarget[] = [
 // FieldBindingPanel.tsx
 const panelModel = resolveBindingPanelModel({
   selectedWidget,
+  selectedWidgetSource,
   selectedBlock,
   selectedBindings,
 });
@@ -153,16 +160,18 @@ separate `Custom bindings` section instead of dropping it.
 Do not make `FieldBindingPanel` reach back into the global widget registry with
 only a block type string unless that ownership is made explicit in the same
 slice. The execution-ready path here is: `CustomScreenEditorPage` resolves the
-active widget once, then passes that owner into the panel. Registry
-normalization must preserve the declared `bindingTargets` so the panel and the
-widget editors read the same contract after registration, not only before it.
-To keep the leaf execution-ready, implement `resolveBindingPanelModel()` before
-rewiring render branches so the panel can decide between declared-target cards,
-legacy manual mode, and layout-only read-only mode from one explicit owner.
-Preserved legacy blocks are the only exception: when the selected block remains
-editable through the current fallback registry path but exposes no
-`bindingTargets`, the panel should stay in manual compatibility mode instead of
-dropping existing bindings.
+active widget once, then passes that owner plus an explicit
+`selectedWidgetSource` signal into the panel. Registry normalization must
+preserve the declared `bindingTargets` so the panel and the widget editors read
+the same contract after registration, not only before it. To keep the leaf
+execution-ready, implement `resolveBindingPanelModel()` before rewiring render
+branches so the panel can decide between declared-target cards, legacy manual
+mode, and layout-only read-only mode from one explicit owner. Preserved legacy
+blocks are the only exception: when the selected block remains editable through
+the current fallback registry path but exposes no `bindingTargets`, the panel
+should stay in manual compatibility mode instead of dropping existing bindings.
+Layout widgets that remain on `selected-content-type` must resolve to the
+read-only state even if their defaults contain writable-looking string fields.
 
 ## Security Contract
 
@@ -181,11 +190,15 @@ dropping existing bindings.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun test tests/unit/widgets/registry.test.ts`
+- `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+- The Bun suites above stay as current registry-owner comparison smoke while the
+  new Vitest binding-target suite is introduced in this slice.
 - Add assertions for:
   - `screen-record-header` exposes five target cards,
   - `screen-field-value` still exposes `value`, `label`, and `helper`,
@@ -194,8 +207,9 @@ dropping existing bindings.
   - a saved custom prop path still renders in compatibility mode,
   - a preserved legacy widget keeps manual binding editability even without
     widget-owned `bindingTargets`,
-  - `CustomScreenEditorPage` passes the resolved selected widget into the panel
-    and the panel consumes that owner directly,
+  - `CustomScreenEditorPage` passes the resolved selected widget plus the
+    explicit ownership/fallback signal into the panel and the panel consumes
+    that owner directly,
   - registry-level normalization preserves `bindingTargets` metadata for
     `screen-record-header` and `screen-field-value`,
   - widget-editor `Data` buttons and Data-tab cards stay aligned on the same
@@ -214,6 +228,7 @@ dropping existing bindings.
 - `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/README.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

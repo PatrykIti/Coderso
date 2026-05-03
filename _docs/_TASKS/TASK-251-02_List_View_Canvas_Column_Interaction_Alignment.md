@@ -34,6 +34,9 @@ the per-item reorder arrows move into the header.
   column affordance copy changes
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
+
+## New Files to Create
+
 - `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 
 ## Product Contract
@@ -126,6 +129,8 @@ without letting hidden columns corrupt the left/right semantics for users.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- The mounted list-canvas owner for this area is introduced by
+  `TASK-251-02-01`, then rerun here during the final area validation pass.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 - mounted list-canvas coverage asserting:
   - header click selects the column,
@@ -143,6 +148,7 @@ without letting hidden columns corrupt the left/right semantics for users.
 ## Documentation Updates Required
 
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

@@ -29,6 +29,9 @@ No child task files.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
+
+## New Files to Create
+
 - `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
 
 ## Implementation Pseudocode
@@ -133,6 +136,7 @@ secondary hidden-column affordance so `visible=false` columns stay selectable.
 ## Documentation Updates Required
 
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria

@@ -39,17 +39,21 @@ No child task files.
 ## Implementation Pseudocode
 
 ```md
-1. Re-run the exact targeted Vitest suites collected by TASK-251-01 through
-   TASK-251-03.
-2. Confirm the final doc set includes every source-of-truth file promised by
+1. When the family or any owned leaf moves to `In Progress`, update the task
+   headers plus `_docs/_TASKS/README.md` tables/statistics immediately instead
+   of waiting for final closure.
+2. Re-run the exact targeted suites collected by TASK-251-01 through
+   TASK-251-03 after the new suites introduced by those leaves exist in the
+   branch.
+3. Confirm the final doc set includes every source-of-truth file promised by
    the implementation leaves: cache docs, content-editor UX docs, widget docs,
    board rows, and changelog index.
-3. Update `TASK-251*` statuses, checkbox lists, board counts, and changelog
+4. Update `TASK-251*` statuses, checkbox lists, board counts, and changelog
    references in one closure pass after validation is complete, including the
    required task-file date fields used in this repo when a task moves to
    `In Progress` or `Done` (for example `**Started:** YYYY-MM-DD` and
    `**Completed:** YYYY-MM-DD` where applicable).
-4. Run `git diff --check` and `bun run precommit` before the final manual
+5. Run `git diff --check` and `bun run precommit` before the final manual
    commit so docs-only drift does not slip through.
 ```
 
@@ -81,6 +85,9 @@ No child task files.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- Re-run the new suites introduced by `TASK-251-01-02`, `TASK-251-02-01`, and
+  `TASK-251-03-01` only after they exist in the branch; until then, treat their
+  paths as implementation deliverables rather than ready validation proof.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
@@ -92,6 +99,8 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts`
+- `bun test tests/unit/widgets/registry.test.ts`
+- `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `bun run gates:coderso`
 - `git diff --check`
 - `bun run precommit`

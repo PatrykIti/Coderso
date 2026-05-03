@@ -32,7 +32,6 @@ No child task files.
 ## Files to Change
 
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
-- new `core/admin/ui/custom-screens/customScreenPreviewData.ts`
 - `core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx`
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx` if preview meta/fallback
   messaging is rendered inside the preview frame
@@ -47,11 +46,14 @@ No child task files.
 - `tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` only as optional
   render smoke
-- `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
-- new pure helper suite such as
-  `tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `tests/vitest/admin/adminPrefetch.test.ts` if builder-route prefetch ownership
   changes
+
+## New Files to Create
+
+- `core/admin/ui/custom-screens/customScreenPreviewData.ts`
+- `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
+- `tests/vitest/ui/custom-screen-preview-data.test.ts`
 
 ## Implementation Pseudocode
 
@@ -123,9 +125,10 @@ function CustomScreenPreviewRecordOwner({
     if (!contentType || !typeSlug) return;
 
     let active = true;
+    const hasInitialCache = entries !== null;
 
-    const refreshPreviewEntries = async () => {
-      const nextItems = await listEntriesCached(typeSlug, { force: true });
+    const hydratePreviewEntries = async (force: boolean) => {
+      const nextItems = await listEntriesCached(typeSlug, { force });
       if (!active) return;
       setEntries(nextItems);
     };
@@ -133,11 +136,13 @@ function CustomScreenPreviewRecordOwner({
     // Lazy state init already seeded current cached rows. Keep the effect
     // async-only after mount so the preview owner stays aligned with the React
     // Hooks rules and the shared entry-list contract.
-    void refreshPreviewEntries();
+    if (!hasInitialCache) {
+      void hydratePreviewEntries(false);
+    }
 
     const unsubscribe = subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.entriesList(typeSlug)) return;
-      void refreshPreviewEntries();
+      void hydratePreviewEntries(true);
     });
 
     return () => {
@@ -186,8 +191,16 @@ const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 - keyed ownership by `selectedContentType.slug`,
 - lazy cache seed for the active type,
 - async-only effect body after lazy seed,
-- `force: true` background revalidation even when cache exists,
+- no preview-only forced mount refresh when warm cache already exists,
+- `force: true` only on shared cache invalidation/revalidation paths such as
+  `cacheBus` updates or an explicit refresh owner,
 - immediate owner reset when the content type changes or clears.
+
+`CustomScreenPreviewRecordState` is part of the required seam, not an optional
+view concern. The builder canvas and preview dialog need the same
+`source`/`entryId`/`note` channel so fallback-vs-real messaging stays owned by
+one preview contract instead of being inferred from raw `Record<string, unknown>`
+data in multiple places.
 
 If a background fetch fails, keep the last good preview state instead of
 breaking the builder. The screen editor should not show a destructive error for
@@ -218,6 +231,9 @@ channel.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- This leaf creates the mounted owner/helper suites below, then uses them as the
+  canonical post-implementation proof for preview ownership and fallback-state
+  behavior.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
@@ -227,13 +243,15 @@ channel.
   `tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - Add assertions for:
   - cached entry preview appearing without a blocking loader,
-  - cached entry preview still triggering `force: true` background revalidation,
+  - warm cached rows not triggering a preview-only forced mount refresh,
   - fallback copy when no entries exist,
   - a background refresh replacing fallback data with a real first record,
   - changing or clearing `contentTypeId` dropping the previous preview owner
     before the next async result resolves,
   - `cacheBus` updates for `cacheKeys.entriesList(typeSlug)` refreshing the
     preview entry after list mutations,
+  - shared invalidation/revalidation paths using `force: true` only after the
+    cached-first owner is already established,
   - direct `/advanced/custom-screens/:screenId` navigation keeps cached-first
     preview behavior aligned with the prefetch contract when builder-route
     warmup is added,
@@ -246,6 +264,7 @@ channel.
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*` on completion.
 
 ## Acceptance Criteria
