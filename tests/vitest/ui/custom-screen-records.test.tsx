@@ -188,7 +188,8 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
     expect(html).toContain("Headline");
     expect(html).toContain("Screen-owned record editor");
     expect(html).toContain("Ocean View");
-    expect(html).toContain("Bound fields");
+    expect(html).not.toContain("Bound fields");
+    expect(html).not.toContain("Back to records");
     expect(html).not.toContain("Workspace details");
   } finally {
     if (originalLocal === undefined) {

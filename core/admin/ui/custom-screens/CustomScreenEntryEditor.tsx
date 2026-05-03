@@ -1,4 +1,4 @@
-import { ArrowLeft, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -764,23 +764,6 @@ export function CustomScreenEntryEditor() {
         }
         topbarActions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => navigate(screenRecordsHref)}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to records
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setDetailsOpen(true)}
-            >
-              {canEditInScreen ? "Bound fields" : "Screen details"}
-            </Button>
             {canEditInScreen ? (
               <Button
                 size="sm"
