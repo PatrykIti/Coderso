@@ -17,7 +17,8 @@ Pages while keeping the Custom Screens builder read-only and schema-bound.
 This area owns two coupled problems:
 
 - the preview dialog shell is too constrained for both `List View` and
-  `Editor View`,
+  `Editor View`, and `Editor View` currently opens on a smaller first-open
+  device footprint than the Pages reference,
 - the `Editor View` builder preview still uses synthetic schema samples instead
   of the first real record for the selected content type.
 
@@ -62,11 +63,15 @@ state so the same record-backed data drives both surfaces.
 1. `List View` preview remains desktop-oriented but uses a roomy modal shell
    instead of a narrow card-in-dialog treatment.
 2. `Editor View` preview can still emulate desktop/tablet/mobile framing, but
-   the outer dialog must not choke the inner device frame.
+   first-open parity must account for both shell sizing and default device
+   framing. Do not leave Custom Screens opening materially smaller than Pages
+   just because the modal is wider while the preview still defaults to a smaller
+   device.
 3. The builder canvas and the preview dialog must use the same preview-record
    state for the selected content type.
 4. The preview should prefer the first cached/current record and clearly signal
-   when it falls back because no records exist yet.
+   when it falls back because no records exist yet or because the first read
+   failed.
 5. Changing or clearing `contentTypeId` in the builder must immediately drop the
    previous content type's preview ownership. The screen must never keep showing
    a stale first record from another type while the new preview state is
@@ -80,9 +85,10 @@ state so the same record-backed data drives both surfaces.
 ## Implementation Pseudocode
 
 ```ts
-type PreviewRecordState = {
+type CustomScreenPreviewRecordState = {
   source: "entry" | "fallback";
-  entry: EntrySummary | null;
+  entryId: string | null;
+  fallbackReason?: "no-content-type" | "no-records" | "read-failed";
   data: Record<string, unknown>;
   note: string | null;
 };
@@ -98,10 +104,12 @@ function CustomScreenPreviewRecordOwner({
   const [entries, setEntries] = useState<EntrySummary[] | null>(() =>
     typeSlug ? (getCachedEntries(typeSlug) ?? null) : null
   );
+  const [readFailed, setReadFailed] = useState(false);
   const seededFromCacheRef = useRef(entries !== null);
+  const hasResolvedEntriesRef = useRef(entries !== null);
   const previewRecordState = useMemo(
-    () => buildPreviewRecordState({ contentType, entries }),
-    [contentType, entries]
+    () => buildPreviewRecordState({ contentType, entries, readFailed }),
+    [contentType, entries, readFailed]
   );
 
   useEffect(() => {
@@ -110,9 +118,18 @@ function CustomScreenPreviewRecordOwner({
     let active = true;
 
     const hydratePreviewEntries = async (force: boolean) => {
-      const nextEntries = await listEntriesCached(typeSlug, { force });
-      if (!active) return;
-      setEntries(nextEntries);
+      try {
+        const nextEntries = await listEntriesCached(typeSlug, { force });
+        if (!active) return;
+        setEntries(nextEntries);
+        setReadFailed(false);
+        hasResolvedEntriesRef.current = true;
+      } catch {
+        if (!active) return;
+        if (!hasResolvedEntriesRef.current) {
+          setReadFailed(true);
+        }
+      }
     };
 
     // Lazy state init already seeded current cached rows. Keep the effect
@@ -165,6 +182,7 @@ const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 - no preview-only forced mount refresh when cache already exists,
 - `force: true` only when the shared cache contract already expects
   revalidation, such as cache-bus updates or an explicit refresh entry point,
+- explicit `read-failed` fallback when the first uncached read fails,
 - immediate fallback state when the content type is cleared.
 
 Reference seam: mirror the shared entries-list cache contract already used by
@@ -176,6 +194,12 @@ only covers the records workspace route family under
 `/advanced/custom-screens/:screenId/entries...`, while the broader
 `/advanced/custom-screens` prefetch branch is owned separately in
 `adminPrefetch.test.ts`.
+
+The same preview-record state must also own the explicit fallback/source marker
+on the builder canvas, not only inside `CustomScreenPreview.tsx`. If the note is
+rendered inside the preview frame for the dialog, add an adjacent owner in
+`CustomScreenEditorPage.tsx` around the mounted `BlockList` so the live builder
+canvas still shows the same state source.
 
 ## Security Contract
 
@@ -212,11 +236,17 @@ only covers the records workspace route family under
   `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts`
   because the current repo only proves list-level Custom Screens prefetch there.
 - If `resolveCustomScreenWorkspacePrefetchTarget()` changes its
-  `/advanced/custom-screens/:screenId/entries...` matcher, rerun
-  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`.
+  `/advanced/custom-screens/:screenId/entries...` matcher, or if direct
+  `/advanced/custom-screens/:screenId` navigation becomes a warmup target in the
+  same slice, rerun and extend
+  `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
+  so the current `null` contract for the plain builder route is updated
+  explicitly instead of drifting implicitly.
 - Assert mounted behavior, not only static render:
   - cached-first preview state renders immediately when cached entries exist,
   - cached rows do not trigger a preview-only forced mount refresh,
+  - a cold-cache read failure resolves to an explicit `read-failed` fallback
+    note instead of a destructive builder error,
   - background refresh can replace fallback preview with a real first record,
   - changing or clearing `contentTypeId` immediately drops the old type's
     preview owner before the next async result resolves,
@@ -246,5 +276,5 @@ only covers the records workspace route family under
 1. Preview shell sizing no longer makes the Custom Screens preview feel smaller
    than the Pages reference.
 2. `Editor View` preview reads from a real first record when possible.
-3. Fallback preview behavior is explicit and does not masquerade as real entry
-   content.
+3. Fallback preview behavior is explicit, including cold-cache read failures,
+   and does not masquerade as real entry content.

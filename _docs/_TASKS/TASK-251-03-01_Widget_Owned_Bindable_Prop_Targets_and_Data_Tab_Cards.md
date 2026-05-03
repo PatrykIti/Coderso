@@ -49,6 +49,15 @@ No child task files.
 - `core/widgets/core/screenFieldValue.tsx`
 - `core/widgets/core/screenFieldGroup.tsx`
 - `core/widgets/core/screenTwoColumn.tsx`
+- `core/services/customScreens/capabilities.ts`
+- `core/services/customScreens/customScreenSchemas.ts`
+- `core/server/validation/assistantActionSchemas.ts` when assistant-surface
+  payload validation must mirror narrowed write-capable binding rules
+- `core/admin/ui/custom-screens/customScreenEntryDraft.ts`
+- `core/admin/ui/custom-screens/assistantSurface.ts`
+- `core/admin/ui/custom-screens/customScreenListModel.ts`
+- `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` when dedicated
+  editor readiness labels or workspace gating change with the same slice
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
 - `core/admin/ui/custom-screens/FieldBindingPanel.tsx`
 - `core/admin/ui/widgets/registry.ts` as the admin consumer seam for
@@ -59,9 +68,13 @@ No child task files.
 - `tests/unit/widgets/registry.test.ts`
 - `tests/unit/widgets/runtimeRegistry.test.ts`
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `tests/vitest/ui/custom-screen-entry-draft.test.ts`
 - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+- `tests/vitest/customScreens/capabilities.test.ts`
+- `tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom
+  screen surface `writableBindingFields` or binding summaries change
 - `tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 
 ## New Files to Create
@@ -196,6 +209,17 @@ function resolveAllowedBindingModes(input: {
   return canWrite ? modeOptions : modeOptions.filter((option) => option.value === "read");
 }
 
+function isBindingWriteAllowed(input: {
+  binding: CustomScreenBinding;
+  widget: WidgetDefinition | null;
+}) {
+  if (input.binding.mode === "read") return false;
+  const target = input.widget?.bindingTargets?.find(
+    (candidate) => candidate.propPath === input.binding.propPath
+  );
+  return target?.modes?.includes("write") === true;
+}
+
 return panelModel.mode === "declared-targets" ? (
   <div className="space-y-3">
     {panelModel.targets.map((target) => {
@@ -262,6 +286,10 @@ contract this means `screen-record-header` remains read-only and
 dedicated record editor. Do not widen `label` or `helper` into writable
 record-editor paths unless `CustomScreenEntryCanvas` and dedicated-editor
 capability ownership move in the same slice.
+The same helper must also gate persisted binding validation, `editableFields`,
+assistant surface `writableBindingFields`, and `supportsDedicatedEditor` so an
+unsupported write combination cannot be hidden in the panel but still survive in
+saved definitions or readiness labels.
 
 Actual owner seam notes:
 
@@ -288,7 +316,10 @@ Actual owner seam notes:
 - Reject-unknown validation:
   - binding-target metadata extends widget definitions only,
   - persisted bindings still pass through the current Custom Screen definition
-    schema and route validation.
+    schema and route validation,
+  - unsupported write-capable `widgetId` / `propPath` / `mode` combinations
+    must be rejected in persisted definition and assistant payload validation,
+    not only hidden in the Data tab UI.
 - Anti-abuse: no public route or weakened validation contract is introduced.
 
 ## Testing Requirements
@@ -298,20 +329,25 @@ Actual owner seam notes:
 - `bun test tests/unit/widgets/registry.test.ts`
 - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen context or `writableBindingFields` changes in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when the touched `screen-*` widget files also move their render or preview-bridge behavior
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts` when the set of write-capable `screen-field-value` targets or dedicated-editor support rules changes
 - The Bun suites above stay as current registry-owner comparison smoke while the
   new Vitest binding-target suite is introduced in this slice.
 - Add assertions for:
   - `screen-record-header` exposes five target cards and keeps them read-only,
   - `screen-field-value` still exposes `value`, `label`, and `helper`, but only
     `value` remains write-capable under the current dedicated-editor contract,
+  - unsupported write-capable combinations are rejected or downgraded before
+    they can drive `supportsDedicatedEditor`, `Workspace ready`, or
+    `editableFields`,
   - `screen-field-group` and `screen-two-column` render the non-bindable layout
     empty state unless their documented contract changes in the same slice,
   - a saved custom prop path still renders in compatibility mode,
@@ -332,6 +368,9 @@ Actual owner seam notes:
     proves the mounted jump/focus flow and must be extended, or paired with
     adjacent mounted coverage, if this leaf rewires the page-level selected
     widget handoff in `CustomScreenEditorPage`,
+  - `tests/vitest/ui/use-assistant-admin-context.test.tsx` and adjacent
+    assistant-context owners keep `writableBindingFields` aligned with the same
+    per-prop write contract when active custom screen surface summaries change,
   - `tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
     continues to prove legacy widget preservation in the editor surface.
 
@@ -355,3 +394,5 @@ Actual owner seam notes:
 3. Existing custom prop paths remain editable and visible.
 4. Preserved legacy blocks do not lose manual binding editability while the
    fallback registry path still exists.
+5. Unsupported write combinations cannot be saved or surfaced as dedicated
+   editor readiness, writable draft fields, or writable assistant context.

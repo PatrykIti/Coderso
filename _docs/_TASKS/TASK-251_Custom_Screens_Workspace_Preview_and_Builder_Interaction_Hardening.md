@@ -35,9 +35,10 @@ primitives.
 ## Current Repo Findings
 
 - `core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx` clamps
-  the dialog to `max-w-[1200px]` and then applies an inner width clamp for
-  editor devices, so the effective preview surface is still noticeably smaller
-  than Pages.
+  the dialog to `max-w-[1200px]`, then applies an inner device-width clamp, and
+  opens `Editor View` on tablet by default. The effective first-open preview
+  footprint still feels materially smaller than the Pages reference, even though
+  `RuntimePreviewDialog.tsx` uses a different shell width.
 - `core/admin/ui/custom-screens/ListViewCanvas.tsx` still renders a second grid
   of column cards with arrow buttons below the table and uses the table header
   only for column selection.
@@ -58,6 +59,12 @@ primitives.
   for `propPath === "value"`, so any new widget-owned binding-target metadata
   must stay aligned with that live write contract unless runtime/editor
   ownership changes in the same slice.
+- `core/services/customScreens/capabilities.ts`,
+  `core/admin/ui/custom-screens/customScreenEntryDraft.ts`,
+  `core/admin/ui/custom-screens/assistantSurface.ts`, and
+  `core/admin/ui/custom-screens/customScreenListModel.ts` still derive editor
+  readiness and writable fields from generic binding modes. The family must keep
+  those owners aligned with the same per-prop write contract as the builder UI.
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` still preserves
   legacy blocks through fallback widget resolution, so task work must not strand
   existing bindings on already-saved non-screen widgets that remain editable on
@@ -67,7 +74,9 @@ primitives.
 
 1. `List View` and `Editor View` preview dialogs should use a spacious desktop
    shell comparable to Pages, with enough room for the actual preview content
-   before device-specific clamps are applied.
+   before device-specific clamps are applied. For `Editor View`, parity is
+   measured on first open, so shell sizing and default device framing must be
+   considered together instead of widening the modal alone.
 2. `List View` column selection and left/right reordering should happen
    directly in the table header row for visible columns. The old lower
    reorder-card strip should be replaced by a compact all-columns /
@@ -93,6 +102,10 @@ primitives.
      not declare widget-owned binding targets,
    - keep widget settings and binding-panel suggestions driven from one shared
      widget-owned contract,
+   - keep save-time validation, dedicated-editor readiness, assistant active
+     surface summaries, and editable-field preparation aligned with that same
+     per-prop contract so unsupported write combinations cannot be persisted or
+     advertised as workspace-ready,
    - keep `screen-field-group` and `screen-two-column` on their current
      `selected-content-type` read-only layout contract unless that contract is
      explicitly changed in the same slice.
@@ -135,6 +148,10 @@ primitives.
 - Reject-unknown validation:
   - if widget binding-target metadata is added, it must remain part of the
     shared widget contract and must not weaken widget schema validation,
+  - if the binding contract narrows write-capable prop paths, persisted
+    definition/assistant payload validation must reject unsupported
+    `widgetId`/`propPath`/`mode` combinations instead of relying on the panel UI
+    alone,
   - no new preview payload may bypass current entry/client normalization.
 - Anti-abuse:
   - no public write flow,
@@ -142,8 +159,9 @@ primitives.
 
 ## Implementation Order
 
-1. Align widget-owned bindable prop metadata before changing Data-tab rendering
-   so the prop list has one source of truth.
+1. Align widget-owned bindable prop metadata, persisted binding validation, and
+   write/readiness owners before changing Data-tab rendering so the prop list
+   and write contract have one source of truth.
 2. Move `List View` column reordering into the table header while preserving a
    compact hidden-columns affordance for non-visible columns. This track is
    independent from the binding-metadata work and does not need to wait on the
@@ -169,10 +187,12 @@ primitives.
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenEditorsBindingAware.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenLayoutEditors.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/widgetRegistryBindingTargets.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts`
   - treat `custom-screen-preview-owner`, `custom-screen-preview-data`,
     `custom-screen-list-view-canvas`, and `widgetRegistryBindingTargets` as
     implementation-deliverable suites until the owning leaves create them in
@@ -183,8 +203,10 @@ primitives.
   the same slice because the current repo only proves list-level Custom Screens
   prefetch
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts`
-  when `resolveCustomScreenWorkspacePrefetchTarget()` changes its
-  `/advanced/custom-screens/:screenId/entries...` matcher contract
+  when `resolveCustomScreenWorkspacePrefetchTarget()` or the broader
+  builder-route warmup contract changes; if `/advanced/custom-screens/:screenId`
+  becomes a warmup target in this family, replace the current `null` assertion
+  for that route with the new explicit owner contract in the same slice
 - `bun test tests/unit/widgets/registry.test.ts` and
   `bun test tests/unit/widgets/runtimeRegistry.test.ts` as comparison smoke if
   `TASK-251-03-01` changes widget-registry normalization or introduces a new
@@ -200,6 +222,9 @@ primitives.
     `FieldBindingPanel`; if this family extends proof to the page-level
     selected-widget handoff in `CustomScreenEditorPage`, extend this suite or
     add adjacent mounted coverage in the same slice.
+  - `tests/vitest/ui/custom-screen-entry-draft.test.ts` owns the current
+    `editableFields` contract and must be rerun when per-prop binding modes
+    change which bindings count as writable in the dedicated editor.
   - `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
     owns mounted `CustomScreenEntryEditor` compatibility for `screen-*`
     renderer/binding refresh seams and should be rerun when shared screen-widget
@@ -235,7 +260,7 @@ primitives.
 ## Acceptance Criteria
 
 1. Workspace preview dialogs no longer feel materially smaller than the Pages
-   preview surface for the same viewport.
+   preview surface on first open for the same viewport.
 2. `List View` header cells own column selection and left/right movement
    without losing access to hidden columns.
 3. `Editor View` preview shows a real first record when one exists and clearly
@@ -245,3 +270,5 @@ primitives.
    labels binding cards by prop instead of by ordinal position, without
    promoting layout-only widgets into the selected-entry binding contract by
    accident.
+5. Unsupported `widget + propPath + write-mode` combinations cannot be saved,
+   surfaced as writable assistant context, or advertised as workspace-ready.

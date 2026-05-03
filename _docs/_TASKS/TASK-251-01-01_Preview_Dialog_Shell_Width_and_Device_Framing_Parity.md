@@ -11,13 +11,15 @@
 
 ## Overview
 
-Widen the Custom Screens workspace preview modal so `List View` and
-`Editor View` previews have comparable breathing room to Pages.
+Align the Custom Screens workspace preview first-open footprint with Pages for
+both `List View` and `Editor View`.
 
 The current issue is not only the inner device width. The outer dialog is
-already narrow before the editor preview applies its own device clamp. The fix
-must remove that double clamp while keeping the dialog usable on smaller
-viewports.
+already narrow before the editor preview applies its own device clamp, and
+`Editor View` currently opens on a smaller default device footprint than the
+Pages reference. The fix must remove that double clamp and make the first-open
+editor framing compare fairly to Pages while keeping the dialog usable on
+smaller viewports.
 
 ## Sub-Tasks
 
@@ -38,6 +40,7 @@ type PreviewShellLayout = {
   bodyClassName: string;
   listMinWidth: number;
   editorFrameMinHeight: number;
+  defaultEditorDevice: "desktop" | "tablet" | "mobile";
 };
 
 function resolvePreviewShellLayout(): PreviewShellLayout {
@@ -46,12 +49,14 @@ function resolvePreviewShellLayout(): PreviewShellLayout {
     bodyClassName: "min-h-0 max-h-[88vh] overflow-auto bg-muted/20 p-6",
     listMinWidth: 1100,
     editorFrameMinHeight: 720,
+    defaultEditorDevice: "desktop",
   };
 }
 ```
 
 ```tsx
 const layout = resolvePreviewShellLayout();
+const [deviceId, setDeviceId] = useState<PreviewDeviceId>(layout.defaultEditorDevice);
 
 <DialogContent className={layout.dialogClassName}>
   <DialogHeader ... />
@@ -82,6 +87,9 @@ Execution notes for the implementer:
 
 - Keep one roomy outer shell policy for both modes; the dialog must stop
   applying a narrower editor-only clamp before the device frame is rendered.
+- Treat Pages parity as a first-open experience, not only a CSS width target.
+  If the product keeps a non-desktop default device here, the same slice must
+  prove why the first-open preview no longer feels smaller than Pages.
 - The list preview may overflow horizontally inside the body scroll container;
   do not solve smaller laptop viewports by reintroducing a tighter modal clamp.
 - The editor preview may keep device-specific inner widths, but only the inner
@@ -109,6 +117,8 @@ Execution notes for the implementer:
 - Add mounted assertions for:
   - list-view preview using the roomy shell without the old `max-w-[1200px]`
     clamp,
+  - editor-view preview opening on the parity default device baseline instead of
+    the current smaller first-open frame,
   - editor-view preview exposing the device frame inside the larger dialog
     shell instead of shrinking both shell and frame,
   - the body scroll container preserving access when the table or device frame
@@ -124,6 +134,6 @@ Execution notes for the implementer:
 ## Acceptance Criteria
 
 1. `List View` preview no longer feels like a table squeezed into a modal card.
-2. `Editor View` preview device framing sits inside a spacious shell rather
-   than being double-clamped by both the modal and the device wrapper.
+2. `Editor View` preview device framing sits inside a spacious shell and opens
+   on a parity baseline that no longer feels smaller than the Pages reference.
 3. Responsive behavior remains usable on smaller laptop viewports.

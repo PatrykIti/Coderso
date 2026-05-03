@@ -49,8 +49,10 @@ No child task files.
    TASK-251-03, but keep conditional suites conditional:
    `adminPrefetch.test.ts` and `custom-screen-route-params.test.ts` only when
    builder-route prefetch changes, `entriesClient.test.ts` only when new
-   preview/cache helpers are introduced, and the newly named owner suites only
-   after their implementing leaves add them to the branch.
+   preview/cache helpers are introduced, `custom-screen-entry-draft.test.ts`
+   and `capabilities.test.ts` when binding-target modes change which bindings
+   count as writable, and the newly named owner suites only after their
+   implementing leaves add them to the branch.
 3. Confirm the final doc set includes every source-of-truth file promised by
    the implementation leaves: cache docs, content-editor UX docs, widget docs,
    board rows, and changelog index.
@@ -93,6 +95,7 @@ No child task files.
 - `bun --cwd core lint:types`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - Re-run the owner suites introduced by `TASK-251-01-02`, `TASK-251-02-01`, and
@@ -110,8 +113,9 @@ No child task files.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` when preview messaging or core `screen-*` render/normalization ownership moves
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx` when `screen-two-column` normalization or style keys change
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/capabilities.test.ts` when the set of write-capable `screen-field-value` targets or dedicated-editor support rules changes
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx` when active custom screen surface summaries or `writableBindingFields` change in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` when the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` when `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract or when direct `/advanced/custom-screens/:screenId` builder warmup is introduced in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` when new preview/cache helpers are introduced
 - `bun test tests/unit/widgets/registry.test.ts`
 - `bun test tests/unit/widgets/runtimeRegistry.test.ts`
@@ -139,6 +143,8 @@ No child task files.
 ## Acceptance Criteria
 
 1. Targeted preview/list-canvas/binding tests pass in the correct Vitest lane.
-2. Any new pure helpers or metadata owners have focused regression coverage.
+2. Any new pure helpers or metadata owners have focused regression coverage,
+   including write/readiness owners when the binding contract narrows writable
+   prop paths.
 3. Task docs, board rows, statistics, changelog, and touched source docs are
    synchronized on closure.

@@ -240,7 +240,17 @@ should mirror the cached-first/background-refresh contract already used by
 `CustomScreenEntriesPage.tsx`. If cached-first paint on direct builder-route
 navigation is required, extend the existing prefetch owner for
 `/advanced/custom-screens/:screenId` instead of inventing a preview-only cache
-channel.
+channel. The current owner seam still treats plain
+`/advanced/custom-screens/:screenId` as outside
+`resolveCustomScreenWorkspacePrefetchTarget()`, so any builder-route warmup
+change must update that route contract explicitly instead of only touching the
+`/entries...` matcher tests.
+
+The same preview-record state must also own the explicit fallback/source note on
+the mounted builder canvas, not only inside `CustomScreenPreview.tsx`. If the
+dialog renders the note inside the preview frame, add the matching owner around
+the `BlockList` surface in `CustomScreenEditorPage.tsx` so the live canvas and
+the dialog remain on the same state contract.
 
 ## Security Contract
 
@@ -269,7 +279,7 @@ channel.
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-preview-data.test.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminPrefetch.test.ts` if the broader `/advanced/custom-screens` prefetch entry or workspace warmup branch changes
-- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` if `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-route-params.test.ts` if `resolveCustomScreenWorkspacePrefetchTarget()` changes the `/advanced/custom-screens/:screenId/entries...` matcher contract or if direct `/advanced/custom-screens/:screenId` builder warmup is introduced in the same slice
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/entriesClient.test.ts` if a new preview/cache helper or cached list-owner path is introduced in `entriesClient.ts`
 - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx` if fallback/source messaging or bound render bridging moves into `CustomScreenPreview.tsx`
 - existing `tests/vitest/ui/custom-screens-page.test.tsx` may remain a
@@ -286,6 +296,8 @@ channel.
     before the next async result resolves,
   - `cacheBus` updates for `cacheKeys.entriesList(typeSlug)` refreshing the
     preview entry after list mutations,
+  - the explicit fallback/source note appearing on both the mounted builder
+    canvas and the preview dialog from the same preview-record state,
   - shared invalidation/revalidation paths using `force: true` only after the
     cached-first owner is already established,
   - direct `/advanced/custom-screens/:screenId` navigation keeps cached-first
@@ -308,4 +320,5 @@ channel.
 1. `Editor View` preview uses the first real record for the selected content
    type when one exists.
 2. Builder canvas and preview dialog stay in sync on the same preview data.
-3. Fallback mode is explicit and non-destructive when no record exists yet.
+3. Fallback mode is explicit and non-destructive when no record exists yet or
+   when the first uncached read fails.
