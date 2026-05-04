@@ -126,10 +126,11 @@ Do not add a personal access token unless a task explicitly requires one.
 
 ## Pre-commit Checks
 
-This repository uses a committed Git hook directory:
+This repository uses a committed Git hook directory. To enable the local
+pre-commit hook after cloning the repo, run:
 
 ```bash
-bun run prepare
+git config core.hooksPath .githooks
 ```
 
 The hook runs before `git commit` and executes:
