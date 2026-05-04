@@ -9,7 +9,6 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks",
     "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
