@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.1.1] - 2026-05-04
+### Changed
+- Changed local pre-commit hook setup to an explicit contributor step with `git config core.hooksPath .githooks` instead of an install-time lifecycle hook.
+
+### Fixed
+- Fixed Docker image release builds so the next semantic-release run can publish a fresh image again after the previous `feat(custom-screens)` / `1.1.0` release stopped in `bun install` before the image stage completed.
+
+### Removed
+- Removed the root install-time `prepare` hook setup that made `bun install` depend on `git` and a real Git worktree.
 ## [1.1.0] - 2026-05-04
 ### Added
 - Local pre-commit hook for staged formatting, linting, and type checks.
