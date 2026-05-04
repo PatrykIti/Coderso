@@ -3,6 +3,36 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.1.0] - 2026-05-04
+### Added
+- Local pre-commit hook for staged formatting, linting, and type checks.
+- Contributor and agent documentation for the pre-commit workflow.
+- Added TASK-239 and TASK-240 umbrella planning docs for member portal and
+- Added changelog entries 770 through 773.
+- Added the Custom Screens V3 workspace with persisted `definition` contracts, table-canvas `List View`, screen-owned `Editor View`, preview dialogs, and record-backed preview/binding flows.
+- Added mode-specific screen-widget editors and expanded widget-owned binding metadata for `screen-*` surfaces.
+
+### Changed
+- Repository setup now configures `core.hooksPath` through `bun run prepare`.
+- Renumbered the GitHub CodeQL remediation task family from TASK-237 to
+- Updated the task board and architecture docs for TASK-220, TASK-238, and
+- Removed Markdown files from the staged Prettier formatter used by
+- Changed widget editors and runtime to support `none` visual off tokens and `Clear` surface controls without `transparent` or empty-string sentinels.
+- Changed Menus editor interactions and Media Library defaults so drag/drop, bulk selection, and upload actions stay aligned with the current admin UI.
+
+### Fixed
+- Fixed Markdown table/indentation damage in currently touched task docs and
+- Fixed published Pages preview so unsaved editor changes sync before preview while public visitors still see `publishedData` until `Publish`.
+- Fixed stale Custom Screen definition reads, matching assistant custom-screen noop handling, and V3 rerun updates so repeat executions no longer fail on persisted editor definitions.
+- Fixed Menus detail hydration, drag-handle hit target, and drop-intent stability, and reset Integrations drawer/request dialog state between sessions.
+
+### Removed
+- Removed `.md` and `.mdx` from automatic staged Prettier formatting.
+- Removed the active Custom Screens classic-editor/create-drawer fallback from the screen-owned record workflow.
+- Removed the Media Library header `Select` toggle because multi-select is now always available.
+
+### Security
+- Documented clean CodeQL and secret-scanning verification for TASK-238.
 ## [1.0.3] - 2026-04-29
 ### Changed
 - No categorized release notes were provided.
