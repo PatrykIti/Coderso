@@ -23,9 +23,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
 
 test("cta banner renders defaults", () => {
-  const html = renderToString(
-    <CtaBannerBlock data={ctaBannerDefaults} variant="centered" />
-  );
+  const html = renderToString(<CtaBannerBlock data={ctaBannerDefaults} variant="centered" />);
 
   expect(html).toContain(ctaBannerDefaults.content?.title ?? "");
   expect(html).toContain('data-cta-banner-variant="centered"');
@@ -108,6 +106,21 @@ test("cta banner validator accepts expanded model", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("cta banner cleared background surfaces omit container, badge, and button backgrounds", () => {
+  const normalized = normalizeCtaBannerData({
+    ...ctaBannerDefaults,
+    style: {},
+  });
+  const html = renderToString(<CtaBannerBlock data={normalized} variant="with-badge" />);
+
+  expect(normalized.style?.background).toBeUndefined();
+  expect(normalized.style?.badgeBackground).toBeUndefined();
+  expect(normalized.style?.primaryButtonBg).toBeUndefined();
+  expect(normalized.style?.secondaryButtonBg).toBeUndefined();
+  expect(html).toContain('data-cta-banner-variant="with-badge"');
+  expect(html).not.toContain("background-color:");
 });
 
 test("cta banner validator rejects unsupported variant", () => {

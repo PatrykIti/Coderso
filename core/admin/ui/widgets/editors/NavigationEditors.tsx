@@ -23,11 +23,9 @@ import {
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { resolveMenuItemSettings } from "../../../../services/menus/menuItemSettings";
 
-import {
-  navigationDefaults,
-  type NavigationData,
-} from "../../../../widgets/core/navigation";
+import { navigationDefaults, type NavigationData } from "../../../../widgets/core/navigation";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 type NavigationLayout = NonNullable<NavigationData["layout"]>;
 type NavigationBehavior = NonNullable<NavigationData["behavior"]>;
@@ -66,23 +64,23 @@ const logoSourceOptions = [
 ] as const;
 
 const alignmentOptions = ["left", "center", "right"] as const;
-const maxWidthOptions = ["5xl", "6xl", "7xl"] as const;
-const paddingYOptions = ["2", "3", "4", "5"] as const;
-const itemGapOptions = ["2", "3", "4", "6"] as const;
+const maxWidthOptions = ["none", "5xl", "6xl", "7xl"] as const;
+const paddingYOptions = ["none", "2", "3", "4", "5"] as const;
+const itemGapOptions = ["none", "2", "3", "4", "6"] as const;
 const mobileModeOptions = [
   { id: "expanded", label: "Expanded links on mobile" },
   { id: "drawer", label: "Compact menu button on mobile" },
   { id: "minimal", label: "Minimal header on mobile" },
 ] as const;
 const borderWidthOptions = ["0", "1", "2", "3"] as const;
-const fontSizeOptions = ["xs", "sm", "base", "lg"] as const;
-const fontWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
+const fontSizeOptions = ["none", "xs", "sm", "base", "lg"] as const;
+const fontWeightOptions = ["none", "normal", "medium", "semibold", "bold"] as const;
 const textTransformOptions = ["none", "uppercase", "capitalize"] as const;
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const NO_MENU_VALUE = "__none__";
+const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 
-const variantSupportsCta = (variant: string) =>
-  variant === "with-cta" || variant === "split";
+const variantSupportsCta = (variant: string) => variant === "with-cta" || variant === "split";
 
 const isValidHref = (value: string | undefined) =>
   !value || value.startsWith("/") || value.startsWith("http");
@@ -150,9 +148,7 @@ function EditorSection({
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </p>
-        {description ? (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        ) : null}
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       </div>
       <div className="space-y-3">{children}</div>
     </section>
@@ -165,16 +161,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback = "#111827",
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback?: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -223,10 +221,7 @@ function MenuSelectField({
   onSelectionChange,
 }: {
   menuId: string | undefined;
-  onSelectionChange: (payload: {
-    menuId: string | undefined;
-    items?: NavigationItem[];
-  }) => void;
+  onSelectionChange: (payload: { menuId: string | undefined; items?: NavigationItem[] }) => void;
 }) {
   const [menus, setMenus] = useState<MenuSummary[]>([]);
   const [isLoadingMenus, setIsLoadingMenus] = useState(true);
@@ -294,7 +289,7 @@ function MenuSelectField({
   const selectedMenuLabel =
     selectValue === NO_MENU_VALUE
       ? "No menu selected"
-      : menus.find((menu) => menu.id === selectValue)?.name ?? "Selected menu";
+      : (menus.find((menu) => menu.id === selectValue)?.name ?? "Selected menu");
 
   return (
     <div className="space-y-2">
@@ -312,13 +307,9 @@ function MenuSelectField({
           ))}
         </SelectContent>
       </Select>
-      {isLoadingMenus ? (
-        <p className="text-xs text-muted-foreground">Loading menus...</p>
-      ) : null}
+      {isLoadingMenus ? <p className="text-xs text-muted-foreground">Loading menus...</p> : null}
       {isResolvingMenu ? (
-        <p className="text-xs text-muted-foreground">
-          Syncing links from selected menu...
-        </p>
+        <p className="text-xs text-muted-foreground">Syncing links from selected menu...</p>
       ) : null}
       {menuError ? <p className="text-xs text-destructive">{menuError}</p> : null}
     </div>
@@ -371,7 +362,7 @@ function NavigationLogoSourceFields({
         alt:
           logo.alt && logo.alt.trim().length > 0
             ? logo.alt
-            : match.alt ?? match.title ?? match.originalName ?? "",
+            : (match.alt ?? match.title ?? match.originalName ?? ""),
       });
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
@@ -387,7 +378,10 @@ function NavigationLogoSourceFields({
     <div className="space-y-3">
       <div className="space-y-2">
         <p className="text-sm font-medium">Logo source</p>
-        <Select value={source} onValueChange={(next) => handleSourceChange(next as "external" | "library")}>
+        <Select
+          value={source}
+          onValueChange={(next) => handleSourceChange(next as "external" | "library")}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Select source" />
           </SelectTrigger>
@@ -409,9 +403,7 @@ function NavigationLogoSourceFields({
             multiple={false}
             accept={["image/*"]}
           />
-          {lookupError ? (
-            <p className="text-xs text-destructive">{lookupError}</p>
-          ) : null}
+          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
         </div>
       ) : (
         <div className="space-y-2">
@@ -422,9 +414,7 @@ function NavigationLogoSourceFields({
             placeholder="https://..."
           />
           {!isValidImageUrl(logo.value) ? (
-            <p className="text-xs text-destructive">
-              Use a relative path or full URL.
-            </p>
+            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
           ) : null}
         </div>
       )}
@@ -490,35 +480,34 @@ export function NavigationWizardEditor({
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Manual links use the rows below, Existing menu syncs from Menus, and Pages index reads published pages that are enabled for navigation.
+          Manual links use the rows below, Existing menu syncs from Menus, and Pages index reads
+          published pages that are enabled for navigation.
         </p>
       </div>
 
       {linksSource === "menu" ? (
         <MenuSelectField
           menuId={value.menuKey}
-          onSelectionChange={({ menuId, items }) =>
-            update(buildMenuSelectionPatch(menuId, items))
-          }
+          onSelectionChange={({ menuId, items }) => update(buildMenuSelectionPatch(menuId, items))}
         />
       ) : (
         <div className="space-y-2">
-          <p className="text-sm font-medium">
-            {usesPagesIndex ? "Fallback links" : "Quick links"}
-          </p>
+          <p className="text-sm font-medium">{usesPagesIndex ? "Fallback links" : "Quick links"}</p>
           {usesPagesIndex ? (
             <p className="text-xs text-muted-foreground">
-              Pages index uses published pages with <span className="font-medium">Show in navigation</span> enabled.
-              Fallback links appear when no pages match.
+              Pages index uses published pages with{" "}
+              <span className="font-medium">Show in navigation</span> enabled. Fallback links appear
+              when no pages match.
             </p>
           ) : null}
           <div className="space-y-2">
             {items.slice(0, 3).map((item, index) => (
-              <div key={`${item.href || item.label}-${index}`} className="grid gap-2 sm:grid-cols-2">
+              <div
+                key={`${item.href || item.label}-${index}`}
+                className="grid gap-2 sm:grid-cols-2"
+              >
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium text-foreground">
-                    Link {index + 1} label
-                  </span>
+                  <span className="font-medium text-foreground">Link {index + 1} label</span>
                   <Input
                     value={item.label}
                     onChange={(event) => updateItem(index, { label: event.target.value })}
@@ -526,9 +515,7 @@ export function NavigationWizardEditor({
                   />
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium text-foreground">
-                    Link {index + 1} URL
-                  </span>
+                  <span className="font-medium text-foreground">Link {index + 1} URL</span>
                   <Input
                     value={item.href}
                     onChange={(event) => updateItem(index, { href: event.target.value })}
@@ -640,9 +627,7 @@ export function NavigationWizardEditor({
           />
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          Simple variant hides CTA in runtime output.
-        </p>
+        <p className="text-xs text-muted-foreground">Simple variant hides CTA in runtime output.</p>
       )}
     </div>
   );
@@ -682,6 +667,10 @@ export function NavigationVisualEditor({
         ...patch,
       },
     });
+  const clearStyleField = (key: keyof NavigationStyle) => {
+    const { [key]: _removed, ...nextStyle } = value.style ?? {};
+    update({ style: Object.keys(nextStyle).length > 0 ? nextStyle : {} });
+  };
 
   const updateBehavior = (patch: Partial<NavigationBehavior>) =>
     update({
@@ -721,11 +710,7 @@ export function NavigationVisualEditor({
     update({ items: next });
   };
 
-  const updateChild = (
-    itemIndex: number,
-    childIndex: number,
-    patch: Partial<NavigationChild>
-  ) => {
+  const updateChild = (itemIndex: number, childIndex: number, patch: Partial<NavigationChild>) => {
     const next = [...items];
     const currentChildren = next[itemIndex].children ?? [];
     currentChildren[childIndex] = {
@@ -769,13 +754,8 @@ export function NavigationVisualEditor({
               )}
             >
               <div className="flex w-full items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-semibold leading-tight">
-                  {option.label}
-                </p>
-                <Badge
-                  className="shrink-0"
-                  variant={variant === option.id ? "default" : "outline"}
-                >
+                <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+                <Badge className="shrink-0" variant={variant === option.id ? "default" : "outline"}>
                   {variant === option.id ? "Selected" : "Pick"}
                 </Badge>
               </div>
@@ -880,12 +860,13 @@ export function NavigationVisualEditor({
           </p>
         ) : (
           <>
-              {linksSource === "pages" ? (
-                <p className="text-xs text-muted-foreground">
-                  Links are sourced from published pages with <span className="font-medium">Show in navigation</span> enabled.
-                  Manual links below act as fallback when no pages match.
-                </p>
-              ) : null}
+            {linksSource === "pages" ? (
+              <p className="text-xs text-muted-foreground">
+                Links are sourced from published pages with{" "}
+                <span className="font-medium">Show in navigation</span> enabled. Manual links below
+                act as fallback when no pages match.
+              </p>
+            ) : null}
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div
@@ -895,16 +876,12 @@ export function NavigationVisualEditor({
                   <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                     <Input
                       value={item.label}
-                      onChange={(event) =>
-                        updateItem(index, { label: event.target.value })
-                      }
+                      onChange={(event) => updateItem(index, { label: event.target.value })}
                       placeholder={`Item ${index + 1} label`}
                     />
                     <Input
                       value={item.href}
-                      onChange={(event) =>
-                        updateItem(index, { href: event.target.value })
-                      }
+                      onChange={(event) => updateItem(index, { href: event.target.value })}
                       placeholder="/path"
                     />
                     <Button
@@ -936,9 +913,7 @@ export function NavigationVisualEditor({
                       </Button>
                     </div>
                     {(item.children ?? []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        No sub-links yet.
-                      </p>
+                      <p className="text-xs text-muted-foreground">No sub-links yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {(item.children ?? []).map((child, childIndex) => (
@@ -1023,15 +998,11 @@ export function NavigationVisualEditor({
               placeholder="/start"
             />
             {!isValidHref(value.cta?.href) ? (
-              <p className="text-xs text-destructive">
-                Use a relative path or full URL.
-              </p>
+              <p className="text-xs text-destructive">Use a relative path or full URL.</p>
             ) : null}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            CTA is disabled for the Simple variant.
-          </p>
+          <p className="text-xs text-muted-foreground">CTA is disabled for the Simple variant.</p>
         )}
         <p className="text-xs text-muted-foreground">
           Use `Right Actions` slot to insert extra widgets like login buttons or language switchers.
@@ -1073,9 +1044,7 @@ export function NavigationVisualEditor({
           </div>
           <Switch
             checked={behavior.hideCtaOnMobile ?? false}
-            onCheckedChange={(checked) =>
-              updateBehavior({ hideCtaOnMobile: checked })
-            }
+            onCheckedChange={(checked) => updateBehavior({ hideCtaOnMobile: checked })}
           />
         </div>
       </EditorSection>
@@ -1088,6 +1057,7 @@ export function NavigationVisualEditor({
           label="Surface color"
           value={style.surfaceColor}
           onChange={(next) => updateStyle({ surfaceColor: next })}
+          onClear={() => clearStyleField("surfaceColor")}
           placeholder="#ffffff"
           pickerFallback="#ffffff"
         />
@@ -1123,6 +1093,7 @@ export function NavigationVisualEditor({
           label="CTA background"
           value={style.ctaBackgroundColor}
           onChange={(next) => updateStyle({ ctaBackgroundColor: next })}
+          onClear={() => clearStyleField("ctaBackgroundColor")}
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
         />
@@ -1156,7 +1127,7 @@ export function NavigationVisualEditor({
               <SelectContent>
                 {borderWidthOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1176,7 +1147,7 @@ export function NavigationVisualEditor({
               <SelectContent>
                 {fontSizeOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1196,7 +1167,7 @@ export function NavigationVisualEditor({
               <SelectContent>
                 {fontWeightOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1216,7 +1187,7 @@ export function NavigationVisualEditor({
               <SelectContent>
                 {textTransformOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1249,10 +1220,7 @@ export function NavigationVisualEditor({
   );
 }
 
-export function NavigationAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<NavigationData>) {
+export function NavigationAdvancedEditor({ value, onChange }: WidgetEditorProps<NavigationData>) {
   const updateLayout = (patch: Partial<NavigationLayout>) =>
     onChange({
       ...value,
@@ -1291,7 +1259,7 @@ export function NavigationAdvancedEditor({
               <SelectContent>
                 {alignmentOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1313,7 +1281,7 @@ export function NavigationAdvancedEditor({
                 <SelectContent>
                   {maxWidthOptions.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1333,7 +1301,7 @@ export function NavigationAdvancedEditor({
                 <SelectContent>
                   {paddingYOptions.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1353,7 +1321,7 @@ export function NavigationAdvancedEditor({
                 <SelectContent>
                   {itemGapOptions.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1371,9 +1339,7 @@ export function NavigationAdvancedEditor({
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <p className="text-sm font-medium">Sticky navigation</p>
-              <p className="text-xs text-muted-foreground">
-                Pin navigation to top during scroll.
-              </p>
+              <p className="text-xs text-muted-foreground">Pin navigation to top during scroll.</p>
             </div>
             <Switch
               checked={value.behavior?.sticky ?? false}
@@ -1389,9 +1355,7 @@ export function NavigationAdvancedEditor({
             </div>
             <Switch
               checked={value.behavior?.collapseOnScroll ?? false}
-              onCheckedChange={(checked) =>
-                updateBehavior({ collapseOnScroll: checked })
-              }
+              onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
             />
           </div>
         </div>

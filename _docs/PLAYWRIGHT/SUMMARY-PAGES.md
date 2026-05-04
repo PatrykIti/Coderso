@@ -576,3 +576,70 @@ Preview otwarty w nowej karcie (`http://localhost:3000/preview?type=page&token=�
 - `screenshots/2026-04-25/deep-01-canvas-4-widgets.png` — admin canvas z 4 skonfigurowanymi widgetami.
 - `screenshots/2026-04-25/deep-02-preview.png` — Runtime preview dialog (iframe) — Hero z custom data + początek Feature Grid.
 - `screenshots/2026-04-25/deep-03-preview-full.png` — pełna strona w nowej karcie (1280×1800), wszystkie 4 widgety widoczne z custom data: QA Hero, QA Features Section, Proof in numbers (777/42%/9001/45%), QA CTA: Wypróbuj nasz system! / Zaczynamy QA.
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-30)
+
+**Tester:** Claude (Playwright CLI, isolated session `qa-pages-0430`)
+**Środowisko:** http://localhost:5173/admin/pages, frontend `localhost:3000` reachable
+**Zalogowany jako:** patryk.ciechanski@patrykiti.pl
+**Strona testowa:** "QA Pages Audit 2026-04-30" (`/qa-pages-audit-2026-04-30`), świeżo utworzona w sesji
+
+### TL;DR
+
+- **Wszystkie 14 pozycji TASK-194 + TASK-211 trzymają fix** — w pełni potwierdzone na żywo na świeżej stronie utworzonej w tej sesji.
+- **BUG-6 (CSRF/403) trzyma fix** — `PATCH /pages/{id}` i `POST /publish` zwracają 200 OK od pierwszego save'a.
+- **Konsola czysta przez cały flow** — 0 errors, 0 warnings (włącznie z otwarciem Create Page / Page Settings / Page History / Runtime Preview).
+- **UX-5 placeholder potwierdzony na unreachable case** poprzez Playwright route mock probe `{ ok: false, reason: "unreachable" }` — dialog pokazuje "Live preview unavailable" + "Frontend is not responding at http://localhost:3000…" + CTA "Open page settings".
+- **Drobny dryf wordingowy w Page Settings:** w sekcji "Snapshot retention" wciąż widać user-facing tekst "Limit how many publish snapshots are kept per page." Słowo "snapshots" zostało (UX-8 zniknęło tylko z autosave/draft kontekstu — to inna funkcja, ale spójność z duchem UX-8 sugerowałaby "published versions" lub "history versions").
+- **Drobne nowe znalezisko a11y:** przyciski akcji wiersza (`...`) na liście stron nie mają `aria-label` ani `title` — brak deskrypcji dla screen readerów. Wzorzec przeciwny do BUG-4 dla widget toolbar (gdzie aria-labels są kompletne).
+
+### Status per pozycja
+
+| ID | Status | Dowód live |
+|---|---|---|
+| **BUG-1** (bulk select) | ✓ FIXED | Klik "Select all" → header `aria-checked=mixed/true`, wszystkie wiersze `[checked]`, toolbar "SELECTED N" + Bulk actions combobox (Publish/Unpublish/Delete) + Apply (disabled until akcja) + Clear. |
+| **BUG-2** (autor "Unknown") | ✓ FIXED | Strona "QA Pages Audit 2026-04-30" utworzona w sesji → Author column = "P Patryk" od razu. |
+| **BUG-3** (Loading template options...) | ✓ FIXED | Page Settings drawer otwiera się natychmiast z Template = "Custom (custom)", brak wiszącego loading text. |
+| **BUG-4** (widget toolbar aria-label) | ✓ FIXED | Hero ma 4 przyciski z `aria-label` + `title`: "Move Hero up" (disabled gdy first/only), "Move Hero down" (disabled gdy last), "Duplicate Hero", "Delete Hero". |
+| **BUG-5** (Radix description) | ✓ FIXED | Dialog Create Page → "Start with a template and publish when ready." Page Settings → "Configure metadata, layout, and defaults for this page." Page History → "Restore published versions or manage the latest draft version." Runtime Preview → "Runtime preview (read-only, site theme)." Konsola: 0 warnings. |
+| **BUG-6** (CSRF 403) | ✓ FIXED | `PATCH /admin/api/pages/{id}` → 200 OK, `POST /publish` → 200 OK od pierwszego save'a na świeżo utworzonej stronie. Brak 403 w network log. |
+| **UX-1** (Save/Publish toasts) | ✓ FIXED | Polling DOM: po Save draft `[data-sonner-toast]` z "Draft saved." pojawia się ~700-800ms po kliknięciu. Po Publish "Page published." pojawia się ~2-2.5s. |
+| **UX-2** (auto-scroll po insert) | ✓ FIXED | Insert Feature Grid po Hero → nowy block ma `top: 64px` (in viewport, alignment "block: start") + highlight `border-primary/50 ring-2 ring-primary/10`. |
+| **UX-3** (disabled Create button helper) | ✓ FIXED | Pole Title: helper "Title is required before you can create the page." + helper pod disabled button: "Add a page title to generate a slug and enable Create Page." Po wpisaniu helper zmienia się na "The slug is generated from the title until you edit it." Auto-gen slug: `qa-pages-audit-2026-04-30`. |
+| **UX-4** (widget picker kategorie) | ✓ FIXED | Lewy panel: tablist Widgets/Templates/Forms; w Widgets sekcje z licznikami: **Layout 10**, **Content 20**, **Forms 5**, **Navigation 2** (= 37 widgetów). Search "Find components..." filtruje natychmiast. |
+| **UX-5** (preview placeholder unreachable) | ✓ FIXED | Mock probe `{ok:false, reason:"unreachable", targetLabel:"http://localhost:3999"}` → dialog pokazuje placeholder: heading "Live preview unavailable" + body "Frontend is not responding at http://localhost:3000. Start the public frontend or update the configured public URL." + CTA "Open page settings" (linkujący do Page Settings). Iframe nie jest renderowany. |
+| **UX-6** (wizard handoff) | ✓ FIXED | Po dodaniu Hero → prawy panel: badge "WIZARD", heading "Hero", footer "Next you can fine-tune layout, styling, and advanced settings." + przycisk "Continue to layout and styling". Po kliknięciu → tablist Wizard / Visual / Advanced + sekcje "VARIANT AND PRESETS" (Centered/Media Right/Media Left), "CONTENT", "CTA" itd. |
+| **UX-7** (empty slot CTA) | ✓ FIXED + rozszerzone | Slot "Hero Content 0" pokazuje "Add widget to Hero Content" + "Drag from the library or choose a widget from the widgets tab." Klik tego CTA przełącza widget picker w tryb slot-scoped: w lewym panelu pojawia się banner "Insert into Hero Content" + "Clear". |
+| **UX-8** (wording Settings + History) | ✓ FIXED | Settings stopka: "Save settings now, or close the panel to keep one **draft version** in history." History dialog description: "Restore published versions or manage the latest **draft version**." Słowo "autosave" zniknęło z user-facing copy. |
+| **UX-9** (Max width disabled helper) | ✓ FIXED | Page width = `full` → Max width disabled, helper "Available when Page width is not full." Po zmianie na `default` helper znika i Max width staje się aktywne. Reaktywność potwierdzona. |
+
+### Deep editor flow — 4 widgety + custom data + runtime render
+
+Dodano i skonfigurowano (via wizard) Hero z custom Headline `QA 2026-04-30 Hero Headline`, subhead `Specials: ąęłóżźć / & < > '` (8 polskich znaków + 4 HTML-special), Primary CTA `QA Primary CTA → /qa-primary`, Secondary CTA `QA Secondary CTA → /qa-secondary`. Dodano też Feature Grid, CTA Banner, Stats KPI (defaultowe presety treści). Reorder (Move Feature Grid up/down), Duplicate Hero (klon zachowuje custom data), Delete duplicate — wszystko deterministyczne, `disabled` na granicach. Save → 200 OK + toast. Publish → 200 OK + toast. Runtime page (`http://localhost:3000/qa-pages-audit-2026-04-30`):
+
+- Hero render: `<h1>QA 2026-04-30 Hero Headline</h1>`, subhead `Specials: ąęłóżźć / & < > '` z `&amp; &lt; &gt;` w innerHTML — **escape działa, brak XSS**.
+- Feature Grid: defaultowe karty (FEATURE HIGHLIGHTS / Everything your team needs / 3 cards).
+- CTA Banner: defaultowe pola (LIMITED OFFER / "Ready to launch your next campaign?" / "Get started" + "Contact sales").
+- Stats KPI: 4 metriki defaultowe (`120+ Projects launched`, `99.9% / Faster iteration`, `4× / Higher engagement`, etc.).
+
+### Network audit (PATCH/POST 200 OK)
+
+- `POST /admin/api/pages` → 201/200 (create)
+- `PATCH /admin/api/pages/{id}` (×N save'ów) → 200 OK każdy
+- `POST /admin/api/pages/{id}/publish` (×2) → 200 OK
+- `POST /admin/api/pages/{id}/preview` (×N otwarć dialogu) → 200 OK
+- Brak żadnego 403 w całym flow → BUG-6 trzyma fix.
+
+### Drobne sugestie / dryfy do rozważenia (nie buggi)
+
+1. **Page Settings — "Snapshot retention":** label sekcji "SNAPSHOT RETENTION" + helper "Limit how many publish snapshots are kept per page." Słowo "snapshots" pozostało user-facing. Spójniej byłoby "Limit how many published versions are kept per page" (zgodne z "draft version" / "published versions" wzorcem z UX-8). Niska priorytet — nie regresja.
+2. **Pages list — przycisk akcji wiersza (`...`):** brak `aria-label` ani `title`. Screen reader user nie ma wskazówki co button robi. Per BUG-4 wzorzec — analogiczny fix typu `aria-label="Open actions for {pageTitle}"`.
+3. **Editor — przycisk "Save draft" znika po Publish:** gdy strona przechodzi na status Published z unsaved changes, w toolbarze widoczny jest tylko "Publish" (działa jak Update). Nie jest to regresja, ale brak odrębnego "Save without publishing" dla Published pages może zaskoczyć użytkownika, który chce zachować edycje jako draft pre-publish. Do potwierdzenia czy to zamierzony product spec.
+
+### Screeny (2026-04-30)
+
+- `runtime-preview-unreachable.png` (przy starcie playwright-cli, w katalogu repo) — placeholder dialogu po mock probe unreachable.
+- `qa-2026-04-30-editor-final.png` — editor z 4 skonfigurowanymi widgetami + UNSAVED CHANGES badge.
+

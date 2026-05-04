@@ -110,6 +110,21 @@ test("stats kpi validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("stats kpi cleared card surfaces omit card background and border styles", () => {
+  const normalized = normalizeStatsKpiData({
+    ...statsKpiDefaults,
+    style: {},
+  });
+  const html = renderToString(<StatsKpiBlock data={normalized} variant="cards" />);
+  const inlineHtml = renderToString(<StatsKpiBlock data={normalized} variant="inline" />);
+
+  expect(normalized.style?.cardBackground).toBeUndefined();
+  expect(normalized.style?.cardBorderColor).toBeUndefined();
+  expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
+  expect(inlineHtml).toContain('data-stats-kpi-variant="inline"');
+});
+
 test("stats kpi validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

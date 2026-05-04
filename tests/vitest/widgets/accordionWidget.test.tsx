@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<AccordionData>> = () => null;
 
 test("accordion renders defaults", () => {
-  const html = renderToString(
-    <AccordionBlock data={accordionDefaults} variant="soft" />
-  );
+  const html = renderToString(<AccordionBlock data={accordionDefaults} variant="soft" />);
 
   expect(html).toContain('data-nextless-accordion="1"');
   expect(html).toContain('data-nextless-accordion-variant="soft"');
@@ -34,7 +32,10 @@ test("accordion renders defaults", () => {
 
 test("accordion normalization resolves defaults", () => {
   const normalized = normalizeAccordionData({
-    items: [{ id: "1", title: "One" }, { id: "2", title: "Two" }],
+    items: [
+      { id: "1", title: "One" },
+      { id: "2", title: "Two" },
+    ],
     options: {
       initiallyOpenId: "2",
       allowMultiple: true,
@@ -75,6 +76,18 @@ test("accordion validator accepts schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("accordion cleared panel surface omits background style", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    style: {},
+  });
+  const html = renderToString(<AccordionBlock data={normalized} variant="soft" />);
+
+  expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(html).toContain('data-nextless-accordion-variant="soft"');
+  expect(html).not.toContain("background-color:");
 });
 
 test("accordion visual editor renders key sections", () => {

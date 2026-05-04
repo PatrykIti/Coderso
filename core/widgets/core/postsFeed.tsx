@@ -1,12 +1,14 @@
 import type { ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { resolveClearableStyleValue } from "./clearableStyle";
 import {
   ContentListBlock,
   contentListDefaults,
   normalizeContentListData,
   normalizeContentListLimit,
   normalizeContentListRuntimeItems,
+  resolveContentListGap,
   resolveContentListVariant,
   type ContentListCardStyle,
   type ContentListData,
@@ -55,12 +57,7 @@ export type PostsFeedData = {
   };
 };
 
-const postsFeedSourceModes: PostsFeedSourceMode[] = [
-  "latest",
-  "featured",
-  "category",
-  "manual",
-];
+const postsFeedSourceModes: PostsFeedSourceMode[] = ["latest", "featured", "category", "manual"];
 
 const resolveString = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
@@ -146,7 +143,7 @@ export const postsFeedSchema = {
       additionalProperties: false,
       properties: {
         columns: { enum: ["1", "2", "3"] },
-        gap: { enum: ["sm", "md", "lg"] },
+        gap: { enum: ["none", "sm", "md", "lg"] },
         cardStyle: { enum: ["outlined", "elevated", "minimal"] },
         ctaLabel: { type: "string" },
         backgroundColor: { type: "string" },
@@ -255,6 +252,7 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
     borderColor: "var(--color-border)",
     textColor: "var(--color-text)",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     source: {
@@ -263,7 +261,10 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
       manualPostIds: normalizeManualPostIds(data.source?.manualPostIds),
       limit: normalizeContentListLimit(data.source?.limit ?? sourceDefaults.limit ?? 6),
       sort:
-        data.source?.sort ?? sourceDefaults.sort ?? postsFeedDefaults.source?.sort ?? "published-desc",
+        data.source?.sort ??
+        sourceDefaults.sort ??
+        postsFeedDefaults.source?.sort ??
+        "published-desc",
     },
     fields: {
       showExcerpt:
@@ -293,18 +294,19 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
     },
     style: {
       columns: data.style?.columns ?? styleDefaults.columns ?? "3",
-      gap: data.style?.gap ?? styleDefaults.gap ?? "md",
+      gap: resolveContentListGap(data.style?.gap ?? styleDefaults.gap ?? "md"),
       cardStyle: data.style?.cardStyle ?? styleDefaults.cardStyle ?? "outlined",
       ctaLabel: resolveString(data.style?.ctaLabel, styleDefaults.ctaLabel ?? "Read more"),
-      backgroundColor: resolveString(
-        data.style?.backgroundColor,
-        styleDefaults.backgroundColor ?? "var(--color-bg)"
+      backgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.backgroundColor)
+        : styleDefaults.backgroundColor,
+      borderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.borderColor)
+        : styleDefaults.borderColor,
+      textColor: resolveString(
+        data.style?.textColor,
+        styleDefaults.textColor ?? "var(--color-text)"
       ),
-      borderColor: resolveString(
-        data.style?.borderColor,
-        styleDefaults.borderColor ?? "var(--color-border)"
-      ),
-      textColor: resolveString(data.style?.textColor, styleDefaults.textColor ?? "var(--color-text)"),
     },
     resolved: {
       items: normalizeResolvedItems(data.resolved?.items),
@@ -323,12 +325,14 @@ export function mapPostsFeedToContentListData(data: PostsFeedData): ContentListD
   const normalized = normalizePostsFeedData(data);
   const fields = normalized.fields ?? postsFeedDefaults.fields!;
   const showMeta = Boolean(fields.showAuthor || fields.showDate);
-  const resolvedItems = normalizeContentListRuntimeItems(normalized.resolved?.items).map((item) => ({
-    ...item,
-    tags: [],
-    authorName: fields.showAuthor ? item.authorName : undefined,
-    publishedAt: fields.showDate ? item.publishedAt : undefined,
-  }));
+  const resolvedItems = normalizeContentListRuntimeItems(normalized.resolved?.items).map(
+    (item) => ({
+      ...item,
+      tags: [],
+      authorName: fields.showAuthor ? item.authorName : undefined,
+      publishedAt: fields.showDate ? item.publishedAt : undefined,
+    })
+  );
 
   return normalizeContentListData({
     source: {
@@ -351,7 +355,8 @@ export function mapPostsFeedToContentListData(data: PostsFeedData): ContentListD
       showCta: Boolean(fields.showCta),
     },
     emptyState: {
-      title: normalized.emptyState?.title ?? postsFeedDefaults.emptyState?.title ?? "No posts found",
+      title:
+        normalized.emptyState?.title ?? postsFeedDefaults.emptyState?.title ?? "No posts found",
       description:
         normalized.emptyState?.description ??
         postsFeedDefaults.emptyState?.description ??
@@ -362,9 +367,8 @@ export function mapPostsFeedToContentListData(data: PostsFeedData): ContentListD
       gap: normalized.style?.gap ?? contentListDefaults.style?.gap,
       cardStyle: normalized.style?.cardStyle ?? contentListDefaults.style?.cardStyle,
       ctaLabel: normalized.style?.ctaLabel ?? contentListDefaults.style?.ctaLabel,
-      backgroundColor:
-        normalized.style?.backgroundColor ?? contentListDefaults.style?.backgroundColor,
-      borderColor: normalized.style?.borderColor ?? contentListDefaults.style?.borderColor,
+      backgroundColor: normalized.style?.backgroundColor,
+      borderColor: normalized.style?.borderColor,
       textColor: normalized.style?.textColor ?? contentListDefaults.style?.textColor,
     },
     resolved: {

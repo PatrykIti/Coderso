@@ -65,6 +65,14 @@ Sekcje Advanced:
   - `style.borderColor`
   - `style.borderWidth`
 
+## Clear Controls
+
+- `style.background` and `style.surfaceColor` are clearable; clear removes the
+  configured section/card surface key and the renderer omits the forced
+  background style.
+- Border width/color, form field rules, and map rendering rules are unchanged by
+  surface clear.
+
 ## Data model (summary)
 
 ```json
@@ -87,7 +95,7 @@ Sekcje Advanced:
   },
   "style": {
     "spacing": "md",
-    "background": "transparent",
+    "background": "#f8fafc",
     "columns": "two",
     "surfaceColor": "var(--color-bg)",
     "borderColor": "var(--color-border)",

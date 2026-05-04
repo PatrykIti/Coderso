@@ -74,13 +74,8 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    open,
-    children,
-  }: {
-    open?: boolean;
-    children: React.ReactNode;
-  }) => (open ? <div>{children}</div> : null),
+  Dialog: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
+    open ? <div>{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -215,12 +210,13 @@ vi.mock("@/components/ui/textarea", () => ({
     placeholder?: string;
     rows?: number;
     [key: string]: unknown;
-  }) => <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />,
+  }) => (
+    <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />
+  ),
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -317,10 +313,7 @@ const flush = async () => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -328,10 +321,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -339,10 +329,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -366,8 +353,7 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -883,10 +869,13 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     ).toBeGreaterThanOrEqual(2);
 
     act(() => {
-      const ctaSizeSelects = findSelectsByOptions(
-        ctaSection ?? view.container,
-        ["sm", "md", "lg"]
-      );
+      const ctaSizeSelects = findSelectsByOptions(ctaSection ?? view.container, ["sm", "md", "lg"]);
+      expect(
+        Array.from((ctaSizeSelects[0] as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
+      expect(
+        Array.from((ctaSizeSelects[1] as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
       setSelectValue(ctaSizeSelects[0], "lg");
       setSelectValue(ctaSizeSelects[1], "sm");
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
@@ -909,33 +898,45 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
 
     act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Describe the media"), "Intro clip");
-      setInputValue(
-        findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)"),
-        "rgba(0,0,0,0.4)"
-      );
+      setInputValue(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)"), "rgba(0,0,0,0.4)");
       setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
     act(() => {
-      const typographySelects = findSelectsByOptions(
-        typographySection ?? view.container,
-        ["left", "center", "right"]
-      );
+      const typographySelects = findSelectsByOptions(typographySection ?? view.container, [
+        "left",
+        "center",
+        "right",
+      ]);
+      const headlineSizeSelect = findSelectByOptions(typographySection ?? view.container, [
+        "2xl",
+        "3xl",
+        "4xl",
+        "5xl",
+      ]);
+      const subheadSizeSelect = findSelectByOptions(typographySection ?? view.container, [
+        "base",
+        "lg",
+        "xl",
+        "2xl",
+      ]);
+      const bodySizeSelect = findSelectByOptions(typographySection ?? view.container, [
+        "sm",
+        "base",
+        "lg",
+        "xl",
+      ]);
+      for (const select of [headlineSizeSelect, subheadSizeSelect, bodySizeSelect]) {
+        expect(
+          Array.from((select as HTMLSelectElement).options).map((option) => option.value)
+        ).toContain("none");
+      }
       setSelectValue(typographySelects[0], "left");
-      setSelectValue(
-        findSelectByOptions(typographySection ?? view.container, ["2xl", "3xl", "4xl", "5xl"]),
-        "5xl"
-      );
-      setSelectValue(
-        findSelectByOptions(typographySection ?? view.container, ["base", "lg", "xl", "2xl"]),
-        "2xl"
-      );
-      setSelectValue(
-        findSelectByOptions(typographySection ?? view.container, ["sm", "base", "lg", "xl"]),
-        "lg"
-      );
+      setSelectValue(headlineSizeSelect, "5xl");
+      setSelectValue(subheadSizeSelect, "2xl");
+      setSelectValue(bodySizeSelect, "lg");
     });
 
     act(() => {
@@ -945,8 +946,14 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       const transparentInputs = findInputsByPlaceholder(colorsRoot, "transparent");
 
       setInputValue(textColorInputs[0], "#111111");
-      setInputValue(findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)"), "rgba(17,17,17,0.8)");
-      setInputValue(findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.7)"), "rgba(17,17,17,0.7)");
+      setInputValue(
+        findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)"),
+        "rgba(17,17,17,0.8)"
+      );
+      setInputValue(
+        findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.7)"),
+        "rgba(17,17,17,0.7)"
+      );
       setInputValue(borderColorInputs[0], "#222222");
       setInputValue(findInputByPlaceholder(colorsRoot, "var(--color-primary)"), "#333333");
       setInputValue(findInputByPlaceholder(colorsRoot, "var(--color-bg)"), "#f8fafc");
@@ -958,6 +965,12 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
 
       const widthSelects = findSelectsByOptions(colorsRoot, ["0", "1", "2", "3"]);
       const radiusSelects = findSelectsByOptions(colorsRoot, ["lg", "xl", "2xl", "3xl"]);
+      expect(
+        Array.from((radiusSelects[0] as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
+      expect(
+        Array.from((radiusSelects[1] as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
       setSelectValue(widthSelects[0], "2");
       setSelectValue(widthSelects[1], "3");
       setSelectValue(radiusSelects[0], "xl");
@@ -995,9 +1008,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     });
 
     expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.media?.alt === "Intro clip")?.[0]
+      [...onChangeSpy.mock.calls].reverse().find(([arg]) => arg?.media?.alt === "Intro clip")?.[0]
     ).toEqual(
       expect.objectContaining({
         headline: "Ship hero updates faster",
@@ -1086,8 +1097,12 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
 
     clickElement(findButtonsByText(firstView.container, "Add variant preset")[0]);
     expect(
-      (findInputByPlaceholder(firstView.container, "Homepage Hero") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(firstView.container, "Homepage Hero") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("centered preset");
 
     clickElement(findButtonsByText(firstView.container, "Cancel")[0]);
@@ -1096,8 +1111,12 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
     clickElement(findButtonContainingText(firstView.container, "Media Left"));
     clickElement(findButtonsByText(firstView.container, "Add variant preset")[0]);
     expect(
-      (findInputByPlaceholder(firstView.container, "Homepage Hero") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(firstView.container, "Homepage Hero") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("media-left preset");
   } finally {
     firstView.cleanup();
@@ -1186,8 +1205,16 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
 
     act(() => {
       setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "right");
-      setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "2xl"]), "2xl");
-      setSelectValue(findSelectsByOptions(view.container, ["sm", "md", "lg", "xl"])[1], "sm");
+      const maxWidthSelect = findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "2xl"]);
+      const contentWidthSelect = findSelectsByOptions(view.container, ["sm", "md", "lg", "xl"])[1];
+      expect(
+        Array.from((maxWidthSelect as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
+      expect(
+        Array.from((contentWidthSelect as HTMLSelectElement).options).map((option) => option.value)
+      ).toContain("none");
+      setSelectValue(maxWidthSelect, "2xl");
+      setSelectValue(contentWidthSelect, "sm");
       const spacingSelects = findSelectsByOptions(view.container, [
         "none",
         "xs",
@@ -1200,9 +1227,9 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
       setSelectValue(spacingSelects[0], "sm");
       setSelectValue(spacingSelects[1], "2xl");
       setInputValue(findInputByPlaceholder(view.container, "transparent"), "#ffffff");
-      const backgroundColors = backgroundSection?.querySelectorAll(
-        'input[type="color"]'
-      ) as NodeListOf<HTMLInputElement> | undefined;
+      const backgroundColors = backgroundSection?.querySelectorAll('input[type="color"]') as
+        | NodeListOf<HTMLInputElement>
+        | undefined;
       setInputValue(backgroundColors?.[0], "#f8fafc");
       setInputValue(backgroundColors?.[1], "#0ea5e9");
       setInputValue(backgroundColors?.[2], "#0369a1");

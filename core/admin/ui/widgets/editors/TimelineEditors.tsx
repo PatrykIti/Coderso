@@ -35,6 +35,7 @@ import {
   type TimelineVariantId,
 } from "../../../../widgets/core/timeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{ id: TimelineVariantId; label: string; description: string }> = [
   {
@@ -71,6 +72,7 @@ const labelPositionOptions: Array<{ id: TimelineLabelPosition; label: string }> 
 ];
 
 const spacingOptions: Array<{ id: TimelineSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -101,6 +103,7 @@ const thicknessOptions: Array<{ id: TimelineThickness; label: string }> = [
 ];
 
 const titleSizeOptions: Array<{ id: TimelineTitleSize; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "base", label: "Base" },
   { id: "lg", label: "Large" },
@@ -108,6 +111,7 @@ const titleSizeOptions: Array<{ id: TimelineTitleSize; label: string }> = [
 ];
 
 const descriptionSizeOptions: Array<{ id: TimelineDescriptionSize; label: string }> = [
+  { id: "none", label: "None" },
   { id: "xs", label: "Extra small" },
   { id: "sm", label: "Small" },
   { id: "base", label: "Base" },
@@ -154,18 +158,20 @@ function ColorField({
   label,
   value,
   onChange,
+  onClear,
   placeholder,
   pickerFallback = "#0f172a",
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onClear?: () => void;
   placeholder: string;
   pickerFallback?: string;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -301,6 +307,18 @@ function updateStyle(
   });
 }
 
+function clearStyle(
+  value: TimelineData,
+  onChange: (next: TimelineData) => void,
+  key: keyof TimelineStyle
+) {
+  const { [key]: _removed, ...nextStyle } = value.style ?? {};
+  onChange({
+    ...value,
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+}
+
 function updateBackground(
   value: TimelineData,
   onChange: (next: TimelineData) => void,
@@ -315,11 +333,15 @@ function updateBackground(
   });
 }
 
-function setStepsCount(
-  value: TimelineData,
-  onChange: (next: TimelineData) => void,
-  count: number
-) {
+function clearBackground(value: TimelineData, onChange: (next: TimelineData) => void) {
+  const { color: _removed, ...nextBackground } = value.background ?? {};
+  onChange({
+    ...value,
+    background: Object.keys(nextBackground).length > 0 ? nextBackground : {},
+  });
+}
+
+function setStepsCount(value: TimelineData, onChange: (next: TimelineData) => void, count: number) {
   const steps = normalizeTimelineSteps(value.steps, normalizeTimelineStepCount(count));
   onChange({ ...value, steps });
 }
@@ -334,11 +356,7 @@ function addStep(value: TimelineData, onChange: (next: TimelineData) => void) {
   onChange({ ...value, steps: next });
 }
 
-function removeStep(
-  value: TimelineData,
-  onChange: (next: TimelineData) => void,
-  index: number
-) {
+function removeStep(value: TimelineData, onChange: (next: TimelineData) => void, index: number) {
   const steps = getNormalizedSteps(value);
   if (steps.length <= timelineStepMin) return;
   const next = steps.filter((_, currentIndex) => currentIndex !== index);
@@ -371,8 +389,7 @@ function normalizeTimelinePayload(value: TimelineData): TimelineData {
       orientation: value.layout?.orientation ?? timelineDefaults.layout?.orientation,
       align: value.layout?.align ?? timelineDefaults.layout?.align,
       spacing: value.layout?.spacing ?? timelineDefaults.layout?.spacing,
-      labelPosition:
-        value.layout?.labelPosition ?? timelineDefaults.layout?.labelPosition,
+      labelPosition: value.layout?.labelPosition ?? timelineDefaults.layout?.labelPosition,
     },
     guides: {
       enabled: value.guides?.enabled ?? timelineDefaults.guides?.enabled,
@@ -644,6 +661,7 @@ function TimelineColorFields({
         label="Line color"
         value={value.style?.lineColor}
         onChange={(next) => updateStyle(value, onChange, { lineColor: next })}
+        onClear={() => clearStyle(value, onChange, "lineColor")}
         placeholder="#e2e8f0"
         pickerFallback="#e2e8f0"
       />
@@ -651,6 +669,7 @@ function TimelineColorFields({
         label="Marker color"
         value={value.style?.markerColor}
         onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
+        onClear={() => clearStyle(value, onChange, "markerColor")}
         placeholder="#1d4ed8"
         pickerFallback="#1d4ed8"
       />
@@ -672,6 +691,7 @@ function TimelineColorFields({
         label="Background color"
         value={value.background?.color}
         onChange={(next) => updateBackground(value, onChange, next)}
+        onClear={() => clearBackground(value, onChange)}
         placeholder="transparent"
         pickerFallback="#ffffff"
       />
@@ -976,10 +996,7 @@ export function TimelineVisualEditor({
   );
 }
 
-export function TimelineAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<TimelineData>) {
+export function TimelineAdvancedEditor({ value, onChange }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
 
   return (
@@ -996,8 +1013,8 @@ export function TimelineAdvancedEditor({
         description="Normalize step IDs and enforce safe step-count bounds."
       >
         <p className="text-xs text-muted-foreground">
-          Current steps: {steps.length}. Normalization keeps payload compatible with runtime
-          rules (`{timelineStepMin}-{timelineStepMax}` steps, unique stable IDs).
+          Current steps: {steps.length}. Normalization keeps payload compatible with runtime rules
+          (`{timelineStepMin}-{timelineStepMax}` steps, unique stable IDs).
         </p>
         <Button
           type="button"

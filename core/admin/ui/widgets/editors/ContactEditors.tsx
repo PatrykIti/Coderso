@@ -27,6 +27,7 @@ import {
   type ContactVariantId,
 } from "../../../../widgets/core/contact";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const fieldLabels: Record<ContactFieldId, string> = {
   name: "Name",
@@ -36,6 +37,7 @@ const fieldLabels: Record<ContactFieldId, string> = {
 };
 
 const spacingOptions: Array<{ id: ContactSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -208,6 +210,20 @@ function updateStyle(
   }));
 }
 
+function clearStyleField(
+  value: ContactData,
+  onChange: (next: ContactData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
+}
+
 function toggleField(
   value: ContactData,
   onChange: (next: ContactData) => void,
@@ -223,9 +239,7 @@ function toggleField(
 
     if (!enabled && fields.length <= 1) return current;
 
-    const nextFields = enabled
-      ? [...fields, field]
-      : fields.filter((item) => item !== field);
+    const nextFields = enabled ? [...fields, field] : fields.filter((item) => item !== field);
     const nextRequired = required.filter((item) => nextFields.includes(item));
 
     return {
@@ -339,15 +353,11 @@ function RequiredFieldList({
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium">{fieldLabels[field]}</p>
-              <p className="text-xs text-muted-foreground">
-                Mark as required and change order.
-              </p>
+              <p className="text-xs text-muted-foreground">Mark as required and change order.</p>
             </div>
             <Switch
               checked={requiredFields.has(field)}
-              onCheckedChange={(checked) =>
-                toggleRequiredField(value, onChange, field, checked)
-              }
+              onCheckedChange={(checked) => toggleRequiredField(value, onChange, field, checked)}
             />
           </div>
           <div className="flex gap-2">
@@ -382,16 +392,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -447,10 +459,7 @@ export function ContactWizardEditor({
       </div>
 
       <div className="rounded-lg border p-3 text-xs text-muted-foreground">
-        {
-          variantOptions.find((option) => option.id === resolveContactVariant(variant))
-            ?.description
-        }
+        {variantOptions.find((option) => option.id === resolveContactVariant(variant))?.description}
       </div>
 
       <div className="space-y-2">
@@ -462,9 +471,7 @@ export function ContactWizardEditor({
         <p className="text-sm font-medium">Submit label</p>
         <Input
           value={normalized.form?.submitLabel ?? ""}
-          onChange={(event) =>
-            updateForm(value, onChange, { submitLabel: event.target.value })
-          }
+          onChange={(event) => updateForm(value, onChange, { submitLabel: event.target.value })}
           placeholder="Send message"
         />
       </div>
@@ -544,9 +551,7 @@ export function ContactVisualEditor({
             <p className="text-sm font-medium">Submit label</p>
             <Input
               value={normalized.form?.submitLabel ?? ""}
-              onChange={(event) =>
-                updateForm(value, onChange, { submitLabel: event.target.value })
-              }
+              onChange={(event) => updateForm(value, onChange, { submitLabel: event.target.value })}
               placeholder="Send message"
             />
           </div>
@@ -620,9 +625,7 @@ export function ContactVisualEditor({
             <p className="text-sm font-medium">Map embed URL</p>
             <Input
               value={normalized.map?.embedUrl ?? ""}
-              onChange={(event) =>
-                updateMap(value, onChange, { embedUrl: event.target.value })
-              }
+              onChange={(event) => updateMap(value, onChange, { embedUrl: event.target.value })}
               placeholder="https://maps.google.com/..."
             />
           </div>
@@ -637,6 +640,7 @@ export function ContactVisualEditor({
           label="Section background"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
+          onClear={() => clearStyleField(value, onChange, "background")}
           placeholder="transparent or #f8fafc"
           pickerFallback="#ffffff"
         />
@@ -644,6 +648,7 @@ export function ContactVisualEditor({
           label="Card surface color"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+          onClear={() => clearStyleField(value, onChange, "surfaceColor")}
           placeholder="var(--color-bg) or #ffffff"
           pickerFallback="#ffffff"
         />

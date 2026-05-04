@@ -7,10 +7,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { createBlock } from "../../../core/admin/ui/pages/builder/blockUtils";
 import { PageEditor } from "../../../core/admin/ui/pages/PageEditor";
 import { normalizePageLayoutSettings } from "../../../core/services/pages/layoutSettings";
-import type {
-  PageDetail,
-  PageRevision,
-} from "../../../core/admin/services/pagesClient";
+import type { PageDetail, PageRevision } from "../../../core/admin/services/pagesClient";
 
 type CacheEvent = {
   key: string;
@@ -87,16 +84,14 @@ const pageEditorState = vi.hoisted(() => {
       return { page: restored };
     }),
     discardPageRevision: vi.fn(async () => undefined),
-    subscribeCacheEvents: vi.fn(
-      (listener: (event: CacheEvent) => void) => {
-        state.cacheListener = listener;
-        return () => {
-          if (state.cacheListener === listener) {
-            state.cacheListener = null;
-          }
-        };
-      }
-    ),
+    subscribeCacheEvents: vi.fn((listener: (event: CacheEvent) => void) => {
+      state.cacheListener = listener;
+      return () => {
+        if (state.cacheListener === listener) {
+          state.cacheListener = null;
+        }
+      };
+    }),
     triggerCacheEvent(key: string) {
       state.cacheListener?.({ key, action: "update" });
     },
@@ -157,20 +152,14 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({
-    open,
-    children,
-  }: {
-    open: boolean;
-    children: React.ReactNode;
-  }) => (open ? <div>{children}</div> : null),
-  SheetContent: ({
-    side,
-    children,
-  }: {
-    side: "left" | "right";
-    children: React.ReactNode;
-  }) => <div>{`sheet:${side}`}{children}</div>,
+  Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? <div>{children}</div> : null,
+  SheetContent: ({ side, children }: { side: "left" | "right"; children: React.ReactNode }) => (
+    <div>
+      {`sheet:${side}`}
+      {children}
+    </div>
+  ),
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -276,22 +265,13 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
       <span>{`block-count:${blocks.length}`}</span>
       <span>{`selected-block:${selectedId ?? "none"}`}</span>
       <span>{`block-types:${blocks.map((block) => block.type).join(",")}`}</span>
-      <button
-        type="button"
-        onClick={() => onSelect(blocks[blocks.length - 1]?.id ?? null)}
-      >
+      <button type="button" onClick={() => onSelect(blocks[blocks.length - 1]?.id ?? null)}>
         select-last-block
       </button>
-      <button
-        type="button"
-        onClick={() => onDuplicate?.(selectedId ?? blocks[0]?.id ?? "missing")}
-      >
+      <button type="button" onClick={() => onDuplicate?.(selectedId ?? blocks[0]?.id ?? "missing")}>
         duplicate-selected-block
       </button>
-      <button
-        type="button"
-        onClick={() => onDelete?.(selectedId ?? blocks[0]?.id ?? "missing")}
-      >
+      <button type="button" onClick={() => onDelete?.(selectedId ?? blocks[0]?.id ?? "missing")}>
         delete-selected-block
       </button>
       <button type="button" onClick={() => onDelete?.("missing-block")}>
@@ -318,9 +298,7 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
         onClick={() => {
           const hero = blocks.find((block) => block.type === "hero") ?? blocks[0];
           const selectedBlock = blocks.find((block) => block.id === selectedId);
-          const fallback = [...blocks]
-            .reverse()
-            .find((block) => block.id !== hero?.id);
+          const fallback = [...blocks].reverse().find((block) => block.id !== hero?.id);
           if (!hero) return;
           const moving = selectedBlock?.id !== hero.id ? selectedBlock : fallback;
           if (!moving) return;
@@ -401,10 +379,7 @@ vi.mock("../../../core/admin/ui/pages/builder/LibraryPanel", () => ({
       >
         add-template
       </button>
-      <button
-        type="button"
-        onClick={() => onAddForm({ id: "form-1", name: "Lead Form" })}
-      >
+      <button type="button" onClick={() => onAddForm({ id: "form-1", name: "Lead Form" })}>
         add-form
       </button>
     </div>
@@ -541,9 +516,7 @@ const clonePage = (page: PageDetail): PageDetail => ({
   },
 });
 
-const createPage = (
-  overrides: Partial<PageDetail> = {}
-): PageDetail => {
+const createPage = (overrides: Partial<PageDetail> = {}): PageDetail => {
   const hero = createBlock("hero");
   const comparison = createBlock("compare-timeline");
 
@@ -607,8 +580,7 @@ const clickButton = (
   const matches = Array.from(container.querySelectorAll("button")).filter((candidate) =>
     candidate.textContent?.includes(label)
   );
-  const button =
-    occurrence === "last" ? matches[matches.length - 1] : matches[0];
+  const button = occurrence === "last" ? matches[matches.length - 1] : matches[0];
 
   if (!button) {
     throw new Error(`Missing button: ${label}`);
@@ -642,8 +614,7 @@ beforeEach(() => {
     createRevision({ id: "rev-published", kind: "publish" }),
     createRevision({ id: "rev-autosave", kind: "autosave", version: 2 }),
   ];
-  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-    true;
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 });
 
 test("PageEditor hydrates from cache, surfaces remote updates, and supports shell library/details flows", async () => {
@@ -795,19 +766,60 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     clickButton(view.container, "restore-revision");
     await flush();
 
-    expect(pageEditorState.restorePageRevision).toHaveBeenCalledWith(
-      "page-1",
-      "rev-published"
-    );
+    expect(pageEditorState.restorePageRevision).toHaveBeenCalledWith("page-1", "rev-published");
     expect(view.container.textContent).toContain("Restored Homepage");
 
     clickButton(view.container, "discard-revision");
     await flush();
 
-    expect(pageEditorState.discardPageRevision).toHaveBeenCalledWith(
-      "page-1",
-      "rev-autosave"
-    );
+    expect(pageEditorState.discardPageRevision).toHaveBeenCalledWith("page-1", "rev-autosave");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor hides draft save on published pages and previews unsaved edits through silent draft sync", async () => {
+  const initialPage = createPage({
+    status: "published",
+    currentData: { blocks: [createBlock("hero")] },
+    publishedData: { blocks: [createBlock("hero")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+    expect(buttons().some((button) => button.textContent?.includes("Save draft"))).toBe(false);
+    const publishButton = buttons().find((button) => button.textContent?.includes("Publish"));
+    expect(publishButton).toBeTruthy();
+    expect((publishButton as HTMLButtonElement).disabled).toBe(false);
+
+    clickButton(view.container, "add-widget");
+    await flush();
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    clickButton(view.container, "Preview");
+    await flush();
+
+    expect(pageEditorState.updatePage).toHaveBeenCalledTimes(1);
+    const draftPayload = pageEditorState.updatePage.mock.calls[0]?.[1] as {
+      data: { blocks: unknown[] };
+    };
+    expect(draftPayload.data.blocks).toHaveLength(2);
+    expect(pageEditorState.previewPage).toHaveBeenCalledWith("page-1", {
+      probe: true,
+    });
+    const draftSyncOrder = pageEditorState.updatePage.mock.invocationCallOrder[0] ?? 0;
+    const previewOrder =
+      pageEditorState.previewPage.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER;
+    expect(draftSyncOrder).toBeLessThan(previewOrder);
+    expect(pageEditorState.currentPage?.publishedData).toEqual(initialPage.publishedData);
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+    expect(view.container.textContent).toContain("preview-url:https://preview.test/page-1");
   } finally {
     view.cleanup();
   }
@@ -1053,8 +1065,8 @@ test("PageEditor uses image background fallback, starts without selection for em
 
     const backgroundShell = Array.from(view.container.querySelectorAll("div")).find(
       (candidate) =>
-        candidate instanceof HTMLDivElement
-        && candidate.style.backgroundImage.includes("page-bg.png")
+        candidate instanceof HTMLDivElement &&
+        candidate.style.backgroundImage.includes("page-bg.png")
     ) as HTMLDivElement | null | undefined;
     if (!backgroundShell) {
       throw new Error("Missing background shell");

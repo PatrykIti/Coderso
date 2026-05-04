@@ -25,9 +25,7 @@ const StubEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("footer renders defaults", () => {
-  const html = renderToString(
-    <FooterBlock data={footerDefaults} variant="columns-2" />
-  );
+  const html = renderToString(<FooterBlock data={footerDefaults} variant="columns-2" />);
 
   expect(html).toContain("Company");
   expect(html).toContain("Resources");
@@ -114,6 +112,21 @@ test("footer schema accepts legal and social fields", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("footer cleared surface and border colors omit background color output", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        style: {},
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).toContain("Company");
+  expect(html).not.toContain("background-color:");
 });
 
 test("footer renders column and bottom slots", () => {

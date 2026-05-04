@@ -4,6 +4,7 @@ import {
   clearWidgets,
   listWidgets,
   listWidgetsForSurface,
+  listWidgetsForSurfaceContext,
   registerWidget,
 } from "../../../core/widgets/registry";
 import type { WidgetDefinition } from "../../../core/widgets/types";
@@ -46,27 +47,21 @@ test("registerWidget rejects duplicate types", () => {
 });
 
 test("registerWidget rejects invalid type", () => {
-  expect(() => registerWidget({ ...baseDef, type: "Hero" })).toThrow(
-    "widget_type_invalid"
-  );
+  expect(() => registerWidget({ ...baseDef, type: "Hero" })).toThrow("widget_type_invalid");
 });
 
 test("registerWidget rejects empty variants", () => {
-  expect(() => registerWidget({ ...baseDef, variants: [] })).toThrow(
-    "widget_variants_required"
-  );
+  expect(() => registerWidget({ ...baseDef, variants: [] })).toThrow("widget_variants_required");
 });
 
 test("registerWidget rejects invalid metadata", () => {
-  expect(() =>
-    registerWidget({ ...baseDef, complexity: "bad" as "composite" })
-  ).toThrow("widget_complexity_invalid");
+  expect(() => registerWidget({ ...baseDef, complexity: "bad" as "composite" })).toThrow(
+    "widget_complexity_invalid"
+  );
   expect(() => registerWidget({ ...baseDef, audience: "bad" as "beginner" })).toThrow(
     "widget_audience_invalid"
   );
-  expect(() => registerWidget({ ...baseDef, module: "  " })).toThrow(
-    "widget_module_invalid"
-  );
+  expect(() => registerWidget({ ...baseDef, module: "  " })).toThrow("widget_module_invalid");
   expect(() =>
     registerWidget({
       ...baseDef,
@@ -123,4 +118,106 @@ test("listWidgetsForSurface filters definitions by surface visibility", () => {
   expect(listWidgetsForSurface("widget-library").map((item) => item.type)).toEqual([
     "shared-layout",
   ]);
+});
+
+test("listWidgetsForSurfaceContext scopes admin widgets by selected content state", () => {
+  registerWidget({
+    ...baseDef,
+    type: "entry-field",
+    surfaces: ["admin-editor-view"],
+    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+  });
+  registerWidget({
+    ...baseDef,
+    type: "schema-layout",
+    surfaces: ["admin-editor-view"],
+    dataAccess: { source: "selected-content-type", modes: ["read"] },
+  });
+  registerWidget({
+    ...baseDef,
+    type: "static-admin",
+    surfaces: ["admin-editor-view"],
+    dataAccess: { source: "none", modes: ["read"] },
+  });
+
+  expect(
+    listWidgetsForSurfaceContext({
+      surface: "admin-editor-view",
+      hasSelectedContentType: false,
+    }).map((item) => item.type)
+  ).toEqual(["static-admin"]);
+  expect(
+    listWidgetsForSurfaceContext({
+      surface: "admin-editor-view",
+      hasSelectedContentType: true,
+    }).map((item) => item.type)
+  ).toEqual(["entry-field", "schema-layout", "static-admin"]);
+});
+
+test("registerWidget rejects invalid data access metadata", () => {
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-data-source",
+      dataAccess: { source: "entry" as "none", modes: ["read"] },
+    })
+  ).toThrow("widget_data_access_invalid");
+
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-data-mode",
+      dataAccess: { source: "selected-entry", modes: ["admin" as "read"] },
+    })
+  ).toThrow("widget_data_access_invalid");
+});
+
+test("registerWidget normalizes widget-owned binding targets", () => {
+  registerWidget({
+    ...baseDef,
+    type: "screen-field-value",
+    surfaces: ["admin-editor-view"],
+    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+    bindingTargets: [
+      { propPath: "label", label: "Label", modes: ["read"] },
+      { propPath: "value", label: "Value" },
+    ],
+  });
+
+  expect(listWidgets()[0]?.bindingTargets).toEqual([
+    { propPath: "label", label: "Label", modes: ["read"] },
+    { propPath: "value", label: "Value", modes: ["read", "write"] },
+  ]);
+});
+
+test("registerWidget rejects invalid binding target metadata", () => {
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-binding-target-source",
+      dataAccess: { source: "selected-content-type", modes: ["read"] },
+      bindingTargets: [{ propPath: "title", label: "Title" }],
+    })
+  ).toThrow("widget_binding_targets_invalid");
+
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-binding-target-path",
+      dataAccess: { source: "selected-entry", modes: ["read"] },
+      bindingTargets: [{ propPath: "__proto__.title", label: "Title" }],
+    })
+  ).toThrow("widget_binding_targets_invalid");
+
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "bad-binding-target-duplicate",
+      dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+      bindingTargets: [
+        { propPath: "value", label: "Value" },
+        { propPath: "value", label: "Value duplicate" },
+      ],
+    })
+  ).toThrow("widget_binding_targets_duplicate");
 });

@@ -1,9 +1,10 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TestimonialsVariantId = "grid" | "spotlight" | "slider-static";
-export type TestimonialsSpacing = "sm" | "md" | "lg";
+export type TestimonialsSpacing = "none" | "sm" | "md" | "lg";
 
 export type TestimonialItem = {
   id?: string;
@@ -41,6 +42,7 @@ const testimonialsVariantCountMap: Record<TestimonialsVariantId, number> = {
 };
 
 const spacingClassMap: Record<TestimonialsSpacing, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
@@ -89,7 +91,7 @@ export const testimonialsSchema = {
         cardBorder: { type: "string" },
         textColor: { type: "string" },
         accentColor: { type: "string" },
-        spacing: { enum: ["sm", "md", "lg"] },
+        spacing: { enum: ["none", "sm", "md", "lg"] },
       },
     },
   },
@@ -104,8 +106,7 @@ export const testimonialsDefaults: TestimonialsData = {
   testimonials: [
     {
       id: "testimonial-1",
-      quote:
-        "We launched our marketing site in two days and kept full control over future edits.",
+      quote: "We launched our marketing site in two days and kept full control over future edits.",
       author: "Anna Kowalska",
       role: "Product Marketing Lead",
       rating: 5,
@@ -121,8 +122,7 @@ export const testimonialsDefaults: TestimonialsData = {
     },
     {
       id: "testimonial-3",
-      quote:
-        "Editors can now publish conversion-focused sections without developer support.",
+      quote: "Editors can now publish conversion-focused sections without developer support.",
       author: "Ewa Zielinska",
       role: "Content Ops",
       rating: 4,
@@ -153,7 +153,7 @@ const resolveRating = (value: number | undefined, fallback: number) => {
 };
 
 const resolveTestimonialsSpacing = (value: string | undefined): TestimonialsSpacing => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
@@ -162,9 +162,8 @@ export const resolveTestimonialsVariant = (variant: string): TestimonialsVariant
   return "grid";
 };
 
-export const resolveTestimonialsCountForVariant = (
-  variant: TestimonialsVariantId
-): number => testimonialsVariantCountMap[variant];
+export const resolveTestimonialsCountForVariant = (variant: TestimonialsVariantId): number =>
+  testimonialsVariantCountMap[variant];
 
 export const normalizeTestimonialsCount = (value: number) => {
   if (!Number.isFinite(value)) return resolveTestimonialsCountForVariant("grid");
@@ -214,12 +213,12 @@ export function normalizeTestimonialsItems(
     const quote =
       typeof base.quote === "string" && base.quote.trim().length > 0
         ? base.quote.trim()
-        : fallbackQuotes[index] ?? `Customer quote ${index + 1}`;
+        : (fallbackQuotes[index] ?? `Customer quote ${index + 1}`);
 
     const author =
       typeof base.author === "string" && base.author.trim().length > 0
         ? base.author.trim()
-        : fallbackAuthors[index] ?? `Customer ${index + 1}`;
+        : (fallbackAuthors[index] ?? `Customer ${index + 1}`);
 
     normalized.push({
       id,
@@ -248,6 +247,7 @@ export function normalizeTestimonialsData(data: TestimonialsData): TestimonialsD
     accentColor: "var(--color-primary)",
     spacing: "md",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -258,14 +258,12 @@ export function normalizeTestimonialsData(data: TestimonialsData): TestimonialsD
     },
     testimonials: normalizeTestimonialsItems(data.testimonials),
     style: {
-      cardSurface: resolveString(
-        data.style?.cardSurface,
-        styleDefaults.cardSurface ?? "var(--color-bg)"
-      ),
-      cardBorder: resolveString(
-        data.style?.cardBorder,
-        styleDefaults.cardBorder ?? "var(--color-border)"
-      ),
+      cardSurface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardSurface)
+        : styleDefaults.cardSurface,
+      cardBorder: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardBorder)
+        : styleDefaults.cardBorder,
       textColor: resolveString(
         data.style?.textColor,
         styleDefaults.textColor ?? "var(--color-text)"
@@ -290,7 +288,11 @@ function RatingStars({ rating, accentColor }: { rating: number; accentColor: str
           <span
             key={`star-${index + 1}`}
             className="text-sm leading-none"
-            style={{ color: active ? accentColor : "color-mix(in oklab, var(--color-text) 25%, transparent)" }}
+            style={{
+              color: active
+                ? accentColor
+                : "color-mix(in oklab, var(--color-text) 25%, transparent)",
+            }}
           >
             ★
           </span>
@@ -300,7 +302,15 @@ function RatingStars({ rating, accentColor }: { rating: number; accentColor: str
   );
 }
 
-function Avatar({ author, src, accentColor }: { author: string; src?: string; accentColor: string }) {
+function Avatar({
+  author,
+  src,
+  accentColor,
+}: {
+  author: string;
+  src?: string;
+  accentColor: string;
+}) {
   if (typeof src === "string" && src.trim().length > 0) {
     return (
       <img
@@ -322,13 +332,7 @@ function Avatar({ author, src, accentColor }: { author: string; src?: string; ac
   );
 }
 
-export function TestimonialsBlock({
-  data,
-  variant,
-}: {
-  data: TestimonialsData;
-  variant: string;
-}) {
+export function TestimonialsBlock({ data, variant }: { data: TestimonialsData; variant: string }) {
   const resolvedVariant = resolveTestimonialsVariant(variant);
   const visibleCount = resolveTestimonialsCountForVariant(resolvedVariant);
   const normalizedData = normalizeTestimonialsData(data);
@@ -342,17 +346,14 @@ export function TestimonialsBlock({
     (normalizedData.header?.title ?? "").trim().length > 0 ||
     (normalizedData.header?.description ?? "").trim().length > 0;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: "transparent",
-  };
-
-  const cardStyle: CSSProperties = {
-    backgroundColor: style.cardSurface ?? "var(--color-bg)",
-    borderColor: style.cardBorder ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: "1px",
-    color: style.textColor ?? "var(--color-text)",
-  };
+  const cardStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.cardSurface),
+      borderColor: resolveClearableStyleValue(style.cardBorder),
+      borderStyle: "solid",
+      borderWidth: "1px",
+      color: style.textColor ?? "var(--color-text)",
+    }) ?? {};
 
   const listClassName =
     resolvedVariant === "slider-static"
@@ -367,7 +368,6 @@ export function TestimonialsBlock({
   return (
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
-      style={sectionStyle}
       data-testimonials-variant={resolvedVariant}
       data-testimonials-spacing={resolvedSpacing}
       data-testimonials-count={String(items.length)}
@@ -405,7 +405,9 @@ export function TestimonialsBlock({
               key={item.id ?? `testimonial-${index + 1}`}
               className={joinClasses(
                 "flex h-full flex-col gap-4 rounded-xl border p-5",
-                resolvedVariant === "slider-static" ? "min-w-[18rem] shrink-0 snap-start" : undefined,
+                resolvedVariant === "slider-static"
+                  ? "min-w-[18rem] shrink-0 snap-start"
+                  : undefined,
                 highlight ? "lg:col-span-2" : undefined
               )}
               style={cardStyle}
@@ -413,9 +415,17 @@ export function TestimonialsBlock({
               data-testimonial-rating={String(rating)}
               data-testimonial-highlighted={String(highlight)}
             >
-              <RatingStars rating={rating} accentColor={style.accentColor ?? "var(--color-primary)"} />
+              <RatingStars
+                rating={rating}
+                accentColor={style.accentColor ?? "var(--color-primary)"}
+              />
 
-              <p className={joinClasses("text-sm leading-relaxed", highlight ? "text-base" : undefined)}>
+              <p
+                className={joinClasses(
+                  "text-sm leading-relaxed",
+                  highlight ? "text-base" : undefined
+                )}
+              >
                 "{item.quote ?? ""}"
               </p>
 
@@ -431,7 +441,10 @@ export function TestimonialsBlock({
                     <p className="text-xs text-[var(--color-text)]/70">{roleText}</p>
                   ) : null}
                   {sourceText.length > 0 ? (
-                    <p className="text-xs font-medium" style={{ color: style.accentColor ?? "var(--color-primary)" }}>
+                    <p
+                      className="text-xs font-medium"
+                      style={{ color: style.accentColor ?? "var(--color-primary)" }}
+                    >
                       {sourceText}
                     </p>
                   ) : null}

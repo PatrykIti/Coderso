@@ -83,6 +83,54 @@ test("product compare renders matrix rows", () => {
   expect(html).toContain("Backorder");
 });
 
+test("product compare cleared surfaces omit empty, table, and header backgrounds", () => {
+  const emptyHtml = renderToString(
+    <ProductCompareBlock
+      variant="matrix"
+      data={normalizeProductCompareData({
+        ...productCompareDefaults,
+        style: {},
+        resolved: {
+          rows: [],
+          total: 0,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  const matrixHtml = renderToString(
+    <ProductCompareBlock
+      variant="matrix"
+      data={normalizeProductCompareData({
+        ...productCompareDefaults,
+        style: {},
+        resolved: {
+          rows: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              priceAmount: 120000,
+              currency: "USD",
+              compareAtAmount: null,
+              stockState: "in_stock",
+              stockQuantity: 3,
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(emptyHtml).not.toContain("bg-[var(--color-bg)]/70");
+  expect(emptyHtml).not.toContain("background-color:transparent");
+  expect(matrixHtml).not.toContain("bg-[var(--color-bg)]");
+  expect(matrixHtml).not.toContain("background-color:transparent");
+});
+
 test("product compare normalizes invalid source", () => {
   const normalized = normalizeProductCompareData({
     source: {

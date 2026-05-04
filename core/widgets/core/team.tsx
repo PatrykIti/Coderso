@@ -1,10 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type TeamVariantId = "cards" | "compact-list" | "spotlight";
 export type TeamColumns = "1" | "2" | "3" | "4";
-export type TeamGap = "sm" | "md" | "lg";
+export type TeamGap = "none" | "sm" | "md" | "lg";
 export type TeamRadius = "none" | "md" | "lg" | "xl";
 
 export type TeamSocialLink = {
@@ -41,6 +42,7 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const gapClassMap: Record<TeamGap, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
@@ -118,7 +120,7 @@ export const teamSchema = {
       additionalProperties: false,
       properties: {
         columns: { enum: ["1", "2", "3", "4"] },
-        gap: { enum: ["sm", "md", "lg"] },
+        gap: { enum: ["none", "sm", "md", "lg"] },
         cardSurface: { type: "string" },
         cardBorder: { type: "string" },
         radius: { enum: ["none", "md", "lg", "xl"] },
@@ -185,7 +187,7 @@ const resolveTeamColumns = (value: string | undefined): TeamColumns => {
 };
 
 const resolveTeamGap = (value: string | undefined): TeamGap => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
@@ -239,11 +241,8 @@ export function normalizeTeamSocialLinks(
       label:
         typeof base.label === "string" && base.label.trim().length > 0
           ? base.label.trim()
-          : fallbackLabels[index] ?? `Social ${index + 1}`,
-      url:
-        typeof base.url === "string" && base.url.trim().length > 0
-          ? base.url.trim()
-          : "#",
+          : (fallbackLabels[index] ?? `Social ${index + 1}`),
+      url: typeof base.url === "string" && base.url.trim().length > 0 ? base.url.trim() : "#",
     });
   }
 
@@ -262,13 +261,7 @@ export function normalizeTeamMembers(
     "Team Member 4",
     "Team Member 5",
   ];
-  const fallbackRoles = [
-    "Role",
-    "Role",
-    "Role",
-    "Role",
-    "Role",
-  ];
+  const fallbackRoles = ["Role", "Role", "Role", "Role", "Role"];
   const fallbackBios = [
     "Short bio describing responsibilities and value.",
     "Short bio describing responsibilities and value.",
@@ -280,9 +273,7 @@ export function normalizeTeamMembers(
   const targetCount =
     typeof desiredCount === "number"
       ? normalizeTeamMemberCount(desiredCount)
-      : normalizeTeamMemberCount(
-          source.length > 0 ? source.length : teamDefaults.members.length
-        );
+      : normalizeTeamMemberCount(source.length > 0 ? source.length : teamDefaults.members.length);
 
   const normalized: TeamMember[] = [];
   const usedIds = new Set<string>();
@@ -308,15 +299,15 @@ export function normalizeTeamMembers(
       name:
         typeof base.name === "string" && base.name.trim().length > 0
           ? base.name.trim()
-          : fallbackNames[index] ?? `Team Member ${index + 1}`,
+          : (fallbackNames[index] ?? `Team Member ${index + 1}`),
       role:
         typeof base.role === "string" && base.role.trim().length > 0
           ? base.role.trim()
-          : fallbackRoles[index] ?? "Role",
+          : (fallbackRoles[index] ?? "Role"),
       bio:
         typeof base.bio === "string" && base.bio.trim().length > 0
           ? base.bio.trim()
-          : fallbackBios[index] ?? "Short bio describing responsibilities and value.",
+          : (fallbackBios[index] ?? "Short bio describing responsibilities and value."),
       photo: resolveOptionalString(base.photo),
       socialLinks: normalizeTeamSocialLinks(base.socialLinks),
     });
@@ -337,6 +328,7 @@ export function normalizeTeamData(data: TeamData): TeamData {
     cardBorder: "var(--color-border)",
     radius: "lg",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -348,29 +340,22 @@ export function normalizeTeamData(data: TeamData): TeamData {
     style: {
       columns: resolveTeamColumns(data.style?.columns),
       gap: resolveTeamGap(data.style?.gap),
-      cardSurface: resolveString(
-        data.style?.cardSurface,
-        styleDefaults.cardSurface ?? "var(--color-bg)"
-      ),
-      cardBorder: resolveString(
-        data.style?.cardBorder,
-        styleDefaults.cardBorder ?? "var(--color-border)"
-      ),
+      cardSurface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardSurface)
+        : styleDefaults.cardSurface,
+      cardBorder: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.cardBorder)
+        : styleDefaults.cardBorder,
       radius: resolveTeamRadius(data.style?.radius),
     },
   };
 }
 
-function Avatar({
-  name,
-  photo,
-  radius,
-}: {
-  name: string;
-  photo?: string;
-  radius: TeamRadius;
-}) {
-  const baseClassName = joinClasses("h-16 w-16 border border-[var(--color-border)] object-cover", radiusClassMap[radius]);
+function Avatar({ name, photo, radius }: { name: string; photo?: string; radius: TeamRadius }) {
+  const baseClassName = joinClasses(
+    "h-16 w-16 border border-[var(--color-border)] object-cover",
+    radiusClassMap[radius]
+  );
   if (typeof photo === "string" && photo.trim().length > 0) {
     return <img src={photo} alt={name} className={baseClassName} />;
   }
@@ -440,7 +425,12 @@ function MemberCard({
     >
       <Avatar name={name} photo={member.photo} radius={radius} />
       <div className={joinClasses("min-w-0", compact ? "flex-1" : undefined)}>
-        <h4 className={joinClasses("font-semibold text-[var(--color-text)]", spotlightLead ? "text-2xl" : "text-lg")}>
+        <h4
+          className={joinClasses(
+            "font-semibold text-[var(--color-text)]",
+            spotlightLead ? "text-2xl" : "text-lg"
+          )}
+        >
           {name}
         </h4>
         <p className="text-sm text-[var(--color-text)]/75">{role}</p>
@@ -453,13 +443,7 @@ function MemberCard({
   );
 }
 
-export function TeamBlock({
-  data,
-  variant,
-}: {
-  data: TeamData;
-  variant: string;
-}) {
+export function TeamBlock({ data, variant }: { data: TeamData; variant: string }) {
   const resolvedVariant = resolveTeamVariant(variant);
   const normalized = normalizeTeamData(data);
   const style = normalized.style ?? teamDefaults.style!;
@@ -468,15 +452,13 @@ export function TeamBlock({
   const columns = resolveTeamColumns(style.columns);
   const gap = resolveTeamGap(style.gap);
   const radius = resolveTeamRadius(style.radius);
-  const cardSurface = style.cardSurface ?? "var(--color-bg)";
-  const cardBorder = style.cardBorder ?? "var(--color-border)";
-
-  const cardStyle: CSSProperties = {
-    backgroundColor: cardSurface,
-    borderColor: cardBorder,
-    borderStyle: "solid",
-    borderWidth: "1px",
-  };
+  const cardStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.cardSurface),
+      borderColor: resolveClearableStyleValue(style.cardBorder),
+      borderStyle: "solid",
+      borderWidth: "1px",
+    }) ?? {};
 
   const showHeader =
     (normalized.header?.title ?? "").trim().length > 0 ||
@@ -502,9 +484,7 @@ export function TeamBlock({
             </h3>
           ) : null}
           {(normalized.header?.description ?? "").trim().length > 0 ? (
-            <p className="text-sm text-[var(--color-text)]/75">
-              {normalized.header?.description}
-            </p>
+            <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>
           ) : null}
         </header>
       ) : null}
@@ -535,7 +515,9 @@ export function TeamBlock({
               spotlightLead
             />
           </div>
-          <div className={joinClasses("grid", spotlightRestColumnsClassMap[columns], gapClassMap[gap])}>
+          <div
+            className={joinClasses("grid", spotlightRestColumnsClassMap[columns], gapClassMap[gap])}
+          >
             {spotlightRest.map((member, index) => (
               <MemberCard
                 key={member.id ?? `team-spotlight-rest-${index + 1}`}

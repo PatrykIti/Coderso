@@ -11,10 +11,7 @@ import {
 import { createPreviewToken } from "../pages/previewService";
 import { invalidateContentEntryCache } from "../../site/cache/siteCache";
 import { getContentType } from "./typeService";
-import {
-  getSeoDocumentByTarget,
-  upsertSeoDocument,
-} from "../seo/seoService";
+import { getSeoDocumentByTarget, upsertSeoDocument } from "../seo/seoService";
 import { resolveEmailValue } from "../security/piiEmail";
 import {
   getEntryTaxonomies,
@@ -22,10 +19,7 @@ import {
   resolveEntryTagsFromTaxonomy,
   type EntryTaxonomyAssignments,
 } from "./taxonomyService";
-import {
-  type ContentSchema,
-  validateEntryData,
-} from "./validation";
+import { type ContentSchema, validateEntryData } from "./validation";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 export type EntryData = Record<string, unknown>;
@@ -103,15 +97,21 @@ type MediaFieldConfig = {
   maxItems: number | undefined;
 };
 
+type EntryFieldError = Error & {
+  field?: string;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const createEntryFieldError = (code: string, field?: string): EntryFieldError =>
+  Object.assign(new Error(code), field ? { field } : {});
 
 const readRelationConfig = (value: unknown) => {
   if (!isRecord(value)) return { target: undefined, multiple: false };
   const relation = value.relation;
   if (!isRecord(relation)) return { target: undefined, multiple: false };
-  const target =
-    typeof relation.target === "string" ? relation.target.trim() : undefined;
+  const target = typeof relation.target === "string" ? relation.target.trim() : undefined;
   const multiple = relation.multiple === true;
   return { target: target || undefined, multiple };
 };
@@ -156,8 +156,7 @@ const extractRelationFields = (schema: ContentSchema) => {
           : undefined;
       const { target, multiple } = readRelationConfig(definition.xFieldConfig);
       const resolvedTarget = xRelationTarget ?? target;
-      const isRelation =
-        xFieldType === "relation" || Boolean(resolvedTarget);
+      const isRelation = xFieldType === "relation" || Boolean(resolvedTarget);
       if (!isRelation || !resolvedTarget) return null;
       const isArray = definition.type === "array";
       return {
@@ -183,9 +182,7 @@ const extractMediaFields = (schema: ContentSchema) => {
       const xFieldType = definition.xFieldType;
       const mediaConfig = readMediaConfig(definition.xFieldConfig);
       const isMedia =
-        xFieldType === "media" ||
-        mediaConfig.multiple === true ||
-        Boolean(mediaConfig.accept);
+        xFieldType === "media" || mediaConfig.multiple === true || Boolean(mediaConfig.accept);
       if (!isMedia) return null;
       const multiple = definition.type === "array" || mediaConfig.multiple === true;
       return {
@@ -217,11 +214,7 @@ const matchesMimeAccept = (mimeType: string, accept?: string[]) => {
   });
 };
 
-async function validateMediaAssets(
-  schema: ContentSchema,
-  data: EntryData,
-  client: DbClient
-) {
+async function validateMediaAssets(schema: ContentSchema, data: EntryData, client: DbClient) {
   const mediaFields = extractMediaFields(schema);
   if (mediaFields.length === 0) return;
 
@@ -236,14 +229,14 @@ async function validateMediaAssets(
 
     if (field.multiple) {
       if (!Array.isArray(rawValue)) {
-        throw new Error("media_value_invalid");
+        throw createEntryFieldError("media_value_invalid", field.name);
       }
       if (field.maxItems && rawValue.length > field.maxItems) {
-        throw new Error("media_value_invalid");
+        throw createEntryFieldError("media_value_invalid", field.name);
       }
       for (const id of rawValue) {
         if (typeof id !== "string" || id.trim() === "") {
-          throw new Error("media_value_invalid");
+          throw createEntryFieldError("media_value_invalid", field.name);
         }
         selectedIds.add(id);
         if (field.accept) {
@@ -254,10 +247,10 @@ async function validateMediaAssets(
       }
     } else {
       if (Array.isArray(rawValue)) {
-        throw new Error("media_value_invalid");
+        throw createEntryFieldError("media_value_invalid", field.name);
       }
       if (typeof rawValue !== "string" || rawValue.trim() === "") {
-        throw new Error("media_value_invalid");
+        throw createEntryFieldError("media_value_invalid", field.name);
       }
       selectedIds.add(rawValue);
       if (field.accept) {
@@ -279,7 +272,13 @@ async function validateMediaAssets(
   const found = new Map(rows.map((row) => [row.id, row.mimeType]));
   const missing = ids.filter((id) => !found.has(id));
   if (missing.length > 0) {
-    throw new Error("media_asset_missing");
+    const missingField = mediaFields.find((field) => {
+      const rawValue = data[field.name];
+      return Array.isArray(rawValue)
+        ? rawValue.some((value) => missing.includes(String(value)))
+        : typeof rawValue === "string" && missing.includes(rawValue);
+    });
+    throw createEntryFieldError("media_asset_missing", missingField?.name);
   }
 
   for (const [id, acceptLists] of allowedById.entries()) {
@@ -287,25 +286,23 @@ async function validateMediaAssets(
     if (!mimeType) continue;
     for (const accept of acceptLists) {
       if (!matchesMimeAccept(mimeType, accept)) {
-        throw new Error("media_type_not_allowed");
+        const offendingField = mediaFields.find((field) => {
+          const rawValue = data[field.name];
+          return Array.isArray(rawValue) ? rawValue.includes(id) : rawValue === id;
+        });
+        throw createEntryFieldError("media_type_not_allowed", offendingField?.name);
       }
     }
   }
 }
 
-async function validateRelationEntries(
-  schema: ContentSchema,
-  data: EntryData,
-  client: DbClient
-) {
+async function validateRelationEntries(schema: ContentSchema, data: EntryData, client: DbClient) {
   const relationFields = extractRelationFields(schema);
   if (relationFields.length === 0) return;
 
   const idsByTarget = new Map<string, Set<string>>();
   const targetsBySlug = new Map<string, string>();
-  const uniqueTargets = Array.from(
-    new Set(relationFields.map((field) => field.targetSlug))
-  );
+  const uniqueTargets = Array.from(new Set(relationFields.map((field) => field.targetSlug)));
   const targetRows = await client
     .select({ id: contentTypes.id, slug: contentTypes.slug })
     .from(contentTypes)
@@ -319,7 +316,6 @@ async function validateRelationEntries(
   }
 
   for (const field of relationFields) {
-
     const rawValue = data[field.name];
     if (rawValue === undefined || rawValue === null || rawValue === "") {
       continue;
@@ -333,20 +329,20 @@ async function validateRelationEntries(
 
     if (field.multiple) {
       if (!Array.isArray(rawValue)) {
-        throw new Error("relation_value_invalid");
+        throw createEntryFieldError("relation_value_invalid", field.name);
       }
       for (const entryId of rawValue) {
         if (typeof entryId !== "string" || entryId.trim() === "") {
-          throw new Error("relation_value_invalid");
+          throw createEntryFieldError("relation_value_invalid", field.name);
         }
         addId(entryId);
       }
     } else {
       if (Array.isArray(rawValue)) {
-        throw new Error("relation_value_invalid");
+        throw createEntryFieldError("relation_value_invalid", field.name);
       }
       if (typeof rawValue !== "string" || rawValue.trim() === "") {
-        throw new Error("relation_value_invalid");
+        throw createEntryFieldError("relation_value_invalid", field.name);
       }
       addId(rawValue);
     }
@@ -361,42 +357,44 @@ async function validateRelationEntries(
     const rows = await client
       .select({ id: contentEntries.id })
       .from(contentEntries)
-      .where(
-        and(eq(contentEntries.typeId, targetId), inArray(contentEntries.id, idList))
-      );
+      .where(and(eq(contentEntries.typeId, targetId), inArray(contentEntries.id, idList)));
 
     const found = new Set(rows.map((row) => row.id));
     const missing = idList.filter((id) => !found.has(id));
     if (missing.length > 0) {
-      throw new Error("relation_entry_missing");
+      const offendingField = relationFields.find((field) => {
+        if (field.targetSlug !== targetSlug) return false;
+        const rawValue = data[field.name];
+        return Array.isArray(rawValue)
+          ? rawValue.some((value) => missing.includes(String(value)))
+          : typeof rawValue === "string" && missing.includes(rawValue);
+      });
+      throw createEntryFieldError("relation_entry_missing", offendingField?.name);
     }
   }
 }
 
 async function getContentSchema(typeId: string) {
-  const [row] = await db
-    .select()
-    .from(contentTypes)
-    .where(eq(contentTypes.id, typeId));
+  const [row] = await db.select().from(contentTypes).where(eq(contentTypes.id, typeId));
   return row ?? null;
 }
 
-async function ensureEntrySlugAvailable(
-  typeId: string,
-  slug: string,
-  excludeEntryId?: string
-) {
+async function ensureEntrySlugAvailable(typeId: string, slug: string, excludeEntryId?: string) {
   const rows = await db
     .select()
     .from(contentEntries)
     .where(
       excludeEntryId
-        ? and(eq(contentEntries.typeId, typeId), eq(contentEntries.slug, slug), ne(contentEntries.id, excludeEntryId))
+        ? and(
+            eq(contentEntries.typeId, typeId),
+            eq(contentEntries.slug, slug),
+            ne(contentEntries.id, excludeEntryId)
+          )
         : and(eq(contentEntries.typeId, typeId), eq(contentEntries.slug, slug))
     );
 
   if (rows.length > 0) {
-    throw new Error("entry_slug_conflict");
+    throw createEntryFieldError("entry_slug_conflict", "slug");
   }
 }
 
@@ -464,10 +462,11 @@ export async function listEntries(typeId: string) {
       ? {
           id: row.authorId,
           name: row.authorName ?? null,
-          email: resolveEmailValue({
-            emailEncrypted: row.authorEmailEncrypted,
-            email: row.authorEmail,
-          }) ?? "",
+          email:
+            resolveEmailValue({
+              emailEncrypted: row.authorEmailEncrypted,
+              email: row.authorEmail,
+            }) ?? "",
         }
       : null,
   }));
@@ -577,10 +576,11 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
       ? {
           id: row.authorId,
           name: row.authorName ?? null,
-          email: resolveEmailValue({
-            emailEncrypted: row.authorEmailEncrypted,
-            email: row.authorEmail,
-          }) ?? "",
+          email:
+            resolveEmailValue({
+              emailEncrypted: row.authorEmailEncrypted,
+              email: row.authorEmail,
+            }) ?? "",
         }
       : null,
     seo: seo
@@ -596,10 +596,7 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
 }
 
 export async function deleteEntry(id: string) {
-  const [row] = await db
-    .delete(contentEntries)
-    .where(eq(contentEntries.id, id))
-    .returning();
+  const [row] = await db.delete(contentEntries).where(eq(contentEntries.id, id)).returning();
   return row ?? null;
 }
 
@@ -617,16 +614,8 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
 
   await ensureEntrySlugAvailable(typeId, input.slug);
   validateEntryData(typeId, contentType.schema as ContentSchema, input.data);
-  await validateRelationEntries(
-    contentType.schema as ContentSchema,
-    input.data,
-    db
-  );
-  await validateMediaAssets(
-    contentType.schema as ContentSchema,
-    input.data,
-    db
-  );
+  await validateRelationEntries(contentType.schema as ContentSchema, input.data, db);
+  await validateMediaAssets(contentType.schema as ContentSchema, input.data, db);
 
   const [row] = await db
     .insert(contentEntries)
@@ -731,16 +720,8 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
 
   const nextData = input.data ?? (entry.data as EntryData);
   validateEntryData(entry.typeId, contentType.schema as ContentSchema, nextData);
-  await validateRelationEntries(
-    contentType.schema as ContentSchema,
-    nextData,
-    db
-  );
-  await validateMediaAssets(
-    contentType.schema as ContentSchema,
-    nextData,
-    db
-  );
+  await validateRelationEntries(contentType.schema as ContentSchema, nextData, db);
+  await validateMediaAssets(contentType.schema as ContentSchema, nextData, db);
 
   await db
     .update(contentEntries)
@@ -767,30 +748,15 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
 
 export async function publishEntry(entryId: string, userId: string) {
   const updated = await db.transaction(async (tx) => {
-    const [entry] = await tx
-      .select()
-      .from(contentEntries)
-      .where(eq(contentEntries.id, entryId));
+    const [entry] = await tx.select().from(contentEntries).where(eq(contentEntries.id, entryId));
 
     if (!entry) throw new Error("entry_not_found");
 
     const contentType = await getContentSchema(entry.typeId);
     if (!contentType) throw new Error("content_type_not_found");
-    validateEntryData(
-      entry.typeId,
-      contentType.schema as ContentSchema,
-      entry.data
-    );
-    await validateRelationEntries(
-      contentType.schema as ContentSchema,
-      entry.data as EntryData,
-      tx
-    );
-    await validateMediaAssets(
-      contentType.schema as ContentSchema,
-      entry.data as EntryData,
-      tx
-    );
+    validateEntryData(entry.typeId, contentType.schema as ContentSchema, entry.data);
+    await validateRelationEntries(contentType.schema as ContentSchema, entry.data as EntryData, tx);
+    await validateMediaAssets(contentType.schema as ContentSchema, entry.data as EntryData, tx);
 
     await createEntryRevisionTx(tx, entry.id, entry.data as EntryData, userId);
 
@@ -934,11 +900,7 @@ export async function listEntryRevisions(entryId: string) {
     .orderBy(desc(contentRevisions.version));
 }
 
-export async function createEntryRevision(
-  entryId: string,
-  data: EntryData,
-  userId: string
-) {
+export async function createEntryRevision(entryId: string, data: EntryData, userId: string) {
   return createEntryRevisionTx(db, entryId, data, userId);
 }
 

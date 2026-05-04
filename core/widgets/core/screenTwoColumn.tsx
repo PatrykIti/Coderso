@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
@@ -8,14 +8,19 @@ import type {
   WidgetEditorProps,
   WidgetLayoutDefaults,
 } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ScreenTwoColumnVariantId = "balanced" | "aside";
-export type ScreenTwoColumnGap = "sm" | "md" | "lg";
+export type ScreenTwoColumnGap = "none" | "sm" | "md" | "lg";
 
 export type ScreenTwoColumnData = {
   leftTitle?: string;
   rightTitle?: string;
   gap?: ScreenTwoColumnGap;
+  style?: {
+    columnBackground?: string;
+    columnBorderColor?: string;
+  };
 };
 
 export const screenTwoColumnSlots = [
@@ -27,9 +32,17 @@ export const screenTwoColumnSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    leftTitle: { type: "string" },
-    rightTitle: { type: "string" },
-    gap: { enum: ["sm", "md", "lg"] },
+    leftTitle: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    rightTitle: { anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    gap: { enum: ["none", "sm", "md", "lg"] },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        columnBackground: { type: "string" },
+        columnBorderColor: { type: "string" },
+      },
+    },
   },
 } as const;
 
@@ -37,24 +50,33 @@ export const screenTwoColumnDefaults: ScreenTwoColumnData = {
   leftTitle: "Primary column",
   rightTitle: "Secondary column",
   gap: "md",
+  style: {
+    columnBackground: "color-mix(in srgb, var(--color-bg) 60%, transparent)",
+    columnBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
+  },
 };
 
 const gapClassMap: Record<ScreenTwoColumnGap, string> = {
+  none: "gap-0",
   sm: "gap-4",
   md: "gap-6",
   lg: "gap-8",
 };
 
-export function resolveScreenTwoColumnVariant(
-  value: string
-): ScreenTwoColumnVariantId {
+export function resolveScreenTwoColumnVariant(value: string): ScreenTwoColumnVariantId {
   if (value === "aside") return value;
   return "balanced";
 }
 
-export function normalizeScreenTwoColumnData(
-  value: ScreenTwoColumnData
-): ScreenTwoColumnData {
+export function normalizeScreenTwoColumnData(value: ScreenTwoColumnData): ScreenTwoColumnData {
+  const hasStyleObject = value.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        columnBackground: resolveClearableStyleValue(value.style?.columnBackground),
+        columnBorderColor: resolveClearableStyleValue(value.style?.columnBorderColor),
+      }) ?? {})
+    : undefined;
+
   return {
     leftTitle:
       typeof value.leftTitle === "string"
@@ -64,7 +86,8 @@ export function normalizeScreenTwoColumnData(
       typeof value.rightTitle === "string"
         ? value.rightTitle
         : (screenTwoColumnDefaults.rightTitle ?? ""),
-    gap: value.gap === "sm" || value.gap === "lg" ? value.gap : "md",
+    gap: value.gap === "none" || value.gap === "sm" || value.gap === "lg" ? value.gap : "md",
+    ...(hasStyleObject ? { style } : {}),
   };
 }
 
@@ -74,18 +97,26 @@ export function ScreenTwoColumnBlock({
   slots,
   previewDevice,
   pageDefaults,
+  renderBlock,
 }: {
   data: ScreenTwoColumnData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
   pageDefaults?: WidgetLayoutDefaults;
+  renderBlock?: (block: WidgetBlock) => ReactNode;
 }) {
   const normalized = normalizeScreenTwoColumnData(data);
   const resolvedVariant = resolveScreenTwoColumnVariant(variant);
   const gap = normalized.gap ?? "md";
   const left = slots?.left ?? [];
   const right = slots?.right ?? [];
+  const hasStyleObject = normalized.style !== undefined;
+  const columnStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.columnBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.columnBorderColor),
+  });
+  const legacyColumnSurfaceClass = hasStyleObject ? "" : "border-border/60 bg-background/60";
   const gridClassName =
     resolvedVariant === "aside"
       ? `grid items-start ${gapClassMap[gap]} lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]`
@@ -93,7 +124,8 @@ export function ScreenTwoColumnBlock({
 
   const renderColumn = (title: string | undefined, items: WidgetBlock[], column: string) => (
     <div
-      className="space-y-4 rounded-3xl border border-border/60 bg-background/60 p-4"
+      className={`space-y-4 rounded-3xl border p-4 ${legacyColumnSurfaceClass}`}
+      style={columnStyle}
       data-screen-widget-column={column}
     >
       {title?.trim() ? (
@@ -103,12 +135,17 @@ export function ScreenTwoColumnBlock({
       ) : null}
       {items.length > 0 ? (
         items.map((block) => (
-          <WidgetRenderer
-            key={block.id}
-            block={block}
-            previewDevice={previewDevice}
-            pageDefaults={pageDefaults}
-          />
+          <div key={block.id}>
+            {renderBlock ? (
+              renderBlock(block)
+            ) : (
+              <WidgetRenderer
+                block={block}
+                previewDevice={previewDevice}
+                pageDefaults={pageDefaults}
+              />
+            )}
+          </div>
         ))
       ) : (
         <div className="rounded-2xl border border-dashed border-border/60 bg-background/50 px-4 py-5 text-sm text-muted-foreground">

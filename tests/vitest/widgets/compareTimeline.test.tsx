@@ -112,6 +112,24 @@ test("compare timeline validator accepts extended fields", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("compare timeline cleared style colors omit normalized keys while runtime keeps readable fallbacks", () => {
+  const normalized = normalizeCompareTimelineData({
+    ...compareTimelineDefaults,
+    style: {},
+  });
+  const html = renderToString(
+    <CompareTimelineBlock data={normalized} variant="dual-track-highlight" />
+  );
+
+  expect(normalized.style?.highlightColor).toBeUndefined();
+  expect(normalized.style?.markerColor).toBeUndefined();
+  expect(normalized.style?.guideColor).toBeUndefined();
+  expect(html).toContain('data-compare-variant="dual-track-highlight"');
+  expect(html).toContain("var(--color-primary)");
+  expect(html).toContain("var(--color-border)");
+  expect(html).not.toContain("background-color:transparent");
+});
+
 test("compare timeline validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

@@ -141,12 +141,13 @@ vi.mock("@/components/ui/textarea", () => ({
     placeholder?: string;
     rows?: number;
     [key: string]: unknown;
-  }) => <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />,
+  }) => (
+    <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />
+  ),
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("@/services/mediaClient", () => ({
@@ -215,10 +216,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
     throw new Error("Expected HTMLTextAreaElement");
   }
 
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -283,9 +281,8 @@ afterEach(() => {
 });
 
 test("GalleryMosaic wizard normalizes the variant selector and seeds deterministic item growth", async () => {
-  const { GalleryMosaicWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors"
-  );
+  const { GalleryMosaicWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -362,9 +359,8 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
 });
 
 test("GalleryMosaic visual editor covers variant cards, item reordering, removal, addition, and style controls", async () => {
-  const { GalleryMosaicVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors"
-  );
+  const { GalleryMosaicVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -439,7 +435,10 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     expect(colorPicker).toBeInstanceOf(HTMLInputElement);
     expect((colorPicker as HTMLInputElement).value).toBe("#0f172a");
 
-    setInputValue(findAllInputsByPlaceholder(view.container, "https://cdn.example.com/clip.mp4")[1], "https://cdn.example.com/item-2.mp4");
+    setInputValue(
+      findAllInputsByPlaceholder(view.container, "https://cdn.example.com/clip.mp4")[1],
+      "https://cdn.example.com/item-2.mp4"
+    );
     setInputValue(findInputByPlaceholder(view.container, "Media 2"), "Motion close-up");
     setInputValue(findAllInputsByPlaceholder(view.container, "#")[1], "/motion-updated");
 
@@ -496,9 +495,8 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 });
 
 test("GalleryMosaic advanced editor normalizes malformed payloads, applies token edits, and resets to defaults", async () => {
-  const { GalleryMosaicAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors"
-  );
+  const { GalleryMosaicAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue = {
@@ -573,7 +571,7 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
       ratio: "4:3",
       gap: "md",
       radius: "lg",
-      overlay: "",
+      overlay: undefined,
       captionPosition: "inside",
     });
 
@@ -604,9 +602,8 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
 });
 
 test("GalleryMosaic visual editor updates header title, image field, move-down ordering, and raw overlay token without a variant handler", async () => {
-  const { GalleryMosaicVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors"
-  );
+  const { GalleryMosaicVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
   let latestValue: GalleryMosaicData = {
     header: {},
@@ -636,7 +633,10 @@ test("GalleryMosaic visual editor updates header title, image field, move-down o
 
   try {
     const headerSection = findSectionByTitle(view.container, "Header copy");
-    setInputValue(findInputByPlaceholder(headerSection ?? view.container, "Gallery highlights"), "Customer proof");
+    setInputValue(
+      findInputByPlaceholder(headerSection ?? view.container, "Gallery highlights"),
+      "Customer proof"
+    );
 
     const mediaSection = findSectionByTitle(view.container, "Media items and links");
     setInputValue(

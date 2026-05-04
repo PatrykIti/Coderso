@@ -357,3 +357,137 @@ Po zakończeniu testów w bazie pozostają:
 - Menu **Footer Menu** (Draft, footer) — pusty
 
 Możliwe pozostałości z wcześniejszych testów innych agentów: nie obserwowano kolizji UUID, lista przed testami była pusta (No menus yet).
+
+---
+
+## Re-retest #3 (2026-04-30) — pełna ścieżka lista + edytor
+
+**Środowisko:** http://localhost:5173/admin/menus, login patryk.ciechanski@patrykiti.pl, sesja `menus-retest-apr30` (izolowana).
+
+**Zakres:** lista (search, filtry Status/Location, kolumny, bulk-select, kebab), Create Menu dialog (walidacja, helper text, toast), edytor menu (Add Item, Page/URL toggle, Badge/Visibility/Icon/Description/Parent, hierarchia sub-menu, Indent/Outdent/Move, Save/Discard, delete item dialog, delete menu dialog), status flow Draft↔Published z edytora i listy.
+
+---
+
+### Status bugów z poprzednich rund
+
+| ID | Tytuł | Status | Obserwacja 2026-04-30 |
+|---|---|---|---|
+| BUG-1 | window.confirm dla item delete | ✅ **NAPRAWIONY** | Radix dialog "Delete menu item?" z nazwą itemu ("About will be removed…"), Cancel / Delete item. Działa zarówno z ikonki w liście itemów jak i z "Delete Item" w panelu. |
+| BUG-2 | Brak wcięcia sub-menu | ✅ **NAPRAWIONY** | `data-menu-depth="1"`, `margin-left: 24px`, tekst "Sub-item of Home" w wierszu. Hierarchia czytelna wizualnie. |
+| BUG-3 / UX-2 | "Active menu" combobox | ✅ **NAPRAWIONY** | Nie ma comboboxa — architektura list+detail, breadcrumb "Content / Menus / [nazwa]", button "Menus" wraca do listy. |
+| BUG-4 | Brak toasta po Save changes | ✅ **NAPRAWIONY** | Toast "Menu saved." po Save changes. Toast "Menu published." / brak toastu po Move to Draft (toast minął za szybko, ale status się zmienił). Toast po Create: `Menu "Test Menu Apr30" created.` |
+| UX-1 | Redundantne ikony | ✅ **NAPRAWIONY** | Każdy wiersz itemu ma rozróżnione: "Open menu item details for X" (klik na wiersz), "Open details for X" (ikonka), "Delete X" (ikonka trash). Jasna semantyka. |
+| UX-3 | Brak drag handle | ✅ **NAPRAWIONY** | `cursor-grab` potwierdzone kodu (`window.getComputedStyle`). Ikonka `lucide-grip-vertical` wizualnie. Instrukcja: "Drag from the grip handle to reorder. Drop near the top or bottom…". |
+| UX-5 | Location bez wyjaśnienia | ✅ **NAPRAWIONY** | Helper z `<code>primary</code>` i `<code>footer</code>`. W edytorze: "Slot key used by the theme or Navigation widget, for example `primary` or `footer`. Leave empty for menus that are not mounted in a theme slot yet." |
+| BUG-N1 | "Customize menu columns" nieaktywny | 🔴 **OTWARTY** | Klik button nie otwiera popovera. `querySelectorAll('[data-state=open]')` = 0. Button widoczny w toolbarze listy — nadal "głuchy". |
+| BUG-N2 | Stale label w native `<select>` | 🔴 **OTWARTY** | Native `<select>` dla Parent Item pokazuje "New item" zamiast "About" — zarówno przed Update Item (live) jak i po nim dla innych itemów otwartych w panelu. Regresja vs poprzedni raport który mówił "synchronizuje po Update Item". Teraz NIE synchronizuje wcale. |
+| BUG-N3 | Page/Custom URL bez role=radiogroup | 🔴 **OTWARTY** | `role=null`, `aria-pressed=null`, brak `role="radiogroup"` na kontenerze. Brak zmian. |
+| BUG-N4 | Menu delete dialog bez nazwy menu | 🔴 **OTWARTY** | Dialog: "Delete menu? Delete this menu? This cannot be undone." — nadal brak nazwy. Niespójne z item delete dialog który ma nazwę. |
+| UX-4 | Icon Name bez wizualnego pickera | ⚠️ **CZĘŚCIOWO** | Po Update Item pojawia się `"Current token:" <code>home</code>` pod polem — tylko tekst, NIE wizualna miniatura. Brak listy/autocomplete tokenów. |
+
+---
+
+### Nowe obserwacje 2026-04-30
+
+#### [OBS-1] Przycisk "Refresh" celowo usunięty z toolbar edytora ✅
+
+**Gdzie:** `/admin/menus/{uuid}` → toolbar nagłówka.
+
+**Co się dzieje:** W re-retescie z 2026-04-26 raportowano "Refresh button — Obecny w toolbarze edytora." Teraz go nie ma — i słusznie. Refresh był potrzebny w starym flow z "Active menu" comboboxem (jedna strona dla wszystkich menu). Po redesignie na architekturę list+detail, każdy edytor jest dedykowany jednemu menu — reload strony po prostu wraca do tego samego URL z aktualnym stanem. Discard + nawigacja breadcrumb zastępują Refresh w 100%.
+
+**Ocena:** Celowe, uzasadnione usunięcie. Nie bug.
+
+---
+
+#### [OBS-2] Indent/Outdent przyciski w liście itemów — nowa funkcja ✅
+
+**Gdzie:** Każdy item w Menu Structure → zestaw 6 przycisków akcji.
+
+**Co się dzieje:** Poza Move up/down (znane) widoczne przyciski "Indent [nazwa]" i "Outdent [nazwa]". Testowane:
+- Indent: przesuwa item o poziom w dół hierarchii (staje się child poprzedniego), tworzy `data-menu-depth="1"` i `margin-left: 24px`. Działa równoważnie z drag right.
+- Outdent: cofa item na poziom wyżej. Działa.
+- Przyciski disabled gdy operacja niemożliwa (top-level bez poprzedniego sibling → Indent disabled; depth=0 → Outdent disabled).
+
+**Ocena:** Porządna alternatywa dla drag&drop, szczególnie dla użytkowników klawiaturowych.
+
+---
+
+#### [OBS-3] BUG-N2 pogłębiony — native select nie synchronizuje WCALE po Update Item
+
+**Gdzie:** Edytor menu → panel Edit Menu Item → Parent Item Radix Select → hidden `<select>`.
+
+**Co się dzieje:** Po dodaniu itemu "About" (domyślnie "New item"), zmianie label na "About" i kliknięciu Update Item — native `<select>` dla Parent Item nadal zawiera "New item" zamiast "About". W poprzednim raporcie (2026-04-26) pisano że "Po Update Item native select zostaje zsynchronizowany dla wszystkich INNYCH itemów" — teraz tak się nie dzieje. Bug pogłębiony.
+
+**Skutek:** Screen reader na każdym kolejnym Add Item anonsuje stary label nowo dodanego itemu.
+
+---
+
+### Co działa dobrze — nowe potwierdzenia
+
+| Funkcja | Obserwacja |
+|---|---|
+| Search po nazwie | "test2" → 1 wynik, clear → 3 wyniki. |
+| Status filter | Draft → 3 (wszystkie draft), Published → 0. |
+| Location filter | "Not assigned" → 3 (wszystkie bez lokalizacji). Opcje generowane dynamicznie. |
+| Bulk select | "Selected 3" + Publish/Move to Draft/Delete z Apply/Clear. |
+| Kebab menu w liście | Edit/Publish/Move to Draft (disabled gdy Draft)/Delete — logika disabled prawidłowa. |
+| Publish z listy | Status Draft → Published, kolumna Published wypełnia się datą. Toast "Menu published." |
+| Move to Draft z listy | Status Published → Draft, data Published znika. Inline, bez page reload. |
+| Publish z edytora | Button Publish → toast "Menu published.", status badge "Published", button → "Move to Draft". |
+| Move to Draft z edytora | Button Move to Draft → status → "Draft", button → "Publish". |
+| Create Menu walidacja | Pusty input → "Menu name is required." inline pod polem. |
+| Create Menu helper | Location z `<code>primary</code>` / `<code>footer</code>` inline. |
+| Create Menu toast | `Menu "Test Menu Apr30" created.` — widoczny. |
+| Page dropdown w Link Type | Lista stron ładuje się: QA Pages Audit 2026-04-30, HomePage, Widget UX Audit, Deep Editor Test Page, QA Retest 2026-04-25. |
+| Custom URL toggle | Przełączenie → URL Path z `https://` placeholder. |
+| Badge Tone | 5 opcji: default/accent/success/warning/danger. |
+| Visibility | 3 opcje: Show to everyone / Only logged-in users / Only logged-out users. |
+| Hierarchia 24px | `data-menu-depth="1"`, `margin-left: 24px`, "Sub-item of [parent]". |
+| Parent Item disabled self | "About" disabled gdy edytujemy "About" — zapobiega circular dependency. |
+| Breadcrumb | Content / Menus / [nazwa] z klikalnym buttonem "Menus". |
+| Discard | Przywraca zmiany, status → "All changes saved". |
+| Save changes | Toast "Menu saved.", przyciski Discard/Save → disabled. |
+| Delete menu alert | Radix dialog "Delete menu?" — menu znika z listy po potwierdzeniu. |
+| Move up/down | Zmiana kolejności itemów. |
+| Indent/Outdent | Tworzenie i cofanie hierarchii przez przyciski (alternatywa dla drag). |
+| Drag handle | `cursor-grab` potwierdzone CSS, ikonka grip-vertical. |
+
+---
+
+### UX feel — obserwacje całościowe 2026-04-30
+
+**Co jest super:**
+- Pełny coverage funkcji CRUD z właściwym stanem przycisków (disabled gdy niedostępne).
+- Indent/Outdent jako klawiaturowa alternatywa dla drag — solidny UX dla dostępności.
+- Toast feedback spójny: created, saved, published.
+- Hierarchia sub-menu działa bezbłędnie przez 3 drogi: drag, Indent button, Parent dropdown.
+
+**Co wymaga uwagi:**
+- **BUG-N1** — "Customize menu columns" to deadweight UI. Widoczny przycisk bez funkcji szkodzi zaufaniu do UI.
+- **BUG-N2** — native `<select>` stale label po rename — teraz NIE synchronizuje się nawet po Update Item (regresja).
+- **BUG-N3** — brak `role="radiogroup"` na toggle Page/Custom URL — pomijany przez screen readery.
+- **BUG-N4** — dialog usuwania menu bez nazwy — niespójność z item delete.
+- **OBS-1** — Refresh usunięty celowo (był zbędny w architekturze per-menu editor). ✅
+- **UX-4** — Icon Name bez wizualnego podglądu — content manager nie wie co wpisać.
+
+### Screenshoty (2026-04-30)
+
+- `screenshots/2026-04-30/menus-full/01-list-view.png` — widok listy (3 menu: test/test2/tesy3)
+- `screenshots/2026-04-30/menus-full/02-customize-columns-no-popover.png` — BUG-N1: button aktywny, brak popovera
+- `screenshots/2026-04-30/menus-full/03-kebab-menu.png` — kebab: Edit/Publish/Move to Draft (disabled)/Delete
+- `screenshots/2026-04-30/menus-full/04-bulk-select.png` — "Selected 3" + Bulk actions
+- `screenshots/2026-04-30/menus-full/05-create-menu-dialog.png` — dialog tworzenia z helper location
+- `screenshots/2026-04-30/menus-full/06-create-menu-validation.png` — "Menu name is required." inline
+- `screenshots/2026-04-30/menus-full/07-editor-empty.png` — edytor pustego menu (brak Refresh w toolbarze)
+- `screenshots/2026-04-30/menus-full/08-item-home-configured.png` — item Home: Page/Badge/Icon skonfigurowany
+- `screenshots/2026-04-30/menus-full/09-submenu-indent.png` — "Sub-item of Home" z 24px indent
+- `screenshots/2026-04-30/menus-full/10-delete-item-dialog.png` — BUG-1 naprawiony: Radix dialog z nazwą "About"
+- `screenshots/2026-04-30/menus-full/11-editor-toolbar.png` — toolbar edytora (Discard/Save/Publish, bez Refresh)
+- `screenshots/2026-04-30/menus-full/12-delete-menu-dialog-no-name.png` — BUG-N4: dialog bez nazwy menu
+- `screenshots/2026-04-30/menus-full/13-final-state.png` — końcowy stan edytora
+
+### Stan testowych danych po teście
+
+Przed testem: test (Draft), test2 (Draft), tesy3 (Draft) — 3 menu bez itemów.
+Po teście: test (Draft, 2 itemy: Home/Cos w oryginalnej kolejności po Discard), test2 (Draft), tesy3 (Draft).
+Menu "Test Menu Apr30" — utworzone i usunięte w ramach testu.

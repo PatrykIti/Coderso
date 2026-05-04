@@ -96,16 +96,19 @@ const createDeps = () => {
     submissionAccess: string;
   }> = [];
   const formSubmissionCounts = new Map<string, number>();
-  const formActions = new Map<string, Array<{
-    id: string;
-    type: "email" | "webhook" | "entry_sync" | "redirect" | "success_message";
-    label: string;
-    enabled: boolean;
-    continueOnError: boolean;
-    condition: Record<string, unknown>;
-    config: Record<string, unknown>;
-    orderIndex: number;
-  }>>();
+  const formActions = new Map<
+    string,
+    Array<{
+      id: string;
+      type: "email" | "webhook" | "entry_sync" | "redirect" | "success_message";
+      label: string;
+      enabled: boolean;
+      continueOnError: boolean;
+      condition: Record<string, unknown>;
+      config: Record<string, unknown>;
+      orderIndex: number;
+    }>
+  >();
   const entries: Array<{
     id: string;
     typeId: string;
@@ -215,8 +218,7 @@ const createDeps = () => {
       return deleted ?? null;
     },
     listCustomScreens: async () => customScreens,
-    getCustomScreen: async (id: string) =>
-      customScreens.find((entry) => entry.id === id) ?? null,
+    getCustomScreen: async (id: string) => customScreens.find((entry) => entry.id === id) ?? null,
     createCustomScreen: async (input: {
       name: string;
       contentTypeId: string;
@@ -296,10 +298,7 @@ const createDeps = () => {
       listingQueries.push(record);
       return record;
     },
-    updateListingQuery: async (
-      id: string,
-      input: unknown
-    ) => {
+    updateListingQuery: async (id: string, input: unknown) => {
       const parsed = input as ListingQueryUpdateInput;
       const existing = listingQueries.find((entry) => entry.id === id) ?? null;
       if (!existing) return null;
@@ -361,10 +360,8 @@ const createDeps = () => {
       const [deleted] = listingTemplates.splice(index, 1);
       return deleted ?? null;
     },
-    getPageBySlug: async (slug: string) =>
-      pages.find((entry) => entry.slug === slug) ?? null,
-    getPage: async (id: string) =>
-      pages.find((entry) => entry.id === id) ?? null,
+    getPageBySlug: async (slug: string) => pages.find((entry) => entry.slug === slug) ?? null,
+    getPage: async (id: string) => pages.find((entry) => entry.id === id) ?? null,
     listPages: async () =>
       pages.map((page) => ({
         id: page.id,
@@ -458,10 +455,8 @@ const createDeps = () => {
       return existing;
     },
     listForms: async () => forms,
-    getForm: async (id: string) =>
-      forms.find((entry) => entry.id === id) ?? null,
-    countFormSubmissions: async (formId: string) =>
-      formSubmissionCounts.get(formId) ?? 0,
+    getForm: async (id: string) => forms.find((entry) => entry.id === id) ?? null,
+    countFormSubmissions: async (formId: string) => formSubmissionCounts.get(formId) ?? 0,
     createForm: async (input: {
       name: string;
       slug?: string | null;
@@ -539,9 +534,7 @@ const createDeps = () => {
     getEntryBySlug: async (typeId: string, slug: string) =>
       (entries.find((entry) => entry.typeId === typeId && entry.slug === slug) ??
         null) as unknown as Awaited<
-        ReturnType<
-          (typeof import("../../../core/services/content/entryService"))["getEntryBySlug"]
-        >
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["getEntryBySlug"]>
       >,
     getEntry: async (id: string) =>
       (entries.find((entry) => entry.id === id) ?? null) as unknown as Awaited<
@@ -622,9 +615,8 @@ const createDeps = () => {
       }
       if (input.seo) {
         const seo =
-          seoDocuments.find(
-            (entry) => entry.targetType === "entry" && entry.targetId === id
-          ) ?? null;
+          seoDocuments.find((entry) => entry.targetType === "entry" && entry.targetId === id) ??
+          null;
         if (seo) {
           seo.title = input.seo.title ?? seo.title;
           seo.description = input.seo.description ?? seo.description;
@@ -650,7 +642,9 @@ const createDeps = () => {
         }
       }
       return existing as unknown as Awaited<
-        ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntryMetadata"]>
+        ReturnType<
+          (typeof import("../../../core/services/content/entryService"))["updateEntryMetadata"]
+        >
       >;
     },
     listMenuItems: async (menuId: string) =>
@@ -711,8 +705,7 @@ const createDeps = () => {
         children: [],
       }));
     },
-    getSeoDocument: async (id: string) =>
-      seoDocuments.find((entry) => entry.id === id) ?? null,
+    getSeoDocument: async (id: string) => seoDocuments.find((entry) => entry.id === id) ?? null,
     getSeoDocumentByTarget: async (targetType: "page" | "entry", targetId: string) =>
       seoDocuments.find(
         (entry) => entry.targetType === targetType && entry.targetId === targetId
@@ -783,8 +776,7 @@ const createDeps = () => {
       seoDocuments.push(record);
       return record;
     },
-    getMediaById: async (id: string) =>
-      mediaAssets.find((entry) => entry.id === id) ?? null,
+    getMediaById: async (id: string) => mediaAssets.find((entry) => entry.id === id) ?? null,
     logAudit: async () => ({
       id: "audit-1",
       actorId: "user-1",
@@ -1252,6 +1244,95 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
   expect(deps.__state.customScreens[0]?.blocks[0]?.id).toBe("hero-1");
 });
 
+test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "House Projects",
+    slug: "house-projects",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  await deps.createCustomScreen({
+    name: "House Projects",
+    contentTypeId: contentType.id,
+    status: "active",
+    showInSidebar: true,
+    sidebarLabel: "House Projects",
+    blocks: [
+      {
+        id: "header-1",
+        type: "screen-record-header",
+        data: {
+          title: "Record overview",
+        },
+      },
+    ],
+    bindings: [
+      {
+        id: "binding-header-title",
+        widgetId: "header-1",
+        propPath: "title",
+        field: "title",
+        mode: "read",
+      },
+    ],
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-custom-screen-upsert-noop",
+    status: "ready",
+    intentId: "custom-screen-upsert",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Upsert custom screen",
+    answer: "I can keep the selected custom screen as-is.",
+    summary: "Verify custom screen reruns stay noop.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-upsert-1",
+        type: "custom-screen.upsert",
+        title: "Create a dedicated House Projects admin screen",
+        description: "Keep the current House Projects screen contract.",
+        input: {
+          name: "House Projects",
+          contentTypeSlug: "house-projects",
+          status: "active",
+          showInSidebar: true,
+          sidebarLabel: "House Projects",
+          blocks: [
+            {
+              id: "header-1",
+              type: "screen-record-header",
+              data: {
+                title: "Record overview",
+              },
+            },
+          ],
+          bindings: [
+            {
+              id: "binding-header-title",
+              widgetId: "header-1",
+              propPath: "title",
+              field: "title",
+              mode: "read",
+            },
+          ],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+
+  expect(preview.changes[0]?.operation).toBe("noop");
+});
+
 test("executeAssistantActionPlan patches custom screen widget block data", async () => {
   const deps = createDeps();
   const contentType = await deps.createContentType({
@@ -1450,7 +1531,9 @@ test("executeAssistantActionPlan updates page metadata and preserves page blocks
   expect(deps.__state.pages[0]?.title).toBe("Contact Us");
   expect(deps.__state.pages[0]?.slug).toBe("/contact-us");
   expect((deps.__state.pages[0]?.currentData.blocks as Array<{ id: string }>)[0]?.id).toBe("hero");
-  expect((deps.__state.pages[0]?.currentData.settings as { showInNav?: boolean })?.showInNav).toBe(false);
+  expect((deps.__state.pages[0]?.currentData.settings as { showInNav?: boolean })?.showInNav).toBe(
+    false
+  );
 });
 
 test("executeAssistantActionPlan publishes page updates through page service", async () => {
@@ -1586,7 +1669,10 @@ test("executeAssistantActionPlan updates widget template metadata and preserves 
         wrapper: {
           container: "full",
           padding: { top: "none", bottom: "none" },
-          background: { color: "transparent", media: { type: "none", source: "external", src: null } },
+          background: {
+            color: "transparent",
+            media: { type: "none", source: "external", src: null },
+          },
         },
         sections: {
           gap: "none",
@@ -1879,9 +1965,7 @@ test("executeAssistantActionPlan blocks listing deletes when page references rem
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.warnings[0]).toContain("referenced by 1 page");
-  expect(preview.changes[0]?.conflicts[0]?.code).toBe(
-    "assistant_action_dependency_conflict"
-  );
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
 
   const executed = await executeAssistantActionPlan(
     {
@@ -2090,9 +2174,7 @@ test("executeAssistantActionPlan blocks form hard delete when submissions exist"
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.warnings[0]).toContain("2 submissions");
-  expect(preview.changes[0]?.conflicts[0]?.code).toBe(
-    "assistant_action_dependency_conflict"
-  );
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
 
   const executed = await executeAssistantActionPlan(
     {
@@ -2307,9 +2389,7 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
     deps
   );
   expect(deps.__state.menuItemsByMenu.get("menu-primary")).toHaveLength(1);
-  expect(deps.__state.menuItemsByMenu.get("menu-primary")?.[0]?.label).toBe(
-    "Products Catalog"
-  );
+  expect(deps.__state.menuItemsByMenu.get("menu-primary")?.[0]?.label).toBe("Products Catalog");
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
@@ -3211,9 +3291,7 @@ test("dryRunAssistantActionPlan rejects unsupported page widget patch types", as
     ],
   };
 
-  await expect(dryRunAssistantActionPlan({ plan }, deps)).rejects.toThrow(
-    "widget_unknown_type"
-  );
+  await expect(dryRunAssistantActionPlan({ plan }, deps)).rejects.toThrow("widget_unknown_type");
 });
 
 test("executeAssistantActionPlan upserts safe form automation without duplicates", async () => {
@@ -3541,9 +3619,7 @@ test("dryRunAssistantActionPlan previews site-kit recommend and install actions"
   ]);
   expect(preview.changes[0]?.operation).toBe("noop");
   expect(preview.changes[1]?.operation).toBe("create");
-  expect(preview.changes[1]?.details?.siteKit?.plan?.selectedKitId).toBe(
-    "automotive-workshop"
-  );
+  expect(preview.changes[1]?.details?.siteKit?.plan?.selectedKitId).toBe("automotive-workshop");
 });
 
 test("executeAssistantActionPlan delegates site-kit install to guided site-builder executor", async () => {

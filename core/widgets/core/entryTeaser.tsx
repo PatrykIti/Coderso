@@ -1,13 +1,14 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
 export type EntryTeaserSourceMode = "manual" | "latest" | "featured";
 export type EntryTeaserDataSourceMode = "legacy" | "listing";
 export type EntryTeaserCtaHrefMode = "auto" | "custom";
-export type EntryTeaserRadius = "sm" | "md" | "lg" | "xl";
-export type EntryTeaserSpacing = "sm" | "md" | "lg";
+export type EntryTeaserRadius = "none" | "sm" | "md" | "lg" | "xl";
+export type EntryTeaserSpacing = "none" | "sm" | "md" | "lg";
 
 export type EntryTeaserRuntimeItem = {
   id?: string;
@@ -106,8 +107,8 @@ export const entryTeaserSchema = {
       properties: {
         surface: { type: "string" },
         border: { type: "string" },
-        radius: { enum: ["sm", "md", "lg", "xl"] },
-        spacing: { enum: ["sm", "md", "lg"] },
+        radius: { enum: ["none", "sm", "md", "lg", "xl"] },
+        spacing: { enum: ["none", "sm", "md", "lg"] },
       },
     },
     fallback: {
@@ -202,12 +203,14 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const spacingClassMap: Record<EntryTeaserSpacing, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
 };
 
 const radiusClassMap: Record<EntryTeaserRadius, string> = {
+  none: "",
   sm: "rounded-md",
   md: "rounded-lg",
   lg: "rounded-xl",
@@ -251,29 +254,23 @@ export const resolveEntryTeaserVariant = (variant: string): EntryTeaserVariantId
   return "horizontal";
 };
 
-const resolveEntryTeaserSourceMode = (
-  value: string | undefined
-): EntryTeaserSourceMode => {
+const resolveEntryTeaserSourceMode = (value: string | undefined): EntryTeaserSourceMode => {
   if (value === "manual" || value === "featured") return value;
   return "latest";
 };
 
-const resolveEntryTeaserHrefMode = (
-  value: string | undefined
-): EntryTeaserCtaHrefMode => {
+const resolveEntryTeaserHrefMode = (value: string | undefined): EntryTeaserCtaHrefMode => {
   if (value === "custom") return value;
   return "auto";
 };
 
 const resolveEntryTeaserRadius = (value: string | undefined): EntryTeaserRadius => {
-  if (value === "sm" || value === "md" || value === "xl") return value;
+  if (value === "none" || value === "sm" || value === "md" || value === "xl") return value;
   return "lg";
 };
 
-const resolveEntryTeaserSpacing = (
-  value: string | undefined
-): EntryTeaserSpacing => {
-  if (value === "sm" || value === "lg") return value;
+const resolveEntryTeaserSpacing = (value: string | undefined): EntryTeaserSpacing => {
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
@@ -339,19 +336,16 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
   };
   const fallbackDefaults = entryTeaserDefaults.fallback ?? {
     title: "No entry selected",
-    description:
-      "Choose a source mode and content type to render teaser content.",
+    description: "Choose a source mode and content type to render teaser content.",
     fallbackToLatest: true,
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
     sourceMode: resolveEntryTeaserSourceMode(data.sourceMode),
     source: {
-      mode: resolveEntryTeaserDataSourceMode(
-        data.source?.mode,
-        data.source?.listingQueryId
-      ),
+      mode: resolveEntryTeaserDataSourceMode(data.source?.mode, data.source?.listingQueryId),
       listingQueryId: resolveString(data.source?.listingQueryId, ""),
       listingTemplateId: resolveString(data.source?.listingTemplateId, ""),
       contentTypeId: resolveString(data.source?.contentTypeId, sourceDefaults.contentTypeId ?? ""),
@@ -381,8 +375,12 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
       href: resolveString(data.cta?.href, ctaDefaults.href ?? ""),
     },
     style: {
-      surface: resolveString(data.style?.surface, styleDefaults.surface ?? "var(--color-bg)"),
-      border: resolveString(data.style?.border, styleDefaults.border ?? "var(--color-border)"),
+      surface: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surface)
+        : styleDefaults.surface,
+      border: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.border)
+        : styleDefaults.border,
       radius: resolveEntryTeaserRadius(data.style?.radius),
       spacing: resolveEntryTeaserSpacing(data.style?.spacing),
     },
@@ -469,14 +467,12 @@ export function EntryTeaserBlock({
       : resolvedVariant === "minimal"
         ? "w-full"
         : "w-full";
-  const contentWrapperClassName =
-    resolvedVariant === "horizontal"
-      ? "flex-1"
-      : "w-full";
-  const surfaceStyle: CSSProperties = {
-    backgroundColor: style.surface ?? "var(--color-bg)",
-    borderColor: style.border ?? "var(--color-border)",
-  };
+  const contentWrapperClassName = resolvedVariant === "horizontal" ? "flex-1" : "w-full";
+  const surfaceStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surface),
+      borderColor: resolveClearableStyleValue(style.border),
+    }) ?? {};
   const metaLine = item ? buildMetaLine(item) : "";
 
   return (
@@ -490,15 +486,13 @@ export function EntryTeaserBlock({
       data-entry-teaser-data-source-mode={sourceDataMode}
       data-entry-teaser-source-mode={sourceMode}
       data-entry-teaser-source={
-        sourceDataMode === "listing"
-          ? source.listingQueryId ?? ""
-          : source.contentTypeId ?? ""
+        sourceDataMode === "listing" ? (source.listingQueryId ?? "") : (source.contentTypeId ?? "")
       }
       data-entry-teaser-state={state}
       data-listing-widget="entry-teaser"
       data-listing-block-id={blockId ?? ""}
       data-listing-query-id={
-        sourceDataMode === "listing" ? normalized.source?.listingQueryId ?? "" : ""
+        sourceDataMode === "listing" ? (normalized.source?.listingQueryId ?? "") : ""
       }
     >
       {errorText ? (

@@ -30,6 +30,7 @@ import {
   type GalleryMosaicVariantId,
 } from "../../../../widgets/core/galleryMosaic";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: GalleryMosaicVariantId;
@@ -61,6 +62,7 @@ const ratioOptions: Array<{ id: GalleryMosaicRatio; label: string }> = [
 ];
 
 const gapOptions: Array<{ id: GalleryMosaicGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -160,16 +162,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -223,6 +227,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: GalleryMosaicData,
+  onChange: (next: GalleryMosaicData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updateItem(
@@ -433,9 +451,7 @@ export function GalleryMosaicWizardEditor({
         <p className="text-xs text-muted-foreground">
           Selected media is saved as public image URLs in gallery items.
         </p>
-        {mediaPickerError ? (
-          <p className="text-xs text-destructive">{mediaPickerError}</p>
-        ) : null}
+        {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
       </div>
     </div>
   );
@@ -494,9 +510,7 @@ export function GalleryMosaicVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Visual storytelling block with media tiles."
           />
         </div>
@@ -628,6 +642,7 @@ export function GalleryMosaicVisualEditor({
           label="Overlay color"
           value={normalized.style?.overlay}
           onChange={(next) => updateStyle(value, onChange, { overlay: next })}
+          onClear={() => clearStyleField(value, onChange, "overlay")}
           placeholder="rgba(15, 23, 42, 0.35)"
           pickerFallback="#0f172a"
         />

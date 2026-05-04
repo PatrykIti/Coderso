@@ -16,17 +16,13 @@ import {
 
 const SnapshotProbe = ({ activeHref }: { activeHref?: string | null }) => {
   const context = useAssistantAdminContext({ activeHref });
-  return (
-    <pre data-context="assistant-admin-context">
-      {JSON.stringify(context)}
-    </pre>
-  );
+  return <pre data-context="assistant-admin-context">{JSON.stringify(context)}</pre>;
 };
 
 const readContextFromHtml = (html: string) => {
   const match = html.match(/<pre[^>]*>(.*)<\/pre>/);
   if (!match?.[1]) throw new Error("missing_context");
-  return JSON.parse(match[1].replaceAll("&quot;", "\"")) as {
+  return JSON.parse(match[1].replaceAll("&quot;", '"')) as {
     page?: string;
     runtimeSnapshot?: {
       route: string | null;
@@ -57,7 +53,11 @@ const readContextFromHtml = (html: string) => {
       blocks: Array<{ id: string; type: string; templateId: string | null }>;
       bindings?: Array<{ widgetId: string; field: string; propPath: string; mode: string }>;
       writableBindingFields?: string[];
-      settings?: { wrapperContainer: string | null; sectionGap: string | null; hasBackgroundMedia: boolean };
+      settings?: {
+        wrapperContainer: string | null;
+        sectionGap: string | null;
+        hasBackgroundMedia: boolean;
+      };
       warnings: string[];
     } | null;
   };
@@ -390,4 +390,18 @@ test("useAssistantAdminContext includes custom screen context on record editor r
   } finally {
     clearActiveAssistantSurfaceContext();
   }
+});
+
+test("useAssistantAdminContext treats custom screen create routes as screen context, not record id new", () => {
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/advanced/custom-screens/screen-1/entries/new">
+      <SnapshotProbe activeHref="/admin/advanced/custom-screens/screen-1/entries/new" />
+    </AdminRouterProvider>
+  );
+  const context = readContextFromHtml(html);
+
+  expect(context.runtimeSnapshot?.selectedResource).toEqual({
+    kind: "custom-screen",
+    id: "screen-1",
+  });
 });

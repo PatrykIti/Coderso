@@ -12,6 +12,7 @@ import {
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
+import { ClearableInputField } from "./ClearableFields";
 
 const update = (
   value: ProductTableData,
@@ -26,10 +27,82 @@ const update = (
   );
 };
 
-export function ProductTableWizardEditor({
+const updateStyle = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["style"]>>
+) => {
+  update(value, onChange, {
+    style: {
+      ...normalizeProductTableData(value).style,
+      ...patch,
+    },
+  });
+};
+
+const clearStyle = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  key: keyof NonNullable<ProductTableData["style"]>
+) => {
+  const current = normalizeProductTableData(value);
+  const { [key]: _removed, ...nextStyle } = current.style ?? {};
+  update(value, onChange, {
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+};
+
+function SurfaceFields({
   value,
   onChange,
-}: WidgetEditorProps<ProductTableData>) {
+}: {
+  value: ProductTableData;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+
+  return (
+    <CommerceEditorSection title="Surfaces" description="Table, header, and empty state colors.">
+      <ClearableInputField
+        label="Table background"
+        value={normalized.style?.tableBackground}
+        onChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
+        onClear={() => clearStyle(value, onChange, "tableBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Table border"
+        value={normalized.style?.tableBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "tableBorderColor")}
+        placeholder="var(--color-border)"
+      />
+      <ClearableInputField
+        label="Header background"
+        value={normalized.style?.headerBackground}
+        onChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
+        onClear={() => clearStyle(value, onChange, "headerBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Empty background"
+        value={normalized.style?.emptyBackground}
+        onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
+        onClear={() => clearStyle(value, onChange, "emptyBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Empty border"
+        value={normalized.style?.emptyBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
+        placeholder="var(--color-border)"
+      />
+    </CommerceEditorSection>
+  );
+}
+
+export function ProductTableWizardEditor({ value, onChange }: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
   const source = normalizeSourceForEditor(normalized.source, {
     limit: productTableDefaults.source?.limit ?? 12,
@@ -48,22 +121,17 @@ export function ProductTableWizardEditor({
           onChange={(nextSource) => update(normalized, onChange, { source: nextSource })}
         />
       </CommerceEditorSection>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
 
-export function ProductTableVisualEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<ProductTableData>) {
+export function ProductTableVisualEditor({ value, onChange }: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
 
   return (
     <div className="space-y-4">
-      <CommerceEditorSection
-        title="Columns"
-        description="Choose columns visible in the table."
-      >
+      <CommerceEditorSection title="Columns" description="Choose columns visible in the table.">
         <CommerceToggleField
           label="Show slug"
           checked={normalized.fields?.showSlug !== false}
@@ -126,10 +194,7 @@ export function ProductTableVisualEditor({
         />
       </CommerceEditorSection>
 
-      <CommerceEditorSection
-        title="Column labels"
-        description="Customize table header labels."
-      >
+      <CommerceEditorSection title="Column labels" description="Customize table header labels.">
         <CommerceTextField
           label="Product"
           value={normalized.labels?.title}
@@ -194,6 +259,7 @@ export function ProductTableVisualEditor({
           }
         />
       </CommerceEditorSection>
+      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -212,7 +278,8 @@ export function ProductTableAdvancedEditor({
         description="Resolved items are injected by runtime resolver."
       >
         <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Resolved items: {normalized.resolved?.items?.length ?? 0} · Total: {normalized.resolved?.total ?? 0}
+          Resolved items: {normalized.resolved?.items?.length ?? 0} · Total:{" "}
+          {normalized.resolved?.total ?? 0}
         </div>
         <CommerceTextField
           label="Runtime error flag"

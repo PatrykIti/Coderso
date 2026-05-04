@@ -12,6 +12,10 @@ import {
   resolveCustomScreenCapabilities,
   type CustomScreenCapabilities,
 } from "../../services/customScreens/capabilities";
+import {
+  normalizeCustomScreenDefinitionForRead,
+  type CustomScreenDefinition,
+} from "../../services/customScreens/customScreenSchemas";
 
 export type CustomScreenStatus = "draft" | "active";
 
@@ -23,15 +27,11 @@ export type CustomScreenBinding = {
   mode: "read" | "write" | "readwrite";
 };
 
-const isCustomScreenCapabilities = (
-  value: unknown
-): value is CustomScreenCapabilities => {
+const isCustomScreenCapabilities = (value: unknown): value is CustomScreenCapabilities => {
   if (!isRecord(value)) return false;
   const counts = isRecord(value.bindingCounts) ? value.bindingCounts : null;
   return (
-    (value.mode === "collection-only" ||
-      value.mode === "dashboard" ||
-      value.mode === "editor") &&
+    (value.mode === "collection-only" || value.mode === "dashboard" || value.mode === "editor") &&
     typeof value.hasBlocks === "boolean" &&
     typeof value.hasBindings === "boolean" &&
     typeof value.hasReadableBindings === "boolean" &&
@@ -53,6 +53,7 @@ export type CustomScreenRecord = {
   showInSidebar: boolean;
   sidebarLabel: string | null;
   schemaVersion: number;
+  definition?: CustomScreenDefinition;
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
   capabilities?: CustomScreenCapabilities;
@@ -67,6 +68,7 @@ export type CustomScreenCreateInput = {
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
   schemaVersion?: number;
+  definition?: CustomScreenDefinition | null;
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
 };
@@ -90,6 +92,7 @@ const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
     value.sidebarLabel === null ||
     typeof value.sidebarLabel === "string") &&
   typeof value.schemaVersion === "number" &&
+  (value.definition === undefined || isRecord(value.definition)) &&
   Array.isArray(value.blocks) &&
   Array.isArray(value.bindings) &&
   (value.capabilities === undefined || isCustomScreenCapabilities(value.capabilities)) &&
@@ -101,17 +104,24 @@ const isCustomScreenList = (value: unknown): value is CustomScreenRecord[] =>
 
 let cachedScreensPromise: Promise<CustomScreenRecord[]> | null = null;
 
-const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => ({
-  ...item,
-  showInSidebar: item.showInSidebar ?? false,
-  sidebarLabel: item.sidebarLabel ?? null,
-  capabilities:
-    item.capabilities ??
-    resolveCustomScreenCapabilities({
-      blocks: item.blocks,
-      bindings: item.bindings,
-    }),
-});
+const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => {
+  const definition = normalizeCustomScreenDefinitionForRead({
+    definition: item.definition,
+    schemaVersion: item.schemaVersion,
+    blocks: item.blocks,
+    bindings: item.bindings,
+  });
+  return {
+    ...item,
+    schemaVersion: definition.schemaVersion,
+    definition,
+    blocks: definition.editorView.blocks,
+    bindings: definition.editorView.bindings,
+    showInSidebar: item.showInSidebar ?? false,
+    sidebarLabel: item.sidebarLabel ?? null,
+    capabilities: item.capabilities ?? resolveCustomScreenCapabilities(definition),
+  };
+};
 
 const customScreensListCache = createMemoryBackedLocalCache({
   key: cacheKeys.customScreensList,
@@ -192,9 +202,7 @@ export async function listCustomScreensCached(options?: { force?: boolean }) {
 }
 
 export async function getCustomScreen(id: string) {
-  const item = await apiRequest<CustomScreenRecord>(
-    `/custom-screens/${encodeURIComponent(id)}`
-  );
+  const item = await apiRequest<CustomScreenRecord>(`/custom-screens/${encodeURIComponent(id)}`);
   return normalizeCustomScreenRecord(item);
 }
 

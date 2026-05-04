@@ -14,6 +14,10 @@
 - `CONTACT.md` - Kontakt
 - `FAQ.md` - FAQ accordion
 - `CTA_BANNER.md` - CTA banner
+- `FEATURE_GRID.md` - Feature grid
+- `PRICING_PLANS.md` - Pricing plans
+- `TESTIMONIALS.md` - Testimonials
+- `FORM_EMBED.md` - Form embed
 - `LOGO_CLOUD.md` - Logo cloud
 - `GALLERY_MOSAIC.md` - Gallery mosaic
 - `STATS_KPI.md` - Stats KPI
@@ -22,5 +26,13 @@
 - `CONTENT_LIST.md` - Dynamic content list
 - `POSTS_FEED.md` - Dynamic posts feed (latest/featured/category/manual)
 - `ENTRY_TEASER.md` - Dynamic single-entry teaser
+- `SCREEN_RECORD_HEADER.md` - Screen record summary header with read-only
+  selected-entry binding targets
+- `SCREEN_FIELD_VALUE.md` - Screen field value row/card with widget-owned
+  `value` write target
+- `SCREEN_FIELD_GROUP.md` - Screen field-group layout panel without
+  selected-entry binding cards
+- `SCREEN_TWO_COLUMN.md` - Screen two-column layout without selected-entry
+  binding cards
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

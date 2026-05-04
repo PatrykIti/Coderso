@@ -1,11 +1,12 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type CtaBannerVariantId = "centered" | "split" | "with-badge";
 export type CtaBannerBorderWidth = "0" | "1" | "2" | "3";
 export type CtaBannerRadius = "none" | "md" | "lg" | "xl" | "2xl";
-export type CtaBannerPadding = "sm" | "md" | "lg" | "xl";
+export type CtaBannerPadding = "none" | "sm" | "md" | "lg" | "xl";
 
 export type CtaBannerAction = {
   label?: string;
@@ -52,6 +53,7 @@ const radiusClassMap: Record<CtaBannerRadius, string> = {
 };
 
 const paddingClassMap: Record<CtaBannerPadding, string> = {
+  none: "p-0",
   sm: "px-4 py-4",
   md: "px-5 py-5",
   lg: "px-6 py-6",
@@ -109,7 +111,7 @@ export const ctaBannerSchema = {
         border: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
         radius: { enum: ["none", "md", "lg", "xl", "2xl"] },
-        padding: { enum: ["sm", "md", "lg", "xl"] },
+        padding: { enum: ["none", "sm", "md", "lg", "xl"] },
         badgeBackground: { type: "string" },
         badgeText: { type: "string" },
         primaryButtonBg: { type: "string" },
@@ -168,9 +170,7 @@ const normalizeAction = (
   href: resolveString(action?.href, fallback.href),
 });
 
-const resolveCtaBannerBorderWidth = (
-  value: string | undefined
-): CtaBannerBorderWidth => {
+const resolveCtaBannerBorderWidth = (value: string | undefined): CtaBannerBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
   return "1";
 };
@@ -183,7 +183,7 @@ const resolveCtaBannerRadius = (value: string | undefined): CtaBannerRadius => {
 };
 
 const resolveCtaBannerPadding = (value: string | undefined): CtaBannerPadding => {
-  if (value === "sm" || value === "lg" || value === "xl") return value;
+  if (value === "none" || value === "sm" || value === "lg" || value === "xl") return value;
   return "md";
 };
 
@@ -218,49 +218,47 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
     secondaryButtonText: "var(--color-text)",
     secondaryButtonBorder: "var(--color-border)",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
     content: {
       badge: resolveString(data.content?.badge, contentDefaults.badge ?? ""),
       title: resolveString(data.content?.title, contentDefaults.title ?? ""),
-      description: resolveString(
-        data.content?.description,
-        contentDefaults.description ?? ""
-      ),
+      description: resolveString(data.content?.description, contentDefaults.description ?? ""),
     },
     actions: {
       primaryCta: normalizeAction(
         data.actions?.primaryCta,
-        (actionsDefaults.primaryCta ?? { label: "Get started", href: "#" }) as Required<CtaBannerAction>
+        (actionsDefaults.primaryCta ?? {
+          label: "Get started",
+          href: "#",
+        }) as Required<CtaBannerAction>
       ),
       secondaryCta: normalizeAction(
         data.actions?.secondaryCta,
-        (actionsDefaults.secondaryCta ?? { label: "Learn more", href: "#" }) as Required<CtaBannerAction>
+        (actionsDefaults.secondaryCta ?? {
+          label: "Learn more",
+          href: "#",
+        }) as Required<CtaBannerAction>
       ),
     },
     style: {
-      background: resolveString(
-        data.style?.background,
-        styleDefaults.background ?? "var(--color-surface)"
-      ),
+      background: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.background)
+        : styleDefaults.background,
       text: resolveString(data.style?.text, styleDefaults.text ?? "var(--color-text)"),
       border: resolveString(data.style?.border, styleDefaults.border ?? "var(--color-border)"),
       borderWidth: resolveCtaBannerBorderWidth(data.style?.borderWidth),
       radius: resolveCtaBannerRadius(data.style?.radius),
       padding: resolveCtaBannerPadding(data.style?.padding),
-      badgeBackground: resolveString(
-        data.style?.badgeBackground,
-        styleDefaults.badgeBackground ?? "var(--color-primary)"
-      ),
-      badgeText: resolveString(
-        data.style?.badgeText,
-        styleDefaults.badgeText ?? "var(--color-bg)"
-      ),
-      primaryButtonBg: resolveString(
-        data.style?.primaryButtonBg,
-        styleDefaults.primaryButtonBg ?? "var(--color-primary)"
-      ),
+      badgeBackground: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.badgeBackground)
+        : styleDefaults.badgeBackground,
+      badgeText: resolveString(data.style?.badgeText, styleDefaults.badgeText ?? "var(--color-bg)"),
+      primaryButtonBg: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.primaryButtonBg)
+        : styleDefaults.primaryButtonBg,
       primaryButtonText: resolveString(
         data.style?.primaryButtonText,
         styleDefaults.primaryButtonText ?? "var(--color-bg)"
@@ -269,10 +267,9 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
         data.style?.primaryButtonBorder,
         styleDefaults.primaryButtonBorder ?? "transparent"
       ),
-      secondaryButtonBg: resolveString(
-        data.style?.secondaryButtonBg,
-        styleDefaults.secondaryButtonBg ?? "transparent"
-      ),
+      secondaryButtonBg: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.secondaryButtonBg)
+        : styleDefaults.secondaryButtonBg,
       secondaryButtonText: resolveString(
         data.style?.secondaryButtonText,
         styleDefaults.secondaryButtonText ?? "var(--color-text)"
@@ -285,13 +282,7 @@ export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
   };
 }
 
-export function CtaBannerBlock({
-  data,
-  variant,
-}: {
-  data: CtaBannerData;
-  variant: string;
-}) {
+export function CtaBannerBlock({ data, variant }: { data: CtaBannerData; variant: string }) {
   const normalized = normalizeCtaBannerData(data);
   const resolvedVariant = resolveCtaBannerVariant(variant);
   const style = normalized.style ?? ctaBannerDefaults.style!;
@@ -318,13 +309,14 @@ export function CtaBannerBlock({
       ? "flex flex-wrap items-center gap-3 md:justify-end"
       : "flex flex-wrap items-center justify-center gap-3";
 
-  const containerStyle: CSSProperties = {
-    backgroundColor: style.background ?? "var(--color-surface)",
-    color: style.text ?? "var(--color-text)",
-    borderColor: style.border ?? "var(--color-border)",
-    borderStyle: "solid",
-    borderWidth: borderWidthValueMap[resolveCtaBannerBorderWidth(style.borderWidth)],
-  };
+  const containerStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+      color: style.text ?? "var(--color-text)",
+      borderColor: style.border ?? "var(--color-border)",
+      borderStyle: "solid",
+      borderWidth: borderWidthValueMap[resolveCtaBannerBorderWidth(style.borderWidth)],
+    }) ?? {};
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8" data-cta-banner-outer="true">
@@ -340,14 +332,19 @@ export function CtaBannerBlock({
         data-cta-banner-border-width={resolveCtaBannerBorderWidth(style.borderWidth)}
       >
         <div className={wrapperClassName}>
-          <div className={joinClasses("space-y-2", resolvedVariant === "split" ? "md:max-w-2xl" : "max-w-2xl")}>
+          <div
+            className={joinClasses(
+              "space-y-2",
+              resolvedVariant === "split" ? "md:max-w-2xl" : "max-w-2xl"
+            )}
+          >
             {showBadge ? (
               <span
                 className="inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
-                style={{
-                  backgroundColor: style.badgeBackground ?? "var(--color-primary)",
+                style={compactStyle({
+                  backgroundColor: resolveClearableStyleValue(style.badgeBackground),
                   color: style.badgeText ?? "var(--color-bg)",
-                }}
+                })}
               >
                 {content.badge}
               </span>
@@ -366,11 +363,11 @@ export function CtaBannerBlock({
               <a
                 href={actions.primaryCta?.href}
                 className="inline-flex rounded-md border px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: style.primaryButtonBg ?? "var(--color-primary)",
+                style={compactStyle({
+                  backgroundColor: resolveClearableStyleValue(style.primaryButtonBg),
                   color: style.primaryButtonText ?? "var(--color-bg)",
                   borderColor: style.primaryButtonBorder ?? "transparent",
-                }}
+                })}
               >
                 {actions.primaryCta?.label}
               </a>
@@ -379,11 +376,11 @@ export function CtaBannerBlock({
               <a
                 href={actions.secondaryCta?.href}
                 className="inline-flex rounded-md border px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: style.secondaryButtonBg ?? "transparent",
+                style={compactStyle({
+                  backgroundColor: resolveClearableStyleValue(style.secondaryButtonBg),
                   color: style.secondaryButtonText ?? "var(--color-text)",
                   borderColor: style.secondaryButtonBorder ?? "var(--color-border)",
-                }}
+                })}
               >
                 {actions.secondaryCta?.label}
               </a>

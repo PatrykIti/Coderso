@@ -1,5 +1,11 @@
 import { registerCoreWidgets } from "../../../widgets/core";
-import { getWidget, listWidgets, listWidgetsForSurface } from "../../../widgets/registry";
+import {
+  getWidget,
+  listWidgets,
+  listWidgetsForSurface,
+  listWidgetsForSurfaceContext,
+} from "../../../widgets/registry";
+import type { WidgetSurface } from "../../../widgets/types";
 import {
   CompareTimelineAdvancedEditor,
   CompareTimelineVisualEditor,
@@ -362,6 +368,17 @@ export function listRegisteredWidgetLibraryWidgets() {
 export function listRegisteredScreenWidgets() {
   ensureCoreWidgetsRegistered();
   return listWidgetsForSurface("custom-screen-builder");
+}
+
+export function listRegisteredWidgetsForSurface(input: {
+  surface: WidgetSurface;
+  contentType?: unknown | null;
+}) {
+  ensureCoreWidgetsRegistered();
+  return listWidgetsForSurfaceContext({
+    surface: input.surface,
+    hasSelectedContentType: Boolean(input.contentType),
+  });
 }
 
 export function getRegisteredWidget(type: string) {

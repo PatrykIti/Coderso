@@ -26,6 +26,7 @@ import {
   type TestimonialItem,
 } from "../../../../widgets/core/testimonials";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: TestimonialsVariantId;
@@ -50,6 +51,7 @@ const variantOptions: Array<{
 ];
 
 const spacingOptions: Array<{ id: TestimonialsSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -135,16 +137,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -200,6 +204,20 @@ function updateStyle(
   }));
 }
 
+function clearStyleField(
+  value: TestimonialsData,
+  onChange: (next: TestimonialsData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
+}
+
 function updateItem(
   value: TestimonialsData,
   onChange: (next: TestimonialsData) => void,
@@ -234,10 +252,7 @@ function setTestimonialsCount(
   }));
 }
 
-function addTestimonial(
-  value: TestimonialsData,
-  onChange: (next: TestimonialsData) => void
-) {
+function addTestimonial(value: TestimonialsData, onChange: (next: TestimonialsData) => void) {
   updateValue(value, onChange, (current) => {
     const testimonials = normalizeTestimonialsItems(current.testimonials);
     if (testimonials.length >= testimonialsItemMax) return current;
@@ -368,18 +383,25 @@ export function TestimonialsWizardEditor({
       <div className="space-y-3">
         <p className="text-sm font-medium">Initial testimonials</p>
         {testimonials.map((testimonial, index) => (
-          <div key={testimonial.id ?? `wizard-testimonial-${index + 1}`} className="space-y-2 rounded-lg border p-3">
+          <div
+            key={testimonial.id ?? `wizard-testimonial-${index + 1}`}
+            className="space-y-2 rounded-lg border p-3"
+          >
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Testimonial {index + 1}
             </p>
             <Textarea
               value={testimonial.quote ?? ""}
-              onChange={(event) => updateItem(value, onChange, index, { quote: event.target.value })}
+              onChange={(event) =>
+                updateItem(value, onChange, index, { quote: event.target.value })
+              }
               placeholder="Customer quote"
             />
             <Input
               value={testimonial.author ?? ""}
-              onChange={(event) => updateItem(value, onChange, index, { author: event.target.value })}
+              onChange={(event) =>
+                updateItem(value, onChange, index, { author: event.target.value })
+              }
               placeholder="Author name"
             />
           </div>
@@ -476,9 +498,7 @@ export function TestimonialsVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Use real customer voices to build trust and reduce hesitation."
           />
         </div>
@@ -489,7 +509,10 @@ export function TestimonialsVisualEditor({
         description="Manage quotes, author identity, source labels, and star ratings."
       >
         {testimonials.map((testimonial, index) => (
-          <div key={testimonial.id ?? `testimonial-${index + 1}`} className="space-y-3 rounded-lg border p-3">
+          <div
+            key={testimonial.id ?? `testimonial-${index + 1}`}
+            className="space-y-3 rounded-lg border p-3"
+          >
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Testimonial {index + 1}</p>
               <div className="flex gap-2">
@@ -527,7 +550,9 @@ export function TestimonialsVisualEditor({
               <p className="text-sm font-medium">Quote</p>
               <Textarea
                 value={testimonial.quote ?? ""}
-                onChange={(event) => updateItem(value, onChange, index, { quote: event.target.value })}
+                onChange={(event) =>
+                  updateItem(value, onChange, index, { quote: event.target.value })
+                }
                 placeholder="Customer quote"
               />
             </div>
@@ -619,6 +644,7 @@ export function TestimonialsVisualEditor({
           label="Card background"
           value={normalized.style?.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
+          onClear={() => clearStyleField(value, onChange, "cardSurface")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
@@ -627,6 +653,7 @@ export function TestimonialsVisualEditor({
           label="Card border"
           value={normalized.style?.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
+          onClear={() => clearStyleField(value, onChange, "cardBorder")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
@@ -669,7 +696,9 @@ export function TestimonialsAdvancedEditor({
           <p className="text-sm font-medium">Card spacing token</p>
           <Select
             value={normalized.style?.spacing ?? testimonialsDefaults.style?.spacing ?? "md"}
-            onValueChange={(next) => updateStyle(value, onChange, { spacing: next as TestimonialsSpacing })}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { spacing: next as TestimonialsSpacing })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Spacing" />

@@ -91,6 +91,63 @@ test("product table renders rows with configured columns", () => {
   expect(html).toContain("Collections");
 });
 
+test("product table cleared surfaces omit empty, table, and header backgrounds", () => {
+  const emptyHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        style: {},
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  const tableHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        style: {},
+        fields: {
+          showSlug: true,
+          showStatus: true,
+          showStock: true,
+          showCompareAt: true,
+          showCollectionCount: true,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(emptyHtml).not.toContain("bg-[var(--color-bg)]/70");
+  expect(emptyHtml).not.toContain("background-color:transparent");
+  expect(tableHtml).not.toContain("bg-[var(--color-bg)]");
+  expect(tableHtml).not.toContain("background-color:transparent");
+});
+
 test("product table normalizes source and labels", () => {
   const normalized = normalizeProductTableData({
     source: {

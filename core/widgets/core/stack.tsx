@@ -1,25 +1,9 @@
 import type { ComponentType } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 
-export const stackGapTokens = [
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "8",
-  "10",
-  "12",
-] as const;
+export const stackGapTokens = ["none", "0", "1", "2", "3", "4", "5", "6", "8", "10", "12"] as const;
 
 export type StackVariantId = "vertical" | "horizontal" | "responsive";
 export type StackDirection = "row" | "column";
@@ -106,6 +90,7 @@ const desktopDirectionClassMap: Record<StackDirection, string> = {
 };
 
 const gapClassMap: Record<StackGap, string> = {
+  none: "gap-0",
   "0": "gap-0",
   "1": "gap-1",
   "2": "gap-2",
@@ -119,6 +104,7 @@ const gapClassMap: Record<StackGap, string> = {
 };
 
 const tabletGapClassMap: Record<StackGap, string> = {
+  none: "md:gap-0",
   "0": "md:gap-0",
   "1": "md:gap-1",
   "2": "md:gap-2",
@@ -132,6 +118,7 @@ const tabletGapClassMap: Record<StackGap, string> = {
 };
 
 const desktopGapClassMap: Record<StackGap, string> = {
+  none: "lg:gap-0",
   "0": "lg:gap-0",
   "1": "lg:gap-1",
   "2": "lg:gap-2",
@@ -158,10 +145,8 @@ const justifyClassMap: Record<StackJustify, string> = {
   between: "justify-between",
 };
 
-const resolveDirection = (
-  value: string | undefined,
-  fallback: StackDirection
-): StackDirection => (value === "row" || value === "column" ? value : fallback);
+const resolveDirection = (value: string | undefined, fallback: StackDirection): StackDirection =>
+  value === "row" || value === "column" ? value : fallback;
 
 const resolveGap = (value: string | undefined, fallback: StackGap): StackGap =>
   stackGapTokens.includes(value as StackGap) ? (value as StackGap) : fallback;
@@ -244,8 +229,7 @@ export function StackBlock({
 }) {
   const resolvedVariant = resolveStackVariant(variant);
   const normalized = normalizeStackData(data, resolvedVariant);
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const contentBlocks = Array.isArray(slotMap.content) ? slotMap.content : [];
   const direction = normalized.direction ?? stackDefaults.direction!;
   const gap = normalized.gap ?? stackDefaults.gap!;

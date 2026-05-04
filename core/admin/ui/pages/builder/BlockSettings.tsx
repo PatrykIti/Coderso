@@ -9,7 +9,7 @@ import {
   resolveWidgetSlotTargets,
 } from "../../../../widgets/slots";
 
-import type { Block, EditorMode, WidgetDefinition } from "./types";
+import type { Block, EditorMode, WidgetDefinition, WidgetEditorContext } from "./types";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { VisualPanel } from "./VisualPanel";
 import { WizardPanel } from "./WizardPanel";
@@ -19,9 +19,10 @@ export type BlockSettingsProps = {
   block?: Block | null;
   widget?: WidgetDefinition;
   onChange: (next: Block) => void;
+  editorContext?: WidgetEditorContext;
 };
 
-export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
+export function BlockSettings({ block, widget, onChange, editorContext }: BlockSettingsProps) {
   if (!block || !widget) {
     return (
       <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
@@ -99,6 +100,7 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
         block={block}
         onChange={onChange}
         onComplete={() => onChange(applyWizardSelection(block))}
+        editorContext={editorContext}
       />
     );
   }
@@ -137,9 +139,7 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
           ) : null}
           <div className="mt-2 space-y-1">
             {slotTargets.map((slot) => {
-              const count = Array.isArray(slotMap[slot.slotId])
-                ? slotMap[slot.slotId].length
-                : 0;
+              const count = Array.isArray(slotMap[slot.slotId]) ? slotMap[slot.slotId].length : 0;
               const repeatableDefinition =
                 slot.kind === "repeatable"
                   ? slotDefinitions.find((definition) => definition.id === slot.definitionId)
@@ -157,7 +157,10 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
                 repeatableDefinition &&
                 repeatableCount > repeatableMinimum;
               return (
-                <div key={slot.slotId} className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5">
+                <div
+                  key={slot.slotId}
+                  className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5"
+                >
                   <div className="flex items-center justify-between">
                     <span>{slot.label} slot</span>
                     <div className="flex items-center gap-2">
@@ -179,8 +182,8 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
                   </div>
                   {count === 0 ? (
                     <div className="mt-1 text-[11px] text-muted-foreground">
-                      Slot is available and currently empty. Use the slot add
-                      action in the canvas or drag from the widgets tab.
+                      Slot is available and currently empty. Use the slot add action in the canvas
+                      or drag from the widgets tab.
                     </div>
                   ) : null}
                 </div>
@@ -188,14 +191,13 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
             })}
           </div>
           <div className="mt-2">
-            Use the slot add action in the canvas or drag from the widgets tab
-            to place widgets into a slot.
+            Use the slot add action in the canvas or drag from the widgets tab to place widgets into
+            a slot.
           </div>
         </div>
       ) : supportsChildren ? (
         <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Nested blocks: {nestedCount}. Use the Insert dialog to add widgets inside
-          this block.
+          Nested blocks: {nestedCount}. Use the Insert dialog to add widgets inside this block.
         </div>
       ) : null}
       <Tabs
@@ -208,25 +210,36 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
         }
         className="gap-4"
       >
-      <TabsList variant="line">
-        <TabsTrigger value="wizard">Wizard</TabsTrigger>
-        <TabsTrigger value="visual">Visual</TabsTrigger>
-        <TabsTrigger value="advanced">Advanced</TabsTrigger>
-      </TabsList>
-      <TabsContent value="wizard">
-        <WizardPanel
-          widget={widget}
-          block={block}
-          onChange={onChange}
-          onComplete={() => onChange(applyWizardSelection(block))}
-        />
-      </TabsContent>
-      <TabsContent value="visual">
-        <VisualPanel widget={widget} block={block} onChange={onChange} />
-      </TabsContent>
-      <TabsContent value="advanced">
-        <AdvancedPanel block={block} widget={widget} onChange={onChange} />
-      </TabsContent>
+        <TabsList variant="line">
+          <TabsTrigger value="wizard">Wizard</TabsTrigger>
+          <TabsTrigger value="visual">Visual</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+        </TabsList>
+        <TabsContent value="wizard">
+          <WizardPanel
+            widget={widget}
+            block={block}
+            onChange={onChange}
+            onComplete={() => onChange(applyWizardSelection(block))}
+            editorContext={editorContext}
+          />
+        </TabsContent>
+        <TabsContent value="visual">
+          <VisualPanel
+            widget={widget}
+            block={block}
+            onChange={onChange}
+            editorContext={editorContext}
+          />
+        </TabsContent>
+        <TabsContent value="advanced">
+          <AdvancedPanel
+            block={block}
+            widget={widget}
+            onChange={onChange}
+            editorContext={editorContext}
+          />
+        </TabsContent>
       </Tabs>
     </>
   );

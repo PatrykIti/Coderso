@@ -1,7 +1,8 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type AppointmentFormVariantId = "default";
 
@@ -25,6 +26,13 @@ export type AppointmentFormData = {
   showPhone?: boolean;
   showNotes?: boolean;
   submissionEndpoint?: string;
+  style?: {
+    frameBackground?: string;
+    frameBorderColor?: string;
+    summaryBackground?: string;
+    summaryBorderColor?: string;
+    submitBackground?: string;
+  };
   resolved?: {
     submissionNonce?: string | null;
     error?: string;
@@ -51,6 +59,13 @@ export const appointmentFormDefaults: AppointmentFormData = {
   showPhone: true,
   showNotes: true,
   submissionEndpoint: "/api/booking/reservations",
+  style: {
+    frameBackground: "color-mix(in srgb, var(--color-bg) 95%, transparent)",
+    frameBorderColor: "var(--color-border)",
+    summaryBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
+    summaryBorderColor: "color-mix(in srgb, var(--color-border) 70%, transparent)",
+    submitBackground: "var(--color-primary)",
+  },
 };
 
 const text = (value: string | undefined, fallback: string) => {
@@ -88,6 +103,17 @@ export const appointmentFormSchema = {
     showPhone: { type: "boolean" },
     showNotes: { type: "boolean" },
     submissionEndpoint: { type: "string" },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        frameBackground: { type: "string" },
+        frameBorderColor: { type: "string" },
+        summaryBackground: { type: "string" },
+        summaryBorderColor: { type: "string" },
+        submitBackground: { type: "string" },
+      },
+    },
     resolved: {
       type: "object",
       additionalProperties: false,
@@ -100,6 +126,17 @@ export const appointmentFormSchema = {
 } as const;
 
 export function normalizeAppointmentFormData(data: AppointmentFormData): AppointmentFormData {
+  const hasStyleObject = data.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        frameBackground: resolveClearableStyleValue(data.style?.frameBackground),
+        frameBorderColor: resolveClearableStyleValue(data.style?.frameBorderColor),
+        summaryBackground: resolveClearableStyleValue(data.style?.summaryBackground),
+        summaryBorderColor: resolveClearableStyleValue(data.style?.summaryBorderColor),
+        submitBackground: resolveClearableStyleValue(data.style?.submitBackground),
+      }) ?? {})
+    : undefined;
+
   return {
     flowId: text(data.flowId, appointmentFormDefaults.flowId ?? "booking-flow"),
     title: text(data.title, appointmentFormDefaults.title ?? "Appointment details"),
@@ -114,8 +151,7 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
     ),
     slotSummaryEmptyMessage: text(
       data.slotSummaryEmptyMessage,
-      appointmentFormDefaults.slotSummaryEmptyMessage ??
-        "Select a slot in Booking Calendar first."
+      appointmentFormDefaults.slotSummaryEmptyMessage ?? "Select a slot in Booking Calendar first."
     ),
     customerNameLabel: text(
       data.customerNameLabel,
@@ -155,12 +191,19 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       data.noSelectionMessage,
       appointmentFormDefaults.noSelectionMessage ?? "Select a slot first."
     ),
-    showPhone: typeof data.showPhone === "boolean" ? data.showPhone : appointmentFormDefaults.showPhone !== false,
-    showNotes: typeof data.showNotes === "boolean" ? data.showNotes : appointmentFormDefaults.showNotes !== false,
+    showPhone:
+      typeof data.showPhone === "boolean"
+        ? data.showPhone
+        : appointmentFormDefaults.showPhone !== false,
+    showNotes:
+      typeof data.showNotes === "boolean"
+        ? data.showNotes
+        : appointmentFormDefaults.showNotes !== false,
     submissionEndpoint: text(
       data.submissionEndpoint,
       appointmentFormDefaults.submissionEndpoint ?? "/api/booking/reservations"
     ),
+    ...(hasStyleObject ? { style } : {}),
     resolved: {
       submissionNonce: optionalText(data.resolved?.submissionNonce ?? undefined) ?? null,
       ...(optionalText(data.resolved?.error) ? { error: text(data.resolved?.error, "") } : {}),
@@ -168,31 +211,24 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
   };
 }
 
-const Field = ({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) => (
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <label className="space-y-1 text-xs font-medium text-[var(--color-text)]/80">
     <span>{label}</span>
     {children}
   </label>
 );
 
-export function AppointmentFormBlock({
-  data,
-}: {
-  data: AppointmentFormData;
-  variant: string;
-}) {
+export function AppointmentFormBlock({ data }: { data: AppointmentFormData; variant: string }) {
   const normalized = normalizeAppointmentFormData(data);
   const submissionNonce = normalized.resolved?.submissionNonce ?? null;
   const submissionEndpoint =
-    normalized.submissionEndpoint ?? appointmentFormDefaults.submissionEndpoint ?? "/api/booking/reservations";
+    normalized.submissionEndpoint ??
+    appointmentFormDefaults.submissionEndpoint ??
+    "/api/booking/reservations";
   const successMessage =
-    normalized.successMessage ?? appointmentFormDefaults.successMessage ?? "Appointment booked successfully.";
+    normalized.successMessage ??
+    appointmentFormDefaults.successMessage ??
+    "Appointment booked successfully.";
   const slotSummaryLabel =
     normalized.slotSummaryLabel ?? appointmentFormDefaults.slotSummaryLabel ?? "Selected slot";
   const slotSummaryEmptyMessage =
@@ -223,10 +259,28 @@ export function AppointmentFormBlock({
   const submitLabel =
     normalized.submitLabel ?? appointmentFormDefaults.submitLabel ?? "Book appointment";
   const noSelectionMessage =
-    normalized.noSelectionMessage ?? appointmentFormDefaults.noSelectionMessage ?? "Select a slot first.";
+    normalized.noSelectionMessage ??
+    appointmentFormDefaults.noSelectionMessage ??
+    "Select a slot first.";
+  const frameStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
+  });
+  const summaryStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.summaryBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.summaryBorderColor),
+  });
+  const submitStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.submitBackground),
+  });
+  const legacyFrameClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/95" : "";
+  const legacySummaryClass =
+    normalized.style === undefined ? "border-[var(--color-border)]/70 bg-[var(--color-bg)]/70" : "";
+  const legacySubmitClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
 
   return (
-    <section className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/95 p-5">
+    <section className={`space-y-4 rounded-xl border p-5 ${legacyFrameClass}`} style={frameStyle}>
       <div className="space-y-1">
         <h3 className="text-lg font-semibold text-[var(--color-text)]">{normalized.title}</h3>
         <p className="text-sm text-[var(--color-text)]/70">{normalized.description}</p>
@@ -247,14 +301,14 @@ export function AppointmentFormBlock({
         data-submission-endpoint={submissionEndpoint}
         data-success-message={successMessage}
       >
-        <div className="rounded-md border border-[var(--color-border)]/70 bg-[var(--color-bg)]/70 px-3 py-2 text-xs text-[var(--color-text)]/80">
+        <div
+          className={`rounded-md border px-3 py-2 text-xs text-[var(--color-text)]/80 ${legacySummaryClass}`}
+          style={summaryStyle}
+        >
           <p className="mb-1 font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
             {slotSummaryLabel}
           </p>
-          <p
-            data-booking-selected-slot
-            data-empty={slotSummaryEmptyMessage}
-          >
+          <p data-booking-selected-slot data-empty={slotSummaryEmptyMessage}>
             {slotSummaryEmptyMessage}
           </p>
         </div>
@@ -317,15 +371,14 @@ export function AppointmentFormBlock({
         <button
           type="submit"
           data-booking-submit
-          className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+          className={`rounded-md px-4 py-2 text-sm font-semibold text-[var(--color-bg)] ${legacySubmitClass}`}
+          style={submitStyle}
         >
           {submitLabel}
         </button>
       </form>
 
-      <script
-        dangerouslySetInnerHTML={{ __html: getBookingRuntimeClientScript() }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: getBookingRuntimeClientScript() }} />
     </section>
   );
 }

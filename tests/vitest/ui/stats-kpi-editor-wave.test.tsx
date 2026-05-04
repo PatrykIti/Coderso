@@ -163,8 +163,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -189,10 +188,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -202,10 +198,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -215,10 +208,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -283,8 +273,7 @@ const getInputsByPlaceholder = (container: ParentNode, placeholder: string) => {
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
   if (!(textarea instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea with placeholder "${placeholder}"`);
@@ -376,11 +365,8 @@ afterEach(() => {
 });
 
 test("StatsKpi editors cover variant, count, item editing, layout/style controls, normalize, and reset", async () => {
-  const {
-    StatsKpiAdvancedEditor,
-    StatsKpiVisualEditor,
-    StatsKpiWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
+  const { StatsKpiAdvancedEditor, StatsKpiVisualEditor, StatsKpiWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -442,14 +428,13 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
         findSelectsByOptions(view.container, ["cards", "inline", "split-highlight"])[0],
         "split-highlight"
       );
-      setSelectValue(
-        findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6"])[0],
-        "3"
-      );
+      setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6"])[0], "3");
       setInputValue(findInputByPlaceholder(view.container, "Metric 1 value"), "120+");
       setInputValue(findInputByPlaceholder(view.container, "Proof in numbers"), "Numbers");
       setTextareaValue(
-        view.container.querySelector("textarea[placeholder='Show key performance metrics and outcomes.']"),
+        view.container.querySelector(
+          "textarea[placeholder='Show key performance metrics and outcomes.']"
+        ),
         "Metrics description"
       );
     });
@@ -472,7 +457,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
       setInputValue(colorInputs[0], "#123456");
       setInputValue(colorInputs[1], "#654321");
       setSelectValue(findSelectsByOptions(view.container, ["start", "center", "end"])[0], "end");
-      setSelectValue(findSelectsByOptions(view.container, ["sm", "md", "lg"])[0], "lg");
+      setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
     });
 
     const switches = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
@@ -508,7 +493,9 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     expect(onVariantChangeSpy).toHaveBeenCalledWith("split-highlight");
 
     clickByText(view.container, "Normalize now");
-    expect(onChangeSpy).toHaveBeenLastCalledWith(expect.objectContaining({ style: expect.any(Object) }));
+    expect(onChangeSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ style: expect.any(Object) })
+    );
 
     clickByText(view.container, "Reset to defaults");
     const resetPayload = onChangeSpy.mock.lastCall?.[0];
@@ -519,9 +506,8 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
 });
 
 test("StatsKpi visual and advanced editors cover isolated variant-card, direct item value, color picker, and token updates", async () => {
-  const { StatsKpiAdvancedEditor, StatsKpiVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/StatsKpiEditors"
-  );
+  const { StatsKpiAdvancedEditor, StatsKpiVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
 
   const visualHarness = mountStatsKpiHarness({
     initialValue: {
@@ -630,9 +616,15 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
       getSelectByOptions(advancedHarness.container, ["start", "center", "end"]),
       "start"
     );
-    setSelectValue(getSelectByOptions(advancedHarness.container, ["sm", "md", "lg"]), "sm");
-    setInputValue(getInputsByPlaceholder(advancedHarness.container, "var(--color-text)")[0], "#223344");
-    setInputValue(getInputsByPlaceholder(advancedHarness.container, "var(--color-text)")[1], "var(--metric-label)");
+    setSelectValue(getSelectByOptions(advancedHarness.container, ["none", "sm", "md", "lg"]), "sm");
+    setInputValue(
+      getInputsByPlaceholder(advancedHarness.container, "var(--color-text)")[0],
+      "#223344"
+    );
+    setInputValue(
+      getInputsByPlaceholder(advancedHarness.container, "var(--color-text)")[1],
+      "var(--metric-label)"
+    );
 
     expect(advancedHarness.getLatestValue()).toMatchObject({
       style: expect.objectContaining({
@@ -661,11 +653,8 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
     {} as StatsKpiItem,
   ]);
 
-  const {
-    StatsKpiAdvancedEditor,
-    StatsKpiVisualEditor,
-    StatsKpiWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
+  const { StatsKpiAdvancedEditor, StatsKpiVisualEditor, StatsKpiWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
 
   const wizardView = mount(
     <StatsKpiWizardEditor
@@ -725,7 +714,7 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
     expect(getSelectByOptions(visualView.container, ["start", "center", "end"]).value).toBe(
       "center"
     );
-    expect(getSelectByOptions(visualView.container, ["sm", "md", "lg"]).value).toBe("md");
+    expect(getSelectByOptions(visualView.container, ["none", "sm", "md", "lg"]).value).toBe("md");
 
     clickByText(visualView.container, "Inline");
   } finally {
@@ -740,9 +729,11 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
     expect(getSelectByOptions(advancedView.container, ["start", "center", "end"]).value).toBe(
       "center"
     );
-    expect(getSelectByOptions(advancedView.container, ["sm", "md", "lg"]).value).toBe("md");
+    expect(getSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]).value).toBe("md");
     expect(
-      getInputsByPlaceholder(advancedView.container, "var(--color-text)").map((input) => input.value)
+      getInputsByPlaceholder(advancedView.container, "var(--color-text)").map(
+        (input) => input.value
+      )
     ).toEqual(["", ""]);
   } finally {
     advancedView.cleanup();
@@ -751,9 +742,8 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
 });
 
 test("StatsKpi wizard value inputs and visual divider toggle update isolated stateful paths", async () => {
-  const { StatsKpiVisualEditor, StatsKpiWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/StatsKpiEditors"
-  );
+  const { StatsKpiVisualEditor, StatsKpiWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
 
   let latestWizardValue: StatsKpiData = {
     items: [
@@ -818,7 +808,8 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
   const visualView = mount(<VisualHarness />);
 
   try {
-    const dividerToggle = visualView.container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    const dividerToggle =
+      visualView.container.querySelector<HTMLInputElement>('input[type="checkbox"]');
     if (!(dividerToggle instanceof HTMLInputElement)) {
       throw new Error("Missing divider toggle");
     }

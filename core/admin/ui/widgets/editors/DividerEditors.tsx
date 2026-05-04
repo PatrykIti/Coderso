@@ -59,7 +59,7 @@ const thicknessOptions = Array.from({ length: 8 }, (_, index) => {
 
 const marginTokenOptions = dividerSpaceTokens.map((token) => ({
   id: token,
-  label: `${token} (${dividerSpaceCssValueMap[token]})`,
+  label: token === "none" ? "None" : `${token} (${dividerSpaceCssValueMap[token]})`,
 }));
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
-import type { Block, DeviceTarget, WidgetDefinition } from "./types";
+import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
 import { LayoutPanel } from "./LayoutPanel";
 import { sanitizeLayout } from "./blockUtils";
 
@@ -15,9 +15,10 @@ export type AdvancedPanelProps = {
   block: Block;
   widget: WidgetDefinition;
   onChange: (next: Block) => void;
+  editorContext?: WidgetEditorContext;
 };
 
-export function AdvancedPanel({ block, widget, onChange }: AdvancedPanelProps) {
+export function AdvancedPanel({ block, widget, onChange, editorContext }: AdvancedPanelProps) {
   const Editor = widget.editor.advanced;
   const layoutValue = sanitizeLayout(block.layout);
 
@@ -28,7 +29,11 @@ export function AdvancedPanel({ block, widget, onChange }: AdvancedPanelProps) {
       : [...devices, device];
     onChange({
       ...block,
-      visibility: { ...block.visibility, devices: nextDevices, enabled: block.visibility?.enabled ?? true },
+      visibility: {
+        ...block.visibility,
+        devices: nextDevices,
+        enabled: block.visibility?.enabled ?? true,
+      },
     });
   };
 
@@ -39,6 +44,7 @@ export function AdvancedPanel({ block, widget, onChange }: AdvancedPanelProps) {
         onChange={(data) => onChange({ ...block, data })}
         variant={block.variant ?? widget.variants[0]?.id ?? ""}
         onVariantChange={(next) => onChange({ ...block, variant: next })}
+        context={editorContext}
       />
       <div>
         <div className="flex items-center gap-2">
@@ -50,10 +56,7 @@ export function AdvancedPanel({ block, widget, onChange }: AdvancedPanelProps) {
           </Badge>
         </div>
         <div className="mt-3">
-          <LayoutPanel
-            value={layoutValue}
-            onChange={(layout) => onChange({ ...block, layout })}
-          />
+          <LayoutPanel value={layoutValue} onChange={(layout) => onChange({ ...block, layout })} />
         </div>
       </div>
       <div>

@@ -1,11 +1,13 @@
 import type { ComponentType } from "react";
 import type {
   WidgetAudience,
+  WidgetBindingTarget,
   WidgetComplexity,
   WidgetDefinition,
   WidgetEditorProps,
   WidgetPreset,
   WidgetSurface,
+  WidgetDataAccess,
 } from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
@@ -18,10 +20,7 @@ import { createContactWidget, type ContactData } from "./contact";
 import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
 import { createDividerWidget, type DividerData } from "./divider";
 import { createEntryTeaserWidget, type EntryTeaserData } from "./entryTeaser";
-import {
-  createAppointmentFormWidget,
-  type AppointmentFormData,
-} from "./appointmentForm";
+import { createAppointmentFormWidget, type AppointmentFormData } from "./appointmentForm";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createFormEmbedWidget, type FormEmbedData } from "./formEmbed";
@@ -29,22 +28,13 @@ import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion"
 import { createGalleryMosaicWidget, type GalleryMosaicData } from "./galleryMosaic";
 import { createGridColumnsWidget, type GridColumnsData } from "./gridColumns";
 import { createHeroWidget, type HeroData } from "./hero";
-import {
-  createBookingCalendarWidget,
-  type BookingCalendarData,
-} from "./bookingCalendar";
-import {
-  createListingFiltersWidget,
-  type ListingFiltersData,
-} from "./listingFilters";
+import { createBookingCalendarWidget, type BookingCalendarData } from "./bookingCalendar";
+import { createListingFiltersWidget, type ListingFiltersData } from "./listingFilters";
 import { createLogoCloudWidget, type LogoCloudData } from "./logoCloud";
 import { createNavigationWidget, type NavigationData } from "./navigation";
 import { createNewsletterWidget, type NewsletterData } from "./newsletter";
 import { createPricingPlansWidget, type PricingPlansData } from "./pricingPlans";
-import {
-  createRichTextSectionWidget,
-  type RichTextSectionData,
-} from "./richTextSection";
+import { createRichTextSectionWidget, type RichTextSectionData } from "./richTextSection";
 import { createSectionWidget, type SectionData } from "./section";
 import { createSearchBoxWidget, type SearchBoxData } from "./searchBox";
 import { createSplitLayoutWidget, type SplitLayoutData } from "./splitLayout";
@@ -55,28 +45,21 @@ import { createTeamWidget, type TeamData } from "./team";
 import { createTabsWidget, type TabsData } from "./tabs";
 import { createAccordionWidget, type AccordionData } from "./accordion";
 import { createToggleBlockWidget, type ToggleBlockData } from "./toggleBlock";
-import {
-  createTemplateSectionWidget,
-  type TemplateSectionData,
-} from "./templateSection";
+import { createTemplateSectionWidget, type TemplateSectionData } from "./templateSection";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
-import {
-  createScreenFieldGroupWidget,
-  type ScreenFieldGroupData,
-} from "./screenFieldGroup";
+import { createScreenFieldGroupWidget, type ScreenFieldGroupData } from "./screenFieldGroup";
 import {
   createScreenFieldValueWidget,
+  screenFieldValueBindingTargets,
   type ScreenFieldValueData,
 } from "./screenFieldValue";
 import {
   createScreenRecordHeaderWidget,
+  screenRecordHeaderBindingTargets,
   type ScreenRecordHeaderData,
 } from "./screenRecordHeader";
-import {
-  createScreenTwoColumnWidget,
-  type ScreenTwoColumnData,
-} from "./screenTwoColumn";
+import { createScreenTwoColumnWidget, type ScreenTwoColumnData } from "./screenTwoColumn";
 
 type EditorBundle<T> = {
   wizard: ComponentType<WidgetEditorProps<T>>;
@@ -91,6 +74,8 @@ type CoreWidgetMetadata = {
   presets?: WidgetPreset[];
   requires?: string[];
   surfaces?: WidgetSurface[];
+  dataAccess?: WidgetDataAccess;
+  bindingTargets?: WidgetBindingTarget[];
 };
 
 const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
@@ -301,25 +286,31 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     complexity: "composite",
     audience: "beginner",
     module: "screens",
-    surfaces: ["custom-screen-builder"],
+    surfaces: ["custom-screen-builder", "admin-editor-view"],
+    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+    bindingTargets: screenRecordHeaderBindingTargets,
   },
   "screen-field-value": {
     complexity: "composite",
     audience: "beginner",
     module: "screens",
-    surfaces: ["custom-screen-builder"],
+    surfaces: ["custom-screen-builder", "admin-editor-view"],
+    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
+    bindingTargets: screenFieldValueBindingTargets,
   },
   "screen-field-group": {
     complexity: "atomic",
     audience: "intermediate",
     module: "screens",
-    surfaces: ["custom-screen-builder"],
+    surfaces: ["custom-screen-builder", "admin-editor-view"],
+    dataAccess: { source: "selected-content-type", modes: ["read"] },
   },
   "screen-two-column": {
     complexity: "atomic",
     audience: "intermediate",
     module: "screens",
-    surfaces: ["custom-screen-builder"],
+    surfaces: ["custom-screen-builder", "admin-editor-view"],
+    dataAccess: { source: "selected-content-type", modes: ["read"] },
   },
 };
 
@@ -429,6 +420,8 @@ export function createCoreWidgetDefinitions(
       presets: metadata.presets,
       requires: metadata.requires,
       surfaces: metadata.surfaces,
+      dataAccess: metadata.dataAccess,
+      bindingTargets: metadata.bindingTargets,
     };
   });
 }

@@ -3,17 +3,21 @@ import { expect, test } from "vitest";
 import {
   moveMenuItemToRoot,
   moveMenuItems,
+  describeMenuLocationState,
   validateMenuItemsPayload,
 } from "../../../core/admin/ui/menus/MenuEditorPage";
+import { resolveMenuDropIntent } from "../../../core/admin/ui/menus/menuDnD";
 
-const baseItem = (overrides: Partial<{
-  id: string;
-  label: string;
-  href: string | null;
-  pageId: string | null;
-  parentId: string | null;
-  orderIndex: number;
-}> = {}) => ({
+const baseItem = (
+  overrides: Partial<{
+    id: string;
+    label: string;
+    href: string | null;
+    pageId: string | null;
+    parentId: string | null;
+    orderIndex: number;
+  }> = {}
+) => ({
   id: "item",
   label: "Home",
   href: "/",
@@ -91,7 +95,7 @@ test("moveMenuItems reorders siblings", () => {
     baseItem({ id: "c", orderIndex: 2 }),
   ];
 
-  const result = moveMenuItems(items, "a", "c", "sibling");
+  const result = moveMenuItems(items, "a", "c", "before");
   const order = result
     .filter((item) => item.parentId === null)
     .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -100,11 +104,24 @@ test("moveMenuItems reorders siblings", () => {
   expect(order).toEqual(["b", "a", "c"]);
 });
 
-test("moveMenuItems nests item as child", () => {
+test("moveMenuItems inserts after target sibling", () => {
   const items = [
     baseItem({ id: "a", orderIndex: 0 }),
     baseItem({ id: "b", orderIndex: 1 }),
+    baseItem({ id: "c", orderIndex: 2 }),
   ];
+
+  const result = moveMenuItems(items, "a", "c", "after");
+  const order = result
+    .filter((item) => item.parentId === null)
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((item) => item.id);
+
+  expect(order).toEqual(["b", "c", "a"]);
+});
+
+test("moveMenuItems nests item as child", () => {
+  const items = [baseItem({ id: "a", orderIndex: 0 }), baseItem({ id: "b", orderIndex: 1 })];
 
   const result = moveMenuItems(items, "b", "a", "child");
   const moved = result.find((item) => item.id === "b");
@@ -123,6 +140,17 @@ test("moveMenuItems blocks cycles", () => {
   expect(result).toEqual(items);
 });
 
+test("moveMenuItems blocks before and after moves against descendants", () => {
+  const items = [
+    baseItem({ id: "parent", orderIndex: 0 }),
+    baseItem({ id: "child", parentId: "parent", orderIndex: 0 }),
+    baseItem({ id: "grandchild", parentId: "child", orderIndex: 0 }),
+  ];
+
+  expect(moveMenuItems(items, "parent", "grandchild", "before")).toEqual(items);
+  expect(moveMenuItems(items, "parent", "grandchild", "after")).toEqual(items);
+});
+
 test("moveMenuItems moves item to new parent as sibling", () => {
   const items = [
     baseItem({ id: "a", orderIndex: 0 }),
@@ -130,7 +158,7 @@ test("moveMenuItems moves item to new parent as sibling", () => {
     baseItem({ id: "c", parentId: "b", orderIndex: 0 }),
   ];
 
-  const result = moveMenuItems(items, "c", "a", "sibling");
+  const result = moveMenuItems(items, "c", "a", "before");
   const moved = result.find((item) => item.id === "c");
 
   expect(moved?.parentId).toBe(null);
@@ -168,4 +196,26 @@ test("moveMenuItemToRoot moves item to root start", () => {
     .map((item) => item.id);
 
   expect(rootOrder[0]).toBe("about");
+});
+
+test("resolveMenuDropIntent maps row zones deterministically", () => {
+  const rect = { left: 10, top: 20, height: 40 };
+
+  expect(resolveMenuDropIntent({ clientX: 20, clientY: 24, rect })).toBe("before");
+  expect(resolveMenuDropIntent({ clientX: 20, clientY: 55, rect })).toBe("after");
+  expect(resolveMenuDropIntent({ clientX: 20, clientY: 36, rect })).toBe("child");
+  expect(resolveMenuDropIntent({ clientX: 20, clientY: 44, rect })).toBe("child");
+  expect(resolveMenuDropIntent({ clientX: 120, clientY: 40, rect })).toBe("child");
+});
+
+test("describeMenuLocationState explains empty, draft, and published slots", () => {
+  expect(describeMenuLocationState({ location: " ", status: "draft" })).toBe(
+    "Not assigned to a theme slot."
+  );
+  expect(describeMenuLocationState({ location: "primary", status: "draft" })).toBe(
+    "Assigned to primary, but hidden from runtime until published."
+  );
+  expect(describeMenuLocationState({ location: "footer", status: "published" })).toBe(
+    "Assigned to the footer theme slot."
+  );
 });

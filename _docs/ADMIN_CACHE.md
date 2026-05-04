@@ -325,6 +325,15 @@ Clients update caches and broadcast events on:
 - `/admin/advanced/custom-screens` prefetch warms both `customScreens:list` and
   `contentTypes:list` because the first-screen table and filters display
   content-type labels.
+- `/admin/advanced/custom-screens/:screenId/entries` prefetch resolves the
+  selected screen from `customScreens:list` / `customScreens:detail:<screenId>`,
+  warms `contentTypes:list`, and warms `entries:list:<typeSlug>` for the
+  assigned content type. Detail workspace routes additionally warm
+  `entries:detail:<typeSlug>:<entryId>` when `entryId` is not `new`.
+- Active sidebar shortcuts only resolve screens with
+  `supportsDedicatedEditor=true`; non-ready screens stay cached and readable in
+  the builder/list catalog, but they are not exposed as active workspace
+  shortcuts.
 - `contentTypesClient` also uses TTL-backed memory for `contentTypes:list`, so
   Custom Screens label projection cannot be pinned to stale module memory after
   the shared list TTL expires.
@@ -335,6 +344,22 @@ Clients update caches and broadcast events on:
   update or invalidate `customScreens:list` / `customScreens:detail:<id>` and
   broadcast cache events for the list, sidebar shortcuts, builder, and records
   workflow.
+- Builder previews do not introduce a separate Custom Screens preview API or
+  preview-only cache family.
+- `Editor View` preview and the mounted builder canvas now share one
+  cached-first preview-record owner over `entries:list:<typeSlug>`:
+  - warm cache -> render the first cached record immediately,
+  - cold cache -> fetch `listEntriesCached(typeSlug, { force: false })` once
+    and show schema fallback values until records resolve,
+  - cache-bus `entries:list:<typeSlug>` events -> revalidate with
+    `force: true` while keeping the last good preview record on background
+    refresh failures.
+- `CustomScreenEntryEditor` create/edit mode reuses the existing entry cache
+  contract. Create/update/delete writes update or invalidate
+  `entries:list:<typeSlug>` and `entries:detail:<typeSlug>:<entryId>` through
+  `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
+  screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
+  as a parallel create path.
 
 ### Forms list/detail cache note
 
@@ -374,13 +399,20 @@ When adding a new resource:
   - cache present -> `{ force: false, background: true }`
   - cache missing -> `{ force: true, background: false }`
 - `MenuEditorPage` mount policy:
-  - cache present -> `{ force: false, background: true, reloadActive: false }`
-  - cache missing -> `{ force: false, background: false, reloadActive: false }`
+  - route-selected `menus:detail:<id>` cache present ->
+    `{ force: false, background: true, reloadActive: false }`
+  - route-selected `menus:detail:<id>` cache missing ->
+    `{ force: false, background: false, reloadActive: false }`
+  - `pages:list` cache may seed link labels, but it must not move the editor
+    shell into background loading when the selected menu detail is missing.
 - Menu editor detail reload:
-  - reloads the route-selected `menus:detail:<id>` entry on explicit refresh,
-    save completion, or cacheBus detail event,
+  - reloads the route-selected `menus:detail:<id>` entry on contextual remote
+    refresh, save completion, publish/draft completion, or cacheBus detail
+    event,
   - does not switch to another menu because `menus:list` changed elsewhere,
-  - does not auto-force on every route entry when detail cache exists.
+  - does not auto-force on every route entry when detail cache exists,
+  - suppresses its own `menus:detail:<id>` cache events while save/publish is
+    in flight so editor mutations do not show as remote updates.
 
 
 ## Route Map

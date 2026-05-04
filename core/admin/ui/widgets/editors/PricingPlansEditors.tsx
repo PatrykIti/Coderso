@@ -28,6 +28,7 @@ import {
   type PricingPlansVariantId,
 } from "../../../../widgets/core/pricingPlans";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: PricingPlansVariantId;
@@ -52,6 +53,7 @@ const variantOptions: Array<{
 ];
 
 const spacingOptions: Array<{ id: PricingPlansSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -142,16 +144,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -205,6 +209,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: PricingPlansData,
+  onChange: (next: PricingPlansData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updatePlan(
@@ -506,7 +524,10 @@ export function PricingPlansWizardEditor({
       <div className="space-y-3">
         <p className="text-sm font-medium">Basic plan setup</p>
         {plans.map((plan, index) => (
-          <div key={plan.id ?? `wizard-plan-${index + 1}`} className="space-y-2 rounded-lg border p-3">
+          <div
+            key={plan.id ?? `wizard-plan-${index + 1}`}
+            className="space-y-2 rounded-lg border p-3"
+          >
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Plan {index + 1}
             </p>
@@ -517,7 +538,9 @@ export function PricingPlansWizardEditor({
             />
             <Input
               value={plan.price ?? ""}
-              onChange={(event) => updatePlan(value, onChange, index, { price: event.target.value })}
+              onChange={(event) =>
+                updatePlan(value, onChange, index, { price: event.target.value })
+              }
               placeholder="$49"
             />
           </div>
@@ -582,9 +605,7 @@ export function PricingPlansVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Compare pricing tiers and pick the option matching your team stage."
           />
         </div>
@@ -730,7 +751,10 @@ export function PricingPlansVisualEditor({
               ) : (
                 <div className="space-y-2">
                   {(plan.features ?? []).map((feature, featureIndex) => (
-                    <div key={`${plan.id ?? planIndex}-feature-${featureIndex}`} className="space-y-2 rounded-md border p-2">
+                    <div
+                      key={`${plan.id ?? planIndex}-feature-${featureIndex}`}
+                      className="space-y-2 rounded-md border p-2"
+                    >
                       <Input
                         value={feature}
                         onChange={(event) =>
@@ -750,13 +774,7 @@ export function PricingPlansVisualEditor({
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            moveFeature(
-                              value,
-                              onChange,
-                              planIndex,
-                              featureIndex,
-                              featureIndex - 1
-                            )
+                            moveFeature(value, onChange, planIndex, featureIndex, featureIndex - 1)
                           }
                           disabled={featureIndex === 0}
                         >
@@ -767,13 +785,7 @@ export function PricingPlansVisualEditor({
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            moveFeature(
-                              value,
-                              onChange,
-                              planIndex,
-                              featureIndex,
-                              featureIndex + 1
-                            )
+                            moveFeature(value, onChange, planIndex, featureIndex, featureIndex + 1)
                           }
                           disabled={featureIndex === (plan.features ?? []).length - 1}
                         >
@@ -783,9 +795,7 @@ export function PricingPlansVisualEditor({
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            removeFeature(value, onChange, planIndex, featureIndex)
-                          }
+                          onClick={() => removeFeature(value, onChange, planIndex, featureIndex)}
                         >
                           Remove
                         </Button>
@@ -816,6 +826,7 @@ export function PricingPlansVisualEditor({
           label="Card surface"
           value={normalized.style?.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
+          onClear={() => clearStyleField(value, onChange, "cardSurface")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
@@ -824,6 +835,7 @@ export function PricingPlansVisualEditor({
           label="Card border"
           value={normalized.style?.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
+          onClear={() => clearStyleField(value, onChange, "cardBorder")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
@@ -952,11 +964,7 @@ export function PricingPlansAdvancedEditor({
             type="button"
             variant="outline"
             onClick={() =>
-              setPlanCount(
-                value,
-                onChange,
-                resolvePricingPlanCountForVariant(resolvedVariant)
-              )
+              setPlanCount(value, onChange, resolvePricingPlanCountForVariant(resolvedVariant))
             }
           >
             Normalize plans to variant baseline

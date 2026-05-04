@@ -169,8 +169,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -195,10 +194,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -208,10 +204,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -221,10 +214,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -266,8 +256,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -300,9 +289,8 @@ afterEach(() => {
 });
 
 test("Timeline wizard editor covers variant selection, normalized step growth, and quick layout toggles", async () => {
-  const { TimelineWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TimelineEditors"
-  );
+  const { TimelineWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: TimelineData = {
@@ -341,11 +329,7 @@ test("Timeline wizard editor covers variant selection, normalized step growth, a
   try {
     expect(view.container.textContent).toContain("Timeline style");
 
-    const variantSelect = findSelectByOptions(view.container, [
-      "milestones",
-      "cards",
-      "compact",
-    ]);
+    const variantSelect = findSelectByOptions(view.container, ["milestones", "cards", "compact"]);
     setSelectValue(variantSelect, "cards");
     expect(currentVariant).toBe("cards");
 
@@ -383,9 +367,8 @@ test("Timeline wizard editor covers variant selection, normalized step growth, a
 });
 
 test("Timeline visual editor covers variant cards, step ordering, color fallbacks, and style controls", async () => {
-  const { TimelineVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TimelineEditors"
-  );
+  const { TimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: TimelineData = {
@@ -486,19 +469,13 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
     expect(latestValue.steps).toHaveLength(4);
     expect(contentSection?.textContent).toContain("4 steps configured");
 
-    setCheckboxValue(
-      guidesSection?.querySelector("input[type='checkbox']") ?? undefined,
-      false
-    );
+    setCheckboxValue(guidesSection?.querySelector("input[type='checkbox']") ?? undefined, false);
     const solidDashedSelects = findSelectsByOptions(guidesSection as ParentNode, [
       "solid",
       "dashed",
     ]);
     setSelectValue(solidDashedSelects[0], "solid");
-    setSelectValue(
-      findSelectByOptions(guidesSection as ParentNode, ["1", "2", "3", "4"]),
-      "4"
-    );
+    setSelectValue(findSelectByOptions(guidesSection as ParentNode, ["1", "2", "3", "4"]), "4");
     setSelectValue(solidDashedSelects[1], "dashed");
 
     setSelectValue(findSelectByOptions(markersSection as ParentNode, ["sm", "md", "lg"]), "lg");
@@ -521,15 +498,15 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
     setInputValue(colorInputs[4], "#555555");
 
     setSelectValue(
-      findSelectByOptions(typographySection as ParentNode, ["sm", "base", "lg", "xl"]),
+      findSelectByOptions(typographySection as ParentNode, ["none", "sm", "base", "lg", "xl"]),
       "xl"
     );
     setSelectValue(
-      findSelectByOptions(typographySection as ParentNode, ["xs", "sm", "base", "lg"]),
+      findSelectByOptions(typographySection as ParentNode, ["none", "xs", "sm", "base", "lg"]),
       "lg"
     );
     setSelectValue(
-      findSelectByOptions(typographySection as ParentNode, ["sm", "md", "lg", "xl"]),
+      findSelectByOptions(typographySection as ParentNode, ["none", "sm", "md", "lg", "xl"]),
       "xl"
     );
 
@@ -556,9 +533,7 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
         spacing: "xl",
       })
     );
-    expect(latestValue.guides).toEqual(
-      expect.objectContaining({ enabled: false, style: "solid" })
-    );
+    expect(latestValue.guides).toEqual(expect.objectContaining({ enabled: false, style: "solid" }));
     expect(latestValue.style).toEqual(
       expect.objectContaining({
         lineStyle: "dashed",
@@ -579,9 +554,8 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
 });
 
 test("Timeline advanced editor covers layout-only controls and payload normalization guard rails", async () => {
-  const { TimelineAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TimelineEditors"
-  );
+  const { TimelineAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: TimelineData = {
@@ -629,10 +603,7 @@ test("Timeline advanced editor covers layout-only controls and payload normaliza
       findSelectByOptions(layoutSection as ParentNode, ["horizontal", "vertical"]),
       "vertical"
     );
-    setSelectValue(
-      findSelectByOptions(layoutSection as ParentNode, ["top", "bottom"]),
-      "bottom"
-    );
+    setSelectValue(findSelectByOptions(layoutSection as ParentNode, ["top", "bottom"]), "bottom");
     setSelectValue(
       findSelectByOptions(layoutSection as ParentNode, ["start", "center", "end"]),
       "start"

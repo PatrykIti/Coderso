@@ -29,6 +29,7 @@ import {
   type FeatureGridVariantId,
 } from "../../../../widgets/core/featureGrid";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: FeatureGridVariantId;
@@ -53,6 +54,7 @@ const variantOptions: Array<{
 ];
 
 const gapOptions: Array<{ id: FeatureGridGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -156,16 +158,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -219,6 +223,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: FeatureGridData,
+  onChange: (next: FeatureGridData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updateItem(
@@ -388,13 +406,18 @@ export function FeatureGridWizardEditor({
       <div className="space-y-3">
         <p className="text-sm font-medium">Basic card labels</p>
         {items.map((item, index) => (
-          <div key={item.id ?? `wizard-item-${index + 1}`} className="space-y-2 rounded-lg border p-3">
+          <div
+            key={item.id ?? `wizard-item-${index + 1}`}
+            className="space-y-2 rounded-lg border p-3"
+          >
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Card {index + 1}
             </p>
             <Input
               value={item.title ?? ""}
-              onChange={(event) => updateItem(value, onChange, index, { title: event.target.value })}
+              onChange={(event) =>
+                updateItem(value, onChange, index, { title: event.target.value })
+              }
               placeholder={`Feature ${index + 1}`}
             />
           </div>
@@ -448,7 +471,9 @@ export function FeatureGridVisualEditor({
             <p className="text-sm font-medium">Card gap</p>
             <Select
               value={normalized.style?.gap ?? featureGridDefaults.style?.gap ?? "md"}
-              onValueChange={(next) => updateStyle(value, onChange, { gap: next as FeatureGridGap })}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { gap: next as FeatureGridGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Gap" />
@@ -521,7 +546,10 @@ export function FeatureGridVisualEditor({
         description="Manage card content, visuals, CTA links, and ordering."
       >
         {items.map((item, index) => (
-          <div key={item.id ?? `feature-item-${index + 1}`} className="space-y-3 rounded-lg border p-3">
+          <div
+            key={item.id ?? `feature-item-${index + 1}`}
+            className="space-y-3 rounded-lg border p-3"
+          >
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Card {index + 1}</p>
               <div className="flex gap-2">
@@ -643,6 +671,7 @@ export function FeatureGridVisualEditor({
           label="Card background"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+          onClear={() => clearStyleField(value, onChange, "surfaceColor")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
@@ -743,7 +772,9 @@ export function FeatureGridAdvancedEditor({
             <p className="text-sm font-medium">Gap token</p>
             <Select
               value={normalized.style?.gap ?? featureGridDefaults.style?.gap ?? "md"}
-              onValueChange={(next) => updateStyle(value, onChange, { gap: next as FeatureGridGap })}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { gap: next as FeatureGridGap })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Gap" />
@@ -811,11 +842,7 @@ export function FeatureGridAdvancedEditor({
             type="button"
             variant="outline"
             onClick={() =>
-              setItemsCount(
-                value,
-                onChange,
-                resolveFeatureGridItemCountForVariant(resolvedVariant)
-              )
+              setItemsCount(value, onChange, resolveFeatureGridItemCountForVariant(resolvedVariant))
             }
           >
             Normalize items to variant baseline

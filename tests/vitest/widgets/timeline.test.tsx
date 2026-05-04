@@ -24,9 +24,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 
 test("timeline renders defaults", () => {
-  const html = renderToString(
-    <TimelineBlock data={timelineDefaults} variant="milestones" />
-  );
+  const html = renderToString(<TimelineBlock data={timelineDefaults} variant="milestones" />);
   expect(html).toContain(timelineDefaults.steps[0]?.title ?? "");
   expect(html).toContain('data-timeline-variant="milestones"');
   expect(html).toContain('data-timeline-orientation="horizontal"');
@@ -105,6 +103,28 @@ test("timeline validator accepts extended model fields", () => {
   expect(data.style?.thickness).toBe("3");
   expect(data.style?.titleSize).toBe("lg");
   expect(data.background?.color).toBe("#f8fafc");
+});
+
+test("timeline cleared background omits section style while semantic markers remain readable", () => {
+  const html = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        background: {},
+        style: {
+          ...timelineDefaults.style,
+          lineColor: undefined,
+          markerColor: undefined,
+        },
+      }}
+      variant="milestones"
+    />
+  );
+
+  expect(html).toContain('data-timeline-variant="milestones"');
+  expect(html).not.toContain("background-color:transparent");
+  expect(html).toContain("var(--color-primary)");
+  expect(html).toContain("var(--color-border)");
 });
 
 test("timeline validator rejects invalid variant", () => {

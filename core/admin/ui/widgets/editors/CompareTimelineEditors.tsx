@@ -27,6 +27,7 @@ import {
   type CompareTrackSegment,
 } from "../../../../widgets/core/compareTimeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: CompareTimelineVariantId;
@@ -47,11 +48,12 @@ const variantOptions: Array<{
 
 const guideStyles = ["solid", "dashed"] as const;
 const labelPositionOptions = ["top", "bottom"] as const;
-const trackSpacingOptions = ["sm", "md", "lg", "xl"] as const;
+const trackSpacingOptions = ["none", "sm", "md", "lg", "xl"] as const;
 const highlightLabelStyles = ["solid", "outline", "subtle"] as const;
-const trackLabelSizes = ["sm", "base", "lg"] as const;
-const stepLabelSizes = ["xs", "sm", "base"] as const;
-const segmentLabelSizes = ["xs", "sm", "base"] as const;
+const trackLabelSizes = ["none", "sm", "base", "lg"] as const;
+const stepLabelSizes = ["none", "xs", "sm", "base"] as const;
+const segmentLabelSizes = ["none", "xs", "sm", "base"] as const;
+const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 
 const stepCountOptions = Array.from(
   { length: compareAxisStepMax - compareAxisStepMin + 1 },
@@ -227,6 +229,20 @@ function updateStyle(
   }));
 }
 
+function clearStyle(
+  value: CompareTimelineData,
+  onChange: (next: CompareTimelineData) => void,
+  key: keyof CompareStyle
+) {
+  updateCompareValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
+}
+
 function updateLayout(
   value: CompareTimelineData,
   onChange: (next: CompareTimelineData) => void,
@@ -296,10 +312,7 @@ function addAxisStep(value: CompareTimelineData, onChange: (next: CompareTimelin
   setAxisStepCount(value, onChange, current.axis.steps.length + 1);
 }
 
-function removeAxisStep(
-  value: CompareTimelineData,
-  onChange: (next: CompareTimelineData) => void
-) {
+function removeAxisStep(value: CompareTimelineData, onChange: (next: CompareTimelineData) => void) {
   const current = normalizeValue(value);
   if (current.axis.steps.length <= compareAxisStepMin) return;
   setAxisStepCount(value, onChange, current.axis.steps.length - 1);
@@ -309,18 +322,20 @@ function ColorField({
   label,
   value,
   onChange,
+  onClear,
   placeholder,
   pickerFallback,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onClear?: () => void;
   placeholder: string;
   pickerFallback: string;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -338,13 +353,7 @@ function ColorField({
   );
 }
 
-function VariantCards({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-}) {
+function VariantCards({ value, onChange }: { value: string; onChange?: (next: string) => void }) {
   return (
     <div className="space-y-2">
       {variantOptions.map((option) => (
@@ -441,7 +450,10 @@ function SegmentEditor({
               </SelectTrigger>
               <SelectContent>
                 {steps.map((step, stepIndex) => (
-                  <SelectItem key={`${track.id}-from-${step.id ?? stepIndex}`} value={String(stepIndex)}>
+                  <SelectItem
+                    key={`${track.id}-from-${step.id ?? stepIndex}`}
+                    value={String(stepIndex)}
+                  >
                     {step.label}
                   </SelectItem>
                 ))}
@@ -457,7 +469,10 @@ function SegmentEditor({
               </SelectTrigger>
               <SelectContent>
                 {steps.map((step, stepIndex) => (
-                  <SelectItem key={`${track.id}-to-${step.id ?? stepIndex}`} value={String(stepIndex)}>
+                  <SelectItem
+                    key={`${track.id}-to-${step.id ?? stepIndex}`}
+                    value={String(stepIndex)}
+                  >
                     {step.label}
                   </SelectItem>
                 ))}
@@ -486,8 +501,7 @@ function SegmentEditor({
 
 function getTargetTrackContext(value: CompareTimelineData) {
   const tracks = value.tracks;
-  const targetTrackId =
-    value.highlight?.targetTrackId ?? tracks[1]?.id ?? tracks[0]?.id ?? "a";
+  const targetTrackId = value.highlight?.targetTrackId ?? tracks[1]?.id ?? tracks[0]?.id ?? "a";
   const targetTrackIndex = Math.max(
     tracks.findIndex((track) => track.id === targetTrackId),
     0
@@ -516,9 +530,7 @@ export function CompareTimelineWizardEditor({
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Highlight mode</p>
-            <p className="text-xs text-muted-foreground">
-              Emphasize ranges on a target track.
-            </p>
+            <p className="text-xs text-muted-foreground">Emphasize ranges on a target track.</p>
           </div>
           <Switch
             checked={highlightEnabled}
@@ -746,7 +758,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {guideStyles.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -770,7 +782,7 @@ export function CompareTimelineVisualEditor({
                 <SelectContent>
                   {highlightLabelStyles.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -790,6 +802,7 @@ export function CompareTimelineVisualEditor({
               label="Highlight color"
               value={normalized.style?.highlightColor}
               onChange={(next) => updateStyle(value, onChange, { highlightColor: next })}
+              onClear={() => clearStyle(value, onChange, "highlightColor")}
               placeholder="#f59e0b"
               pickerFallback="#f59e0b"
             />
@@ -799,6 +812,7 @@ export function CompareTimelineVisualEditor({
             label="Marker color"
             value={normalized.style?.markerColor}
             onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
+            onClear={() => clearStyle(value, onChange, "markerColor")}
             placeholder="#1d4ed8"
             pickerFallback="#1d4ed8"
           />
@@ -831,6 +845,7 @@ export function CompareTimelineVisualEditor({
             label="Guide color"
             value={normalized.style?.guideColor}
             onChange={(next) => updateStyle(value, onChange, { guideColor: next })}
+            onClear={() => clearStyle(value, onChange, "guideColor")}
             placeholder="#e2e8f0"
             pickerFallback="#e2e8f0"
           />
@@ -853,7 +868,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {trackLabelSizes.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -876,7 +891,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {stepLabelSizes.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -900,7 +915,7 @@ export function CompareTimelineVisualEditor({
                 <SelectContent>
                   {segmentLabelSizes.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {formatTokenOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -931,7 +946,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {trackSpacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -954,7 +969,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {labelPositionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -999,7 +1014,7 @@ export function CompareTimelineAdvancedEditor({
               <SelectContent>
                 {trackSpacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1022,7 +1037,7 @@ export function CompareTimelineAdvancedEditor({
               <SelectContent>
                 {labelPositionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {formatTokenOptionLabel(option)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1057,7 +1072,7 @@ export function CompareTimelineAdvancedEditor({
             <SelectContent>
               {guideStyles.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {option}
+                  {formatTokenOptionLabel(option)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1130,9 +1145,9 @@ export function CompareTimelineAdvancedEditor({
         description="Apply deterministic normalization for axis count, IDs, markers, and segments."
       >
         <p className="text-xs text-muted-foreground">
-          Current axis steps: {normalized.axis.steps.length}. Runtime rules enforce
-          {" "}
-          {compareAxisStepMin}-{compareAxisStepMax} steps, stable IDs, and clamped marker/segment ranges.
+          Current axis steps: {normalized.axis.steps.length}. Runtime rules enforce{" "}
+          {compareAxisStepMin}-{compareAxisStepMax} steps, stable IDs, and clamped marker/segment
+          ranges.
         </p>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" onClick={() => onChange(normalized)}>

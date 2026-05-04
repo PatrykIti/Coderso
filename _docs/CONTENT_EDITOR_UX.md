@@ -149,3 +149,45 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   `Layout`, `Content`, `Forms`, `Navigation`, `Media`.
 - After a widget is inserted, the canvas scrolls to the new block and applies a
   short-lived visual highlight.
+
+## Custom Screens workspace UX
+
+- The builder header uses one workspace control model:
+  `Preview`, `List View`, `Editor View`, and `Save`.
+- `Open records`, `Builder`, and the center-canvas `Settings` tab are not part
+  of the active Custom Screens workspace flow.
+- `List View` is edited from a table-preview canvas with:
+  - left rail list element library,
+  - center table preview,
+  - inline header selection/reorder controls for visible columns,
+  - compact hidden-column tray for reselecting `visible=false` columns,
+  - right inspector for screen settings and the selected column.
+- `Preview` in the builder opens a dedicated modal preview:
+  - `List View` preview renders the records table live, without mutating the
+    active builder route,
+  - `Editor View` preview renders the widget-based record surface inside a
+    wider Pages-like shell, defaults to a desktop device frame on first open,
+    and hydrates from the first real record when `entries:list:<typeSlug>` is
+    available,
+  - when no records exist or the first preview read fails, the builder and the
+    preview dialog keep a shared schema-fallback note instead of silently
+    pretending the sample data is a real record.
+- `Editor View` keeps the widget canvas, but the active palette is restricted to
+  `admin-editor-view` widgets and the right inspector owns screen/data/selected
+  widget controls.
+- `Data` now renders prop-centric cards from widget-owned binding targets:
+  `screen-record-header` exposes read-only header props, `screen-field-value`
+  keeps only `value` as the write-capable target, and compatibility rows keep
+  already-saved custom prop paths visible without reopening ordinal `Binding N`
+  cards.
+- `Selected Widget` controls for `screen-record-header` and
+  `screen-field-value` are binding-aware in Visual mode:
+  they can show `Literal` / `Bound` / `Mixed` status and jump to the matching
+  `Data` tab card without moving binding ownership out of the shared binding
+  panel.
+- The record editor route uses the screen-owned canvas as the active editing
+  surface; bound screen widgets can edit the underlying entry inline instead of
+  showing a preview card plus a separate classic-editor fallback.
+- The record editor details rail exposes `Record` and `Selected Element` tabs so
+  clicking a widget on the canvas can focus its bound fields and open
+  element-scoped editing in the same screen-owned view.

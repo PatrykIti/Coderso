@@ -40,13 +40,7 @@ vi.mock("@/components/ui/input", () => ({
     type?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      type={type}
-      {...props}
-    />
+    <input value={value} onChange={onChange} placeholder={placeholder} type={type} {...props} />
   ),
 }));
 
@@ -131,10 +125,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -144,10 +135,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -201,11 +189,8 @@ afterEach(() => {
 });
 
 test("Footer editors cover quick setup, visual content edits, social links, and advanced layout tokens", async () => {
-  const {
-    FooterAdvancedEditor,
-    FooterVisualEditor,
-    FooterWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+  const { FooterAdvancedEditor, FooterVisualEditor, FooterWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: FooterData = {
@@ -267,7 +252,11 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
   const view = mount(<Harness />);
 
   try {
-    const variantSelect = findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0];
+    const variantSelect = findSelectsByOptions(view.container, [
+      "columns-2",
+      "columns-3",
+      "minimal",
+    ])[0];
     setSelectValue(variantSelect, "minimal");
     expect(currentVariant).toBe("minimal");
 
@@ -279,8 +268,21 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
     setInputValue(findInputByPlaceholder(view.container, "Terms URL"), "/terms");
 
     clickByText(view.container, "Add social");
-    setSelectValue(findSelectsByOptions(view.container, ["linkedin", "twitter", "github", "youtube", "facebook", "instagram"])[0], "github");
-    setInputValue(findInputByPlaceholder(view.container, "Social URL"), "https://github.com/example");
+    setSelectValue(
+      findSelectsByOptions(view.container, [
+        "linkedin",
+        "twitter",
+        "github",
+        "youtube",
+        "facebook",
+        "instagram",
+      ])[0],
+      "github"
+    );
+    setInputValue(
+      findInputByPlaceholder(view.container, "Social URL"),
+      "https://github.com/example"
+    );
 
     expect(latestValue.legal).toMatchObject({
       copyright: "© 2026 Example",
@@ -303,9 +305,25 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
 
     const socialPanel = findPanelByTitle(view.container, "Social links and icon style");
     clickByText(socialPanel as ParentNode, "Add social");
-    setSelectValue(findSelectsByOptions(socialPanel as ParentNode, ["linkedin", "twitter", "github", "youtube", "facebook", "instagram"]).at(-1), "youtube");
-    setInputValue(findInputsByPlaceholder(socialPanel as ParentNode, "Social URL").at(-1), "https://youtube.com/example");
-    setInputValue(findInputByPlaceholder(socialPanel as ParentNode, "Social color (e.g. #0f172a)"), "#111111");
+    setSelectValue(
+      findSelectsByOptions(socialPanel as ParentNode, [
+        "linkedin",
+        "twitter",
+        "github",
+        "youtube",
+        "facebook",
+        "instagram",
+      ]).at(-1),
+      "youtube"
+    );
+    setInputValue(
+      findInputsByPlaceholder(socialPanel as ParentNode, "Social URL").at(-1),
+      "https://youtube.com/example"
+    );
+    setInputValue(
+      findInputByPlaceholder(socialPanel as ParentNode, "Social color (e.g. #0f172a)"),
+      "#111111"
+    );
 
     const colorsPanel = findPanelByTitle(view.container, "Colors and borders");
     setInputValue(findInputByPlaceholder(colorsPanel as ParentNode, "Surface color"), "#ffffff");
@@ -317,23 +335,49 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
     const typoPanel = findPanelByTitle(view.container, "Typography and spacing");
     setInputValue(findInputByPlaceholder(typoPanel as ParentNode, "Heading color"), "#111827");
     setInputValue(findInputByPlaceholder(typoPanel as ParentNode, "Legal text color"), "#6b7280");
-    setSelectValue(findSelectsByOptions(typoPanel as ParentNode, ["xs", "sm", "base"])[0], "base");
-    setSelectValue(findSelectsByOptions(typoPanel as ParentNode, ["none", "uppercase", "capitalize"])[0], "capitalize");
-    setSelectValue(findSelectsByOptions(typoPanel as ParentNode, ["8", "10", "12"])[0], "12");
+    setSelectValue(
+      findSelectsByOptions(typoPanel as ParentNode, ["none", "xs", "sm", "base"])[0],
+      "base"
+    );
+    setSelectValue(
+      findSelectsByOptions(typoPanel as ParentNode, ["none", "uppercase", "capitalize"])[0],
+      "capitalize"
+    );
+    setSelectValue(
+      findSelectsByOptions(typoPanel as ParentNode, ["none", "8", "10", "12"])[0],
+      "12"
+    );
 
     const layoutPanel = findPanelByTitle(view.container, "Layout tokens");
-    const alignSelects = findSelectsByOptions(layoutPanel as ParentNode, ["left", "center", "right"]);
+    const alignSelects = findSelectsByOptions(layoutPanel as ParentNode, [
+      "left",
+      "center",
+      "right",
+    ]);
     setSelectValue(alignSelects[0], "center");
     setSelectValue(alignSelects[1], "left");
-    setSelectValue(findSelectsByOptions(layoutPanel as ParentNode, ["5xl", "6xl", "7xl"])[0], "7xl");
-    setSelectValue(findSelectsByOptions(layoutPanel as ParentNode, ["4", "6", "8"])[0], "8");
-    setSelectValue(findSelectsByOptions(layoutPanel as ParentNode, ["8", "10", "12"])[0], "8");
+    setSelectValue(
+      findSelectsByOptions(layoutPanel as ParentNode, ["none", "5xl", "6xl", "7xl"])[0],
+      "7xl"
+    );
+    setSelectValue(
+      findSelectsByOptions(layoutPanel as ParentNode, ["none", "4", "6", "8"])[0],
+      "8"
+    );
+    setSelectValue(
+      findSelectsByOptions(layoutPanel as ParentNode, ["none", "8", "10", "12"])[0],
+      "8"
+    );
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.columns[0]).toMatchObject({
       title: "Company",
     });
-    expect(latestValue.columns.some((column) => column.links.some((link) => link.label === "API" && link.href === "/api"))).toBe(true);
+    expect(
+      latestValue.columns.some((column) =>
+        column.links.some((link) => link.label === "API" && link.href === "/api")
+      )
+    ).toBe(true);
     expect(latestValue.social).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ type: "github", href: "https://github.com/example" }),
@@ -365,9 +409,8 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
 });
 
 test("Footer visual editor updates visible column titles and removes social links", async () => {
-  const { FooterVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/FooterEditors"
-  );
+  const { FooterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
   let latestValue: FooterData = {
     columns: [
@@ -425,11 +468,8 @@ test("Footer visual editor updates visible column titles and removes social link
 });
 
 test("Footer editors fall back safely for sparse columns, social, layout, and style data", async () => {
-  const {
-    FooterAdvancedEditor,
-    FooterVisualEditor,
-    FooterWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+  const { FooterAdvancedEditor, FooterVisualEditor, FooterWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
   let latestValue: FooterData = {
     columns: [{ title: "", links: [] }],
@@ -482,12 +522,22 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
   const view = mount(<Harness />);
 
   try {
-    expect((findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "minimal"
-    );
-    expect((findInputByPlaceholder(view.container, "Column 1 title") as HTMLInputElement | null | undefined)?.value).toBe(
-      "Column 1"
-    );
+    expect(
+      (
+        findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("minimal");
+    expect(
+      (
+        findInputByPlaceholder(view.container, "Column 1 title") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("Column 1");
     expect(view.container.textContent).toContain("No social links configured.");
 
     const visualColumnsPanel = findPanelByTitle(view.container, "Columns and links");
@@ -502,12 +552,19 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
 
     const socialPanel = findPanelByTitle(view.container, "Social links and icon style");
     clickByText(socialPanel as ParentNode, "Add social");
-    const socialTypeSelect = findSelectsByOptions(
-      socialPanel as ParentNode,
-      ["linkedin", "twitter", "github", "youtube", "facebook", "instagram"]
-    )[0];
+    const socialTypeSelect = findSelectsByOptions(socialPanel as ParentNode, [
+      "linkedin",
+      "twitter",
+      "github",
+      "youtube",
+      "facebook",
+      "instagram",
+    ])[0];
     setSelectValue(socialTypeSelect, "twitter");
-    setInputValue(findInputByPlaceholder(socialPanel as ParentNode, "Social URL"), "https://x.com/example");
+    setInputValue(
+      findInputByPlaceholder(socialPanel as ParentNode, "Social URL"),
+      "https://x.com/example"
+    );
 
     expect(latestValue.social).toEqual([
       {
@@ -517,18 +574,39 @@ test("Footer editors fall back safely for sparse columns, social, layout, and st
     ]);
 
     const advancedLayoutPanel = findPanelByTitle(view.container, "Layout tokens");
-    const selects = findSelectsByOptions(advancedLayoutPanel as ParentNode, ["left", "center", "right"]);
+    const selects = findSelectsByOptions(advancedLayoutPanel as ParentNode, [
+      "left",
+      "center",
+      "right",
+    ]);
     expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("left");
     expect((selects[1] as HTMLSelectElement | null | undefined)?.value).toBe("right");
-    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["5xl", "6xl", "7xl"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "6xl"
-    );
-    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["4", "6", "8"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "6"
-    );
-    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["8", "10", "12"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "10"
-    );
+    expect(
+      (
+        findSelectsByOptions(advancedLayoutPanel as ParentNode, [
+          "none",
+          "5xl",
+          "6xl",
+          "7xl",
+        ])[0] as HTMLSelectElement | null | undefined
+      )?.value
+    ).toBe("6xl");
+    expect(
+      (
+        findSelectsByOptions(advancedLayoutPanel as ParentNode, ["none", "4", "6", "8"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("6");
+    expect(
+      (
+        findSelectsByOptions(advancedLayoutPanel as ParentNode, ["none", "8", "10", "12"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("10");
   } finally {
     view.cleanup();
   }

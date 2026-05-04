@@ -224,8 +224,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -291,10 +290,7 @@ const flush = async () => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -304,10 +300,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -317,10 +310,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -355,15 +345,16 @@ const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
 const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
     const optionValues = Array.from(element.options).map((option) => option.value);
-    return optionValues.length === values.length && values.every((value) => optionValues.includes(value));
+    return (
+      optionValues.length === values.length && values.every((value) => optionValues.includes(value))
+    );
   });
 
 const normalizeText = (value: string | null | undefined) =>
@@ -390,11 +381,8 @@ const renderEditors = async ({
   initialVariant?: string;
   withVariantChange?: boolean;
 }) => {
-  const {
-    EntryTeaserAdvancedEditor,
-    EntryTeaserVisualEditor,
-    EntryTeaserWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
+  const { EntryTeaserAdvancedEditor, EntryTeaserVisualEditor, EntryTeaserWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -511,10 +499,7 @@ test("EntryTeaser advanced editor updates source wiring, style tokens, and fallb
       throw new Error("Missing source wiring section");
     }
 
-    setSelectValue(
-      findSelectByOptions(sourceWiringSection, ["legacy", "listing"]),
-      "listing"
-    );
+    setSelectValue(findSelectByOptions(sourceWiringSection, ["legacy", "listing"]), "listing");
     await flush();
 
     setSelectValue(
@@ -539,11 +524,16 @@ test("EntryTeaser advanced editor updates source wiring, style tokens, and fallb
       findInputByPlaceholder(styleTokensSection, "var(--color-border)"),
       "var(--teaser-border)"
     );
-    setSelectValue(
-      findSelectByOptions(styleTokensSection, ["sm", "md", "lg", "xl"]),
-      "sm"
-    );
-    setSelectValue(findSelectByOptions(styleTokensSection, ["sm", "md", "lg"]), "lg");
+    const radiusSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg", "xl"]);
+    const spacingSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg"]);
+    expect(
+      Array.from((radiusSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    expect(
+      Array.from((spacingSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    setSelectValue(radiusSelect, "sm");
+    setSelectValue(spacingSelect, "lg");
 
     const fallbackSection = findSectionByTitle(view.container, "Fallback behavior");
     if (!(fallbackSection instanceof HTMLElement)) {
@@ -648,9 +638,11 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
       "latest"
     );
 
-    expect(findCheckboxes(view.container).slice(0, 4).every((checkbox) => checkbox.checked)).toBe(
-      true
-    );
+    expect(
+      findCheckboxes(view.container)
+        .slice(0, 4)
+        .every((checkbox) => checkbox.checked)
+    ).toBe(true);
     expect(findInputByPlaceholder(view.container, "Read more")?.value).toBe("Read more");
     expect(
       findInputByPlaceholder(view.container, "/blog/entry-slug or https://...")
@@ -666,8 +658,16 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
     }
     expect(findInputByPlaceholder(styleTokensSection, "var(--color-bg)")?.value).toBe("");
     expect(findInputByPlaceholder(styleTokensSection, "var(--color-border)")?.value).toBe("");
-    expect(findSelectByOptions(styleTokensSection, ["sm", "md", "lg", "xl"])?.value).toBe("lg");
-    expect(findSelectByOptions(styleTokensSection, ["sm", "md", "lg"])?.value).toBe("md");
+    const radiusSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg", "xl"]);
+    const spacingSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg"]);
+    expect(
+      Array.from((radiusSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    expect(
+      Array.from((spacingSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    expect(radiusSelect?.value).toBe("lg");
+    expect(spacingSelect?.value).toBe("md");
 
     const fallbackSection = findSectionByTitle(view.container, "Fallback behavior");
     if (!(fallbackSection instanceof HTMLElement)) {
@@ -751,13 +751,8 @@ test("EntryTeaser editors surface generic listing and entry load failures plus e
 });
 
 test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, and runtime snapshot", async () => {
-  const {
-    EntryTeaserAdvancedEditor,
-    EntryTeaserVisualEditor,
-    EntryTeaserWizardEditor,
-  } = await import(
-    "../../../core/admin/ui/widgets/editors/EntryTeaserEditors"
-  );
+  const { EntryTeaserAdvancedEditor, EntryTeaserVisualEditor, EntryTeaserWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -817,10 +812,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     expect(view.container.textContent).toContain("Runtime payload snapshot");
 
     act(() => {
-      setSelectValue(
-        findSelectByOptions(view.container, ["legacy", "listing"]),
-        "legacy"
-      );
+      setSelectValue(findSelectByOptions(view.container, ["legacy", "listing"]), "legacy");
       setSelectValue(
         findSelectByOptions(view.container, ["latest", "featured", "manual"]),
         "manual"
@@ -837,26 +829,17 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     await flush();
 
     act(() => {
-      setSelectValue(
-        findSelectByOptions(view.container, ["__no_entry__", "entry-1"]),
-        "entry-1"
-      );
+      setSelectValue(findSelectByOptions(view.container, ["__no_entry__", "entry-1"]), "entry-1");
       setSelectValue(
         findSelectByOptions(view.container, ["horizontal", "vertical", "minimal"]),
         "minimal"
       );
-      setInputValue(
-        findInputByPlaceholder(view.container, "Read more"),
-        "Read article"
-      );
+      setInputValue(findInputByPlaceholder(view.container, "Read more"), "Read article");
     });
     await flush();
 
     act(() => {
-      setSelectValue(
-        findSelectByOptions(view.container, ["auto", "custom"]),
-        "custom"
-      );
+      setSelectValue(findSelectByOptions(view.container, ["auto", "custom"]), "custom");
     });
     await flush();
 
@@ -865,14 +848,8 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
         findInputByPlaceholder(view.container, "/blog/entry-slug or https://..."),
         "/custom-entry"
       );
-      setSelectValue(
-        findSelectByOptions(view.container, ["sm", "md", "lg"]),
-        "lg"
-      );
-      setSelectValue(
-        findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]),
-        "xl"
-      );
+      setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
+      setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg", "xl"]), "xl");
       setTextareaValue(
         findTextareaByPlaceholder(view.container, "Choose a source mode and content type."),
         "Nothing ready"
@@ -913,22 +890,38 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
 });
 
 test("EntryTeaser editors cover listing mode and content/listings loading errors", async () => {
-  const {
-    EntryTeaserAdvancedEditor,
-    EntryTeaserVisualEditor,
-    EntryTeaserWizardEditor,
-  } = await import(
-    "../../../core/admin/ui/widgets/editors/EntryTeaserEditors"
-  );
+  const { EntryTeaserAdvancedEditor, EntryTeaserVisualEditor, EntryTeaserWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
 
   const onChangeSpy = vi.fn();
   const Harness = () => {
     const [value, setValue] = useState<EntryTeaserData>({} as EntryTeaserData);
     return (
       <>
-        <EntryTeaserWizardEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} variant="horizontal" />
-        <EntryTeaserVisualEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} variant="horizontal" />
-        <EntryTeaserAdvancedEditor value={value} onChange={(next) => { onChangeSpy(next); setValue(next); }} variant="horizontal" />
+        <EntryTeaserWizardEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant="horizontal"
+        />
+        <EntryTeaserVisualEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant="horizontal"
+        />
+        <EntryTeaserAdvancedEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant="horizontal"
+        />
       </>
     );
   };
@@ -949,10 +942,7 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
     expect(errorView.container.textContent).toContain("Types failed");
 
     act(() => {
-      setSelectValue(
-        findSelectByOptions(errorView.container, ["legacy", "listing"]),
-        "listing"
-      );
+      setSelectValue(findSelectByOptions(errorView.container, ["legacy", "listing"]), "listing");
     });
     await flush();
     expect(errorView.container.textContent).toContain("Listings failed");
@@ -967,10 +957,7 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
     await flush();
 
     act(() => {
-      setSelectValue(
-        findSelectByOptions(successView.container, ["legacy", "listing"]),
-        "listing"
-      );
+      setSelectValue(findSelectByOptions(successView.container, ["legacy", "listing"]), "listing");
     });
     await flush();
 

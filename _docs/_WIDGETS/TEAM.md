@@ -55,6 +55,13 @@ Notes:
   - member IDs deduplicated
   - social links normalized and capped to `5` per member
 
+## Clear Controls
+
+- `style.cardSurface` and `style.cardBorder` are clearable from Visual and
+  Advanced controls; clear removes the configured fields and card renderers omit
+  the matching inline background/border style keys.
+- Gap and radius continue to use the approved `none` token semantics.
+
 ## Data Model (summary)
 
 ```json

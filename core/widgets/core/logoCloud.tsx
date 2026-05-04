@@ -1,10 +1,11 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type LogoCloudVariantId = "grid" | "strip" | "dense";
-export type LogoCloudHeight = "sm" | "md" | "lg" | "xl";
-export type LogoCloudGap = "sm" | "md" | "lg";
+export type LogoCloudHeight = "none" | "sm" | "md" | "lg" | "xl";
+export type LogoCloudGap = "none" | "sm" | "md" | "lg";
 export type LogoCloudAlignment = "start" | "center" | "end";
 
 export type LogoCloudLogo = {
@@ -26,6 +27,8 @@ export type LogoCloudData = {
     hoverColor?: boolean;
     gap?: LogoCloudGap;
     alignment?: LogoCloudAlignment;
+    tileBackground?: string;
+    tileBorderColor?: string;
   };
 };
 
@@ -33,6 +36,7 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const logoHeightClassMap: Record<LogoCloudHeight, string> = {
+  none: "",
   sm: "h-8",
   md: "h-10",
   lg: "h-12",
@@ -40,6 +44,7 @@ const logoHeightClassMap: Record<LogoCloudHeight, string> = {
 };
 
 const gapClassMap: Record<LogoCloudGap, string> = {
+  none: "gap-0",
   sm: "gap-2",
   md: "gap-4",
   lg: "gap-6",
@@ -86,11 +91,13 @@ export const logoCloudSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        logoHeight: { enum: ["sm", "md", "lg", "xl"] },
+        logoHeight: { enum: ["none", "sm", "md", "lg", "xl"] },
         grayscale: { type: "boolean" },
         hoverColor: { type: "boolean" },
-        gap: { enum: ["sm", "md", "lg"] },
+        gap: { enum: ["none", "sm", "md", "lg"] },
         alignment: { enum: ["start", "center", "end"] },
+        tileBackground: { type: "string" },
+        tileBorderColor: { type: "string" },
       },
     },
   },
@@ -115,6 +122,8 @@ export const logoCloudDefaults: LogoCloudData = {
     hoverColor: true,
     gap: "md",
     alignment: "center",
+    tileBackground: "var(--color-bg)",
+    tileBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
 };
 
@@ -127,18 +136,16 @@ const resolveOptionalString = (value: string | undefined) =>
   typeof value === "string" ? value : undefined;
 
 const resolveLogoCloudHeight = (value: string | undefined): LogoCloudHeight => {
-  if (value === "sm" || value === "lg" || value === "xl") return value;
+  if (value === "none" || value === "sm" || value === "lg" || value === "xl") return value;
   return "md";
 };
 
 const resolveLogoCloudGap = (value: string | undefined): LogoCloudGap => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
-const resolveLogoCloudAlignment = (
-  value: string | undefined
-): LogoCloudAlignment => {
+const resolveLogoCloudAlignment = (value: string | undefined): LogoCloudAlignment => {
   if (value === "start" || value === "end") return value;
   return "center";
 };
@@ -198,7 +205,7 @@ export function normalizeLogoCloudLogos(
     const name =
       typeof base.name === "string" && base.name.trim().length > 0
         ? base.name.trim()
-        : fallbackNames[index] ?? `Logo ${index + 1}`;
+        : (fallbackNames[index] ?? `Logo ${index + 1}`);
 
     normalized.push({
       id,
@@ -223,15 +230,22 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
     gap: "md",
     alignment: "center",
   };
+  const hasStyleObject = data.style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        tileBackground: resolveClearableStyleValue(data.style?.tileBackground),
+        tileBorderColor: resolveClearableStyleValue(data.style?.tileBorderColor),
+      })
+    : compactObject({
+        tileBackground: resolveClearableStyleValue(styleDefaults.tileBackground),
+        tileBorderColor: resolveClearableStyleValue(styleDefaults.tileBorderColor),
+      });
 
   return {
     ...data,
     header: {
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
-      description: resolveString(
-        data.header?.description,
-        headerDefaults.description ?? ""
-      ),
+      description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     logos: normalizeLogoCloudLogos(data.logos),
     style: {
@@ -246,6 +260,7 @@ export function normalizeLogoCloudData(data: LogoCloudData): LogoCloudData {
           : Boolean(styleDefaults.hoverColor),
       gap: resolveLogoCloudGap(data.style?.gap),
       alignment: resolveLogoCloudAlignment(data.style?.alignment),
+      ...(clearableStyle ?? {}),
     },
   };
 }
@@ -256,12 +271,14 @@ function LogoCloudItem({
   logoHeight,
   grayscale,
   hoverColor,
+  tileStyle,
 }: {
   logo: LogoCloudLogo;
   index: number;
   logoHeight: LogoCloudHeight;
   grayscale: boolean;
   hoverColor: boolean;
+  tileStyle?: CSSProperties;
 }) {
   const hasImage = typeof logo.image === "string" && logo.image.trim().length > 0;
   const hasLink = typeof logo.href === "string" && logo.href.trim().length > 0;
@@ -284,13 +301,14 @@ function LogoCloudItem({
   );
 
   const wrapperClassName =
-    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg)] px-3 py-2";
+    "group inline-flex min-h-[4.5rem] min-w-[8.5rem] items-center justify-center rounded-lg border px-3 py-2";
 
   if (hasLink) {
     return (
       <a
         href={logo.href}
         className={wrapperClassName}
+        style={tileStyle}
         data-logo-cloud-item={String(index + 1)}
         data-logo-cloud-has-image={String(hasImage)}
       >
@@ -302,6 +320,7 @@ function LogoCloudItem({
   return (
     <div
       className={wrapperClassName}
+      style={tileStyle}
       data-logo-cloud-item={String(index + 1)}
       data-logo-cloud-has-image={String(hasImage)}
     >
@@ -310,13 +329,7 @@ function LogoCloudItem({
   );
 }
 
-export function LogoCloudBlock({
-  data,
-  variant,
-}: {
-  data: LogoCloudData;
-  variant: string;
-}) {
+export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant: string }) {
   const resolvedVariant = resolveLogoCloudVariant(variant);
   const normalized = normalizeLogoCloudData(data);
   const style = normalized.style ?? logoCloudDefaults.style!;
@@ -327,6 +340,10 @@ export function LogoCloudBlock({
   const grayscale = Boolean(style.grayscale);
   const hoverColor = Boolean(style.hoverColor);
   const logos = normalizeLogoCloudLogos(normalized.logos);
+  const tileStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(style.tileBackground),
+    borderColor: resolveClearableStyleValue(style.tileBorderColor),
+  });
 
   const showHeader =
     (normalized.header?.title ?? "").trim().length > 0 ||
@@ -334,11 +351,7 @@ export function LogoCloudBlock({
 
   const listClassName =
     resolvedVariant === "strip"
-      ? joinClasses(
-          "flex flex-wrap items-center",
-          gapClassMap[gap],
-          alignmentClassMap[alignment]
-        )
+      ? joinClasses("flex flex-wrap items-center", gapClassMap[gap], alignmentClassMap[alignment])
       : resolvedVariant === "dense"
         ? joinClasses(
             "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
@@ -364,6 +377,7 @@ export function LogoCloudBlock({
       className="mx-auto w-full max-w-6xl px-4 py-8"
       data-logo-cloud-variant={resolvedVariant}
       data-logo-cloud-gap={gap}
+      data-logo-cloud-height={logoHeight}
       data-logo-cloud-count={String(logos.length)}
       data-logo-cloud-alignment={alignment}
       data-logo-cloud-grayscale={String(grayscale)}
@@ -377,9 +391,7 @@ export function LogoCloudBlock({
             </h3>
           ) : null}
           {(normalized.header?.description ?? "").trim().length > 0 ? (
-            <p className="text-sm text-[var(--color-text)]/75">
-              {normalized.header?.description}
-            </p>
+            <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>
           ) : null}
         </header>
       ) : null}
@@ -393,6 +405,7 @@ export function LogoCloudBlock({
             logoHeight={logoHeight}
             grayscale={grayscale}
             hoverColor={hoverColor}
+            tileStyle={tileStyle}
           />
         ))}
       </div>

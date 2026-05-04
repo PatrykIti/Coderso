@@ -30,6 +30,7 @@ import {
   type RichTextSectionVariantId,
 } from "../../../../widgets/core/richTextSection";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: RichTextSectionVariantId;
@@ -61,18 +62,21 @@ const maxWidthOptions: Array<{ id: RichTextSectionMaxWidth; label: string }> = [
 ];
 
 const fontScaleOptions: Array<{ id: RichTextSectionFontScale; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Large" },
 ];
 
 const lineHeightOptions: Array<{ id: RichTextSectionLineHeight; label: string }> = [
+  { id: "none", label: "None" },
   { id: "tight", label: "Tight" },
   { id: "normal", label: "Normal" },
   { id: "relaxed", label: "Relaxed" },
 ];
 
 const spacingOptions: Array<{ id: RichTextSectionSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -84,9 +88,7 @@ const outputModeOptions: Array<{ id: RichTextSectionOutputMode; label: string }>
   { id: "blocks", label: "Blocks only" },
 ];
 
-const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) =>
-  String(index)
-);
+const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) => String(index));
 const wizardBlockCount = Math.max(richTextSectionDefaults.body?.blocks?.length ?? 2, 2);
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
@@ -165,16 +167,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -256,6 +260,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: RichTextSectionData,
+  onChange: (next: RichTextSectionData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updateBlock(
@@ -441,9 +459,7 @@ export function RichTextSectionWizardEditor({
         <p className="text-sm font-medium">Eyebrow</p>
         <Input
           value={normalized.titleBlock?.eyebrow ?? ""}
-          onChange={(event) =>
-            updateTitleBlock(value, onChange, { eyebrow: event.target.value })
-          }
+          onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
           placeholder="Editorial"
         />
       </div>
@@ -452,9 +468,7 @@ export function RichTextSectionWizardEditor({
         <p className="text-sm font-medium">Title</p>
         <Input
           value={normalized.titleBlock?.title ?? ""}
-          onChange={(event) =>
-            updateTitleBlock(value, onChange, { title: event.target.value })
-          }
+          onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
           placeholder="Long-form content section"
         />
       </div>
@@ -539,9 +553,7 @@ export function RichTextSectionVisualEditor({
           <p className="text-sm font-medium">Eyebrow</p>
           <Input
             value={normalized.titleBlock?.eyebrow ?? ""}
-            onChange={(event) =>
-              updateTitleBlock(value, onChange, { eyebrow: event.target.value })
-            }
+            onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
             placeholder="Editorial"
           />
         </div>
@@ -549,9 +561,7 @@ export function RichTextSectionVisualEditor({
           <p className="text-sm font-medium">Title</p>
           <Input
             value={normalized.titleBlock?.title ?? ""}
-            onChange={(event) =>
-              updateTitleBlock(value, onChange, { title: event.target.value })
-            }
+            onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
             placeholder="Long-form content section"
           />
         </div>
@@ -596,7 +606,10 @@ export function RichTextSectionVisualEditor({
         </div>
 
         {blocks.map((block, index) => (
-          <div key={block.id ?? `fallback-block-${index + 1}`} className="space-y-3 rounded-lg border p-3">
+          <div
+            key={block.id ?? `fallback-block-${index + 1}`}
+            className="space-y-3 rounded-lg border p-3"
+          >
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Block {index + 1}</p>
               <div className="flex gap-2">
@@ -689,9 +702,7 @@ export function RichTextSectionVisualEditor({
           </div>
           <Switch
             checked={Boolean(normalized.options?.toc)}
-            onCheckedChange={(checked) =>
-              updateOptions(value, onChange, { toc: Boolean(checked) })
-            }
+            onCheckedChange={(checked) => updateOptions(value, onChange, { toc: Boolean(checked) })}
           />
         </div>
       </EditorSection>
@@ -771,6 +782,7 @@ export function RichTextSectionVisualEditor({
           label="Background color"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
+          onClear={() => clearStyleField(value, onChange, "background")}
           placeholder="transparent"
           pickerFallback="#ffffff"
         />

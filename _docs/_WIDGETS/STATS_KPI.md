@@ -56,6 +56,13 @@ Notes:
   - IDs deduplicated
   - missing value/label replaced by safe fallbacks
 
+## Clear Controls
+
+- `style.cardBackground` and `style.cardBorderColor` are clearable. Clear
+  removes those fields and KPI cards render without forced background/border
+  inline styles.
+- Value, label, and metric content fields are unaffected by surface clear.
+
 ## Data Model (summary)
 
 ```json
@@ -76,6 +83,8 @@ Notes:
   "style": {
     "alignment": "center",
     "spacing": "md",
+    "cardBackground": "var(--color-bg)",
+    "cardBorderColor": "var(--color-border)",
     "valueColor": "var(--color-text)",
     "labelColor": "var(--color-text)",
     "divider": true

@@ -24,6 +24,7 @@ import {
   type CtaBannerVariantId,
 } from "../../../../widgets/core/ctaBanner";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: CtaBannerVariantId;
@@ -63,6 +64,7 @@ const radiusOptions: Array<{ id: CtaBannerRadius; label: string }> = [
 ];
 
 const paddingOptions: Array<{ id: CtaBannerPadding; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -144,16 +146,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -221,6 +225,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: CtaBannerData,
+  onChange: (next: CtaBannerData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function DiagnosticsSnapshot({ value }: { value: CtaBannerData }) {
@@ -305,10 +323,7 @@ export function CtaBannerVisualEditor({
         <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
 
-      <EditorSection
-        title="Content copy"
-        description="Edit badge, title, and support line."
-      >
+      <EditorSection title="Content copy" description="Edit badge, title, and support line.">
         <div className="space-y-2">
           <p className="text-sm font-medium">Badge</p>
           <Input
@@ -339,10 +354,7 @@ export function CtaBannerVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="Actions"
-        description="Configure primary and secondary CTA buttons."
-      >
+      <EditorSection title="Actions" description="Configure primary and secondary CTA buttons.">
         <div className="space-y-2 rounded-md border p-3">
           <p className="text-sm font-semibold">Primary CTA</p>
           <Input
@@ -400,14 +412,12 @@ export function CtaBannerVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="Colors and button styles"
-        description="Set content and button palette."
-      >
+      <EditorSection title="Colors and button styles" description="Set content and button palette.">
         <ColorField
           label="Background"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
+          onClear={() => clearStyleField(value, onChange, "background")}
           placeholder="var(--color-surface)"
           pickerFallback="#f8fafc"
         />
@@ -422,6 +432,7 @@ export function CtaBannerVisualEditor({
           label="Badge background"
           value={normalized.style?.badgeBackground}
           onChange={(next) => updateStyle(value, onChange, { badgeBackground: next })}
+          onClear={() => clearStyleField(value, onChange, "badgeBackground")}
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
         />
@@ -436,6 +447,7 @@ export function CtaBannerVisualEditor({
           label="Primary button background"
           value={normalized.style?.primaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBg: next })}
+          onClear={() => clearStyleField(value, onChange, "primaryButtonBg")}
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
         />
@@ -452,6 +464,14 @@ export function CtaBannerVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonText: next })}
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
+        />
+        <ColorField
+          label="Secondary button background"
+          value={normalized.style?.secondaryButtonBg}
+          onChange={(next) => updateStyle(value, onChange, { secondaryButtonBg: next })}
+          onClear={() => clearStyleField(value, onChange, "secondaryButtonBg")}
+          placeholder="transparent"
+          pickerFallback="#ffffff"
         />
       </EditorSection>
 
@@ -534,10 +554,7 @@ export function CtaBannerVisualEditor({
   );
 }
 
-export function CtaBannerAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<CtaBannerData>) {
+export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<CtaBannerData>) {
   const normalized = normalizeValue(value);
 
   return (

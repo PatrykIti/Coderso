@@ -22,6 +22,7 @@ import {
   type NewsletterVariantId,
 } from "../../../../widgets/core/newsletter";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: NewsletterVariantId;
@@ -46,6 +47,7 @@ const variantOptions: Array<{
 ];
 
 const spacingOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -165,22 +167,38 @@ function updateStyle(
   }));
 }
 
+function clearStyleField(
+  value: NewsletterData,
+  onChange: (next: NewsletterData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
+}
+
 function ColorField({
   label,
   value,
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -198,13 +216,7 @@ function ColorField({
   );
 }
 
-function VariantCards({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-}) {
+function VariantCards({ value, onChange }: { value: string; onChange?: (next: string) => void }) {
   return (
     <div className="space-y-2">
       {variantOptions.map((option) => (
@@ -440,9 +452,7 @@ export function NewsletterVisualEditor({
               <p className="text-sm font-medium">Consent label</p>
               <Input
                 value={consent.label}
-                onChange={(event) =>
-                  updateConsent(value, onChange, { label: event.target.value })
-                }
+                onChange={(event) => updateConsent(value, onChange, { label: event.target.value })}
                 placeholder="I agree to receive updates."
               />
             </div>
@@ -451,9 +461,7 @@ export function NewsletterVisualEditor({
               <p className="text-sm font-medium">Consent required</p>
               <Switch
                 checked={consent.required}
-                onCheckedChange={(checked) =>
-                  updateConsent(value, onChange, { required: checked })
-                }
+                onCheckedChange={(checked) => updateConsent(value, onChange, { required: checked })}
               />
             </div>
           </>
@@ -524,6 +532,7 @@ export function NewsletterVisualEditor({
           label="Background color"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
+          onClear={() => clearStyleField(value, onChange, "background")}
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
@@ -582,7 +591,8 @@ export function NewsletterVisualEditor({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Use runtime preview device tabs to validate spacing and input/button readability per viewport.
+          Use runtime preview device tabs to validate spacing and input/button readability per
+          viewport.
         </p>
       </EditorSection>
     </div>
@@ -715,11 +725,8 @@ export function NewsletterAdvancedEditor({
         description="Enforce deterministic defaults and inspect resolved runtime metadata."
       >
         <p className="text-xs text-muted-foreground">
-          Resolved variant: {resolveNewsletterVariant(variant)}. Resolved integration mode:
-          {" "}
-          {integration.mode}. Consent required:
-          {" "}
-          {consent.required ? "true" : "false"}.
+          Resolved variant: {resolveNewsletterVariant(variant)}. Resolved integration mode:{" "}
+          {integration.mode}. Consent required: {consent.required ? "true" : "false"}.
         </p>
         <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
           Normalize newsletter payload

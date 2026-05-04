@@ -25,6 +25,21 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 788 | 2026-05-03 | TASK-251 custom screens builder hardening | CMS Custom Screens/Admin UI |
+| 787 | 2026-05-02 | TASK-250 custom screens screen widget parity | CMS Custom Screens/Admin UI |
+| 786 | 2026-05-02 | TASK-157 integrations follow-up coverage and reset hardening | Docs/Admin UI/QA |
+| 785 | 2026-05-01 | TASK-249 custom screens workspace V3 | CMS Custom Screens/Admin UI |
+| 784 | 2026-05-01 | Custom Screens read-path definition fallback | CMS Custom Screens/Resilience |
+| 783 | 2026-05-01 | TASK-248 custom screens runtime contract follow-up | CMS Custom Screens/Admin UI |
+| 782 | 2026-05-01 | TASK-248 custom screens workspace builder V2 | CMS Custom Screens/Admin UI |
+| 781 | 2026-04-30 | TASK-244 widget surface clear controls | CMS Widgets/Admin UI |
+| 780 | 2026-04-30 | TASK-247 media always-on selection and upload copy | CMS Media/Admin UI |
+| 779 | 2026-04-30 | TASK-246 menus drop intent and indicator stability | CMS Menus/Admin UI |
+| 778 | 2026-04-30 | TASK-245 menus drag handle hit target | CMS Menus/Admin UI |
+| 777 | 2026-04-29 | TASK-243 menus editor action, location, and drag parity | CMS Menus/Admin UI |
+| 776 | 2026-04-29 | TASK-242 widget style none tokens | CMS Widgets/Admin UI |
+| 775 | 2026-04-29 | Menus editor detail cache hydration | CMS Menus/Admin Cache |
+| 774 | 2026-04-29 | TASK-241 pages published preview draft sync | CMS Pages/Admin UI |
 | 773 | 2026-04-29 | Markdown pre-commit format guard | Developer Tooling |
 | 772 | 2026-04-29 | TASK-054 modular admin IA closure and portal/i18n split | Documentation/Planning |
 | 771 | 2026-04-29 | TASK-220 ESLint 9 React Hooks Compiler cleanup | Tooling/Admin UI |

@@ -1,5 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import {
   resolveFormFieldStyle,
@@ -11,8 +12,8 @@ export type FormEmbedVariantId = "standard";
 
 export type FormEmbedLayout = {
   alignment?: "start" | "center" | "end";
-  width?: "sm" | "md" | "lg" | "xl";
-  spacing?: "sm" | "md" | "lg" | "xl";
+  width?: "none" | "sm" | "md" | "lg" | "xl";
+  spacing?: "none" | "sm" | "md" | "lg" | "xl";
   buttonAlignment?: "start" | "center" | "end";
 };
 
@@ -21,8 +22,8 @@ export type FormEmbedStyle = {
   surface?: string;
   borderColor?: string;
   borderWidth?: "0" | "1" | "2";
-  radius?: "sm" | "md" | "lg";
-  inputSize?: "sm" | "md" | "lg";
+  radius?: "none" | "sm" | "md" | "lg";
+  inputSize?: "none" | "sm" | "md" | "lg";
 };
 
 export type FormEmbedFields = {
@@ -78,6 +79,7 @@ export type FormEmbedData = {
 };
 
 const spacingClassMap: Record<NonNullable<FormEmbedLayout["spacing"]>, string> = {
+  none: "gap-0 py-0",
   sm: "gap-4 py-6",
   md: "gap-6 py-8",
   lg: "gap-8 py-10",
@@ -85,6 +87,7 @@ const spacingClassMap: Record<NonNullable<FormEmbedLayout["spacing"]>, string> =
 };
 
 const widthClassMap: Record<NonNullable<FormEmbedLayout["width"]>, string> = {
+  none: "",
   sm: "max-w-md",
   md: "max-w-lg",
   lg: "max-w-xl",
@@ -104,12 +107,14 @@ const buttonAlignClassMap: Record<NonNullable<FormEmbedLayout["buttonAlignment"]
 };
 
 const radiusClassMap: Record<NonNullable<FormEmbedStyle["radius"]>, string> = {
+  none: "",
   sm: "rounded-md",
   md: "rounded-lg",
   lg: "rounded-xl",
 };
 
 const inputSizeClassMap: Record<NonNullable<FormEmbedStyle["inputSize"]>, string> = {
+  none: "",
   sm: "px-3 py-2 text-sm",
   md: "px-3 py-2.5 text-sm",
   lg: "px-4 py-3 text-base",
@@ -163,35 +168,23 @@ const resolveFields = (value?: FormEmbedFields): Required<FormEmbedFields> => {
   };
 };
 
-const isBorderWidthValue = (
-  value: string
-): value is NonNullable<FormEmbedStyle["borderWidth"]> =>
+const isBorderWidthValue = (value: string): value is NonNullable<FormEmbedStyle["borderWidth"]> =>
   value === "0" || value === "1" || value === "2";
 
-const isRadius = (
-  value: string
-): value is NonNullable<FormEmbedStyle["radius"]> =>
-  value === "sm" || value === "md" || value === "lg";
+const isRadius = (value: string): value is NonNullable<FormEmbedStyle["radius"]> =>
+  value === "none" || value === "sm" || value === "md" || value === "lg";
 
-const isInputSize = (
-  value: string
-): value is NonNullable<FormEmbedStyle["inputSize"]> =>
-  value === "sm" || value === "md" || value === "lg";
+const isInputSize = (value: string): value is NonNullable<FormEmbedStyle["inputSize"]> =>
+  value === "none" || value === "sm" || value === "md" || value === "lg";
 
-const isAlignment = (
-  value: string
-): value is NonNullable<FormEmbedLayout["alignment"]> =>
+const isAlignment = (value: string): value is NonNullable<FormEmbedLayout["alignment"]> =>
   value === "start" || value === "center" || value === "end";
 
-const isWidth = (
-  value: string
-): value is NonNullable<FormEmbedLayout["width"]> =>
-  value === "sm" || value === "md" || value === "lg" || value === "xl";
+const isWidth = (value: string): value is NonNullable<FormEmbedLayout["width"]> =>
+  value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl";
 
-const isSpacing = (
-  value: string
-): value is NonNullable<FormEmbedLayout["spacing"]> =>
-  value === "sm" || value === "md" || value === "lg" || value === "xl";
+const isSpacing = (value: string): value is NonNullable<FormEmbedLayout["spacing"]> =>
+  value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl";
 
 export const formEmbedSchema = {
   type: "object",
@@ -207,8 +200,8 @@ export const formEmbedSchema = {
       additionalProperties: false,
       properties: {
         alignment: { enum: ["start", "center", "end"] },
-        width: { enum: ["sm", "md", "lg", "xl"] },
-        spacing: { enum: ["sm", "md", "lg", "xl"] },
+        width: { enum: ["none", "sm", "md", "lg", "xl"] },
+        spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
         buttonAlignment: { enum: ["start", "center", "end"] },
       },
     },
@@ -220,8 +213,8 @@ export const formEmbedSchema = {
         surface: { type: "string" },
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2"] },
-        radius: { enum: ["sm", "md", "lg"] },
-        inputSize: { enum: ["sm", "md", "lg"] },
+        radius: { enum: ["none", "sm", "md", "lg"] },
+        inputSize: { enum: ["none", "sm", "md", "lg"] },
       },
     },
     fields: {
@@ -266,6 +259,7 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const layout = resolveLayout(data.layout);
   const style = resolveStyle(data.style);
   const fields = resolveFields(data.fields);
+  const hasStyleObject = data.style !== undefined;
 
   const normalizedLayout: Required<FormEmbedLayout> = {
     alignment: isAlignment(layout.alignment) ? layout.alignment : "start",
@@ -274,9 +268,13 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     buttonAlignment: isAlignment(layout.buttonAlignment) ? layout.buttonAlignment : "start",
   };
 
-  const normalizedStyle: Required<FormEmbedStyle> = {
-    background: resolveNonEmptyString(style.background, "transparent"),
-    surface: resolveNonEmptyString(style.surface, "var(--color-bg)"),
+  const normalizedStyle: FormEmbedStyle = {
+    background: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.background)
+      : resolveNonEmptyString(style.background, "transparent"),
+    surface: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.surface)
+      : resolveNonEmptyString(style.surface, "var(--color-bg)"),
     borderColor: resolveNonEmptyString(style.borderColor, "var(--color-border)"),
     borderWidth: isBorderWidthValue(style.borderWidth) ? style.borderWidth : "1",
     radius: isRadius(style.radius) ? style.radius : "md",
@@ -286,7 +284,7 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const resolvedSuccessMessage =
     data.successMessage !== undefined
       ? data.successMessage
-      : data.resolved?.successMessage ?? undefined;
+      : (data.resolved?.successMessage ?? undefined);
 
   return {
     ...data,
@@ -294,10 +292,7 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     title: resolveOptionalString(data.title),
     description: resolveOptionalString(data.description),
     submitLabel: resolveNonEmptyString(data.submitLabel, formEmbedDefaults.submitLabel!),
-    successMessage: resolveString(
-      resolvedSuccessMessage,
-      formEmbedDefaults.successMessage ?? ""
-    ),
+    successMessage: resolveString(resolvedSuccessMessage, formEmbedDefaults.successMessage ?? ""),
     layout: normalizedLayout,
     style: normalizedStyle,
     fields,
@@ -310,17 +305,11 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
 const buildFormAction = (formId?: string) =>
   formId ? `/forms/${encodeURIComponent(formId)}/submissions` : undefined;
 
-const resolveTitle = (
-  data: FormEmbedData,
-  resolved?: FormEmbedResolvedData
-) => {
+const resolveTitle = (data: FormEmbedData, resolved?: FormEmbedResolvedData) => {
   return data.title ?? resolved?.formName ?? "Form";
 };
 
-const resolveDescription = (
-  data: FormEmbedData,
-  resolved?: FormEmbedResolvedData
-) => {
+const resolveDescription = (data: FormEmbedData, resolved?: FormEmbedResolvedData) => {
   return data.description ?? resolved?.description ?? "";
 };
 
@@ -347,14 +336,17 @@ const resolveFieldGridSpanClass = (field: ResolvedFormField) => {
   return style.width === "half" ? "md:col-span-1" : "md:col-span-2";
 };
 
-function renderFieldControl(field: ResolvedFormField, options: {
-  showLabels: boolean;
-  showRequiredIndicator: boolean;
-  inputClassName: string;
-  borderClassName: string;
-  radiusClassName: string;
-  borderColor: string;
-}) {
+function renderFieldControl(
+  field: ResolvedFormField,
+  options: {
+    showLabels: boolean;
+    showRequiredIndicator: boolean;
+    inputClassName: string;
+    borderClassName: string;
+    radiusClassName: string;
+    borderColor: string;
+  }
+) {
   const {
     showLabels,
     showRequiredIndicator,
@@ -368,8 +360,7 @@ function renderFieldControl(field: ResolvedFormField, options: {
   const required = Boolean(field.required);
   const labelSuffix = showRequiredIndicator && required ? " *" : "";
   const resolvedFieldStyle = resolveFormFieldStyle(field.settings?.style);
-  const labelHidden =
-    !showLabels || resolvedFieldStyle.labelPosition === "hidden";
+  const labelHidden = !showLabels || resolvedFieldStyle.labelPosition === "hidden";
   const inlineLabel = resolvedFieldStyle.labelPosition === "inline" && !labelHidden;
   const wrapperClassName = inlineLabel
     ? "grid gap-2 md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:gap-3"
@@ -401,9 +392,7 @@ function renderFieldControl(field: ResolvedFormField, options: {
           style={{ borderColor }}
           rows={4}
         />
-        {helper ? (
-          <p className="text-xs text-[var(--color-text)]/60">{helper}</p>
-        ) : null}
+        {helper ? <p className="text-xs text-[var(--color-text)]/60">{helper}</p> : null}
       </div>
     );
   }
@@ -429,9 +418,7 @@ function renderFieldControl(field: ResolvedFormField, options: {
   }
 
   if (field.type === "select") {
-    const optionsList = Array.isArray(field.settings?.options)
-      ? field.settings?.options
-      : [];
+    const optionsList = Array.isArray(field.settings?.options) ? field.settings?.options : [];
     return (
       <div className={wrapperClassName}>
         {renderLabel()}
@@ -455,9 +442,7 @@ function renderFieldControl(field: ResolvedFormField, options: {
             </option>
           ))}
         </select>
-        {helper ? (
-          <p className="text-xs text-[var(--color-text)]/60">{helper}</p>
-        ) : null}
+        {helper ? <p className="text-xs text-[var(--color-text)]/60">{helper}</p> : null}
       </div>
     );
   }
@@ -466,10 +451,10 @@ function renderFieldControl(field: ResolvedFormField, options: {
     field.type === "email"
       ? "email"
       : field.type === "phone"
-      ? "tel"
-      : field.type === "date"
-      ? "date"
-      : "text";
+        ? "tel"
+        : field.type === "date"
+          ? "date"
+          : "text";
 
   return (
     <div className={wrapperClassName}>
@@ -490,9 +475,7 @@ function renderFieldControl(field: ResolvedFormField, options: {
         )}
         style={{ borderColor }}
       />
-      {helper ? (
-        <p className="text-xs text-[var(--color-text)]/60">{helper}</p>
-      ) : null}
+      {helper ? <p className="text-xs text-[var(--color-text)]/60">{helper}</p> : null}
     </div>
   );
 }
@@ -502,23 +485,29 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const resolvedVariant: FormEmbedVariantId = variant === "standard" ? "standard" : "standard";
   const resolved = normalizedData.resolved;
   const layout = resolveLayout(normalizedData.layout);
-  const style = resolveStyle(normalizedData.style);
+  const style = {
+    ...resolveStyle(undefined),
+    ...(normalizedData.style ?? {}),
+  };
   const fieldsConfig = resolveFields(normalizedData.fields);
   const fields = Array.isArray(resolved?.fields) ? resolved?.fields : [];
-  const runtimeLayoutMode = resolved?.settings?.layoutMode === "multi_step" ? "multi_step" : "single";
+  const runtimeLayoutMode =
+    resolved?.settings?.layoutMode === "multi_step" ? "multi_step" : "single";
   const stepGroups = groupFieldsByStep(fields);
   const runtimeStepTitles = Array.isArray(resolved?.settings?.stepTitles)
     ? resolved?.settings?.stepTitles
     : [];
   const saveProgressEnabled = resolved?.settings?.saveProgress === true;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: style.background,
-  };
-  const surfaceStyle: CSSProperties = {
-    backgroundColor: style.surface,
-    borderColor: style.borderColor,
-  };
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+    }) ?? {};
+  const surfaceStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.surface),
+      borderColor: style.borderColor,
+    }) ?? {};
 
   const borderClassName = borderWidthClassMap[style.borderWidth];
   const radiusClassName = radiusClassMap[style.radius];
@@ -538,6 +527,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
       className={joinClasses("mx-auto flex w-full flex-col px-4", spacingClassMap[layout.spacing])}
       style={sectionStyle}
       data-form-embed-variant={resolvedVariant}
+      data-form-embed-spacing={layout.spacing}
     >
       <div
         className={joinClasses(
@@ -545,14 +535,13 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
           widthClassMap[layout.width],
           alignClassMap[layout.alignment]
         )}
+        data-form-embed-width={layout.width}
       >
         <div
-          className={joinClasses(
-            "w-full space-y-6 rounded-2xl border p-6",
-            borderClassName,
-            radiusClassName
-          )}
+          className={joinClasses("w-full space-y-6 border p-6", borderClassName, radiusClassName)}
           style={surfaceStyle}
+          data-form-embed-radius={style.radius}
+          data-form-embed-input-size={style.inputSize}
         >
           <div className="space-y-2">
             <h3 className="text-xl font-semibold text-[var(--color-text)]">{title}</h3>
@@ -582,11 +571,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               data-form-success-message={normalizedData.successMessage ?? ""}
             >
               {resolved?.submissionNonce ? (
-                <input
-                  type="hidden"
-                  name="__nl_form_nonce"
-                  value={resolved.submissionNonce}
-                />
+                <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
               ) : null}
               {runtimeLayoutMode === "multi_step" ? (
                 <div className="space-y-4">
@@ -654,7 +639,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                     data-form-nav="back"
                     hidden
                     className={joinClasses(
-                      "rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)]",
+                      "border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)]",
                       radiusClassName
                     )}
                   >
@@ -666,7 +651,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                     type="button"
                     data-form-nav="next"
                     className={joinClasses(
-                      "rounded-md bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
+                      "bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
                       radiusClassName
                     )}
                   >
@@ -678,7 +663,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                   data-form-submit="1"
                   hidden={hasMultipleSteps}
                   className={joinClasses(
-                    "rounded-md bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
+                    "bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
                     radiusClassName
                   )}
                 >
@@ -691,18 +676,13 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               >
                 {showSuccessMessage ? normalizedData.successMessage : ""}
               </p>
-              <p
-                className="hidden text-xs text-rose-600"
-                data-form-embed-error="true"
-              >
+              <p className="hidden text-xs text-rose-600" data-form-embed-error="true">
                 Unable to submit the form. Please try again.
               </p>
             </form>
           )}
           {fields.length > 0 ? (
-            <script
-              dangerouslySetInnerHTML={{ __html: getFormRuntimeClientScript() }}
-            />
+            <script dangerouslySetInnerHTML={{ __html: getFormRuntimeClientScript() }} />
           ) : null}
         </div>
       </div>

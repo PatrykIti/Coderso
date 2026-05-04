@@ -68,6 +68,13 @@ Site footer with structured columns, legal strip, and social links.
   - `layout.align`, `layout.legalAlign`, `layout.maxWidth`, `layout.columnGap`, `layout.sectionPaddingY`
   - `style.surfaceColor`, `style.borderColor`, `style.borderTopWidth`, `style.textColor`, `style.headingColor`, `style.linkColor`, `style.legalTextColor`, `style.socialColor`, `style.fontSize`, `style.headingTransform`
 
+## Clear Controls
+
+- `style.surfaceColor` is clearable; clear removes the footer background field
+  and the renderer omits a forced footer surface style.
+- Link, legal, social, typography, and border fields keep their existing
+  authored-color behavior.
+
 ## Data model (summary)
 
 ```json

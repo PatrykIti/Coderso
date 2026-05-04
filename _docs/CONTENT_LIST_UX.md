@@ -176,10 +176,11 @@ Gdy zaznaczysz wpisy na liscie:
 - Rows keep Custom Screens domain columns and routes:
   - `Screen` links to `/admin/advanced/custom-screens/:id`,
   - `Records` links to `/admin/advanced/custom-screens/:id/entries`,
-  - columns show active/draft status, content type, capability mode, derived
+  - columns show active/draft status, content type, workspace readiness, derived
     sidebar shortcut state, and updated date.
 - Sidebar shortcut display is derived, not persisted:
-  - active + shortcut-enabled -> `Visible`,
+  - active + shortcut-enabled + editor-ready -> `Visible`,
+  - active + shortcut-enabled + not editor-ready -> `Requires editor setup`,
   - draft + shortcut-enabled -> `Configured after activation`,
   - otherwise -> `Not shown`.
 - Row actions are limited to `Records`, `Edit`, `Activate` or `Move to draft`,
@@ -197,6 +198,22 @@ Gdy zaznaczysz wpisy na liscie:
   - Activate,
   - Move to draft,
   - Delete.
+
+## Custom Screens workspace runtime
+
+- `/admin/advanced/custom-screens/:screenId/entries` is the canonical records
+  workspace route for an active editor-ready screen.
+- `New record` always routes to
+  `/admin/advanced/custom-screens/:screenId/entries/new`.
+- Row click and row `Edit record` always route to
+  `/admin/advanced/custom-screens/:screenId/entries/:entryId`.
+- The records workspace no longer exposes `Classic editor` or the shared
+  `EntryCreateDrawer` in the active V3 flow.
+- Screens without writable editor bindings stay out of sidebar shortcuts and
+  show an upgrade-required state if a records route is opened directly.
+- `writable editor bindings` here means widget-aware write-capable targets
+  (currently `screen-field-value.value` plus a writable schema/system field),
+  not any arbitrary legacy `readwrite` binding on a preserved fallback block.
 
 ## Forms parity
 
@@ -312,5 +329,8 @@ Gdy zaznaczysz wpisy na liscie:
 - Menus persist whole-menu lifecycle state via `draft` / `published`.
   Existing menus migrate as `published` so public navigation does not disappear;
   new menus default to `draft`.
+- The route-selected Menus editor mirrors lifecycle parity: header actions own
+  `Discard`, `Save changes`, and `Publish` / `Move to Draft`; publishing saves
+  valid pending metadata and item changes before switching runtime visibility.
 - Menus list uses the shared admin pagination footer after filtering and keeps
   header selection scoped to the current visible page.

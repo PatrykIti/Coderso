@@ -24,9 +24,7 @@ import type { MenuItemNode } from "../../../core/admin/services/menusClient";
 const StubEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
 test("navigation renders defaults", () => {
-  const html = renderToString(
-    <NavigationBlock data={navigationDefaults} variant="simple" />
-  );
+  const html = renderToString(<NavigationBlock data={navigationDefaults} variant="simple" />);
 
   expect(html).toContain("Coderso");
   expect(html).toContain("Home");
@@ -61,12 +59,31 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
   );
 
   expect(html).toContain("sticky top-0 z-40");
-  expect(html).toContain("data-mobile-mode=\"drawer\"");
-  expect(html).toContain("data-collapse-on-scroll=\"true\"");
+  expect(html).toContain('data-mobile-mode="drawer"');
+  expect(html).toContain('data-collapse-on-scroll="true"');
   expect(html).toContain("border-bottom-width:2px");
   expect(html).toContain("text-lg");
   expect(html).toContain("uppercase");
   expect(html).toContain("Menu");
+});
+
+test("navigation cleared surface and CTA background omit background styles", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        behavior: {
+          ...navigationDefaults.behavior,
+          transparent: false,
+        },
+        style: {},
+      }}
+      variant="split"
+    />
+  );
+
+  expect(html).toContain("Coderso");
+  expect(html).not.toContain("background-color:");
 });
 
 test("navigation schema accepts submenu children and image logo metadata", () => {

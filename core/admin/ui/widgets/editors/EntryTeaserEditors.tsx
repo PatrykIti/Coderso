@@ -13,10 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  listContentTypesCached,
-  type ContentTypeSummary,
-} from "@/services/contentTypesClient";
+import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
 import {
   listListingQueriesCached,
@@ -37,6 +34,7 @@ import {
   type EntryTeaserSpacing,
 } from "../../../../widgets/core/entryTeaser";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: EntryTeaserVariantId;
@@ -77,6 +75,7 @@ const hrefModeOptions: Array<{ id: EntryTeaserCtaHrefMode; label: string }> = [
 ];
 
 const radiusOptions: Array<{ id: EntryTeaserRadius; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
@@ -84,6 +83,7 @@ const radiusOptions: Array<{ id: EntryTeaserRadius; label: string }> = [
 ];
 
 const spacingOptions: Array<{ id: EntryTeaserSpacing; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -151,9 +151,7 @@ function VariantCards({
 }
 
 function useContentTypeEntries(types: ContentTypeSummary[]) {
-  const [entriesByTypeSlug, setEntriesByTypeSlug] = useState<Record<string, EntrySummary[]>>(
-    {}
-  );
+  const [entriesByTypeSlug, setEntriesByTypeSlug] = useState<Record<string, EntrySummary[]>>({});
   const [entryLoadError, setEntryLoadError] = useState<string | null>(null);
 
   const ensureEntriesLoaded = useCallback(
@@ -326,6 +324,20 @@ function updateStyle(
   }));
 }
 
+function clearStyle(
+  value: EntryTeaserData,
+  onChange: (next: EntryTeaserData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
+}
+
 function updateFallback(
   value: EntryTeaserData,
   onChange: (next: EntryTeaserData) => void,
@@ -386,8 +398,7 @@ function SourcePickerFields({
     };
   }, []);
 
-  const { ensureEntriesLoaded, getEntriesForTypeId, entryLoadError } =
-    useContentTypeEntries(types);
+  const { ensureEntriesLoaded, getEntriesForTypeId, entryLoadError } = useContentTypeEntries(types);
   const {
     queries,
     templates,
@@ -410,19 +421,15 @@ function SourcePickerFields({
   const selectedTypeLabel =
     selectedTypeValue === NO_CONTENT_TYPE_VALUE
       ? "No content type selected"
-      : selectedType?.name ?? "Selected content type";
+      : (selectedType?.name ?? "Selected content type");
 
-  const selectedEntryValue =
-    selectedEntryId.trim().length > 0 ? selectedEntryId : NO_ENTRY_VALUE;
+  const selectedEntryValue = selectedEntryId.trim().length > 0 ? selectedEntryId : NO_ENTRY_VALUE;
   const selectedEntryLabel =
     selectedEntryValue === NO_ENTRY_VALUE
       ? "No entry selected"
-      : entries.find((entry) => entry.id === selectedEntryValue)?.title ??
-        "Selected entry";
+      : (entries.find((entry) => entry.id === selectedEntryValue)?.title ?? "Selected entry");
   const selectedListingQueryValue =
-    selectedListingQueryId.trim().length > 0
-      ? selectedListingQueryId
-      : NO_LISTING_QUERY_VALUE;
+    selectedListingQueryId.trim().length > 0 ? selectedListingQueryId : NO_LISTING_QUERY_VALUE;
   const selectedListingTemplateValue =
     selectedListingTemplateId.trim().length > 0
       ? selectedListingTemplateId
@@ -430,13 +437,13 @@ function SourcePickerFields({
   const selectedListingQueryLabel =
     selectedListingQueryValue === NO_LISTING_QUERY_VALUE
       ? "No listing query selected"
-      : queries.find((item) => item.id === selectedListingQueryValue)?.name ??
-        "Selected listing query";
+      : (queries.find((item) => item.id === selectedListingQueryValue)?.name ??
+        "Selected listing query");
   const selectedListingTemplateLabel =
     selectedListingTemplateValue === NO_LISTING_TEMPLATE_VALUE
       ? "No template selected (optional)"
-      : templates.find((item) => item.id === selectedListingTemplateValue)?.name ??
-        "Selected listing template";
+      : (templates.find((item) => item.id === selectedListingTemplateValue)?.name ??
+        "Selected listing template");
 
   return (
     <div className="space-y-3">
@@ -458,9 +465,7 @@ function SourcePickerFields({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_LISTING_QUERY_VALUE}>
-                  No listing query selected
-                </SelectItem>
+                <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
                 {queries.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
                     {item.name}
@@ -503,68 +508,68 @@ function SourcePickerFields({
         </>
       ) : (
         <>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Content type</p>
-        <Select
-          value={selectedTypeValue}
-          onValueChange={(next) =>
-            updateSource(value, onChange, {
-              contentTypeId: next === NO_CONTENT_TYPE_VALUE ? "" : next,
-              entryId: "",
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select content type">{selectedTypeLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_CONTENT_TYPE_VALUE}>No content type selected</SelectItem>
-            {types.map((entry) => (
-              <SelectItem key={entry.id} value={entry.id}>
-                {entry.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isLoadingTypes ? (
-          <p className="text-xs text-muted-foreground">Loading content types...</p>
-        ) : null}
-        {typesError ? <p className="text-xs text-destructive">{typesError}</p> : null}
-      </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Content type</p>
+            <Select
+              value={selectedTypeValue}
+              onValueChange={(next) =>
+                updateSource(value, onChange, {
+                  contentTypeId: next === NO_CONTENT_TYPE_VALUE ? "" : next,
+                  entryId: "",
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select content type">{selectedTypeLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CONTENT_TYPE_VALUE}>No content type selected</SelectItem>
+                {types.map((entry) => (
+                  <SelectItem key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isLoadingTypes ? (
+              <p className="text-xs text-muted-foreground">Loading content types...</p>
+            ) : null}
+            {typesError ? <p className="text-xs text-destructive">{typesError}</p> : null}
+          </div>
 
-      {sourceMode === "manual" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Manual entry</p>
-          <Select
-            value={selectedEntryValue}
-            onValueChange={(next) =>
-              updateSource(value, onChange, {
-                entryId: next === NO_ENTRY_VALUE ? "" : next,
-              })
-            }
-            disabled={!selectedTypeSlug}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select entry">{selectedEntryLabel}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_ENTRY_VALUE}>No entry selected</SelectItem>
-              {entries.map((entry) => (
-                <SelectItem key={entry.id} value={entry.id}>
-                  {entry.title}
-                  {compact ? "" : ` (${entry.status})`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedTypeSlug && entries.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No entries loaded yet for selected content type.
-            </p>
+          {sourceMode === "manual" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Manual entry</p>
+              <Select
+                value={selectedEntryValue}
+                onValueChange={(next) =>
+                  updateSource(value, onChange, {
+                    entryId: next === NO_ENTRY_VALUE ? "" : next,
+                  })
+                }
+                disabled={!selectedTypeSlug}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select entry">{selectedEntryLabel}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_ENTRY_VALUE}>No entry selected</SelectItem>
+                  {entries.map((entry) => (
+                    <SelectItem key={entry.id} value={entry.id}>
+                      {entry.title}
+                      {compact ? "" : ` (${entry.status})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedTypeSlug && entries.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No entries loaded yet for selected content type.
+                </p>
+              ) : null}
+              {entryLoadError ? <p className="text-xs text-destructive">{entryLoadError}</p> : null}
+            </div>
           ) : null}
-          {entryLoadError ? <p className="text-xs text-destructive">{entryLoadError}</p> : null}
-        </div>
-      ) : null}
         </>
       )}
     </div>
@@ -606,33 +611,33 @@ export function EntryTeaserWizardEditor({
           </Select>
         </div>
         {dataSourceMode === "legacy" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Mode</p>
-          <Select
-            value={sourceMode}
-            onValueChange={(next) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                sourceMode: next as EntryTeaserSourceMode,
-                source: {
-                  ...current.source,
-                  entryId: next === "manual" ? current.source?.entryId ?? "" : "",
-                },
-              }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select source mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Mode</p>
+            <Select
+              value={sourceMode}
+              onValueChange={(next) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  sourceMode: next as EntryTeaserSourceMode,
+                  source: {
+                    ...current.source,
+                    entryId: next === "manual" ? (current.source?.entryId ?? "") : "",
+                  },
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select source mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         ) : null}
         <SourcePickerFields
           value={value}
@@ -703,33 +708,33 @@ export function EntryTeaserVisualEditor({
           </Select>
         </div>
         {dataSourceMode === "legacy" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Source mode</p>
-          <Select
-            value={sourceMode}
-            onValueChange={(next) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                sourceMode: next as EntryTeaserSourceMode,
-                source: {
-                  ...current.source,
-                  entryId: next === "manual" ? current.source?.entryId ?? "" : "",
-                },
-              }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select source mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Source mode</p>
+            <Select
+              value={sourceMode}
+              onValueChange={(next) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  sourceMode: next as EntryTeaserSourceMode,
+                  source: {
+                    ...current.source,
+                    entryId: next === "manual" ? (current.source?.entryId ?? "") : "",
+                  },
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select source mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         ) : null}
         <SourcePickerFields
           value={value}
@@ -755,9 +760,7 @@ export function EntryTeaserVisualEditor({
             <span className="text-sm">Show excerpt</span>
             <Switch
               checked={normalized.fields?.showExcerpt ?? true}
-              onCheckedChange={(checked) =>
-                updateFields(value, onChange, { showExcerpt: checked })
-              }
+              onCheckedChange={(checked) => updateFields(value, onChange, { showExcerpt: checked })}
             />
           </label>
           <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
@@ -825,9 +828,7 @@ export function EntryTeaserVisualEditor({
           <p className="text-sm font-medium">Fallback title</p>
           <Input
             value={normalized.fallback?.title ?? ""}
-            onChange={(event) =>
-              updateFallback(value, onChange, { title: event.target.value })
-            }
+            onChange={(event) => updateFallback(value, onChange, { title: event.target.value })}
             placeholder="No entry selected"
           />
         </div>
@@ -847,10 +848,7 @@ export function EntryTeaserVisualEditor({
   );
 }
 
-export function EntryTeaserAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<EntryTeaserData>) {
+export function EntryTeaserAdvancedEditor({ value, onChange }: WidgetEditorProps<EntryTeaserData>) {
   const normalized = normalizeValue(value);
   const dataSourceMode = normalized.source?.mode ?? "legacy";
   const sourceMode = normalized.sourceMode ?? "latest";
@@ -892,22 +890,20 @@ export function EntryTeaserAdvancedEditor({
 
       <EditorSection title="Style tokens" description="Direct style tokens for teaser surface.">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Surface color</p>
-            <Input
-              value={normalized.style?.surface ?? ""}
-              onChange={(event) => updateStyle(value, onChange, { surface: event.target.value })}
-              placeholder="var(--color-bg)"
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border color</p>
-            <Input
-              value={normalized.style?.border ?? ""}
-              onChange={(event) => updateStyle(value, onChange, { border: event.target.value })}
-              placeholder="var(--color-border)"
-            />
-          </div>
+          <ClearableInputField
+            label="Surface color"
+            value={normalized.style?.surface}
+            onChange={(next) => updateStyle(value, onChange, { surface: next })}
+            onClear={() => clearStyle(value, onChange, "surface")}
+            placeholder="var(--color-bg)"
+          />
+          <ClearableInputField
+            label="Border color"
+            value={normalized.style?.border}
+            onChange={(next) => updateStyle(value, onChange, { border: next })}
+            onClear={() => clearStyle(value, onChange, "border")}
+            placeholder="var(--color-border)"
+          />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">

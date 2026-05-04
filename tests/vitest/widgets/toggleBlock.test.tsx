@@ -22,9 +22,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
 
 test("toggle block renders defaults", () => {
-  const html = renderToString(
-    <ToggleBlock data={toggleBlockDefaults} variant="switch" />
-  );
+  const html = renderToString(<ToggleBlock data={toggleBlockDefaults} variant="switch" />);
 
   expect(html).toContain('data-nextless-toggle-block="1"');
   expect(html).toContain('data-nextless-toggle-state="primary"');
@@ -77,6 +75,18 @@ test("toggle block validator accepts schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("toggle block cleared surface omits background style", () => {
+  const normalized = normalizeToggleBlockData({
+    ...toggleBlockDefaults,
+    style: {},
+  });
+  const html = renderToString(<ToggleBlock data={normalized} variant="switch" />);
+
+  expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(html).toContain('data-nextless-toggle-block="1"');
+  expect(html).not.toContain("background-color:");
 });
 
 test("toggle block visual editor renders key sections", () => {

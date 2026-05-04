@@ -1,11 +1,4 @@
-import {
-  BarChart3,
-  MessageSquare,
-  Plus,
-  Search,
-  ShieldAlert,
-  Zap,
-} from "lucide-react";
+import { BarChart3, MessageSquare, Plus, Search, ShieldAlert, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +20,10 @@ import { IntegrationDrawer } from "./IntegrationDrawer";
 import { IntegrationRequestDialog } from "./IntegrationRequestDialog";
 import { SettingsSidebar } from "./SettingsSidebar";
 
-const iconMap: Record<string, { icon: IntegrationCardProps["icon"]; accent: IntegrationCardProps["accent"] }> = {
+const iconMap: Record<
+  string,
+  { icon: IntegrationCardProps["icon"]; accent: IntegrationCardProps["accent"] }
+> = {
   "google-analytics": { icon: BarChart3, accent: "amber" },
   slack: { icon: MessageSquare, accent: "violet" },
   zapier: { icon: Zap, accent: "orange" },
@@ -122,10 +118,7 @@ export function IntegrationsPage() {
     setDrawerOpen(true);
   };
 
-  const handleSaveIntegration = async (
-    id: string,
-    config: Record<string, string | null>
-  ) => {
+  const handleSaveIntegration = async (id: string, config: Record<string, string | null>) => {
     setIsSaving(true);
     setDrawerError(null);
     try {
@@ -184,7 +177,13 @@ export function IntegrationsPage() {
               title="Integrations"
               description="Connect your workflow with third-party services."
               actions={
-                <Button className="gap-2" onClick={() => setRequestOpen(true)}>
+                <Button
+                  className="gap-2"
+                  onClick={() => {
+                    setRequestError(null);
+                    setRequestOpen(true);
+                  }}
+                >
                   <Plus className="h-4 w-4" />
                   Request new
                 </Button>
@@ -254,7 +253,7 @@ export function IntegrationsPage() {
         </div>
       </div>
       <IntegrationDrawer
-        key={activeIntegration?.id ?? (drawerOpen ? "integration-open" : "integration")}
+        key={`${activeIntegration?.id ?? "integration"}:${drawerOpen ? "open" : "closed"}`}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         integration={
@@ -274,8 +273,14 @@ export function IntegrationsPage() {
         onSave={handleSaveIntegration}
       />
       <IntegrationRequestDialog
+        key={requestOpen ? "request-open" : "request-closed"}
         open={requestOpen}
-        onOpenChange={setRequestOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRequestError(null);
+          }
+          setRequestOpen(open);
+        }}
         onSubmit={handleRequestIntegration}
         isSubmitting={isRequesting}
         error={requestError}

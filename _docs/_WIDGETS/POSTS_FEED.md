@@ -44,6 +44,13 @@ Render a ready-to-use list of posts without building a custom listing query.
 ### Advanced
 - visual sections + runtime payload snapshot
 
+## Clear Controls
+
+- `style.backgroundColor` is clearable; clear removes the posts-feed card
+  background field before mapping to the Content List renderer.
+- Card style, CTA label, source mode, and resolved post data remain unchanged by
+  surface clear.
+
 ## Data Model (summary)
 
 ```json
@@ -69,7 +76,8 @@ Render a ready-to-use list of posts without building a custom listing query.
     "columns": "3",
     "gap": "md",
     "cardStyle": "outlined",
-    "ctaLabel": "Read more"
+    "ctaLabel": "Read more",
+    "backgroundColor": "var(--color-bg)"
   },
   "resolved": {
     "items": [],

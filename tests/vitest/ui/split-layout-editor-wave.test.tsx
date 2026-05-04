@@ -88,8 +88,7 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -114,10 +113,7 @@ const mount = (node: React.ReactNode) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -174,11 +170,8 @@ const renderEditor = async ({
   initialVariant?: string;
   withVariantChange?: boolean;
 }) => {
-  const {
-    SplitLayoutAdvancedEditor,
-    SplitLayoutVisualEditor,
-    SplitLayoutWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/SplitLayoutEditors");
+  const { SplitLayoutAdvancedEditor, SplitLayoutVisualEditor, SplitLayoutWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SplitLayoutEditors");
 
   const editorMap = {
     wizard: SplitLayoutWizardEditor,
@@ -256,6 +249,7 @@ test("SplitLayout wizard editor normalizes malformed defaults and ignores preset
     const presetSelect = findSelectsByOptions(view.container, ["50-50", "40-60", "60-40"])[0];
     const collapseSelect = findSelectsByOptions(view.container, ["stack", "keep"])[0];
     const gapSelect = findSelectsByOptions(view.container, [
+      "none",
       "0",
       "1",
       "2",
@@ -395,6 +389,7 @@ test("SplitLayout editor controls fall back to safe tokens when normalized value
     const wizardPreset = findSelectsByOptions(wizardView.container, ["50-50", "40-60", "60-40"])[0];
     const wizardCollapse = findSelectsByOptions(wizardView.container, ["stack", "keep"])[0];
     const wizardGap = findSelectsByOptions(wizardView.container, [
+      "none",
       "0",
       "1",
       "2",
@@ -433,7 +428,9 @@ test("SplitLayout editor controls fall back to safe tokens when normalized value
     expect((visualRatioSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
     expect((visualCollapse as HTMLSelectElement | null | undefined)?.value).toBe("stack");
     expect((visualSpacingSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((visualSpacingSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
+    expect((visualSpacingSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe(
+      "stretch"
+    );
 
     const advancedSection = findSectionByTitle(advancedView.container, "Technical split tokens");
     const advancedSelects = Array.from((advancedSection as ParentNode).querySelectorAll("select"));
@@ -453,11 +450,8 @@ test("SplitLayout editor controls fall back to safe tokens when normalized value
 });
 
 test("SplitLayout editors cover variant changes, mobile behavior, spacing, and advanced token edits", async () => {
-  const {
-    SplitLayoutAdvancedEditor,
-    SplitLayoutVisualEditor,
-    SplitLayoutWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/SplitLayoutEditors");
+  const { SplitLayoutAdvancedEditor, SplitLayoutVisualEditor, SplitLayoutWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SplitLayoutEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: SplitLayoutData = {
@@ -527,7 +521,19 @@ test("SplitLayout editors cover variant changes, mobile behavior, spacing, and a
     expect(currentVariant).toBe("60-40");
 
     const collapseSelect = findSelectsByOptions(view.container, ["stack", "keep"])[0];
-    const gapSelect = findSelectsByOptions(view.container, ["0", "1", "2", "3", "4", "5", "6", "8", "10", "12"])[0];
+    const gapSelect = findSelectsByOptions(view.container, [
+      "none",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "8",
+      "10",
+      "12",
+    ])[0];
     setSelectValue(collapseSelect, "keep");
     setSelectValue(gapSelect, "8");
 
@@ -545,7 +551,9 @@ test("SplitLayout editors cover variant changes, mobile behavior, spacing, and a
     setSelectValue(ratioSelects[1], "60-40");
 
     const mobileSection = findSectionByTitle(view.container, "Mobile collapse behavior");
-    const reverseToggle = Array.from((mobileSection as ParentNode).querySelectorAll('input[type="checkbox"]'))[0];
+    const reverseToggle = Array.from(
+      (mobileSection as ParentNode).querySelectorAll('input[type="checkbox"]')
+    )[0];
     setCheckboxValue(reverseToggle, true);
 
     const spacingSection = findSectionByTitle(view.container, "Spacing and vertical alignment");
@@ -560,7 +568,9 @@ test("SplitLayout editors cover variant changes, mobile behavior, spacing, and a
     setSelectValue(advancedSelects[2], "stack");
     setSelectValue(advancedSelects[3], "4");
     setSelectValue(advancedSelects[4], "end");
-    const advancedToggle = Array.from((advancedSection as ParentNode).querySelectorAll('input[type="checkbox"]'))[0];
+    const advancedToggle = Array.from(
+      (advancedSection as ParentNode).querySelectorAll('input[type="checkbox"]')
+    )[0];
     setCheckboxValue(advancedToggle, false);
 
     expect(onChangeSpy).toHaveBeenCalled();

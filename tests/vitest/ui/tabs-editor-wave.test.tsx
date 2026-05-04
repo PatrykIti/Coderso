@@ -110,8 +110,7 @@ vi.mock("@/components/ui/select", () => {
 });
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -136,10 +135,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -149,10 +145,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -166,15 +159,10 @@ const clickButton = (element: Element | null | undefined) => {
   });
 };
 
-const findInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const findInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = Array.from(container.querySelectorAll("input")).filter(
     (element) =>
-      element instanceof HTMLInputElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   )[index];
   if (!(input instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
@@ -237,9 +225,8 @@ const renderEditor = async ({
   initialValue: TabsData;
   initialVariant?: string;
 }) => {
-  const { TabsAdvancedEditor, TabsVisualEditor, TabsWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TabsEditors"
-  );
+  const { TabsAdvancedEditor, TabsVisualEditor, TabsWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TabsEditors");
 
   const editorMap = {
     wizard: TabsWizardEditor,
@@ -345,10 +332,7 @@ test("Tabs wizard editor covers variant fallback, item-count growth, active-tab 
 
     setInputValue(findInputByPlaceholder(structureSection, "Tab 1"), "   ");
     setInputValue(findInputByPlaceholder(structureSection, "Tab 3"), "Support");
-    const descriptionInputs = findInputsByPlaceholder(
-      structureSection,
-      "Optional tab description"
-    );
+    const descriptionInputs = findInputsByPlaceholder(structureSection, "Optional tab description");
     setInputValue(descriptionInputs[2], "Help panel details.");
 
     expect(view.getValue().items?.[0]?.label).toBe("Tab 1");
@@ -415,16 +399,10 @@ test("Tabs visual editor covers variant cards, alignment fallback, active-tab pr
 
     const layoutSection = getSectionByTitle(view.container, "Layout");
     const alignmentSelect = findSelectByOptions(layoutSection, ["start", "center", "end"]);
-    const surfaceColorInput = findInputByPlaceholder(
-      layoutSection,
-      "var(--color-surface)"
-    );
+    const surfaceColorInput = findInputByPlaceholder(layoutSection, "var(--color-surface)");
     const borderColorInput = findInputByPlaceholder(layoutSection, "var(--color-border)");
     const activeBackgroundInput = findInputByPlaceholder(layoutSection, "var(--color-text)");
-    const activeTextColorInput = findInputByPlaceholder(
-      layoutSection,
-      "var(--color-background)"
-    );
+    const activeTextColorInput = findInputByPlaceholder(layoutSection, "var(--color-background)");
 
     expect(alignmentSelect.value).toBe("start");
     expect(surfaceColorInput.value).toBe(tabsDefaults.style?.surfaceColor);
@@ -488,9 +466,7 @@ test("Tabs advanced editor covers diagnostics normalization, technical field upd
     expect(snapshotBefore?.textContent).toContain('"label": "Tab 1"');
     expect(snapshotBefore?.textContent).toContain('"activeId": "dup"');
     expect(snapshotBefore?.textContent).toContain('"alignment": "end"');
-    expect(snapshotBefore?.textContent).toContain(
-      `"surfaceColor": "${tabsDefaults.style?.surfaceColor}"`
-    );
+    expect(snapshotBefore?.textContent).not.toContain('"surfaceColor"');
     expect(snapshotBefore?.textContent).toContain('"borderColor": "token-border"');
 
     const variantSection = getSectionByTitle(view.container, "Variant");
@@ -501,10 +477,7 @@ test("Tabs advanced editor covers diagnostics normalization, technical field upd
     const structureSection = getSectionByTitle(view.container, "Tabs Structure");
     const activeSelect = findSelectByOptions(structureSection, ["dup", "2"]);
     setSelectValue(activeSelect, "2");
-    const descriptionInputs = findInputsByPlaceholder(
-      structureSection,
-      "Optional tab description"
-    );
+    const descriptionInputs = findInputsByPlaceholder(structureSection, "Optional tab description");
     setInputValue(descriptionInputs[0], "Primary details restored.");
 
     const layoutSection = getSectionByTitle(view.container, "Layout");
@@ -524,9 +497,7 @@ test("Tabs advanced editor covers diagnostics normalization, technical field upd
     );
     expect(snapshotAfter?.textContent).toContain('"activeId": "2"');
     expect(snapshotAfter?.textContent).toContain('"borderColor": "#222222"');
-    expect(snapshotAfter?.textContent).toContain(
-      '"description": "Primary details restored."'
-    );
+    expect(snapshotAfter?.textContent).toContain('"description": "Primary details restored."');
   } finally {
     view.cleanup();
   }

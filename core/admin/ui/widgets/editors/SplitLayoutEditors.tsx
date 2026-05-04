@@ -59,7 +59,7 @@ const collapseOptions: Array<{ id: SplitLayoutCollapseMobile; label: string }> =
 
 const gapOptions = splitLayoutGapTokens.map((value) => ({
   id: value,
-  label: `Gap ${value}`,
+  label: value === "none" ? "None" : `Gap ${value}`,
 }));
 
 const verticalAlignOptions: Array<{
@@ -107,10 +107,7 @@ function updateMeta(
   variant: string,
   onChange: (next: SplitLayoutData) => void,
   patch: Partial<
-    Pick<
-      SplitLayoutData,
-      "collapseMobile" | "reverseOnMobile" | "gap" | "verticalAlign"
-    >
+    Pick<SplitLayoutData, "collapseMobile" | "reverseOnMobile" | "gap" | "verticalAlign">
   >
 ) {
   updateValue(value, variant, onChange, (current) => ({

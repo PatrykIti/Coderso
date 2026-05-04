@@ -1,20 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import type { Block, WidgetDefinition } from "./types";
+import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
 
 export type VisualPanelProps = {
   widget: WidgetDefinition;
   block: Block;
   onChange: (next: Block) => void;
+  editorContext?: WidgetEditorContext;
 };
 
-export function VisualPanel({ widget, block, onChange }: VisualPanelProps) {
+export function VisualPanel({ widget, block, onChange, editorContext }: VisualPanelProps) {
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
   const Editor = widget.editor.visual;
-  const visualOwnsVariantSelection = Boolean(
-    widget.editorCapabilities?.visualOwnsVariantSelection
-  );
+  const visualOwnsVariantSelection = Boolean(widget.editorCapabilities?.visualOwnsVariantSelection);
 
   return (
     <div className="space-y-4">
@@ -25,9 +24,7 @@ export function VisualPanel({ widget, block, onChange }: VisualPanelProps) {
               Visual
             </p>
             <h3 className="text-lg font-semibold">{widget.title} Variants</h3>
-            <p className="text-sm text-muted-foreground">
-              Choose a visual style for this widget.
-            </p>
+            <p className="text-sm text-muted-foreground">Choose a visual style for this widget.</p>
           </div>
           <div className="grid gap-3">
             {widget.variants.map((variant) => (
@@ -45,9 +42,7 @@ export function VisualPanel({ widget, block, onChange }: VisualPanelProps) {
                   <div>
                     <p className="text-sm font-semibold">{variant.label}</p>
                     {variant.description ? (
-                      <p className="text-xs text-muted-foreground">
-                        {variant.description}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{variant.description}</p>
                     ) : null}
                   </div>
                   <Badge variant={block.variant === variant.id ? "default" : "outline"}>
@@ -67,6 +62,7 @@ export function VisualPanel({ widget, block, onChange }: VisualPanelProps) {
         onChange={(data) => onChange({ ...block, data })}
         variant={variant}
         onVariantChange={(next) => onChange({ ...block, variant: next })}
+        context={editorContext}
       />
     </div>
   );

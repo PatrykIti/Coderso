@@ -700,3 +700,147 @@ Walidacja wykonana dla TASK-212:
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/action-toasts.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/sonner.test.tsx tests/vitest/ui/post-editor-state-hook-wave.test.tsx tests/vitest/ui-integration/post-editor-header-workflow.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/post-block-editor-shell-wave.test.tsx tests/vitest/ui/posts-create-drawer-a11y.test.tsx tests/vitest/posts/post-block-document-writing-canvas.test.ts tests/vitest/posts/postEditorStore.test.ts tests/vitest/posts/post-block-normalizer-writing-canvas.test.ts tests/vitest/posts/post-block-catalog-search.test.ts tests/vitest/posts/post-block-runtime-renderer.test.tsx tests/vitest/ui/post-block-inspector-wave.test.tsx tests/vitest/ui/post-editor-canvas-wave.test.tsx tests/vitest/ui/post-block-inserter-wave.test.tsx tests/vitest/ui/block-inserter-wave.test.tsx`
+
+---
+
+## Manualna re-weryfikacja Playwright (2026-04-30)
+
+**Tester:** Claude (Playwright CLI, sesja izolowana `posts-qa`)
+**Środowisko:** http://localhost:5173/admin/coderso/posts
+**Zalogowany jako:** patryk.ciechanski@patrykiti.pl
+**Post testowy:** QA Deep Test 2026-04-30 (ID: 015a941e-f830-463b-b452-c058fcf07260)
+
+### TL;DR
+
+- **W pełni naprawione (wszystkie 13 z TASK-212):** BUG-1, BUG-2, BUG-3, BUG-4, BUG-5, BUG-6, BUG-7, BUG-8, UX-1, UX-3, UX-4, UX-5, UX-6, UX-7 — utrzymują stan FIXED.
+- **Wciąż otwarte obserwacje (bez zmian od 2026-04-26):** UX-OBS-1, UX-OBS-3, UX-OBS-4.
+- **Nowe znalezisko:** canonical URL jest auto-pre-filled w sekcji Advanced — SEO badge zaczyna się od 1/3 zamiast 0/3 przy nowym poście (może być zamierzone zachowanie, warte doprecyzowania).
+
+### Krok 1 — Lista postów
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-1 | Bulk select | ✓ FIXED | "Select all posts" → header + oba wiersze checked → toolbar "2 posts selected — Apply a bulk action to the visible selection." + combobox Bulk actions + Apply (disabled) + Clear. |
+| BUG-2 | Search placeholder | ✓ FIXED | Placeholder: "Search posts by title..." (nie "pages"). Zweryfikowane przez eval `querySelectorAll('input')` — drugi input ma placeholder "Search posts by title...". |
+| Filtr Status | Działa | ✓ OK | Opcje: All / Published / Draft / Scheduled / Archived. Filtr Draft → "No posts match your current filters." (oba posty Published). |
+| Menu (...) | Działa | ✓ OK | Opcje: Edit / Preview / Duplicate / Publish (disabled — już Published) / Unpublish / Delete. |
+
+### Krok 2 — Create New Post dialog (BUG-8)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-8 | Radix `aria-describedby` w Create Post dialog | ✓ FIXED | `role=dialog` → `aria-describedby="radix-_r_8_"` → element istnieje w DOM → textContent: "Start a new article and publish when ready." Konsola: 0 errors, 0 warnings. |
+
+### Krok 3 — Editor toolbar (BUG-3)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-3 | 5 oddzielnych przycisków toolbara | ✓ FIXED | `[aria-label="Post editor toolbar"]` zawiera dokładnie 5 przycisków: "Toggle block inserter", "Hide document overview", "Hide post details", "Toggle full width editor", "Open revision history". |
+| UX-OBS-1 | Type button nie pokazuje aktualnego typu | ✗ WCIĄŻ OTWARTE | Przycisk "Type" w inline toolbarze ma label "Type" — nie zmienia się na "Paragraph", "Heading" itp. Dropdown otwiera się na: Section / Paragraph / Heading / Quote bez wskazania aktualnego. |
+| UX-2 | Focus mode domyślnie wyłączony | ✓ FIXED | Przy otwarciu nowego edytora: "Hide document overview" [pressed=true], "Hide post details" [pressed=true], "Toggle full width editor" [pressed=false]. Oba panele domyślnie widoczne. |
+| UX-6 | "Typography follows the selected block style." | ✓ FIXED | Tekst widoczny w inline toolbar obok dropdownów czcionki. |
+
+### Krok 4 — Block Inserter (UX-4, UX-7)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| UX-4 | Block Inserter Media tab | ✓ FIXED | Zakładka Media zawiera: **Image, Video, Gallery, Audio, File, Embed** (6 typów). Brak Separator w Media. |
+| UX-7 | Scoped search w Block Inserter | ✓ FIXED | Placeholder zmienia się dynamicznie: zakładka All → "Search blocks...", Text → "Search Text blocks...", Media → "Search Media blocks...". Test: wpisanie "image" w Media → wyniki tylko Image + Gallery (Embed/Video/Audio/File odfiltrowane). |
+
+### Krok 5 — Document Inspector Post tab (BUG-4, BUG-7, UX-3, UX-5)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-4 | Category dropdown + Browse media | ✓ FIXED | Categories: combobox "No category" (nie raw ID). Featured image: button "Browse media" + "No media selected yet." (nie "Media ID" textbox). |
+| BUG-7 | /terms endpoint | ✓ FIXED | `GET /admin/api/content-types/post/terms` → 200 OK. Dropdown pokazuje "No category" (pusta lista kategorii). Konsola: 0 errors, 0 warnings — brak raw SQL error. |
+| UX-3 | SEO badge w zwiniętej sekcji Advanced | ✓ FIXED | Nowy post: badge "SEO 1/3" widoczny przy zwiniętej sekcji (canonical URL auto-pre-filled). Po wpisaniu SEO title → "SEO 2/3". Po wpisaniu SEO description (przez `click + type`) → "SEO 3/3". |
+| UX-5 | Slug z "Public URL:" prefixem | ✓ FIXED | Pod polem slug widoczne "Public URL:" + pełna ścieżka `http://localhost:3000/post/qa-deep-test-2026-04-30`. |
+
+**Nowa obserwacja (SEO canonical pre-fill):** Canonical URL w sekcji Advanced jest automatycznie pre-filled wartością `http://localhost:3000/post/{slug}` przy tworzeniu posta. Skutkuje to startem od "SEO 1/3" zamiast "SEO 0/3". Może być zamierzone (dobry UX — nie trzeba wpisywać canonical ręcznie), ale różni się od zachowania z 2026-04-26 gdzie start był "SEO 0/3".
+
+### Krok 6 — Publish / Update + Toast (BUG-5)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-5 | Sonner toast po Publish / Update | ✓ FIXED | Po Publish: badge Draft → Published, przycisk Publish → "Update published post". Po Update (po edycji treści): `[data-sonner-toast]` zawiera "Changes saved" (przechwycony po ~2s). |
+
+### Krok 7 — Revisions (BUG-6, UX-1)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| BUG-6 | Revisions dialog aria-describedby | ✓ FIXED | `aria-describedby="radix-_r_2g_"` → element istnieje w DOM → text: "Restore an earlier snapshot of this post." Konsola: 0 errors, 0 warnings. |
+| UX-1 | Preview w Revisions pokazuje treść | ✓ FIXED | 6 wersji (autosave). Klik Preview na Version 6 → panel rozwinięty z treścią "Test content for QA Deep Test 2026-04-30..." + button "Hide preview". Brak komunikatu "No preview available". |
+
+### Krok 8 — Delete block (UX-OBS-3)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| UX-OBS-3 | Brak undo po Delete block | ✗ WCIĄŻ OTWARTE | Klik "Delete block: Image" → blok usunięty natychmiast. Brak toast z "Undo", brak confirmation dialog. `[data-sonner-toast]` = brak. Risk: nieodwracalne usunięcie bez możliwości cofnięcia. |
+
+### Krok 9 — Runtime Preview (UX-OBS-4)
+
+| ID | Element | Status | Obserwacja |
+|---|---|---|---|
+| UX-OBS-4 | Puste bloki renderują się w runtime | ✗ WCIĄŻ OTWARTE | `data-post-runtime-warning-count="0"`. Pusty Code: `<pre class="..."><code></code></pre>` — renderowany. Pusty Heading: `<h2 class="font-semibold..."></h2>` — renderowany. Puste List blocks są dropowane (poprzednie zachowanie zachowane). Rozszerzenie drop-logic na Code/Heading/Quote/Paragraph nadal otwarte. |
+
+### Nowe obserwacje (2026-04-30)
+
+#### [OBS-NEW-1] Canonical URL auto-pre-fill w Advanced
+
+**Gdzie:** Edytor → prawy panel Post → sekcja Advanced → pole Canonical URL
+
+**Co się dzieje:** Przy tworzeniu nowego posta pole Canonical URL jest automatycznie wypełniane wartością `http://localhost:3000/post/{slug}`. To zmienia startowy SEO badge z "SEO 0/3" (z poprzednich testów) na "SEO 1/3".
+
+**Ocena:** Zachowanie **pozytywne** — użytkownik nie musi wpisywać canonical ręcznie, domyślna wartość jest poprawna. Warto tylko upewnić się, że:
+1. Canonical URL aktualizuje się automatycznie gdy slug zostanie zmieniony po create.
+2. Placeholder lub helper text komunikuje że wartość jest auto-generated (żeby user nie myślał że musi jej nie ruszać).
+
+#### [OBS-NEW-2] UX-OBS-1 — Type button bez wskaźnika aktualnego bloku
+
+**Status:** Bez zmian od 2026-04-26. Przycisk "Type" w inline toolbarze nie wyświetla aktualnego typu bloku (np. "Heading" / "Paragraph"). User musi kliknąć Type → dropdown żeby zobaczyć opcje, ale żadna nie jest oznaczona jako "aktualnie aktywna" (brak [checked], brak [selected] w menu).
+
+**Kierunek:** Zmienić label przycisku na aktualny typ (np. "Paragraph" zamiast "Type") lub dodać checkmark przy aktywnej opcji w dropdown.
+
+### Status końcowy vs. TASK-212 (2026-04-26)
+
+| ID | Status po TASK-212 | Status 2026-04-30 |
+|---|---|---|
+| BUG-1 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-2 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-3 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-4 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-5 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-6 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-7 | ✓ FIXED | ✓ UTRZYMANE |
+| BUG-8 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-1 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-2 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-3 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-4 | ✓ FIXED (Image+Embed+Video+Gallery+Audio+File) | ✓ UTRZYMANE |
+| UX-5 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-6 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-7 | ✓ FIXED | ✓ UTRZYMANE |
+| UX-OBS-1 | Otwarte obserwacje z 2026-04-26 | ✗ WCIĄŻ OTWARTE |
+| UX-OBS-3 | Otwarte obserwacje z 2026-04-26 | ✗ WCIĄŻ OTWARTE |
+| UX-OBS-4 | Otwarte obserwacje z 2026-04-26 | ✗ WCIĄŻ OTWARTE |
+
+### Stan środowiska
+
+- Konsola przeglądarki (sesja posts-qa): 5 messages total, 0 errors, 0 warnings (tylko React DevTools info).
+- API calls: publish 200 OK, autosave 200 OK, /terms 200 OK.
+- Brak CONNECTION_CLOSED, brak raw SQL errors, brak Radix warnings.
+
+### Screenshoty (2026-04-30)
+
+- `screenshots/2026-04-30/posts-01-list.png` — lista postów
+- `screenshots/2026-04-30/posts-02-bulk-select.png` — "2 posts selected" + bulk toolbar
+- `screenshots/2026-04-30/posts-03-create-dialog.png` — Create New Post dialog (BUG-8 fixed)
+- `screenshots/2026-04-30/posts-04-editor-toolbar.png` — 5 przycisków toolbara z aria-labels
+- `screenshots/2026-04-30/posts-05-block-inserter-media.png` — Media tab: Image/Video/Gallery/Audio/File/Embed
+- `screenshots/2026-04-30/posts-06-editor-blocks.png` — edytor z wieloma blokami
+- `screenshots/2026-04-30/posts-07-inspector-seo3.png` — SEO badge 3/3
+- `screenshots/2026-04-30/posts-08-published.png` — po Publish: badge Published, przycisk Update
+- `screenshots/2026-04-30/posts-09-update-toast.png` — toast "Changes saved" widoczny w DOM
+- `screenshots/2026-04-30/posts-10-revisions.png` — Revisions dialog z Preview treści (Version 6)
+- `screenshots/2026-04-30/posts-11-runtime-preview.png` — Runtime Preview (inline dialog)
+- `screenshots/2026-04-30/posts-12-final-editor.png` — końcowy stan edytora

@@ -58,6 +58,12 @@ Notes:
   - `data-entry-teaser-source`
   - `data-entry-teaser-state`
 
+## Clear Controls
+
+- `style.surface` is clearable; clear removes the teaser surface field and the
+  renderer omits the forced card background style.
+- Border, radius, spacing, source, and fallback behavior remain independent.
+
 ## Data Model (summary)
 
 ```json

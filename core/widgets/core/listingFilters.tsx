@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import {
   buildListingRuntimeParamName,
@@ -9,6 +9,7 @@ import {
   type ListingFacetMetric,
 } from "../../services/search/filterContract";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getListingRuntimeClientScript } from "./listingRuntimeScript";
 
 export type ListingFiltersVariantId = "default";
@@ -23,6 +24,11 @@ export type ListingFiltersData = {
   searchLabel?: string;
   applyLabel?: string;
   facets?: ListingFacetConfig[];
+  style?: {
+    frameBackground?: string;
+    frameBorderColor?: string;
+    actionBackground?: string;
+  };
   resolved?: {
     listingQueryId?: string;
     metrics?: ListingFacetMetric[];
@@ -56,23 +62,17 @@ const sanitizeMetricOptions = (
             value,
             label: resolveText(option?.label, value),
             count:
-              typeof option?.count === "number" && Number.isFinite(option.count)
-                ? option.count
-                : 0,
+              typeof option?.count === "number" && Number.isFinite(option.count) ? option.count : 0,
             active: option?.active === true,
           };
         })
-        .filter(
-          (option): option is ListingFacetMetric["options"][number] => option !== null
-        )
+        .filter((option): option is ListingFacetMetric["options"][number] => option !== null)
     : [];
 
 const sanitizeMetricRange = (range: ListingFacetMetric["range"]) => {
   if (!range) return null;
-  const min =
-    typeof range.min === "number" && Number.isFinite(range.min) ? range.min : null;
-  const max =
-    typeof range.max === "number" && Number.isFinite(range.max) ? range.max : null;
+  const min = typeof range.min === "number" && Number.isFinite(range.min) ? range.min : null;
+  const max = typeof range.max === "number" && Number.isFinite(range.max) ? range.max : null;
   const active = Array.isArray(range.active) && range.active.length === 2 ? range.active : null;
   return { min, max, active };
 };
@@ -123,6 +123,11 @@ export const listingFiltersDefaults: ListingFiltersData = {
   searchLabel: "Search",
   applyLabel: "Apply filters",
   facets: [defaultSortFacet],
+  style: {
+    frameBackground: "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+    frameBorderColor: "var(--color-border)",
+    actionBackground: "var(--color-primary)",
+  },
 };
 
 export const listingFiltersSchema = {
@@ -137,6 +142,15 @@ export const listingFiltersSchema = {
     searchPlaceholder: { type: "string" },
     searchLabel: { type: "string" },
     applyLabel: { type: "string" },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        frameBackground: { type: "string" },
+        frameBorderColor: { type: "string" },
+        actionBackground: { type: "string" },
+      },
+    },
     facets: {
       type: "array",
       maxItems: 24,
@@ -273,6 +287,14 @@ export function normalizeListingFiltersData(data: ListingFiltersData): ListingFi
   const defaultValues = listingFiltersDefaults;
   const fallbackFacets = normalizeListingFacetConfigs(defaultValues.facets);
   const facets = normalizeListingFacetConfigs(data.facets);
+  const hasStyleObject = data.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        frameBackground: resolveClearableStyleValue(data.style?.frameBackground),
+        frameBorderColor: resolveClearableStyleValue(data.style?.frameBorderColor),
+        actionBackground: resolveClearableStyleValue(data.style?.actionBackground),
+      }) ?? {})
+    : undefined;
 
   return {
     listingQueryId: resolveText(data.listingQueryId, ""),
@@ -292,6 +314,7 @@ export function normalizeListingFiltersData(data: ListingFiltersData): ListingFi
     searchLabel: resolveText(data.searchLabel, defaultValues.searchLabel ?? "Search"),
     applyLabel: resolveText(data.applyLabel, defaultValues.applyLabel ?? "Apply filters"),
     facets: facets.length > 0 ? facets : fallbackFacets,
+    ...(hasStyleObject ? { style } : {}),
     resolved: {
       listingQueryId: resolveText(data.resolved?.listingQueryId, ""),
       metrics: Array.isArray(data.resolved?.metrics)
@@ -383,11 +406,7 @@ function ListingFacetControl({
           name={inputName}
           data-listing-token={metric.token}
           defaultValue={active}
-          placeholder={
-            metric.kind === "date-range"
-              ? "YYYY-MM-DD,YYYY-MM-DD"
-              : "min,max"
-          }
+          placeholder={metric.kind === "date-range" ? "YYYY-MM-DD,YYYY-MM-DD" : "min,max"}
         />
       </label>
     );
@@ -408,9 +427,7 @@ function ListingFacetControl({
                 data-listing-token={metric.token}
               />
               <span>{option.label}</span>
-              <span className="ml-auto text-xs text-[var(--color-text)]/60">
-                {option.count}
-              </span>
+              <span className="ml-auto text-xs text-[var(--color-text)]/60">{option.count}</span>
             </label>
           ))}
         </div>
@@ -432,9 +449,7 @@ function ListingFacetControl({
               data-listing-token={metric.token}
             />
             <span>{option.label}</span>
-            <span className="ml-auto text-xs text-[var(--color-text)]/60">
-              {option.count}
-            </span>
+            <span className="ml-auto text-xs text-[var(--color-text)]/60">{option.count}</span>
           </label>
         ))}
       </div>
@@ -467,6 +482,16 @@ export function ListingFiltersBlock({
   const showSearch = normalized.showSearch !== false;
   const autoApply = normalized.autoApply !== false;
   const searchValue = resolveOptionalText(normalized.resolved?.searchQuery) ?? "";
+  const frameStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
+  });
+  const actionStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.actionBackground),
+  });
+  const legacyFrameClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/80" : "";
+  const legacyActionClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
 
   if (!listingQueryId) {
     return (
@@ -490,7 +515,7 @@ export function ListingFiltersBlock({
       data-listing-block-id={blockId ?? ""}
       data-listing-query-id={listingQueryId}
     >
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/80 p-4">
+      <div className={`rounded-xl border p-4 ${legacyFrameClass}`} style={frameStyle}>
         <form
           method="get"
           action=""
@@ -510,26 +535,18 @@ export function ListingFiltersBlock({
 
           {showSearch ? (
             <label className="grid gap-2 text-sm">
-                <span className="font-medium">
-                {resolveText(normalized.searchLabel, "Search")}
-              </span>
+              <span className="font-medium">{resolveText(normalized.searchLabel, "Search")}</span>
               <input
                 className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
-                name={buildListingRuntimeParamName(
-                  listingQueryId,
-                  listingRuntimeTokens.search
-                )}
+                name={buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)}
                 data-listing-token={listingRuntimeTokens.search}
                 defaultValue={searchValue}
-                placeholder={resolveText(
-                  normalized.searchPlaceholder,
-                  "Search results..."
-                )}
+                placeholder={resolveText(normalized.searchPlaceholder, "Search results...")}
               />
             </label>
           ) : null}
 
-          <div className={joinClasses("grid gap-4", metrics.length > 1 ? "md:grid-cols-2" : "")}> 
+          <div className={joinClasses("grid gap-4", metrics.length > 1 ? "md:grid-cols-2" : "")}>
             {metrics.map((metric) => (
               <ListingFacetControl
                 key={metric.id}
@@ -542,7 +559,8 @@ export function ListingFiltersBlock({
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-bg)]"
+              className={`inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold text-[var(--color-bg)] ${legacyActionClass}`}
+              style={actionStyle}
             >
               {resolveText(normalized.applyLabel, "Apply filters")}
             </button>

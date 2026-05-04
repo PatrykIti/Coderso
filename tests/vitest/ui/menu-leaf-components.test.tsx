@@ -38,7 +38,10 @@ vi.mock("@/components/ui/dialog", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-dialog-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-dialog-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -131,9 +134,15 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
     onSelect?: (item: { id: string; label: string }, eventTimeStamp: number) => void;
     onEdit?: (item: { id: string; label: string }) => void;
     onDelete?: (item: { id: string; label: string }) => void;
-    onDragStart?: (item: { id: string; label: string }, event: React.DragEvent<HTMLDivElement>) => void;
+    onDragStart?: (
+      item: { id: string; label: string },
+      event: React.DragEvent<HTMLDivElement>
+    ) => void;
     onDragEnd?: (event: React.DragEvent<HTMLDivElement>) => void;
-    onDragOver?: (item: { id: string; label: string }, event: React.DragEvent<HTMLDivElement>) => void;
+    onDragOver?: (
+      item: { id: string; label: string },
+      event: React.DragEvent<HTMLDivElement>
+    ) => void;
     onDrop?: (item: { id: string; label: string }, event: React.DragEvent<HTMLDivElement>) => void;
   }) => (
     <div data-menu-row={item.id}>
@@ -149,27 +158,21 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
       </button>
       <button
         type="button"
-        onClick={() =>
-          onDragStart?.(
-            item,
-            { timeStamp: 100 } as React.DragEvent<HTMLDivElement>
-          )
-        }
+        onClick={() => onDragStart?.(item, { timeStamp: 100 } as React.DragEvent<HTMLDivElement>)}
       >
         drag-start-{item.id}
       </button>
       <button
         type="button"
         onClick={() =>
-          onDragOver?.(
-            item,
-            {
-              clientX: 50,
-              currentTarget: {
-                getBoundingClientRect: () => ({ left: 0 }),
-              },
-            } as React.DragEvent<HTMLDivElement>
-          )
+          onDragOver?.(item, {
+            clientX: 120,
+            clientY: 20,
+            dataTransfer: { dropEffect: "none" },
+            currentTarget: {
+              getBoundingClientRect: () => ({ left: 0, top: 0, height: 40 }),
+            },
+          } as React.DragEvent<HTMLDivElement>)
         }
       >
         drag-over-child-{item.id}
@@ -177,10 +180,16 @@ vi.mock("@/ui/menus/MenuItemRow", () => ({
       <button
         type="button"
         onClick={() =>
-          onDrop?.(
-            item,
-            { timeStamp: 150 } as React.DragEvent<HTMLDivElement>
-          )
+          onDrop?.(item, {
+            timeStamp: 150,
+            clientX: 120,
+            clientY: 20,
+            currentTarget: {
+              getBoundingClientRect: () => ({ left: 0, top: 0, height: 40 }),
+            },
+            dataTransfer: { dropEffect: "none" },
+            preventDefault: () => undefined,
+          } as React.DragEvent<HTMLDivElement>)
         }
       >
         drop-{item.id}
@@ -217,10 +226,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -230,9 +236,7 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
   const onOpenChange = vi.fn();
   const onCreateError = vi.fn();
   const onCreate = vi
-    .fn<(
-      payload: { name: string; location?: string }
-    ) => Promise<void>>()
+    .fn<(payload: { name: string; location?: string }) => Promise<void>>()
     .mockResolvedValueOnce(undefined)
     .mockRejectedValueOnce(new Error("Failed to create menu."));
 
@@ -249,9 +253,7 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    expect(view.container.textContent).toContain(
-      "Theme slot identifier such as"
-    );
+    expect(view.container.textContent).toContain("Theme slot identifier such as");
 
     await act(async () => {
       buttons.find((button) => button.textContent?.includes("Create Menu"))?.click();
@@ -288,7 +290,9 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
 
     act(() => {
       buttons.find((button) => button.textContent === "Cancel")?.click();
-      buttons.find((button) => button.getAttribute("aria-label") === "Close create menu dialog")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Close create menu dialog")
+        ?.click();
     });
 
     expect(onOpenChange).toHaveBeenCalledTimes(3);
@@ -314,9 +318,7 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
   );
 
   try {
-    expect(emptyView.container.textContent).toContain(
-      "Select a menu item to edit details."
-    );
+    expect(emptyView.container.textContent).toContain("Select a menu item to edit details.");
   } finally {
     emptyView.cleanup();
   }
@@ -346,9 +348,7 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
   );
 
   try {
-    expect(view.container.textContent).toContain(
-      "Create at least one page to link a menu item."
-    );
+    expect(view.container.textContent).toContain("Create at least one page to link a menu item.");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
@@ -393,12 +393,11 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
   }
 });
 
-test("MenuTree suppresses post-drag click selection and forwards edit/delete/move/root-drop", () => {
+test("MenuTree suppresses post-drag click selection and forwards edit/delete/move", () => {
   const onSelect = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
   const onMove = vi.fn();
-  const onMoveToRoot = vi.fn();
 
   const items = [
     {
@@ -429,15 +428,14 @@ test("MenuTree suppresses post-drag click selection and forwards edit/delete/mov
       onEdit={onEdit}
       onDelete={onDelete}
       onMove={onMove}
-      onMoveToRoot={onMoveToRoot}
     />
   );
 
   try {
     const click = (label: string) =>
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === label
-      )?.click();
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === label)
+        ?.click();
 
     act(() => {
       click("select-item-1");
@@ -463,25 +461,7 @@ test("MenuTree suppresses post-drag click selection and forwards edit/delete/mov
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: "item-2" }));
     expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "item-2" }));
     expect(onMove).toHaveBeenCalledWith("item-1", "item-2", "child");
-
-    act(() => {
-      click("drag-start-item-1");
-    });
-
-    const rootDrop = Array.from(view.container.querySelectorAll("div")).find(
-      (div) => div.textContent?.trim() === "Drop here to move to top level"
-    );
-
-    act(() => {
-      rootDrop?.dispatchEvent(
-        new DragEvent("dragover", { bubbles: true, cancelable: true })
-      );
-      rootDrop?.dispatchEvent(
-        new DragEvent("drop", { bubbles: true, cancelable: true })
-      );
-    });
-
-    expect(onMoveToRoot).toHaveBeenCalledWith("item-1", "start");
+    expect(view.container.textContent).not.toContain("Drop here to move to top level");
   } finally {
     view.cleanup();
   }

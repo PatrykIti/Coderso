@@ -36,13 +36,18 @@ Dotyczy:
 ## Runtime token flow
 
 1. Admin klika `Preview`.
-2. API tworzy preview token (`preview_tokens`).
-3. API zwraca `previewUrl` i `expiresAt`.
-4. Pages editor moze poprosic o bounded probe (`probe: true`); serwer sprawdza
+2. Pages editor z niezapisanymi zmianami najpierw wykonuje cichy sync draftu do
+   `currentData` przez istniejace admin write API. Ten krok nie aktualizuje
+   `publishedData`, wiec publiczni odwiedzajacy nadal widza ostatnia
+   opublikowana wersje do czasu `Publish`.
+3. API tworzy preview token (`preview_tokens`).
+4. API zwraca `previewUrl` i `expiresAt`.
+5. Pages editor moze poprosic o bounded probe (`probe: true`); serwer sprawdza
    tylko wygenerowany preview URL, nie dowolny URL z przegladarki.
-5. Admin laduje `previewUrl` w iframe tylko gdy probe nie zwrocil bledu.
-6. Runtime route `/preview` waliduje token i target type.
-7. Render korzysta z tego samego pipeline co public site.
+6. Admin laduje `previewUrl` w iframe tylko gdy probe nie zwrocil bledu.
+7. Runtime route `/preview` waliduje token i target type.
+8. Render korzysta z tego samego pipeline co public site, ale dla stron preview
+   czyta `currentData`; publiczny runtime bez tokena czyta `publishedData`.
 
 ## Preview URL contract
 

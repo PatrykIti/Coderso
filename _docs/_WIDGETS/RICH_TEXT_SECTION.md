@@ -63,6 +63,13 @@ Notes:
   - TOC anchors are injected from sanitized headings only
 - Structured fallback blocks are deterministic and capped to `20`.
 
+## Clear Controls
+
+- `style.background` is clearable; clear removes the background field and the
+  renderer omits the section background inline style.
+- Typography and spacing fields keep their existing `none` token support where
+  approved.
+
 ## Data Model (summary)
 
 ```json
@@ -91,7 +98,7 @@ Notes:
     "fontScale": "md",
     "lineHeight": "normal",
     "textColor": "var(--color-text)",
-    "background": "transparent",
+    "background": "#ffffff",
     "spacing": "md"
   }
 }

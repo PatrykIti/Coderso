@@ -56,6 +56,12 @@ Notes:
   - `data-newsletter-integration-mode`
   - `data-newsletter-consent-required`
 
+## Clear Controls
+
+- `style.background` is clearable; clear removes the background field and the
+  renderer omits a forced section background style.
+- Consent, integration, spacing, and alignment behavior are unchanged by clear.
+
 ## Data Model (summary)
 
 ```json
@@ -81,7 +87,7 @@ Notes:
   "style": {
     "spacing": "md",
     "alignment": "start",
-    "background": "transparent"
+    "background": "#f8fafc"
   }
 }
 ```

@@ -66,9 +66,7 @@ export const sessions = pgTable(
   (t) => ({
     tokenHashIdx: uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
     expiresAtIdx: index("sessions_expires_at_idx").on(t.expiresAt),
-    csrfTokenHashIdx: index("sessions_csrf_token_hash_idx").on(
-      t.csrfTokenHash
-    ),
+    csrfTokenHashIdx: index("sessions_csrf_token_hash_idx").on(t.csrfTokenHash),
   })
 );
 
@@ -211,9 +209,7 @@ export const passwordResets = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (t) => ({
-    tokenHashIdx: uniqueIndex("password_resets_token_hash_idx").on(
-      t.tokenHash
-    ),
+    tokenHashIdx: uniqueIndex("password_resets_token_hash_idx").on(t.tokenHash),
     expiresAtIdx: index("password_resets_expires_at_idx").on(t.expiresAt),
   })
 );
@@ -310,9 +306,7 @@ export const widgetTemplateRevisions = pgTable(
     createdBy: uuid("created_by").references(() => users.id),
   },
   (t) => ({
-    templateIdIdx: index("widget_template_revisions_template_id_idx").on(
-      t.templateId
-    ),
+    templateIdIdx: index("widget_template_revisions_template_id_idx").on(t.templateId),
   })
 );
 
@@ -419,10 +413,7 @@ export const assistantDocChunks = pgTable(
     docIdx: index("assistant_doc_chunks_doc_id_idx").on(t.docId),
     headingIdx: index("assistant_doc_chunks_heading_idx").on(t.heading),
     lineIdx: index("assistant_doc_chunks_line_idx").on(t.lineStart, t.lineEnd),
-    chunkUniqueIdx: uniqueIndex("assistant_doc_chunks_doc_chunk_idx").on(
-      t.docId,
-      t.chunkIndex
-    ),
+    chunkUniqueIdx: uniqueIndex("assistant_doc_chunks_doc_chunk_idx").on(t.docId, t.chunkIndex),
   })
 );
 
@@ -500,10 +491,7 @@ export const assistantActionUndoItems = pgTable(
   },
   (t) => ({
     executionIdx: index("assistant_action_undo_items_execution_idx").on(t.executionId),
-    resourceIdx: index("assistant_action_undo_items_resource_idx").on(
-      t.resourceType,
-      t.resourceId
-    ),
+    resourceIdx: index("assistant_action_undo_items_resource_idx").on(t.resourceType, t.resourceId),
     statusIdx: index("assistant_action_undo_items_status_idx").on(t.status),
     executionActionResourceIdx: uniqueIndex(
       "assistant_action_undo_items_execution_action_resource_idx"
@@ -665,6 +653,7 @@ export const customScreens = pgTable(
     showInSidebar: boolean("show_in_sidebar").notNull().default(false),
     sidebarLabel: text("sidebar_label"),
     schemaVersion: integer("schema_version").notNull().default(1),
+    definition: jsonb("definition"),
     blocks: jsonb("blocks").notNull().default([]),
     bindings: jsonb("bindings").notNull().default([]),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -672,9 +661,7 @@ export const customScreens = pgTable(
   },
   (t) => ({
     nameIdx: index("custom_screens_name_idx").on(t.name),
-    contentTypeIdx: index("custom_screens_content_type_id_idx").on(
-      t.contentTypeId
-    ),
+    contentTypeIdx: index("custom_screens_content_type_id_idx").on(t.contentTypeId),
     statusIdx: index("custom_screens_status_idx").on(t.status),
     sidebarIdx: index("custom_screens_sidebar_idx").on(t.showInSidebar),
     updatedAtIdx: index("custom_screens_updated_at_idx").on(t.updatedAt),
@@ -702,10 +689,7 @@ export const contentEntries = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (t) => ({
-    typeSlugIdx: uniqueIndex("content_entries_type_slug_idx").on(
-      t.typeId,
-      t.slug
-    ),
+    typeSlugIdx: uniqueIndex("content_entries_type_slug_idx").on(t.typeId, t.slug),
     authorIdx: index("content_entries_author_idx").on(t.authorId),
     statusIdx: index("content_entries_status_idx").on(t.status),
     titleIdx: index("content_entries_title_idx").on(t.title),
@@ -780,10 +764,7 @@ export const postRevisions = pgTable(
   },
   (t) => ({
     postIdIdx: index("post_revisions_post_id_idx").on(t.postId),
-    postVersionIdx: uniqueIndex("post_revisions_post_version_idx").on(
-      t.postId,
-      t.version
-    ),
+    postVersionIdx: uniqueIndex("post_revisions_post_version_idx").on(t.postId, t.version),
   })
 );
 
@@ -799,9 +780,7 @@ export const postPreviewTokens = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
-    tokenHashIdx: uniqueIndex("post_preview_tokens_token_hash_idx").on(
-      t.tokenHash
-    ),
+    tokenHashIdx: uniqueIndex("post_preview_tokens_token_hash_idx").on(t.tokenHash),
     postIdIdx: index("post_preview_tokens_post_id_idx").on(t.postId),
     expiresAtIdx: index("post_preview_tokens_expires_at_idx").on(t.expiresAt),
   })
@@ -822,14 +801,8 @@ export const contentTaxonomies = pgTable(
   },
   (t) => ({
     typeIdx: index("content_taxonomies_type_id_idx").on(t.typeId),
-    typeKindIdx: uniqueIndex("content_taxonomies_type_kind_idx").on(
-      t.typeId,
-      t.kind
-    ),
-    typeSlugIdx: uniqueIndex("content_taxonomies_type_slug_idx").on(
-      t.typeId,
-      t.slug
-    ),
+    typeKindIdx: uniqueIndex("content_taxonomies_type_kind_idx").on(t.typeId, t.kind),
+    typeSlugIdx: uniqueIndex("content_taxonomies_type_slug_idx").on(t.typeId, t.slug),
   })
 );
 
@@ -847,10 +820,7 @@ export const contentTerms = pgTable(
   },
   (t) => ({
     taxonomyIdx: index("content_terms_taxonomy_id_idx").on(t.taxonomyId),
-    taxonomySlugIdx: uniqueIndex("content_terms_taxonomy_slug_idx").on(
-      t.taxonomyId,
-      t.slug
-    ),
+    taxonomySlugIdx: uniqueIndex("content_terms_taxonomy_slug_idx").on(t.taxonomyId, t.slug),
   })
 );
 
@@ -909,10 +879,7 @@ export const seoDocuments = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (t) => ({
-    targetIdx: uniqueIndex("seo_documents_target_idx").on(
-      t.targetType,
-      t.targetId
-    ),
+    targetIdx: uniqueIndex("seo_documents_target_idx").on(t.targetType, t.targetId),
     scoreIdx: index("seo_documents_score_idx").on(t.score),
     updatedAtIdx: index("seo_documents_updated_at_idx").on(t.updatedAt),
   })
@@ -965,10 +932,7 @@ export const themeRoutes = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
-    profilePathIdx: uniqueIndex("theme_routes_profile_path_idx").on(
-      t.profileId,
-      t.path
-    ),
+    profilePathIdx: uniqueIndex("theme_routes_profile_path_idx").on(t.profileId, t.path),
     profileIdx: index("theme_routes_profile_idx").on(t.profileId),
   })
 );
@@ -1060,11 +1024,7 @@ export const menuItems = pgTable(
   (t) => ({
     menuIdIdx: index("menu_items_menu_id_idx").on(t.menuId),
     parentIdIdx: index("menu_items_parent_id_idx").on(t.parentId),
-    orderIdx: index("menu_items_order_idx").on(
-      t.menuId,
-      t.parentId,
-      t.orderIndex
-    ),
+    orderIdx: index("menu_items_order_idx").on(t.menuId, t.parentId, t.orderIndex),
   })
 );
 
@@ -1270,12 +1230,8 @@ export const solutionKitInstallRuns = pgTable(
   (t) => ({
     kitIdx: index("solution_kit_install_runs_kit_idx").on(t.kitId),
     statusIdx: index("solution_kit_install_runs_status_idx").on(t.status),
-    createdAtIdx: index("solution_kit_install_runs_created_at_idx").on(
-      t.createdAt
-    ),
-    rollbackIdx: index("solution_kit_install_runs_rollback_idx").on(
-      t.rollbackOfRunId
-    ),
+    createdAtIdx: index("solution_kit_install_runs_created_at_idx").on(t.createdAt),
+    rollbackIdx: index("solution_kit_install_runs_rollback_idx").on(t.rollbackOfRunId),
   })
 );
 
@@ -1300,10 +1256,7 @@ export const solutionKitInstallItems = pgTable(
   },
   (t) => ({
     runIdx: index("solution_kit_install_items_run_idx").on(t.runId),
-    resourceIdx: index("solution_kit_install_items_resource_idx").on(
-      t.resourceType,
-      t.resourceKey
-    ),
+    resourceIdx: index("solution_kit_install_items_resource_idx").on(t.resourceType, t.resourceKey),
     statusIdx: index("solution_kit_install_items_status_idx").on(t.status),
     runPositionIdx: uniqueIndex("solution_kit_install_items_run_position_idx").on(
       t.runId,
@@ -1459,11 +1412,7 @@ export const bookings = pgTable(
     resourceIdx: index("bookings_resource_idx").on(t.resourceId),
     statusIdx: index("bookings_status_idx").on(t.status),
     startsIdx: index("bookings_starts_idx").on(t.startsAt),
-    resourceWindowIdx: index("bookings_resource_window_idx").on(
-      t.resourceId,
-      t.startsAt,
-      t.endsAt
-    ),
+    resourceWindowIdx: index("bookings_resource_window_idx").on(t.resourceId, t.startsAt, t.endsAt),
   })
 );
 

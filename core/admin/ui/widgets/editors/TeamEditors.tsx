@@ -30,6 +30,7 @@ import {
   type TeamVariantId,
 } from "../../../../widgets/core/team";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableFieldHeader } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: TeamVariantId;
@@ -61,6 +62,7 @@ const columnsOptions: Array<{ id: TeamColumns; label: string }> = [
 ];
 
 const gapOptions: Array<{ id: TeamGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -73,9 +75,7 @@ const radiusOptions: Array<{ id: TeamRadius; label: string }> = [
   { id: "xl", label: "Extra large" },
 ];
 
-const memberCountOptions = Array.from({ length: teamMemberMax }, (_, index) =>
-  String(index + 1)
-);
+const memberCountOptions = Array.from({ length: teamMemberMax }, (_, index) => String(index + 1));
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
@@ -151,16 +151,18 @@ function ColorField({
   onChange,
   placeholder,
   pickerFallback,
+  onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
+  onClear?: () => void;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
@@ -214,6 +216,20 @@ function updateStyle(
       ...patch,
     },
   }));
+}
+
+function clearStyleField(
+  value: TeamData,
+  onChange: (next: TeamData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...style } = current.style ?? {};
+    return {
+      ...current,
+      style,
+    };
+  });
 }
 
 function updateMember(
@@ -331,11 +347,7 @@ function removeMemberSocialLink(
   });
 }
 
-function setMembersCount(
-  value: TeamData,
-  onChange: (next: TeamData) => void,
-  count: number
-) {
+function setMembersCount(value: TeamData, onChange: (next: TeamData) => void, count: number) {
   updateValue(value, onChange, (current) => ({
     ...current,
     members: normalizeTeamMembers(current.members, count),
@@ -366,11 +378,7 @@ function addMember(value: TeamData, onChange: (next: TeamData) => void) {
   });
 }
 
-function removeMember(
-  value: TeamData,
-  onChange: (next: TeamData) => void,
-  memberIndex: number
-) {
+function removeMember(value: TeamData, onChange: (next: TeamData) => void, memberIndex: number) {
   updateValue(value, onChange, (current) => {
     const members = normalizeTeamMembers(current.members);
     if (members.length <= 1) return current;
@@ -469,9 +477,7 @@ export function TeamWizardEditor({
           <Input
             key={member.id}
             value={member.name}
-            onChange={(event) =>
-              updateMember(value, onChange, index, { name: event.target.value })
-            }
+            onChange={(event) => updateMember(value, onChange, index, { name: event.target.value })}
             placeholder={`Member ${index + 1} name`}
           />
         ))}
@@ -535,9 +541,7 @@ export function TeamVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={header.description}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Introduce key people behind delivery, support, and strategy."
           />
         </div>
@@ -548,10 +552,7 @@ export function TeamVisualEditor({
         description="Manage names, roles, bios, photos, and member order."
       >
         {members.map((member, memberIndex) => (
-          <div
-            key={member.id}
-            className="space-y-3 rounded-lg border p-3"
-          >
+          <div key={member.id} className="space-y-3 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Member {memberIndex + 1}</p>
               <div className="flex gap-2">
@@ -645,10 +646,7 @@ export function TeamVisualEditor({
         {members.map((member, memberIndex) => {
           const socialLinks = normalizeTeamSocialLinks(member.socialLinks);
           return (
-            <div
-              key={`social-links-${member.id}`}
-              className="space-y-3 rounded-lg border p-3"
-            >
+            <div key={`social-links-${member.id}`} className="space-y-3 rounded-lg border p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold">
                   {member.name && member.name.trim().length > 0
@@ -678,26 +676,18 @@ export function TeamVisualEditor({
                       <Input
                         value={link.label}
                         onChange={(event) =>
-                          updateMemberSocialLink(
-                            value,
-                            onChange,
-                            memberIndex,
-                            socialIndex,
-                            { label: event.target.value }
-                          )
+                          updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+                            label: event.target.value,
+                          })
                         }
                         placeholder="LinkedIn"
                       />
                       <Input
                         value={link.url}
                         onChange={(event) =>
-                          updateMemberSocialLink(
-                            value,
-                            onChange,
-                            memberIndex,
-                            socialIndex,
-                            { url: event.target.value }
-                          )
+                          updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+                            url: event.target.value,
+                          })
                         }
                         placeholder="https://..."
                       />
@@ -728,9 +718,7 @@ export function TeamVisualEditor({
           <p className="text-sm font-medium">Columns</p>
           <Select
             value={style.columns}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { columns: next as TeamColumns })
-            }
+            onValueChange={(next) => updateStyle(value, onChange, { columns: next as TeamColumns })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select columns" />
@@ -784,6 +772,7 @@ export function TeamVisualEditor({
           label="Card background"
           value={style.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
+          onClear={() => clearStyleField(value, onChange, "cardSurface")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
@@ -791,6 +780,7 @@ export function TeamVisualEditor({
           label="Card border"
           value={style.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
+          onClear={() => clearStyleField(value, onChange, "cardBorder")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
@@ -799,10 +789,7 @@ export function TeamVisualEditor({
   );
 }
 
-export function TeamAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<TeamData>) {
+export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? teamDefaults.style!;
 
@@ -816,9 +803,7 @@ export function TeamAdvancedEditor({
           <p className="text-sm font-medium">Columns token</p>
           <Select
             value={style.columns}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { columns: next as TeamColumns })
-            }
+            onValueChange={(next) => updateStyle(value, onChange, { columns: next as TeamColumns })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select columns token" />
@@ -869,22 +854,26 @@ export function TeamAdvancedEditor({
           </Select>
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Card surface token</p>
-          <Input
+          <ClearableFieldHeader
+            label="Card surface token"
             value={style.cardSurface}
-            onChange={(event) =>
-              updateStyle(value, onChange, { cardSurface: event.target.value })
-            }
+            onClear={() => clearStyleField(value, onChange, "cardSurface")}
+          />
+          <Input
+            value={style.cardSurface ?? ""}
+            onChange={(event) => updateStyle(value, onChange, { cardSurface: event.target.value })}
             placeholder="var(--color-bg)"
           />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Card border token</p>
-          <Input
+          <ClearableFieldHeader
+            label="Card border token"
             value={style.cardBorder}
-            onChange={(event) =>
-              updateStyle(value, onChange, { cardBorder: event.target.value })
-            }
+            onClear={() => clearStyleField(value, onChange, "cardBorder")}
+          />
+          <Input
+            value={style.cardBorder ?? ""}
+            onChange={(event) => updateStyle(value, onChange, { cardBorder: event.target.value })}
             placeholder="var(--color-border)"
           />
         </div>

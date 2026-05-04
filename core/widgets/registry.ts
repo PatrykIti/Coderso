@@ -1,4 +1,4 @@
-import type { WidgetDefinition, WidgetSurface } from "./types";
+import type { WidgetBindingTarget, WidgetDefinition, WidgetSurface } from "./types";
 import { getWidgetSlotKind } from "./slots";
 import {
   listWidgetPackMatrix,
@@ -9,16 +9,21 @@ import {
 const registry = new Map<string, WidgetDefinition<any>>();
 
 const coreTypePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const pluginTypePattern =
-  /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const pluginTypePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const widgetComplexityValues = new Set(["composite", "atomic"]);
 const widgetAudienceValues = new Set(["beginner", "intermediate", "advanced"]);
 const widgetSurfaceValues = new Set<WidgetSurface>([
   "page-builder",
   "widget-library",
   "custom-screen-builder",
+  "admin-list-view",
+  "admin-editor-view",
 ]);
 const defaultWidgetSurfaces: WidgetSurface[] = ["page-builder", "widget-library"];
+const widgetDataAccessSources = new Set(["none", "selected-content-type", "selected-entry"]);
+const widgetDataAccessModes = new Set(["read", "write"]);
+const widgetBindingPathPattern = /^[a-zA-Z0-9_.-]+$/;
+const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
 
 export type ModulePackStatus = {
   module: string;
@@ -78,6 +83,73 @@ function isValidType(type: string) {
   return coreTypePattern.test(type) || pluginTypePattern.test(type);
 }
 
+function normalizeWidgetBindingTargets(
+  targets: unknown,
+  dataAccessModes: Array<"read" | "write">,
+  dataAccessSource: string | undefined
+): WidgetBindingTarget[] {
+  if (targets === undefined) {
+    return [];
+  }
+  if (dataAccessSource !== "selected-entry") {
+    throw new Error("widget_binding_targets_invalid");
+  }
+  if (!Array.isArray(targets)) {
+    throw new Error("widget_binding_targets_invalid");
+  }
+
+  const seen = new Set<string>();
+  return targets.map((target) => {
+    if (!target || typeof target !== "object" || Array.isArray(target)) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+    const record = target as Record<string, unknown>;
+
+    const propPath = typeof record.propPath === "string" ? record.propPath.trim() : "";
+    const label = typeof record.label === "string" ? record.label.trim() : "";
+    const description =
+      typeof record.description === "string" && record.description.trim()
+        ? record.description.trim()
+        : undefined;
+    if (!propPath || !label || !widgetBindingPathPattern.test(propPath)) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+    if (
+      propPath
+        .split(".")
+        .some((segment: string) => segment.length === 0 || unsafePathSegments.has(segment))
+    ) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+    if (seen.has(propPath)) {
+      throw new Error("widget_binding_targets_duplicate");
+    }
+    seen.add(propPath);
+
+    const requestedModes = Array.isArray(record.modes) ? record.modes : dataAccessModes;
+    const modes = Array.from(
+      new Set(
+        requestedModes.filter(
+          (mode: unknown): mode is "read" | "write" =>
+            typeof mode === "string" &&
+            widgetDataAccessModes.has(mode) &&
+            dataAccessModes.includes(mode as "read" | "write")
+        )
+      )
+    );
+    if (modes.length === 0) {
+      throw new Error("widget_binding_targets_invalid");
+    }
+
+    return {
+      propPath,
+      label,
+      ...(description ? { description } : {}),
+      modes,
+    };
+  });
+}
+
 export function registerWidget(def: WidgetDefinition<any>) {
   if (!def || typeof def !== "object") {
     throw new Error("widget_definition_required");
@@ -106,8 +178,7 @@ export function registerWidget(def: WidgetDefinition<any>) {
   if (typeof def.module === "string" && !def.module.trim()) {
     throw new Error("widget_module_invalid");
   }
-  const normalizedModule =
-    typeof def.module === "string" ? def.module.trim() : def.category;
+  const normalizedModule = typeof def.module === "string" ? def.module.trim() : def.category;
   if (!normalizedModule) {
     throw new Error("widget_module_invalid");
   }
@@ -116,34 +187,46 @@ export function registerWidget(def: WidgetDefinition<any>) {
       throw new Error("widget_presets_invalid");
     }
     for (const preset of def.presets) {
-      if (
-        !preset ||
-        typeof preset !== "object" ||
-        !preset.id ||
-        !preset.label
-      ) {
+      if (!preset || typeof preset !== "object" || !preset.id || !preset.label) {
         throw new Error("widget_preset_invalid");
       }
     }
   }
-  if (def.requires !== undefined && (!Array.isArray(def.requires) ||
-      def.requires.some(
-        (value) => typeof value !== "string" || !value.trim()
-      ))
+  if (
+    def.requires !== undefined &&
+    (!Array.isArray(def.requires) ||
+      def.requires.some((value) => typeof value !== "string" || !value.trim()))
   ) {
     throw new Error("widget_requires_invalid");
   }
   const normalizedSurfaces = normalizeWidgetSurfaces(def.surfaces);
+  if (def.dataAccess !== undefined) {
+    if (!def.dataAccess || typeof def.dataAccess !== "object") {
+      throw new Error("widget_data_access_invalid");
+    }
+    if (!widgetDataAccessSources.has(def.dataAccess.source)) {
+      throw new Error("widget_data_access_invalid");
+    }
+    if (
+      !Array.isArray(def.dataAccess.modes) ||
+      def.dataAccess.modes.length === 0 ||
+      def.dataAccess.modes.some((mode) => !widgetDataAccessModes.has(mode))
+    ) {
+      throw new Error("widget_data_access_invalid");
+    }
+  }
+  const normalizedBindingTargets = normalizeWidgetBindingTargets(
+    def.bindingTargets,
+    def.dataAccess?.modes ?? ["read"],
+    def.dataAccess?.source
+  );
   if (!def.schema || typeof def.schema !== "object" || Array.isArray(def.schema)) {
     throw new Error("widget_schema_invalid");
   }
   if (!def.defaults || typeof def.defaults !== "object" || Array.isArray(def.defaults)) {
     throw new Error("widget_defaults_invalid");
   }
-  if (
-    def.canHaveChildren !== undefined &&
-    typeof def.canHaveChildren !== "boolean"
-  ) {
+  if (def.canHaveChildren !== undefined && typeof def.canHaveChildren !== "boolean") {
     throw new Error("widget_children_flag_invalid");
   }
   if (def.slots !== undefined) {
@@ -202,9 +285,7 @@ export function registerWidget(def: WidgetDefinition<any>) {
       if (
         slot.allowedTypes !== undefined &&
         (!Array.isArray(slot.allowedTypes) ||
-          slot.allowedTypes.some(
-            (value) => typeof value !== "string" || !value.trim()
-          ))
+          slot.allowedTypes.some((value) => typeof value !== "string" || !value.trim()))
       ) {
         throw new Error("widget_slot_allowed_invalid");
       }
@@ -227,6 +308,13 @@ export function registerWidget(def: WidgetDefinition<any>) {
     presets: def.presets ?? [],
     requires: def.requires ?? [],
     surfaces: normalizedSurfaces,
+    dataAccess: def.dataAccess
+      ? {
+          source: def.dataAccess.source,
+          modes: Array.from(new Set(def.dataAccess.modes)),
+        }
+      : undefined,
+    bindingTargets: normalizedBindingTargets,
   });
 }
 
@@ -240,6 +328,21 @@ export function listWidgets(): WidgetDefinition<any>[] {
 
 export function listWidgetsForSurface(surface: WidgetSurface): WidgetDefinition<any>[] {
   return listWidgets().filter((widget) => widget.surfaces?.includes(surface));
+}
+
+export function listWidgetsForSurfaceContext(input: {
+  surface: WidgetSurface;
+  hasSelectedContentType?: boolean;
+}): WidgetDefinition<any>[] {
+  return listWidgetsForSurface(input.surface).filter((widget) => {
+    if (widget.dataAccess?.source === "selected-content-type") {
+      return input.hasSelectedContentType === true;
+    }
+    if (widget.dataAccess?.source === "selected-entry") {
+      return input.surface === "admin-editor-view" && input.hasSelectedContentType === true;
+    }
+    return true;
+  });
 }
 
 export function clearWidgets() {

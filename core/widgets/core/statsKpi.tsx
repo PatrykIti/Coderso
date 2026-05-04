@@ -1,10 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type StatsKpiVariantId = "cards" | "inline" | "split-highlight";
 export type StatsKpiAlignment = "start" | "center" | "end";
-export type StatsKpiSpacing = "sm" | "md" | "lg";
+export type StatsKpiSpacing = "none" | "sm" | "md" | "lg";
 
 export type StatsKpiItem = {
   id?: string;
@@ -26,6 +27,8 @@ export type StatsKpiData = {
     valueColor?: string;
     labelColor?: string;
     divider?: boolean;
+    cardBackground?: string;
+    cardBorderColor?: string;
   };
 };
 
@@ -33,12 +36,14 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const spacingClassMap: Record<StatsKpiSpacing, string> = {
+  none: "gap-0",
   sm: "gap-2",
   md: "gap-4",
   lg: "gap-6",
 };
 
 const cardsGridClassMap: Record<StatsKpiSpacing, string> = {
+  none: "gap-0",
   sm: "gap-3",
   md: "gap-4",
   lg: "gap-6",
@@ -93,10 +98,12 @@ export const statsKpiSchema = {
       additionalProperties: false,
       properties: {
         alignment: { enum: ["start", "center", "end"] },
-        spacing: { enum: ["sm", "md", "lg"] },
+        spacing: { enum: ["none", "sm", "md", "lg"] },
         valueColor: { type: "string" },
         labelColor: { type: "string" },
         divider: { type: "boolean" },
+        cardBackground: { type: "string" },
+        cardBorderColor: { type: "string" },
       },
     },
   },
@@ -143,6 +150,8 @@ export const statsKpiDefaults: StatsKpiData = {
     valueColor: "var(--color-text)",
     labelColor: "var(--color-text)",
     divider: true,
+    cardBackground: "var(--color-bg)",
+    cardBorderColor: "var(--color-border)",
   },
 };
 
@@ -160,7 +169,7 @@ const resolveStatsKpiAlignment = (value: string | undefined): StatsKpiAlignment 
 };
 
 const resolveStatsKpiSpacing = (value: string | undefined): StatsKpiSpacing => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
@@ -219,11 +228,11 @@ export function normalizeStatsKpiItems(
     const value =
       typeof base.value === "string" && base.value.trim().length > 0
         ? base.value.trim()
-        : fallbackValues[index] ?? `${index + 1}`;
+        : (fallbackValues[index] ?? `${index + 1}`);
     const label =
       typeof base.label === "string" && base.label.trim().length > 0
         ? base.label.trim()
-        : fallbackLabels[index] ?? `Metric ${index + 1}`;
+        : (fallbackLabels[index] ?? `Metric ${index + 1}`);
 
     normalized.push({
       id,
@@ -249,15 +258,22 @@ export function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
     labelColor: "var(--color-text)",
     divider: true,
   };
+  const hasStyleObject = data.style !== undefined;
+  const clearableStyle = hasStyleObject
+    ? compactObject({
+        cardBackground: resolveClearableStyleValue(data.style?.cardBackground),
+        cardBorderColor: resolveClearableStyleValue(data.style?.cardBorderColor),
+      })
+    : compactObject({
+        cardBackground: resolveClearableStyleValue(styleDefaults.cardBackground),
+        cardBorderColor: resolveClearableStyleValue(styleDefaults.cardBorderColor),
+      });
 
   return {
     ...data,
     header: {
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
-      description: resolveString(
-        data.header?.description,
-        headerDefaults.description ?? ""
-      ),
+      description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     items: normalizeStatsKpiItems(data.items),
     style: {
@@ -275,6 +291,7 @@ export function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
         typeof data.style?.divider === "boolean"
           ? data.style.divider
           : Boolean(styleDefaults.divider),
+      ...(clearableStyle ?? {}),
     },
   };
 }
@@ -286,6 +303,7 @@ function StatsKpiCard({
   labelColor,
   divider,
   variant,
+  cardStyle,
 }: {
   item: StatsKpiItem;
   index: number;
@@ -293,6 +311,7 @@ function StatsKpiCard({
   labelColor: string;
   divider: boolean;
   variant: StatsKpiVariantId;
+  cardStyle?: CSSProperties;
 }) {
   const hasDescription = (item.description ?? "").trim().length > 0;
   const hasIcon = (item.icon ?? "").trim().length > 0;
@@ -304,17 +323,16 @@ function StatsKpiCard({
           divider && index > 0 ? "border-l border-[var(--color-border)]/70" : undefined
         )
       : variant === "split-highlight" && index === 0
-        ? "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-5"
-        : "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4";
+        ? "rounded-xl border p-5"
+        : "rounded-xl border p-4";
 
-  const valueClassName =
-    variant === "split-highlight" && index === 0 ? "text-4xl" : "text-3xl";
-  const labelClassName =
-    variant === "split-highlight" && index === 0 ? "text-base" : "text-sm";
+  const valueClassName = variant === "split-highlight" && index === 0 ? "text-4xl" : "text-3xl";
+  const labelClassName = variant === "split-highlight" && index === 0 ? "text-base" : "text-sm";
 
   return (
     <article
       className={wrapperClassName}
+      style={variant === "inline" ? undefined : cardStyle}
       data-stats-kpi-item={String(index + 1)}
       data-stats-kpi-highlighted={String(variant === "split-highlight" && index === 0)}
     >
@@ -324,7 +342,10 @@ function StatsKpiCard({
             {item.icon}
           </span>
         ) : null}
-        <p className={joinClasses("font-semibold leading-none", valueClassName)} style={{ color: valueColor }}>
+        <p
+          className={joinClasses("font-semibold leading-none", valueClassName)}
+          style={{ color: valueColor }}
+        >
           {item.value}
         </p>
         <p className={joinClasses("font-medium", labelClassName)} style={{ color: labelColor }}>
@@ -338,13 +359,7 @@ function StatsKpiCard({
   );
 }
 
-export function StatsKpiBlock({
-  data,
-  variant,
-}: {
-  data: StatsKpiData;
-  variant: string;
-}) {
+export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: string }) {
   const resolvedVariant = resolveStatsKpiVariant(variant);
   const normalized = normalizeStatsKpiData(data);
   const style = normalized.style ?? statsKpiDefaults.style!;
@@ -354,6 +369,10 @@ export function StatsKpiBlock({
   const valueColor = style.valueColor ?? "var(--color-text)";
   const labelColor = style.labelColor ?? "var(--color-text)";
   const divider = Boolean(style.divider);
+  const cardStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(style.cardBackground),
+    borderColor: resolveClearableStyleValue(style.cardBorderColor),
+  });
 
   const items = normalizeStatsKpiItems(normalized.items);
 
@@ -363,16 +382,9 @@ export function StatsKpiBlock({
 
   const containerClassName =
     resolvedVariant === "cards"
-      ? joinClasses(
-          "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
-          cardsGridClassMap[spacing]
-        )
+      ? joinClasses("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4", cardsGridClassMap[spacing])
       : resolvedVariant === "inline"
-        ? joinClasses(
-            "flex flex-wrap",
-            spacingClassMap[spacing],
-            justifyClassMap[alignment]
-          )
+        ? joinClasses("flex flex-wrap", spacingClassMap[spacing], justifyClassMap[alignment])
         : joinClasses("grid grid-cols-1 lg:grid-cols-3", spacingClassMap[spacing]);
 
   const splitRest = resolvedVariant === "split-highlight" ? items.slice(1) : [];
@@ -394,9 +406,7 @@ export function StatsKpiBlock({
             </h3>
           ) : null}
           {(normalized.header?.description ?? "").trim().length > 0 ? (
-            <p className="text-sm text-[var(--color-text)]/75">
-              {normalized.header?.description}
-            </p>
+            <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>
           ) : null}
         </header>
       ) : null}
@@ -411,6 +421,7 @@ export function StatsKpiBlock({
               labelColor={labelColor}
               divider={divider}
               variant={resolvedVariant}
+              cardStyle={cardStyle}
             />
           </div>
           <div
@@ -428,6 +439,7 @@ export function StatsKpiBlock({
                 labelColor={labelColor}
                 divider={divider}
                 variant={resolvedVariant}
+                cardStyle={cardStyle}
               />
             ))}
           </div>
@@ -443,6 +455,7 @@ export function StatsKpiBlock({
               labelColor={labelColor}
               divider={divider}
               variant={resolvedVariant}
+              cardStyle={cardStyle}
             />
           ))}
         </div>

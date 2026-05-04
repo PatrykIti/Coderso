@@ -65,10 +65,38 @@ test("search box renders global mode source toggles", () => {
     />
   );
 
-  expect(html).toContain('data-global-search-form');
+  expect(html).toContain("data-global-search-form");
   expect(html).toContain('name="sources"');
   expect(html).toContain("Pages");
   expect(html).toContain("Posts");
+});
+
+test("search box cleared frame style omits listing and global shell backgrounds", () => {
+  const listingHtml = renderToString(
+    <SearchBoxBlock
+      variant="default"
+      data={normalizeSearchBoxData({
+        ...searchBoxDefaults,
+        listingQueryId: "listing-query-1",
+        style: {},
+      })}
+    />
+  );
+  expect(listingHtml).not.toContain("bg-[var(--color-bg)]/80");
+  expect(listingHtml).not.toContain("bg-[var(--color-primary)]");
+
+  const globalHtml = renderToString(
+    <SearchBoxBlock
+      variant="default"
+      data={normalizeSearchBoxData({
+        ...searchBoxDefaults,
+        mode: "global",
+        style: {},
+      })}
+    />
+  );
+  expect(globalHtml).not.toContain("bg-[var(--color-bg)]/80");
+  expect(globalHtml).not.toContain("bg-[var(--color-primary)]");
 });
 
 test("search box validator accepts resolved runtime payload", () => {
@@ -103,21 +131,13 @@ test("search box validator accepts resolved runtime payload", () => {
 
 test("search box editors render expected sections", () => {
   const wizard = renderToString(
-    <SearchBoxWizardEditor
-      value={searchBoxDefaults}
-      onChange={() => undefined}
-      variant="default"
-    />
+    <SearchBoxWizardEditor value={searchBoxDefaults} onChange={() => undefined} variant="default" />
   );
   expect(wizard).toContain("Mode");
   expect(wizard).toContain("Copy and behavior");
 
   const visual = renderToString(
-    <SearchBoxVisualEditor
-      value={searchBoxDefaults}
-      onChange={() => undefined}
-      variant="default"
-    />
+    <SearchBoxVisualEditor value={searchBoxDefaults} onChange={() => undefined} variant="default" />
   );
   expect(visual).toContain("global public search");
 

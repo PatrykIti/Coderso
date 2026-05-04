@@ -160,8 +160,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -186,10 +185,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -199,10 +195,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -212,10 +205,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -261,8 +251,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -295,9 +284,8 @@ afterEach(() => {
 });
 
 test("CompareTimeline wizard editor covers variant fallback, step expansion, track normalization, and marker toggles", async () => {
-  const { CompareTimelineWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/CompareTimelineEditors"
-  );
+  const { CompareTimelineWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -385,9 +373,8 @@ test("CompareTimeline wizard editor covers variant fallback, step expansion, tra
 });
 
 test("CompareTimeline visual editor covers highlight branching, segment editing, and style controls", async () => {
-  const { CompareTimelineVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/CompareTimelineEditors"
-  );
+  const { CompareTimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
@@ -487,12 +474,18 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
       findSelectsByOptions(markersSection as ParentNode, ["0", "1", "2", "3"])[3],
       "3"
     );
-    setInputValue(findInputsByPlaceholder(markersSection as ParentNode, "Segment label (optional)")[1], "Automation lane");
+    setInputValue(
+      findInputsByPlaceholder(markersSection as ParentNode, "Segment label (optional)")[1],
+      "Automation lane"
+    );
     clickButtonByText(markersSection as ParentNode, "Remove segment", 0);
 
     const highlightSection = findSectionByTitle(view.container, "Highlight and guide styles");
     toggleCheckbox(highlightSection?.querySelector("input[type='checkbox']"));
-    setSelectValue(findSelectByOptions(highlightSection as ParentNode, ["solid", "dashed"]), "dashed");
+    setSelectValue(
+      findSelectByOptions(highlightSection as ParentNode, ["solid", "dashed"]),
+      "dashed"
+    );
     setSelectValue(
       findSelectByOptions(highlightSection as ParentNode, ["solid", "outline", "subtle"]),
       "subtle"
@@ -516,21 +509,44 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     setInputValue(findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[1], "#203040");
     setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#334155"), "#304050");
 
-    setSelectValue(
-      findSelectByOptions(colorsSection as ParentNode, ["sm", "base", "lg"]),
-      "lg"
-    );
-    setSelectValue(
-      findSelectsByOptions(colorsSection as ParentNode, ["xs", "sm", "base"])[0],
-      "base"
-    );
-    setSelectValue(
-      findSelectsByOptions(colorsSection as ParentNode, ["xs", "sm", "base"])[1],
-      "base"
-    );
+    const trackLabelSizeSelect = findSelectByOptions(colorsSection as ParentNode, [
+      "sm",
+      "base",
+      "lg",
+    ]);
+    const smallLabelSizeSelects = findSelectsByOptions(colorsSection as ParentNode, [
+      "xs",
+      "sm",
+      "base",
+    ]);
+    expect(
+      Array.from((trackLabelSizeSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    expect(
+      Array.from((smallLabelSizeSelects[0] as HTMLSelectElement).options).map(
+        (option) => option.value
+      )
+    ).toContain("none");
+    expect(
+      Array.from((smallLabelSizeSelects[1] as HTMLSelectElement).options).map(
+        (option) => option.value
+      )
+    ).toContain("none");
+    setSelectValue(trackLabelSizeSelect, "lg");
+    setSelectValue(smallLabelSizeSelects[0], "base");
+    setSelectValue(smallLabelSizeSelects[1], "base");
 
     const spacingSection = findSectionByTitle(view.container, "Spacing and layout preview hints");
-    setSelectValue(findSelectByOptions(spacingSection as ParentNode, ["sm", "md", "lg", "xl"]), "xl");
+    const trackSpacingSelect = findSelectByOptions(spacingSection as ParentNode, [
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    expect(
+      Array.from((trackSpacingSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    setSelectValue(trackSpacingSelect, "xl");
     setSelectValue(findSelectByOptions(spacingSection as ParentNode, ["top", "bottom"]), "bottom");
 
     expect(onChangeSpy).toHaveBeenCalled();
@@ -583,9 +599,8 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
 });
 
 test("CompareTimeline advanced editor covers normalization, metadata edits, and axis count guard rails", async () => {
-  const { CompareTimelineAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/CompareTimelineEditors"
-  );
+  const { CompareTimelineAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: CompareTimelineData = {
@@ -709,12 +724,19 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
     expect(onChangeSpy).toHaveBeenCalledTimes(callsAtMinimum);
     expect(latestValue.axis.steps).toHaveLength(3);
 
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]), "xl");
+    const trackSpacingSelect = findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]);
+    expect(
+      Array.from((trackSpacingSelect as HTMLSelectElement).options).map((option) => option.value)
+    ).toContain("none");
+    setSelectValue(trackSpacingSelect, "xl");
     setSelectValue(findSelectByOptions(view.container, ["top", "bottom"]), "bottom");
     toggleCheckbox(view.container.querySelector("input[type='checkbox']"));
     setSelectValue(findSelectByOptions(view.container, ["solid", "dashed"]), "solid");
     setInputValue(findInputByPlaceholder(view.container, "step-1"), "kickoff");
-    setTextareaValue(findTextareaByPlaceholder(view.container, "Optional step description"), "Intro");
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "Optional step description"),
+      "Intro"
+    );
     setSelectValue(findSelectByOptions(view.container, ["a", "b"]), "a");
 
     expect(latestValue.layout).toEqual({ trackSpacing: "xl", labelPosition: "bottom" });
@@ -732,10 +754,8 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
 });
 
 test("CompareTimeline editors cover visual marker toggles, raw color tokens, and advanced add-step growth", async () => {
-  const {
-    CompareTimelineAdvancedEditor,
-    CompareTimelineVisualEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
+  const { CompareTimelineAdvancedEditor, CompareTimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
   let latestVisualValue: CompareTimelineData = {
     axis: {
@@ -776,12 +796,18 @@ test("CompareTimeline editors cover visual marker toggles, raw color tokens, and
     expect(latestVisualValue.tracks[1]?.markers).toEqual([0, 2]);
 
     const colorsSection = findSectionByTitle(visualView.container, "Colors and typography");
-    setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#0f172a"), "var(--track-label)");
+    setInputValue(
+      findInputByPlaceholder(colorsSection as ParentNode, "#0f172a"),
+      "var(--track-label)"
+    );
     setInputValue(
       findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[1],
       "var(--step-label)"
     );
-    setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#334155"), "muted-step-token");
+    setInputValue(
+      findInputByPlaceholder(colorsSection as ParentNode, "#334155"),
+      "muted-step-token"
+    );
 
     expect(latestVisualValue.style).toEqual(
       expect.objectContaining({

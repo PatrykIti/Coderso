@@ -44,13 +44,7 @@ vi.mock("@/components/ui/input", () => ({
     type?: string;
     [key: string]: unknown;
   }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      type={type}
-      {...props}
-    />
+    <input value={value} onChange={onChange} placeholder={placeholder} type={type} {...props} />
   ),
 }));
 
@@ -138,8 +132,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -164,10 +157,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -177,10 +167,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -190,10 +177,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -232,8 +216,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -247,11 +230,10 @@ const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
-  Array.from(container.querySelectorAll("section")).find(
-    (section) =>
-      Array.from(section.querySelectorAll("p")).some(
-        (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
-      )
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    Array.from(section.querySelectorAll("p")).some(
+      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    )
   );
 
 afterEach(() => {
@@ -305,7 +287,15 @@ test("Team wizard editor covers variant fallback, count changes, and primary mem
 
     setSelectValue(variantSelect, "spotlight");
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("spotlight");
-    expect((findSelectByOptions(view.container, ["cards", "compact-list", "spotlight"]) as HTMLSelectElement).value).toBe("spotlight");
+    expect(
+      (
+        findSelectByOptions(view.container, [
+          "cards",
+          "compact-list",
+          "spotlight",
+        ]) as HTMLSelectElement
+      ).value
+    ).toBe("spotlight");
 
     const memberCountSelect = findSelectByOptions(view.container, ["1", "12"]);
     setSelectValue(memberCountSelect, "4");
@@ -413,10 +403,7 @@ test("Team visual editor covers member structure, social link branching, and sty
     setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[0], "Ada");
     setInputValue(findInputsByPlaceholder(view.container, "Head of Product")[0], "CTO");
     setTextareaValue(
-      findTextareaByPlaceholder(
-        view.container,
-        "Short bio describing responsibilities and value."
-      ),
+      findTextareaByPlaceholder(view.container, "Short bio describing responsibilities and value."),
       "Builds release systems."
     );
     setInputValue(
@@ -437,7 +424,10 @@ test("Team visual editor covers member structure, social link branching, and sty
     expect(latestValue.members[0]?.socialLinks?.[0]?.url).toBe("#");
 
     setInputValue(findInputsByPlaceholder(view.container, "LinkedIn")[0], "GitHub");
-    setInputValue(findInputsByPlaceholder(view.container, "https://...")[0], "https://github.com/ada");
+    setInputValue(
+      findInputsByPlaceholder(view.container, "https://...")[0],
+      "https://github.com/ada"
+    );
 
     expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
       expect.objectContaining({
@@ -474,7 +464,10 @@ test("Team visual editor covers member structure, social link branching, and sty
       )?.value
     ).toBe("3");
     setSelectValue(findSelectByOptions(styleSection as ParentNode, ["1", "2", "3", "4"]), "4");
-    setSelectValue(findSelectByOptions(styleSection as ParentNode, ["sm", "md", "lg"]), "lg");
+    setSelectValue(
+      findSelectByOptions(styleSection as ParentNode, ["none", "sm", "md", "lg"]),
+      "lg"
+    );
     setSelectValue(
       findSelectByOptions(styleSection as ParentNode, ["none", "md", "lg", "xl"]),
       "xl"
@@ -568,8 +561,8 @@ test("Team advanced editor covers normalization safeguards, token updates, and r
         columns: "3",
         gap: "md",
         radius: "lg",
-        cardSurface: "var(--color-bg)",
-        cardBorder: "var(--color-border)",
+        cardSurface: undefined,
+        cardBorder: undefined,
       })
     );
     expect(latestValue.members[1]?.id).toBe("member-2");
@@ -577,7 +570,7 @@ test("Team advanced editor covers normalization safeguards, token updates, and r
     expect(latestValue.members[0]?.socialLinks?.[1]?.id).toBe("social-2");
 
     setSelectValue(findSelectByOptions(view.container, ["1", "2", "3", "4"]), "2");
-    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
     setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "var(--panel)");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "var(--edge)");
@@ -639,9 +632,9 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
 
     const membersSection = findSectionByTitle(view.container, "Members content and order");
     setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[1], "Grace");
-    const moveUpButtons = Array.from((membersSection ?? view.container).querySelectorAll("button")).filter(
-      (button) => button.textContent?.includes("Move up")
-    );
+    const moveUpButtons = Array.from(
+      (membersSection ?? view.container).querySelectorAll("button")
+    ).filter((button) => button.textContent?.includes("Move up"));
     clickElement(moveUpButtons[1]);
     expect(latestValue.members.map((member) => member.name)).toEqual(["Grace", "Ada"]);
 
@@ -656,7 +649,10 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
     );
 
     const styleSection = findSectionByTitle(view.container, "Card and layout style");
-    setInputValue(findInputByPlaceholder(styleSection as ParentNode, "var(--color-bg)"), "var(--team-surface)");
+    setInputValue(
+      findInputByPlaceholder(styleSection as ParentNode, "var(--color-bg)"),
+      "var(--team-surface)"
+    );
     setInputValue(
       findInputByPlaceholder(styleSection as ParentNode, "var(--color-border)"),
       "var(--team-border)"
@@ -674,9 +670,8 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
 });
 
 test("Team editors render sparse defaults and ignore variant changes without a handler", async () => {
-  const { TeamAdvancedEditor, TeamVisualEditor, TeamWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TeamEditors"
-  );
+  const { TeamAdvancedEditor, TeamVisualEditor, TeamWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const sparseValue: TeamData = {
     header: {},
@@ -690,16 +685,28 @@ test("Team editors render sparse defaults and ignore variant changes without a h
 
   try {
     expect(
-      (findSelectByOptions(wizardView.container, ["cards", "compact-list", "spotlight"]) as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectByOptions(wizardView.container, ["cards", "compact-list", "spotlight"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("cards");
-    expect((findSelectByOptions(wizardView.container, ["1", "12"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "1"
-    );
-    expect((findInputByPlaceholder(wizardView.container, "Member 1 name") as HTMLInputElement | null | undefined)?.value).toBe(
-      "Team Member 1"
-    );
+    expect(
+      (
+        findSelectByOptions(wizardView.container, ["1", "12"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("1");
+    expect(
+      (
+        findInputByPlaceholder(wizardView.container, "Member 1 name") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("Team Member 1");
   } finally {
     wizardView.cleanup();
   }
@@ -709,29 +716,51 @@ test("Team editors render sparse defaults and ignore variant changes without a h
   );
 
   try {
-    const structureSection = findSectionByTitle(visualView.container, "Variant and member structure");
+    const structureSection = findSectionByTitle(
+      visualView.container,
+      "Variant and member structure"
+    );
     clickButtonByText(structureSection as ParentNode, "Compact List");
 
     expect(
-      (findInputByPlaceholder(visualView.container, "Meet the team") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(visualView.container, "Meet the team") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(teamDefaults.header?.title);
     expect(
-      (findTextareaByPlaceholder(
-        visualView.container,
-        "Introduce key people behind delivery, support, and strategy."
-      ) as HTMLTextAreaElement | null | undefined)?.value
+      (
+        findTextareaByPlaceholder(
+          visualView.container,
+          "Introduce key people behind delivery, support, and strategy."
+        ) as HTMLTextAreaElement | null | undefined
+      )?.value
     ).toBe(teamDefaults.header?.description);
     expect(
-      (findInputByPlaceholder(visualView.container, "Anna Kowalska") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(visualView.container, "Anna Kowalska") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("Team Member 1");
     expect(
-      (findInputByPlaceholder(visualView.container, "Head of Product") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(visualView.container, "Head of Product") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("Role");
     expect(
-      (findTextareaByPlaceholder(
-        visualView.container,
-        "Short bio describing responsibilities and value."
-      ) as HTMLTextAreaElement | null | undefined)?.value
+      (
+        findTextareaByPlaceholder(
+          visualView.container,
+          "Short bio describing responsibilities and value."
+        ) as HTMLTextAreaElement | null | undefined
+      )?.value
     ).toBe("Short bio describing responsibilities and value.");
     expect(findSectionByTitle(visualView.container, "Social links")?.textContent).toContain(
       "No social links configured."
@@ -745,21 +774,46 @@ test("Team editors render sparse defaults and ignore variant changes without a h
   );
 
   try {
-    expect((findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "3"
-    );
-    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "md"
-    );
-    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | null | undefined)?.value).toBe(
-      "lg"
-    );
     expect(
-      (findInputByPlaceholder(advancedView.container, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value
-    ).toBe(teamDefaults.style?.cardSurface);
+      (
+        findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("3");
     expect(
-      (findInputByPlaceholder(advancedView.container, "var(--color-border)") as HTMLInputElement | null | undefined)?.value
-    ).toBe(teamDefaults.style?.cardBorder);
+      (
+        findSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("md");
+    expect(
+      (
+        findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("lg");
+    expect(
+      (
+        findInputByPlaceholder(advancedView.container, "var(--color-bg)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (
+        findInputByPlaceholder(advancedView.container, "var(--color-border)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
   } finally {
     advancedView.cleanup();
   }
@@ -781,9 +835,8 @@ test("Team editors fall back when normalized style is missing and social labels 
     };
   });
 
-  const { TeamAdvancedEditor, TeamVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TeamEditors"
-  );
+  const { TeamAdvancedEditor, TeamVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const value: TeamData = {
     members: [
@@ -805,10 +858,20 @@ test("Team editors fall back when normalized style is missing and social labels 
       "Member 1"
     );
     expect(
-      (findInputByPlaceholder(visualView.container, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(visualView.container, "var(--color-bg)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(teamDefaults.style?.cardSurface);
     expect(
-      (findInputByPlaceholder(visualView.container, "var(--color-border)") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(visualView.container, "var(--color-border)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(teamDefaults.style?.cardBorder);
   } finally {
     visualView.cleanup();
@@ -820,13 +883,28 @@ test("Team editors fall back when normalized style is missing and social labels 
 
   try {
     expect(
-      (findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("3");
     expect(
-      (findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("md");
     expect(
-      (findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("lg");
   } finally {
     advancedView.cleanup();

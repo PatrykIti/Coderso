@@ -2,6 +2,7 @@ import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 import type { WidgetBlock } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type NavigationItem = {
   label: string;
@@ -51,9 +52,9 @@ export type NavigationData = {
   behavior?: NavigationBehavior;
   layout?: {
     alignment?: "left" | "center" | "right";
-    maxWidth?: "5xl" | "6xl" | "7xl";
-    paddingY?: "2" | "3" | "4" | "5";
-    itemGap?: "2" | "3" | "4" | "6";
+    maxWidth?: "none" | "5xl" | "6xl" | "7xl";
+    paddingY?: "none" | "2" | "3" | "4" | "5";
+    itemGap?: "none" | "2" | "3" | "4" | "6";
   };
   style?: {
     textColor?: string;
@@ -65,8 +66,8 @@ export type NavigationData = {
     ctaTextColor?: string;
     ctaBackgroundColor?: string;
     ctaBorderColor?: string;
-    fontSize?: "xs" | "sm" | "base" | "lg";
-    fontWeight?: "normal" | "medium" | "semibold" | "bold";
+    fontSize?: "none" | "xs" | "sm" | "base" | "lg";
+    fontWeight?: "none" | "normal" | "medium" | "semibold" | "bold";
     textTransform?: "none" | "uppercase" | "capitalize";
   };
 };
@@ -161,7 +162,7 @@ export const navigationSchema = {
       properties: {
         label: { type: "string" },
         href: { type: "string" },
-    },
+      },
     },
     linksSource: { enum: ["manual", "menu", "pages"] },
     menuKey: { type: "string" },
@@ -181,9 +182,9 @@ export const navigationSchema = {
       additionalProperties: false,
       properties: {
         alignment: { enum: ["left", "center", "right"] },
-        maxWidth: { enum: ["5xl", "6xl", "7xl"] },
-        paddingY: { enum: ["2", "3", "4", "5"] },
-        itemGap: { enum: ["2", "3", "4", "6"] },
+        maxWidth: { enum: ["none", "5xl", "6xl", "7xl"] },
+        paddingY: { enum: ["none", "2", "3", "4", "5"] },
+        itemGap: { enum: ["none", "2", "3", "4", "6"] },
       },
     },
     style: {
@@ -199,8 +200,8 @@ export const navigationSchema = {
         ctaTextColor: { type: "string" },
         ctaBackgroundColor: { type: "string" },
         ctaBorderColor: { type: "string" },
-        fontSize: { enum: ["xs", "sm", "base", "lg"] },
-        fontWeight: { enum: ["normal", "medium", "semibold", "bold"] },
+        fontSize: { enum: ["none", "xs", "sm", "base", "lg"] },
+        fontWeight: { enum: ["none", "normal", "medium", "semibold", "bold"] },
         textTransform: { enum: ["none", "uppercase", "capitalize"] },
       },
     },
@@ -224,22 +225,28 @@ export const navigationDefaults: NavigationData = {
     hideCtaOnMobile: false,
   },
   layout: { alignment: "right", maxWidth: "6xl", paddingY: "4", itemGap: "4" },
-  style: {},
+  style: {
+    surfaceColor: "var(--color-bg)",
+    ctaBackgroundColor: "var(--color-primary)",
+    ctaTextColor: "var(--color-bg)",
+    ctaBorderColor: "transparent",
+  },
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const variantSupportsCta = (variant: string) =>
-  variant === "with-cta" || variant === "split";
+const variantSupportsCta = (variant: string) => variant === "with-cta" || variant === "split";
 
 const maxWidthClassMap = {
+  none: "",
   "5xl": "max-w-5xl",
   "6xl": "max-w-6xl",
   "7xl": "max-w-7xl",
 } as const;
 
 const paddingYClassMap = {
+  none: "py-0",
   "2": "py-2",
   "3": "py-3",
   "4": "py-4",
@@ -247,6 +254,7 @@ const paddingYClassMap = {
 } as const;
 
 const itemGapClassMap = {
+  none: "gap-0",
   "2": "gap-2",
   "3": "gap-3",
   "4": "gap-4",
@@ -254,6 +262,7 @@ const itemGapClassMap = {
 } as const;
 
 const fontSizeClassMap = {
+  none: "",
   xs: "text-xs",
   sm: "text-sm",
   base: "text-base",
@@ -261,6 +270,7 @@ const fontSizeClassMap = {
 } as const;
 
 const fontWeightClassMap = {
+  none: "",
   normal: "font-normal",
   medium: "font-medium",
   semibold: "font-semibold",
@@ -294,7 +304,8 @@ export function NavigationBlock({
   const showCta = variantSupportsCta(variant);
   const splitLayout = variant === "split";
   const linksSource = data.linksSource ?? "manual";
-  const resolvedAlignment = data.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
+  const resolvedAlignment =
+    data.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
   const alignmentClass =
     resolvedAlignment === "center"
       ? "justify-center"
@@ -311,17 +322,18 @@ export function NavigationBlock({
   const rightSlotBlocks = slots?.right ?? [];
   const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && data.cta);
   const borderWidth = style.borderWidth ?? "1";
-  const navStyle: CSSProperties = {
-    backgroundColor: behavior.transparent
-      ? "transparent"
-      : style.surfaceColor ?? "var(--color-bg)",
-    borderColor: behavior.transparent
-      ? "transparent"
-      : style.borderColor ?? "var(--color-border)",
-    borderBottomStyle: "solid",
-    borderBottomWidth: borderWidthValueMap[borderWidth] ?? "1px",
-    color: style.textColor ?? "var(--color-text)",
-  };
+  const navStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: behavior.transparent
+        ? "transparent"
+        : resolveClearableStyleValue(style.surfaceColor),
+      borderColor: behavior.transparent
+        ? "transparent"
+        : (style.borderColor ?? "var(--color-border)"),
+      borderBottomStyle: "solid",
+      borderBottomWidth: borderWidthValueMap[borderWidth] ?? "1px",
+      color: style.textColor ?? "var(--color-text)",
+    }) ?? {};
 
   const logoStyle: CSSProperties =
     data.logo.type === "text"
@@ -332,18 +344,19 @@ export function NavigationBlock({
     color: style.linkColor ?? style.textColor ?? "var(--color-text)",
   };
 
-  const ctaStyle: CSSProperties = {
-    background: style.ctaBackgroundColor ?? "var(--color-primary)",
-    color: style.ctaTextColor ?? "var(--color-bg)",
-    borderColor: style.ctaBorderColor ?? "transparent",
-    borderStyle: "solid",
-    borderWidth:
-      style.ctaBorderColor &&
-      style.ctaBorderColor !== "transparent" &&
-      style.ctaBorderColor !== ""
-        ? "1px"
-        : "0px",
-  };
+  const ctaStyle: CSSProperties =
+    compactStyle({
+      background: resolveClearableStyleValue(style.ctaBackgroundColor),
+      color: style.ctaTextColor ?? "var(--color-bg)",
+      borderColor: style.ctaBorderColor ?? "transparent",
+      borderStyle: "solid",
+      borderWidth:
+        style.ctaBorderColor &&
+        style.ctaBorderColor !== "transparent" &&
+        style.ctaBorderColor !== ""
+          ? "1px"
+          : "0px",
+    }) ?? {};
 
   const navClass = joinClasses(
     "w-full px-6",
@@ -422,11 +435,7 @@ export function NavigationBlock({
               </button>
             ) : null}
             {rightSlotBlocks.map((slotBlock) => (
-              <WidgetRenderer
-                key={slotBlock.id}
-                block={slotBlock}
-                previewDevice={previewDevice}
-              />
+              <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
             ))}
             {showCta && data.cta ? (
               <a

@@ -1,11 +1,6 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 
-export type WidgetCategory =
-  | "layout"
-  | "content"
-  | "forms"
-  | "navigation"
-  | "media";
+export type WidgetCategory = "layout" | "content" | "forms" | "navigation" | "media";
 
 export type WidgetComplexity = "composite" | "atomic";
 
@@ -13,7 +8,21 @@ export type WidgetAudience = "beginner" | "intermediate" | "advanced";
 export type WidgetSurface =
   | "page-builder"
   | "widget-library"
-  | "custom-screen-builder";
+  | "custom-screen-builder"
+  | "admin-list-view"
+  | "admin-editor-view";
+
+export type WidgetDataAccess = {
+  source: "none" | "selected-content-type" | "selected-entry";
+  modes: Array<"read" | "write">;
+};
+
+export type WidgetBindingTarget = {
+  propPath: string;
+  label: string;
+  description?: string;
+  modes?: Array<"read" | "write">;
+};
 
 export type WidgetPreset = {
   id: string;
@@ -41,6 +50,13 @@ export type WidgetEditorProps<T> = {
   onChange: (next: T) => void;
   variant: string;
   onVariantChange?: (next: string) => void;
+  context?: WidgetEditorContext;
+};
+
+export type WidgetEditorContext = {
+  surface: WidgetSurface;
+  jumpToBindingPropPath?: (propPath: string) => void;
+  getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
 };
 
 export type WidgetEditorCapabilities = {
@@ -58,6 +74,8 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   presets?: WidgetPreset[];
   requires?: string[];
   surfaces?: WidgetSurface[];
+  dataAccess?: WidgetDataAccess;
+  bindingTargets?: WidgetBindingTarget[];
   canHaveChildren?: boolean;
   slots?: WidgetSlotDefinition[];
   variants: WidgetVariant[];
@@ -76,19 +94,12 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     previewDevice?: DeviceTarget;
     pageDefaults?: WidgetLayoutDefaults;
     blockId?: string;
+    renderBlock?: (block: WidgetBlock) => ReactNode;
   }>;
 };
 
 export const containerTokens = ["default", "narrow", "full"] as const;
-export const spacingTokens = [
-  "none",
-  "xs",
-  "sm",
-  "md",
-  "lg",
-  "xl",
-  "2xl",
-] as const;
+export const spacingTokens = ["none", "xs", "sm", "md", "lg", "xl", "2xl"] as const;
 
 export type ContainerToken = (typeof containerTokens)[number];
 export type SpacingToken = (typeof spacingTokens)[number];

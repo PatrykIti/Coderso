@@ -24,9 +24,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubEditor: ComponentType<WidgetEditorProps<TestimonialsData>> = () => null;
 
 test("testimonials renders defaults", () => {
-  const html = renderToString(
-    <TestimonialsBlock data={testimonialsDefaults} variant="grid" />
-  );
+  const html = renderToString(<TestimonialsBlock data={testimonialsDefaults} variant="grid" />);
 
   expect(html).toContain(testimonialsDefaults.header?.title ?? "");
   expect(html).toContain('data-testimonials-variant="grid"');
@@ -108,6 +106,20 @@ test("testimonials validator accepts expanded model", () => {
   ).not.toThrow();
 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("testimonials cleared card surfaces omit background and border color styles", () => {
+  const normalized = normalizeTestimonialsData({
+    ...testimonialsDefaults,
+    style: {},
+  });
+  const html = renderToString(<TestimonialsBlock data={normalized} variant="grid" />);
+
+  expect(normalized.style?.cardSurface).toBeUndefined();
+  expect(normalized.style?.cardBorder).toBeUndefined();
+  expect(html).toContain('data-testimonials-variant="grid"');
+  expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
 });
 
 test("testimonials validator rejects invalid variant", () => {

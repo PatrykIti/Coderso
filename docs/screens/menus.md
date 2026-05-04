@@ -22,11 +22,13 @@ two connected screens:
 
 In the current UI, the Menus experience includes:
 
-- a list-first screen with `Refresh`, `New Menu`, and one row per menu,
+- a list-first screen with `New`, filters, selection, lifecycle actions, and
+  one row per menu,
 - an editor route that opens only after you choose a menu from the list,
-- save state controls such as `All changes saved`, `Discard`, and
-  `Save changes`,
-- menu-level fields for `Location` and `Menu name`,
+- save state controls such as `Unsaved changes`, `Discard`, and `Save changes`,
+- lifecycle controls such as `Draft`, `Published`, `Publish`, and
+  `Move to Draft`,
+- menu-level fields for `Theme location` and `Menu name`,
 - a `Menu Structure` area for hierarchy editing,
 - a create dialog for new menus,
 - an item-details workflow for editing one selected menu item,
@@ -47,15 +49,24 @@ The Menus experience is easiest to understand as five connected workflows:
 - menu-level editing:
   update location and menu name on the selected menu
 - structure editing:
-  add items, reorder them, and build parent/child hierarchy
+  add items, reorder them with row-level before/after feedback, and build
+  parent/child hierarchy
 - item-level editing:
   define what each link points to and when it should appear
 
 The editor also exposes a clear save model:
 
-- `All changes saved` when nothing is pending
+- status badges such as `Draft` and `Published` in the main admin header
+- `Unsaved changes` in the main admin header only when local edits are pending
 - `Discard` when you want to throw away unsaved changes
 - `Save changes` when you want to persist the current editor state
+- `Publish` when a draft menu should become available to runtime navigation
+- `Move to Draft` when a published menu should be hidden from runtime
+  navigation
+
+Publishing from the editor saves valid metadata and item changes first, then
+switches the menu to `Published`. Runtime navigation only uses published menus
+with usable items.
 
 # Instruction
 
@@ -65,7 +76,7 @@ The editor also exposes a clear save model:
    - which menus already exist,
    - which one you want to edit,
    - whether you need a brand-new menu instead.
-3. If you need a new menu, click `New Menu`.
+3. If you need a new menu, click `New`.
 4. In the create dialog, fill the fields in this order:
    - `Menu name`
    - `Location (optional)`
@@ -73,18 +84,24 @@ The editor also exposes a clear save model:
 6. Open the chosen menu from the list when you are ready to edit it.
 7. In the editor header, confirm:
    - you are editing the correct menu,
-   - whether the page says `All changes saved`,
-   - whether `Discard` and `Save changes` are available.
+   - whether the menu is `Draft` or `Published`,
+   - whether `Unsaved changes` is already shown,
+   - whether `Discard`, `Save changes`, and `Publish` or `Move to Draft` are
+     available.
 8. Review the menu-level fields before touching the structure:
-   - `Location`
+   - `Theme location`
    - `Menu name`
-9. Use `Location` for the theme slot identifier the frontend expects, for
-   example `primary` or `footer`.
+9. Use `Theme location` for the theme slot identifier the frontend expects, for
+   example `primary` or `footer`. Leave it empty for menus that are not mounted
+   in a theme slot yet.
 10. Scroll to `Menu Structure`.
 11. Use `Add Item` when you need a new link.
-12. Reorder items in the structure area by dragging the handle:
-    - up or down to reorder,
-    - slightly right to create a sub-menu.
+12. Reorder items in the structure area by dragging the grip handle:
+    - drop near the top of a row to place before that item,
+    - drop through the middle of a row to create a sub-menu,
+    - drop near the bottom of a row to place after that item,
+    - use the row indicators as the only drag feedback; the editor does not show
+      separate top-level drop banners while dragging.
 13. Select an existing item when you need to edit its details.
 14. In item settings, work top to bottom:
     - `Navigation Label`
@@ -112,10 +129,15 @@ The editor also exposes a clear save model:
     removed from the current draft menu.
 20. Click `Save changes` after updating menu metadata, structure, or item
     settings.
-21. Use `Discard` only when you intentionally want to throw away the unsaved
+21. Click `Publish` when the current valid menu should become available to
+    runtime navigation. The editor saves valid pending changes first.
+22. Click `Move to Draft` when a published menu should stop powering runtime
+    navigation while you revise it.
+23. Use `Discard` only when you intentionally want to throw away the unsaved
     state.
-22. Use `Refresh` when the menu changed elsewhere and you want the latest
-    server state.
+24. Use the contextual `Refresh` action only when the editor warns that the
+    same menu changed elsewhere and you intentionally want the latest server
+    state.
 
 Use this safe working order when you want the fewest mistakes:
 
@@ -124,6 +146,7 @@ Use this safe working order when you want the fewest mistakes:
 3. Build the hierarchy.
 4. Edit item details one item at a time.
 5. Save changes.
+6. Publish only after the menu structure and theme location are intentional.
 
 # Advanced
 
@@ -138,6 +161,8 @@ Use this safe working order when you want the fewest mistakes:
 - `Location` is operational metadata for theme mapping. Use consistent location
   names across environments instead of inventing similar labels for the same
   purpose.
+- A draft menu can have a location, but runtime navigation ignores it until the
+  menu is published.
 - `Visibility` is more than presentation polish. It changes who can discover a
   path through navigation.
 - Badge, description, and icon fields are optional enrichments. Only use them
@@ -146,13 +171,14 @@ Use this safe working order when you want the fewest mistakes:
   trees. Review the final structure as a user journey, not just as a technical
   nesting exercise.
 - The editor can surface remote updates without overwriting your unsaved draft.
-  Refresh intentionally when another tab changed the same menu.
+  Refresh intentionally only from that warning state when another tab changed
+  the same menu.
 
 # Troubleshooting
 
 - Menus appears to be stuck on loading:
-  use `Refresh` on the list or in the editor and confirm the current menu still
-  exists.
+  return to the Menus list, choose the menu again, and confirm the current menu
+  still exists.
 - You cannot find the menu you expected:
   return to the Menus list and confirm it was created successfully.
 - You cannot create a page-linked item:
@@ -166,7 +192,7 @@ Use this safe working order when you want the fewest mistakes:
   use `Save changes`; item edits alone do not finish the workflow.
 - A menu looks correct but is not appearing where expected:
   review the menu `Location` value and the theme/runtime mapping that consumes
-  it.
+  it, then confirm the menu is `Published`.
 - You want to remove an item but are unsure whether children will be affected:
   open delete intentionally and read the confirmation dialog before continuing.
 
@@ -189,17 +215,21 @@ Use this safe working order when you want the fewest mistakes:
 - Choose `Discard` vs `Save changes`:
   discard only when you intentionally want to revert; save when the current menu
   state should become the source of truth.
+- Choose `Save changes` vs `Publish`:
+  save when you want to keep working in the admin editor; publish when the
+  current valid menu should power runtime navigation.
 
 # Checklist
 
 1. Confirm you opened the correct menu from the list.
-2. Confirm menu `Location` and `Menu name` are correct.
+2. Confirm menu `Theme location` and `Menu name` are correct.
 3. Confirm top-level and nested item hierarchy matches user journeys.
 4. Confirm each item points to the correct page or custom URL.
 5. Confirm `Visibility` rules are intentional.
 6. Confirm optional badge/description/icon metadata is actually needed.
 7. Click `Save changes`.
-8. Re-check the saved structure before leaving the editor.
+8. Click `Publish` if the menu should be used by runtime navigation.
+9. Re-check the saved structure before leaving the editor.
 
 # Security
 

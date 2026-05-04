@@ -150,8 +150,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -176,10 +175,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -189,10 +185,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -202,10 +195,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -244,8 +234,7 @@ const getInputsByPlaceholder = (container: ParentNode, placeholder: string) => {
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
   if (!(textarea instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea with placeholder "${placeholder}"`);
@@ -350,9 +339,8 @@ afterEach(() => {
 });
 
 test("CtaBanner wizard covers variant fallback and nested CTA normalization", async () => {
-  const { CtaBannerWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/CtaBannerEditors"
-  );
+  const { CtaBannerWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
   const initialValue: CtaBannerData = {
     content: {},
@@ -411,9 +399,8 @@ test("CtaBanner wizard covers variant fallback and nested CTA normalization", as
 });
 
 test("CtaBanner visual covers variant cards, picker fallbacks, action updates, and style selects", async () => {
-  const { CtaBannerVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/CtaBannerEditors"
-  );
+  const { CtaBannerVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
   const initialValue: CtaBannerData = {
     content: {
@@ -457,12 +444,13 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
       "#1d4ed8",
       "#ffffff",
       "#0f172a",
+      "#ffffff",
       "#e2e8f0",
     ]);
 
     const borderWidthSelect = getSelectByOptions(spacingSection, ["0", "1", "2", "3"]);
     const radiusSelect = getSelectByOptions(spacingSection, ["none", "md", "lg", "xl", "2xl"]);
-    const paddingSelect = getSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]);
+    const paddingSelect = getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]);
 
     expect(borderWidthSelect.value).toBe("1");
     expect(radiusSelect.value).toBe("xl");
@@ -535,9 +523,8 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
 });
 
 test("CtaBanner advanced covers raw token updates, normalize now, reset to defaults, and payload snapshot", async () => {
-  const { CtaBannerAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/CtaBannerEditors"
-  );
+  const { CtaBannerAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
   const initialValue: CtaBannerData = {
     content: {
@@ -618,7 +605,9 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
     const snapshotAfterNormalize = container.querySelector("pre")?.textContent ?? "";
     expect(snapshotAfterNormalize).toContain('"title": "Ready to launch your next campaign?"');
     expect(snapshotAfterNormalize).toContain('"borderWidth": "1"');
-    expect(snapshotAfterNormalize).toContain('"secondaryButtonBorder": "var(--cta-secondary-border)"');
+    expect(snapshotAfterNormalize).toContain(
+      '"secondaryButtonBorder": "var(--cta-secondary-border)"'
+    );
 
     clickButton(getButtonsByText(container, "Reset to defaults")[0]);
 
@@ -644,11 +633,8 @@ test("CtaBanner editors render defensive empty and default fallbacks for sparse 
     style: {},
   });
 
-  const {
-    CtaBannerWizardEditor,
-    CtaBannerVisualEditor,
-    CtaBannerAdvancedEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
+  const { CtaBannerWizardEditor, CtaBannerVisualEditor, CtaBannerAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
   const wizardMount = mount(
     <CtaBannerWizardEditor
@@ -691,9 +677,10 @@ test("CtaBanner editors render defensive empty and default fallbacks for sparse 
     ).toBe("");
     expect(getInputByPlaceholder(visualMount.container, "Get started").value).toBe("");
     expect(getInputByPlaceholder(visualMount.container, "Contact sales").value).toBe("");
-    expect(getInputsByPlaceholder(visualMount.container, "#").map((input) => input.value)).toEqual(
-      ["", ""]
-    );
+    expect(getInputsByPlaceholder(visualMount.container, "#").map((input) => input.value)).toEqual([
+      "",
+      "",
+    ]);
 
     expect(
       getInputsByPlaceholder(colorsSection, "var(--color-surface)").map((input) => input.value)
@@ -704,12 +691,12 @@ test("CtaBanner editors render defensive empty and default fallbacks for sparse 
     expect(
       getInputsByPlaceholder(colorsSection, "var(--color-primary)").map((input) => input.value)
     ).toEqual(["", ""]);
-    expect(getInputsByPlaceholder(colorsSection, "var(--color-bg)").map((input) => input.value)).toEqual(
-      ["", ""]
-    );
-    expect(getInputsByPlaceholder(spacingSection, "var(--color-border)").map((input) => input.value)).toEqual(
-      [""]
-    );
+    expect(
+      getInputsByPlaceholder(colorsSection, "var(--color-bg)").map((input) => input.value)
+    ).toEqual(["", ""]);
+    expect(
+      getInputsByPlaceholder(spacingSection, "var(--color-border)").map((input) => input.value)
+    ).toEqual([""]);
 
     expect(getColorInputs(visualMount.container).map((input) => input.value)).toEqual([
       "#f8fafc",
@@ -719,19 +706,20 @@ test("CtaBanner editors render defensive empty and default fallbacks for sparse 
       "#1d4ed8",
       "#ffffff",
       "#0f172a",
+      "#ffffff",
       "#e2e8f0",
     ]);
 
     expect(getSelectByOptions(spacingSection, ["0", "1", "2", "3"]).value).toBe("1");
-    expect(getSelectByOptions(spacingSection, ["none", "md", "lg", "xl", "2xl"]).value).toBe(
-      "xl"
-    );
-    expect(getSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]).value).toBe("md");
+    expect(getSelectByOptions(spacingSection, ["none", "md", "lg", "xl", "2xl"]).value).toBe("xl");
+    expect(getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
   } finally {
     visualMount.cleanup();
   }
 
-  const advancedMount = mount(<CtaBannerAdvancedEditor value={{}} onChange={vi.fn()} variant="centered" />);
+  const advancedMount = mount(
+    <CtaBannerAdvancedEditor value={{}} onChange={vi.fn()} variant="centered" />
+  );
 
   try {
     expect(getInputByPlaceholder(advancedMount.container, "background token").value).toBe("");

@@ -4,10 +4,7 @@ import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  newsletterDefaults,
-  type NewsletterData,
-} from "../../../core/widgets/core/newsletter";
+import { newsletterDefaults, type NewsletterData } from "../../../core/widgets/core/newsletter";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -169,8 +166,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -195,10 +191,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -208,10 +201,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -221,10 +211,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -247,24 +234,15 @@ const clickButton = (element: Element | null | undefined) => {
   });
 };
 
-const findInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const findInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = Array.from(container.querySelectorAll("input")).filter(
     (element) =>
-      element instanceof HTMLInputElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   )[index];
   return input instanceof HTMLInputElement ? input : undefined;
 };
 
-const getInputByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const getInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = findInputByPlaceholder(container, placeholder, index);
   if (!(input instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
@@ -272,15 +250,10 @@ const getInputByPlaceholder = (
   return input;
 };
 
-const getTextareaByPlaceholder = (
-  container: ParentNode,
-  placeholder: string,
-  index = 0
-) => {
+const getTextareaByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).filter(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   )[index];
   if (!(textarea instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea with placeholder "${placeholder}" (${index})`);
@@ -385,25 +358,18 @@ afterEach(() => {
 });
 
 test("Newsletter wizard editor covers variant fallback, submit normalization, and consent branching", async () => {
-  const { NewsletterWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NewsletterEditors"
-  );
+  const { NewsletterWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
-  const {
-    cleanup,
-    container,
-    getLatestValue,
-    getLatestVariant,
-    onChangeSpy,
-    onVariantChangeSpy,
-  } = mountNewsletterHarness({
-    initialValue: {
-      submit: { label: "" },
-      consent: { enabled: false },
-    },
-    initialVariant: "legacy-newsletter",
-    render: (props) => <NewsletterWizardEditor {...props} />,
-  });
+  const { cleanup, container, getLatestValue, getLatestVariant, onChangeSpy, onVariantChangeSpy } =
+    mountNewsletterHarness({
+      initialValue: {
+        submit: { label: "" },
+        consent: { enabled: false },
+      },
+      initialVariant: "legacy-newsletter",
+      render: (props) => <NewsletterWizardEditor {...props} />,
+    });
 
   try {
     const variantSelect = getSelectByOptions(container, ["inline", "stacked", "minimal"]);
@@ -449,41 +415,35 @@ test("Newsletter wizard editor covers variant fallback, submit normalization, an
 });
 
 test("Newsletter visual editor covers variant cards, consent gates, integration switching, and color fallback", async () => {
-  const { NewsletterVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NewsletterEditors"
-  );
+  const { NewsletterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
-  const {
-    cleanup,
-    container,
-    getLatestValue,
-    getLatestVariant,
-    onChangeSpy,
-  } = mountNewsletterHarness({
-    initialValue: {
-      title: "Campaign updates",
-      description: "Weekly launch notes.",
-      placeholder: "team@example.com",
-      consent: {
-        enabled: true,
-        label: "Legacy opt-in",
+  const { cleanup, container, getLatestValue, getLatestVariant, onChangeSpy } =
+    mountNewsletterHarness({
+      initialValue: {
+        title: "Campaign updates",
+        description: "Weekly launch notes.",
+        placeholder: "team@example.com",
+        consent: {
+          enabled: true,
+          label: "Legacy opt-in",
+        },
+        submit: {
+          label: "Stay posted",
+          successMessage: "",
+        },
+        integration: {
+          webhookId: "legacy_hook",
+        },
+        style: {
+          spacing: "wide" as never,
+          alignment: "edge" as never,
+          background: "transparent",
+        },
       },
-      submit: {
-        label: "Stay posted",
-        successMessage: "",
-      },
-      integration: {
-        webhookId: "legacy_hook",
-      },
-      style: {
-        spacing: "wide" as never,
-        alignment: "edge" as never,
-        background: "transparent",
-      },
-    },
-    initialVariant: "legacy-variant",
-    render: (props) => <NewsletterVisualEditor {...props} />,
-  });
+      initialVariant: "legacy-variant",
+      render: (props) => <NewsletterVisualEditor {...props} />,
+    });
 
   try {
     const variantSection = getSectionByTitle(container, "Variant and form structure");
@@ -494,10 +454,7 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
     expect(getLatestVariant()).toBe("minimal");
 
     const contentSection = getSectionByTitle(container, "Content and copy");
-    setInputValue(
-      getInputByPlaceholder(contentSection, "Join our newsletter"),
-      "Launch notes"
-    );
+    setInputValue(getInputByPlaceholder(contentSection, "Join our newsletter"), "Launch notes");
     setTextareaValue(
       getTextareaByPlaceholder(contentSection, "Short supporting line"),
       "Monthly digest for operators."
@@ -548,12 +505,11 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
     expect(getInputByPlaceholder(integrationSection, "webhook_newsletter_signup").value).toBe(
       "legacy_hook"
     );
-    expect(findInputByPlaceholder(integrationSection, "https://example.com/subscribe")).toBeUndefined();
+    expect(
+      findInputByPlaceholder(integrationSection, "https://example.com/subscribe")
+    ).toBeUndefined();
 
-    const integrationSelect = getSelectByOptions(integrationSection, [
-      "action-url",
-      "webhook",
-    ]);
+    const integrationSelect = getSelectByOptions(integrationSection, ["action-url", "webhook"]);
     expect(integrationSelect.value).toBe("webhook");
     setSelectValue(integrationSelect, "action-url");
     setInputValue(
@@ -584,7 +540,7 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
     expect((colorInput as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
 
     const spacingSection = getSectionByTitle(container, "Spacing and alignment");
-    const spacingSelect = getSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]);
+    const spacingSelect = getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]);
     const alignmentSelect = getSelectByOptions(spacingSection, ["start", "center", "end"]);
 
     expect(spacingSelect.value).toBe("md");
@@ -605,9 +561,8 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
 });
 
 test("Newsletter advanced editor covers fallback summary, raw integration metadata, and normalize action", async () => {
-  const { NewsletterAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/NewsletterEditors"
-  );
+  const { NewsletterAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
   const { cleanup, container, getLatestValue, onChangeSpy } = mountNewsletterHarness({
     initialValue: {
@@ -633,7 +588,7 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
     );
 
     const layoutSection = getSectionByTitle(container, "Layout tokens");
-    const spacingSelect = getSelectByOptions(layoutSection, ["sm", "md", "lg", "xl"]);
+    const spacingSelect = getSelectByOptions(layoutSection, ["none", "sm", "md", "lg", "xl"]);
     const alignmentSelect = getSelectByOptions(layoutSection, ["start", "center", "end"]);
 
     expect(spacingSelect.value).toBe("md");
@@ -643,10 +598,7 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
     setSelectValue(alignmentSelect, "center");
 
     const integrationSection = getSectionByTitle(container, "Raw integration metadata");
-    const integrationSelect = getSelectByOptions(integrationSection, [
-      "action-url",
-      "webhook",
-    ]);
+    const integrationSelect = getSelectByOptions(integrationSection, ["action-url", "webhook"]);
 
     expect(integrationSelect.value).toBe("webhook");
     setSelectValue(integrationSelect, "action-url");
@@ -688,7 +640,7 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
       style: {
         spacing: "xl",
         alignment: "center",
-        background: newsletterDefaults.style?.background,
+        background: undefined,
       },
     });
     expect(normalizeText(container.textContent)).toContain(
@@ -701,11 +653,8 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
 });
 
 test("Newsletter editors render sparse defaults and ignore variant changes without a handler", async () => {
-  const {
-    NewsletterAdvancedEditor,
-    NewsletterVisualEditor,
-    NewsletterWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+  const { NewsletterAdvancedEditor, NewsletterVisualEditor, NewsletterWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
   const sparseValue: NewsletterData = {
     title: undefined,
@@ -726,14 +675,18 @@ test("Newsletter editors render sparse defaults and ignore variant changes witho
   );
 
   try {
-    const variantSelect = getSelectByOptions(wizardView.container, ["inline", "stacked", "minimal"]);
+    const variantSelect = getSelectByOptions(wizardView.container, [
+      "inline",
+      "stacked",
+      "minimal",
+    ]);
     expect(variantSelect.value).toBe("inline");
     expect(getInputByPlaceholder(wizardView.container, "Join our newsletter").value).toBe(
       newsletterDefaults.title ?? ""
     );
-    expect(
-      getTextareaByPlaceholder(wizardView.container, "Short supporting line").value
-    ).toBe(newsletterDefaults.description ?? "");
+    expect(getTextareaByPlaceholder(wizardView.container, "Short supporting line").value).toBe(
+      newsletterDefaults.description ?? ""
+    );
     setSelectValue(variantSelect, "stacked");
     expect(variantSelect.value).toBe("inline");
   } finally {
@@ -755,20 +708,20 @@ test("Newsletter editors render sparse defaults and ignore variant changes witho
     expect(getInputByPlaceholder(visualView.container, "Join our newsletter").value).toBe(
       newsletterDefaults.title ?? ""
     );
-    expect(
-      getTextareaByPlaceholder(visualView.container, "Short supporting line").value
-    ).toBe(newsletterDefaults.description ?? "");
+    expect(getTextareaByPlaceholder(visualView.container, "Short supporting line").value).toBe(
+      newsletterDefaults.description ?? ""
+    );
     expect(getInputByPlaceholder(visualView.container, "you@example.com").value).toBe(
       newsletterDefaults.placeholder ?? ""
     );
 
     const integrationSection = getSectionByTitle(visualView.container, "Integration target");
-    expect(
-      getSelectByOptions(integrationSection, ["action-url", "webhook"]).value
-    ).toBe("action-url");
-    expect(
-      getInputByPlaceholder(integrationSection, "https://example.com/subscribe").value
-    ).toBe("");
+    expect(getSelectByOptions(integrationSection, ["action-url", "webhook"]).value).toBe(
+      "action-url"
+    );
+    expect(getInputByPlaceholder(integrationSection, "https://example.com/subscribe").value).toBe(
+      ""
+    );
   } finally {
     visualView.cleanup();
   }
@@ -783,7 +736,7 @@ test("Newsletter editors render sparse defaults and ignore variant changes witho
 
   try {
     const layoutSection = getSectionByTitle(advancedView.container, "Layout tokens");
-    expect(getSelectByOptions(layoutSection, ["sm", "md", "lg", "xl"]).value).toBe("md");
+    expect(getSelectByOptions(layoutSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
     expect(getSelectByOptions(layoutSection, ["start", "center", "end"]).value).toBe("start");
   } finally {
     advancedView.cleanup();

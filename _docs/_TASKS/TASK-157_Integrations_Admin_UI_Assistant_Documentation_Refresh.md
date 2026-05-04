@@ -93,3 +93,21 @@ integration drawer, and request-new flow.
   - `core/admin/services/integrationsClient.ts`
 - No automated lint or test commands were run because this was a docs-only
   change.
+
+## Follow-up Pass (2026-05-02)
+
+- Re-audited the canonical Integrations assistant doc against the live
+  `IntegrationsPage`, drawer, request dialog, and assistant-provider links.
+- Corrected drift in `docs/screens/integrations.md` so the doc now covers:
+  - the shipped search control,
+  - single-provider encrypted secret setup,
+  - request-submit success/error behavior,
+  - secret-only masking in the drawer.
+- Hardened the page so closing and reopening the same drawer/request dialog
+  resets transient local state instead of reusing stale edits or stale errors.
+- Added behavior coverage for:
+  - catalog search and category filtering,
+  - drawer open/reopen reset,
+  - save payload trimming,
+  - request dialog submit/error/reset flow,
+  - route validation and error mapping for Integrations endpoints.

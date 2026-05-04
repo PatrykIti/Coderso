@@ -1,16 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import type { Block, WidgetDefinition } from "./types";
+import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
 
 export type WizardPanelProps = {
   widget: WidgetDefinition;
   block: Block;
   onChange: (next: Block) => void;
   onComplete: () => void;
+  editorContext?: WidgetEditorContext;
 };
 
-export function WizardPanel({ widget, block, onChange, onComplete }: WizardPanelProps) {
+export function WizardPanel({
+  widget,
+  block,
+  onChange,
+  onComplete,
+  editorContext,
+}: WizardPanelProps) {
   const Editor = widget.editor.wizard;
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
 
@@ -40,6 +47,7 @@ export function WizardPanel({ widget, block, onChange, onComplete }: WizardPanel
         onChange={(data) => onChange({ ...block, data })}
         variant={variant}
         onVariantChange={(next) => onChange({ ...block, variant: next })}
+        context={editorContext}
       />
       <p className="text-xs text-muted-foreground">
         Next you can fine-tune layout, styling, and advanced settings.

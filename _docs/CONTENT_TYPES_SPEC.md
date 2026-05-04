@@ -465,6 +465,24 @@ Nazewnictwo template’ów (type: `content`):
 - `content-detail.tsx`
 - `content.tsx` (fallback)
 
+## Admin Workspace Defaults
+
+Custom Screens workspace builder V2 can derive default `List View` and
+`Editor View` behavior from a selected content type schema:
+
+- default list columns use approved system fields plus selected schema fields
+  such as `name`, `summary`, and `projectStatus`;
+- default filters use schema-backed status/select-like fields when available;
+- create/edit drafts initialize writable `Editor View` fields from schema
+  defaults and safe type fallbacks; screens without writable bindings stay
+  read-only and must not fall back to editing the whole content type schema;
+- persisted Custom Screen definitions validate field references against the
+  selected content type schema when that context is available.
+
+The content type schema remains the source of truth. Custom Screens do not store
+their own `contentTypeId` inside `definition`; they reference the record-level
+`custom_screens.content_type_id`.
+
 ## API
 
 Admin API w `CMS_API.md`:

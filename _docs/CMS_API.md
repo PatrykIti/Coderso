@@ -566,6 +566,10 @@ Create/Update payload (summary):
 }
 ```
 
+- Pages editor preview with unsaved changes performs a client-side silent draft
+  sync through `PATCH /pages/:id` before calling this endpoint. The sync writes
+  `currentData` only; it does not update `publishedData`, so public visitors keep
+  seeing the last published version until `POST /pages/:id/publish` succeeds.
 - `ttlMinutes` is optional and remains clamped by the preview token policy.
 - `probe` is optional. When `true`, the server probes only the generated preview
   URL/origin and returns UI-safe metadata; it never accepts an arbitrary URL from
@@ -1090,7 +1094,7 @@ Public runtime safety:
 - runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
 - public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
 
-## Coderso Custom Screens (v1 foundation)
+## Coderso Custom Screens (workspace builder V3)
 
 Permissions (internal, routes in TASK-054-22-02): `content:read`, `content:write`
 
@@ -1103,56 +1107,136 @@ Custom screen payload (summary):
   "status": "draft",
   "showInSidebar": true,
   "sidebarLabel": "Katalog domow",
-  "schemaVersion": 1,
-  "blocks": [
-    {
-      "id": "section-1",
-      "type": "section",
-      "variant": "default",
-      "data": {},
-      "slots": {
-        "region-1": []
+  "schemaVersion": 3,
+  "definition": {
+    "schemaVersion": 3,
+    "listView": {
+      "columns": [
+        {
+          "id": "system-title",
+          "source": "system",
+          "field": "title",
+          "label": "Record",
+          "formatter": "text",
+          "visible": true
+        },
+        {
+          "id": "field-projectstatus",
+          "source": "field",
+          "field": "projectStatus",
+          "label": "Project status",
+          "formatter": "select",
+          "visible": true
+        }
+      ],
+      "filters": [
+        {
+          "id": "filter-projectstatus",
+          "source": "field",
+          "field": "projectStatus",
+          "label": "Project status",
+          "operator": "equals",
+          "enabled": true
+        }
+      ],
+      "defaultSort": { "field": "updatedAt", "direction": "desc" },
+      "bulkActions": {
+        "delete": true,
+        "publish": true,
+        "unpublish": true
       }
+    },
+    "editorView": {
+      "saveMode": "entry",
+      "interactionMode": "inline",
+      "blocks": [
+        {
+          "id": "field-1",
+          "type": "screen-field-value",
+          "data": {}
+        }
+      ],
+      "bindings": [
+        {
+          "id": "field-1-value",
+          "widgetId": "field-1",
+          "propPath": "value",
+          "field": "projectStatus",
+          "mode": "readwrite"
+        }
+      ]
     }
-  ],
-  "bindings": [
-    {
-      "id": "title",
-      "widgetId": "section-1",
-      "propPath": "heading.title",
-      "field": "title",
-      "mode": "readwrite"
-    }
-  ]
+  }
 }
 ```
 
 Notes:
+- `contentTypeId` pozostaje stanem rekordu `custom_screens.content_type_id`;
+  persisted `definition` odrzuca top-level `contentTypeId`.
+- `definition.schemaVersion=3` jest zrodlem prawdy dla aktywnego workspace
+  Custom Screens.
+- Legacy `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
+  `definition.editorView` oraz kompatybilnoscia dla starszych rows.
+- V1/V2 rows bez gotowego V3 payloadu sa migrowane przy odczycie do V3:
+  `listView` dostaje deterministyczne domyslne kolumny/filtry z wybranego
+  content type, a dawne `blocks`/`bindings` trafiaja do `editorView`.
+- `definition.listView` jest wlascicielem tabeli rekordow: system/field
+  columns, filters, `defaultSort`, i bulk action visibility.
+- `definition.editorView` jest wlascicielem canvasa create/edit:
+  `blocks`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
 - `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
-- builder insert library filtruje do widget surface `custom-screen-builder`; screen-only widgets nie sa zwracane przez widget library/catalog endpoints.
-- `bindings` mapuja `widgetId + propPath` do `contentType` field key.
-- `schemaVersion` jest wersjonowany (aktualnie `1`).
-- `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
+- builder insert library filtruje do admin surface `admin-editor-view`; public
+  page builder i widget library nadal uzywaja swoich powierzchni.
+- `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
+  do dozwolonych system fields.
+- Dla screen widgets kontrakt zapisuje tez widget-owned binding targets:
+  `screen-record-header` wystawia tylko read-only props
+  (`eyebrow`, `title`, `subtitle`, `description`, `badge`), a
+  `screen-field-value` pozwala na write-capable binding tylko dla `value`;
+  `label` i `helper` pozostaja read-only.
+- screen widget editor bundles nadal uzywaja wspolnego kontraktu
+  `wizard -> visual -> advanced`:
+  `wizard` ustawia wariant i glowna strukture, `visual` jest binding-aware dla
+  codziennej edycji tresci, a `advanced` trzyma alignment/tone oraz clearable
+  chrome tokens.
+- builder preview i read-only fragmenty record editora renderuja
+  `definition.editorView.blocks` przez wspolny screen-widget read bridge, wiec
+  ten sam payload blokow zasila preview dialog, nested layout widgets, i
+  readonly runtime record surface. Inline write pozostaje zachowaniem widgetow
+  takich jak `screen-field-value`, gdy `value` binding wskazuje writable field.
+- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `3`.
+- `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
+  pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
 - lista `/admin/advanced/custom-screens` wzbogaca wiersze o nazwy content type
   z `contentTypes:list`, ale nie zapisuje denormalizowanych labeli do custom
   screen record.
 - lista pokazuje status sidebar shortcut jako pochodna:
-  `active + showInSidebar` -> visible shortcut,
+  `active + showInSidebar + supportsDedicatedEditor` -> visible shortcut,
+  `active + showInSidebar + !supportsDedicatedEditor` -> requires editor setup,
   `draft + showInSidebar` -> configured after activation,
   otherwise -> not shown.
 - create drawer na liscie wysyla tylko istniejace pola create schema:
   `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`,
   `blocks`, `bindings`.
-- builder preview rozwiazuje bindings przed przekazaniem blokow do `WidgetRenderer`.
+- builder topbar uzywa `Preview`, `List View`, `Editor View`, i `Save`; aktywny
+  runtime flow nie uzywa juz `Builder / Preview`, `Open records`, ani
+  classic-editor / drawer branches.
+- `Preview` w builderze otwiera dedykowany dialog:
+  - `List View` preview pokazuje zywy widok tabeli rekordow dla aktualnej
+    konfiguracji z inline header reorder controls zachowanymi w canvasie,
+  - `Editor View` preview pokazuje widgetowy record surface w szerszym,
+    Pages-like shell i startuje od desktop frame na first open,
+  - `Editor View` preview oraz mounted builder canvas wspoldziela cached-first
+    owner nad `entries:list:<typeSlug>`; przy braku rekordow albo cold-cache
+    read failure UI pokazuje jawny schema-fallback note zamiast udawac realny
+    rekord sample data.
 - response record niesie tez derived `capabilities`:
   - `mode: "collection-only" | "dashboard" | "editor"`
   - `hasBlocks`, `hasBindings`, `hasReadableBindings`, `hasWritableBindings`
   - `supportsDedicatedPreview`, `supportsDedicatedEditor`
-- admin record workflow korzysta z `capabilities`:
-  - `collection-only` -> entries list shortcut + classic editor fallback,
-  - `dashboard` -> read-only record screen + classic editor CTA,
-  - `editor` -> dedicated screen editor with writable bound fields.
+- `capabilities` pozostaje polem diagnostycznym/readiness, ale aktywna sciezka
+  runtime dla V3 nie rozgalezia sie juz do classic editor / drawer.
 - dedicated record workflow nie dodaje nowego API `custom-screen entries`; reuse is through existing internal entry endpoints:
   - `GET /content/:type/entries`
   - `POST /content/:type/entries`
@@ -1161,6 +1245,13 @@ Notes:
 - admin UI routes for the workflow:
   - `/admin/advanced/custom-screens/:screenId/entries`
   - `/admin/advanced/custom-screens/:screenId/entries/:entryId`
+  - `/admin/advanced/custom-screens/:screenId/entries/new`
+- `New record` z records workspace zawsze otwiera
+  `/admin/advanced/custom-screens/:screenId/entries/new`; active V3 runtime nie
+  otwiera juz shared `EntryCreateDrawer`.
+- screen-owned record editor renderuje widgetowy layout jako glowny surface i
+  pozwala aktywowac widgety na canvasie, a prawy panel `Selected Element`
+  pokazuje bound field editors dla wybranego elementu.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ## Coderso Filters & Search (v2 beta)
@@ -1625,6 +1716,8 @@ Create menu payload:
 
 `status` is optional and must be `draft` or `published`. New menus default to
 `draft`; existing menus are migrated as `published` for runtime compatibility.
+`location` is a nullable theme/runtime slot key such as `primary` or `footer`;
+create payloads include the key explicitly and may set it to `null`.
 
 Update menu payload:
 
@@ -1979,6 +2072,22 @@ Entry response fields include:
 - `tags` (string[])
 - `scheduledAt` (timestamp | null)
 - `seo` (object with `title`, `description`, `canonicalUrl`, `robots`)
+
+Content entry route errors are mapped at the route boundary and remain
+machine-readable for Custom Screens, Entries, and any other internal admin
+client reusing these endpoints:
+
+- `entry_validation_failed` -> HTTP 400 with bounded `validation` details when
+  schema validation fails.
+- `entry_slug_conflict` -> HTTP 409 with `details.field = "slug"` when the UI
+  can bind the conflict to the slug input.
+- `content_type_not_found`, `entry_not_found`, `media_asset_missing`,
+  `relation_target_not_found`, and `relation_entry_missing` -> HTTP 404.
+- `media_value_invalid`, `media_type_not_allowed`, `relation_value_invalid`,
+  and `entry_duplicate_failed` -> HTTP 400. Media/relation field errors may
+  also include `details.field` so admin clients can render inline field
+  feedback without parsing backend-only messages.
+- `auth_required` -> HTTP 401.
 
 Preview response (example):
 

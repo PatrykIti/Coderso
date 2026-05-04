@@ -54,7 +54,7 @@ const directionOptions: Array<{ id: StackDirection; label: string }> = [
 
 const gapOptions = stackGapTokens.map((value) => ({
   id: value,
-  label: `Gap ${value}`,
+  label: value === "none" ? "None" : `Gap ${value}`,
 }));
 
 const alignOptions: Array<{ id: StackAlign; label: string }> = [
@@ -503,26 +503,18 @@ export function StackVisualEditor({
             </div>
             <Switch
               checked={Boolean(normalized.wrap)}
-              onCheckedChange={(checked) =>
-                updateMeta(value, variant, onChange, { wrap: checked })
-              }
+              onCheckedChange={(checked) => updateMeta(value, variant, onChange, { wrap: checked })}
             />
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Stack uses a single fixed slot: `content`.
-        </p>
+        <p className="text-xs text-muted-foreground">Stack uses a single fixed slot: `content`.</p>
       </EditorSection>
     </div>
   );
 }
 
-export function StackAdvancedEditor({
-  value,
-  onChange,
-  variant,
-}: WidgetEditorProps<StackData>) {
+export function StackAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<StackData>) {
   const normalized = normalizeValue(value, variant);
 
   return (
@@ -581,15 +573,11 @@ export function StackAdvancedEditor({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Wrap</p>
-              <p className="text-xs text-muted-foreground">
-                Technical toggle for flex-wrap.
-              </p>
+              <p className="text-xs text-muted-foreground">Technical toggle for flex-wrap.</p>
             </div>
             <Switch
               checked={Boolean(normalized.wrap)}
-              onCheckedChange={(checked) =>
-                updateMeta(value, variant, onChange, { wrap: checked })
-              }
+              onCheckedChange={(checked) => updateMeta(value, variant, onChange, { wrap: checked })}
             />
           </div>
         </div>

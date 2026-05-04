@@ -409,6 +409,9 @@ Runtime admin context:
 - `PageEditor` publishes bounded active page surface context for assistant planning: page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and unsaved-change warnings.
 - `WidgetTemplateEditorPage` publishes bounded active widget template surface context: template identity, selected block id, block id/type/path summaries, slot keys, template-section references, and template settings summary.
 - Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
+- Writable field names are derived only from widget-aware write-capable targets
+  (for example `screen-field-value.value`), so legacy fallback widgets and
+  read-only screen props do not advertise false editor capability.
 - The assistant plan route rehydrates active surface identity server-side before planning: pages through `pageService`, widget templates through `widgetTemplateService`, and custom screens through `customScreenService`; missing resources clear the active surface instead of trusting stale browser context.
 - Active page hydration also extracts and dedupes `template-section` references from the advisory surface and persisted page canvas data, then loads referenced widget template summaries through `widgetTemplateService` with bounded nested block/config keys and secret-like redaction. Page template inspection requires `widgets:read` in addition to active page `content:read`.
 - When a page edit points at a template-backed block and both page-instance and reusable-template targets are plausible, the planner returns `needs_input` instead of mutating. Explicit page-instance prompts route to `page.widget.patch`; explicit reusable-template prompts can route to `widget-template.block.patch` only when the hydrated template summary resolves exactly one supported nested block/field.
@@ -666,7 +669,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `showInSidebar`, `sidebarLabel` dla szybkich skrotow w admin nav.
 - `customScreenService` trzyma CRUD + normalizacje:
   - `blocks` sa walidowane przez widget schema + normalizer,
-  - `bindings` mapuja `widgetId + propPath` -> field key i sa wykonywane przez `bindingResolver`.
+  - `bindings` mapuja `widgetId + propPath` -> field key i sa wykonywane przez
+    `bindingResolver`,
+  - save path odrzuca unsupported write combinations dla screen widgets, wiec
+    tylko widget-owned write-capable targets licza sie do dedicated-editor
+    readiness i writable field lists.
 - Shortcut model:
   - tylko `active` screen z `showInSidebar=true` moze trafic do lewego menu,
   - skrot jest renderowany po grupie `Coderso`,
@@ -676,14 +683,20 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - screen settings,
   - widget-level bindings dla zaznaczonego bloku,
   - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
+- `Editor View` preview owner jest cached-first nad `entries:list:<typeSlug>`:
+  pierwszy cached record hydratuje i builder canvas, i preview dialog; cold
+  cache fallback pozostaje schema-shaped z jawna notka dla `no-records` albo
+  `read-failed`.
 - `Screens` nie korzysta juz z calej public/page widget library:
   - insert library filtruje do surface `custom-screen-builder`,
   - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa ukryte w `Advanced/Widgets`,
   - wspoldzielone prymitywy layoutowe musza byc jawnie dopuszczone do obu surface'ow.
 - Kazdy custom screen ma derived capabilities:
   - `collection-only`: brak dedykowanego record screen; shortcut zawęża tylko liste rekordow,
-  - `dashboard`: screen moze previewowac dane rekordu, ale edycja zostaje w classic editor,
-  - `editor`: screen ma writable bindings i moze pelnic role dedykowanego record editor.
+  - `dashboard`: screen moze previewowac dane rekordu, ale nie ma ani jednego
+    widget-aware write-capable target,
+  - `editor`: screen ma co najmniej jeden widget-aware write-capable binding i
+    moze pelnic role dedykowanego record editor.
 - Workflow rekordow custom screen korzysta z istniejacego domain `entries`, bez nowego storage:
   - list route: `/admin/advanced/custom-screens/:screenId/entries`,
   - editor route: `/admin/advanced/custom-screens/:screenId/entries/:entryId`,

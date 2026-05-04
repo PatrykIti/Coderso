@@ -97,13 +97,22 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/CONTACT.md`
 - `_docs/_WIDGETS/FAQ.md`
 - `_docs/_WIDGETS/CTA_BANNER.md`
+- `_docs/_WIDGETS/FEATURE_GRID.md`
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/TEAM.md`
+- `_docs/_WIDGETS/TESTIMONIALS.md`
+- `_docs/_WIDGETS/PRICING_PLANS.md`
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
+- `_docs/_WIDGETS/FORM_EMBED.md`
+- `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
+- `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
+- `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`
@@ -113,6 +122,52 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/DIVIDER.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
+
+---
+
+## Visual Off Tokens
+
+TASK-242 adds a consistent `none` token for off-capable visual presets. Editors
+show this value as `None`, schemas accept it only for approved visual fields, and
+renderers map it through fixed class/style maps instead of accepting arbitrary
+class names.
+
+Use `none` only for visual styling controls that can be disabled:
+
+| Token family | Widgets and fields |
+|---|---|
+| Layout gap/spacing/padding | `stack.gap.*`, `splitLayout.gap`, `gridColumns.layout.gapX/gapY`, `gridColumns.style.columnPadding`, `screenTwoColumn.gap`, `statsKpi.style.spacing`, `featureGrid.style.gap`, `contentList.style.gap`, `postsFeed.style.gap`, `galleryMosaic.style.gap`, `pricingPlans.style.spacing`, `faqAccordion.style.spacing`, `team.style.gap`, `testimonials.style.spacing`, `contact.style.spacing`, `newsletter.style.spacing`, `ctaBanner.style.padding`, `logoCloud.style.gap`, `richTextSection.style.spacing`, `timeline.layout.spacing`, `compareTimeline.layout.trackSpacing` |
+| Vertical utility rhythm | `divider.marginTop/marginBottom`, `spacer.height.desktop/tablet/mobile` |
+| Radius | `hero.style.borderRadius/mediaRadius`, `entryTeaser.style.radius`, plus existing radius fields on `section`, `ctaBanner`, `featureGrid`, `galleryMosaic`, `pricingPlans`, `team`, and `gridColumns` |
+| Width and size | `hero.layout.maxWidth/contentWidth`, `navigation.layout.maxWidth`, `footer.layout.maxWidth`, `formEmbed.layout.width`, `logoCloud.style.logoHeight`, `formEmbed.style.inputSize`, `hero.style.primaryButtonSize/secondaryButtonSize` |
+| Typography | `hero.style.headlineSize/subheadSize/bodySize`, `navigation.style.fontSize/fontWeight`, `footer.style.fontSize`, `richTextSection.style.fontScale/lineHeight`, `timeline.style.titleSize/descriptionSize`, `compareTimeline.style.trackLabelSize/stepLabelSize/segmentLabelSize` |
+
+Legacy numeric zero values remain backward compatible where they already existed
+and continue to render as zero spacing. Do not add `none` to structural choices
+such as variants, ratios, columns, spans, alignments, sources, statuses, or media
+type modes that already use `none` for content semantics.
+
+## Visual Clear Controls
+
+TASK-244 adds `Clear` actions for configured visual surface fields such as
+background colors, gradients, overlays, card surfaces, table shells, CTA button
+backgrounds, and framed custom-screen surfaces. `Clear` is an editor action, not
+a saved token. It removes the owning field from widget data so the renderer does
+not emit a forced inline style or fallback shell solely because the field was
+cleared.
+
+`Clear` is separate from TASK-242 `None` token semantics:
+
+| Action/value | Saved payload | Runtime contract |
+|---|---|---|
+| `Clear` on a surface field | property omitted from the owning object | no forced background, gradient, overlay, card, table, or panel style for that field |
+| `none` visual token | literal `none` value on approved token fields | fixed zero/empty output for spacing, size, radius, typography, or other approved token maps |
+| deliberate color value such as `transparent` | literal string chosen by the user | render the configured color because it is user-authored data, not a clear sentinel |
+
+Widget editors must remove keys for clear actions and must not serialize
+`transparent` or an empty string as an off-state sentinel. Renderers should
+normalize clearable surface values through the shared clearable-style helpers and
+compact omitted style keys before output.
 
 ---
 
@@ -127,6 +182,8 @@ Kazdy widget powinien zdefiniowac:
   - `page-builder`
   - `widget-library`
   - `custom-screen-builder`
+  - `admin-list-view`
+  - `admin-editor-view`
 
 ## Surface scoping
 
@@ -134,7 +191,9 @@ Widget registry nie jest juz jedna plaska lista dla wszystkich surface'ow.
 
 Zasady:
 - public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
-- screen-only widgets naleza do `custom-screen-builder`,
+- screen-only widgets moga nalezec do `custom-screen-builder`,
+  `admin-list-view`, i `admin-editor-view` zalezne od realnej surface
+  odpowiedzialnosci,
 - tylko jawnie dopuszczone prymitywy layoutowe moga byc wspoldzielone miedzy wszystkimi surface'ami,
 - `Advanced/Widgets` pokazuje tylko surface `widget-library`,
 - `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
@@ -170,6 +229,24 @@ Minimalny screen widget pack dla admin UI:
 - `screen-field-value`
 - `screen-field-group`
 - `screen-two-column`
+
+Current intent for that pack:
+- `screen-record-header` is a selected-entry summary surface with widget-owned
+  binding targets for `eyebrow`, `title`, `subtitle`, `description`, and
+  `badge`; those props can participate in write-capable record editing again.
+- `screen-field-value` is the record-row/card primitive that can stay read-only
+  or become inline-editable when its widget-owned `value` target points at a
+  writable field; `label` and `helper` remain read-only binding targets.
+- `screen-field-group` is the fixed-slot section wrapper for related field
+  widgets and keeps its `selected-content-type` layout contract without
+  selected-entry binding cards.
+- `screen-two-column` is the left/right layout shell for primary vs supporting
+  record content and keeps its `selected-content-type` layout contract without
+  selected-entry binding cards.
+- Detailed per-widget docs live in `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`,
+  `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`,
+  `_docs/_WIDGETS/SCREEN_FIELD_GROUP.md`, and
+  `_docs/_WIDGETS/SCREEN_TWO_COLUMN.md`.
 
 ---
 
@@ -216,7 +293,17 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
-  surfaces?: ("page-builder" | "widget-library" | "custom-screen-builder")[];
+  surfaces?: (
+    | "page-builder"
+    | "widget-library"
+    | "custom-screen-builder"
+    | "admin-list-view"
+    | "admin-editor-view"
+  )[];
+  dataAccess?: {
+    source: "none" | "selected-content-type" | "selected-entry";
+    modes: ("read" | "write")[];
+  };
   canHaveChildren?: boolean;
   slots?: {
     id: string;
@@ -241,6 +328,9 @@ type WidgetDefinition<T = Record<string, unknown>> = {
     data: T;
     variant: string;
     slots?: Record<string, WidgetBlock[]>;
+    previewDevice?: DeviceTarget;
+    pageDefaults?: WidgetLayoutDefaults;
+    blockId?: string;
   }>;
 };
 ```
@@ -265,6 +355,13 @@ type WidgetEditorProps<T> = {
   onChange: (next: T) => void;
   variant: string;
   onVariantChange?: (next: string) => void;
+  context?: WidgetEditorContext;
+};
+
+type WidgetEditorContext = {
+  surface: WidgetSurface;
+  jumpToBindingPropPath?: (propPath: string) => void;
+  getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
 };
 ```
 
@@ -332,6 +429,61 @@ Flow:
 - Dodanie widgetu tworzy blok z `defaults`.
 - Panel Wizard/Visual/Advanced renderuje `definition.editor.*`.
 - Zmiana wariantu aktualizuje `block.variant`.
+
+## Admin Widget Surfaces
+
+Widget availability is surface-scoped:
+
+- `page-builder` - public page builder canvas.
+- `widget-library` - reusable widget/template catalog.
+- `custom-screen-builder` - legacy Custom Screens surface kept for V1
+  compatibility.
+- `admin-list-view` - Custom Screens `List View` configuration surface.
+- `admin-editor-view` - Custom Screens `Editor View` canvas and screen-owned
+  inline record editing surface.
+
+Admin-only widgets may declare `dataAccess` metadata:
+
+- `source: "selected-content-type"` for widgets that need the assigned content
+  type schema.
+- `source: "selected-entry"` for widgets that read or write the active record.
+- `modes: ["read"]`, `["write"]`, or `["read", "write"]` describe the expected
+  data direction.
+- `bindingTargets` let a selected-entry widget own the prop paths surfaced in
+  Custom Screens `Data`; they define labels, descriptions, and per-prop read vs
+  write capability instead of leaving the panel to infer paths from defaults.
+- Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
+  and `screen-two-column` widgets can be reused in `admin-editor-view` for
+  screen-owned inline editing when their bindings target writable entry fields.
+
+`listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
+widgets until the current Custom Screen has a resolved content type. This keeps
+public widgets out of admin record editors and prevents schema-bound controls
+from rendering against missing context.
+
+### Screen widget editor parity
+
+The `screen-*` family now follows the same three-mode editor bundle contract as
+the mature public widgets:
+
+- `wizard` owns variant choice plus the primary structure/content fields.
+- `visual` owns the day-to-day content controls. For
+  `screen-record-header` and `screen-field-value`, Visual mode can use
+  `WidgetEditorContext` to show binding-state badges and jump directly into the
+  existing `Data` tab card for a specific `propPath`.
+- The `Data` tab renders prop-centric cards from widget-owned binding targets
+  instead of ordinal binding rows. Compatibility rows keep already-saved custom
+  prop paths visible, but only declared write-capable targets count toward
+  `supportsDedicatedEditor` and `writableBindingFields`.
+- `advanced` owns alignment, tone, spacing, and clearable chrome tokens. Clear
+  actions remove the nested style key instead of writing `transparent` or other
+  sentinel strings.
+
+Custom Screens preview and the read-only portions of the inline record editor
+reuse one shared screen-widget render bridge for nested `screen-field-group`
+and `screen-two-column` layouts. The editable record canvas can still swap a
+bound `screen-field-value` into an inline field control when the `value`
+binding targets a writable schema or system field.
 
 ---
 

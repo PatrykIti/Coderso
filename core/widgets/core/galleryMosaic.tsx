@@ -1,10 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { resolveClearableStyleValue } from "./clearableStyle";
 
 export type GalleryMosaicVariantId = "mosaic" | "uniform-grid" | "feature-left";
 export type GalleryMosaicRatio = "1:1" | "4:3" | "16:9" | "3:4";
-export type GalleryMosaicGap = "sm" | "md" | "lg";
+export type GalleryMosaicGap = "none" | "sm" | "md" | "lg";
 export type GalleryMosaicRadius = "none" | "md" | "lg" | "xl";
 export type GalleryMosaicCaptionPosition = "inside" | "below" | "hover";
 
@@ -42,6 +43,7 @@ const ratioClassMap: Record<GalleryMosaicRatio, string> = {
 };
 
 const gapClassMap: Record<GalleryMosaicGap, string> = {
+  none: "gap-0",
   sm: "gap-2",
   md: "gap-4",
   lg: "gap-6",
@@ -91,7 +93,7 @@ export const galleryMosaicSchema = {
       additionalProperties: false,
       properties: {
         ratio: { enum: ["1:1", "4:3", "16:9", "3:4"] },
-        gap: { enum: ["sm", "md", "lg"] },
+        gap: { enum: ["none", "sm", "md", "lg"] },
         radius: { enum: ["none", "md", "lg", "xl"] },
         overlay: { type: "string" },
         captionPosition: { enum: ["inside", "below", "hover"] },
@@ -160,13 +162,11 @@ const resolveGalleryMosaicRatio = (value: string | undefined): GalleryMosaicRati
 };
 
 const resolveGalleryMosaicGap = (value: string | undefined): GalleryMosaicGap => {
-  if (value === "sm" || value === "lg") return value;
+  if (value === "none" || value === "sm" || value === "lg") return value;
   return "md";
 };
 
-const resolveGalleryMosaicRadius = (
-  value: string | undefined
-): GalleryMosaicRadius => {
+const resolveGalleryMosaicRadius = (value: string | undefined): GalleryMosaicRadius => {
   if (value === "none" || value === "md" || value === "xl") return value;
   return "lg";
 };
@@ -178,9 +178,7 @@ const resolveGalleryMosaicCaptionPosition = (
   return "inside";
 };
 
-export const resolveGalleryMosaicVariant = (
-  variant: string
-): GalleryMosaicVariantId => {
+export const resolveGalleryMosaicVariant = (variant: string): GalleryMosaicVariantId => {
   if (variant === "uniform-grid" || variant === "feature-left") return variant;
   return "mosaic";
 };
@@ -238,7 +236,7 @@ export function normalizeGalleryMosaicItems(
       caption:
         typeof base.caption === "string" && base.caption.trim().length > 0
           ? base.caption.trim()
-          : fallbackCaptions[index] ?? `Media ${index + 1}`,
+          : (fallbackCaptions[index] ?? `Media ${index + 1}`),
       href: resolveOptionalString(base.href),
     });
   }
@@ -258,25 +256,22 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
     overlay: "rgba(15, 23, 42, 0.35)",
     captionPosition: "inside",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
     header: {
       title: resolveString(data.header?.title, headerDefaults.title ?? ""),
-      description: resolveString(
-        data.header?.description,
-        headerDefaults.description ?? ""
-      ),
+      description: resolveString(data.header?.description, headerDefaults.description ?? ""),
     },
     items: normalizeGalleryMosaicItems(data.items),
     style: {
       ratio: resolveGalleryMosaicRatio(data.style?.ratio),
       gap: resolveGalleryMosaicGap(data.style?.gap),
       radius: resolveGalleryMosaicRadius(data.style?.radius),
-      overlay: resolveString(
-        data.style?.overlay,
-        styleDefaults.overlay ?? "rgba(15, 23, 42, 0.35)"
-      ),
+      overlay: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.overlay)
+        : styleDefaults.overlay,
       captionPosition: resolveGalleryMosaicCaptionPosition(data.style?.captionPosition),
     },
   };
@@ -291,28 +286,24 @@ function renderCaption({
   item: GalleryMosaicItem;
   index: number;
   captionPosition: GalleryMosaicCaptionPosition;
-  overlay: string;
+  overlay: string | undefined;
 }) {
   const captionText = (item.caption ?? "").trim();
   if (!captionText) return null;
 
   if (captionPosition === "below") {
-    return (
-      <p className="mt-2 text-xs font-medium text-[var(--color-text)]/80">
-        {captionText}
-      </p>
-    );
+    return <p className="mt-2 text-xs font-medium text-[var(--color-text)]/80">{captionText}</p>;
   }
 
   return (
     <div
       className={joinClasses(
         "pointer-events-none absolute inset-x-0 bottom-0 px-3 py-2 text-xs font-medium text-white",
-        captionPosition === "hover" ? "opacity-0 transition-opacity duration-200 group-hover:opacity-100" : undefined
+        captionPosition === "hover"
+          ? "opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          : undefined
       )}
-      style={{
-        background: overlay,
-      }}
+      style={overlay ? { background: overlay } : undefined}
       data-gallery-caption-inside={String(index + 1)}
     >
       {captionText}
@@ -334,7 +325,7 @@ function GalleryCard({
   ratio: GalleryMosaicRatio;
   radius: GalleryMosaicRadius;
   captionPosition: GalleryMosaicCaptionPosition;
-  overlay: string;
+  overlay: string | undefined;
   featured?: boolean;
 }) {
   const hasVideo = typeof item.video === "string" && item.video.trim().length > 0;
@@ -405,7 +396,7 @@ export function GalleryMosaicBlock({
   const gap = resolveGalleryMosaicGap(style.gap);
   const radius = resolveGalleryMosaicRadius(style.radius);
   const captionPosition = resolveGalleryMosaicCaptionPosition(style.captionPosition);
-  const overlay = style.overlay ?? "rgba(15, 23, 42, 0.35)";
+  const overlay = resolveClearableStyleValue(style.overlay);
   const items = normalizeGalleryMosaicItems(normalized.items);
 
   const showHeader =
@@ -490,9 +481,7 @@ export function GalleryMosaicBlock({
             </h3>
           ) : null}
           {(normalized.header?.description ?? "").trim().length > 0 ? (
-            <p className="text-sm text-[var(--color-text)]/75">
-              {normalized.header?.description}
-            </p>
+            <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>
           ) : null}
         </header>
       ) : null}
@@ -502,7 +491,9 @@ export function GalleryMosaicBlock({
           <div
             key={item.id ?? `gallery-item-${index + 1}`}
             className={joinClasses(
-              resolvedVariant === "mosaic" && index === 0 ? "lg:col-span-2 lg:row-span-2" : undefined
+              resolvedVariant === "mosaic" && index === 0
+                ? "lg:col-span-2 lg:row-span-2"
+                : undefined
             )}
           >
             <GalleryCard

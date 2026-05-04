@@ -83,6 +83,59 @@ test("product gallery renders resolved cards", () => {
   expect(html).toContain('data-product-gallery-count="1"');
 });
 
+test("product gallery cleared card and empty surfaces omit backgrounds", () => {
+  const emptyHtml = renderToString(
+    <ProductGalleryBlock
+      variant="cards"
+      data={normalizeProductGalleryData({
+        ...productGalleryDefaults,
+        style: {
+          columns: "3",
+          cardStyle: "outlined",
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+  expect(emptyHtml).not.toContain("bg-[var(--color-bg)]/70");
+
+  const cardHtml = renderToString(
+    <ProductGalleryBlock
+      variant="cards"
+      data={normalizeProductGalleryData({
+        ...productGalleryDefaults,
+        style: {
+          columns: "3",
+          cardStyle: "outlined",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+  expect(cardHtml).not.toContain("bg-[var(--color-bg)]");
+});
+
 test("product gallery normalizes source defaults", () => {
   const normalized = normalizeProductGalleryData({
     source: {

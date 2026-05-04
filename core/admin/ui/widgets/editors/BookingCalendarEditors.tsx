@@ -8,6 +8,7 @@ import {
   type BookingCalendarData,
 } from "../../../../widgets/core/bookingCalendar";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const update = (
   value: BookingCalendarData,
@@ -35,6 +36,38 @@ const updateResolved = (
         ...current.resolved,
         ...patch,
       },
+    })
+  );
+};
+
+const updateStyle = (
+  value: BookingCalendarData,
+  onChange: (next: BookingCalendarData) => void,
+  patch: Partial<NonNullable<BookingCalendarData["style"]>>
+) => {
+  const current = normalizeBookingCalendarData(value);
+  onChange(
+    normalizeBookingCalendarData({
+      ...current,
+      style: {
+        ...current.style,
+        ...patch,
+      },
+    })
+  );
+};
+
+const clearStyle = (
+  value: BookingCalendarData,
+  onChange: (next: BookingCalendarData) => void,
+  key: keyof NonNullable<BookingCalendarData["style"]>
+) => {
+  const current = normalizeBookingCalendarData(value);
+  const { [key]: _removed, ...nextStyle } = current.style ?? {};
+  onChange(
+    normalizeBookingCalendarData({
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
     })
   );
 };
@@ -135,6 +168,33 @@ function CopyFields({
   );
 }
 
+function SurfaceFields({
+  value,
+  onChange,
+}: {
+  value: BookingCalendarData;
+  onChange: (next: BookingCalendarData) => void;
+}) {
+  return (
+    <Section title="Surface" description="Clear removes decorative frame styles.">
+      <ClearableInputField
+        label="Frame background"
+        value={value.style?.frameBackground}
+        onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+        onClear={() => clearStyle(value, onChange, "frameBackground")}
+        placeholder="var(--color-bg)"
+      />
+      <ClearableInputField
+        label="Frame border"
+        value={value.style?.frameBorderColor}
+        onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+        onClear={() => clearStyle(value, onChange, "frameBorderColor")}
+        placeholder="var(--color-border)"
+      />
+    </Section>
+  );
+}
+
 export function BookingCalendarWizardEditor({
   value,
   onChange,
@@ -156,6 +216,7 @@ export function BookingCalendarWizardEditor({
       </Section>
 
       <CopyFields value={normalized} onChange={onChange} />
+      <SurfaceFields value={normalized} onChange={onChange} />
 
       <Section title="Availability behavior" description="Slot loading behavior for runtime.">
         <TextField
@@ -183,6 +244,7 @@ export function BookingCalendarVisualEditor({
   return (
     <div className="space-y-4">
       <CopyFields value={normalized} onChange={onChange} />
+      <SurfaceFields value={normalized} onChange={onChange} />
 
       <Section
         title="Status messages"
@@ -237,7 +299,10 @@ export function BookingCalendarAdvancedEditor({
         />
       </Section>
 
-      <Section title="Defaults" description="Optional fallback IDs if you need deterministic selection.">
+      <Section
+        title="Defaults"
+        description="Optional fallback IDs if you need deterministic selection."
+      >
         <TextField
           label="Default service ID"
           value={normalized.defaultServiceId}
@@ -250,7 +315,10 @@ export function BookingCalendarAdvancedEditor({
         />
       </Section>
 
-      <Section title="Resolved runtime payload" description="Injected on runtime/preview by server resolver.">
+      <Section
+        title="Resolved runtime payload"
+        description="Injected on runtime/preview by server resolver."
+      >
         <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
           Services: {services.length} · Resources: {resources.length}
         </div>

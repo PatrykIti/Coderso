@@ -2,12 +2,8 @@ import type { ComponentType, CSSProperties } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type AccordionVariantId = "soft" | "bordered" | "compact";
 
@@ -149,7 +145,9 @@ export function normalizeAccordionItems(
   const count =
     typeof desiredCount === "number"
       ? normalizeCount(desiredCount)
-      : normalizeCount(source.length > 0 ? source.length : accordionDefaults.items?.length ?? accordionItemMin);
+      : normalizeCount(
+          source.length > 0 ? source.length : (accordionDefaults.items?.length ?? accordionItemMin)
+        );
 
   const used = new Set<string>();
   const normalized: NormalizedAccordionItem[] = [];
@@ -167,16 +165,15 @@ export function normalizeAccordionItems(
   return normalized;
 }
 
-export function normalizeAccordionData(
-  data: AccordionData,
-  desiredCount?: number
-): AccordionData {
+export function normalizeAccordionData(data: AccordionData, desiredCount?: number): AccordionData {
   const items = normalizeAccordionItems(data.items, desiredCount);
   const initialIdCandidate = toTrimmedString(data.options?.initiallyOpenId);
   const initiallyOpenId =
     initialIdCandidate && items.some((item) => item.id === initialIdCandidate)
       ? initialIdCandidate
-      : items[0]?.id ?? "1";
+      : (items[0]?.id ?? "1");
+
+  const hasStyleObject = data.style !== undefined;
 
   return {
     items,
@@ -185,13 +182,12 @@ export function normalizeAccordionData(
       allowMultiple:
         typeof data.options?.allowMultiple === "boolean"
           ? data.options.allowMultiple
-          : accordionDefaults.options?.allowMultiple ?? false,
+          : (accordionDefaults.options?.allowMultiple ?? false),
     },
     style: {
-      surfaceColor:
-        toTrimmedString(data.style?.surfaceColor) ??
-        accordionDefaults.style?.surfaceColor ??
-        "var(--color-surface)",
+      surfaceColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        : (accordionDefaults.style?.surfaceColor ?? "var(--color-surface)"),
       borderColor:
         toTrimmedString(data.style?.borderColor) ??
         accordionDefaults.style?.borderColor ??
@@ -265,8 +261,7 @@ export function AccordionBlock({
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
 }) {
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const resolvedItems = resolveAccordionItems(data, slotMap);
   const normalized = normalizeAccordionData(data, resolvedItems.length);
   const resolvedVariant = resolveVariant(variant);
@@ -275,10 +270,11 @@ export function AccordionBlock({
   const detailsGroupName = `nextless-accordion-${resolvedItems[0]?.instanceId ?? "group"}`;
   const style = normalized.style ?? accordionDefaults.style!;
 
-  const containerStyle: CSSProperties = {
-    borderColor: style.borderColor,
-    backgroundColor: style.surfaceColor,
-  };
+  const containerStyle: CSSProperties =
+    compactStyle({
+      borderColor: style.borderColor,
+      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+    }) ?? {};
 
   const summaryStyle: CSSProperties = {
     color: style.summaryTextColor,
@@ -309,17 +305,19 @@ export function AccordionBlock({
             <summary className={resolveSummaryClass(resolvedVariant)} style={summaryStyle}>
               {item.title}
             </summary>
-            <div className={joinClasses("space-y-4 border-t", resolvedVariant === "compact" ? "p-3" : "p-4")} style={{ borderColor: style.borderColor }}>
+            <div
+              className={joinClasses(
+                "space-y-4 border-t",
+                resolvedVariant === "compact" ? "p-3" : "p-4"
+              )}
+              style={{ borderColor: style.borderColor }}
+            >
               {item.description ? (
                 <p className="text-sm text-[var(--color-text)]/70">{item.description}</p>
               ) : null}
               {item.blocks.length > 0 ? (
                 item.blocks.map((block) => (
-                  <WidgetRenderer
-                    key={block.id}
-                    block={block}
-                    previewDevice={previewDevice}
-                  />
+                  <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
                 ))
               ) : (
                 <div className="rounded-md border border-dashed px-4 py-5 text-sm text-muted-foreground">

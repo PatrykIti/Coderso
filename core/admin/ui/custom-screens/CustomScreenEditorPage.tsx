@@ -1,5 +1,5 @@
-import { ArrowLeft, Eye, Save, Settings2, SquarePen } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Eye, Save, Settings2 } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
@@ -26,14 +21,16 @@ import {
   getCachedCustomScreen,
   getCustomScreenCached,
   updateCustomScreen,
-  type CustomScreenBinding,
   type CustomScreenRecord,
   type CustomScreenStatus,
 } from "@/services/customScreensClient";
 import {
+  normalizeCustomScreenDefinitionForRead,
+  type CustomScreenDefinition,
+} from "../../../services/customScreens/customScreenSchemas";
+import {
   getCachedContentTypes,
   listContentTypesCached,
-  type ContentSchemaProperty,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -43,15 +40,16 @@ import {
 } from "@/ui/assistant/activeSurfaceContext";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import {
-  listRegisteredScreenWidgets,
-  listRegisteredWidgets,
-} from "@/ui/widgets/registry";
+import { listRegisteredWidgets, listRegisteredWidgetsForSurface } from "@/ui/widgets/registry";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
-import { CustomScreenPreview } from "./CustomScreenPreview";
 import { FieldBindingPanel } from "./FieldBindingPanel";
+import { ListViewDesigner } from "./ListViewDesigner";
+import { ListViewCanvas } from "./ListViewCanvas";
+import { ListViewColumnInspector } from "./ListViewColumnInspector";
+import { ListViewElementLibrary } from "./ListViewElementLibrary";
+import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { BlockList } from "@/ui/pages/builder/BlockList";
@@ -69,10 +67,36 @@ import {
   type BlockPath,
 } from "@/ui/pages/builder/blockUtils";
 import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
-import type { Block } from "@/ui/pages/builder/types";
-import type { ContentField } from "../content-types/SchemaBuilder";
+import type { Block, WidgetEditorContext } from "@/ui/pages/builder/types";
+import {
+  buildListColumnFromOption,
+  getVisibleListColumns,
+  listSelectableListFields,
+} from "./customScreenListModel";
+import {
+  applyBindingsToBlocks,
+  sanitizeUnsupportedWriteBindings,
+  type CustomScreenBindingWidgetSource,
+} from "../../../services/customScreens/bindingResolver";
+import {
+  useCustomScreenPreviewRecordState,
+  type CustomScreenPreviewRecordState,
+} from "./customScreenPreviewData";
 
 const normalizeText = (value: string) => value.trim();
+type EditorDetailsTab = "screen" | "data" | "widget";
+
+const resolveBindingState = (
+  bindings: CustomScreenDefinition["editorView"]["bindings"],
+  selectedBlockId: string | null,
+  propPath: string
+): "literal" | "bound" | "mixed" => {
+  const matching = bindings.filter(
+    (binding) => binding.widgetId === selectedBlockId && binding.propPath === propPath
+  );
+  if (matching.length > 1) return "mixed";
+  return matching.length === 1 ? "bound" : "literal";
+};
 
 const collectBlockTypes = (blocks: Block[]): string[] => {
   const result = new Set<string>();
@@ -97,44 +121,62 @@ const collectBlockTypes = (blocks: Block[]): string[] => {
   return Array.from(result);
 };
 
-const buildPreviewValue = (field: ContentField, property?: ContentSchemaProperty) => {
-  if (property?.default !== undefined) {
-    return property.default;
-  }
-
-  switch (field.type) {
-    case "number":
-      return 1;
-    case "boolean":
-      return true;
-    case "select": {
-      const firstOption = Array.isArray(field.options) ? field.options[0] : undefined;
-      if (typeof firstOption === "string") return firstOption;
-      return firstOption?.value ?? `${field.label} option`;
-    }
-    case "media":
-      return "https://images.unsplash.com/photo-1498050108023-c5249f4df085";
-    case "relation":
-      return field.relation?.multiple ? ["related-entry-1"] : "related-entry-1";
-    case "richtext":
-      return `${field.label} example content`;
-    case "text":
-    default:
-      return `${field.label} preview`;
-  }
+const resolveScreenDefinition = (
+  screen: CustomScreenRecord | null | undefined
+): CustomScreenDefinition => {
+  const definition = normalizeCustomScreenDefinitionForRead({
+    definition: screen?.definition,
+    schemaVersion: screen?.schemaVersion,
+    blocks: screen?.blocks,
+    bindings: screen?.bindings,
+  });
+  return {
+    ...definition,
+    editorView: {
+      ...definition.editorView,
+      bindings: sanitizeUnsupportedWriteBindings(definition.editorView.bindings, {
+        blocks: definition.editorView.blocks as Block[],
+      }),
+    },
+  };
 };
 
-const buildPreviewData = (contentType: ContentTypeSummary | null) => {
-  if (!contentType) return {};
-  const fields = fieldsFromSchema(contentType.schema);
-  return fields.reduce<Record<string, unknown>>((result, field) => {
-    result[field.name] = buildPreviewValue(
-      field,
-      contentType.schema.properties[field.name]
-    );
-    return result;
-  }, {});
-};
+function PreviewStateNotice({
+  contentType,
+  previewRecordState,
+  isLoading,
+}: {
+  contentType: ContentTypeSummary | null;
+  previewRecordState: CustomScreenPreviewRecordState;
+  isLoading: boolean;
+}) {
+  const message = isLoading
+    ? `Loading the first record for ${contentType?.name ?? "this content type"}. Schema fallback values are shown until preview data is ready.`
+    : previewRecordState.source === "entry"
+      ? previewRecordState.note
+      : previewRecordState.note;
+  if (!message) return null;
+
+  return (
+    <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+      {message}
+    </div>
+  );
+}
+
+function CustomScreenPreviewRecordOwner({
+  contentType,
+  children,
+}: {
+  contentType: ContentTypeSummary | null;
+  children: (state: {
+    isLoading: boolean;
+    previewRecordState: CustomScreenPreviewRecordState;
+  }) => ReactNode;
+}) {
+  const state = useCustomScreenPreviewRecordState(contentType);
+  return <>{children(state)}</>;
+}
 
 export function CustomScreenEditorPage() {
   const { path, navigate } = useAdminRouter();
@@ -153,12 +195,13 @@ export function CustomScreenEditorPage() {
   const [status, setStatus] = useState<CustomScreenStatus>(screen?.status ?? "draft");
   const [showInSidebar, setShowInSidebar] = useState(screen?.showInSidebar ?? false);
   const [sidebarLabel, setSidebarLabel] = useState(screen?.sidebarLabel ?? "");
-  const [blocks, setBlocks] = useState<Block[]>(() => screen?.blocks ?? []);
-  const [bindings, setBindings] = useState<CustomScreenBinding[]>(
-    () => screen?.bindings ?? []
+  const [definition, setDefinition] = useState<CustomScreenDefinition>(() =>
+    resolveScreenDefinition(screen)
   );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    () => getFirstBlockId(screen?.blocks ?? [])
+  const blocks = definition.editorView.blocks as Block[];
+  const bindings = definition.editorView.bindings;
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    getFirstBlockId(resolveScreenDefinition(screen).editorView.blocks as Block[])
   );
   const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
   const [isSaving, setIsSaving] = useState(false);
@@ -167,9 +210,27 @@ export function CustomScreenEditorPage() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
-  const [canvasMode, setCanvasMode] = useState<"builder" | "preview">("builder");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
+    "list-view"
+  );
+  const [activeEditorDetailsTab, setActiveEditorDetailsTab] = useState<EditorDetailsTab>("screen");
+  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
+  const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
+    () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
+  );
 
-  const screenWidgetRegistry = useMemo(() => listRegisteredScreenWidgets(), []);
+  const selectedContentType = useMemo(
+    () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
+    [contentTypeId, contentTypes]
+  );
+  const screenWidgetRegistry = useMemo(() => {
+    if (!selectedContentType) return [];
+    return listRegisteredWidgetsForSurface({
+      surface: "admin-editor-view",
+      contentType: selectedContentType,
+    });
+  }, [selectedContentType]);
   const allWidgetRegistry = useMemo(() => listRegisteredWidgets(), []);
   const widgetRegistry = useMemo(() => {
     const byType = new Map(screenWidgetRegistry.map((widget) => [widget.type, widget]));
@@ -183,51 +244,53 @@ export function CustomScreenEditorPage() {
     });
     return Array.from(byType.values());
   }, [allWidgetRegistry, blocks, screenWidgetRegistry]);
-  const selectedContentType = useMemo(
-    () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
-    [contentTypeId, contentTypes]
-  );
   const contentFields = useMemo(
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
-    [selectedContentType]
-  );
-  const previewData = useMemo(
-    () => buildPreviewData(selectedContentType),
     [selectedContentType]
   );
   const previewCapabilities = useMemo(
     () => resolveCustomScreenCapabilities({ blocks, bindings }),
     [bindings, blocks]
   );
-  const previewState = useMemo(() => {
-    if (!selectedContentType) {
-      return {
-        title: "Select a content type",
-        message:
-          "Choose the content type first so the preview can resolve sample values for mapped fields.",
-      };
-    }
-    if (blocks.length === 0) {
-      return {
-        title: "No screen widgets yet",
-        message:
-          "Add dedicated screen widgets from the library to start composing the admin screen.",
-      };
-    }
-    if (previewCapabilities.mode === "collection-only") {
-      return {
-        title: "Collection-only screen",
-        message:
-          "This setup currently narrows the records list only. Add dedicated screen widgets and map them to content fields to preview record data.",
-      };
-    }
-    return null;
-  }, [blocks.length, previewCapabilities.mode, selectedContentType]);
 
   const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = selectedBlock
-    ? widgetRegistry.find((item) => item.type === selectedBlock.type)
-    : undefined;
+    ? (widgetRegistry.find((item) => item.type === selectedBlock.type) ?? null)
+    : null;
+  const selectedWidgetSource = useMemo<CustomScreenBindingWidgetSource | null>(() => {
+    if (!selectedBlock) return null;
+    if (screenWidgetRegistry.some((widget) => widget.type === selectedBlock.type)) {
+      return "screen-registry";
+    }
+    if (allWidgetRegistry.some((widget) => widget.type === selectedBlock.type)) {
+      return "legacy-fallback";
+    }
+    return null;
+  }, [allWidgetRegistry, screenWidgetRegistry, selectedBlock]);
+  const selectedListColumn = useMemo(
+    () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
+    [definition.listView.columns, selectedListColumnId]
+  );
+  const adminEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (activeBuilderTab !== "editor-view" || !selectedBlock) return undefined;
+    return {
+      surface: "admin-editor-view",
+      jumpToBindingPropPath: (propPath: string) => {
+        setActiveEditorDetailsTab("data");
+        setFocusedBindingPropPath(propPath);
+      },
+      getBindingState: (propPath: string) => resolveBindingState(bindings, selectedId, propPath),
+    };
+  }, [activeBuilderTab, bindings, selectedBlock, selectedId]);
+  const availableListFieldOptions = useMemo(() => {
+    if (!selectedContentType) return [];
+    const selectedKeys = new Set(
+      definition.listView.columns.map((column) => `${column.source}:${column.field}`)
+    );
+    return listSelectableListFields(selectedContentType).filter(
+      (option) => !selectedKeys.has(`${option.source}:${option.field}`)
+    );
+  }, [definition.listView.columns, selectedContentType]);
 
   useEffect(() => {
     if (isCreateMode || !screen || !screenId) {
@@ -244,6 +307,7 @@ export function CustomScreenEditorPage() {
           status,
           showInSidebar,
           sidebarLabel: sidebarLabel.trim() || null,
+          definition,
           blocks,
           bindings,
         },
@@ -265,6 +329,7 @@ export function CustomScreenEditorPage() {
     bindings,
     blocks,
     contentTypeId,
+    definition,
     hasUnsavedChanges,
     isCreateMode,
     name,
@@ -283,24 +348,52 @@ export function CustomScreenEditorPage() {
     setError(null);
   }, []);
 
-  const updateBlocks = useCallback(
-    (next: Block[]) => {
-      setBlocks(next);
+  const updateDefinition = useCallback(
+    (next: CustomScreenDefinition) => {
+      setDefinition(next);
       markDirty();
     },
     [markDirty]
   );
 
+  const updateBlocks = useCallback(
+    (next: Block[]) => {
+      updateDefinition({
+        ...definition,
+        editorView: {
+          ...definition.editorView,
+          blocks: next,
+        },
+      });
+    },
+    [definition, updateDefinition]
+  );
+
+  const updateListView = useCallback(
+    (next: CustomScreenDefinition["listView"]) => {
+      updateDefinition({
+        ...definition,
+        listView: next,
+      });
+      if (!next.columns.some((column) => column.id === selectedListColumnId)) {
+        setSelectedListColumnId(next.columns[0]?.id ?? null);
+      }
+    },
+    [definition, selectedListColumnId, updateDefinition]
+  );
+
   const applyScreen = useCallback((record: CustomScreenRecord) => {
+    const nextDefinition = resolveScreenDefinition(record);
     setScreen(record);
     setName(record.name);
     setContentTypeId(record.contentTypeId);
     setStatus(record.status);
     setShowInSidebar(record.showInSidebar ?? false);
     setSidebarLabel(record.sidebarLabel ?? "");
-    setBlocks(record.blocks ?? []);
-    setBindings(record.bindings ?? []);
-    setSelectedId(getFirstBlockId(record.blocks ?? []));
+    setDefinition(nextDefinition);
+    setSelectedId(getFirstBlockId(nextDefinition.editorView.blocks as Block[]));
+    setFocusedBindingPropPath(null);
+    setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
     setHasUnsavedChanges(false);
   }, []);
 
@@ -316,15 +409,18 @@ export function CustomScreenEditorPage() {
         applyScreen(detail);
         setError(null);
       } catch (err) {
-        setError(
-          isApiClientError(err) ? err.message : "Failed to load custom screen."
-        );
+        setError(isApiClientError(err) ? err.message : "Failed to load custom screen.");
       } finally {
         setIsLoading(false);
       }
     },
     [applyScreen, isCreateMode, screenId]
   );
+
+  const handleSelectBlock = useCallback((id: string) => {
+    setSelectedId(id);
+    setFocusedBindingPropPath(null);
+  }, []);
 
   useEffect(() => {
     listContentTypesCached({ force: true })
@@ -344,9 +440,7 @@ export function CustomScreenEditorPage() {
       })
       .catch((err) => {
         if (!active) return;
-        setError(
-          isApiClientError(err) ? err.message : "Failed to load custom screen."
-        );
+        setError(isApiClientError(err) ? err.message : "Failed to load custom screen.");
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -377,12 +471,14 @@ export function CustomScreenEditorPage() {
     const nextBlock = createBlock(type);
     updateBlocks([...blocks, nextBlock]);
     setSelectedId(nextBlock.id);
+    setFocusedBindingPropPath(null);
   };
 
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
     const nextBlock = createBlock(type);
     updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
     setSelectedId(nextBlock.id);
+    setFocusedBindingPropPath(null);
   };
 
   const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
@@ -404,11 +500,72 @@ export function CustomScreenEditorPage() {
     updateBlocks(result.blocks);
     if (selectedId && !findBlockById(result.blocks, selectedId)) {
       setSelectedId(getFirstBlockId(result.blocks));
+      setFocusedBindingPropPath(null);
     }
   };
 
   const handleChangeBlock = (next: Block) => {
     updateBlocks(updateBlockById(blocks, next.id, () => next));
+  };
+
+  const handleAddListColumn = (option: ReturnType<typeof listSelectableListFields>[number]) => {
+    const nextColumn = buildListColumnFromOption(option);
+    updateListView({
+      ...definition.listView,
+      columns: [...definition.listView.columns, nextColumn],
+    });
+    setSelectedListColumnId(nextColumn.id);
+  };
+
+  const handleMoveListColumn = (columnId: string, direction: "left" | "right") => {
+    const visibleColumns = getVisibleListColumns(definition.listView);
+    const visibleIds = visibleColumns.map((column) => column.id);
+    const currentVisibleIndex = visibleIds.indexOf(columnId);
+    if (currentVisibleIndex === -1) return;
+    const swapVisibleId =
+      direction === "left"
+        ? visibleIds[currentVisibleIndex - 1]
+        : visibleIds[currentVisibleIndex + 1];
+    if (!swapVisibleId) return;
+
+    const currentIndex = definition.listView.columns.findIndex((column) => column.id === columnId);
+    const swapIndex = definition.listView.columns.findIndex(
+      (column) => column.id === swapVisibleId
+    );
+    if (currentIndex === -1 || swapIndex === -1) return;
+    const nextColumns = [...definition.listView.columns];
+    [nextColumns[currentIndex], nextColumns[swapIndex]] = [
+      nextColumns[swapIndex]!,
+      nextColumns[currentIndex]!,
+    ];
+    updateListView({
+      ...definition.listView,
+      columns: nextColumns,
+    });
+  };
+
+  const handleChangeSelectedListColumn = (
+    patch: Partial<CustomScreenDefinition["listView"]["columns"][number]>
+  ) => {
+    if (!selectedListColumn) return;
+    updateListView({
+      ...definition.listView,
+      columns: definition.listView.columns.map((column) =>
+        column.id === selectedListColumn.id ? { ...column, ...patch } : column
+      ),
+    });
+  };
+
+  const handleRemoveSelectedListColumn = () => {
+    if (!selectedListColumn) return;
+    const nextColumns = definition.listView.columns.filter(
+      (column) => column.id !== selectedListColumn.id
+    );
+    updateListView({
+      ...definition.listView,
+      columns: nextColumns,
+    });
+    setSelectedListColumnId(nextColumns[0]?.id ?? null);
   };
 
   const handleSave = async () => {
@@ -430,8 +587,9 @@ export function CustomScreenEditorPage() {
       status,
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
-      blocks,
-      bindings,
+      definition,
+      blocks: definition.editorView.blocks,
+      bindings: definition.editorView.bindings,
     };
 
     try {
@@ -455,17 +613,23 @@ export function CustomScreenEditorPage() {
     }
   };
 
-  const libraryPanel = (
-    <WidgetPicker
-      widgets={screenWidgetRegistry}
-      onAdd={handleAddBlock}
-      draggable
-      onDragStart={(event, type) => {
-        event.dataTransfer.setData("widget-type", type);
-        event.dataTransfer.effectAllowed = "copy";
-      }}
-    />
-  );
+  const libraryPanel =
+    activeBuilderTab === "list-view" ? (
+      <ListViewElementLibrary
+        options={availableListFieldOptions}
+        onAddColumn={handleAddListColumn}
+      />
+    ) : (
+      <WidgetPicker
+        widgets={screenWidgetRegistry}
+        onAdd={handleAddBlock}
+        draggable
+        onDragStart={(event, type) => {
+          event.dataTransfer.setData("widget-type", type);
+          event.dataTransfer.effectAllowed = "copy";
+        }}
+      />
+    );
 
   const screenSettingsPanel = (
     <div className="space-y-4">
@@ -536,9 +700,7 @@ export function CustomScreenEditorPage() {
           Sidebar shortcut
         </p>
         <div className="flex h-10 items-center justify-between rounded-md border px-3">
-          <span className="text-sm text-muted-foreground">
-            Show records workflow in left menu
-          </span>
+          <span className="text-sm text-muted-foreground">Show records workflow in left menu</span>
           <Switch
             checked={showInSidebar}
             onCheckedChange={(checked) => {
@@ -568,259 +730,278 @@ export function CustomScreenEditorPage() {
     </div>
   );
 
-  const detailsPanel = (
-    <Tabs defaultValue="screen" className="flex h-full flex-col">
-      <TabsList variant="line" className="px-1">
-        <TabsTrigger value="screen">Screen</TabsTrigger>
-        <TabsTrigger value="bindings">Bindings</TabsTrigger>
-        <TabsTrigger value="block">Block</TabsTrigger>
-      </TabsList>
-      <TabsContent value="screen" className="mt-4">
-        {screenSettingsPanel}
-      </TabsContent>
-      <TabsContent value="bindings" className="mt-4">
-        <FieldBindingPanel
-          selectedBlock={selectedBlock}
-          value={bindings}
-          fields={contentFields}
-          onChange={(next) => {
-            setBindings(next);
-            markDirty();
-          }}
-        />
-      </TabsContent>
-      <TabsContent value="block" className="mt-4">
-        <BlockSettings
-          block={selectedBlock}
-          widget={selectedWidget}
-          onChange={handleChangeBlock}
-        />
-      </TabsContent>
-    </Tabs>
-  );
+  const detailsPanel =
+    activeBuilderTab === "list-view" ? (
+      <Tabs key="list-view-details" defaultValue="screen" className="flex h-full flex-col">
+        <TabsList variant="line" className="px-1">
+          <TabsTrigger value="screen">Screen</TabsTrigger>
+          <TabsTrigger value="column">Selected Column</TabsTrigger>
+        </TabsList>
+        <TabsContent value="screen" className="mt-4 space-y-6">
+          {screenSettingsPanel}
+          <div className="rounded-xl border p-4">
+            <ListViewDesigner
+              contentType={selectedContentType}
+              value={definition.listView}
+              onChange={updateListView}
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="column" className="mt-4">
+          <ListViewColumnInspector
+            column={selectedListColumn}
+            onChange={handleChangeSelectedListColumn}
+            onRemove={handleRemoveSelectedListColumn}
+          />
+        </TabsContent>
+      </Tabs>
+    ) : (
+      <Tabs
+        key="editor-view-details"
+        value={activeEditorDetailsTab}
+        onValueChange={(next) => setActiveEditorDetailsTab(next as EditorDetailsTab)}
+        className="flex h-full flex-col"
+      >
+        <TabsList variant="line" className="px-1">
+          <TabsTrigger value="screen">Screen</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
+          <TabsTrigger value="widget">Selected Widget</TabsTrigger>
+        </TabsList>
+        <TabsContent value="screen" className="mt-4">
+          {screenSettingsPanel}
+        </TabsContent>
+        <TabsContent value="data" className="mt-4">
+          <FieldBindingPanel
+            selectedBlock={selectedBlock}
+            selectedWidget={selectedWidget}
+            selectedWidgetSource={selectedWidgetSource}
+            value={bindings}
+            fields={contentFields}
+            focusedPropPath={focusedBindingPropPath}
+            onFocusedPropPathChange={setFocusedBindingPropPath}
+            onChange={(next) => {
+              updateDefinition({
+                ...definition,
+                editorView: {
+                  ...definition.editorView,
+                  bindings: next,
+                },
+              });
+            }}
+          />
+        </TabsContent>
+        <TabsContent value="widget" className="mt-4">
+          <BlockSettings
+            block={selectedBlock}
+            widget={selectedWidget ?? undefined}
+            onChange={handleChangeBlock}
+            editorContext={adminEditorWidgetContext}
+          />
+        </TabsContent>
+      </Tabs>
+    );
 
   const showEmptyState = !isLoading && blocks.length === 0;
+  const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
   return (
-    <>
-      <CustomScreenShell
-        name={name}
-        status={status}
-        hasUnsavedChanges={hasUnsavedChanges}
-        isCreateMode={isCreateMode}
-        leftPanel={libraryPanel}
-        rightPanel={detailsPanel}
-        rightPanelClassName="p-6"
-      >
-        <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {canvasMode === "builder" ? "Screen canvas" : "Bound preview"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {canvasMode === "builder"
-                    ? "Drag dedicated screen widgets from the library or use the quick insert buttons."
-                    : "Preview uses sample content values and the current screen bindings."}
-                </p>
-              </div>
-              {!isCreateMode && screenId ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() =>
-                    navigate(
-                      `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
-                    )
-                  }
-                >
-                  <SquarePen className="h-4 w-4" />
-                  Open records
-                </Button>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
-                  <Button
-                    variant={canvasMode === "builder" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setCanvasMode("builder")}
-                  >
-                    <SquarePen className="h-4 w-4" />
-                    Builder
-                  </Button>
-                  <Button
-                    variant={canvasMode === "preview" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setCanvasMode("preview")}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Preview
-                  </Button>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 sm:hidden"
-                  onClick={() =>
-                    setCanvasMode((current) =>
-                      current === "builder" ? "preview" : "builder"
-                    )
-                  }
-                >
-                  {canvasMode === "builder" ? (
-                    <>
+    <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
+      {({ isLoading: previewDataLoading, previewRecordState }) => {
+        const editorPreviewBlocks = applyBindingsToBlocks(
+          blocks,
+          bindings,
+          previewRecordState.data
+        ) as Block[];
+
+        return (
+          <>
+            <CustomScreenShell
+              name={name}
+              status={status}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isCreateMode={isCreateMode}
+              leftPanel={libraryPanel}
+              rightPanel={detailsPanel}
+              rightPanelClassName="p-6"
+            >
+              <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
+                <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setPreviewOpen(true)}
+                    >
                       <Eye className="h-4 w-4" />
                       Preview
-                    </>
-                  ) : (
-                    <>
-                      <SquarePen className="h-4 w-4" />
-                      Builder
-                    </>
-                  )}
-                </Button>
+                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
+                        <Button
+                          variant={activeBuilderTab === "list-view" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setActiveBuilderTab("list-view")}
+                        >
+                          List View
+                        </Button>
+                        <Button
+                          variant={activeBuilderTab === "editor-view" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setActiveBuilderTab("editor-view")}
+                        >
+                          Editor View
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 sm:hidden"
+                        onClick={() =>
+                          setActiveBuilderTab((current) =>
+                            current === "list-view" ? "editor-view" : "list-view"
+                          )
+                        }
+                      >
+                        {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleSave}
+                      disabled={isLoading || isSaving}
+                    >
+                      <Save className="h-4 w-4" />
+                      {isSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                    <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
+                      Components
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
+                      Details
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                onClick={() => navigate("/advanced/custom-screens")}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to list
-              </Button>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSave}
-                disabled={isLoading || isSaving}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : isCreateMode ? "Create screen" : "Save screen"}
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 lg:hidden">
-              <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
-                Components
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
-                Details
-              </Button>
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
-          {error ? (
-            <Alert variant="destructive">
-              <AlertTitle>Custom screen error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          {remoteUpdatePending ? (
-            <Alert>
-              <AlertTitle>Updated in another tab</AlertTitle>
-              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <span>New changes are available. Refresh to load the latest version.</span>
-                <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
-                  Refresh
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : null}
+              <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
+                {error ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Custom screen error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                ) : null}
+                {remoteUpdatePending ? (
+                  <Alert>
+                    <AlertTitle>Updated in another tab</AlertTitle>
+                    <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span>New changes are available. Refresh to load the latest version.</span>
+                      <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
+                        Refresh
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
-          {isLoading ? (
-            <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-              Loading custom screen...
-            </div>
-          ) : showEmptyState ? (
-            <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                <Settings2 className="h-10 w-10" />
+                {isLoading ? (
+                  <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+                    Loading custom screen...
+                  </div>
+                ) : activeBuilderTab === "list-view" ? (
+                  <ListViewCanvas
+                    contentType={selectedContentType}
+                    listView={definition.listView}
+                    selectedColumnId={selectedListColumnId}
+                    onSelectColumn={setSelectedListColumnId}
+                    onMoveColumn={handleMoveListColumn}
+                  />
+                ) : showEmptyState ? (
+                  <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                      <Settings2 className="h-10 w-10" />
+                    </div>
+                    <h2 className="text-2xl font-semibold text-foreground">
+                      Build your custom screen
+                    </h2>
+                    <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                      Add dedicated screen widgets from the library to compose the admin experience
+                      for this content type.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <PreviewStateNotice
+                      contentType={selectedContentType}
+                      previewRecordState={previewRecordState}
+                      isLoading={previewDataLoading}
+                    />
+                    <div
+                      className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const type = event.dataTransfer.getData("widget-type");
+                        if (type) handleAddBlock(type);
+                      }}
+                    >
+                      <BlockList
+                        blocks={editorPreviewBlocks}
+                        className="p-4"
+                        widgetRegistry={widgetRegistry}
+                        selectedId={selectedId}
+                        onSelect={handleSelectBlock}
+                        onMove={handleMove}
+                        onDuplicate={handleDuplicate}
+                        onDelete={handleDelete}
+                        onInsert={handleInsertIntoSlot}
+                        onMoveToSlot={handleMoveIntoSlot}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <h2 className="text-2xl font-semibold text-foreground">
-                Build your custom screen
-              </h2>
-              <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                Add dedicated screen widgets from the library to compose the admin
-                experience for this content type.
-              </p>
-            </div>
-          ) : canvasMode === "preview" ? (
-            previewState ? (
-              <CustomScreenPreview
-                blocks={[]}
-                bindings={[]}
-                data={{}}
-                emptyTitle={previewState.title}
-                emptyMessage={previewState.message}
-              />
-            ) : (
-            <CustomScreenPreview
+            </CustomScreenShell>
+
+            <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
+              <SheetContent side="left" className="w-80 p-0">
+                <SheetTitle className="sr-only">Widget library</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Insert widgets into the custom screen layout.
+                </SheetDescription>
+                {libraryPanel}
+              </SheetContent>
+            </Sheet>
+
+            <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
+              <SheetContent side="right" className="w-96 p-6">
+                <SheetTitle className="sr-only">Screen details</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Configure screen metadata and widget settings.
+                </SheetDescription>
+                {detailsPanel}
+              </SheetContent>
+            </Sheet>
+
+            <CustomScreenWorkspacePreviewDialog
+              open={previewOpen}
+              onOpenChange={setPreviewOpen}
+              mode={activeBuilderTab}
+              contentType={selectedContentType}
+              listView={definition.listView}
               blocks={blocks}
               bindings={bindings}
-              data={previewData}
-              emptyTitle="Preview unavailable"
-              emptyMessage={
-                "Add dedicated screen widgets and bindings to preview the custom screen."
-              }
+              previewRecordState={previewRecordState}
+              previewLoading={previewDataLoading}
             />
-            )
-          ) : (
-            <div
-              className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
-              onDragOver={(event) => {
-                event.preventDefault();
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                const type = event.dataTransfer.getData("widget-type");
-                if (type) handleAddBlock(type);
-              }}
-            >
-              <BlockList
-                blocks={blocks}
-                className="p-4"
-                widgetRegistry={widgetRegistry}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onMove={handleMove}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onInsert={handleInsertIntoSlot}
-                onMoveToSlot={handleMoveIntoSlot}
-              />
-            </div>
-          )}
-        </div>
-      </CustomScreenShell>
-
-      <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
-        <SheetContent side="left" className="w-80 p-0">
-          <SheetTitle className="sr-only">Widget library</SheetTitle>
-          <SheetDescription className="sr-only">
-            Insert widgets into the custom screen layout.
-          </SheetDescription>
-          {libraryPanel}
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
-        <SheetContent side="right" className="w-96 p-6">
-          <SheetTitle className="sr-only">Screen details</SheetTitle>
-          <SheetDescription className="sr-only">
-            Configure screen metadata and widget settings.
-          </SheetDescription>
-          {detailsPanel}
-        </SheetContent>
-      </Sheet>
-    </>
+          </>
+        );
+      }}
+    </CustomScreenPreviewRecordOwner>
   );
 }

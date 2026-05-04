@@ -28,6 +28,7 @@ import {
   type LogoCloudVariantId,
 } from "../../../../widgets/core/logoCloud";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: LogoCloudVariantId;
@@ -52,6 +53,7 @@ const variantOptions: Array<{
 ];
 
 const logoHeightOptions: Array<{ id: LogoCloudHeight; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Small" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
@@ -59,6 +61,7 @@ const logoHeightOptions: Array<{ id: LogoCloudHeight; label: string }> = [
 ];
 
 const gapOptions: Array<{ id: LogoCloudGap; label: string }> = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -70,9 +73,7 @@ const alignmentOptions: Array<{ id: LogoCloudAlignment; label: string }> = [
   { id: "end", label: "End" },
 ];
 
-const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) =>
-  String(index + 1)
-);
+const logoCountOptions = Array.from({ length: logoCloudLogoMax }, (_, index) => String(index + 1));
 
 type HeaderData = NonNullable<LogoCloudData["header"]>;
 type StyleData = NonNullable<LogoCloudData["style"]>;
@@ -175,6 +176,20 @@ function updateStyle(
   }));
 }
 
+function clearStyle(
+  value: LogoCloudData,
+  onChange: (next: LogoCloudData) => void,
+  key: keyof StyleData
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
+}
+
 function updateLogo(
   value: LogoCloudData,
   onChange: (next: LogoCloudData) => void,
@@ -224,11 +239,7 @@ function addLogo(value: LogoCloudData, onChange: (next: LogoCloudData) => void) 
   });
 }
 
-function removeLogo(
-  value: LogoCloudData,
-  onChange: (next: LogoCloudData) => void,
-  index: number
-) {
+function removeLogo(value: LogoCloudData, onChange: (next: LogoCloudData) => void, index: number) {
   updateValue(value, onChange, (current) => {
     const logos = normalizeLogoCloudLogos(current.logos);
     if (logos.length <= 1) return current;
@@ -337,9 +348,7 @@ export function LogoCloudWizardEditor({
           <Input
             key={logo.id}
             value={logo.name}
-            onChange={(event) =>
-              updateLogo(value, onChange, index, { name: event.target.value })
-            }
+            onChange={(event) => updateLogo(value, onChange, index, { name: event.target.value })}
             placeholder={`Logo ${index + 1}`}
           />
         ))}
@@ -403,9 +412,7 @@ export function LogoCloudVisualEditor({
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={header.description}
-            onChange={(event) =>
-              updateHeader(value, onChange, { description: event.target.value })
-            }
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
             placeholder="Showcase partner and client logos."
           />
         </div>
@@ -522,9 +529,7 @@ export function LogoCloudVisualEditor({
           <p className="text-sm font-medium">Gap</p>
           <Select
             value={style.gap}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { gap: next as LogoCloudGap })
-            }
+            onValueChange={(next) => updateStyle(value, onChange, { gap: next as LogoCloudGap })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gap" />
@@ -589,15 +594,28 @@ export function LogoCloudVisualEditor({
             }
           />
         </div>
+
+        <ClearableInputField
+          label="Tile background"
+          value={style.tileBackground}
+          onChange={(next) => updateStyle(value, onChange, { tileBackground: next })}
+          onClear={() => clearStyle(value, onChange, "tileBackground")}
+          placeholder="var(--color-bg)"
+        />
+
+        <ClearableInputField
+          label="Tile border"
+          value={style.tileBorderColor}
+          onChange={(next) => updateStyle(value, onChange, { tileBorderColor: next })}
+          onClear={() => clearStyle(value, onChange, "tileBorderColor")}
+          placeholder="var(--color-border)"
+        />
       </EditorSection>
     </div>
   );
 }
 
-export function LogoCloudAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<LogoCloudData>) {
+export function LogoCloudAdvancedEditor({ value, onChange }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? logoCloudDefaults.style!;
 
@@ -631,9 +649,7 @@ export function LogoCloudAdvancedEditor({
           <p className="text-sm font-medium">Gap token</p>
           <Select
             value={style.gap}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { gap: next as LogoCloudGap })
-            }
+            onValueChange={(next) => updateStyle(value, onChange, { gap: next as LogoCloudGap })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gap" />

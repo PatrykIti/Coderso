@@ -167,8 +167,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -193,10 +192,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -206,10 +202,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -219,10 +212,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -263,8 +253,7 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 const findInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const input = Array.from(container.querySelectorAll("input")).filter(
     (element) =>
-      element instanceof HTMLInputElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   )[index];
   return input instanceof HTMLInputElement ? input : undefined;
 };
@@ -272,8 +261,7 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string, inde
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).filter(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   )[index];
   return textarea instanceof HTMLTextAreaElement ? textarea : undefined;
 };
@@ -284,9 +272,8 @@ afterEach(() => {
 });
 
 test("RichTextSection wizard editor normalizes the variant and updates copy fields", async () => {
-  const { RichTextSectionWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/RichTextSectionEditors"
-  );
+  const { RichTextSectionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
   let latestValue: RichTextSectionData = {};
   let latestVariant = "legacy-layout";
@@ -325,17 +312,11 @@ test("RichTextSection wizard editor normalizes the variant and updates copy fiel
       findInputByPlaceholder(view.container, "Long-form content section"),
       "Quarterly narrative"
     );
-    setInputValue(
-      findInputByPlaceholder(view.container, "Heading 1"),
-      "Inside the release"
-    );
+    setInputValue(findInputByPlaceholder(view.container, "Heading 1"), "Inside the release");
     await act(async () => {
       await Promise.resolve();
     });
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Paragraph 1"),
-      "Structured update"
-    );
+    setTextareaValue(findTextareaByPlaceholder(view.container, "Paragraph 1"), "Structured update");
 
     expect(latestValue.titleBlock?.eyebrow).toBe("Analysis");
     expect(latestValue.titleBlock?.title).toBe("Quarterly narrative");
@@ -348,9 +329,8 @@ test("RichTextSection wizard editor normalizes the variant and updates copy fiel
 });
 
 test("RichTextSection visual editor covers variant cards, fallback blocks, reader toggles, and color safeguards", async () => {
-  const { RichTextSectionVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/RichTextSectionEditors"
-  );
+  const { RichTextSectionVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
   let latestValue: RichTextSectionData = {
     titleBlock: {
@@ -423,7 +403,10 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     expect(latestValue.options?.maxWidth).toBe("full");
 
     const titleSection = findSectionByTitle(view.container, "Title block copy");
-    setInputValue(findInputByPlaceholder(titleSection ?? view.container, "Editorial"), "Perspective");
+    setInputValue(
+      findInputByPlaceholder(titleSection ?? view.container, "Editorial"),
+      "Perspective"
+    );
     setInputValue(
       findInputByPlaceholder(titleSection ?? view.container, "Long-form content section"),
       "Deeper narrative"
@@ -450,7 +433,10 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     expect(latestValue.body?.blocks?.[2]?.heading).toBe("Heading 3");
     expect(latestValue.body?.blocks?.[2]?.content).toBe("Paragraph content.");
 
-    setInputValue(findInputByPlaceholder(blockSection ?? view.container, "Heading", 2), "Third section");
+    setInputValue(
+      findInputByPlaceholder(blockSection ?? view.container, "Heading", 2),
+      "Third section"
+    );
     setTextareaValue(
       findTextareaByPlaceholder(blockSection ?? view.container, "Paragraph content", 2),
       "Gamma copy"
@@ -487,7 +473,9 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     expect((moveDownButtons.at(-1) as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
 
     const readerSection = findSectionByTitle(view.container, "Reader options");
-    const readerToggles = Array.from(readerSection?.querySelectorAll('input[type="checkbox"]') ?? []);
+    const readerToggles = Array.from(
+      readerSection?.querySelectorAll('input[type="checkbox"]') ?? []
+    );
     setCheckboxValue(readerToggles[0], true);
     setCheckboxValue(readerToggles[1], true);
 
@@ -585,9 +573,7 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
     expect((wizardSelect as HTMLSelectElement | null)?.value).toBe("single-column");
     expect(findInputByPlaceholder(view.container, "Editorial", 0)?.value).toBe("");
     expect(findInputByPlaceholder(view.container, "Long-form content section", 0)?.value).toBe("");
-    expect(findTextareaByPlaceholder(view.container, "Paragraph 1")?.value).toBe(
-      ""
-    );
+    expect(findTextareaByPlaceholder(view.container, "Paragraph 1")?.value).toBe("");
 
     const layoutSection = findSectionByTitle(view.container, "Variant and layout structure");
     const layoutSelect = layoutSection?.querySelector("select");
@@ -595,7 +581,9 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
 
     const titleSection = findSectionByTitle(view.container, "Title block copy");
     expect(findInputByPlaceholder(titleSection ?? view.container, "Editorial")?.value).toBe("");
-    expect(findInputByPlaceholder(titleSection ?? view.container, "Long-form content section")?.value).toBe("");
+    expect(
+      findInputByPlaceholder(titleSection ?? view.container, "Long-form content section")?.value
+    ).toBe("");
 
     const bodySection = findSectionByTitle(view.container, "Body content");
     expect(
@@ -609,17 +597,26 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
     expect((blocksSection?.querySelector("select") as HTMLSelectElement | null)?.value).toBe("0");
 
     const readerSection = findSectionByTitle(view.container, "Reader options");
-    const readerToggles = Array.from(readerSection?.querySelectorAll('input[type="checkbox"]') ?? []);
+    const readerToggles = Array.from(
+      readerSection?.querySelectorAll('input[type="checkbox"]') ?? []
+    );
     expect((readerToggles[0] as HTMLInputElement | null | undefined)?.checked).toBe(false);
     expect((readerToggles[1] as HTMLInputElement | null | undefined)?.checked).toBe(false);
 
     const typographySection = findSectionByTitle(view.container, "Typography and colors");
     const typographySelects = Array.from(typographySection?.querySelectorAll("select") ?? []);
+    for (const select of typographySelects.slice(0, 3)) {
+      expect(Array.from(select.options).map((option) => option.value)).toContain("none");
+    }
     expect((typographySelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("md");
     expect((typographySelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("normal");
     expect((typographySelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("md");
-    expect(findInputByPlaceholder(typographySection ?? view.container, "var(--color-text)")?.value).toBe("");
-    expect(findInputByPlaceholder(typographySection ?? view.container, "transparent")?.value).toBe("");
+    expect(
+      findInputByPlaceholder(typographySection ?? view.container, "var(--color-text)")?.value
+    ).toBe("");
+    expect(findInputByPlaceholder(typographySection ?? view.container, "transparent")?.value).toBe(
+      ""
+    );
 
     const colorInputs = Array.from(
       typographySection?.querySelectorAll<HTMLInputElement>('input[type="color"]') ?? []
@@ -634,6 +631,9 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
 
     const tokensSection = findSectionByTitle(view.container, "Technical typography tokens");
     const tokenSelects = Array.from(tokensSection?.querySelectorAll("select") ?? []);
+    for (const select of tokenSelects.slice(0, 3)) {
+      expect(Array.from(select.options).map((option) => option.value)).toContain("none");
+    }
     expect((tokenSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("md");
     expect((tokenSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("normal");
     expect((tokenSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("md");
@@ -645,9 +645,8 @@ test("RichTextSection editors render sparse normalized fallbacks across wizard, 
 });
 
 test("RichTextSection advanced editor normalizes incomplete payloads, updates output tokens, and resets defaults", async () => {
-  const { RichTextSectionAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/RichTextSectionEditors"
-  );
+  const { RichTextSectionAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
   let latestValue: RichTextSectionData = {
     body: {
@@ -715,11 +714,13 @@ test("RichTextSection advanced editor normalizes incomplete payloads, updates ou
     expect(latestValue.titleBlock?.title).toBe(richTextSectionDefaults.titleBlock?.title);
     expect(latestValue.body?.html).toBe(richTextSectionDefaults.body?.html);
     expect(latestValue.body?.blocks?.[1]?.id).toBe("block-2");
-    expect(latestValue.style?.background).toBe(richTextSectionDefaults.style?.background);
+    expect(latestValue.style?.background).toBeUndefined();
 
     clickByText(view.container, "Reset to defaults");
     expect(latestValue).toEqual(richTextSectionDefaults);
-    expect(view.container.querySelector("pre")?.textContent).toContain('"outputMode": "blocks-fallback"');
+    expect(view.container.querySelector("pre")?.textContent).toContain(
+      '"outputMode": "blocks-fallback"'
+    );
   } finally {
     view.cleanup();
   }

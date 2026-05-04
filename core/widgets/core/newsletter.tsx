@@ -1,9 +1,10 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type NewsletterVariantId = "inline" | "stacked" | "minimal";
-export type NewsletterSpacing = "sm" | "md" | "lg" | "xl";
+export type NewsletterSpacing = "none" | "sm" | "md" | "lg" | "xl";
 export type NewsletterAlignment = "start" | "center" | "end";
 export type NewsletterIntegrationMode = "action-url" | "webhook";
 
@@ -29,6 +30,7 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const spacingClassMap = {
+  none: "gap-0",
   sm: "gap-2",
   md: "gap-4",
   lg: "gap-6",
@@ -96,7 +98,7 @@ export const newsletterSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        spacing: { enum: ["sm", "md", "lg", "xl"] },
+        spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
         alignment: { enum: ["start", "center", "end"] },
         background: { type: "string" },
       },
@@ -132,16 +134,12 @@ export const newsletterDefaults: NewsletterData = {
 const resolveString = (value: string | undefined, fallback: string) =>
   typeof value === "string" ? value : fallback;
 
-const resolveNewsletterSpacing = (
-  value: string | undefined
-): NewsletterSpacing => {
-  if (value === "sm" || value === "lg" || value === "xl") return value;
+const resolveNewsletterSpacing = (value: string | undefined): NewsletterSpacing => {
+  if (value === "none" || value === "sm" || value === "lg" || value === "xl") return value;
   return "md";
 };
 
-const resolveNewsletterAlignment = (
-  value: string | undefined
-): NewsletterAlignment => {
+const resolveNewsletterAlignment = (value: string | undefined): NewsletterAlignment => {
   if (value === "center" || value === "end") return value;
   return "start";
 };
@@ -152,14 +150,8 @@ const resolveNewsletterIntegrationMode = (
   if (integration?.mode === "webhook") return "webhook";
   if (integration?.mode === "action-url") return "action-url";
 
-  const webhookId =
-    typeof integration?.webhookId === "string"
-      ? integration.webhookId.trim()
-      : "";
-  const actionUrl =
-    typeof integration?.actionUrl === "string"
-      ? integration.actionUrl.trim()
-      : "";
+  const webhookId = typeof integration?.webhookId === "string" ? integration.webhookId.trim() : "";
+  const actionUrl = typeof integration?.actionUrl === "string" ? integration.actionUrl.trim() : "";
 
   if (webhookId.length > 0 && actionUrl.length === 0) return "webhook";
   return "action-url";
@@ -195,6 +187,7 @@ export function normalizeNewsletterData(data: NewsletterData): NewsletterData {
     alignment: "start",
     background: "transparent",
   };
+  const hasStyleObject = data.style !== undefined;
 
   return {
     ...data,
@@ -215,30 +208,20 @@ export function normalizeNewsletterData(data: NewsletterData): NewsletterData {
     },
     integration: {
       mode: resolveNewsletterIntegrationMode(data.integration),
-      actionUrl: resolveString(
-        data.integration?.actionUrl,
-        integrationDefaults.actionUrl ?? ""
-      ),
-      webhookId: resolveString(
-        data.integration?.webhookId,
-        integrationDefaults.webhookId ?? ""
-      ),
+      actionUrl: resolveString(data.integration?.actionUrl, integrationDefaults.actionUrl ?? ""),
+      webhookId: resolveString(data.integration?.webhookId, integrationDefaults.webhookId ?? ""),
     },
     style: {
       spacing: resolveNewsletterSpacing(data.style?.spacing),
       alignment: resolveNewsletterAlignment(data.style?.alignment),
-      background: resolveString(data.style?.background, styleDefaults.background ?? "transparent"),
+      background: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.background)
+        : styleDefaults.background,
     },
   };
 }
 
-export function NewsletterBlock({
-  data,
-  variant,
-}: {
-  data: NewsletterData;
-  variant: string;
-}) {
+export function NewsletterBlock({ data, variant }: { data: NewsletterData; variant: string }) {
   const normalizedData = normalizeNewsletterData(data);
   const resolvedVariant = resolveNewsletterVariant(variant);
 
@@ -254,8 +237,7 @@ export function NewsletterBlock({
 
   const showTitle = (normalizedData.title ?? "").trim().length > 0;
   const showDescription =
-    resolvedVariant !== "minimal" &&
-    (normalizedData.description ?? "").trim().length > 0;
+    resolvedVariant !== "minimal" && (normalizedData.description ?? "").trim().length > 0;
   const showConsent = (consent.enabled ?? false) && (consent.label ?? "").trim().length > 0;
   const showSuccessMessage = (submit.successMessage ?? "").trim().length > 0;
   const integrationMode = integration.mode ?? "action-url";
@@ -265,9 +247,10 @@ export function NewsletterBlock({
       ? integration.actionUrl?.trim()
       : undefined;
 
-  const sectionStyle: CSSProperties = {
-    backgroundColor: style.background ?? "transparent",
-  };
+  const sectionStyle: CSSProperties =
+    compactStyle({
+      backgroundColor: resolveClearableStyleValue(style.background),
+    }) ?? {};
 
   return (
     <section

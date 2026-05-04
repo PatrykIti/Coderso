@@ -84,9 +84,7 @@ test("buildDefaultNavSections composes Advanced group from registry", () => {
 
   expect(advanced).toBeDefined();
   expect(mainLabels).toEqual(["Dashboard", "Pages", "Posts", "Menus", "Media"]);
-  expect(advanced?.items.some((item) => item.href === "/admin/advanced/appointments")).toBe(
-    true
-  );
+  expect(advanced?.items.some((item) => item.href === "/admin/advanced/appointments")).toBe(true);
   expect(advanced?.items.some((item) => item.href === "/admin/posts")).toBe(false);
 });
 
@@ -161,8 +159,16 @@ test("buildCustomScreenShortcutNavItems returns only active sidebar screens", ()
       showInSidebar: true,
       sidebarLabel: "Catalog",
       schemaVersion: 1,
-      blocks: [],
-      bindings: [],
+      blocks: [{ id: "field-1", type: "screen-field-value", data: {} }],
+      bindings: [
+        {
+          id: "binding-1",
+          widgetId: "field-1",
+          propPath: "value",
+          field: "title",
+          mode: "readwrite",
+        },
+      ],
       createdAt: "2026-03-06T00:00:00.000Z",
       updatedAt: "2026-03-06T00:00:00.000Z",
     },

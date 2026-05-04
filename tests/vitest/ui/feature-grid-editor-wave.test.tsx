@@ -4,10 +4,7 @@ import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  featureGridDefaults,
-  type FeatureGridData,
-} from "../../../core/widgets/core/featureGrid";
+import { featureGridDefaults, type FeatureGridData } from "../../../core/widgets/core/featureGrid";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -147,8 +144,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -173,10 +169,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -186,10 +179,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -199,10 +189,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -243,8 +230,7 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findTextareasByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).filter(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
 const normalizeText = (value: string | null | undefined) =>
@@ -263,11 +249,8 @@ afterEach(() => {
 });
 
 test("FeatureGrid editors cover variant changes, card editing, style tokens, and advanced normalization", async () => {
-  const {
-    FeatureGridAdvancedEditor,
-    FeatureGridVisualEditor,
-    FeatureGridWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+  const { FeatureGridAdvancedEditor, FeatureGridVisualEditor, FeatureGridWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: FeatureGridData = {
@@ -359,7 +342,16 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "Short proof of platform value."
     );
 
-    const countSelect = findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
+    const countSelect = findSelectsByOptions(view.container, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ])[0];
     setSelectValue(countSelect, "4");
     expect(latestValue.items).toHaveLength(4);
     setInputValue(findInputsByPlaceholder(view.container, "Feature 1")[0], "Wizard automation");
@@ -379,12 +371,27 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     clickByText(layoutSection as ParentNode, "Highlight First");
     expect(currentVariant).toBe("highlight-first");
 
-    const visualColumnsSelect = findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0];
-    const visualGapSelect = findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0];
-    const visualCountSelect = findSelectsByOptions(
-      layoutSection as ParentNode,
-      ["1", "2", "3", "4", "5", "6", "7", "8"]
-    )[0];
+    const visualColumnsSelect = findSelectsByOptions(layoutSection as ParentNode, [
+      "2",
+      "3",
+      "4",
+    ])[0];
+    const visualGapSelect = findSelectsByOptions(layoutSection as ParentNode, [
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ])[0];
+    const visualCountSelect = findSelectsByOptions(layoutSection as ParentNode, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ])[0];
     setSelectValue(visualColumnsSelect, "2");
     setSelectValue(visualGapSelect, "lg");
     setSelectValue(visualCountSelect, "6");
@@ -419,7 +426,10 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     );
     setInputValue(findInputByPlaceholder(featureCardsSection as ParentNode, "⚡"), "🤖");
     setInputValue(
-      findInputByPlaceholder(featureCardsSection as ParentNode, "https://cdn.example.com/feature.jpg"),
+      findInputByPlaceholder(
+        featureCardsSection as ParentNode,
+        "https://cdn.example.com/feature.jpg"
+      ),
       "https://cdn.example.com/automation.jpg"
     );
     setInputValue(
@@ -438,12 +448,24 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     clickByText(featureCardsSection as ParentNode, "Remove", 6);
     expect(latestValue.items).toHaveLength(6);
 
-    const borderWidthSelect = findSelectsByOptions(colorsSection as ParentNode, ["0", "1", "2", "3"])[0];
-    const radiusSelect = findSelectsByOptions(colorsSection as ParentNode, ["none", "md", "lg", "xl"])[0];
+    const borderWidthSelect = findSelectsByOptions(colorsSection as ParentNode, [
+      "0",
+      "1",
+      "2",
+      "3",
+    ])[0];
+    const radiusSelect = findSelectsByOptions(colorsSection as ParentNode, [
+      "none",
+      "md",
+      "lg",
+      "xl",
+    ])[0];
     setSelectValue(borderWidthSelect, "3");
     setSelectValue(radiusSelect, "xl");
 
-    const colorInputs = Array.from((colorsSection as ParentNode).querySelectorAll("input[type='color']"));
+    const colorInputs = Array.from(
+      (colorsSection as ParentNode).querySelectorAll("input[type='color']")
+    );
     setInputValue(colorInputs[0], "#111111");
     setInputValue(colorInputs[1], "#222222");
     setInputValue(
@@ -455,16 +477,29 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "var(--border-strong)"
     );
 
-    const advancedColumnsSelect = findSelectsByOptions(advancedSection as ParentNode, ["2", "3", "4"])[0];
-    const advancedGapSelect = findSelectsByOptions(advancedSection as ParentNode, ["sm", "md", "lg"])[0];
-    const advancedBorderWidthSelect = findSelectsByOptions(
-      advancedSection as ParentNode,
-      ["0", "1", "2", "3"]
-    )[0];
-    const advancedRadiusSelect = findSelectsByOptions(
-      advancedSection as ParentNode,
-      ["none", "md", "lg", "xl"]
-    )[0];
+    const advancedColumnsSelect = findSelectsByOptions(advancedSection as ParentNode, [
+      "2",
+      "3",
+      "4",
+    ])[0];
+    const advancedGapSelect = findSelectsByOptions(advancedSection as ParentNode, [
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ])[0];
+    const advancedBorderWidthSelect = findSelectsByOptions(advancedSection as ParentNode, [
+      "0",
+      "1",
+      "2",
+      "3",
+    ])[0];
+    const advancedRadiusSelect = findSelectsByOptions(advancedSection as ParentNode, [
+      "none",
+      "md",
+      "lg",
+      "xl",
+    ])[0];
     setSelectValue(advancedColumnsSelect, "4");
     setSelectValue(advancedGapSelect, "sm");
     setSelectValue(advancedBorderWidthSelect, "2");
@@ -515,11 +550,8 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
 });
 
 test("FeatureGrid editors render sparse fallback defaults and ignore variant changes when no handler is provided", async () => {
-  const {
-    FeatureGridAdvancedEditor,
-    FeatureGridVisualEditor,
-    FeatureGridWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+  const { FeatureGridAdvancedEditor, FeatureGridVisualEditor, FeatureGridWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
   const sparseValue: FeatureGridData = {
     header: {},
@@ -528,28 +560,33 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   };
 
   const wizardView = mount(
-    <FeatureGridWizardEditor
-      value={sparseValue}
-      onChange={() => undefined}
-      variant="cards-3"
-    />
+    <FeatureGridWizardEditor value={sparseValue} onChange={() => undefined} variant="cards-3" />
   );
 
   try {
     expect(
-      (findInputByPlaceholder(wizardView.container, "Everything your team needs") as
-        | HTMLInputElement
-        | undefined)?.value
+      (
+        findInputByPlaceholder(wizardView.container, "Everything your team needs") as
+          | HTMLInputElement
+          | undefined
+      )?.value
     ).toBe(featureGridDefaults.header?.title);
     expect(
-      (findTextareasByPlaceholder(
-        wizardView.container,
-        "Use focused cards to explain your strongest product capabilities."
-      )[0] as HTMLTextAreaElement | null | undefined)?.value
+      (
+        findTextareasByPlaceholder(
+          wizardView.container,
+          "Use focused cards to explain your strongest product capabilities."
+        )[0] as HTMLTextAreaElement | null | undefined
+      )?.value
     ).toBe(featureGridDefaults.header?.description);
-    expect((findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "1"
-    );
+    expect(
+      (
+        findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("1");
   } finally {
     wizardView.cleanup();
   }
@@ -561,63 +598,126 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   try {
     const layoutSection = findSectionByTitle(visualView.container, "Variant and layout structure");
     const headerSection = findSectionByTitle(visualView.container, "Header copy");
-    const featureCardsSection = findSectionByTitle(visualView.container, "Feature cards and actions");
+    const featureCardsSection = findSectionByTitle(
+      visualView.container,
+      "Feature cards and actions"
+    );
     const colorsSection = findSectionByTitle(visualView.container, "Colors and borders");
 
     clickByText(layoutSection as ParentNode, "Cards 4");
 
-    expect((findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "3"
-    );
-    expect((findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "md"
-    );
     expect(
-      (findSelectsByOptions(layoutSection as ParentNode, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("3");
+    expect(
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("md");
+    expect(
+      (
+        findSelectsByOptions(layoutSection as ParentNode, [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+        ])[0] as HTMLSelectElement | undefined
+      )?.value
     ).toBe("1");
     expect(
-      (findInputByPlaceholder(headerSection as ParentNode, "Feature highlights") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(headerSection as ParentNode, "Feature highlights") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(featureGridDefaults.header?.eyebrow);
     expect(
-      (findInputByPlaceholder(featureCardsSection as ParentNode, "Feature 1") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(featureCardsSection as ParentNode, "Feature 1") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(featureGridDefaults.items?.[0]?.title);
     expect(
-      (findInputByPlaceholder(featureCardsSection as ParentNode, "⚡") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(featureCardsSection as ParentNode, "⚡") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
-      (findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value
-    ).toBe(featureGridDefaults.style?.surfaceColor);
+      (
+        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
     expect(
-      (findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as HTMLInputElement | null | undefined)?.value
+      (
+        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe(featureGridDefaults.style?.borderColor);
   } finally {
     visualView.cleanup();
   }
 
   const advancedView = mount(
-    <FeatureGridAdvancedEditor
-      value={sparseValue}
-      onChange={() => undefined}
-      variant="cards-3"
-    />
+    <FeatureGridAdvancedEditor value={sparseValue} onChange={() => undefined} variant="cards-3" />
   );
 
   try {
     const layoutSection = findSectionByTitle(advancedView.container, "Layout tokens");
-    expect((findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "3"
-    );
-    expect((findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "md"
-    );
-    expect((findSelectsByOptions(layoutSection as ParentNode, ["0", "1", "2", "3"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "1"
-    );
-    expect((findSelectsByOptions(layoutSection as ParentNode, ["none", "md", "lg", "xl"])[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "lg"
-    );
+    expect(
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("3");
+    expect(
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("md");
+    expect(
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["0", "1", "2", "3"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("1");
+    expect(
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["none", "md", "lg", "xl"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("lg");
   } finally {
     advancedView.cleanup();
   }
@@ -626,9 +726,9 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
 test("FeatureGrid editors fall back to default layout tokens when normalized payload is sparse", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/featureGrid", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/featureGrid")
-    >("../../../core/widgets/core/featureGrid");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/featureGrid")>(
+      "../../../core/widgets/core/featureGrid"
+    );
 
     return {
       ...actual,
@@ -673,22 +773,24 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   };
 
   const wizardView = mount(
-    <FeatureGridWizardEditor
-      value={sparseValue}
-      onChange={() => undefined}
-      variant="legacy-grid"
-    />
+    <FeatureGridWizardEditor value={sparseValue} onChange={() => undefined} variant="legacy-grid" />
   );
 
   try {
     expect(
-      (findSelectsByOptions(wizardView.container, ["cards-3", "cards-4", "highlight-first"])[0] as
-        | HTMLSelectElement
-        | undefined)?.value
+      (
+        findSelectsByOptions(wizardView.container, ["cards-3", "cards-4", "highlight-first"])[0] as
+          | HTMLSelectElement
+          | undefined
+      )?.value
     ).toBe("cards-3");
     expect(
-      (findInputByPlaceholder(wizardView.container, "Everything your team needs") as HTMLInputElement | null | undefined)
-        ?.value
+      (
+        findInputByPlaceholder(wizardView.container, "Everything your team needs") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
     ).toBe("");
     expect(
       (
@@ -698,9 +800,14 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
         )[0] as HTMLTextAreaElement | null | undefined
       )?.value
     ).toBe("");
-    expect((findInputsByPlaceholder(wizardView.container, "Feature 1")[0] as HTMLInputElement | null | undefined)?.value).toBe(
-      ""
-    );
+    expect(
+      (
+        findInputsByPlaceholder(wizardView.container, "Feature 1")[0] as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
   } finally {
     wizardView.cleanup();
   }
@@ -715,31 +822,70 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
     const cardsSection = findSectionByTitle(visualView.container, "Feature cards and actions");
 
     expect(
-      (findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("3");
     expect(
-      (findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectsByOptions(layoutSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("md");
     expect(
       (
-        findSelectsByOptions(layoutSection as ParentNode, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as
-          | HTMLSelectElement
-          | undefined
+        findSelectsByOptions(layoutSection as ParentNode, [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+        ])[0] as HTMLSelectElement | undefined
       )?.value
     ).toBe("1");
-    expect((findInputsByPlaceholder(cardsSection as ParentNode, "Feature 1")[0] as HTMLInputElement | null | undefined)?.value).toBe(
-      ""
+    expect(
+      (
+        findInputsByPlaceholder(cardsSection as ParentNode, "Feature 1")[0] as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (
+        findInputByPlaceholder(cardsSection as ParentNode, "⚡") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (
+        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (
+        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as
+          | HTMLInputElement
+          | null
+          | undefined
+      )?.value
+    ).toBe("");
+    const colorInputs = Array.from(
+      (colorsSection as ParentNode).querySelectorAll("input[type='color']")
     );
-    expect((findInputByPlaceholder(cardsSection as ParentNode, "⚡") as HTMLInputElement | null | undefined)?.value).toBe(
-      ""
-    );
-    expect((findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as HTMLInputElement | null | undefined)?.value).toBe(
-      ""
-    );
-    expect((findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as HTMLInputElement | null | undefined)?.value).toBe(
-      ""
-    );
-    const colorInputs = Array.from((colorsSection as ParentNode).querySelectorAll("input[type='color']"));
     expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
     expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
   } finally {
@@ -747,22 +893,46 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   }
 
   const advancedView = mount(
-    <FeatureGridAdvancedEditor value={sparseValue} onChange={() => undefined} variant="legacy-grid" />
+    <FeatureGridAdvancedEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="legacy-grid"
+    />
   );
 
   try {
     const advancedSection = findSectionByTitle(advancedView.container, "Layout tokens");
     expect(
-      (findSelectsByOptions(advancedSection as ParentNode, ["2", "3", "4"])[0] as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectsByOptions(advancedSection as ParentNode, ["2", "3", "4"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("3");
     expect(
-      (findSelectsByOptions(advancedSection as ParentNode, ["sm", "md", "lg"])[0] as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectsByOptions(advancedSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("md");
     expect(
-      (findSelectsByOptions(advancedSection as ParentNode, ["0", "1", "2", "3"])[0] as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectsByOptions(advancedSection as ParentNode, ["0", "1", "2", "3"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("1");
     expect(
-      (findSelectsByOptions(advancedSection as ParentNode, ["none", "md", "lg", "xl"])[0] as HTMLSelectElement | null | undefined)?.value
+      (
+        findSelectsByOptions(advancedSection as ParentNode, ["none", "md", "lg", "xl"])[0] as
+          | HTMLSelectElement
+          | null
+          | undefined
+      )?.value
     ).toBe("lg");
   } finally {
     advancedView.cleanup();

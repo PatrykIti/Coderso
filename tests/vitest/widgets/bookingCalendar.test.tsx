@@ -67,8 +67,8 @@ test("booking calendar renders selectors from resolved payload", () => {
 
   expect(html).toContain("Oil change");
   expect(html).toContain("Bay A");
-  expect(html).toContain('data-booking-service');
-  expect(html).toContain('data-booking-resource');
+  expect(html).toContain("data-booking-service");
+  expect(html).toContain("data-booking-resource");
   expect(html).toContain('data-slots-token="slots-token"');
 });
 
@@ -84,6 +84,18 @@ test("booking calendar normalization clamps runtime interval", () => {
     intervalMinutes: 999,
   });
   expect(normalizedHigh.intervalMinutes).toBe(180);
+});
+
+test("booking calendar cleared frame style omits decorative background", () => {
+  const html = renderToString(
+    <BookingCalendarBlock
+      data={normalizeBookingCalendarData({ ...bookingCalendarDefaults, style: {} })}
+      variant="default"
+    />
+  );
+
+  expect(html).not.toContain("bg-[var(--color-bg)]/95");
+  expect(html).not.toContain("background-color:transparent");
 });
 
 test("booking calendar validator accepts resolved runtime payload", () => {

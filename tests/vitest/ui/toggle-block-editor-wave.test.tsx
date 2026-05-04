@@ -105,8 +105,7 @@ vi.mock("@/components/ui/select", () => {
 });
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -131,10 +130,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -144,10 +140,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -231,11 +224,8 @@ const renderEditor = async ({
   initialVariant?: string;
   withVariantChange?: boolean;
 }) => {
-  const {
-    ToggleBlockAdvancedEditor,
-    ToggleBlockVisualEditor,
-    ToggleBlockWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/ToggleBlockEditors");
+  const { ToggleBlockAdvancedEditor, ToggleBlockVisualEditor, ToggleBlockWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ToggleBlockEditors");
 
   const editorMap = {
     wizard: ToggleBlockWizardEditor,
@@ -314,10 +304,7 @@ test("ToggleBlock wizard editor covers variant fallback and label normalization"
     const labelsSection = getSectionByTitle(view.container, "Labels");
     const primaryInput = findInputByPlaceholder(labelsSection, "View A");
     const secondaryInput = findInputByPlaceholder(labelsSection, "View B");
-    const helperInput = findInputByPlaceholder(
-      labelsSection,
-      "Switch between two content views."
-    );
+    const helperInput = findInputByPlaceholder(labelsSection, "Switch between two content views.");
 
     expect(primaryInput.value).toBe("View A");
     expect(secondaryInput.value).toBe("View B");
@@ -455,7 +442,6 @@ test("ToggleBlock advanced editor renders diagnostics from normalized data and t
         defaultState: "secondary",
       },
       style: {
-        surfaceColor: "var(--color-surface)",
         borderColor: "#222222",
         accentColor: "var(--color-text)",
       },
@@ -463,10 +449,7 @@ test("ToggleBlock advanced editor renders diagnostics from normalized data and t
 
     const labelsSection = getSectionByTitle(view.container, "Labels");
     const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
-    const helperInput = findInputByPlaceholder(
-      labelsSection,
-      "Switch between two content views."
-    );
+    const helperInput = findInputByPlaceholder(labelsSection, "Switch between two content views.");
     const stateSelect = findSelectByOptions(behaviorSection, ["primary", "secondary"]);
     const surfaceInput = findInputByPlaceholder(behaviorSection, "var(--color-surface)");
 

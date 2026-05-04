@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import {
@@ -10,6 +10,7 @@ import {
   type CommerceWidgetRuntimeCompareRow,
   type CommerceWidgetSource,
 } from "./commerceWidgetShared";
+import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ProductCompareVariantId = "matrix";
 
@@ -30,6 +31,13 @@ export type ProductCompareData = {
   emptyState?: {
     title?: string;
     description?: string;
+  };
+  style?: {
+    tableBackground?: string;
+    tableBorderColor?: string;
+    headerBackground?: string;
+    emptyBackground?: string;
+    emptyBorderColor?: string;
   };
   resolved?: {
     rows?: CommerceWidgetRuntimeCompareRow[];
@@ -63,6 +71,13 @@ export const productCompareDefaults: ProductCompareData = {
   emptyState: {
     title: "No products to compare",
     description: "Update source filters or publish products.",
+  },
+  style: {
+    tableBackground: "var(--color-bg)",
+    tableBorderColor: "var(--color-border)",
+    headerBackground: "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+    emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
+    emptyBorderColor: "var(--color-border)",
   },
   resolved: {
     rows: [],
@@ -105,8 +120,7 @@ const normalizeRows = (value: unknown): CommerceWidgetRuntimeCompareRow[] => {
             : 0,
         currency: text(payload.currency, "USD"),
         compareAtAmount:
-          typeof payload.compareAtAmount === "number" &&
-          Number.isFinite(payload.compareAtAmount)
+          typeof payload.compareAtAmount === "number" && Number.isFinite(payload.compareAtAmount)
             ? payload.compareAtAmount
             : null,
         stockState:
@@ -187,6 +201,17 @@ export const productCompareSchema = {
         description: { type: "string" },
       },
     },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        tableBackground: { type: "string" },
+        tableBorderColor: { type: "string" },
+        headerBackground: { type: "string" },
+        emptyBackground: { type: "string" },
+        emptyBorderColor: { type: "string" },
+      },
+    },
     resolved: {
       type: "object",
       additionalProperties: false,
@@ -223,6 +248,16 @@ export const normalizeProductCompareData = (value: ProductCompareData): ProductC
     sortDir: "asc",
   });
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
+  const hasStyleObject = value.style !== undefined;
+  const style = hasStyleObject
+    ? (compactObject({
+        tableBackground: resolveClearableStyleValue(value.style?.tableBackground),
+        tableBorderColor: resolveClearableStyleValue(value.style?.tableBorderColor),
+        headerBackground: resolveClearableStyleValue(value.style?.headerBackground),
+        emptyBackground: resolveClearableStyleValue(value.style?.emptyBackground),
+        emptyBorderColor: resolveClearableStyleValue(value.style?.emptyBorderColor),
+      }) ?? {})
+    : undefined;
 
   return {
     source,
@@ -238,10 +273,7 @@ export const normalizeProductCompareData = (value: ProductCompareData): ProductC
         productCompareDefaults.labels?.compareAt ?? "Compare at"
       ),
       stock: text(value.labels?.stock, productCompareDefaults.labels?.stock ?? "Stock"),
-      quantity: text(
-        value.labels?.quantity,
-        productCompareDefaults.labels?.quantity ?? "Quantity"
-      ),
+      quantity: text(value.labels?.quantity, productCompareDefaults.labels?.quantity ?? "Quantity"),
       slug: text(value.labels?.slug, productCompareDefaults.labels?.slug ?? "Slug"),
     },
     emptyState: {
@@ -255,6 +287,7 @@ export const normalizeProductCompareData = (value: ProductCompareData): ProductC
           "Update source filters or publish products."
       ),
     },
+    ...(hasStyleObject ? { style } : {}),
     resolved: {
       rows: normalizeRows(value.resolved?.rows),
       total: resolvedMeta.total,
@@ -279,6 +312,22 @@ export function ProductCompareBlock({ data }: { data: ProductCompareData; varian
   const normalized = normalizeProductCompareData(data);
   const rows = normalized.resolved?.rows ?? [];
   const hasError = Boolean(normalized.resolved?.error);
+  const tableStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.tableBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.tableBorderColor),
+  });
+  const headerStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.headerBackground),
+  });
+  const emptyStyle: CSSProperties | undefined = compactStyle({
+    backgroundColor: resolveClearableStyleValue(normalized.style?.emptyBackground),
+    borderColor: resolveClearableStyleValue(normalized.style?.emptyBorderColor),
+  });
+  const legacyTableClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]" : "";
+  const legacyHeaderClass = normalized.style === undefined ? "bg-[var(--color-bg)]/80" : "";
+  const legacyEmptyClass =
+    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/70" : "";
   const metrics: Array<{
     id: string;
     label: string;
@@ -310,8 +359,7 @@ export function ProductCompareBlock({ data }: { data: ProductCompareData; varian
       id: "quantity",
       label: normalized.labels?.quantity ?? "Quantity",
       visible: normalized.fields?.showStockQuantity !== false,
-      render: (row) =>
-        typeof row.stockQuantity === "number" ? String(row.stockQuantity) : "-",
+      render: (row) => (typeof row.stockQuantity === "number" ? String(row.stockQuantity) : "-"),
     },
     {
       id: "slug",
@@ -336,7 +384,10 @@ export function ProductCompareBlock({ data }: { data: ProductCompareData; varian
       ) : null}
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/70 px-4 py-6 text-center">
+        <div
+          className={`rounded-xl border border-dashed px-4 py-6 text-center ${legacyEmptyClass}`}
+          style={emptyStyle}
+        >
           <p className="text-sm font-medium text-[var(--color-text)]">
             {normalized.emptyState?.title}
           </p>
@@ -345,10 +396,13 @@ export function ProductCompareBlock({ data }: { data: ProductCompareData; varian
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]">
+        <div className={`overflow-x-auto rounded-xl border ${legacyTableClass}`} style={tableStyle}>
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]/80">
+              <tr
+                className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
+                style={headerStyle}
+              >
                 <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
                   Attribute
                 </th>
@@ -364,10 +418,18 @@ export function ProductCompareBlock({ data }: { data: ProductCompareData; varian
             </thead>
             <tbody>
               {visibleMetrics.map((metric) => (
-                <tr key={metric.id} className="border-b border-[var(--color-border)]/70 last:border-b-0">
-                  <td className="px-3 py-2 font-medium text-[var(--color-text)]/80">{metric.label}</td>
+                <tr
+                  key={metric.id}
+                  className="border-b border-[var(--color-border)]/70 last:border-b-0"
+                >
+                  <td className="px-3 py-2 font-medium text-[var(--color-text)]/80">
+                    {metric.label}
+                  </td>
                   {rows.map((row) => (
-                    <td key={`${metric.id}-${row.id}`} className="px-3 py-2 text-[var(--color-text)]/75">
+                    <td
+                      key={`${metric.id}-${row.id}`}
+                      className="px-3 py-2 text-[var(--color-text)]/75"
+                    >
                       {metric.render(row)}
                     </td>
                   ))}

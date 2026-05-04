@@ -16,8 +16,7 @@ import {
 import { SidebarNav } from "../../../core/admin/ui/shared/SidebarNav";
 import { mapNavSections } from "../../../core/admin/utils/adminPaths";
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const renderSidebar = (
   sections: NavSection[],
@@ -48,10 +47,7 @@ const mountSidebar = (sections: NavSection[]) => {
     root.render(
       <AdminRouterProvider initialPath="/admin">
         <AdminBasePathProvider value="/admin">
-          <SidebarNav
-            sections={mapNavSections(sections, "/admin")}
-            activeHref="/admin"
-          />
+          <SidebarNav sections={mapNavSections(sections, "/admin")} activeHref="/admin" />
         </AdminBasePathProvider>
       </AdminRouterProvider>
     );
@@ -106,8 +102,8 @@ test("SidebarNav preserves desktop menu scroll position across navigation remoun
 
   try {
     const nav = firstView.container.querySelector("nav");
-    const seoLink = Array.from(firstView.container.querySelectorAll("a")).find(
-      (item) => item.textContent?.includes("SEO")
+    const seoLink = Array.from(firstView.container.querySelectorAll("a")).find((item) =>
+      item.textContent?.includes("SEO")
     );
     expect(nav).toBeTruthy();
     expect(seoLink).toBeTruthy();
@@ -174,4 +170,69 @@ test("SidebarNav renders custom screen shortcuts after the Advanced group", () =
 
   expect(html).toContain("Catalog");
   expect(html).toContain("/admin/advanced/custom-screens/screen-1/entries");
+});
+
+test("SidebarNav prefers the custom screen records shortcut over the generic Screens item", () => {
+  const sections = appendNavItemsAfterGroup(defaultNavSections, "advanced", [
+    {
+      label: "Catalog",
+      href: "/admin/advanced/custom-screens/screen-1/entries",
+      icon: Database,
+    },
+  ]);
+  const view = mountSidebar(sections);
+
+  try {
+    const root = view.container;
+    const genericScreensLink = root.querySelector(
+      'a[href="/admin/advanced/custom-screens"]'
+    ) as HTMLAnchorElement | null;
+    const customScreenShortcutLink = root.querySelector(
+      'a[href="/admin/advanced/custom-screens/screen-1/entries"]'
+    ) as HTMLAnchorElement | null;
+
+    expect(genericScreensLink).not.toBeNull();
+    expect(customScreenShortcutLink).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+
+  const activeContainer = document.createElement("div");
+  document.body.appendChild(activeContainer);
+  const activeRoot = createRoot(activeContainer);
+
+  act(() => {
+    activeRoot.render(
+      <AdminRouterProvider initialPath="/admin/advanced/custom-screens/screen-1/entries/entry-1">
+        <AdminBasePathProvider value="/admin">
+          <SidebarNav
+            sections={mapNavSections(sections, "/admin")}
+            activeHref="/admin/advanced/custom-screens/screen-1/entries"
+            groupState={{ advanced: true }}
+          />
+        </AdminBasePathProvider>
+      </AdminRouterProvider>
+    );
+  });
+
+  try {
+    const genericScreensLink = activeContainer.querySelector(
+      'a[href="/admin/advanced/custom-screens"]'
+    ) as HTMLAnchorElement | null;
+    const customScreenShortcutLink = activeContainer.querySelector(
+      'a[href="/admin/advanced/custom-screens/screen-1/entries"]'
+    ) as HTMLAnchorElement | null;
+
+    expect(genericScreensLink?.className.includes("bg-[var(--admin-sidebar-active-bg)]")).toBe(
+      false
+    );
+    expect(
+      customScreenShortcutLink?.className.includes("bg-[var(--admin-sidebar-active-bg)]")
+    ).toBe(true);
+  } finally {
+    act(() => {
+      activeRoot.unmount();
+    });
+    activeContainer.remove();
+  }
 });

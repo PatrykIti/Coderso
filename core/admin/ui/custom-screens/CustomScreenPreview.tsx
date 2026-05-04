@@ -2,9 +2,10 @@ import { LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 
 import type { Block } from "@/ui/pages/builder/types";
+import { ensureRuntimeWidgetsRegistered } from "../../../widgets/runtime";
 import { applyBindingsToBlocks } from "../../../services/customScreens/bindingResolver";
 import type { CustomScreenBinding } from "../../../services/customScreens/customScreenSchemas";
-import { WidgetRenderer } from "../../../widgets/renderers/widgetRenderer";
+import { ScreenWidgetReadOnlyBlock } from "./screenWidgetRenderBridge";
 
 type CustomScreenPreviewProps = {
   blocks: Block[];
@@ -21,6 +22,8 @@ export function CustomScreenPreview({
   emptyTitle,
   emptyMessage,
 }: CustomScreenPreviewProps) {
+  ensureRuntimeWidgetsRegistered();
+
   const previewBlocks = useMemo(
     () => applyBindingsToBlocks(blocks, bindings, data),
     [bindings, blocks, data]
@@ -49,7 +52,7 @@ export function CustomScreenPreview({
           key={block.id}
           className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm"
         >
-          <WidgetRenderer block={block} />
+          <ScreenWidgetReadOnlyBlock block={block} />
         </div>
       ))}
     </div>

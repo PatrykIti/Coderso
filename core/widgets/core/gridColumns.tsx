@@ -2,12 +2,8 @@ import type { ComponentType, CSSProperties } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
-import type {
-  DeviceTarget,
-  WidgetBlock,
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export const gridColumnsSpanTokens = [
   "1",
@@ -23,10 +19,10 @@ export const gridColumnsSpanTokens = [
   "11",
   "12",
 ] as const;
-export const gridColumnsGapTokens = ["2", "3", "4", "6", "8"] as const;
+export const gridColumnsGapTokens = ["none", "2", "3", "4", "6", "8"] as const;
 export const gridColumnsBorderWidthTokens = ["0", "1", "2", "3"] as const;
 export const gridColumnsRadiusTokens = ["none", "lg", "xl", "2xl"] as const;
-export const gridColumnsPaddingTokens = ["2", "3", "4", "5", "6"] as const;
+export const gridColumnsPaddingTokens = ["none", "2", "3", "4", "5", "6"] as const;
 
 export type GridColumnsVariantId = "equal" | "asymmetric" | "masonry-lite";
 export type GridColumnsSpan = (typeof gridColumnsSpanTokens)[number];
@@ -185,6 +181,7 @@ const desktopSpanClassMap: Record<GridColumnsSpan, string> = {
 };
 
 const gapXClassMap: Record<GridColumnsGap, string> = {
+  none: "gap-x-0",
   "2": "gap-x-2",
   "3": "gap-x-3",
   "4": "gap-x-4",
@@ -193,6 +190,7 @@ const gapXClassMap: Record<GridColumnsGap, string> = {
 };
 
 const gapYClassMap: Record<GridColumnsGap, string> = {
+  none: "gap-y-0",
   "2": "gap-y-2",
   "3": "gap-y-3",
   "4": "gap-y-4",
@@ -222,6 +220,7 @@ const radiusClassMap: Record<GridColumnsRadius, string> = {
 };
 
 const paddingClassMap: Record<GridColumnsPadding, string> = {
+  none: "p-0",
   "2": "p-2",
   "3": "p-3",
   "4": "p-4",
@@ -229,19 +228,15 @@ const paddingClassMap: Record<GridColumnsPadding, string> = {
   "6": "p-6",
 };
 
-const resolveGapToken = (
-  value: string | undefined,
-  fallback: GridColumnsGap
-): GridColumnsGap => (gridColumnsGapTokens.includes(value as GridColumnsGap) ? (value as GridColumnsGap) : fallback);
+const resolveGapToken = (value: string | undefined, fallback: GridColumnsGap): GridColumnsGap =>
+  gridColumnsGapTokens.includes(value as GridColumnsGap) ? (value as GridColumnsGap) : fallback;
 
 const resolveAlignToken = (value: string | undefined): GridColumnsAlign => {
   if (value === "center" || value === "end" || value === "stretch") return value;
   return "start";
 };
 
-const resolveBorderWidthToken = (
-  value: string | undefined
-): GridColumnsBorderWidth => {
+const resolveBorderWidthToken = (value: string | undefined): GridColumnsBorderWidth => {
   if (value === "0" || value === "2" || value === "3") return value;
   return "1";
 };
@@ -252,21 +247,17 @@ const resolveRadiusToken = (value: string | undefined): GridColumnsRadius => {
 };
 
 const resolvePaddingToken = (value: string | undefined): GridColumnsPadding => {
-  if (value === "2" || value === "3" || value === "5" || value === "6") return value;
+  if (value === "none" || value === "2" || value === "3" || value === "5" || value === "6")
+    return value;
   return "4";
 };
 
-const resolveSpanToken = (
-  value: string | undefined,
-  fallback: GridColumnsSpan
-): GridColumnsSpan => (gridColumnsSpanTokens.includes(value as GridColumnsSpan) ? (value as GridColumnsSpan) : fallback);
+const resolveSpanToken = (value: string | undefined, fallback: GridColumnsSpan): GridColumnsSpan =>
+  gridColumnsSpanTokens.includes(value as GridColumnsSpan) ? (value as GridColumnsSpan) : fallback;
 
 const clampColumnsCount = (value: number) => {
   if (!Number.isFinite(value)) return gridColumnsColumnMin;
-  return Math.max(
-    gridColumnsColumnMin,
-    Math.min(gridColumnsColumnMax, Math.floor(value))
-  );
+  return Math.max(gridColumnsColumnMin, Math.min(gridColumnsColumnMax, Math.floor(value)));
 };
 
 const resolveColumnId = (value: string | undefined, index: number, used: Set<string>) => {
@@ -331,10 +322,11 @@ export function resolveGridColumnsVariant(variant: string): GridColumnsVariantId
 export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData {
   const source = Array.isArray(data.columns) ? data.columns : [];
   const targetCount = clampColumnsCount(
-    source.length > 0 ? source.length : gridColumnsDefaults.columns?.length ?? 2
+    source.length > 0 ? source.length : (gridColumnsDefaults.columns?.length ?? 2)
   );
   const normalized: GridColumnsColumn[] = [];
   const usedIds = new Set<string>();
+  const hasStyleObject = data.style !== undefined;
 
   for (let index = 0; index < targetCount; index += 1) {
     const base = source[index] ?? {};
@@ -358,13 +350,13 @@ export function normalizeGridColumnsData(data: GridColumnsData): GridColumnsData
     },
     style: {
       cardizeColumns:
-        typeof data.style?.cardizeColumns === "boolean"
-          ? data.style.cardizeColumns
-          : false,
-      columnBackground:
-        data.style?.columnBackground ?? "var(--color-surface)",
-      columnBorderColor:
-        data.style?.columnBorderColor ?? "var(--color-border)",
+        typeof data.style?.cardizeColumns === "boolean" ? data.style.cardizeColumns : false,
+      columnBackground: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.columnBackground)
+        : "var(--color-surface)",
+      columnBorderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.columnBorderColor)
+        : "var(--color-border)",
       columnBorderWidth: resolveBorderWidthToken(data.style?.columnBorderWidth),
       columnRadius: resolveRadiusToken(data.style?.columnRadius),
       columnPadding: resolvePaddingToken(data.style?.columnPadding),
@@ -438,8 +430,7 @@ export function GridColumnsBlock({
 }) {
   const resolvedVariant = resolveGridColumnsVariant(variant);
   const normalized = normalizeGridColumnsData(data);
-  const slotMap =
-    slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
+  const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const columns = resolveGridColumnsForSlots({
     data: normalized,
     variant: resolvedVariant,
@@ -447,17 +438,15 @@ export function GridColumnsBlock({
   });
   const layout = normalized.layout ?? gridColumnsDefaults.layout!;
   const style = normalized.style ?? gridColumnsDefaults.style!;
-  const cardized =
-    style.cardizeColumns || resolvedVariant === "masonry-lite";
+  const cardized = style.cardizeColumns || resolvedVariant === "masonry-lite";
 
   const columnStyle: CSSProperties | undefined = cardized
-    ? {
-        backgroundColor: style.columnBackground ?? "var(--color-surface)",
-        borderColor: style.columnBorderColor ?? "var(--color-border)",
+    ? compactStyle({
+        backgroundColor: resolveClearableStyleValue(style.columnBackground),
+        borderColor: resolveClearableStyleValue(style.columnBorderColor),
         borderStyle: "solid",
-        borderWidth:
-          borderWidthValueMap[style.columnBorderWidth ?? "1"] ?? "1px",
-      }
+        borderWidth: borderWidthValueMap[style.columnBorderWidth ?? "1"] ?? "1px",
+      })
     : undefined;
 
   return (
@@ -493,8 +482,8 @@ export function GridColumnsBlock({
               className={joinClasses(
                 "h-full min-h-[6rem]",
                 cardized ? "border" : "",
-                cardized ? paddingClassMap[style.columnPadding ?? "4"] ?? "p-4" : "",
-                cardized ? radiusClassMap[style.columnRadius ?? "xl"] ?? "rounded-xl" : ""
+                cardized ? (paddingClassMap[style.columnPadding ?? "4"] ?? "p-4") : "",
+                cardized ? (radiusClassMap[style.columnRadius ?? "xl"] ?? "rounded-xl") : ""
               )}
               style={columnStyle}
             >
@@ -504,11 +493,7 @@ export function GridColumnsBlock({
               {column.blocks.length > 0 ? (
                 <div className="space-y-4">
                   {column.blocks.map((block) => (
-                    <WidgetRenderer
-                      key={block.id}
-                      block={block}
-                      previewDevice={previewDevice}
-                    />
+                    <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
                   ))}
                 </div>
               ) : (

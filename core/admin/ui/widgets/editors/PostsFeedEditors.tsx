@@ -20,6 +20,7 @@ import {
   type PostsFeedSourceMode,
 } from "../../../../widgets/core/postsFeed";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 
 type EditorMode = "wizard" | "visual" | "advanced";
 
@@ -68,6 +69,7 @@ const columnsOptions = [
 ] as const;
 
 const gapOptions = [
+  { id: "none", label: "None" },
   { id: "sm", label: "Compact" },
   { id: "md", label: "Default" },
   { id: "lg", label: "Spacious" },
@@ -109,6 +111,34 @@ function updateValue(
   const current = normalizePostsFeedData(value);
   const next = updater(current);
   onChange(normalizePostsFeedData(next));
+}
+
+function updateStyle(
+  value: PostsFeedData,
+  onChange: (next: PostsFeedData) => void,
+  patch: Partial<NonNullable<PostsFeedData["style"]>>
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    style: {
+      ...current.style,
+      ...patch,
+    },
+  }));
+}
+
+function clearStyle(
+  value: PostsFeedData,
+  onChange: (next: PostsFeedData) => void,
+  key: keyof NonNullable<PostsFeedData["style"]>
+) {
+  updateValue(value, onChange, (current) => {
+    const { [key]: _removed, ...nextStyle } = current.style ?? {};
+    return {
+      ...current,
+      style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    };
+  });
 }
 
 function usePostOptions() {
@@ -161,10 +191,7 @@ function SourceSetup({
   const { items: posts, loading, error } = usePostOptions();
   const selectedManualIds = normalized.source?.manualPostIds ?? [];
 
-  const postsById = useMemo(
-    () => new Map(posts.map((item) => [item.id, item])),
-    [posts]
-  );
+  const postsById = useMemo(() => new Map(posts.map((item) => [item.id, item])), [posts]);
 
   const selectedPosts = selectedManualIds
     .map((id) => postsById.get(id))
@@ -291,7 +318,7 @@ function SourceSetup({
                 ...current,
                 source: {
                   ...current.source,
-                  limit: Number.isFinite(parsed) ? parsed : postsFeedDefaults.source?.limit ?? 6,
+                  limit: Number.isFinite(parsed) ? parsed : (postsFeedDefaults.source?.limit ?? 6),
                 },
               }));
             }}
@@ -511,6 +538,23 @@ function LayoutOptions({
           placeholder="Read more"
         />
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ClearableInputField
+          label="Card background"
+          value={normalized.style?.backgroundColor}
+          onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+          onClear={() => clearStyle(value, onChange, "backgroundColor")}
+          placeholder="var(--color-bg)"
+        />
+        <ClearableInputField
+          label="Card border"
+          value={normalized.style?.borderColor}
+          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          onClear={() => clearStyle(value, onChange, "borderColor")}
+          placeholder="var(--color-border)"
+        />
+      </div>
     </EditorSection>
   );
 }
@@ -561,7 +605,10 @@ function RuntimeSnapshot({ value }: { value: PostsFeedData }) {
   const normalized = normalizePostsFeedData(value);
 
   return (
-    <EditorSection title="Runtime payload" description="Read-only snapshot of resolved runtime data.">
+    <EditorSection
+      title="Runtime payload"
+      description="Read-only snapshot of resolved runtime data."
+    >
       <pre className="max-h-64 overflow-auto rounded-md border border-border/70 bg-background/70 p-3 text-xs">
         {JSON.stringify(normalized.resolved ?? {}, null, 2)}
       </pre>
@@ -569,10 +616,7 @@ function RuntimeSnapshot({ value }: { value: PostsFeedData }) {
   );
 }
 
-function renderPostsFeedEditor(
-  mode: EditorMode,
-  props: WidgetEditorProps<PostsFeedData>
-) {
+function renderPostsFeedEditor(mode: EditorMode, props: WidgetEditorProps<PostsFeedData>) {
   const { value, onChange, variant, onVariantChange } = props;
 
   if (mode === "wizard") {

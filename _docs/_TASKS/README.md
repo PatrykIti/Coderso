@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 48 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1357 tasks
+- **Done:** 1441 tasks
 
 ---
 
@@ -104,6 +104,90 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Done: preview is record-backed and cache-aware, list canvas reorders in-header, and Data uses widget-owned prop contracts |
+| TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Done: builder canvas and preview dialog now share cached-first first-record ownership plus a wider Pages-like preview shell |
+| TASK-251-01-02 | First-Record Preview Data for Editor View Canvas | High | Medium | Done: builder/editor preview now hydrates from `entries:list:<typeSlug>` with explicit fallback notes for no-record and read-failed states |
+| TASK-251-01-01 | Preview Dialog Shell Width and Device Framing Parity | High | Medium | Done: preview modal now opens from a roomy shell and defaults Editor View to desktop framing |
+| TASK-251-02 | List View Canvas Column Interaction Alignment | High | Medium | Done: visible column selection and reordering now live in the header, with a hidden-column tray below the table |
+| TASK-251-02-01 | Inline Table-Header Column Reordering | High | Medium | Done: left/right moves now swap visible columns in-header without hidden-column drift |
+| TASK-251-03 | Binding Panel Prop Coverage and Prop-Centric Cards | High | Large | Done: Data now renders widget-owned prop cards, compatibility rows, and write capability from one shared contract |
+| TASK-251-03-01 | Widget-Owned Bindable Prop Targets and Data-Tab Cards | High | Large | Done: screen widget registries now own bindable targets and only `screen-field-value.value` counts as write-capable end-to-end |
+| TASK-251-04 | QA, Docs, and Closure | Medium | Medium | Done: targeted validation, widget/cache/docs updates, board sync, and changelog landed with the builder hardening family |
+| TASK-250 | Custom Screens Widget Parity and Editor Flow Completion | High | Very Large | Done: screen widgets now use mode-specific editors, binding-aware controls, canonical read-only rendering, nested selected-element ownership, and broader parity coverage |
+| TASK-250-02 | Screen Layout Widget Surface Expansion | High | Large | Done: layout editor surface work is paired with nested selected-element rail ownership in the record editor |
+| TASK-250-02-02 | Selected Element Interaction and Element-Scoped Editing Flow | High | Large | Done: nested child selection now hydrates the right-side rail correctly and survives refresh without snapping back to the parent |
+| TASK-250-03 | Runtime and Registry Unification | High | Large | Done: preview and record-editor read paths now reuse the canonical renderer contract, with stronger registry coverage for `admin-editor-view` |
+| TASK-250-03-01 | Canonical Widget Renderer Reuse in the Dedicated Record Editor | High | Large | Done: `ScreenWidgetReadOnlyBlock` is now a thin `WidgetRenderer` pass-through while writable `screen-field-value` stays screen-owned |
+| TASK-250-03-02 | `admin-editor-view` Registry, Picker, and Surface Contract Coverage | High | Medium | Done: runtime-registry assertions now cover concrete `screen-*` surfaces/data-access and the picker remains screen-widget-only |
+| TASK-250-04 | QA, Docs, and Closure | Medium | Medium | Done: docs, board, changelog, targeted tests, and `gates:coderso` are synchronized for the finished parity follow-up |
+| TASK-250-04-01 | Screen Widget Editor/Runtime Test Matrix and Documentation Closure | Medium | Medium | Done: closure notes now reflect the final renderer path, nested element flow, widget docs, and validation matrix |
+| TASK-250-01 | Screen Widget Editor Architecture and Mode Parity | High | Large | Done: screen widget editors no longer alias one form; `wizard`, `visual`, and `advanced` now have distinct responsibilities |
+| TASK-250-01-01 | Distinct Wizard, Visual, and Advanced Flows for `screen-*` | High | Large | Done: each screen widget now exposes separate onboarding, day-to-day editing, and expert-control surfaces |
+| TASK-250-01-02 | Binding-Aware Editor Controls for `screen-record-header` and `screen-field-value` | High | Large | Done: header/value editors now expose binding-state hints and `Data` tab shortcuts without duplicating binding ownership |
+| TASK-250-02-01 | `screen-field-group` and `screen-two-column` Configuration Parity | High | Medium | Done: layout shells now document slot guidance, gap control, and clearable chrome closer to mature shared widget editors |
+| TASK-249 | Custom Screens Workspace V3 Legacy Path Removal | High | Very Large | Done: Custom Screens now use a workspace-first V3 contract, table-canvas List View, screen-owned editor runtime, sidebar readiness gating, and no active classic-editor or drawer fallback |
+| TASK-249-01 | Workspace V3 Contract, Routes, and Legacy Path Removal | High | Large | Done: V3 read/write contract, canonical workspace routing, sidebar shortcut gate, and assistant route parsing were hard-cut away from legacy active-path branches |
+| TASK-249-01-01 | Definition Schema, Read Migration, and Persistence Hard Cutover | High | Large | Done: `schemaVersion: 3` is active, V1/V2 reads migrate safely, explicit V2 write payloads are rejected, and legacy rows no longer auto-promote to writable editors |
+| TASK-249-01-02 | Routes, Clients, Cache, Nav, and Assistant Canonicalization | High | Large | Done: workspace paths, client normalization, sidebar shortcuts, prefetch, and assistant create-route parsing now follow the canonical records workflow |
+| TASK-249-02 | Builder IA and List View Canvas Realignment | High | Large | Done: the builder shell now uses `Preview`, `List View`, `Editor View`, and `Save`, while list building moved to a canvas plus inspector model |
+| TASK-249-02-01 | Topbar Mode Switch, Preview Action, and Inspector Ownership | High | Medium | Done: `Open records`, `Builder`, and center-canvas settings were removed; screen settings now live only in the right inspector |
+| TASK-249-02-02 | List View Table Canvas and Column Inspector | High | Large | Done: left-panel list element library, center table preview canvas, and selected-column inspector now own the records-list builder flow |
+| TASK-249-03 | Interactive Editor View and Entry Runtime | High | Very Large | Done: the record route now uses a screen-owned inline canvas and no longer offers active classic-editor or drawer fallback paths |
+| TASK-249-03-01 | Admin Editor Widgets and Inline Editable Screen Components | High | Large | Done: existing `screen-*` widgets were extended into the active inline editor surface instead of introducing a parallel widget platform |
+| TASK-249-03-02 | Entry Create/Edit Runtime, Error UX, and No-Legacy Fallback | High | Large | Done: records/new and row edit always route through the screen-owned editor, inline errors map from shared entry routes, and `EntryCreateDrawer` is gone from the active path |
+| TASK-249-04 | QA, Docs, and Closure | Medium | Medium | Done: docs, board, changelog, and targeted validation were synchronized for the V3 cutover |
+| TASK-249-04-01 | Replay, Validation Matrix, Docs, Board, and Changelog Closure | Medium | Medium | Done: targeted validation and docs closure landed; local Playwright replay remained unavailable and is recorded separately |
+| TASK-248 | Custom Screens Workspace Builder V2 | High | Very Large | Done: Custom Screens now persist V2 `definition`, expose `List View` and `Editor View` builder surfaces, and reuse existing entry routes/cache contracts |
+| TASK-248-01 | Custom Screen Definition V2 and Workspace Routing | High | Large | Done: V2 definition storage, V1 read migration, workspace route helpers, and prefetch contract landed |
+| TASK-248-01-01 | Definition Schema, Normalizer, and V1 Migration | High | Medium | Done: strict V2 normalizer, default list view generation, V1 migration, migration artifacts, and service projections shipped |
+| TASK-248-01-02 | Workspace Routes, Client Cache, and Entry Error Mapping | High | Medium | Done: workspace helpers, custom screen client normalization, prefetch warmup, and centralized content-entry error mapping shipped |
+| TASK-248-02 | Custom Screen List View Builder and Records Table | High | Large | Done: `List View` designer, persisted table config, row routing, and existing entry action reuse shipped |
+| TASK-248-02-01 | List View Designer and Persisted Configuration | High | Medium | Done: schema-bound column/filter/sort/create-mode controls save through `definition.listView` |
+| TASK-248-02-02 | Records Table Renderer, Actions, and Cache Behavior | High | Medium | Done: records table renders from `definition.listView`, keeps entries cache behavior, and routes rows/create by V2 config |
+| TASK-248-03 | Custom Screen Editor View Canvas and Entry Create Mode | High | Very Large | Done: `Editor View` owns schema-bound entry create/edit canvases without a parallel custom-screen entries API |
+| TASK-248-03-01 | Editor View Designer and Admin Field Widget Controls | High | Medium | Done: editor designer adds field widgets/bindings through existing screen widget contracts |
+| TASK-248-03-02 | Editor View Create Mode Draft, Save, and Validation | High | Medium | Done: `entries/new` create mode builds schema defaults and submits normalized entry data through existing create route |
+| TASK-248-03-03 | Editor View Edit Mode Hydration, Save, and Dirty State | High | Medium | Done: edit mode hydrates typed data, preserves unrelated fields on save, and keeps cache/dirty semantics |
+| TASK-248-04 | Admin Widget Registry, QA, Docs, and Closure | Medium | Large | Done: admin widget surfaces/data access, focused tests, gates, docs, changelog 782, and board closure synced |
+| TASK-248-04-01 | Admin Widget Registry Surface Split | High | Medium | Done: `admin-list-view` and `admin-editor-view` surfaces with data-access filtering landed |
+| TASK-248-04-02 | Playwright Replay, Docs, Changelog, and Board Closure | Medium | Small | Done: docs/changelog/board closure completed; Playwright and DB replay blockers recorded with targeted replacement validation |
+| TASK-244 | Widget Visual Surface Clear Controls | High | Very Large | Done: `Clear` controls now remove configured surface/background/overlay style keys across widget runtime and editor contracts without transparent or empty-string sentinels |
+| TASK-244-01 | Widget Surface Inventory and Clear Semantics | High | Medium | Done: clear-required surfaces, exclusions, and clear-as-removal semantics were locked before rollout |
+| TASK-244-01-01 | Widget Surface Background Inventory | High | Medium | Done: every rendered widget surface was classified as clear-required, already-clearable, intentional-state, or excluded |
+| TASK-244-01-02 | Clear Semantics and Backward Compatibility | High | Small | Done: shared helpers preserve deliberate `transparent` values while cleared fields remain absent |
+| TASK-244-02 | Hero, Shared Color Fields, and Background Clear Controls | High | Large | Done: Hero, shared clear helpers, and Section background clear behavior shipped with focused tests |
+| TASK-244-02-01 | Hero Gradient, Background, and Media Overlay Clear | High | Medium | Done: Hero gradient, background color, media overlay, and CTA background clear actions remove nested keys |
+| TASK-244-02-02 | Shared Clear Field Controls and Section No-Regression | High | Medium | Done: reusable clear field helpers cover repeated editor controls and preserve Section gradient/overlay behavior |
+| TASK-244-02-03 | Section Background Color Clear | High | Small | Done: Section background color clear removes `style.backgroundColor` without materializing `transparent` |
+| TASK-244-03 | Custom Screen and Operational Widget Surface Clear | High | Large | Done: screen, booking, listing, search, and commerce widget frames can clear configured surfaces |
+| TASK-244-03-01 | Custom Screen Widget Frame Surface Clear | High | Medium | Done: screen-record-header, screen-field-value, screen-field-group, and screen-two-column frame style keys can be cleared |
+| TASK-244-03-02 | Booking, Listing, Search, and Commerce Frame Surface Clear | High | Large | Done: operational shells, cards, tables, and action backgrounds clear without changing semantic state colors |
+| TASK-244-04 | Composite, Content, Form, and Shell Widget Surface Clear | High | Large | Done: marketing, content, form, shell, and primitive panel surfaces now use real clear semantics |
+| TASK-244-04-01 | Marketing and Content Surface and Overlay Clear | High | Large | Done: overlays, cards, panels, tiles, CTA surfaces, and content-list/posts-feed mappings clear by key removal |
+| TASK-244-04-02 | Form, Navigation, Footer, and Primitive Panel Color Clear | High | Large | Done: form backgrounds, global shell colors, and accordion/tabs/toggle panel surfaces clear while preserving behavior modes |
+| TASK-244-05 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Done: targeted matrix, docs, changelog 781, and task board closure are synchronized |
+| TASK-244-05-01 | Widget Surface Clear Test Matrix and Docs Closure | Medium | Small | Done: closure notes record validation commands, intentional exclusions, skipped broad gates, and no-transparent-sentinel evidence |
+| TASK-247 | Media Always-On Selection and Upload Copy | High | Small | Done: Media multi-select is always active, header `Select` was removed, and the upload CTA now reads `Upload` while preserving the existing dropzone file-input path |
+| TASK-246 | Menus Drop Intent and Indicator Stability | High | Small | Done: Menus row top/middle/bottom drop zones are stable, before/after indicators no longer shift layout, and the grip is centered with fixed height |
+| TASK-245 | Menus Drag Handle Hit Target Fix | High | Small | Done: Menus grip handle now owns a wider full-lane drag target, prevents SVG pointer interception, and keeps row content non-draggable |
+| TASK-243 | Menus Editor Action, Location, and Drag Parity | High | Large | Done: Menus editor header actions, lifecycle publish/draft, Location guidance, and handle-based drag/drop parity shipped |
+| TASK-243-01 | Menus Editor Header Actions and Lifecycle Publish | High | Medium | Done: editor header owns Discard, Save changes, Publish, and Move to Draft with lifecycle-safe persistence |
+| TASK-243-02 | Menus Location Contract and Editor Guidance | High | Medium | Done: Theme location guidance explains nullable slot behavior and runtime published-menu dependency |
+| TASK-243-03 | Menu Item Drag Handle and Nesting Drop Contract | High | Large | Done: grip-only drag, before/after/child intents, drop markers, keyboard reorder actions, and cycle guards shipped |
+| TASK-243-04 | Menus Editor Validation, Docs, and Closure | Medium | Medium | Done: targeted tests, docs, changelog 777, and board closure synced |
+| TASK-242 | Widget Style Token None Options | High | Large | Done: `none` off switches now cover approved visual tokens across widget schemas, render maps, admin selects, focused runtime/UI tests, docs, and changelog 776 |
+| TASK-242-01 | Widget Token Audit and None Semantics | High | Medium | Done: token inventory and semantic boundaries were used to scope the implementation |
+| TASK-242-01-01 | Widget Config Token Inventory | High | Small | Done: visual, legacy-zero, already-none, and structural fields were classified before rollout |
+| TASK-242-01-02 | None Token Semantics and Compatibility Helpers | High | Small | Done: `none` maps to fixed zero/empty output while legacy zero tokens remain compatible |
+| TASK-242-02 | Layout, Spacing, Gap, Padding, and Radius None Rollout | High | Large | Done: layout, spacing, padding, and radius runtime contracts accept `none` where approved |
+| TASK-242-02-01 | Flow Layout and Container Widget None Tokens | High | Medium | Done: stack, split layout, divider, spacer, grid columns, hero, navigation, footer, and screen gap tokens support `none` |
+| TASK-242-02-02 | Content, Form, Timeline, and Composite Widget None Tokens | High | Large | Done: content, form, timeline, rich text, logo, and marketing widget spacing/radius tokens support `none` |
+| TASK-242-03 | Typography, Size, Width, and Editor UI None Rollout | High | Medium | Done: typography, width, logo/input/button size, and editor select contracts expose `None` |
+| TASK-242-03-01 | Widget Editor Select Option Regressions | High | Medium | Done: editor-wave tests assert `None` visibility across changed widget editors |
+| TASK-242-03-02 | Typography, Size, Width Runtime None Tokens | High | Medium | Done: runtime/schema support for typography, width, logo height, input, and button `none` tokens landed |
+| TASK-242-04 | Validation, Docs, Changelog, and Board Closure | Medium | Medium | Done: validation, widget docs, changelog 776, and board sync completed |
+| TASK-242-04-01 | Widget None Token Test Matrix and Docs Closure | Medium | Small | Done: focused test matrix and widget docs were added for the `none` token rollout |
+| TASK-241 | Pages Published Preview Draft Sync | High | Small | Done: published Pages hide Save draft, Preview silently syncs unsaved editor data to currentData before token generation, and public visitors keep seeing publishedData until Publish |
 | TASK-238 | GitHub CodeQL Security Findings Remediation | High | Large | Done: CodeQL remediation was renumbered from TASK-237 to TASK-238, local scanner/lint/type/test validation passed, GitHub CodeQL open alerts are 0, secret scanning open alerts are 0, and Dependabot remains disabled/403 |
 | TASK-238-01 | Workflow Least-Privilege Permissions | High | Small | Done: explicit PR-gate workflow permissions and scoped SARIF write permissions are covered by regression tests |
 | TASK-238-02 | Listing Query Path Hardening | High | Small | Done: listing projection path guards reject unsafe prototype-pollution segments with Bun regression coverage |

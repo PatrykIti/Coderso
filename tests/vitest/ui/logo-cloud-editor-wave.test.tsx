@@ -170,8 +170,7 @@ vi.mock("@/components/ui/textarea", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -258,8 +257,7 @@ const getInputsByPlaceholder = (container: ParentNode, placeholder: string) => {
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
+      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
   if (!(textarea instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea with placeholder "${placeholder}"`);
@@ -376,9 +374,8 @@ afterEach(() => {
 });
 
 test("LogoCloud wizard covers variant fallback, logo count changes, and starter name updates", async () => {
-  const { LogoCloudWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
-  );
+  const { LogoCloudWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const initialValue: LogoCloudData = {
     logos: [
@@ -410,9 +407,7 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
   );
 
   expect(getLatestValue().header?.title).toBe("Trusted by enterprise teams");
-  expect(getLatestValue().header?.description).toBe(
-    logoCloudDefaults.header?.description
-  );
+  expect(getLatestValue().header?.description).toBe(logoCloudDefaults.header?.description);
 
   const countSelect = getSelectByOptions(container, ["1", String(logoCloudLogoMax)]);
   setSelectValue(countSelect, "2");
@@ -431,9 +426,8 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
 });
 
 test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reordering, and style toggles", async () => {
-  const { LogoCloudVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
-  );
+  const { LogoCloudVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const initialValue: LogoCloudData = {
     header: {
@@ -520,11 +514,11 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   );
 
   expect(getLatestValue().header?.title).toBe("Trusted by global partners");
-  expect(getLatestValue().header?.description).toBe(
-    "Focused on recognizable deployment logos."
-  );
+  expect(getLatestValue().header?.description).toBe("Focused on recognizable deployment logos.");
 
   const styleSelects = getSelects(styleSection);
+  expect(Array.from(styleSelects[0]!.options).map((option) => option.value)).toContain("none");
+  expect(Array.from(styleSelects[1]!.options).map((option) => option.value)).toContain("none");
   setSelectValue(styleSelects[0]!, "xl");
   setSelectValue(styleSelects[1]!, "lg");
   setSelectValue(styleSelects[2]!, "end");
@@ -546,9 +540,8 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
 });
 
 test("LogoCloud advanced covers normalization defaults, technical tokens, and reset safeguards", async () => {
-  const { LogoCloudAdvancedEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
-  );
+  const { LogoCloudAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const initialValue: LogoCloudData = {
     logos: [
@@ -577,14 +570,14 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
 
   clickButton(getButtonsByText(safeguardsSection, "Normalize now")[0]);
   expect(getLatestValue().header?.title).toBe(logoCloudDefaults.header?.title);
-  expect(getLatestValue().header?.description).toBe(
-    logoCloudDefaults.header?.description
-  );
+  expect(getLatestValue().header?.description).toBe(logoCloudDefaults.header?.description);
   expect(getLatestValue().style).toEqual(logoCloudDefaults.style);
   expect(getLatestValue().logos[1]?.id).toBe("logo-2");
   expect(getLatestValue().logos[0]?.name).toBe("Acme");
 
   const technicalSelects = getSelects(technicalSection);
+  expect(Array.from(technicalSelects[0]!.options).map((option) => option.value)).toContain("none");
+  expect(Array.from(technicalSelects[1]!.options).map((option) => option.value)).toContain("none");
   setSelectValue(technicalSelects[0]!, "xl");
   setSelectValue(technicalSelects[1]!, "lg");
   setSelectValue(technicalSelects[2]!, "end");
@@ -603,11 +596,8 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
 });
 
 test("LogoCloud editors render sparse header and style fallbacks with safe defaults", async () => {
-  const {
-    LogoCloudAdvancedEditor,
-    LogoCloudVisualEditor,
-    LogoCloudWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
+  const { LogoCloudAdvancedEditor, LogoCloudVisualEditor, LogoCloudWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const baseValue: LogoCloudData = {
     header: {},
@@ -637,9 +627,9 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
   });
 
   try {
-    expect(
-      getInputByPlaceholder(visualHarness.container, "Trusted by teams worldwide").value
-    ).toBe(logoCloudDefaults.header?.title);
+    expect(getInputByPlaceholder(visualHarness.container, "Trusted by teams worldwide").value).toBe(
+      logoCloudDefaults.header?.title
+    );
     expect(
       getTextareaByPlaceholder(visualHarness.container, "Showcase partner and client logos.").value
     ).toBe(logoCloudDefaults.header?.description);
@@ -669,7 +659,10 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
   });
 
   try {
-    const technicalSection = getSectionByTitle(advancedHarness.container, "Technical layout tokens");
+    const technicalSection = getSectionByTitle(
+      advancedHarness.container,
+      "Technical layout tokens"
+    );
     const selects = getSelects(technicalSection);
     expect(selects[0]?.value).toBe("md");
     expect(selects[1]?.value).toBe("md");
@@ -680,9 +673,8 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
 });
 
 test("LogoCloud editors ignore variant changes safely when no handler is provided", async () => {
-  const { LogoCloudVisualEditor, LogoCloudWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
-  );
+  const { LogoCloudVisualEditor, LogoCloudWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const sharedValue: LogoCloudData = {
     logos: [
@@ -723,9 +715,9 @@ test("LogoCloud editors ignore variant changes safely when no handler is provide
 test("LogoCloud editors fall back when normalized header and style are omitted", async () => {
   vi.resetModules();
   vi.doMock("../../../core/widgets/core/logoCloud", async () => {
-    const actual = await vi.importActual<
-      typeof import("../../../core/widgets/core/logoCloud")
-    >("../../../core/widgets/core/logoCloud");
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/logoCloud")>(
+      "../../../core/widgets/core/logoCloud"
+    );
 
     return {
       ...actual,
@@ -752,9 +744,8 @@ test("LogoCloud editors fall back when normalized header and style are omitted",
     };
   });
 
-  const { LogoCloudAdvancedEditor, LogoCloudVisualEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
-  );
+  const { LogoCloudAdvancedEditor, LogoCloudVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const sparseValue: LogoCloudData = {
     logos: [{} as never],
@@ -766,12 +757,20 @@ test("LogoCloud editors fall back when normalized header and style are omitted",
 
   try {
     expect(
-      (getInputByPlaceholder(visualView.container, "Trusted by teams worldwide") as HTMLInputElement)
-        .value
+      (
+        getInputByPlaceholder(
+          visualView.container,
+          "Trusted by teams worldwide"
+        ) as HTMLInputElement
+      ).value
     ).toBe(logoCloudDefaults.header?.title);
     expect(
-      (getTextareaByPlaceholder(visualView.container, "Showcase partner and client logos.") as HTMLTextAreaElement)
-        .value
+      (
+        getTextareaByPlaceholder(
+          visualView.container,
+          "Showcase partner and client logos."
+        ) as HTMLTextAreaElement
+      ).value
     ).toBe(logoCloudDefaults.header?.description);
 
     const styleSection = getSectionByTitle(visualView.container, "Display style");
@@ -787,7 +786,11 @@ test("LogoCloud editors fall back when normalized header and style are omitted",
   }
 
   const advancedView = mount(
-    <LogoCloudAdvancedEditor value={sparseValue} onChange={() => undefined} variant="legacy-cloud" />
+    <LogoCloudAdvancedEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="legacy-cloud"
+    />
   );
 
   try {
