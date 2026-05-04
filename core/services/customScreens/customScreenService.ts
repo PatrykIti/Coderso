@@ -6,6 +6,7 @@ import type { WidgetBlock } from "../../widgets/types";
 import {
   normalizeCustomScreenDefinition,
   normalizeCustomScreenDefinitionForRead,
+  normalizeCustomScreenSchemaVersion,
   type CustomScreenBinding,
   type CustomScreenDefinition,
   type CustomScreenDefinitionVersion,
@@ -219,6 +220,9 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
     },
     { contentType }
   );
+  const nextSchemaVersion = normalizeCustomScreenSchemaVersion(
+    input.schemaVersion ?? existing.schemaVersion
+  );
   const definition = normalizeCustomScreenDefinition(
     input.definition !== undefined
       ? {
@@ -230,11 +234,28 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
       : input.blocks !== undefined ||
           input.bindings !== undefined ||
           input.schemaVersion !== undefined
-        ? {
-            schemaVersion: input.schemaVersion ?? existing.schemaVersion,
-            blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
-            bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
-          }
+        ? nextSchemaVersion === 3
+          ? {
+              definition: {
+                schemaVersion: 3,
+                listView: baseDefinition.listView,
+                editorView: {
+                  blocks:
+                    input.blocks !== undefined ? input.blocks : baseDefinition.editorView.blocks,
+                  bindings:
+                    input.bindings !== undefined
+                      ? input.bindings
+                      : baseDefinition.editorView.bindings,
+                  saveMode: "entry",
+                  interactionMode: "inline",
+                },
+              },
+            }
+          : {
+              schemaVersion: nextSchemaVersion,
+              blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
+              bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
+            }
         : {
             definition: baseDefinition,
           },

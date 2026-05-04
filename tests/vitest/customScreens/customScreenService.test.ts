@@ -265,6 +265,86 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
   expect(result?.capabilities.mode).toBe("collection-only");
 });
 
+test("updateCustomScreen preserves v3 definition shape when blocks are patched", async () => {
+  const existingDefinition = {
+    schemaVersion: 3,
+    listView: {
+      columns: [
+        {
+          id: "title",
+          source: "system",
+          field: "title",
+          label: "Title",
+          formatter: "text",
+          visible: true,
+        },
+      ],
+      filters: [],
+      defaultSort: { field: "updatedAt", direction: "desc" },
+      bulkActions: {
+        delete: true,
+        publish: true,
+        unpublish: true,
+      },
+    },
+    editorView: {
+      blocks: [{ id: "section-1", type: "section", data: {} }],
+      bindings: [],
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 3,
+      definition: existingDefinition,
+      blocks: existingDefinition.editorView.blocks,
+      bindings: existingDefinition.editorView.bindings,
+    }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({
+      schemaVersion: 3,
+      definition: {
+        ...existingDefinition,
+        editorView: {
+          ...existingDefinition.editorView,
+          blocks: [{ id: "section-2", type: "section", data: {} }],
+        },
+      },
+      blocks: [{ id: "section-2", type: "section", data: {} }],
+      bindings: [],
+    }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", {
+    blocks: [{ id: "section-2", type: "section", data: {} }],
+  });
+
+  expect(mockDb.state.lastUpdateValues).toMatchObject({
+    schemaVersion: 3,
+    definition: {
+      schemaVersion: 3,
+      listView: existingDefinition.listView,
+      editorView: {
+        blocks: [{ id: "section-2", type: "section", data: {} }],
+        bindings: [],
+        saveMode: "entry",
+        interactionMode: "inline",
+      },
+    },
+    blocks: [{ id: "section-2", type: "section", data: {} }],
+    bindings: [],
+  });
+  expect(result?.definition.listView).toEqual(existingDefinition.listView);
+  expect(result?.definition.editorView.blocks[0]).toMatchObject({
+    id: "section-2",
+    type: "section",
+    data: {},
+  });
+});
+
 test("deleteCustomScreen returns the normalized deleted record or null", async () => {
   mockDb.state.deleteRows = [createRow()];
 
