@@ -14,13 +14,23 @@
 Add the first internal admin route family for detail-page CRUD, revisions, and
 detail-template preview token issuance.
 
-This leaf owns the route/service boundary for the resource itself. It does not
+This task is now a small program, not one implementation leaf. It still owns
+the route/service boundary for the resource itself, but the work is split so we
+do not mix:
+
+- CRUD/read route handlers,
+- preview/publish/autosave lifecycle routes,
+- revisions/restore/discard route flow
+
+into one oversized slice. It does not
 own `detailPageId` route linking in `site.contentRoutes`; that round-trip stays
 with `TASK-190-05-03-07-02`.
 
 ## Sub-Tasks
 
-No child task files.
+- `TASK-190-05-03-07-01-01_Detail_Page_CRUD_and_Read_Route_Family.md`
+- `TASK-190-05-03-07-01-02_Detail_Page_Preview_Publish_and_Autosave_Lifecycle_Routes.md`
+- `TASK-190-05-03-07-01-03_Detail_Page_Revisions_and_Restore_Route_Flow.md`
 
 ## Files to Change
 

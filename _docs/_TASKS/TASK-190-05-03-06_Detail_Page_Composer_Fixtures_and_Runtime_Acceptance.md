@@ -74,9 +74,13 @@ Required local fixtures:
 
 ```ts
 for (const fixture of detailPageFixtures) {
-  const plan = composeBlueprintPlan(fixture.prompt, fixture.context);
+  const plan = planAssistantActions({
+    prompt: fixture.prompt,
+    context: fixture.context,
+  });
   expect(plan.actions).toContainAction("detail-page.upsert");
-  await executePlan(plan);
+  await dryRunAssistantActionPlan({ plan });
+  await executeAssistantActionPlan({ plan, actorId: fixture.actorId });
   await assertPublicRuntimeMatchesFixture(fixture);
 }
 ```

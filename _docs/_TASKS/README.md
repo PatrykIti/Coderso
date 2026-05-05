@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 54 tasks
+- **To Do:** 57 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1441 tasks
 
@@ -63,7 +63,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05-03-05 | Detail Page Action Schema and Executor Adapter | High | Large | Technical leaf: strict typed detail-page upsert action and executor integration |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
 | TASK-190-05-03-07 | Detail Page Route Linking and Internal Admin API | High | Large | Technical program: internal CRUD/revision routes, `detailPageId` settings/matcher round-trip, and admin client/cache parity |
-| TASK-190-05-03-07-01 | Detail Page Internal CRUD, Revisions, and Preview Routes | High | Large | Technical leaf: internal detail-page CRUD/revisions/preview route family and service error mapping |
+| TASK-190-05-03-07-01 | Detail Page Internal CRUD, Revisions, and Preview Routes | High | Large | Technical program: internal CRUD/read, preview/lifecycle, and revision route subwaves |
+| TASK-190-05-03-07-01-01 | Detail Page CRUD and Read Route Family | High | Medium | Technical leaf: list/detail/create/update/delete routes plus document service boundary |
+| TASK-190-05-03-07-01-02 | Detail Page Preview, Publish, and Autosave Lifecycle Routes | High | Medium | Technical leaf: preview token issuance, publish/unpublish, and autosave lifecycle routes |
+| TASK-190-05-03-07-01-03 | Detail Page Revisions and Restore Route Flow | High | Medium | Technical leaf: revision history, restore, discard, and route-level error mapping |
 | TASK-190-05-03-07-02 | DetailPageId Content Route Round-Trip and Matcher Metadata | High | Medium | Technical leaf: `detailPageId` settings, assistant action, Site Settings, and matcher round-trip |
 | TASK-190-05-03-07-03 | Detail Page Admin Client, Cache, and Delete Conflict Parity | High | Medium | Technical leaf: detail-page admin client/cache family plus linked delete and content-type conflict parity |
 | TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |

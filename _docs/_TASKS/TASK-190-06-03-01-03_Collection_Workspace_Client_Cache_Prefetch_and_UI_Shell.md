@@ -41,7 +41,11 @@ No child task files.
 - `CollectionWorkspacePage.tsx` owns route-local refresh/pending UX only,
 - `adminPrefetch.ts` remains the prefetch owner and must warm the workspace
   route through the current Engine seam without being swallowed by the broader
-  `/advanced/engine` match.
+  `/advanced/engine` match,
+- because current `adminPrefetch.ts` treats string `match` values as literal
+  `path.startsWith(...)` prefixes, workspace warmup must use either a predicate
+  matcher or an explicit workspace-path parser/resolver. Do not document a
+  parameterized string pattern that the current helper cannot match.
 
 ## Pseudocode
 
@@ -54,7 +58,11 @@ export const getContentTypeCollectionWorkspaceCached = (contentTypeId, options) 
   );
 
 prefetchEntries.unshift({
-  match: "/advanced/engine/:id/collection",
+  match: (path) => resolveCollectionWorkspacePrefetchTarget(path) !== null,
+  resolveKey: ({ path }) => {
+    const target = resolveCollectionWorkspacePrefetchTarget(path);
+    return target ? `/advanced/engine/${target.contentTypeId}/collection` : "/advanced/engine";
+  },
   run: ({ path }) => warmCollectionWorkspace(path),
 });
 ```
@@ -76,6 +84,9 @@ prefetchEntries.unshift({
 - client helpers use the content-types cache namespace and current cache bus
   contract,
 - workspace warmup resolves through a specific Engine-prefetch match,
+- workspace warmup does not rely on a parameterized string `match`; it uses a
+  predicate matcher or explicit workspace-path parser compatible with the
+  current `adminPrefetch.ts` implementation,
 - the workspace route shell mounts inside the canonical `/admin/advanced/engine`
   family and does not create a second admin namespace,
 - route-local refresh/pending UX stays in the page shell, not the client helper.

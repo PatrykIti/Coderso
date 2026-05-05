@@ -232,20 +232,24 @@ Rules:
 ## Pseudocode
 
 ```ts
-export const buildAssistantAdminContext = (route, activeSurface) => {
-  const runtimeSnapshot = buildRuntimeSnapshot(route);
-  const hint = isCollectionWorkspaceRoute(route)
+const browserContext = buildAssistantAdminContext({
+  page: route,
+  runtimeSnapshot,
+  activeSurface,
+  collectionWorkspaceHint: isCollectionWorkspaceRoute(route)
     ? {
         contentTypeId: runtimeSnapshot.selectedResource?.id ?? null,
         activeDetailPageId: activeSurface?.kind === "detail-page" ? activeSurface.detailPage.id : null,
       }
-    : null;
+    : null,
+});
 
-  return {
-    collectionWorkspaceHint: hint,
-    collectionWorkspace: hydrateCollectionWorkspaceOnServer(hint),
-  };
-};
+const contextWithCatalog = includeResourceCatalog
+  ? { ...browserContext, resourceCatalog: await service.buildResourceCatalog({}) }
+  : browserContext;
+
+const hydratedContext = await service.hydrateActiveSurface(contextWithCatalog);
+return service.planActions({ prompt, context: hydratedContext });
 ```
 
 ## Security Contract
