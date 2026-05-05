@@ -210,17 +210,20 @@ Touched existing modules:
    composer-created documents.
 2. Define binding resolution from entry fields/meta/computed sources using the
    existing dot-path binding model.
-3. Add runtime resolver and plug it into the current content-detail runtime
-   entry point with legacy fallback.
-4. Add required `detail-page.upsert` typed action schema/executor to
-   create/update detail page documents without mutating route ownership.
-5. Add internal admin detail page API plus explicit stable-id behavior for
-   assistant/composer upserts and manual admin create flows.
-6. Extend preview/cache/invalidation with detail-page-specific preview context
+3. Add `detailPageId` content-route round-trip and matcher metadata through the
+   current `site.contentRoutes` owner seam before any runtime leaf consumes
+   that route-link contract.
+4. Add runtime resolver and plug it into the current content-detail runtime
+   entry point with legacy fallback, consuming validated `detailPageId` route
+   metadata from step 3 instead of inventing a second lookup path.
+5. Extend preview/cache/invalidation with detail-page-specific preview context
    stored server-side, not trusted from ad-hoc query params.
-7. Add `detailPageId` content-route round-trip and runtime linkage after the
-   detail page document exists; live route ownership must stay in
-   `site.contentRoutes`.
+6. Add required `detail-page.upsert` typed action schema/executor to
+   create/update detail page documents without mutating route ownership.
+7. Add internal admin detail page API plus explicit stable-id behavior for
+   assistant/composer upserts and manual admin create flows; preview lifecycle
+   routes must consume the shared preview contract from step 5, and CRUD/client
+   parity must keep route-link ownership in step 3.
 8. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
 9. Add generic assistant resource/policy integration for `detail-page` only

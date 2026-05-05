@@ -232,7 +232,7 @@ Rules:
 ## Pseudocode
 
 ```ts
-const browserContext = buildAssistantAdminContext({
+const browserContext: AssistantActionContext = {
   page: route,
   runtimeSnapshot,
   activeSurface,
@@ -242,7 +242,7 @@ const browserContext = buildAssistantAdminContext({
         activeDetailPageId: activeSurface?.kind === "detail-page" ? activeSurface.detailPage.id : null,
       }
     : null,
-});
+};
 
 const contextWithCatalog = includeResourceCatalog
   ? { ...browserContext, resourceCatalog: await service.buildResourceCatalog({}) }
