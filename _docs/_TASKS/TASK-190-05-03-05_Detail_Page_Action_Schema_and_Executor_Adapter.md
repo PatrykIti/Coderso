@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Assistant/Core + Typed Actions
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-03
+**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-03, TASK-190-05-03-04
 **Status:** To Do
 
 ---
@@ -144,6 +144,26 @@ Policy metadata for this resource family should use the technical kind
 `detail-page` and the UI label "Detail Template" only at the presentation
 layer, but generic policy registration itself is deferred to
 `TASK-190-05-03-08`.
+
+## Pseudocode
+
+```ts
+export const executeDetailPageUpsert = async (action, deps) => {
+  const document = normalizeDetailPageDocument(action.input.document);
+  const contentType = await deps.getContentTypeById(document.contentTypeId);
+  assertDetailPageIdOwnership(document.id, contentType.id, action.input.expectedExistingId);
+
+  const persisted = await deps.upsertDetailPageDocument(document);
+  deps.invalidateDetailPagePublicCache(persisted);
+
+  return {
+    detailPageId: persisted.id,
+    contentTypeId: persisted.contentTypeId,
+    contentTypeSlug: contentType.slug,
+    status: persisted.status,
+  };
+};
+```
 
 ## Security Contract
 

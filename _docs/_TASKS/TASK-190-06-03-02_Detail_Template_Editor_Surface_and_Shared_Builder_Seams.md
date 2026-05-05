@@ -68,7 +68,7 @@ Rules:
 - editor chrome and lifecycle behavior should come from extracted shared seams
   where practical,
 - route shell, cache warmup, and admin navigation ownership stay in the current
-  `Coderso/Engine` / `content-types` family; `detailPagesClient.ts` remains the
+  `Advanced/Engine` / `content-types` family; `detailPagesClient.ts` remains the
   owner only for detail-page document CRUD/preview/revision lifecycle,
 - no ad-hoc route-local fetch helpers; use dedicated detail-page admin client
   wrappers,
@@ -91,6 +91,24 @@ Collection Workspace
   -> inspect bindings
   -> preview runtime
   -> autosave / publish / revisions
+```
+
+## Pseudocode
+
+```ts
+export const DetailTemplateEditorPage = ({ detailPageId, contentTypeId }) => {
+  const document = useDetailPageDocument(detailPageId);
+  const sampleEntry = useSampleEntryPreview(contentTypeId);
+
+  return (
+    <SharedBuilderSurface
+      mode="detail-page"
+      document={document}
+      onSave={detailPagesClient.save}
+      onPreview={() => detailPagesClient.preview(detailPageId, sampleEntry.id)}
+    />
+  );
+};
 ```
 
 ## Security Contract

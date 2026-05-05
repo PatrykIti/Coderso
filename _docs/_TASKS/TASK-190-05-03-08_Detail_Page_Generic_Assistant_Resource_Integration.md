@@ -115,6 +115,21 @@ Rules:
 - provider/resource catalog packaging remains server-derived and redacted; adding
   `detail-page` must not make client-authored `resourceCatalog` trusted.
 
+## Pseudocode
+
+```ts
+export const resolveDetailPageTarget = ({ activeSurface, resourceCatalog, request }) => {
+  if (activeSurface?.kind === "detail-page") return byId(resourceCatalog.detailPages, activeSurface.id);
+  if (request.detailPageId) return byId(resourceCatalog.detailPages, request.detailPageId);
+  return null;
+};
+
+export const extendProviderPlanningContext = (context) => ({
+  ...context,
+  detailPages: context.resourceCatalog?.detailPages ?? [],
+});
+```
+
 ## Security Contract
 
 - Visibility: internal assistant planning only.

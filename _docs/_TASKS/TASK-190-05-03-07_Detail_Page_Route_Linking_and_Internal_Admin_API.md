@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/Admin API + Detail Pages
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04, TASK-190-05-03-05
+**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-04
 **Status:** To Do
 
 ---
@@ -18,14 +18,21 @@ routes.
 Public users must never access detail page CRUD endpoints. Public users only hit
 runtime paths such as `/projekty-domow/:slug`.
 
-This leaf is the single implementation owner for the `detailPageId` round-trip
-across settings normalization, assistant action input, Site Settings
-serialization/UI, and route-match metadata. `TASK-190-05-03-01` defines the
-shared contract and id rules, but this leaf owns the actual end-to-end wiring.
+This task is now a small program, not one implementation leaf. It still owns
+the end-to-end `detailPageId` round-trip plus the internal detail-page admin
+API, but the work is split so we do not mix:
+
+- CRUD/revisions/preview route handlers and services,
+- `detailPageId` settings/action/UI/matcher round-trip,
+- admin client/cache/delete parity
+
+into one oversized slice.
 
 ## Sub-Tasks
 
-No child task files.
+- `TASK-190-05-03-07-01_Detail_Page_Internal_CRUD_Revisions_and_Preview_Routes.md`
+- `TASK-190-05-03-07-02_DetailPageId_Content_Route_Roundtrip_and_Matcher_Metadata.md`
+- `TASK-190-05-03-07-03_Detail_Page_Admin_Client_Cache_and_Delete_Conflict_Parity.md`
 
 ## Internal API Contract
 
@@ -218,6 +225,30 @@ ID contract:
   rather than accepting arbitrary string ids.
 - Runtime route linking must happen through `setting.content-route.upsert`
   after the referenced detail page document id is known.
+
+## Pseudocode
+
+```ts
+// 07-01
+router.post("/admin/api/detail-pages/:id/preview", async (ctx) => {
+  const request = normalizeDetailPagePreviewRequest(ctx.body);
+  return issueDetailPagePreviewToken(request);
+});
+
+// 07-02
+export const mergeContentRouteDetailPageId = (currentRoute, input) => ({
+  ...currentRoute,
+  ...(Object.prototype.hasOwnProperty.call(input, "detailPageId")
+    ? { detailPageId: input.detailPageId }
+    : {}),
+});
+
+// 07-03
+export const invalidateDetailPageAdminCaches = ({ id, contentTypeId }) => {
+  cacheBus.invalidate(`detailPages:detail:${id}`);
+  cacheBus.invalidate(`detailPages:list:contentType:${contentTypeId}`);
+};
+```
 
 Delete contract:
 

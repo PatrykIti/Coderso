@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 48 tasks
+- **To Do:** 54 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1441 tasks
 
@@ -58,17 +58,23 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-05-03 | Detail Page Composition and Content Route Sections | High | Very Large | Technical program: first-class public detail page contract, bindings, runtime, preview/cache, action adapter, and acceptance |
 | TASK-190-05-03-01 | Detail Page Model and Schema Contract | High | Large | Technical leaf: strict versioned detail page document model and normalizer |
 | TASK-190-05-03-02 | Detail Page Bindings and Field Resolver | High | Large | Technical leaf: safe entry field/meta/computed bindings into widget props |
-| TASK-190-05-03-03 | Detail Page Runtime Renderer and Route Resolution | High | Large | Technical leaf: public runtime detail renderer with legacy fallback |
+| TASK-190-05-03-03 | Detail Page Runtime Renderer and Route Resolution | High | Large | Technical leaf: public runtime detail renderer with legacy fallback after validated `detailPageId` route metadata lands |
 | TASK-190-05-03-04 | Detail Page Preview, Cache, and Invalidation | High | Medium | Technical leaf: preview token flow plus entry/detail cache invalidation |
 | TASK-190-05-03-05 | Detail Page Action Schema and Executor Adapter | High | Large | Technical leaf: strict typed detail-page upsert action and executor integration |
 | TASK-190-05-03-06 | Detail Page Composer Fixtures and Runtime Acceptance | High | Medium | Technical leaf: fixture matrix and Bun public runtime acceptance coverage |
-| TASK-190-05-03-07 | Detail Page Route Linking and Internal Admin API | High | Large | Technical leaf: content route detailPageId round-trip plus internal detail page CRUD/revision routes |
+| TASK-190-05-03-07 | Detail Page Route Linking and Internal Admin API | High | Large | Technical program: internal CRUD/revision routes, `detailPageId` settings/matcher round-trip, and admin client/cache parity |
+| TASK-190-05-03-07-01 | Detail Page Internal CRUD, Revisions, and Preview Routes | High | Large | Technical leaf: internal detail-page CRUD/revisions/preview route family and service error mapping |
+| TASK-190-05-03-07-02 | DetailPageId Content Route Round-Trip and Matcher Metadata | High | Medium | Technical leaf: `detailPageId` settings, assistant action, Site Settings, and matcher round-trip |
+| TASK-190-05-03-07-03 | Detail Page Admin Client, Cache, and Delete Conflict Parity | High | Medium | Technical leaf: detail-page admin client/cache family plus linked delete and content-type conflict parity |
 | TASK-190-05-03-08 | Detail Page Generic Assistant Resource Integration | High | Medium | Technical leaf: later generic policy/target-resolver/provider support for detail-page after base action/admin/runtime flow exists |
 | TASK-190-06 | Admin Surface Composer | High | Large | Business area: compose custom-screen admin UX from multiple fragments |
 | TASK-190-06-01 | Admin Screen Layout Composer | High | Medium | Technical leaf: merge admin groups into screen blocks |
 | TASK-190-06-02 | Admin Bindings, Routes, and Permission Safety | High | Medium | Technical leaf: safe field bindings and permission metadata |
 | TASK-190-06-03 | Collection Workspace and Template Editor | High | Large | Technical program: workspace route/read model, canonical links, detail-template editor seams, and assistant context integration |
-| TASK-190-06-03-01 | Collection Workspace Route, Read Model, and Canonical Resource Linking | High | Medium | Technical leaf: route plus aggregated workspace read model with deterministic canonical resource resolution |
+| TASK-190-06-03-01 | Collection Workspace Route, Read Model, and Canonical Resource Linking | High | Medium | Technical program: route, server read model, canonical resolution, cache/prefetch, and UI shell |
+| TASK-190-06-03-01-01 | Collection Workspace Route and Server Read Model | High | Medium | Technical leaf: workspace route registration, bounded summary schema, and server aggregation seam |
+| TASK-190-06-03-01-02 | Collection Workspace Canonical Resolution and Read Permissions | High | Medium | Technical leaf: deterministic canonical-link resolution, unresolved candidates, and owner-read redaction |
+| TASK-190-06-03-01-03 | Collection Workspace Client Cache, Prefetch, and UI Shell | High | Medium | Technical leaf: cached client helpers, Engine prefetch, and workspace route shell |
 | TASK-190-06-03-02 | Detail Template Editor Surface and Shared Builder Seams | High | Large | Technical leaf: detail-page editor mode built from extracted page/template/screen editor seams |
 | TASK-190-06-03-03 | Collection Workspace Assistant Context and Follow-Up Integration | High | Medium | Technical leaf: workspace/detail-page active-surface integration through current assistant context seams |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | Business area: assemble strict action plans and reuse existing resources |

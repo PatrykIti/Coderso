@@ -20,9 +20,20 @@ prefixes. The workspace should surface deterministic links first and return
 `unresolved` / `candidates[]` when the repo does not yet have enough
 information to pick one canonical resource safely.
 
+This task is now a small program, not one implementation leaf. It still owns
+the workspace route/read-model outcome, but the work is split so we do not mix:
+
+- route registration plus server summary assembly,
+- canonical resolution plus owner-read/redaction rules,
+- client cache/prefetch/UI shell
+
+into one oversized slice.
+
 ## Sub-Tasks
 
-No child task files.
+- `TASK-190-06-03-01-01_Collection_Workspace_Route_and_Server_Read_Model.md`
+- `TASK-190-06-03-01-02_Collection_Workspace_Canonical_Resolution_and_Read_Permissions.md`
+- `TASK-190-06-03-01-03_Collection_Workspace_Client_Cache_Prefetch_and_UI_Shell.md`
 
 ## Files to Change
 
@@ -99,12 +110,12 @@ Reuse rule:
   seams; `contentTypesClient.ts` workspace helpers must not become a
   centralized mutation broker.
 - `adminPrefetch.ts` remains the owner of route warmup. The new
-  `/coderso/engine/:contentTypeId/collection` route must extend the existing
+  `/advanced/engine/:contentTypeId/collection` route must extend the existing
   Engine prefetch family through that shared helper, not route-local hover
   hooks or page-level effect fetches.
 - Because current `createAdminPrefetcher(...)` picks the first matching prefix,
   this leaf must ensure the workspace route does not collapse into the generic
-  `/coderso/engine` warmup path. The implementation must either:
+  `/advanced/engine` warmup path. The implementation must either:
   - register a more specific workspace prefetch entry ahead of the generic
     Engine entry, or
   - teach `adminPrefetch.ts` to prefer the most specific matching route.
@@ -151,7 +162,7 @@ Owner rule:
 Workspace root:
 
 ```text
-/admin/coderso/engine/:contentTypeId/collection
+/admin/advanced/engine/:contentTypeId/collection
 ```
 
 Server-owned read endpoint:
@@ -330,7 +341,7 @@ type CollectionWorkspaceSummary = {
 - `adminPrefetch.ts` keeps workspace warmup inside the existing Engine prefetch
   seam; no route-local prefetch flow is introduced for the collection route.
 - Workspace route warmup resolves through a specific workspace prefetch match and
-  does not get swallowed by the broader `/coderso/engine` prefix entry under the
+  does not get swallowed by the broader `/advanced/engine` prefix entry under the
   current `adminPrefetch.ts` matcher.
 - route tests cover the owner-read bundle explicitly: `content:read` for the
   host route plus `settings:read` / `forms:read` / `media:read` gated slices

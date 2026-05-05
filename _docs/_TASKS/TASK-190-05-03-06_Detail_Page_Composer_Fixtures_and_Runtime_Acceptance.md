@@ -70,6 +70,17 @@ Required local fixtures:
 6. Existing legacy content detail routes still work without a detail document.
 7. Gated domains appear in review metadata but not executable actions.
 
+## Pseudocode
+
+```ts
+for (const fixture of detailPageFixtures) {
+  const plan = composeBlueprintPlan(fixture.prompt, fixture.context);
+  expect(plan.actions).toContainAction("detail-page.upsert");
+  await executePlan(plan);
+  await assertPublicRuntimeMatchesFixture(fixture);
+}
+```
+
 ## Security Contract
 
 - Visibility: QA fixtures plus public read runtime tests.

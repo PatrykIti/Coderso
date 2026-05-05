@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Runtime + Public Pages
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02
+**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-07-02
 **Status:** To Do
 
 ---
@@ -44,8 +44,8 @@ No child task files.
   runtime shell directly
 - Update `core/site/renderPublicEntry.tsx` only for the legacy
   content-detail-template fallback path or shared entry-detail data shaping
-- Update `core/site/contentRouteMatcher.ts` only if route match metadata needs
-  detail page ids from `site.contentRoutes`.
+- Consume `contentRouteMatcher.ts` route metadata widened by
+  `TASK-190-05-03-07-02`; do not create a second matcher contract in this leaf.
 - Add `core/services/content/detailPageRuntimeResolver.ts` only if extracting
   detail-page-specific runtime resolution out of the current public runtime
   owners improves reuse; otherwise keep the resolution logic inside
@@ -78,14 +78,30 @@ Public runtime rules:
   `renderPublicEntry.tsx`,
 - `renderPublicEntry.tsx` remains the fallback/theme-template owner for current
   content detail output when no linked detail-page document exists,
-- `TASK-190-05-03-07` later wires the validated `detailPageId` settings/client/
-  matcher round-trip, but this leaf remains the only runtime owner that
-  consumes that route metadata inside `publicSite.tsx` /
+- validated `detailPageId` route metadata is supplied by
+  `TASK-190-05-03-07-02`; this leaf remains the only runtime owner that
+  consumes that metadata inside `publicSite.tsx` /
   `renderPublicPage.tsx` / `renderPublicEntry.tsx`,
 - detail page render must not import admin UI modules,
 - current theme override support for `content detail` templates remains the
   fallback seam when no linked detail document exists,
 - unknown widgets render existing runtime fallback/warning behavior.
+
+## Pseudocode
+
+```ts
+export async function renderContentDetailWithOptionalDetailPage(match, deps) {
+  const entry = await deps.getPublishedEntryForRoute(match);
+  if (!entry) return render404();
+
+  if (!match.detailPageId) return renderLegacyEntryDetail(entry);
+
+  const detailPage = await deps.getPublishedDetailPage(match.detailPageId);
+  if (!detailPage || detailPage.contentTypeId !== entry.typeId) return render404();
+
+  return renderPublicPageRuntimeHtml(resolveDetailPageRuntimeDocument(detailPage, entry));
+}
+```
 
 ## Security Contract
 
@@ -110,6 +126,10 @@ Public runtime rules:
 - Existing theme-based content-detail template resolution remains intact for the
   fallback path.
 - Content route list page behavior remains unchanged.
+- Existing route-precedence behavior stays explicit: a matching
+  `site.contentRoutes` entry still shadows a page slug until routes are cleared,
+  unless this leaf intentionally changes that contract together with the
+  runtime regression tests.
 - Unknown detail document/widget errors produce deterministic fallback or 404,
   not a crash.
 

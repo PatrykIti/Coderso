@@ -100,6 +100,25 @@ Rules:
   contracts above; they do not become hidden owners of route resolution, nonce
   issuance, form access policy, or listing-query semantics.
 
+## Pseudocode
+
+```ts
+export const resolveBindingValue = (source, entry, deps) => {
+  if (source.kind === "entry-field") return readEntryField(entry, source.field);
+  if (source.kind === "entry-meta") return readEntryMeta(entry, source.field);
+  if (source.kind === "computed" && source.resolver === "detailHref") {
+    return deps.resolveDetailHref(entry);
+  }
+  if (source.kind === "computed" && source.resolver === "relatedItems") {
+    return deps.resolveRelatedItems(entry);
+  }
+  if (source.kind === "computed" && source.resolver === "formContext") {
+    return deps.resolveFormContext(entry);
+  }
+  throw new Error("detail_page_binding_invalid");
+};
+```
+
 ## Security Contract
 
 - Visibility: internal resolver and public read rendering.

@@ -51,7 +51,7 @@ No child task files.
 The collection workspace stays inside the existing Engine module:
 
 ```text
-/admin/coderso/engine/:contentTypeId/collection
+/admin/advanced/engine/:contentTypeId/collection
 ```
 
 Expected context additions:
@@ -83,7 +83,7 @@ Exact browser owner split:
 - The workspace route itself is the existing source of truth for
   `collectionWorkspaceHint.contentTypeId`, but this leaf must extend
   `useAssistantAdminContext.ts` with an explicit workspace-aware route match
-  for `/admin/coderso/engine/:contentTypeId/collection` instead of assuming
+  for `/admin/advanced/engine/:contentTypeId/collection` instead of assuming
   the current generic `selectedResourceFromRoute(...)` helper already provides
   that distinction today.
 - `buildAssistantAdminRuntimeSnapshot(...)` / `selectedResourceFromRoute(...)`
@@ -103,9 +103,9 @@ Exact browser owner split:
 Rules:
 
 - workspace route parsing must continue to resolve to
-  `area: "coderso"` + `codersoModule: "engine"`,
+  `area: "advanced"` + `advancedModule: "engine"`,
 - `useAssistantAdminContext.ts` must add an explicit workspace-route branch for
-  `/admin/coderso/engine/:contentTypeId/collection` when deriving
+  `/admin/advanced/engine/:contentTypeId/collection` when deriving
   `collectionWorkspaceHint.contentTypeId`; do not broaden the existing generic
   `content-type` route match so far that ordinary Engine routes start emitting
   workspace hints,
@@ -138,7 +138,7 @@ Rules:
   must widen that existing chain in place rather than bypassing one hop with a
   direct browser-to-provider payload,
 - selected resource stays the collection/content-type shell resource for the
-  workspace root; do not repurpose `/admin/coderso/engine/:contentTypeId/collection`
+  workspace root; do not repurpose `/admin/advanced/engine/:contentTypeId/collection`
   to `selectedResource.kind = "detail-page"`,
 - the active detail-template editor publishes `activeSurface.kind = "detail-page"`,
 - this leaf consumes the detail-page read/admin seam introduced by
@@ -229,6 +229,25 @@ Rules:
   before such a route exists,
 - no second route-to-surface transport is introduced.
 
+## Pseudocode
+
+```ts
+export const buildAssistantAdminContext = (route, activeSurface) => {
+  const runtimeSnapshot = buildRuntimeSnapshot(route);
+  const hint = isCollectionWorkspaceRoute(route)
+    ? {
+        contentTypeId: runtimeSnapshot.selectedResource?.id ?? null,
+        activeDetailPageId: activeSurface?.kind === "detail-page" ? activeSurface.detailPage.id : null,
+      }
+    : null;
+
+  return {
+    collectionWorkspaceHint: hint,
+    collectionWorkspace: hydrateCollectionWorkspaceOnServer(hint),
+  };
+};
+```
+
 ## Security Contract
 
 - Visibility: internal assistant planning context only.
@@ -251,7 +270,7 @@ Rules:
 
 ## Testing Requirements
 
-- workspace route is recognized as `codersoModule: "engine"`.
+- workspace route is recognized as `advancedModule: "engine"`.
 - `assistantActionSchemas.ts` accepts the new `detail-page` active-surface shape
   and bounded `collectionWorkspaceHint` browser payload shape.
 - `/assistant/actions/plan` keeps explicit permission parity for

@@ -65,10 +65,10 @@ singleton resource with no linked secondary modules.
 Canonical route:
 
 ```text
-/admin/coderso/engine/:contentTypeId/collection
+/admin/advanced/engine/:contentTypeId/collection
 ```
 
-Do not introduce a new top-level `/admin/coderso/collections/*` module in this
+Do not introduce a new top-level `/admin/advanced/collections/*` module in this
 task. If a friendlier alias is ever added later, it must resolve to the same
 canonical route through the shared admin path helpers.
 
@@ -114,7 +114,7 @@ Program rules:
 - keep the workspace under the existing `Engine` route family and admin-path
   helpers.
 - workspace UI files live under the existing `core/admin/ui/content-types/*`
-  family so the feature extends current `Coderso/Engine` ownership instead of
+  family so the feature extends current `Advanced/Engine` ownership instead of
   creating a second admin namespace.
 - `adminPrefetch.ts` remains the owner of hover/focus warmup for the Engine
   route family; the workspace route extends that seam instead of adding route-
@@ -123,8 +123,9 @@ Program rules:
 - if workspace/detail template becomes assistant-visible, extend the current
   `adminContextService`, `assistantActionSchemas`, and `useAssistantAdminContext`
   seams instead of inventing a parallel collection-context transport.
-- the workspace root stays inside the current `codersoModule: "engine"` family;
-  it must not introduce a new assistant module/category such as `collections`.
+- the workspace root stays inside the current `advancedModule: "engine"`
+  family; it must not introduce a new assistant module/category such as
+  `collections`.
 - if Detail Template editing publishes a dedicated assistant surface, the
   technical `kind` should be `detail-page`; "Detail Template" remains a UI
   label.
@@ -151,7 +152,7 @@ Program rules:
 
 ## Acceptance Criteria
 
-1. The workspace route lives under `/admin/coderso/engine/:contentTypeId/collection`.
+1. The workspace route lives under `/admin/advanced/engine/:contentTypeId/collection`.
 2. Canonical collection resources are resolved deterministically, not by fuzzy
    naming heuristics.
 3. When the repo does not have enough information to pick one canonical

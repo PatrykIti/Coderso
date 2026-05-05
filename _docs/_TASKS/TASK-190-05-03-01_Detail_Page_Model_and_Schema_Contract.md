@@ -38,6 +38,8 @@ No child task files.
 - Add Drizzle `meta/*_snapshot.json` and `meta/_journal.json` updates.
 - Update `core/services/content/typeService.ts` delete guards for the new
   `detail_page_documents.content_type_id` dependency.
+- Update `core/server/routes/contentTypeRoutes.ts` so the new service error is
+  mapped through the existing content-type API boundary.
 - Add/extend content-type delete guard tests for content types that own detail
   page documents.
 
@@ -260,6 +262,31 @@ Normalization rules:
 - End-to-end settings/action/admin-client/UI/matcher round-trip for
   `detailPageId` is explicitly deferred to `TASK-190-05-03-07`; this leaf only
   defines the shared contract that slice must consume.
+
+## Pseudocode
+
+```ts
+export const createDetailPageDocument = (input, deps) => {
+  const contentType = deps.getContentTypeById(input.contentTypeId);
+  const id = input.id ?? buildDeterministicDetailPageId(contentType.id, input.role);
+  assertDetailPageId(id);
+
+  const document = normalizeDetailPageDocument({
+    ...input,
+    id,
+    contentTypeId: contentType.id,
+    contentTypeSlug: contentType.slug,
+  });
+
+  return deps.insertDocumentAndInitialRevision(document);
+};
+
+export const assertDetailPageDeleteDependency = async (contentTypeId, deps) => {
+  if (await deps.findAnyDetailPageForContentType(contentTypeId)) {
+    throw new Error("content_type_has_detail_pages");
+  }
+};
+```
 
 ## Documentation Updates Required
 
