@@ -90,6 +90,24 @@ const hasCatalogAwareAdminSurface = (context: AssistantActionContext | undefined
   );
 };
 
+const selectedResourceCatalogIntentFamily = (context: AssistantActionContext | undefined) => {
+  const catalog = context?.resourceCatalog;
+  const selectedResource = context?.runtimeSnapshot?.selectedResource;
+  if (!catalog || selectedResource?.kind !== "content-type")
+    return "unknown" as AssistantIntentFamily;
+
+  const contentType = catalog.contentTypes.find(
+    (entry) =>
+      entry.id === selectedResource.id ||
+      entry.slug === selectedResource.id ||
+      entry.name.toLowerCase() === selectedResource.id.toLowerCase()
+  );
+  if (!contentType) return "unknown" as AssistantIntentFamily;
+  return resolveIntentFamilyFromText(
+    normalizeAssistantPlannerPrompt([contentType.slug, contentType.name].join(" "))
+  );
+};
+
 const contextRouteToIntentFamily = (context: AssistantActionContext | undefined) => {
   const routeText = normalizeAssistantPlannerPrompt(
     [
@@ -104,10 +122,7 @@ const contextRouteToIntentFamily = (context: AssistantActionContext | undefined)
   if (routeIntentFamily !== "unknown") return routeIntentFamily;
   if (!hasCatalogAwareAdminSurface(context)) return "unknown";
 
-  const selectedResourceText = normalizeAssistantPlannerPrompt(
-    context?.runtimeSnapshot?.selectedResource?.id ?? ""
-  );
-  const selectedResourceIntentFamily = resolveIntentFamilyFromText(selectedResourceText);
+  const selectedResourceIntentFamily = selectedResourceCatalogIntentFamily(context);
   if (selectedResourceIntentFamily !== "unknown") return selectedResourceIntentFamily;
 
   const catalogText = normalizeAssistantPlannerPrompt(catalogContextText(context));
