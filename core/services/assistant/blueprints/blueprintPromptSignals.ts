@@ -86,21 +86,44 @@ const hasCatalogAwareAdminSurface = (context: AssistantActionContext | undefined
   return (
     route.includes("/admin/advanced/entries") ||
     route.includes("/admin/advanced/listings") ||
-    route.includes("/admin/advanced/engine")
+    route.includes("/admin/advanced/engine") ||
+    route.includes("/admin/content-types")
   );
+};
+
+const contentTypeRouteId = (context: AssistantActionContext | undefined) => {
+  const routes = [
+    context?.page ?? "",
+    context?.runtimeSnapshot?.route ?? "",
+    context?.runtimeSnapshot?.activeHref ?? "",
+  ]
+    .map((entry) => normalizeAssistantPlannerPrompt(entry))
+    .filter((entry) => entry.length > 0);
+  for (const route of routes) {
+    if (route.includes("/admin/content-types/")) {
+      const id = route.split("/admin/content-types/")[1]?.split("/")[0]?.trim() ?? null;
+      if (id) return id;
+    }
+    if (route.includes("/admin/advanced/engine/")) {
+      const id = route.split("/admin/advanced/engine/")[1]?.split("/")[0]?.trim() ?? null;
+      if (id) return id;
+    }
+  }
+  return null;
 };
 
 const selectedResourceCatalogIntentFamily = (context: AssistantActionContext | undefined) => {
   const catalog = context?.resourceCatalog;
   const selectedResource = context?.runtimeSnapshot?.selectedResource;
-  if (!catalog || selectedResource?.kind !== "content-type")
-    return "unknown" as AssistantIntentFamily;
+  const selectedResourceId =
+    selectedResource?.kind === "content-type" ? selectedResource.id : contentTypeRouteId(context);
+  if (!catalog || !selectedResourceId) return "unknown" as AssistantIntentFamily;
 
   const contentType = catalog.contentTypes.find(
     (entry) =>
-      entry.id === selectedResource.id ||
-      entry.slug === selectedResource.id ||
-      entry.name.toLowerCase() === selectedResource.id.toLowerCase()
+      entry.id === selectedResourceId ||
+      entry.slug === selectedResourceId ||
+      entry.name.toLowerCase() === selectedResourceId.toLowerCase()
   );
   if (!contentType) return "unknown" as AssistantIntentFamily;
   return resolveIntentFamilyFromText(

@@ -432,7 +432,7 @@ test("planAssistantActions does not attach blueprint shadow metadata to generic 
         entries: [],
         contentTypes: [
           {
-            id: "ct-products",
+            id: "type-1",
             slug: "products",
             name: "Products",
             entryCount: 1,
