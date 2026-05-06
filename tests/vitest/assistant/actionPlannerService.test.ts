@@ -512,18 +512,75 @@ test("planAssistantActions uses normalized admin route aliases for blueprint sha
   });
 });
 
-test("planAssistantActions shadow diagnostics can infer family from selectedResource id on custom-screen style routes", () => {
+test("planAssistantActions uses normalized content-type aliases for blueprint shadow diagnostics", () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
 
   const plan = planAssistantActions({
     prompt: "dodaj sortowanie A-Z",
     context: {
-      page: "/admin/advanced/engine/products",
+      page: "/admin/content-types/products",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions shadow diagnostics can infer family from selectedResource id on engine surfaces", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/advanced/engine",
       locale: "pl-PL",
       runtimeSnapshot: {
         schemaVersion: 2,
-        route: "/admin/advanced/engine/products",
-        activeHref: "/admin/advanced/engine/products",
+        route: "/admin/advanced/engine",
+        activeHref: "/admin/advanced/engine",
         area: "advanced",
         advancedModule: "engine",
         selectedResource: {
