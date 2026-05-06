@@ -1,4 +1,7 @@
-import { buildAssistantAdminContext } from "../adminContextService";
+import {
+  buildAssistantAdminContext,
+  readTrustedAssistantResourceCatalog,
+} from "../adminContextService";
 import type { AssistantActionContext, AssistantActionPlan } from "../actionPlanTypes";
 import { resolveBlueprintCandidates } from "./blueprintCandidateResolver";
 import type { BlueprintCandidate } from "./blueprintCapabilityTypes";
@@ -15,6 +18,27 @@ const shadowAllowlist = new Set([
 
 const shouldExposeBlueprintShadowMetadata = () => process.env.ASSISTANT_BLUEPRINT_SHADOW === "1";
 
+const composedIntentPrefix = "blueprint-composed-";
+const composedPlanIdPrefix = "plan-blueprint-composed-";
+
+const usesBlueprintComposer = (plan: AssistantActionPlan) =>
+  plan.intentId.startsWith(composedIntentPrefix);
+
+const extractCurrentPrimaryCapabilityId = (plan: AssistantActionPlan) => {
+  if (!usesBlueprintComposer(plan)) return plan.intentId;
+  const suffix = plan.intentId.slice(composedIntentPrefix.length);
+  return suffix.endsWith("-needs-input") ? suffix.slice(0, -"-needs-input".length) : suffix;
+};
+
+const extractCurrentSelectedCapabilityIds = (plan: AssistantActionPlan) => {
+  if (!plan.id.startsWith(composedPlanIdPrefix)) return null;
+  const suffix = plan.id.slice(composedPlanIdPrefix.length);
+  const encoded = suffix.endsWith("-needs-input")
+    ? suffix.slice(0, -"-needs-input".length)
+    : suffix;
+  return encoded.length > 0 ? encoded.split("~").filter((value) => value.length > 0) : [];
+};
+
 export const shouldRunBlueprintCandidateShadow = (input: {
   promptKind?: string;
   intentFamily?: string;
@@ -24,7 +48,9 @@ export const shouldRunBlueprintCandidateShadow = (input: {
   if (input.promptKind !== "setup_request" && input.promptKind !== "refinement_request") {
     return false;
   }
-  if (process.env.NODE_ENV === "test") return true;
+  if (process.env.NODE_ENV === "test") {
+    return input.intentFamily === "unknown" || shadowAllowlist.has(input.intentFamily ?? "");
+  }
   if (!shouldExposeBlueprintShadowMetadata()) return false;
   return shadowAllowlist.has(input.intentFamily ?? "");
 };
@@ -38,9 +64,33 @@ const buildMismatchReason = (input: {
   const adjuncts = input.candidates.filter((candidate) => candidate.role === "adjunct");
   const gated = input.candidates.filter((candidate) => candidate.role === "gated");
   if (!primary) return "missing_primary_candidate";
-  if (input.currentPlan.intentId !== primary.capabilityId) return "legacy_primary_routing";
-  if (adjuncts.length > 0) return "adjunct_capabilities_deferred";
-  if (gated.length > 0) return "gated_capabilities_detected";
+  if (extractCurrentPrimaryCapabilityId(input.currentPlan) !== primary.capabilityId) {
+    return "legacy_primary_routing";
+  }
+  const selectedCapabilityIds = extractCurrentSelectedCapabilityIds(input.currentPlan);
+  if (usesBlueprintComposer(input.currentPlan) && selectedCapabilityIds) {
+    const expectedIds = [
+      primary.capabilityId,
+      ...adjuncts.map((candidate) => candidate.capabilityId),
+      ...gated.map((candidate) => candidate.capabilityId),
+    ].sort();
+    const currentIds = [...selectedCapabilityIds].sort();
+    if (expectedIds.length !== currentIds.length) {
+      return "composed_capabilities_drifted";
+    }
+    for (const [index, capabilityId] of expectedIds.entries()) {
+      if (currentIds[index] !== capabilityId) {
+        return "composed_capabilities_drifted";
+      }
+    }
+    return null;
+  }
+  if (adjuncts.length > 0) {
+    return "adjunct_capabilities_deferred";
+  }
+  if (gated.length > 0) {
+    return "gated_capabilities_detected";
+  }
   return null;
 };
 
@@ -75,13 +125,14 @@ export const runBlueprintCandidateShadow = (input: {
   currentPlan: AssistantActionPlan;
 }) => {
   const normalizedContext = buildAssistantAdminContext(input.context);
+  const trustedResourceCatalog = readTrustedAssistantResourceCatalog(input.context);
   const candidates = resolveBlueprintCandidates({
     prompt: input.prompt,
     context: {
       ...input.context,
       page: normalizedContext.route ?? input.context?.page,
       locale: normalizedContext.locale ?? input.context?.locale,
-      resourceCatalog: normalizedContext.resourceCatalog ?? input.context?.resourceCatalog,
+      resourceCatalog: trustedResourceCatalog,
       runtimeSnapshot: normalizedContext.runtimeSnapshot ?? input.context?.runtimeSnapshot,
       activeSurface: normalizedContext.activeSurface ?? input.context?.activeSurface,
       planningState: normalizedContext.planningState ?? input.context?.planningState,

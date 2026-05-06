@@ -25,6 +25,14 @@ including `TASK-190-06-03`), and the rollout gates are then validated in
 
 This prevents a big-bang cutover in `actionPlannerService.ts`.
 
+Historical follow-up note:
+- this leaf stayed shadow-only when it landed,
+- later `TASK-190-03..07` slices can now enable bounded live routing for the
+  current mixed-capability setup families once their own validation/docs gates
+  are satisfied,
+- the broader detail-page, workspace/manual-editability, no-duplicate, and
+  rollout-evaluation closure still remains owned by the later leaves.
+
 ## Sub-Tasks
 
 No child task files.
@@ -46,7 +54,7 @@ Before full composer availability:
   - candidate score/reason snapshots,
 - mismatches become fixtures, not production regressions,
 - no graph, merge, action assembly, dry-run, execute, or user-visible plan
-  routing changes happen in this leaf.
+  routing changes happened in this leaf itself.
 
 Deferred full plan cutover:
 - selected prompt families may opt into composer routing only after

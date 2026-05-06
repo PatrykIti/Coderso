@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** In Progress (2026-05-05)
+**Status:** In Progress (2026-05-06)
 
 ---
 
@@ -50,10 +50,12 @@ The goal is foundation first. Do not start by expanding individual presets such
 as Mabudo-like house projects. Preset-specific enrichment comes after the
 composer exists and can consume richer capabilities safely.
 
-The current delivered slice remains foundation-only. Capability manifests,
-candidate ranking, graph fragments, and assembler helpers may evolve behind
-tests, but user-visible setup routing stays on the current single-blueprint
-planner until the shadow/cutover and no-duplicate rollout leaves are closed.
+The current delivered slice remains foundation-first. Capability manifests,
+candidate ranking, graph fragments, and assembler helpers now drive the local
+setup planner for supported mixed-capability and primary-plus-gated setup
+requests, but single-pack setup/refinement routing plus the broader
+detail/media/no-duplicate cutover stay deferred until the later rollout leaves
+close.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service
@@ -96,11 +98,12 @@ means:
   the composer may reference those assets through `media.reference.attach`,
   entry/page/widget owner actions, or `needs_input` when the asset does not yet
   exist,
-- assistant resource catalogs used for composition must be server-derived from
-  current admin-context/catalog owners. Clients may request catalog inclusion
-  through the reviewed flag, but they must not submit a trusted
-  `resourceCatalog`, and catalog-backed LLM Guide planning remains gated by the
-  existing LLM availability checks,
+- assistant resource catalogs used by the composed blueprint/shadow cutover
+  paths must be server-derived from current admin-context/catalog owners.
+  Clients may request catalog inclusion through the reviewed flag, but they
+  must not submit a trusted `resourceCatalog`, and catalog-backed LLM Guide
+  planning for those cutover paths remains gated by the existing LLM
+  availability checks,
 - when a leaf widens an existing contract, it should name the concrete write
   owner, read/cache owner, and admin/UI transport owner for that widened seam
   instead of leaving responsibility implicit,

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06
-**Status:** In Progress (2026-05-05)
+**Status:** In Progress (2026-05-06)
 
 ---
 
@@ -22,6 +22,14 @@ Business value:
 - Mixed blueprint plans can execute safely.
 - Existing setups can be refined instead of reinstalled.
 - Review/dry-run can show clear resource ownership and changes.
+
+Current slice note:
+- assembler ordering/dedupe are landed for the current catalog/form/page
+  fragments,
+- the local setup planner now uses the composed path for supported
+  mixed-capability and primary-plus-gated setup requests,
+- DB-backed no-duplicate checks, broader review metadata, and later
+  detail/media closure work remain deferred.
 
 ## Sub-Tasks
 
@@ -71,6 +79,7 @@ Touched files:
 ## Testing Requirements
 
 - Vitest assembler tests.
+- Targeted planner tests for the supported live composed setup path.
 - Bun DB-backed no-duplicate tests in the existing `actionExecutorService`
   executor lane.
 - Existing assistant execute/dry-run tests remain green.

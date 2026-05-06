@@ -155,7 +155,26 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
   expect(plan.actions.some((action) => action.type === "page.upsert")).toBe(true);
 });
 
-test("planAssistantActions keeps current single-blueprint routing for mixed product prompts before composer cutover", () => {
+test("planAssistantActions composes a single-adjunct house projects prompt through the live blueprint planner path", () => {
+  const plan = planAssistantActions({
+    prompt: "Build a house projects catalog with a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("catalog_showcase");
+  expect(plan.intentId).toBe("blueprint-composed-house-projects-catalog");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/projekty-domow", "/blog"]);
+});
+
+test("planAssistantActions composes mixed product prompts through the live blueprint planner path", () => {
   const plan = planAssistantActions({
     prompt: "Create a product catalog with inquiry form and a blog hub.",
     context: {
@@ -166,18 +185,18 @@ test("planAssistantActions keeps current single-blueprint routing for mixed prod
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(plan.actions.filter((action) => action.type === "content-type.upsert")).toHaveLength(1);
   expect(plan.actions.filter((action) => action.type === "form.upsert")).toHaveLength(1);
   expect(
     plan.actions
       .filter((action) => action.type === "page.upsert")
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
-  ).toEqual(["/produkty"]);
+  ).toEqual(["/produkty", "/blog"]);
   expect(plan.metadata?.blueprintShadow).toBeUndefined();
 });
 
-test("planAssistantActions keeps current single-blueprint routing for multi-primary prompts before composer cutover", () => {
+test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {
   const plan = planAssistantActions({
     prompt: "Create a contact page and blog hub.",
     context: {
@@ -188,11 +207,15 @@ test("planAssistantActions keeps current single-blueprint routing for multi-prim
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("editorial_content_hub");
-  expect(plan.intentId).toBe("editorial-content-hub");
-  expect(plan.actions.map((action) => action.type)).toEqual(["page.upsert"]);
+  expect(plan.intentId).toBe("blueprint-composed-editorial-content-hub");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/blog", "/kontakt"]);
 });
 
-test("planAssistantActions exposes blueprint shadow diagnostics only when the debug flag is enabled", () => {
+test("planAssistantActions exposes aligned blueprint shadow diagnostics only when the debug flag is enabled", () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
 
   const plan = planAssistantActions({
@@ -203,25 +226,25 @@ test("planAssistantActions exposes blueprint shadow diagnostics only when the de
     },
   });
 
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(
     plan.actions
       .filter((action) => action.type === "page.upsert")
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
-  ).toEqual(["/produkty"]);
+  ).toEqual(["/produkty", "/blog"]);
   expect(plan.metadata).toMatchObject({
     planner: "local",
     providerDraftUsed: false,
     blueprintShadow: {
-      currentIntentId: "product-inquiry-catalog",
+      currentIntentId: "blueprint-composed-product-catalog",
       primaryCapabilityId: "product-catalog",
       adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
-      mismatchReason: "legacy_primary_routing",
+      mismatchReason: null,
     },
   });
 });
 
-test("planAssistantActionsWithProviderDraft also exposes blueprint shadow diagnostics only when the debug flag is enabled", async () => {
+test("planAssistantActionsWithProviderDraft also exposes aligned blueprint shadow diagnostics only when the debug flag is enabled", async () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
 
   const plan = await planAssistantActionsWithProviderDraft({
@@ -233,20 +256,20 @@ test("planAssistantActionsWithProviderDraft also exposes blueprint shadow diagno
     },
   });
 
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(plan.metadata).toMatchObject({
     planner: "local",
     providerDraftUsed: false,
     blueprintShadow: {
-      currentIntentId: "product-inquiry-catalog",
+      currentIntentId: "blueprint-composed-product-catalog",
       primaryCapabilityId: "product-catalog",
       adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
-      mismatchReason: "legacy_primary_routing",
+      mismatchReason: null,
     },
   });
 });
 
-test("planAssistantActionsWithProviderDraft exposes blueprint shadow diagnostics on provider-path fallback to local setup planning", async () => {
+test("planAssistantActionsWithProviderDraft exposes aligned blueprint shadow diagnostics on provider-path fallback to local setup planning", async () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
   const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
 
@@ -276,15 +299,15 @@ test("planAssistantActionsWithProviderDraft exposes blueprint shadow diagnostics
     },
   });
 
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(plan.metadata).toMatchObject({
     planner: "provider",
     providerDraftUsed: false,
     blueprintShadow: {
-      currentIntentId: "product-inquiry-catalog",
+      currentIntentId: "blueprint-composed-product-catalog",
       primaryCapabilityId: "product-catalog",
       adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
-      mismatchReason: "legacy_primary_routing",
+      mismatchReason: null,
     },
   });
   expect(requests).toHaveLength(1);
@@ -463,6 +486,7 @@ test("planAssistantActions uses normalized admin route aliases for blueprint sha
     context: {
       page: "/admin/content",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-05-06T10:00:00.000Z",
@@ -520,6 +544,7 @@ test("planAssistantActions uses normalized content-type aliases for blueprint sh
     context: {
       page: "/admin/content-types/type-1",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-05-06T10:00:00.000Z",
@@ -601,6 +626,7 @@ test("planAssistantActions uses normalized content-type aliases for blueprint sh
     context: {
       page: "/admin/content-types/type-1",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-05-06T10:00:00.000Z",
@@ -671,6 +697,66 @@ test("planAssistantActions uses normalized content-type aliases for blueprint sh
   });
 });
 
+test("planAssistantActions ignores client-authored resource catalogs in blueprint shadow diagnostics without the include flag", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content-types/type-1",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "type-1",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/content-types/type-1",
+        activeHref: "/admin/content-types/type-1",
+        area: "advanced",
+        advancedModule: null,
+        selectedResource: {
+          kind: "content-type",
+          id: "type-1",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: null,
+    mismatchReason: "no_candidates",
+  });
+  expect(plan.intentFamily).toBe("unknown");
+});
+
 test("planAssistantActions shadow diagnostics can infer family from selectedResource id on engine surfaces", () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
 
@@ -679,6 +765,7 @@ test("planAssistantActions shadow diagnostics can infer family from selectedReso
     context: {
       page: "/admin/advanced/engine/type-1",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-05-06T10:00:00.000Z",
@@ -2577,17 +2664,23 @@ test("planAssistantActions builds product inquiry catalog for catalog plus form 
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(plan.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
     "form.upsert",
     "page.upsert",
+    "setting.content-route.upsert",
   ]);
-  expect(plan.summary).toContain("inquiry form");
+  expect(plan.actions.find((action) => action.type === "page.upsert")).toMatchObject({
+    input: {
+      formEmbed: {
+        formName: "Product Catalog Inquiry",
+      },
+    },
+  });
 });
 
 test("planAssistantActions returns needs-input for checkout/payment prompts", () => {
@@ -2603,6 +2696,94 @@ test("planAssistantActions returns needs-input for checkout/payment prompts", ()
   expect(plan.intentFamily).toBe("product_catalog");
   expect(plan.intentId).toBe("product-checkout-needs-prerequisite");
   expect(plan.actions).toEqual([]);
+});
+
+test("planAssistantActions returns a gated composed plan for mixed services setup with booking", () => {
+  const plan = planAssistantActions({
+    prompt: "Build a services directory with contact page and booking.",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentFamily).toBe("services_directory");
+  expect(plan.intentId).toBe("blueprint-composed-services-directory-needs-input");
+  expect(plan.actions).toEqual([]);
+  expect(plan.questions).toEqual([
+    expect.objectContaining({
+      id: expect.stringContaining("blueprint-gated-domain"),
+    }),
+  ]);
+  expect(plan.summary).toContain("Booking Service");
+});
+
+test("planAssistantActions composes a services directory with a single adjunct contact page", () => {
+  const plan = planAssistantActions({
+    prompt: "Build a services directory with contact page.",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("services_directory");
+  expect(plan.intentId).toBe("blueprint-composed-services-directory");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/uslugi", "/kontakt"]);
+});
+
+test("planAssistantActions ignores untrusted resource catalogs on the live composed setup path", () => {
+  const prompt = "Create a services directory with contact page here.";
+  const trustedByRouteOnly = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+    },
+  });
+  const withClientAuthoredCatalog = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(withClientAuthoredCatalog.intentId).toBe(trustedByRouteOnly.intentId);
+  expect(withClientAuthoredCatalog.intentFamily).toBe(trustedByRouteOnly.intentFamily);
+  expect(withClientAuthoredCatalog.actions).toEqual(trustedByRouteOnly.actions);
 });
 
 test("planAssistantActions builds ready portfolio and services plans for routed families", () => {
@@ -3154,12 +3335,12 @@ test("planAssistantActionsWithProviderDraft falls back when provider is unavaila
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(
     plan.actions
       .filter((action) => action.type === "page.upsert")
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
-  ).toEqual(["/produkty"]);
+  ).toEqual(["/produkty", "/blog"]);
 });
 
 test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {

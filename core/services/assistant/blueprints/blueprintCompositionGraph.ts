@@ -78,7 +78,7 @@ export const buildBlueprintCompositionGraph = (input: {
     ...adjuncts.flatMap((node) => node.capability.resources),
     ...gated.flatMap((node) => node.capability.resources),
   ];
-  const conflicts = resolveBlueprintCompositionConflicts({ fragments });
+  const conflicts = resolveBlueprintCompositionConflicts({ fragments, gated });
 
   return {
     primary,

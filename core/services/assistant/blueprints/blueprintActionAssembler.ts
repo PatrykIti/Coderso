@@ -4,16 +4,20 @@ import type {
   AssistantActionPlan,
   AssistantIntentFamily,
   AssistantPageUpsertAction,
+  AssistantPlanQuestion,
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "../actionPlanTypes";
 import { normalizeAssistantActionPlan } from "../actionPlanSchema";
-import type { BlueprintCompositionGraph, BlueprintConflict } from "./blueprintCapabilityTypes";
+import {
+  normalizeBlueprintConflict,
+  type BlueprintCompositionGraph,
+  type BlueprintConflict,
+} from "./blueprintCapabilityTypes";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
 const actionOrder: Record<AssistantPlannedAction["type"], number> = {
-  "setting.content-route.upsert": 10,
   "content-type.upsert": 20,
   "content-type.delete": 90,
   "custom-screen.upsert": 30,
@@ -45,6 +49,7 @@ const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "page.widget.patch": 90,
   "form.automation.upsert": 90,
   "page.upsert": 70,
+  "setting.content-route.upsert": 80,
   "page.update": 90,
   "page.delete": 90,
   "widget-template.delete": 90,
@@ -59,13 +64,230 @@ const buildMergeConflict = (
   action: AssistantPlannedAction,
   code: string,
   message: string
-): BlueprintConflict => ({
-  code,
-  severity: "error",
-  message,
-  resourceKey: buildBlueprintActionMergeKey(action),
-  actionType: action.type,
-});
+): BlueprintConflict =>
+  normalizeBlueprintConflict({
+    code: code as BlueprintConflict["code"],
+    severity: "error",
+    message,
+    resourceKey: buildBlueprintActionMergeKey(action),
+    actionType: action.type,
+  });
+
+const compareConflictPriority = (left: BlueprintConflict, right: BlueprintConflict) => {
+  const leftPriority = left.code === "resource_key_duplicate" ? 0 : 1;
+  const rightPriority = right.code === "resource_key_duplicate" ? 0 : 1;
+  return rightPriority - leftPriority;
+};
+
+const buildConflictTargetKey = (conflict: BlueprintConflict) => {
+  if (!conflict.actionType) {
+    return `${conflict.code}:${conflict.capabilityId ?? ""}:${conflict.resourceKey ?? conflict.message}`;
+  }
+
+  const resourceKey = conflict.resourceKey ?? conflict.message;
+
+  switch (conflict.actionType) {
+    case "setting.content-route.upsert":
+      return resourceKey.startsWith("content-route:")
+        ? `${conflict.actionType}:${resourceKey.slice("content-route:".length)}`
+        : resourceKey;
+    case "content-type.upsert":
+      return resourceKey.startsWith("content-type:")
+        ? `${conflict.actionType}:${resourceKey.slice("content-type:".length).split(":field:")[0]}`
+        : resourceKey;
+    case "custom-screen.upsert":
+      return resourceKey.startsWith("custom-screen:")
+        ? `${conflict.actionType}:${resourceKey.slice("custom-screen:".length)}`
+        : resourceKey;
+    case "listing-query.upsert":
+      return resourceKey.startsWith("listing-query:")
+        ? `${conflict.actionType}:${resourceKey.slice("listing-query:".length)}`
+        : resourceKey;
+    case "listing-template.upsert":
+      return resourceKey.startsWith("listing-template:")
+        ? `${conflict.actionType}:${resourceKey.slice("listing-template:".length)}`
+        : resourceKey;
+    case "form.upsert":
+      return resourceKey.startsWith("form:")
+        ? `${conflict.actionType}:${resourceKey.slice("form:".length)}`
+        : resourceKey;
+    case "page.upsert":
+      return resourceKey.startsWith("page:")
+        ? `${conflict.actionType}:${resourceKey.slice("page:".length)}`
+        : resourceKey;
+    default:
+      return `${conflict.actionType}:${resourceKey}`;
+  }
+};
+
+const dedupeConflicts = (conflicts: BlueprintConflict[]) => {
+  const byKey = new Map<string, BlueprintConflict>();
+  for (const conflict of conflicts) {
+    const key = buildConflictTargetKey(conflict);
+    const previous = byKey.get(key);
+    if (!previous || compareConflictPriority(previous, conflict) > 0) {
+      byKey.set(key, conflict);
+      continue;
+    }
+  }
+  return [...byKey.values()];
+};
+
+const assertNever = (value: never): never => {
+  throw new Error(`assistant_blueprint_conflict_code_unhandled:${String(value)}`);
+};
+
+const buildConflictQuestionId = (baseId: string, conflict: BlueprintConflict) =>
+  [
+    baseId,
+    conflict.actionType ?? "global",
+    conflict.resourceKey ?? conflict.capabilityId ?? "general",
+  ]
+    .join(":")
+    .replace(/[^a-z0-9:_-]+/gi, "-");
+
+const buildConflictQuestion = (conflict: BlueprintConflict): AssistantPlanQuestion => {
+  switch (conflict.code) {
+    case "route_conflict":
+      return {
+        id: buildConflictQuestionId("blueprint-route-conflict", conflict),
+        label: "Which route configuration should the composed plan keep?",
+        description:
+          "Choose the intended page or public content route path before executable actions are assembled.",
+        required: true,
+      };
+    case "field_type_conflict":
+      return {
+        id: buildConflictQuestionId("blueprint-field-type-conflict", conflict),
+        label: "Which field schema should win?",
+        description:
+          "Choose the intended field type for the conflicting content model field before the composed plan can execute safely.",
+        required: true,
+      };
+    case "gated_domain":
+      return {
+        id: buildConflictQuestionId("blueprint-gated-domain", conflict),
+        label: "Should this gated module stay deferred or get a dedicated adapter first?",
+        description:
+          "Booking, checkout, and other gated modules remain non-executable until their typed adapter task lands.",
+        required: true,
+      };
+    case "media_asset_missing":
+      return {
+        id: buildConflictQuestionId("blueprint-media-asset-missing", conflict),
+        label: "Which existing media asset should be used?",
+        description:
+          "Provide a trusted existing media library asset before the composed plan can attach media safely.",
+        required: true,
+      };
+    case "media_asset_ambiguous":
+      return {
+        id: buildConflictQuestionId("blueprint-media-asset-ambiguous", conflict),
+        label: "Which media asset match is correct?",
+        description: "Choose one exact media asset so the composer does not attach the wrong file.",
+        required: true,
+      };
+    case "media_upload_gated":
+      return {
+        id: buildConflictQuestionId("blueprint-media-upload-gated", conflict),
+        label: "Should media import be handled before composition?",
+        description:
+          "Raw uploads stay gated until they become trusted media library assets through the media owner flow.",
+        required: true,
+      };
+    case "media_delete_gated":
+      return {
+        id: buildConflictQuestionId("blueprint-media-delete-gated", conflict),
+        label: "Should media deletion stay outside the composed plan?",
+        description:
+          "Removing a reference is supported only through the owning resource action; deleting the asset itself remains gated.",
+        required: true,
+      };
+    case "permission_gap":
+      return {
+        id: buildConflictQuestionId("blueprint-permission-gap", conflict),
+        label: "Which permission boundary should this plan rely on?",
+        description:
+          "Confirm the required permission boundary before the composed plan can execute privileged actions.",
+        required: true,
+      };
+    case "facet_field_missing":
+      return {
+        id: buildConflictQuestionId("blueprint-facet-field-missing", conflict),
+        label: "Which field should back this listing facet?",
+        description:
+          "Choose or add a supported field before the composed plan can wire the facet safely.",
+        required: true,
+      };
+    case "widget_capability_missing":
+      return {
+        id: buildConflictQuestionId("blueprint-widget-capability-missing", conflict),
+        label: "Which widget capability should be used here?",
+        description:
+          "Pick a supported widget capability before the composed plan can assemble this surface.",
+        required: true,
+      };
+    case "resource_slug_conflict":
+    case "resource_key_duplicate":
+      return {
+        id: buildConflictQuestionId("blueprint-resource-conflict", conflict),
+        label: "Which duplicate resource should the composed plan keep?",
+        description:
+          "Choose the intended slug, name, or owner seam before duplicate resource setup can proceed.",
+        required: true,
+      };
+  }
+
+  return assertNever(conflict.code);
+};
+
+const buildBlueprintConflictNeedsInputPlan = (input: {
+  promptKind: AssistantPromptKind;
+  intentFamily: AssistantIntentFamily;
+  graph: BlueprintCompositionGraph;
+  conflicts: BlueprintConflict[];
+}): AssistantActionPlan => {
+  const selectedLabels = [
+    input.graph.primary?.capability.label ?? "Blueprint composition",
+    ...input.graph.adjuncts.map((node) => node.capability.label),
+  ];
+  const gatedLabels = input.graph.gated.map((node) => node.capability.label);
+  const capabilityLabels = [...selectedLabels, ...gatedLabels];
+  const questions = unique(
+    input.conflicts.map((conflict) => JSON.stringify(buildConflictQuestion(conflict)))
+  ).map((value) => JSON.parse(value) as AssistantPlanQuestion);
+  const onlyGatedConflicts = input.conflicts.every((conflict) => conflict.code === "gated_domain");
+
+  return normalizeAssistantActionPlan({
+    id: `plan-blueprint-composed-${input.graph.selectedCapabilityIds.join("~")}-needs-input`,
+    status: "needs_input",
+    responseKind: onlyGatedConflicts ? "gated" : "needs_input",
+    intentId: `blueprint-composed-${input.graph.primary?.capability.id ?? "unknown"}-needs-input`,
+    promptKind: input.promptKind,
+    intentFamily: input.intentFamily,
+    title: onlyGatedConflicts
+      ? "Blueprint composition needs a supported adapter first"
+      : "Blueprint composition needs conflict resolution first",
+    answer: [
+      onlyGatedConflicts
+        ? "I recognized the requested blueprint mix, but at least one module is still gated and cannot become executable typed actions yet."
+        : "I recognized the requested blueprint mix, but the composed plan still has blocking conflicts that need an explicit decision first.",
+      "",
+      ...input.conflicts.map((conflict) => `- ${conflict.message}`),
+    ].join("\n"),
+    summary: onlyGatedConflicts
+      ? `The requested composition includes gated modules (${(gatedLabels.length > 0 ? gatedLabels : selectedLabels).join(", ")}) that still need dedicated adapters.`
+      : `The requested composition includes unresolved route/resource/schema conflicts across ${selectedLabels.join(", ")}.`,
+    confidence: onlyGatedConflicts ? 0.58 : 0.42,
+    assumptions: [
+      ...input.graph.fragments.flatMap((fragment) => fragment.assumptions),
+      `Selected capabilities: ${capabilityLabels.join(", ")}.`,
+      "No executable composed action plan is returned until the blocking conflict is resolved explicitly.",
+    ],
+    questions,
+    actions: [],
+  });
+};
 
 const mergeBlocksById = (
   left: Array<Record<string, unknown>> | undefined,
@@ -165,7 +387,7 @@ export const buildBlueprintActionMergeKey = (action: AssistantPlannedAction) => 
     case "content-type.upsert":
       return `${action.type}:${action.input.slug}`;
     case "custom-screen.upsert":
-      return `${action.type}:${action.input.name}`;
+      return `${action.type}:${action.input.contentTypeSlug}:${action.input.name}`;
     case "listing-query.upsert":
       return `${action.type}:${action.input.name}`;
     case "listing-template.upsert":
@@ -282,7 +504,7 @@ export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
         conflicts.push(
           buildMergeConflict(
             action,
-            "blueprint_action_merge_conflict",
+            "resource_key_duplicate",
             `Conflicting ${action.type} actions target the same resource (${mergeKey}).`
           )
         );
@@ -296,7 +518,7 @@ export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
     actions: [...mergedActions].sort(
       (left, right) => actionOrder[left.type] - actionOrder[right.type]
     ),
-    conflicts,
+    conflicts: dedupeConflicts(conflicts),
   };
 };
 
@@ -309,23 +531,26 @@ export const assembleComposedBlueprintPlan = (input: {
   if (!input.graph.primary) return null;
   const assembled = assembleBlueprintActions(input.graph);
   const fatalConflicts = assembled.conflicts.filter((conflict) => conflict.severity === "error");
-  if (fatalConflicts.length > 0) return null;
+  if (fatalConflicts.length > 0) {
+    return buildBlueprintConflictNeedsInputPlan({
+      promptKind: input.promptKind,
+      intentFamily: input.intentFamily,
+      graph: input.graph,
+      conflicts: fatalConflicts,
+    });
+  }
 
   const selectedLabels = [
     input.graph.primary.capability.label,
     ...input.graph.adjuncts.map((node) => node.capability.label),
   ];
-  const gatedLabels = input.graph.gated.map((node) => node.capability.label);
   const assumptions = unique([
     ...input.graph.fragments.flatMap((fragment) => fragment.assumptions),
     `Selected capabilities: ${selectedLabels.join(", ")}.`,
-    ...gatedLabels.map(
-      (label) => `${label} remains gated and is excluded from the executable typed action plan.`
-    ),
   ]);
 
   return normalizeAssistantActionPlan({
-    id: `plan-blueprint-composed-${input.graph.selectedCapabilityIds.join("-")}`,
+    id: `plan-blueprint-composed-${input.graph.selectedCapabilityIds.join("~")}`,
     status: "ready",
     intentId: `blueprint-composed-${input.graph.primary.capability.id}`,
     promptKind: input.promptKind,

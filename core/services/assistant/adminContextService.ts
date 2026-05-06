@@ -71,9 +71,7 @@ const resolveArea = (route: string | null): AssistantAdminContext["area"] => {
   return "other";
 };
 
-const resolveAdvancedModule = (
-  route: string | null
-): AssistantAdminContext["advancedModule"] => {
+const resolveAdvancedModule = (route: string | null): AssistantAdminContext["advancedModule"] => {
   if (!route || !route.startsWith("/admin/advanced")) return null;
   if (route.startsWith("/admin/advanced/engine")) return "engine";
   if (route.startsWith("/admin/advanced/entries")) return "entries";
@@ -130,9 +128,7 @@ const normalizeVisibleActions = (value: unknown): AssistantAdminRuntimeVisibleAc
     }
     const href = record.href === null ? null : normalizeHref(record.href);
     const requiredPermission =
-      record.requiredPermission === null
-        ? null
-        : normalizePermission(record.requiredPermission);
+      record.requiredPermission === null ? null : normalizePermission(record.requiredPermission);
     if (record.href !== null && record.href !== undefined && !href) continue;
     if (
       record.requiredPermission !== null &&
@@ -165,10 +161,7 @@ const normalizePermissionHints = (
       : [];
   const normalized = [
     ...new Set(
-      [
-        ...fromActions,
-        ...(Array.isArray(fromHints) ? fromHints : []),
-      ]
+      [...fromActions, ...(Array.isArray(fromHints) ? fromHints : [])]
         .map(normalizePermission)
         .filter((item): item is string => Boolean(item))
     ),
@@ -247,9 +240,7 @@ const normalizeCustomScreenBindingSummary = (
   const mode = record.mode;
   if (!widgetId || !field || !propPath) return null;
   const normalizedMode: AssistantCustomScreenBindingSummary["mode"] =
-    mode === "read" || mode === "write" || mode === "readwrite"
-      ? mode
-      : "readwrite";
+    mode === "read" || mode === "write" || mode === "readwrite" ? mode : "readwrite";
   return {
     widgetId,
     field,
@@ -292,9 +283,7 @@ const normalizeActiveSurface = (
         ...extractAssistantTemplateSectionReferences(blocks),
         ...(Array.isArray(value.templateReferences) ? value.templateReferences : []),
       ]),
-      referencedTemplates: normalizeAssistantReferencedWidgetTemplates(
-        value.referencedTemplates
-      ),
+      referencedTemplates: normalizeAssistantReferencedWidgetTemplates(value.referencedTemplates),
       warnings: normalizeStringArray(value.warnings, 20, 160),
     };
   }
@@ -384,3 +373,6 @@ export const buildAssistantAdminContext = (
     advancedModule: resolveAdvancedModule(route),
   };
 };
+
+export const readTrustedAssistantResourceCatalog = (input: AssistantActionContext | undefined) =>
+  input?.includeResourceCatalog === true ? input.resourceCatalog : undefined;

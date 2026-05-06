@@ -15,8 +15,11 @@ Resolve or surface conflicts in composed blueprint graphs.
 
 Current slice note:
 - stable merge keys and duplicate-action conflict detection are landed,
-- full typed `needs_input` surfacing for the broader conflict families remains
-  open.
+- typed `route_conflict`, `resource_slug_conflict`, `field_type_conflict`, and
+  blocking `gated_domain` surfacing now return machine-readable conflicts
+  through a closed typed contract that the assembler/planner path can downgrade
+  into `needs_input` / `gated`,
+- broader media and permission conflict families remain open.
 
 ## Sub-Tasks
 
@@ -45,14 +48,10 @@ No child task files.
 ## Pseudocode
 
 ```ts
-export const resolveBlueprintConflicts = (graph, context) => {
-  const conflicts = detectConflicts(graph, context);
-  const resolved = conflicts.map((conflict) =>
-    canAutoResolve(conflict) ? autoResolve(conflict) : conflict
+export const resolveBlueprintConflicts = (graph) => {
+  return detectConflicts(graph).map((conflict) =>
+    normalizeBlueprintConflict(conflict)
   );
-  return unresolved(resolved).length > 0
-    ? buildNeedsInputCompositionPlan(resolved)
-    : applyConflictResolutions(graph, resolved);
 };
 ```
 
@@ -63,20 +62,19 @@ export const resolveBlueprintConflicts = (graph, context) => {
 - RBAC: permission gaps cannot auto-resolve.
 - CSRF: unchanged.
 - Rate-limit bucket: unchanged.
-- Reject-unknown validation: conflict objects strict.
+- Reject-unknown validation: conflict objects use a closed typed
+  code/severity contract.
 - Anti-abuse: destructive/privileged conflicts always need input.
 - Secret handling: conflict messages redact secret-like fields.
 
 ## Testing Requirements
 
-- Slug collision test.
+- Listing-template slug conflict test.
 - Field type mismatch test.
 - Route collision test.
-- Permission gap test.
 - Gated module test.
-- Media conflict tests for missing asset id, ambiguous filename/label matches,
-  attached files that need media import first, and asset deletion requests that
-  lack an executable media-service action.
+- Closed-contract regression for unknown conflict codes.
+- Media and permission conflict families remain deferred to follow-up work.
 
 ## Documentation Updates Required
 

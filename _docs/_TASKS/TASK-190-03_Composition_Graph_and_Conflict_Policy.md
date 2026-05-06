@@ -22,9 +22,10 @@ Business value:
 
 Current slice note:
 - deterministic graph fragments are landed for current capability packs,
-- duplicate-action conflicts are detected by stable merge key,
-- full typed `needs_input` surfacing for route/field/media/permission conflicts
-  remains in follow-up work before live cutover.
+- typed route/resource/field conflicts plus blocking gated-domain surfacing are
+  landed for the current capability packs,
+- broader media and permission `needs_input` families remain in follow-up work
+  before live cutover.
 
 ## Sub-Tasks
 
@@ -60,34 +61,38 @@ type BlueprintCompositionGraph = {
 1. Graph order is deterministic.
 2. Duplicate resources merge by stable key.
 3. Conflicting slugs/routes/fields produce typed conflicts.
-4. Conflicts can be auto-resolved only when policy says it is safe.
-5. Unresolved conflicts return `needs_input` with questions.
-6. Media conflicts distinguish existing media references from attached files
-   that still need import, ambiguous existing-gallery matches, and unsupported
-   media deletion/upload requests.
+4. Current conflicts remain explicit and machine-readable; any future
+   auto-resolution policy must stay bounded to safe owner-approved cases.
+5. Unresolved conflicts stay machine-readable and can be downgraded into
+   `needs_input` with questions by the assembler/planner path.
+6. Media conflicts for attached files, ambiguous matches, and unsupported
+   delete/upload flows remain explicit follow-up scope under the later closure
+   leaves.
 
 ## Security Contract
 
 - Visibility: internal planner graph only.
 - Auth model: unchanged.
-- RBAC: graph stores permission requirements, execute remains authoritative.
+- RBAC: permission-gap detection remains deferred; execute remains
+  authoritative for the current slice.
 - CSRF: no route changes.
 - Rate-limit bucket: existing assistant bucket.
-- Reject-unknown validation: graph nodes and conflicts use strict schemas.
+- Reject-unknown validation: graph nodes and conflicts use closed typed
+  contracts.
 - Anti-abuse: unresolved destructive/privileged conflicts cannot auto-resolve.
 - Secret handling: conflicts must redact secret-like values.
 
 ## Testing Requirements
 
-- Graph snapshot tests.
+- Deterministic graph tests.
 - Conflict tests for:
   - duplicate content type slug,
   - incompatible field type,
   - duplicate page route,
   - incompatible listing template slug,
-  - ambiguous media filename/label match,
-  - attached media file without trusted media-library id,
   - gated booking/checkout module.
+- Media and permission conflict families remain deferred to the later closure
+  leaves.
 
 ## Documentation Updates Required
 

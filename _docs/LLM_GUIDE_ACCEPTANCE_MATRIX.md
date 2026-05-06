@@ -113,7 +113,7 @@ Rules:
 | Services Directory | Executable | Vitest planner/catalog blueprint | Catalog-family executor path | No dedicated public runtime test yet | Existing generic catalog pack |
 | Lead Capture Site | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Form runtime hardening remains existing Forms contract |
 | Editorial Content Hub | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Uses `posts-feed`; no post mutation |
-| Mixed Blueprint Composition (current packs) | Internal foundation | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics | Not user-visible yet | Not applicable yet | Composer helpers stay behind the current single-blueprint planner; provider context and shadow diagnostics are landed, while live cutover remains deferred |
+| Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics | Uses existing typed executor families only; broader no-duplicate/runtime closure still deferred | Not applicable yet | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path, while single-pack setup/refinement and deeper detail/media waves remain deferred |
 | Booking Service Business | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires booking action adapters |
 | Product Checkout/Payment | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires commerce/payment adapters |
 | Solution Kit Refinement | Gated | Docs/task audit | Not applicable | Not applicable | Requires server-derived installed-kit context |

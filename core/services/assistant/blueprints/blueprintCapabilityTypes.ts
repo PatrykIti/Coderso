@@ -161,13 +161,72 @@ export type BlueprintCandidate = {
   reasons: string[];
 };
 
+export const blueprintConflictCodes = [
+  "resource_key_duplicate",
+  "resource_slug_conflict",
+  "route_conflict",
+  "field_type_conflict",
+  "facet_field_missing",
+  "widget_capability_missing",
+  "media_asset_missing",
+  "media_asset_ambiguous",
+  "media_upload_gated",
+  "media_delete_gated",
+  "permission_gap",
+  "gated_domain",
+] as const;
+
+export type BlueprintConflictCode = (typeof blueprintConflictCodes)[number];
+export type BlueprintConflictSeverity = "warning" | "error";
+
 export type BlueprintConflict = {
-  code: string;
-  severity: "warning" | "error";
+  code: BlueprintConflictCode;
+  severity: BlueprintConflictSeverity;
   message: string;
   capabilityId?: string | null;
   resourceKey?: string | null;
   actionType?: AssistantExecutableActionType | null;
+};
+
+const blueprintConflictCodeSet = new Set<BlueprintConflictCode>(blueprintConflictCodes);
+const secretLikeConflictPattern =
+  /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf)[\w.-]*\b/gi;
+
+const redactSecretLikeText = (value: string) =>
+  value.replace(secretLikeConflictPattern, "[redacted]");
+
+export const normalizeBlueprintConflict = (input: BlueprintConflict): BlueprintConflict => {
+  if (!blueprintConflictCodeSet.has(input.code)) {
+    throw new Error("assistant_blueprint_conflict_invalid");
+  }
+  if ((input.severity !== "warning" && input.severity !== "error") || !input.message.trim()) {
+    throw new Error("assistant_blueprint_conflict_invalid");
+  }
+
+  const capabilityId = input.capabilityId ?? undefined;
+  const resourceKey = input.resourceKey ?? undefined;
+  const actionType = input.actionType ?? undefined;
+
+  if (capabilityId !== undefined && capabilityId.trim() === "") {
+    throw new Error("assistant_blueprint_conflict_invalid");
+  }
+  if (resourceKey !== undefined && resourceKey.trim() === "") {
+    throw new Error("assistant_blueprint_conflict_invalid");
+  }
+  if (actionType !== undefined && actionType.trim() === "") {
+    throw new Error("assistant_blueprint_conflict_invalid");
+  }
+
+  return {
+    code: input.code,
+    severity: input.severity,
+    message: redactSecretLikeText(input.message.trim()),
+    ...(capabilityId !== undefined
+      ? { capabilityId: redactSecretLikeText(capabilityId.trim()) }
+      : {}),
+    ...(resourceKey !== undefined ? { resourceKey: redactSecretLikeText(resourceKey.trim()) } : {}),
+    ...(actionType !== undefined ? { actionType } : {}),
+  };
 };
 
 export type BlueprintActionFragment = {

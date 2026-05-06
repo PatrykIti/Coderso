@@ -7,7 +7,10 @@ import type {
   AssistantSiteKitPlanInput,
 } from "./actionPlanTypes";
 import type { AssistantProvider } from "./providers/providerTypes";
-import { buildAssistantAdminContext } from "./adminContextService";
+import {
+  buildAssistantAdminContext,
+  readTrustedAssistantResourceCatalog,
+} from "./adminContextService";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import {
   classifyAssistantPrompt,
@@ -32,6 +35,9 @@ import {
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildBookingServiceNeedsInputPlan } from "./blueprints/bookingServiceBlueprint";
+import { assembleComposedBlueprintPlan } from "./blueprints/blueprintActionAssembler";
+import { resolveBlueprintCandidates } from "./blueprints/blueprintCandidateResolver";
+import { buildBlueprintCompositionGraph } from "./blueprints/blueprintCompositionGraph";
 import { attachBlueprintShadowMetadata } from "./blueprints/blueprintComposerShadow";
 import { buildEditorialContentHubPlan } from "./blueprints/editorialContentHubBlueprint";
 import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
@@ -344,6 +350,52 @@ const buildRefinementPlanForIntentFamily = (
   });
 };
 
+const buildBlueprintComposerSetupPlan = (input: {
+  prompt: string;
+  context?: AssistantActionContext;
+  promptKind: AssistantPromptKind;
+  intentFamily: AssistantIntentFamily;
+  normalizedPrompt?: string;
+}): AssistantActionPlan | null => {
+  if (input.promptKind !== "setup_request" || input.intentFamily === "unknown") return null;
+  if (
+    input.intentFamily === "product_catalog" &&
+    includesAny(input.normalizedPrompt ?? "", checkoutKeywords)
+  ) {
+    return null;
+  }
+
+  const trustedContext = input.context
+    ? {
+        ...input.context,
+        resourceCatalog: readTrustedAssistantResourceCatalog(input.context),
+      }
+    : undefined;
+  const candidates = resolveBlueprintCandidates({
+    prompt: input.prompt,
+    context: trustedContext,
+  });
+  const primary = candidates.find((candidate) => candidate.role === "primary");
+  const adjuncts = candidates.filter((candidate) => candidate.role === "adjunct");
+  const gated = candidates.filter((candidate) => candidate.role === "gated");
+
+  if (!primary) return null;
+  if (gated.length === 0 && adjuncts.length === 0) return null;
+
+  const graph = buildBlueprintCompositionGraph({
+    candidates,
+    promptKind: input.promptKind,
+    intentFamily: input.intentFamily,
+  });
+
+  return assembleComposedBlueprintPlan({
+    prompt: input.prompt,
+    promptKind: input.promptKind,
+    intentFamily: input.intentFamily,
+    graph,
+  });
+};
+
 const buildClarifyingPlan = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>,
@@ -643,7 +695,7 @@ const finalizeAssistantPlan = (
         ...input.context,
         page: context.route ?? input.context?.page,
         locale: context.locale ?? input.context?.locale,
-        resourceCatalog: context.resourceCatalog ?? input.context?.resourceCatalog,
+        resourceCatalog: readTrustedAssistantResourceCatalog(input.context),
         runtimeSnapshot: context.runtimeSnapshot ?? input.context?.runtimeSnapshot,
         activeSurface: context.activeSurface ?? input.context?.activeSurface,
         planningState: context.planningState ?? input.context?.planningState,
@@ -655,12 +707,17 @@ const finalizeAssistantPlan = (
 
 const buildRoutedClassification = (
   prompt: string,
-  context: ReturnType<typeof buildAssistantAdminContext>
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  inputContext?: AssistantActionContext
 ) => {
   const classification = classifyAssistantPrompt(prompt);
+  const trustedContextForRouting =
+    inputContext?.includeResourceCatalog === true
+      ? { ...context, resourceCatalog: inputContext.resourceCatalog ?? null }
+      : { ...context, resourceCatalog: null };
   const intentFamily =
     classification.promptKind === "refinement_request"
-      ? resolveContextualRefinementFamily(context, classification.intentFamily)
+      ? resolveContextualRefinementFamily(trustedContextForRouting, classification.intentFamily)
       : classification.intentFamily;
   return { ...classification, intentFamily };
 };
@@ -942,7 +999,7 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     return normalizeAssistantActionPlan(buildSiteKitActionPlan(input.context.siteKit));
   }
 
-  const routedClassification = buildRoutedClassification(input.prompt, context);
+  const routedClassification = buildRoutedClassification(input.prompt, context, input.context);
   const intentFamily = routedClassification.intentFamily;
   const classification = routedClassification;
   if (!classification.normalizedPrompt) {
@@ -988,6 +1045,25 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     return finalizeAssistantPlan(input, context, routedClassification, setupPolicyPlan);
 
   if (classification.promptKind === "setup_request" && intentFamily !== "unknown") {
+    const composedPlan = buildBlueprintComposerSetupPlan({
+      prompt: input.prompt,
+      context: {
+        ...input.context,
+        page: context.route ?? input.context?.page,
+        locale: context.locale ?? input.context?.locale,
+        resourceCatalog: context.resourceCatalog ?? input.context?.resourceCatalog,
+        runtimeSnapshot: context.runtimeSnapshot ?? input.context?.runtimeSnapshot,
+        activeSurface: context.activeSurface ?? input.context?.activeSurface,
+        planningState: context.planningState ?? input.context?.planningState,
+      },
+      promptKind: classification.promptKind,
+      intentFamily,
+      normalizedPrompt: classification.normalizedPrompt,
+    });
+    if (composedPlan) {
+      return finalizeAssistantPlan(input, context, routedClassification, composedPlan);
+    }
+
     const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
       promptKind: classification.promptKind,
       intentFamily,
@@ -1017,7 +1093,7 @@ export const planAssistantActionsWithProviderDraft = async (
   input: AssistantProviderDraftPlanInput
 ): Promise<AssistantActionPlan> => {
   const context = buildAssistantAdminContext(input.context);
-  const routedClassification = buildRoutedClassification(input.prompt, context);
+  const routedClassification = buildRoutedClassification(input.prompt, context, input.context);
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
   if (planningStatePlan) {
     return finalizeAssistantPlan(

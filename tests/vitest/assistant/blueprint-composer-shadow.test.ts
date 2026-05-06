@@ -13,7 +13,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-test("compareBlueprintCandidateSelection reports legacy primary routing drift for mixed product prompts", () => {
+test("compareBlueprintCandidateSelection reports no mismatch for live-composed mixed product prompts", () => {
   const currentPlan = planAssistantActions({
     prompt: "Create a product catalog with inquiry form and a blog hub.",
     context: {
@@ -35,11 +35,35 @@ test("compareBlueprintCandidateSelection reports legacy primary routing drift fo
       candidates,
     })
   ).toMatchObject({
-    currentIntentId: "product-inquiry-catalog",
+    currentIntentId: "blueprint-composed-product-catalog",
     primaryCapabilityId: "product-catalog",
     adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
-    mismatchReason: "legacy_primary_routing",
+    mismatchReason: null,
   });
+});
+
+test("compareBlueprintCandidateSelection reports composed capability drift when adjunct or gated selections change", () => {
+  const currentPlan = planAssistantActions({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+  const candidates = resolveBlueprintCandidates({
+    prompt: "Create a product catalog with booking.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(
+    compareBlueprintCandidateSelection({
+      currentPlan,
+      candidates,
+    }).mismatchReason
+  ).toBe("composed_capabilities_drifted");
 });
 
 test("compareBlueprintCandidateSelection reports no mismatch for aligned single-pack prompts", () => {
@@ -88,7 +112,7 @@ test("compareBlueprintCandidateSelection reports gated-only shadow outcomes", ()
   });
 });
 
-test("compareBlueprintCandidateSelection reports gated modules on mixed prompts", () => {
+test("compareBlueprintCandidateSelection reports no mismatch for live-composed gated mixed prompts", () => {
   const currentPlan = planAssistantActions({
     prompt: "Build a services directory with contact page and booking.",
     context: {
@@ -110,10 +134,11 @@ test("compareBlueprintCandidateSelection reports gated modules on mixed prompts"
       candidates,
     })
   ).toMatchObject({
+    currentIntentId: "blueprint-composed-services-directory-needs-input",
     primaryCapabilityId: "services-directory",
     adjunctCapabilityIds: ["lead-capture-site"],
     gatedCapabilityIds: ["booking-service"],
-    mismatchReason: "adjunct_capabilities_deferred",
+    mismatchReason: null,
   });
 });
 
@@ -121,6 +146,7 @@ test("runBlueprintCandidateShadow uses catalog context to avoid no-candidate dri
   const context: AssistantActionContext = {
     page: "/admin/advanced/listings",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: "2026-05-06T10:00:00.000Z",
@@ -326,6 +352,55 @@ test("runBlueprintCandidateShadow resolves services catalog context from resourc
   });
 });
 
+test("runBlueprintCandidateShadow ignores caller resource catalogs without the include flag", () => {
+  const currentPlan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/advanced/listings",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(
+    runBlueprintCandidateShadow({
+      prompt: "dodaj sortowanie A-Z",
+      context: {
+        page: "/admin/advanced/listings",
+        locale: "pl-PL",
+        resourceCatalog: {
+          schemaVersion: 1,
+          generatedAt: "2026-05-06T10:00:00.000Z",
+          budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+          pages: [],
+          posts: [],
+          entries: [],
+          contentTypes: [
+            {
+              id: "ct-products",
+              slug: "products",
+              name: "Products",
+              entryCount: 1,
+              fields: [],
+            },
+          ],
+          customScreens: [],
+          listings: { queries: [], templates: [] },
+          forms: [],
+          menus: [],
+          seoDocuments: [],
+          widgets: [],
+          media: [],
+          warnings: [],
+        },
+      },
+      currentPlan,
+    })
+  ).toMatchObject({
+    primaryCapabilityId: null,
+    mismatchReason: "no_candidates",
+  });
+});
+
 test("runBlueprintCandidateShadow does not let unrelated pages catalog residue pick a blueprint", () => {
   const currentPlan = planAssistantActions({
     prompt: "czy widzisz strone Home w Pages?",
@@ -403,6 +478,7 @@ test("runBlueprintCandidateShadow normalizes admin alias routes before resolving
   const context: AssistantActionContext = {
     page: "/admin/content",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: "2026-05-06T10:00:00.000Z",

@@ -74,10 +74,10 @@ Current implemented guide blueprint:
   - current packs and adjunct/gated modules now register through a strict capability manifest and registry layer
   - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
-  - user-visible setup routing remains on the current single-blueprint planner until the shadow/cutover leaves close
+  - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path, while single-pack setup/refinement and deeper detail/media/no-duplicate cutover work still remain on the later leaves
   - catalog capabilities can already describe latent `detail-page` intent in metadata, but executable detail-page/runtime/admin flows remain deferred to later `TASK-190` slices
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
-  - candidate shadow diagnostics can be exposed only through a local/test env gate and do not change the normal returned plan yet
+  - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
 
 Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.
