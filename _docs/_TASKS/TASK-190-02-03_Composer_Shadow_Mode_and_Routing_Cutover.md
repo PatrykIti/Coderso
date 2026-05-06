@@ -33,8 +33,8 @@ No child task files.
 
 Before full composer availability:
 - existing single-blueprint prompts still return current plans,
-- candidate composer runs and records comparison metadata in test-only planner
-  diagnostics only,
+- candidate composer runs and records comparison metadata in test diagnostics and
+  optional local debug planner metadata only,
 - generic CMS/admin provider planning keeps the existing `cms_operation_draft`
   contract and does not switch response shape in this leaf,
 - shadow diagnostics compare:

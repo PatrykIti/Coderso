@@ -48,6 +48,48 @@ const mediaKeywords = [
   "remove image",
 ];
 
+const catalogContextText = (context: AssistantActionContext | undefined) => {
+  const catalog = context?.resourceCatalog;
+  if (!catalog) return "";
+  const contentTypes = catalog.contentTypes.flatMap((item) => [item.id, item.slug, item.name]);
+  const queries = catalog.listings.queries.flatMap((item) => [item.id, item.name]);
+  const templates = catalog.listings.templates.flatMap((item) => [item.id, item.slug, item.name]);
+  const forms = catalog.forms.flatMap((item) => [item.id, item.slug ?? "", item.name]);
+  return [...contentTypes, ...queries, ...templates, ...forms].join(" ");
+};
+
+const resolveIntentFamilyFromText = (value: string) => {
+  if (!value) return "unknown" as AssistantIntentFamily;
+  if (value.includes("projekty-domow") || value.includes("house-projects")) {
+    return "catalog_showcase" as AssistantIntentFamily;
+  }
+  if (value.includes("portfolio")) {
+    return "portfolio_projects" as AssistantIntentFamily;
+  }
+  if (value.includes("uslugi") || value.includes("usługi") || value.includes("services")) {
+    return "services_directory" as AssistantIntentFamily;
+  }
+  if (value.includes("produkty") || value.includes("products")) {
+    return "product_catalog" as AssistantIntentFamily;
+  }
+  return "unknown" as AssistantIntentFamily;
+};
+
+const hasCatalogAwareAdminSurface = (context: AssistantActionContext | undefined) => {
+  const route = normalizeAssistantPlannerPrompt(
+    [
+      context?.page ?? "",
+      context?.runtimeSnapshot?.route ?? "",
+      context?.runtimeSnapshot?.activeHref ?? "",
+    ].join(" ")
+  );
+  return (
+    route.includes("/admin/advanced/entries") ||
+    route.includes("/admin/advanced/listings") ||
+    route.includes("/admin/advanced/custom-screens")
+  );
+};
+
 const contextRouteToIntentFamily = (context: AssistantActionContext | undefined) => {
   const routeText = normalizeAssistantPlannerPrompt(
     [
@@ -55,27 +97,31 @@ const contextRouteToIntentFamily = (context: AssistantActionContext | undefined)
       context?.runtimeSnapshot?.route ?? "",
       context?.runtimeSnapshot?.activeHref ?? "",
       context?.runtimeSnapshot?.selectedResource?.kind ?? "",
+      context?.runtimeSnapshot?.selectedResource?.id ?? "",
     ].join(" ")
   );
 
-  if (!routeText) return "unknown" as AssistantIntentFamily;
-  if (routeText.includes("projekty-domow") || routeText.includes("house-projects")) {
-    return "catalog_showcase";
-  }
-  if (routeText.includes("produkty") || routeText.includes("products")) {
-    return "product_catalog";
-  }
-  if (routeText.includes("portfolio")) {
-    return "portfolio_projects";
-  }
-  if (
-    routeText.includes("uslugi") ||
-    routeText.includes("usługi") ||
-    routeText.includes("services")
-  ) {
-    return "services_directory";
-  }
-  return "unknown";
+  const routeIntentFamily = resolveIntentFamilyFromText(routeText);
+  if (routeIntentFamily !== "unknown") return routeIntentFamily;
+  if (!hasCatalogAwareAdminSurface(context)) return "unknown";
+
+  const catalogText = normalizeAssistantPlannerPrompt(catalogContextText(context));
+  const detectedFamilies = [
+    catalogText.includes("projekty-domow") || catalogText.includes("house-projects")
+      ? ("catalog_showcase" as AssistantIntentFamily)
+      : null,
+    catalogText.includes("produkty") || catalogText.includes("products")
+      ? ("product_catalog" as AssistantIntentFamily)
+      : null,
+    catalogText.includes("portfolio") ? ("portfolio_projects" as AssistantIntentFamily) : null,
+    catalogText.includes("uslugi") ||
+    catalogText.includes("usługi") ||
+    catalogText.includes("services")
+      ? ("services_directory" as AssistantIntentFamily)
+      : null,
+  ].filter((entry): entry is AssistantIntentFamily => entry !== null);
+  const uniqueFamilies = [...new Set(detectedFamilies)];
+  return uniqueFamilies.length === 1 ? uniqueFamilies[0]! : "unknown";
 };
 
 export const extractBlueprintPromptSignals = (input: {

@@ -628,6 +628,7 @@ export type AssistantProviderDraftPlanInput = AssistantActionPlanInput & {
 
 const finalizeAssistantPlan = (
   input: AssistantActionPlanInput,
+  context: ReturnType<typeof buildAssistantAdminContext>,
   classification: {
     promptKind?: AssistantPromptKind;
     intentFamily?: AssistantIntentFamily;
@@ -638,7 +639,15 @@ const finalizeAssistantPlan = (
     attachBlueprintShadowMetadata({
       plan,
       prompt: input.prompt,
-      context: input.context,
+      context: {
+        ...input.context,
+        page: context.route ?? input.context?.page,
+        locale: context.locale ?? input.context?.locale,
+        resourceCatalog: context.resourceCatalog ?? input.context?.resourceCatalog,
+        runtimeSnapshot: context.runtimeSnapshot ?? input.context?.runtimeSnapshot,
+        activeSurface: context.activeSurface ?? input.context?.activeSurface,
+        planningState: context.planningState ?? input.context?.planningState,
+      },
       promptKind: classification?.promptKind,
       intentFamily: classification?.intentFamily,
     })
@@ -939,6 +948,7 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   if (!classification.normalizedPrompt) {
     return finalizeAssistantPlan(
       input,
+      context,
       routedClassification,
       buildClarifyingPlan(input.prompt, context, routedClassification)
     );
@@ -947,10 +957,10 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   if (classification.promptKind !== "setup_request") {
     const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
     if (planningStatePlan)
-      return finalizeAssistantPlan(input, routedClassification, planningStatePlan);
+      return finalizeAssistantPlan(input, context, routedClassification, planningStatePlan);
     const genericInspectionPlan = buildGenericCmsInspectionOperationPlan(input.prompt, context);
     if (genericInspectionPlan) {
-      return finalizeAssistantPlan(input, routedClassification, genericInspectionPlan);
+      return finalizeAssistantPlan(input, context, routedClassification, genericInspectionPlan);
     }
     const draft = buildCmsOperationDraftFromPrompt(input.prompt, context);
     const preferBlueprintRefinement =
@@ -961,19 +971,21 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     if (!preferBlueprintRefinement) {
       const genericMutationPlan = buildLocalPolicyOperationPlan(input.prompt, context);
       if (genericMutationPlan) {
-        return finalizeAssistantPlan(input, routedClassification, genericMutationPlan);
+        return finalizeAssistantPlan(input, context, routedClassification, genericMutationPlan);
       }
     }
   }
   if (classification.promptKind === "docs_question") {
     return finalizeAssistantPlan(
       input,
+      context,
       routedClassification,
       buildDocsGuidancePlan(input.prompt, context)
     );
   }
   const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
-  if (setupPolicyPlan) return finalizeAssistantPlan(input, routedClassification, setupPolicyPlan);
+  if (setupPolicyPlan)
+    return finalizeAssistantPlan(input, context, routedClassification, setupPolicyPlan);
 
   if (classification.promptKind === "setup_request" && intentFamily !== "unknown") {
     const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
@@ -981,7 +993,7 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       intentFamily,
       normalizedPrompt: classification.normalizedPrompt,
     });
-    if (readyPlan) return finalizeAssistantPlan(input, routedClassification, readyPlan);
+    if (readyPlan) return finalizeAssistantPlan(input, context, routedClassification, readyPlan);
   }
 
   if (classification.promptKind === "refinement_request" && intentFamily !== "unknown") {
@@ -989,11 +1001,13 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       promptKind: classification.promptKind,
       intentFamily,
     });
-    if (refinementPlan) return finalizeAssistantPlan(input, routedClassification, refinementPlan);
+    if (refinementPlan)
+      return finalizeAssistantPlan(input, context, routedClassification, refinementPlan);
   }
 
   return finalizeAssistantPlan(
     input,
+    context,
     routedClassification,
     buildClarifyingPlan(input.prompt, context, routedClassification)
   );
@@ -1008,6 +1022,7 @@ export const planAssistantActionsWithProviderDraft = async (
   if (planningStatePlan) {
     return finalizeAssistantPlan(
       input,
+      context,
       routedClassification,
       withProviderPlannerMetadata(planningStatePlan, input)
     );
@@ -1030,7 +1045,7 @@ export const planAssistantActionsWithProviderDraft = async (
         providerId: input.provider?.id ?? null,
       },
     });
-    return finalizeAssistantPlan(input, routedClassification, plan);
+    return finalizeAssistantPlan(input, context, routedClassification, plan);
   }
 
   if (!input.llmAvailable || !input.provider) {
@@ -1071,12 +1086,14 @@ export const planAssistantActionsWithProviderDraft = async (
         if (localInspection && (localInspection.inspection?.candidates.length ?? 0) > 0) {
           return finalizeAssistantPlan(
             input,
+            context,
             routedClassification,
             withProviderPlannerMetadata(localInspection, input)
           );
         }
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
-        if (recoveredPlan) return finalizeAssistantPlan(input, routedClassification, recoveredPlan);
+        if (recoveredPlan)
+          return finalizeAssistantPlan(input, context, routedClassification, recoveredPlan);
       }
       if (
         operationPlan.status === "needs_input" ||
@@ -1085,7 +1102,8 @@ export const planAssistantActionsWithProviderDraft = async (
           operationPlan.responseKind !== "docs")
       ) {
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
-        if (recoveredPlan) return finalizeAssistantPlan(input, routedClassification, recoveredPlan);
+        if (recoveredPlan)
+          return finalizeAssistantPlan(input, context, routedClassification, recoveredPlan);
       }
       if (
         isBroadDestructivePromptWithPolicy(input.prompt) &&
@@ -1105,7 +1123,7 @@ export const planAssistantActionsWithProviderDraft = async (
       if (hasPromptImpliedFieldMismatchWithPolicy(input.prompt, operationPlan)) {
         return planAssistantActions(input);
       }
-      return finalizeAssistantPlan(input, routedClassification, operationPlan);
+      return finalizeAssistantPlan(input, context, routedClassification, operationPlan);
     }
     return planAssistantActions(input);
   } catch {

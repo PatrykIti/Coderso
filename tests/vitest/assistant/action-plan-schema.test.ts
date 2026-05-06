@@ -94,6 +94,74 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
       },
     })
   ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        blueprintShadow: {
+          schemaVersion: 2,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "product_catalog",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          candidates: [],
+          mismatchReason: null,
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        blueprintShadow: {
+          schemaVersion: 1,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "wrong_family",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          candidates: [],
+          mismatchReason: null,
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        blueprintShadow: {
+          schemaVersion: 1,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "product_catalog",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          candidates: [
+            {
+              capabilityId: "product-catalog",
+              role: "unsupported",
+              score: 100,
+              matchedSignals: [],
+              reasons: [],
+            },
+          ],
+          mismatchReason: null,
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan accepts read-only inspection plans", () => {

@@ -1,3 +1,4 @@
+import { buildAssistantAdminContext } from "../adminContextService";
 import type { AssistantActionContext, AssistantActionPlan } from "../actionPlanTypes";
 import { resolveBlueprintCandidates } from "./blueprintCandidateResolver";
 import type { BlueprintCandidate } from "./blueprintCapabilityTypes";
@@ -73,9 +74,18 @@ export const runBlueprintCandidateShadow = (input: {
   context?: AssistantActionContext;
   currentPlan: AssistantActionPlan;
 }) => {
+  const normalizedContext = buildAssistantAdminContext(input.context);
   const candidates = resolveBlueprintCandidates({
     prompt: input.prompt,
-    context: input.context,
+    context: {
+      ...input.context,
+      page: normalizedContext.route ?? input.context?.page,
+      locale: normalizedContext.locale ?? input.context?.locale,
+      resourceCatalog: normalizedContext.resourceCatalog ?? input.context?.resourceCatalog,
+      runtimeSnapshot: normalizedContext.runtimeSnapshot ?? input.context?.runtimeSnapshot,
+      activeSurface: normalizedContext.activeSurface ?? input.context?.activeSurface,
+      planningState: normalizedContext.planningState ?? input.context?.planningState,
+    },
   });
   return compareBlueprintCandidateSelection({
     currentPlan: input.currentPlan,
@@ -90,6 +100,13 @@ export const attachBlueprintShadowMetadata = (input: {
   promptKind?: string;
   intentFamily?: string;
 }) => {
+  if (
+    input.plan.intentId.startsWith("cms-") ||
+    input.plan.responseKind === "inspection" ||
+    input.plan.responseKind === "docs"
+  ) {
+    return input.plan;
+  }
   if (
     !shouldRunBlueprintCandidateShadow({
       promptKind: input.promptKind,

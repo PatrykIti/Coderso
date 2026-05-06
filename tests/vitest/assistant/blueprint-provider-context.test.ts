@@ -63,4 +63,43 @@ test("normalizeProviderBlueprintCompositionDraft rejects unknown ids, duplicate 
       actions: [],
     })
   ).toThrow("assistant_blueprint_composition_draft_invalid");
+
+  expect(() =>
+    normalizeProviderBlueprintCompositionDraft({
+      schemaVersion: 2,
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: [],
+      gatedCapabilityIds: [],
+    })
+  ).toThrow("assistant_blueprint_composition_draft_invalid");
+
+  expect(() =>
+    normalizeProviderBlueprintCompositionDraft({
+      schemaVersion: 1,
+      primaryCapabilityId: "   ",
+      adjunctCapabilityIds: [],
+      gatedCapabilityIds: [],
+    })
+  ).toThrow("assistant_blueprint_composition_draft_invalid");
+
+  expect(() =>
+    normalizeProviderBlueprintCompositionDraft({
+      schemaVersion: 1,
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: "product-inquiry-catalog",
+      gatedCapabilityIds: [],
+    })
+  ).toThrow("assistant_blueprint_composition_draft_invalid");
+});
+
+test("normalizeProviderBlueprintCompositionDraft trims optional notes", () => {
+  expect(
+    normalizeProviderBlueprintCompositionDraft({
+      schemaVersion: 1,
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: [],
+      gatedCapabilityIds: [],
+      notes: ["  Prefer inquiry first  "],
+    }).notes
+  ).toEqual(["Prefer inquiry first"]);
 });

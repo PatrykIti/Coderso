@@ -274,6 +274,149 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   ]);
 });
 
+test("buildProviderPlanningPromptPackage returns null resources when no catalog is available", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(prompt.resources).toBeNull();
+  expect(prompt.blueprints.capabilities.length).toBeGreaterThan(0);
+});
+
+test("buildProviderPlanningPromptPackage emits truncation warnings for added resource groups", () => {
+  const catalog = resourceCatalog as NonNullable<AssistantActionContext["resourceCatalog"]>;
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    maxResourceItemsPerGroup: 1,
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+      resourceCatalog: {
+        ...catalog,
+        posts: [
+          ...(catalog.posts ?? []),
+          {
+            id: "post-2",
+            title: "Products follow-up",
+            slug: "products-follow-up",
+            status: "draft",
+            publishedAt: null,
+            updatedAt: null,
+          },
+        ],
+        entries: [
+          ...(catalog.entries ?? []),
+          {
+            id: "entry-2",
+            typeId: "ct-products",
+            title: "Switch",
+            slug: "switch",
+            status: "draft",
+            publishedAt: null,
+            updatedAt: "2026-04-12T12:00:00.000Z",
+          },
+        ],
+        media: [
+          ...(catalog.media ?? []),
+          {
+            id: "media-gallery",
+            title: "Gallery",
+            originalName: "gallery.png",
+            type: "image",
+            mimeType: "image/png",
+            size: 1024,
+            alt: "Gallery",
+            createdAt: "2026-04-12T12:00:00.000Z",
+          },
+        ],
+        commerce: {
+          products: [
+            ...(catalog.commerce?.products ?? []),
+            {
+              id: "commerce-product-2",
+              slug: "switch-y",
+              title: "Switch Y",
+              status: "draft",
+              currency: "USD",
+              priceAmount: 199,
+              stockState: "in_stock",
+              updatedAt: "2026-04-12T12:00:00.000Z",
+            },
+          ],
+          collections: [
+            ...(catalog.commerce?.collections ?? []),
+            {
+              id: "collection-2",
+              slug: "wireless",
+              name: "Wireless",
+              productCount: 1,
+              updatedAt: "2026-04-12T12:00:00.000Z",
+            },
+          ],
+        },
+        solutionKits: [
+          ...(catalog.solutionKits ?? []),
+          {
+            id: "kit-2",
+            title: "Storefront",
+            shortDescription: "Commerce starter",
+            recommendedModules: ["commerce"],
+            features: ["catalog"],
+          },
+        ],
+      },
+    },
+  });
+
+  expect(prompt.resources?.posts).toHaveLength(1);
+  expect(prompt.resources?.entries).toHaveLength(1);
+  expect(prompt.resources?.media).toHaveLength(1);
+  expect(prompt.resources?.commerce.products).toHaveLength(1);
+  expect(prompt.resources?.commerce.collections).toHaveLength(1);
+  expect(prompt.resources?.solutionKits).toHaveLength(1);
+  expect(prompt.warnings).toContain("posts_truncated");
+  expect(prompt.warnings).toContain("entries_truncated");
+  expect(prompt.warnings).toContain("media_truncated");
+  expect(prompt.warnings).toContain("commerce_products_truncated");
+  expect(prompt.warnings).toContain("commerce_collections_truncated");
+  expect(prompt.warnings).toContain("solution_kits_truncated");
+});
+
+test("buildProviderPlanningPromptPackage reads retrieval-shaped evidence chunks", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    evidence: [
+      {
+        chunk: {
+          docPath: "docs/coderso/retrieval.md",
+          docTitle: "Retrieval Title",
+          heading: "Chunk Heading",
+          content: "Chunk content for retrieval evidence.",
+        },
+        snippet: "Fallback snippet",
+        score: 7,
+      } as never,
+    ],
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(prompt.docs).toEqual([
+    {
+      path: "docs/coderso/retrieval.md",
+      heading: "Chunk Heading",
+      content: "Chunk content for retrieval evidence.",
+      score: 7,
+    },
+  ]);
+});
+
 test("buildProviderPlanningPromptPackage includes redacted active surface summaries", () => {
   const prompt = buildProviderPlanningPromptPackage({
     prompt: "Edit current template block",

@@ -130,6 +130,9 @@ Core domain service:
   - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
   - `core/services/assistant/blueprints/blueprintCompositionGraph.ts`
   - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
+  - `core/services/assistant/blueprints/blueprintProviderContext.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionDraftSchema.ts`
+  - `core/services/assistant/blueprints/blueprintComposerShadow.ts`
 
 Public functions:
 - `previewGuidedSiteBuilderPlan(input)`

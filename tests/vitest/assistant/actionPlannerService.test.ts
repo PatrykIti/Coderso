@@ -246,6 +246,224 @@ test("planAssistantActionsWithProviderDraft also exposes blueprint shadow diagno
   });
 });
 
+test("planAssistantActionsWithProviderDraft preserves provider metadata and request contract on a real provider response", async () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+  const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: {
+      id: "openai",
+      complete: async (request) => {
+        requests.push(request);
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            surfaceHint: "Pages",
+            targetQuery: { exactName: "Pysiek Mysiek" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "gpt-4o-mini",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          {
+            id: "page-pysiek",
+            title: "Pysiek Mysiek",
+            slug: "/pysiek-mysiek",
+            status: "draft",
+          },
+        ],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: true,
+    providerId: "openai",
+  });
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.responseContract).toMatchObject({
+    kind: "json_schema",
+    name: "cms_operation_draft",
+  });
+});
+
+test("planAssistantActionsWithProviderDraft keeps provider responses free of blueprint shadow metadata when the debug flag is off", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "page",
+        surfaceHint: "Pages",
+        targetQuery: { exactName: "Pysiek Mysiek" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      })
+    ),
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          {
+            id: "page-pysiek",
+            title: "Pysiek Mysiek",
+            slug: "/pysiek-mysiek",
+            status: "draft",
+          },
+        ],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata?.planner).toBe("provider");
+  expect(plan.metadata?.providerDraftUsed).toBe(true);
+  expect(plan.metadata?.providerId).toBe("fake");
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActions does not attach blueprint shadow metadata to generic cms plans even in debug mode", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "czy widzisz strone Home w Pages?",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [{ id: "page-home", title: "Home", slug: "/", status: "published" }],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.intentId).toBe("cms-resource-inspect");
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActions uses normalized admin route aliases for blueprint shadow diagnostics", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
 test("planAssistantActions returns docs guidance plan for non-actionable docs prompt", () => {
   const plan = planAssistantActions({
     prompt: "gdzie zmienie kolory hero widgetu?",

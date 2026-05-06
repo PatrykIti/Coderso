@@ -11,9 +11,9 @@
 - Added bounded blueprint capability summaries to the provider planning package
   so setup/composer evaluation can reference current packs, adjunct modules, and
   latent gated/detail-page metadata without exposing action payloads.
-- Added a strict capability-id composition draft schema for shadow/dev use that
-  rejects unknown capability ids, duplicate ids, and provider-authored action
-  arrays.
+- Added a strict capability-id composition draft schema for shadow/dev
+  validation so provider-side capability suggestions can be normalized safely
+  without replacing the live `cms_operation_draft` contract.
 
 ### Planner shadow diagnostics
 
@@ -26,12 +26,12 @@
 
 ### Docs and task closure
 
-- Updated `TASK-190-02*`, assistant architecture/site-builder/security/testing
-  docs, task-board counts, and closure notes for the delivered provider/shadow
-  stage.
+- Updated the relevant `TASK-190-02*` source-of-truth docs and closure notes
+  for the delivered provider/shadow stage.
 
 ## Validation
 
 - `bun --cwd core lint` - passed.
 - `bun --cwd core lint:types` - passed.
 - `bun run vitest run --config vitest.config.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/assistant/blueprint-provider-context.test.ts tests/vitest/assistant/blueprint-composer-shadow.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/blueprint-capability-registry.test.ts tests/vitest/assistant/blueprint-candidate-resolver.test.ts tests/vitest/assistant/blueprint-composition-graph.test.ts tests/vitest/assistant/blueprint-conflict-resolver.test.ts tests/vitest/assistant/blueprint-action-assembler.test.ts` - passed.
+- `bun test tests/integration/routes/assistant.test.ts` - passed.
