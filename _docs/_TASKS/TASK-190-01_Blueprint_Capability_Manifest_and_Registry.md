@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Blueprint Architecture
 **Estimated Effort:** Large
 **Dependencies:** TASK-190
-**Status:** To Do
+**Status:** Done (2026-05-05)
 
 ---
 
@@ -65,6 +65,7 @@ Resource/surface kinds must include first-class detail templates:
 ```ts
 type BlueprintResourceKind =
   | "content-type"
+  | "content-route"
   | "entry"
   | "custom-screen"
   | "listing-query"
@@ -93,6 +94,9 @@ Content-model relations stay owned by the existing schema/field contract in the
 content domain. If a capability contributes relation behavior, it does so
 through content-schema field metadata handled by the schema merge/validation
 leaves, not as a standalone `BlueprintResourceKind`.
+
+`content-route` is the first-class manifest resource kind for
+`setting.content-route.upsert` ownership.
 
 If the registry carries `site-kit` metadata, it describes the existing explicit
 site-kit entrypoint owned by the current site-builder flow. It does not imply

@@ -5,13 +5,18 @@
 **Category:** Assistant/Core + Conflict Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03-01
-**Status:** To Do
+**Status:** In Progress (2026-05-06)
 
 ---
 
 ## Overview
 
 Resolve or surface conflicts in composed blueprint graphs.
+
+Current slice note:
+- stable merge keys and duplicate-action conflict detection are landed,
+- full typed `needs_input` surfacing for the broader conflict families remains
+  open.
 
 ## Sub-Tasks
 

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Composition Graph
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-02
-**Status:** To Do
+**Status:** Done (2026-05-05)
 
 ---
 
@@ -27,20 +27,22 @@ No child task files.
 
 ```ts
 export const buildBlueprintCompositionGraph = (input: {
-  primary: BlueprintCandidate;
-  adjuncts: BlueprintCandidate[];
-  registry: BlueprintCapabilityRegistry;
+  candidates: BlueprintCandidate[];
+  promptKind: AssistantPromptKind;
+  intentFamily: AssistantIntentFamily;
 }): BlueprintCompositionGraph => {
-  const nodes = orderNodes([input.primary, ...input.adjuncts]);
+  const nodes = orderAndDedupeCandidates(input.candidates);
+  const primary = firstPrimary(nodes);
+  const adjuncts = nodes.filter((node) => node.role === "adjunct");
+  const gated = nodes.filter((node) => node.role === "gated");
   return {
-    primary: toNode(input.primary),
-    adjuncts: input.adjuncts.map(toNode),
-    resources: collectResourceNodes(nodes),
-    pageSections: collectPageSections(nodes),
-    adminSections: collectAdminSections(nodes),
-    mediaReferences: collectMediaReferenceNodes(nodes),
-    gated: collectGatedNodes(nodes),
-    conflicts: [],
+    primary,
+    adjuncts,
+    gated,
+    resources: collectResourceNodes(primary, adjuncts, gated),
+    conflicts: detectDuplicateActionConflicts(primary, adjuncts),
+    fragments: buildTypedPlanFragments(primary, adjuncts, input.promptKind, input.intentFamily),
+    selectedCapabilityIds: selectedIds(primary, adjuncts, gated),
   };
 };
 ```
@@ -64,8 +66,8 @@ export const buildBlueprintCompositionGraph = (input: {
 - Primary before adjunct.
 - Gated nodes preserved.
 - Duplicate nodes deduped by capability id.
-- Media reference nodes preserve deterministic order and attached-file prompts
-  without trusted ids become gated/needs-input nodes, not executable refs.
+- Fragments and selected capability ids stay deterministic regardless of input
+  candidate order.
 
 ## Documentation Updates Required
 

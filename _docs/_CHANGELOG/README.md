@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 790 | 2026-05-05 | TASK-190 blueprint composer foundation slice 1 | Assistant/Core |
 | 789 | 2026-05-04 | Manual git hooks setup and Docker-safe install | Developer Tooling |
 | 788 | 2026-05-03 | TASK-251 custom screens builder hardening | CMS Custom Screens/Admin UI |
 | 787 | 2026-05-02 | TASK-250 custom screens screen widget parity | CMS Custom Screens/Admin UI |

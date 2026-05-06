@@ -5,13 +5,19 @@
 **Category:** Assistant/Core + Action Assembly
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03-01, TASK-190-04, TASK-190-05, TASK-190-06
-**Status:** To Do
+**Status:** In Progress (2026-05-06)
 
 ---
 
 ## Overview
 
 Convert the composed graph into existing typed assistant actions.
+
+Current slice note:
+- current catalog/form/page fragments can already be assembled and deduped in
+  tests,
+- live planner cutover, broader gated review metadata, detail-page ordering, and
+  later media/existing-resource flows remain deferred.
 
 ## Sub-Tasks
 

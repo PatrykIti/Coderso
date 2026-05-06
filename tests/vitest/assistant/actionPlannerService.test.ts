@@ -121,9 +121,7 @@ test("classifyAssistantPrompt distinguishes docs, setup, and refinement prompts"
     intentFamily: "catalog_showcase",
   });
 
-  expect(
-    classifyAssistantPrompt("dodaj filtr po metrazu i liczbie pokoi")
-  ).toMatchObject({
+  expect(classifyAssistantPrompt("dodaj filtr po metrazu i liczbie pokoi")).toMatchObject({
     promptKind: "refinement_request",
   });
 });
@@ -151,6 +149,42 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
     "page.upsert",
   ]);
   expect(plan.actions.some((action) => action.type === "page.upsert")).toBe(true);
+});
+
+test("planAssistantActions keeps current single-blueprint routing for mixed product prompts before composer cutover", () => {
+  const plan = planAssistantActions({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.actions.filter((action) => action.type === "content-type.upsert")).toHaveLength(1);
+  expect(plan.actions.filter((action) => action.type === "form.upsert")).toHaveLength(1);
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/produkty"]);
+});
+
+test("planAssistantActions keeps current single-blueprint routing for multi-primary prompts before composer cutover", () => {
+  const plan = planAssistantActions({
+    prompt: "Create a contact page and blog hub.",
+    context: {
+      page: "/admin/pages",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("editorial_content_hub");
+  expect(plan.intentId).toBe("editorial-content-hub");
+  expect(plan.actions.map((action) => action.type)).toEqual(["page.upsert"]);
 });
 
 test("planAssistantActions returns docs guidance plan for non-actionable docs prompt", () => {
@@ -792,7 +826,8 @@ test("planAssistantActions asks for page instance vs template target on ambiguou
     {
       id: "cms-operation-target",
       label: "Which exact CMS resource should I use?",
-      description: "Choose one exact candidate, provide a stricter name, or add the expected count.",
+      description:
+        "Choose one exact candidate, provide a stricter name, or add the expected count.",
       required: true,
     },
   ]);
@@ -2246,7 +2281,10 @@ test("planAssistantActions inspects left-menu resource catalog sections", () => 
 
     expect(plan.responseKind, item.prompt).toBe("inspection");
     expect(plan.inspection?.resourceKind, item.prompt).toBe(item.resourceKind);
-    expect(plan.inspection?.candidates.map((candidate) => candidate.label), item.prompt).toEqual(item.labels);
+    expect(
+      plan.inspection?.candidates.map((candidate) => candidate.label),
+      item.prompt
+    ).toEqual(item.labels);
     expect(plan.actions, item.prompt).toEqual([]);
   }
 });
@@ -2516,12 +2554,14 @@ test("planAssistantActionsWithProviderDraft recovers empty provider inspection t
   expect(plan.metadata?.planner).toBe("provider");
   expect(plan.metadata?.providerDraftUsed).toBe(true);
   expect(plan.responseKind).toBe("inspection");
-  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toContain("Pysiek Mysiek");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toContain(
+    "Pysiek Mysiek"
+  );
 });
 
 test("planAssistantActionsWithProviderDraft falls back when provider is unavailable", async () => {
   const plan = await planAssistantActionsWithProviderDraft({
-    prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
     llmAvailable: false,
     provider: createFakeProvider(
       JSON.stringify({
@@ -2537,7 +2577,12 @@ test("planAssistantActionsWithProviderDraft falls back when provider is unavaila
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-catalog");
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/produkty"]);
 });
 
 test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {
@@ -2624,10 +2669,7 @@ test("planAssistantActionsWithProviderDraft prefers planning state for follow-up
   expect(providerCalls).toBe(0);
   expect(plan.status).toBe("ready");
   expect(plan.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
-  expect(plan.actions.map((action) => action.title)).toEqual([
-    "Delete test-page",
-    "Delete test2",
-  ]);
+  expect(plan.actions.map((action) => action.title)).toEqual(["Delete test-page", "Delete test2"]);
 });
 
 test("planAssistantActionsWithProviderDraft recovers explicit page create fields when provider asks for target", async () => {
@@ -2790,9 +2832,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
   });
 
   expect(plan.responseKind).toBe("inspection");
-  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual([
-    "Lead Public",
-  ]);
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual(["Lead Public"]);
 });
 
 test("planAssistantActionsWithProviderDraft recovers provider misses with local read-only word search", async () => {

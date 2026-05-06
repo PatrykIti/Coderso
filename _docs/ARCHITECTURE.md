@@ -375,10 +375,13 @@ Zamiast tego:
 - Resource catalog snapshots now include bounded page summaries when the plan route
   requests server-side resource context; page data payloads stay out of the catalog.
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
+- `core/services/assistant/blueprints/blueprintCapabilitySchema.ts` and `blueprintCapabilityRegistry.ts` now layer strict capability metadata on top of the current executable packs and adjunct/gated modules without introducing a second executor boundary.
+- `core/services/assistant/blueprints/blueprintCandidateResolver.ts`, `blueprintCompositionGraph.ts`, `blueprintConflictResolver.ts`, and `blueprintActionAssembler.ts` provide the first `TASK-190` composition foundation: capability candidates, graph fragments, duplicate-action checks, and typed action assembly now exist behind the current single-blueprint planner path, while user-visible composer cutover remains deferred to the later `TASK-190` rollout leaves.
 - `core/services/assistant/blueprints/leadCaptureBlueprint.ts` provides a lead-capture pack that creates a public inquiry form and a simple landing page through existing `form.upsert` and block-backed `page.upsert` actions.
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts` provides an executable product inquiry catalog pack and a gated checkout/payment needs-input path.
 - `core/services/assistant/blueprints/editorialContentHubBlueprint.ts` provides an editorial hub page with a posts-feed widget and does not create or mutate post records.
+- The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, but executable detail-page, collection-workspace, and no-duplicate DB slices remain separate follow-up work under the later `TASK-190` leaves.
 
 Resource catalog context:
 - `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Composition Engine
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-01, TASK-190-02
-**Status:** To Do
+**Status:** In Progress (2026-05-06)
 
 ---
 
@@ -19,6 +19,12 @@ Business value:
 - Mixed prompts become explainable.
 - Conflicts are visible before execution.
 - Generated plans become stable across model/provider runs.
+
+Current slice note:
+- deterministic graph fragments are landed for current capability packs,
+- duplicate-action conflicts are detected by stable merge key,
+- full typed `needs_input` surfacing for route/field/media/permission conflicts
+  remains in follow-up work before live cutover.
 
 ## Sub-Tasks
 

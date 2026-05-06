@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 57 tasks
-- **In Progress:** 4 tasks
-- **Done:** 1441 tasks
+- **To Do:** 76 tasks
+- **In Progress:** 10 tasks
+- **Done:** 1467 tasks
 
 ---
 
@@ -38,17 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190 | Blueprint Composer Foundation | High | Very Large | Planner foundation for capability manifests, candidate ranking, graph composition, merges, action assembly, and evaluation |
-| TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Business area: declare what each blueprint fragment provides/requires before composition |
-| TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Technical leaf: strict manifest types, schema normalizer, and safety invariants |
-| TASK-190-01-02 | Migrate Current Blueprints to Capability Registry | High | Medium | Technical leaf: register current packs as capabilities without changing generated actions |
-| TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | Business area: choose primary and adjunct blueprint candidates from prompt/context |
-| TASK-190-02-01 | Prompt Candidate Extraction and Ranking | High | Large | Technical leaf: deterministic signals, scores, and candidate order |
 | TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Technical leaf: provider can suggest capability ids only, never actions |
 | TASK-190-02-03 | Composer Candidate Shadow Mode and Deferred Routing Cutover | High | Large | Technical leaf: candidate-only shadow diagnostics; full plan cutover waits for graph/merge/action assembly |
-| TASK-190-03 | Composition Graph and Conflict Policy | High | Large | Business area: intermediate graph plus explicit conflicts before action assembly |
-| TASK-190-03-01 | Composition Graph Contract and Deterministic Order | High | Medium | Technical leaf: graph node model and stable ordering |
-| TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | Technical leaf: slug/field/route/permission conflict handling |
 | TASK-190-04 | Field, Facet, and Card Merge Foundation | High | Large | Business area: merge content models, listing filters, and listing card configs |
 | TASK-190-04-01 | Content Schema Field Merge Engine | High | Large | Technical leaf: strict schema field merge and validation |
 | TASK-190-04-02 | Listing Facet and Card Config Merge Engine | High | Large | Technical leaf: merge listing filter facets and card display fields |
@@ -80,8 +71,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-06-03-01-03 | Collection Workspace Client Cache, Prefetch, and UI Shell | High | Medium | Technical leaf: cached client helpers, Engine prefetch, and workspace route shell |
 | TASK-190-06-03-02 | Detail Template Editor Surface and Shared Builder Seams | High | Large | Technical leaf: detail-page editor mode built from extracted page/template/screen editor seams |
 | TASK-190-06-03-03 | Collection Workspace Assistant Context and Follow-Up Integration | High | Medium | Technical leaf: workspace/detail-page active-surface integration through current assistant context seams |
-| TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | Business area: assemble strict action plans and reuse existing resources |
-| TASK-190-07-01 | Composition Action Assembler | High | Large | Technical leaf: graph-to-action-plan adapter over existing typed actions |
 | TASK-190-07-02 | No-Duplicate Idempotency and Existing Resource Reuse | High | Large | Technical leaf: existing resource matcher and DB-backed no-duplicate guards |
 | TASK-190-07-03 | Composition Review Metadata and Diagnostics | High | Medium | Technical leaf: explain primary/adjunct/gated choices and merge diagnostics in review metadata |
 | TASK-190-08 | Evaluation, Docs, and Closure | High | Large | Business area: fixtures, red-team corpus, live matrix, docs, and closure |
@@ -102,6 +91,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, prompt candidate ranking, deterministic composition graph/conflicts, and initial action assembly are landed; provider draft, merge-engine, detail-page, workspace, and no-duplicate closure waves remain |
+| TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | In progress: local prompt signal extraction and primary/adjunct/gated ranking now ship; provider composition draft and shadow/cutover follow-up remain |
+| TASK-190-03 | Composition Graph and Conflict Policy | High | Large | In progress: deterministic graph fragments are landed, but full typed conflict surfacing and cutover-safe policy coverage remain open |
+| TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | In progress: duplicate-action conflict keys are landed, while broader route/field/media/permission needs-input surfacing remains open |
+| TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | In progress: internal typed-action assembly is landed for the current fragments; DB-backed no-duplicate checks, review metadata, and live cutover remain |
+| TASK-190-07-01 | Composition Action Assembler | High | Large | In progress: current fragments assemble deterministically in tests, but live routing plus later detail/media dependency work remain deferred |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -113,6 +108,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190-03-01 | Composition Graph Contract and Deterministic Order | High | Medium | Done: current capability fragments now build deterministic graph nodes and fragments over existing typed plans |
+| TASK-190-02-01 | Prompt Candidate Extraction and Ranking | High | Large | Done: prompt signals now rank current primary, adjunct, and gated blueprint capabilities for mixed setup prompts |
+| TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Done: current blueprint packs and adjunct/gated modules now have a strict manifest/registry layer with latent detail-page metadata |
+| TASK-190-01-02 | Migrate Current Blueprints to Capability Registry | High | Medium | Done: current pack builders are registered as capabilities without changing their single-pack plan output |
+| TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Done: strict capability schema rejects unsafe keys, duplicate ids, raw media payload metadata, and secret-like defaults |
 | TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Done: preview is record-backed and cache-aware, list canvas reorders in-header, and Data uses widget-owned prop contracts |
 | TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Done: builder canvas and preview dialog now share cached-first first-record ownership plus a wider Pages-like preview shell |
 | TASK-251-01-02 | First-Record Preview Data for Editor View Canvas | High | Medium | Done: builder/editor preview now hydrates from `entries:list:<typeSlug>` with explicit fallback notes for no-record and read-failed states |

@@ -70,6 +70,12 @@ Current implemented guide blueprint:
   - listing template
   - public catalog page
   - public detail routes
+- capability registry/composer foundation:
+  - current packs and adjunct/gated modules now register through a strict capability manifest and registry layer
+  - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
+  - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
+  - user-visible setup routing remains on the current single-blueprint planner until the shadow/cutover leaves close
+  - catalog capabilities can already describe latent `detail-page` intent in metadata, but executable detail-page/runtime/admin flows remain deferred to later `TASK-190` slices
 
 Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.
@@ -117,6 +123,11 @@ Core domain service:
 - generic guide runtime:
   - `core/services/assistant/actionPlannerService.ts`
   - `core/services/assistant/actionExecutorService.ts`
+  - `core/services/assistant/blueprints/blueprintCapabilitySchema.ts`
+  - `core/services/assistant/blueprints/blueprintCapabilityRegistry.ts`
+  - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionGraph.ts`
+  - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
 
 Public functions:
 - `previewGuidedSiteBuilderPlan(input)`

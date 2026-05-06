@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** To Do
+**Status:** In Progress (2026-05-05)
 
 ---
 
@@ -49,6 +49,11 @@ prompt + context
 The goal is foundation first. Do not start by expanding individual presets such
 as Mabudo-like house projects. Preset-specific enrichment comes after the
 composer exists and can consume richer capabilities safely.
+
+The current delivered slice remains foundation-only. Capability manifests,
+candidate ranking, graph fragments, and assembler helpers may evolve behind
+tests, but user-visible setup routing stays on the current single-blueprint
+planner until the shadow/cutover and no-duplicate rollout leaves are closed.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service
