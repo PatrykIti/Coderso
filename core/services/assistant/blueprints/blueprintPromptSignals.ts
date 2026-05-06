@@ -86,7 +86,7 @@ const hasCatalogAwareAdminSurface = (context: AssistantActionContext | undefined
   return (
     route.includes("/admin/advanced/entries") ||
     route.includes("/admin/advanced/listings") ||
-    route.includes("/admin/advanced/custom-screens")
+    route.includes("/admin/advanced/engine")
   );
 };
 

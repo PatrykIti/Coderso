@@ -518,14 +518,14 @@ test("planAssistantActions shadow diagnostics can infer family from selectedReso
   const plan = planAssistantActions({
     prompt: "dodaj sortowanie A-Z",
     context: {
-      page: "/admin/advanced/custom-screens",
+      page: "/admin/advanced/engine/products",
       locale: "pl-PL",
       runtimeSnapshot: {
         schemaVersion: 2,
-        route: "/admin/advanced/custom-screens",
-        activeHref: "/admin/advanced/custom-screens",
+        route: "/admin/advanced/engine/products",
+        activeHref: "/admin/advanced/engine/products",
         area: "advanced",
-        advancedModule: "custom-screens",
+        advancedModule: "engine",
         selectedResource: {
           kind: "content-type",
           id: "products",
