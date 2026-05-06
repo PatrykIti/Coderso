@@ -518,8 +518,25 @@ test("planAssistantActions uses normalized content-type aliases for blueprint sh
   const plan = planAssistantActions({
     prompt: "dodaj sortowanie A-Z",
     context: {
-      page: "/admin/content-types/products",
+      page: "/admin/content-types/type-1",
       locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/content-types/type-1",
+        activeHref: "/admin/content-types/type-1",
+        area: "advanced",
+        advancedModule: null,
+        selectedResource: {
+          kind: "content-type",
+          id: "products",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-05-06T10:00:00.000Z",

@@ -25,7 +25,6 @@ export default defineConfig({
         "core/services/assistant/actionPlanTypes.ts",
         "core/services/assistant/actionPlannerService.ts",
         "core/services/assistant/adminContextService.ts",
-        "core/services/assistant/adminContextTypes.ts",
         "core/services/assistant/modelCapabilities.ts",
         "core/services/assistant/operationPolicy/providerGuidance.ts",
         "core/services/assistant/providerPlanningContext.ts",
