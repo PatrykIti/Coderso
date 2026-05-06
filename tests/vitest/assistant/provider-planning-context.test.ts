@@ -44,6 +44,26 @@ const resourceCatalog = {
     },
   ],
   customScreens: [],
+  posts: [
+    {
+      id: "post-1",
+      title: "Products launch",
+      slug: "products-launch",
+      status: "published",
+      publishedAt: "2026-04-12T10:00:00.000Z",
+    },
+  ],
+  entries: [
+    {
+      id: "entry-1",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      title: "Router",
+      slug: "router",
+      status: "published",
+      updatedAt: "2026-04-12T10:00:00.000Z",
+    },
+  ],
   listings: {
     queries: [],
     templates: [],
@@ -103,6 +123,45 @@ const resourceCatalog = {
       surfaces: ["page-builder"],
       requires: [],
       status: "published",
+    },
+  ],
+  media: [
+    {
+      id: "media-hero",
+      name: "Hero",
+      altText: "Hero",
+      mimeType: "image/jpeg",
+      width: 1600,
+      height: 900,
+      folder: null,
+    },
+  ],
+  commerce: {
+    products: [
+      {
+        id: "commerce-product-1",
+        slug: "router-x",
+        name: "Router X",
+        status: "active",
+        price: "299.00",
+      },
+    ],
+    collections: [
+      {
+        id: "collection-1",
+        slug: "networking",
+        name: "Networking",
+        productCount: 1,
+      },
+    ],
+  },
+  solutionKits: [
+    {
+      id: "kit-1",
+      title: "Workshop",
+      businessType: "services",
+      moduleCount: 3,
+      installed: false,
     },
   ],
   warnings: [],
@@ -179,21 +238,34 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.docs[0]?.content).toContain("...");
   expect(prompt.registry.some((entry) => entry.kind === "page")).toBe(true);
   expect(prompt.policyGuidance.resources.some((entry) => entry.key === "page")).toBe(true);
-  expect(prompt.policyGuidance.resources.some((entry) => entry.key === "settings-api-keys")).toBe(true);
+  expect(prompt.policyGuidance.resources.some((entry) => entry.key === "settings-api-keys")).toBe(
+    true
+  );
   expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("Allowed draft resourceKinds");
   expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("custom-screen.status");
-  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("Secret-bearing resources are redacted");
+  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain(
+    "Secret-bearing resources are redacted"
+  );
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Custom Screens");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("content-type");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Lead Form");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("listing-query");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("seo-document");
   expect(prompt.resources?.pages).toHaveLength(1);
+  expect(prompt.resources?.posts).toHaveLength(1);
+  expect(prompt.resources?.entries).toHaveLength(1);
   expect(prompt.resources?.contentTypes).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.menus).toHaveLength(1);
   expect(prompt.resources?.seoDocuments).toHaveLength(1);
   expect(prompt.resources?.widgets).toHaveLength(1);
+  expect(prompt.resources?.media).toHaveLength(1);
+  expect(prompt.resources?.commerce.products).toHaveLength(1);
+  expect(prompt.resources?.commerce.collections).toHaveLength(1);
+  expect(prompt.resources?.solutionKits).toHaveLength(1);
+  expect(prompt.blueprints.capabilities).toHaveLength(1);
+  expect(prompt.blueprints.capabilities[0]?.id).toBe("house-projects-catalog");
+  expect(prompt.blueprints.warnings).toContain("detail_pages_unavailable");
   expect(prompt.activeSurface).toBeNull();
   expect(prompt.warnings).toEqual([
     "docs_truncated",
@@ -247,7 +319,9 @@ test("buildProviderPlanningPromptPackage includes redacted active surface summar
     selectedBlockId: "cta-1",
   });
   expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
-  expect(prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null).toBeNull();
+  expect(
+    prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null
+  ).toBeNull();
 });
 
 test("buildProviderPlanningPromptPackage includes referenced template target context", () => {

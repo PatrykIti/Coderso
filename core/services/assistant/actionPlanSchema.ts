@@ -80,8 +80,7 @@ const fail = (): never => {
   throw new Error("assistant_action_plan_invalid");
 };
 
-const assertRecord = (value: unknown): JsonRecord =>
-  isRecord(value) ? value : fail();
+const assertRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : fail());
 
 const assertKeys = (value: JsonRecord, allowed: Set<string>) => {
   for (const key of Object.keys(value)) {
@@ -145,8 +144,7 @@ const readOptionalEnum = <T extends string>(value: unknown, allowed: Set<T>) => 
   return readEnum(value, allowed);
 };
 
-const normalizeConfidence = (value: unknown) =>
-  Math.max(0, Math.min(1, readFiniteNumber(value)));
+const normalizeConfidence = (value: unknown) => Math.max(0, Math.min(1, readFiniteNumber(value)));
 
 const normalizeQuestions = (value: unknown) =>
   readRecordArray(value).map((question) => {
@@ -162,11 +160,60 @@ const normalizeQuestions = (value: unknown) =>
 const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | undefined => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
-  assertKeys(input, new Set(["planner", "providerDraftUsed", "providerId"]));
+  assertKeys(input, new Set(["planner", "providerDraftUsed", "providerId", "blueprintShadow"]));
+  const blueprintShadow =
+    input.blueprintShadow === undefined
+      ? undefined
+      : (() => {
+          const shadow = assertRecord(input.blueprintShadow);
+          assertKeys(
+            shadow,
+            new Set([
+              "schemaVersion",
+              "currentIntentId",
+              "currentIntentFamily",
+              "primaryCapabilityId",
+              "adjunctCapabilityIds",
+              "gatedCapabilityIds",
+              "candidates",
+              "mismatchReason",
+            ])
+          );
+          const shadowSchemaVersion = readFiniteNumber(shadow.schemaVersion);
+          if (shadowSchemaVersion !== 1) fail();
+          const candidates = readRecordArray(shadow.candidates).map((candidate) => {
+            assertKeys(
+              candidate,
+              new Set(["capabilityId", "role", "score", "matchedSignals", "reasons"])
+            );
+            return {
+              capabilityId: readText(candidate.capabilityId),
+              role: readEnum(
+                candidate.role,
+                new Set<"primary" | "adjunct" | "gated">(["primary", "adjunct", "gated"])
+              ),
+              score: readFiniteNumber(candidate.score),
+              matchedSignals: readStringArray(candidate.matchedSignals),
+              reasons: readStringArray(candidate.reasons),
+            };
+          });
+          return {
+            schemaVersion: 1 as const,
+            currentIntentId: readText(shadow.currentIntentId),
+            currentIntentFamily:
+              readOptionalEnum(shadow.currentIntentFamily, intentFamilies) ?? null,
+            primaryCapabilityId: readOptionalText(shadow.primaryCapabilityId),
+            adjunctCapabilityIds: readStringArray(shadow.adjunctCapabilityIds),
+            gatedCapabilityIds: readStringArray(shadow.gatedCapabilityIds),
+            candidates,
+            mismatchReason: readOptionalText(shadow.mismatchReason),
+          };
+        })();
   return {
     planner: readEnum(input.planner, new Set(["local", "provider", "fallback"])),
     providerDraftUsed: readBoolean(input.providerDraftUsed),
     ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
+    ...(blueprintShadow !== undefined ? { blueprintShadow } : {}),
   };
 };
 
@@ -356,15 +403,7 @@ const normalizeCustomScreenWidgetPatchInput = (input: JsonRecord) => {
 const normalizeListingQueryInput = (input: JsonRecord) => {
   assertKeys(
     input,
-    new Set([
-      "name",
-      "description",
-      "contentTypeSlug",
-      "fields",
-      "includeDrafts",
-      "limit",
-      "sort",
-    ])
+    new Set(["name", "description", "contentTypeSlug", "fields", "includeDrafts", "limit", "sort"])
   );
   return {
     name: readText(input.name),
@@ -680,7 +719,10 @@ const normalizeMenuItemUpdatePatch = (value: unknown) => {
 };
 
 const normalizeMenuItemUpdateInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["menuId", "itemId", "label", "expectedHref", "expectedParentId", "patch"]));
+  assertKeys(
+    input,
+    new Set(["menuId", "itemId", "label", "expectedHref", "expectedParentId", "patch"])
+  );
   return {
     menuId: readText(input.menuId),
     itemId: readText(input.itemId),
@@ -736,7 +778,10 @@ const normalizeSeoDocumentDeleteInput = (input: JsonRecord) => {
 };
 
 const normalizeSeoDocumentUpdateInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["id", "targetType", "targetId", "expectedSlug", "expectedTitle", "patch"]));
+  assertKeys(
+    input,
+    new Set(["id", "targetType", "targetId", "expectedSlug", "expectedTitle", "patch"])
+  );
   return {
     id: readText(input.id),
     targetType: readEnum(input.targetType, new Set(["page", "entry"])),
@@ -797,10 +842,7 @@ const normalizeDataPath = (value: unknown) => {
   const path = readStringArray(value);
   if (path.length === 0 || path.length > 6) fail();
   for (const segment of path) {
-    if (
-      !/^[a-zA-Z0-9_-]+$/.test(segment) ||
-      unsafePatchPathSegments.has(segment)
-    ) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(segment) || unsafePatchPathSegments.has(segment)) {
       fail();
     }
   }
@@ -823,15 +865,7 @@ const normalizePatchValue = (value: unknown) => {
 const normalizePageWidgetPatchInput = (input: JsonRecord) => {
   assertKeys(
     input,
-    new Set([
-      "pageSlug",
-      "operation",
-      "block",
-      "blockId",
-      "expectedBlockType",
-      "dataPath",
-      "value",
-    ])
+    new Set(["pageSlug", "operation", "block", "blockId", "expectedBlockType", "dataPath", "value"])
   );
   const operation = readEnum(input.operation, new Set(["upsert-block", "patch-data"]));
   if (operation === "upsert-block") {
@@ -977,9 +1011,7 @@ const normalizePageInput = (input: JsonRecord) => {
     ...(input.listingFilters !== undefined
       ? { listingFilters: normalizeListingFilters(input.listingFilters) }
       : {}),
-    ...(input.formEmbed !== undefined
-      ? { formEmbed: normalizeFormEmbed(input.formEmbed) }
-      : {}),
+    ...(input.formEmbed !== undefined ? { formEmbed: normalizeFormEmbed(input.formEmbed) } : {}),
   };
 };
 
@@ -1175,13 +1207,7 @@ const normalizeSiteKitRecommendInput = (input: JsonRecord) => {
 const normalizeSiteKitInstallInput = (input: JsonRecord) => {
   assertKeys(
     input,
-    new Set([
-      ...siteKitPlanKeys,
-      "dryRun",
-      "continueOnError",
-      "settingsPatch",
-      "notes",
-    ])
+    new Set([...siteKitPlanKeys, "dryRun", "continueOnError", "settingsPatch", "notes"])
   );
   return {
     ...normalizeSiteKitPlanBase(input),
@@ -1202,10 +1228,7 @@ const normalizeSiteKitValidateInput = (input: JsonRecord) => {
   return { runId: readText(input.runId) };
 };
 
-const normalizeActionInput = (
-  type: AssistantPlannedAction["type"],
-  input: unknown
-) => {
+const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unknown) => {
   const record = assertRecord(input);
   switch (type) {
     case "setting.content-route.upsert":
@@ -1321,7 +1344,10 @@ const resolvePlanResponseKind = (
 export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPlan => {
   const input = assertRecord(value);
   assertKeys(input, planKeys);
-  const status = readEnum(input.status, new Set<AssistantActionPlanStatus>(["ready", "needs_input"]));
+  const status = readEnum(
+    input.status,
+    new Set<AssistantActionPlanStatus>(["ready", "needs_input"])
+  );
   const questions = normalizeQuestions(input.questions);
   const actions = normalizeActions(input.actions);
   const responseKind = resolvePlanResponseKind(input, status, questions, actions);
@@ -1331,7 +1357,8 @@ export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPla
   if (responseKind === "docs" && actions.length > 0) fail();
   if (responseKind === "inspection" && input.inspection === undefined) fail();
   if (responseKind === "action_plan" && actions.length === 0) fail();
-  if ((responseKind === "needs_input" || responseKind === "gated") && status !== "needs_input") fail();
+  if ((responseKind === "needs_input" || responseKind === "gated") && status !== "needs_input")
+    fail();
 
   return {
     id: readText(input.id),

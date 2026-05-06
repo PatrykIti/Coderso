@@ -377,6 +377,8 @@ Zamiast tego:
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
 - `core/services/assistant/blueprints/blueprintCapabilitySchema.ts` and `blueprintCapabilityRegistry.ts` now layer strict capability metadata on top of the current executable packs and adjunct/gated modules without introducing a second executor boundary.
 - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`, `blueprintCompositionGraph.ts`, `blueprintConflictResolver.ts`, and `blueprintActionAssembler.ts` provide the first `TASK-190` composition foundation: capability candidates, graph fragments, duplicate-action checks, and typed action assembly now exist behind the current single-blueprint planner path, while user-visible composer cutover remains deferred to the later `TASK-190` rollout leaves.
+- `core/services/assistant/blueprints/blueprintProviderContext.ts` and `blueprintCompositionDraftSchema.ts` add bounded provider-side capability summaries plus a strict capability-id draft schema for shadow/dev use, while the production provider contract for generic CMS/admin planning stays `cms_operation_draft`.
+- `core/services/assistant/blueprints/blueprintComposerShadow.ts` runs candidate-vs-current-plan comparisons behind a test/local env gate; it can surface diagnostics in planner metadata for QA, but it does not change normal user-visible routing yet.
 - `core/services/assistant/blueprints/leadCaptureBlueprint.ts` provides a lead-capture pack that creates a public inquiry form and a simple landing page through existing `form.upsert` and block-backed `page.upsert` actions.
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts` provides an executable product inquiry catalog pack and a gated checkout/payment needs-input path.
@@ -429,6 +431,7 @@ Planner schema/recovery:
   drafts cannot become executable actions. Provider drafts are not repaired into
   valid drafts after TASK-189-05.
 - `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It packages prompt text, docs evidence, advisory runtime context, resource catalog summaries, and model-capability output contracts for provider planning calls.
+- Provider planning packages now also include bounded blueprint capability summaries for setup/composer shadow evaluation, but provider adapters still request `cms_operation_draft` for the current production planning path.
 - Provider planning packages are passed through `assistantRedaction.ts` before the provider boundary.
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled
   provider operation-draft planning. It requires injected provider availability,

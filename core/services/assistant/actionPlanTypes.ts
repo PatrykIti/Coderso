@@ -962,6 +962,22 @@ export type AssistantActionPlanMetadata = {
   planner: "local" | "provider" | "fallback";
   providerDraftUsed: boolean;
   providerId?: string | null;
+  blueprintShadow?: {
+    schemaVersion: 1;
+    currentIntentId: string;
+    currentIntentFamily: AssistantIntentFamily | null;
+    primaryCapabilityId: string | null;
+    adjunctCapabilityIds: string[];
+    gatedCapabilityIds: string[];
+    candidates: Array<{
+      capabilityId: string;
+      role: "primary" | "adjunct" | "gated";
+      score: number;
+      matchedSignals: string[];
+      reasons: string[];
+    }>;
+    mismatchReason: string | null;
+  };
 };
 
 export type AssistantActionPlanInspectionCandidate = {
@@ -1093,6 +1109,5 @@ export type AssistantActionExecuteResult = {
   };
 };
 
-export const isAssistantActionPlan = (
-  value: unknown
-): value is AssistantActionPlan => isAssistantActionPlanStrict(value);
+export const isAssistantActionPlan = (value: unknown): value is AssistantActionPlan =>
+  isAssistantActionPlanStrict(value);

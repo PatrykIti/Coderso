@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import {
   classifyAssistantPrompt,
@@ -12,6 +12,10 @@ import type {
   AssistantPlannedAction,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../core/services/assistant/providers/providerTypes";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const createFakeProvider = (text: string): AssistantProvider => ({
   id: "fake",
@@ -170,6 +174,7 @@ test("planAssistantActions keeps current single-blueprint routing for mixed prod
       .filter((action) => action.type === "page.upsert")
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
   ).toEqual(["/produkty"]);
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
 });
 
 test("planAssistantActions keeps current single-blueprint routing for multi-primary prompts before composer cutover", () => {
@@ -185,6 +190,60 @@ test("planAssistantActions keeps current single-blueprint routing for multi-prim
   expect(plan.intentFamily).toBe("editorial_content_hub");
   expect(plan.intentId).toBe("editorial-content-hub");
   expect(plan.actions.map((action) => action.type)).toEqual(["page.upsert"]);
+});
+
+test("planAssistantActions exposes blueprint shadow diagnostics only when the debug flag is enabled", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/produkty"]);
+  expect(plan.metadata).toMatchObject({
+    planner: "local",
+    providerDraftUsed: false,
+    blueprintShadow: {
+      currentIntentId: "product-inquiry-catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      mismatchReason: "legacy_primary_routing",
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft also exposes blueprint shadow diagnostics only when the debug flag is enabled", async () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    llmAvailable: false,
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.metadata).toMatchObject({
+    planner: "local",
+    providerDraftUsed: false,
+    blueprintShadow: {
+      currentIntentId: "product-inquiry-catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      mismatchReason: "legacy_primary_routing",
+    },
+  });
 });
 
 test("planAssistantActions returns docs guidance plan for non-actionable docs prompt", () => {

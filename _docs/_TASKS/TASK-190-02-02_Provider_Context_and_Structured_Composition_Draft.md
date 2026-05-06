@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Provider Planning
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-02-01
-**Status:** To Do
+**Status:** Done (2026-05-06)
 
 ---
 

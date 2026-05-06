@@ -76,6 +76,8 @@ Current implemented guide blueprint:
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
   - user-visible setup routing remains on the current single-blueprint planner until the shadow/cutover leaves close
   - catalog capabilities can already describe latent `detail-page` intent in metadata, but executable detail-page/runtime/admin flows remain deferred to later `TASK-190` slices
+  - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
+  - candidate shadow diagnostics can be exposed only through a local/test env gate and do not change the normal returned plan yet
 
 Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Planner Rollout Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-02-01, TASK-190-02-02
-**Status:** To Do
+**Status:** Done (2026-05-06)
 
 ---
 
@@ -78,11 +78,11 @@ After cutover:
 ## Files to Change
 
 - `core/services/assistant/actionPlannerService.ts`
-- `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
+- `core/services/assistant/actionPlanTypes.ts`
+- `core/services/assistant/actionPlanSchema.ts`
 - Add `core/services/assistant/blueprints/blueprintComposerShadow.ts`
 - Update `tests/vitest/assistant/actionPlannerService.test.ts`
 - Add `tests/vitest/assistant/blueprint-composer-shadow.test.ts`
-- Add `tests/vitest/assistant/blueprint-candidate-shadow.test.ts`
 
 ## Technical Scope
 

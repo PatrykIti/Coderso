@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 76 tasks
-- **In Progress:** 10 tasks
-- **Done:** 1467 tasks
+- **To Do:** 74 tasks
+- **In Progress:** 9 tasks
+- **Done:** 1470 tasks
 
 ---
 
@@ -38,8 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Technical leaf: provider can suggest capability ids only, never actions |
-| TASK-190-02-03 | Composer Candidate Shadow Mode and Deferred Routing Cutover | High | Large | Technical leaf: candidate-only shadow diagnostics; full plan cutover waits for graph/merge/action assembly |
 | TASK-190-04 | Field, Facet, and Card Merge Foundation | High | Large | Business area: merge content models, listing filters, and listing card configs |
 | TASK-190-04-01 | Content Schema Field Merge Engine | High | Large | Technical leaf: strict schema field merge and validation |
 | TASK-190-04-02 | Listing Facet and Card Config Merge Engine | High | Large | Technical leaf: merge listing filter facets and card display fields |
@@ -91,8 +89,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, prompt candidate ranking, deterministic composition graph/conflicts, and initial action assembly are landed; provider draft, merge-engine, detail-page, workspace, and no-duplicate closure waves remain |
-| TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | In progress: local prompt signal extraction and primary/adjunct/gated ranking now ship; provider composition draft and shadow/cutover follow-up remain |
+| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, and initial action assembly are landed; merge-engine, detail-page, workspace, review metadata, and no-duplicate closure waves remain |
 | TASK-190-03 | Composition Graph and Conflict Policy | High | Large | In progress: deterministic graph fragments are landed, but full typed conflict surfacing and cutover-safe policy coverage remain open |
 | TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | In progress: duplicate-action conflict keys are landed, while broader route/field/media/permission needs-input surfacing remains open |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | In progress: internal typed-action assembly is landed for the current fragments; DB-backed no-duplicate checks, review metadata, and live cutover remain |
@@ -108,6 +105,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-190-02-03 | Composer Candidate Shadow Mode and Deferred Routing Cutover | High | Large | Done: candidate shadow now compares current plan routing to capability candidates behind an env-gated debug surface while keeping user-visible routing unchanged |
+| TASK-190-02-02 | Provider Context and Structured Composition Draft | High | Medium | Done: provider prompt packaging now includes bounded blueprint capability context and a strict capability-id draft schema without replacing `cms_operation_draft` |
+| TASK-190-02 | Intent to Blueprint Candidate Planning | High | Large | Done: current prompt candidate extraction, provider capability context, and shadow diagnostics are landed for the pre-cutover planner stage |
 | TASK-190-03-01 | Composition Graph Contract and Deterministic Order | High | Medium | Done: current capability fragments now build deterministic graph nodes and fragments over existing typed plans |
 | TASK-190-02-01 | Prompt Candidate Extraction and Ranking | High | Large | Done: prompt signals now rank current primary, adjunct, and gated blueprint capabilities for mixed setup prompts |
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Done: current blueprint packs and adjunct/gated modules now have a strict manifest/registry layer with latent detail-page metadata |

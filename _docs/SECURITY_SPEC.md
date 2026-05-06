@@ -358,6 +358,9 @@ Rotacja klucza:
 - Hardening:
   - brak public write surface,
   - brak arbitralnego kodu,
+  - blueprint/provider shadow drafts pozostaja capability-id only: unknown ids
+    reject, provider action arrays reject, a produkcyjny provider planning dla
+    generic CMS/admin mutations nadal pozostaje na `cms_operation_draft`,
   - plan payload przechodzi strict top-level validation i wewnetrzna walidacje typed planu,
   - planner output przechodzi strict nested `actionPlanSchema` przed dry-run/execute,
   - provider draft output is untrusted and operation-draft-only: provider `actions[]`, arbitrary executor inputs, malformed drafts, unknown fields, null/missing ambiguous `resourceKey`, and secret-like keys cannot produce executable actions; TASK-189-05 removed provider draft repair from active planning,

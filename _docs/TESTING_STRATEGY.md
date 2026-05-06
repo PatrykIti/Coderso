@@ -95,6 +95,10 @@ then that test should move to Vitest.
   provider draft strictness, exact `resourceKey`, policy gated/read-only behavior,
   active target resolution, selected-block patch mapping, and no provider repair
   fallback are validated in `tests/vitest/assistant/*`.
+- TASK-190 candidate/provider shadow work also stays in the Vitest-owned
+  assistant lane: capability registry context, capability-id draft schema, and
+  env-gated planner shadow diagnostics are pure planning contracts and must not
+  require Bun runtime coupling.
 
 ### Vitest Happy-DOM Guardrails
 

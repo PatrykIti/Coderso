@@ -40,12 +40,48 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
         planner: "provider",
         providerDraftUsed: true,
         providerId: "fake",
+        blueprintShadow: {
+          schemaVersion: 1,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "product_catalog",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: ["product-inquiry-catalog"],
+          gatedCapabilityIds: [],
+          candidates: [
+            {
+              capabilityId: "product-catalog",
+              role: "primary",
+              score: 100,
+              matchedSignals: ["intent:product_catalog"],
+              reasons: ["Primary product catalog."],
+            },
+          ],
+          mismatchReason: null,
+        },
       },
     }).metadata
   ).toEqual({
     planner: "provider",
     providerDraftUsed: true,
     providerId: "fake",
+    blueprintShadow: {
+      schemaVersion: 1,
+      currentIntentId: "product-catalog",
+      currentIntentFamily: "product_catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog"],
+      gatedCapabilityIds: [],
+      candidates: [
+        {
+          capabilityId: "product-catalog",
+          role: "primary",
+          score: 100,
+          matchedSignals: ["intent:product_catalog"],
+          reasons: ["Primary product catalog."],
+        },
+      ],
+      mismatchReason: null,
+    },
   });
 
   expect(() =>
@@ -882,10 +918,7 @@ test("normalizeAssistantActionPlan accepts form delete and archive actions", () 
     ],
   });
 
-  expect(normalized.actions.map((action) => action.type)).toEqual([
-    "form.delete",
-    "form.archive",
-  ]);
+  expect(normalized.actions.map((action) => action.type)).toEqual(["form.delete", "form.archive"]);
 });
 
 test("normalizeAssistantActionPlan rejects webhook form automation in this slice", () => {
