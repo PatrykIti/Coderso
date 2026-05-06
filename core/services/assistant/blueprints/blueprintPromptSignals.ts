@@ -97,13 +97,18 @@ const contextRouteToIntentFamily = (context: AssistantActionContext | undefined)
       context?.runtimeSnapshot?.route ?? "",
       context?.runtimeSnapshot?.activeHref ?? "",
       context?.runtimeSnapshot?.selectedResource?.kind ?? "",
-      context?.runtimeSnapshot?.selectedResource?.id ?? "",
     ].join(" ")
   );
 
   const routeIntentFamily = resolveIntentFamilyFromText(routeText);
   if (routeIntentFamily !== "unknown") return routeIntentFamily;
   if (!hasCatalogAwareAdminSurface(context)) return "unknown";
+
+  const selectedResourceText = normalizeAssistantPlannerPrompt(
+    context?.runtimeSnapshot?.selectedResource?.id ?? ""
+  );
+  const selectedResourceIntentFamily = resolveIntentFamilyFromText(selectedResourceText);
+  if (selectedResourceIntentFamily !== "unknown") return selectedResourceIntentFamily;
 
   const catalogText = normalizeAssistantPlannerPrompt(catalogContextText(context));
   const detectedFamilies = [

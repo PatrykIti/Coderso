@@ -20,6 +20,7 @@ export default defineConfig({
         "core/admin/services/**/*.ts",
         "core/admin/utils/**/*.ts",
         "core/admin/ui/**/*.{ts,tsx}",
+        "core/services/assistant/**/*.ts",
         "core/services/customScreens/**/*.ts",
         "packages/sdk/src/**/*.ts",
       ],

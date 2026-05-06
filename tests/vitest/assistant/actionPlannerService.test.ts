@@ -246,6 +246,54 @@ test("planAssistantActionsWithProviderDraft also exposes blueprint shadow diagno
   });
 });
 
+test("planAssistantActionsWithProviderDraft exposes blueprint shadow diagnostics on provider-path fallback to local setup planning", async () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+  const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    llmAvailable: true,
+    provider: {
+      id: "openai",
+      complete: async (request) => {
+        requests.push(request);
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            targetQuery: { exactName: "non-existent-page" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "gpt-4o-mini",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: false,
+    blueprintShadow: {
+      currentIntentId: "product-inquiry-catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      mismatchReason: "legacy_primary_routing",
+    },
+  });
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.responseContract).toMatchObject({
+    kind: "json_schema",
+    name: "cms_operation_draft",
+  });
+});
+
 test("planAssistantActionsWithProviderDraft preserves provider metadata and request contract on a real provider response", async () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
   const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
@@ -461,6 +509,74 @@ test("planAssistantActions uses normalized admin route aliases for blueprint sha
 
   expect(plan.metadata?.blueprintShadow).toMatchObject({
     primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions shadow diagnostics can infer family from selectedResource id on custom-screen style routes", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/advanced/custom-screens",
+      locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/advanced/custom-screens",
+        activeHref: "/admin/advanced/custom-screens",
+        area: "advanced",
+        advancedModule: "custom-screens",
+        selectedResource: {
+          kind: "content-type",
+          id: "products",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions shadow diagnostics ignore selectedResource ids on non catalog-aware page surfaces", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/pages/123",
+      locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/pages/123",
+        activeHref: "/admin/pages/123",
+        area: "pages",
+        advancedModule: null,
+        selectedResource: {
+          kind: "page",
+          id: "page-services",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.intentId).toBe("page-update-needs-input");
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: null,
+    mismatchReason: "no_candidates",
   });
 });
 
