@@ -593,6 +593,84 @@ test("planAssistantActions uses normalized content-type aliases for blueprint sh
   });
 });
 
+test("planAssistantActions uses normalized content-type aliases for blueprint shadow diagnostics without selectedResource", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content-types/type-1",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "type-1",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+          {
+            id: "type-2",
+            slug: "services",
+            name: "Services",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "type-1",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/content-types/type-1",
+        activeHref: "/admin/content-types/type-1",
+        area: "advanced",
+        advancedModule: null,
+        selectedResource: null,
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
 test("planAssistantActions shadow diagnostics can infer family from selectedResource id on engine surfaces", () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
 

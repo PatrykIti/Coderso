@@ -20,6 +20,8 @@
 - Added env-gated blueprint candidate shadow diagnostics that compare the
   current returned plan against primary/adjunct/gated capability selection
   without changing normal user-visible planner routing.
+- Hardened the shadow path so catalog-aware family inference also respects the
+  normalized `content-types` / Engine route aliases used by the main planner.
 - Kept the current production generic provider contract on
   `cms_operation_draft`; no silent cutover to composed plan routing landed in
   this slice.

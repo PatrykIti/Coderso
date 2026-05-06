@@ -105,6 +105,9 @@ Feature/cutover controls:
   toggles,
 - env/test override for fixtures,
 - per-family allowlist for candidate shadow diagnostics,
+- shadow candidate comparison must use the same normalized admin-route aliases
+  the planner relies on, including `content` / `content-types` -> Engine/Entries
+  canonicalization before catalog-aware family inference runs,
 - any provider-backed capability-id suggestion remains test/dev/shadow only in
   this slice,
 - full `shouldUseBlueprintComposer(...)` plan routing remains hard-disabled in
