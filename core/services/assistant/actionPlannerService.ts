@@ -1199,7 +1199,12 @@ export const planAssistantActionsWithProviderDraft = async (
       if (hasPromptImpliedFieldMismatchWithPolicy(input.prompt, operationPlan)) {
         return planAssistantActions(input);
       }
-      return finalizeAssistantPlan(input, context, routedClassification, operationPlan);
+      return finalizeAssistantPlan(
+        input,
+        context,
+        routedClassification,
+        withProviderPlannerMetadata(operationPlan, input)
+      );
     }
     return planAssistantActions(input);
   } catch {

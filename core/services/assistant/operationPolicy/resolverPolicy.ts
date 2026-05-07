@@ -92,10 +92,7 @@ const surfaceStopWords = new Set([
 ]);
 
 export const normalizeResolverText = (value: string) =>
-  value
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
+  value.trim().replace(/\s+/g, " ").toLowerCase();
 
 const includesAny = (value: string, candidates: string[]) =>
   candidates.some((candidate) => value.includes(normalizeResolverText(candidate)));
@@ -131,6 +128,9 @@ export const inferOperationWithPolicy = (
     if (!operations.has(operation)) continue;
     if (includesAny(normalizedPrompt, operationAliases[operation])) return operation;
   }
+  if (/^(czy|is|does)\b/u.test(normalizedPrompt)) {
+    return operations.has("inspect") ? "inspect" : null;
+  }
   return null;
 };
 
@@ -138,7 +138,9 @@ export const includesPrefixIntentWithPolicy = (normalizedPrompt: string) =>
   includesAny(normalizedPrompt, prefixAliases);
 
 const policyResourceEntries = (policy: AssistantOperationPolicy) =>
-  Object.entries(policy.resources).filter(([, resource]) => resource.coverage.state !== "not-applicable");
+  Object.entries(policy.resources).filter(
+    ([, resource]) => resource.coverage.state !== "not-applicable"
+  );
 
 export const getResolverResourcePolicyByKey = (
   key: string | null | undefined,
@@ -155,9 +157,7 @@ export const getResolverResourcePolicy = (
 ): AssistantResourcePolicy | null => {
   const exact = policy.resources[kind];
   if (exact?.kind === kind && exact.coverage.state !== "not-applicable") return exact;
-  return (
-    policyResourceEntries(policy).find(([, resource]) => resource.kind === kind)?.[1] ?? null
-  );
+  return policyResourceEntries(policy).find(([, resource]) => resource.kind === kind)?.[1] ?? null;
 };
 
 export const getResolverResourcePolicyForDraft = (
@@ -178,7 +178,8 @@ export const resolveResourcePolicyEntryFromPromptWithPolicy = (
       resource,
       score: resource.aliases.reduce(
         (result, alias) =>
-          result + (wordLikeContains(normalizedPrompt, alias) ? normalizeResolverText(alias).length : 0),
+          result +
+          (wordLikeContains(normalizedPrompt, alias) ? normalizeResolverText(alias).length : 0),
         0
       ),
     }))
@@ -194,8 +195,9 @@ export const resolveResourceKindFromPromptWithPolicy = (
   prompt: string,
   policy: AssistantOperationPolicy = assistantOperationPolicy
 ): CmsResourceKind | null =>
-  (resolveResourcePolicyEntryFromPromptWithPolicy(prompt, policy)?.resource.kind as CmsResourceKind | undefined) ??
-  null;
+  (resolveResourcePolicyEntryFromPromptWithPolicy(prompt, policy)?.resource.kind as
+    | CmsResourceKind
+    | undefined) ?? null;
 
 const isCmsResourceKind = (value: unknown): value is CmsResourceKind =>
   typeof value === "string" && (cmsResourceKindValues as readonly string[]).includes(value);
@@ -207,7 +209,11 @@ export const inferRequestedCountWithPolicy = (
   const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
   if (digitMatch?.[1]) return Number(digitMatch[1]);
   for (const [word, count] of Object.entries(policy.followUp.countWords)) {
-    if (new RegExp(`(^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`, "u").test(normalizedPrompt)) {
+    if (
+      new RegExp(`(^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`, "u").test(
+        normalizedPrompt
+      )
+    ) {
       return count;
     }
   }
@@ -383,12 +389,11 @@ export const isSurfaceOnlyReadQueryWithPolicy = (
   const surfaceText = normalizeResolverText(draft.surfaceHint ?? "");
   const surfaceTokens = surfaceTokensForPolicy(resourcePolicy);
   const tokens = text.split(/[^a-z0-9ąćęłńóśźż]+/u).filter(Boolean);
-  const isOnlySurfaceWords = tokens.every(
-    (token) => surfaceTokens.has(token) || token.length <= 2
-  );
+  const isOnlySurfaceWords = tokens.every((token) => surfaceTokens.has(token) || token.length <= 2);
   return (
-    Boolean(surfaceText && (text === surfaceText || (text.includes(surfaceText) && isOnlySurfaceWords))) ||
-    isOnlySurfaceWords
+    Boolean(
+      surfaceText && (text === surfaceText || (text.includes(surfaceText) && isOnlySurfaceWords))
+    ) || isOnlySurfaceWords
   );
 };
 

@@ -3593,6 +3593,49 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
   expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual(["Lead Public"]);
 });
 
+test("planAssistantActions inspects trusted form visibility questions instead of routing them into refinement setup", () => {
+  const plan = planAssistantActions({
+    prompt: "czy formularz Lead Form jest publiczny?",
+    context: {
+      page: "/admin/advanced/forms",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-lead",
+            name: "Lead Form",
+            slug: "lead-form",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.intentId).toBe("cms-resource-inspect");
+  expect(plan.inspection?.resourceKind).toBe("form");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual(["Lead Form"]);
+});
+
 test("planAssistantActionsWithProviderDraft recovers provider misses with local read-only word search", async () => {
   let providerCalls = 0;
   const provider: AssistantProvider = {

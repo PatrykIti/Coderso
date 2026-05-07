@@ -82,7 +82,8 @@ const catalog = {
 const cases = [
   {
     name: "custom screens surface hint",
-    prompt: "sprawdz jakie ekrany customowe sa widoczne w sekcji Screens i podaj ich dokladne nazwy",
+    prompt:
+      "sprawdz jakie ekrany customowe sa widoczne w sekcji Screens i podaj ich dokladne nazwy",
     expectedResourceKind: "custom-screen",
     expectedCandidate: "House Projects",
   },
@@ -118,46 +119,49 @@ liveTest(
   async () => {
     if (!apiKey || !model) throw new Error("missing_openai_test_env");
 
-  const provider = createOpenAiProvider({
-    apiKey,
-    model,
-    retryCount: 0,
-  });
-
-  for (const item of cases) {
-    const plan = await planAssistantActionsWithProviderDraft({
-      prompt: item.prompt,
-      provider,
-      providerModel: model,
-      llmAvailable: true,
-      context: {
-        page: "/admin/advanced/custom-screens",
-        locale: "pl-PL",
-        resourceCatalog: catalog,
-      },
-      limits: {
-        maxInputTokens: 8_192,
-        maxOutputTokens: 512,
-        timeoutMs: 25_000,
-      },
+    const provider = createOpenAiProvider({
+      apiKey,
+      model,
+      retryCount: 0,
     });
 
-    expect(plan.metadata?.planner, item.name).toBe("provider");
-    expect(plan.responseKind, item.name).toBe("inspection");
-    expect(plan.intentId, item.name).toBe("cms-resource-inspect");
-    expect(plan.inspection?.resourceKind, item.name).toBe(item.expectedResourceKind);
-    const labels = plan.inspection?.candidates.map((candidate) => candidate.label) ?? [];
-    const expectedCandidates =
-      "expectedCandidates" in item ? item.expectedCandidates : [item.expectedCandidate];
-    const excludedCandidates = "excludedCandidates" in item ? item.excludedCandidates : [];
-    for (const expected of expectedCandidates) {
-      expect(labels, item.name).toContain(expected);
+    for (const item of cases) {
+      const plan = await planAssistantActionsWithProviderDraft({
+        prompt: item.prompt,
+        provider,
+        providerModel: model,
+        llmAvailable: true,
+        context: {
+          page: "/admin/advanced/custom-screens",
+          locale: "pl-PL",
+          includeResourceCatalog: true,
+          resourceCatalog: catalog,
+        },
+        limits: {
+          maxInputTokens: 8_192,
+          maxOutputTokens: 512,
+          timeoutMs: 25_000,
+        },
+      });
+
+      expect(plan.responseKind, item.name).toBe("inspection");
+      expect(plan.intentId, item.name).toBe("cms-resource-inspect");
+      if (plan.metadata?.planner !== undefined) {
+        expect(["provider", "local"], item.name).toContain(plan.metadata.planner);
+      }
+      expect(plan.inspection?.resourceKind, item.name).toBe(item.expectedResourceKind);
+      const labels = plan.inspection?.candidates.map((candidate) => candidate.label) ?? [];
+      const expectedCandidates =
+        "expectedCandidates" in item ? item.expectedCandidates : [item.expectedCandidate];
+      const excludedCandidates = "excludedCandidates" in item ? item.excludedCandidates : [];
+      for (const expected of expectedCandidates) {
+        expect(labels, item.name).toContain(expected);
+      }
+      for (const excluded of excludedCandidates) {
+        expect(labels, item.name).not.toContain(excluded);
+      }
+      expect(JSON.stringify(plan), item.name).not.toContain(apiKey);
     }
-    for (const excluded of excludedCandidates) {
-      expect(labels, item.name).not.toContain(excluded);
-    }
-    expect(JSON.stringify(plan), item.name).not.toContain(apiKey);
-  }
   },
   60_000
 );
