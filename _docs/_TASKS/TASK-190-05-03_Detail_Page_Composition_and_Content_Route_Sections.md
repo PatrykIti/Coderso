@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Public Runtime + Page Sections
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-190-05-01, TASK-190-05-02
-**Status:** To Do
+**Status:** In Progress (2026-05-07)
 
 ---
 
@@ -23,6 +23,14 @@ The runtime must render detail pages with the same level of visual control as
 normal Pages, while preserving the current CMS safety model: strict schemas,
 typed actions, reviewed execution, public read-only rendering, existing form
 hardening, and no provider-defined payloads.
+
+Current slice note:
+- `TASK-190-05-03-01` is landed: persisted detail-page document/revision
+  storage, strict schema normalization, deterministic UUID-compatible id rules,
+  and the content-type delete guard for `content_type_has_detail_pages` now
+  exist under the content-domain owner seam.
+- Binding resolution, runtime rendering, preview/cache, reviewed action
+  adapters, and route/admin round-trip remain open in the later leaves.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.

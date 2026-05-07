@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Detail Page Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03
-**Status:** To Do
+**Status:** Done (2026-05-07)
 
 ---
 
@@ -22,6 +22,18 @@ It is an assistant/admin-owned collection template resource, not a replacement
 for the existing theme-file `content detail` template seam. Public runtime may
 prefer this document when linked from a content route, but current content
 template fallback must remain intact.
+
+Delivered slice note:
+- Added `detailPageTypes.ts` and `detailPageSchema.ts` as the strict
+  source-of-truth contract for persisted detail-page documents, binding sources,
+  related-source limits, and UUID-compatible ids.
+- Added `detail_page_documents` and `detail_page_revisions` storage to the DB
+  schema together with generated migration/meta artifacts.
+- Content-type deletion now treats `detail_page_documents.content_type_id` as a
+  blocking dependency and returns `content_type_has_detail_pages` through both
+  the service and route mapping layers.
+- End-to-end `detailPageId` route-link round-trip, runtime rendering, preview,
+  and CRUD/admin flows remain deferred to the later `TASK-190-05-03-*` leaves.
 
 ## Sub-Tasks
 

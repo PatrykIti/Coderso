@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
-import { contentEntries, contentTypes, users } from "../../../core/db/schema";
+import { contentEntries, contentTypes, detailPageDocuments, users } from "../../../core/db/schema";
 import { matchRoute } from "../../../core/server/router";
+import { ApiError } from "../../../core/server/errorHandler";
 import {
   registerContentEntryRoutes,
   type RouteContext,
@@ -11,6 +12,7 @@ import {
 } from "../../../core/server/routes/contentEntryRoutes";
 import { registerContentTypeRoutes } from "../../../core/server/routes/contentTypeRoutes";
 import { createEntry } from "../../../core/services/content/entryService";
+import { normalizeDetailPageDocument } from "../../../core/services/content/detailPageSchema";
 import { createContentType } from "../../../core/services/content/typeService";
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
@@ -44,12 +46,7 @@ async function canConnect() {
   }
 }
 
-const runRoute = async (
-  routes: Route[],
-  method: string,
-  path: string,
-  ctx: RouteContext
-) => {
+const runRoute = async (routes: Route[], method: string, path: string, ctx: RouteContext) => {
   const route = routes.find((item) => item.method === method && item.path === path);
   if (!route) throw new Error(`route_not_found:${method} ${path}`);
   let result: unknown;
@@ -213,21 +210,92 @@ testIfDb("content entry duplicate route returns a draft clone", async () => {
   });
 
   try {
-    const result = (await runRoute(
-      routes,
-      "POST",
-      "/content/:type/entries/:id/duplicate",
-      {
-        params: { type: type.slug, id: entry.id },
-        query: {},
-        body: {},
-      }
-    )) as { title: string; slug: string; status: string };
+    const result = (await runRoute(routes, "POST", "/content/:type/entries/:id/duplicate", {
+      params: { type: type.slug, id: entry.id },
+      query: {},
+      body: {},
+    })) as { title: string; slug: string; status: string };
 
     expect(result.title).toBe("Route doc (Copy)");
     expect(result.slug).toBe(`${entry.slug}-copy`);
     expect(result.status).toBe("draft");
   } finally {
+    await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
+  }
+});
+
+testIfDb("content type delete route maps detail page dependency conflicts", async () => {
+  const { router, routes } = makeRouter();
+
+  registerContentTypeRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const type = await createContentType({
+    name: `Route Detail Guard ${randomUUID()}`,
+    slug: `route-detail-guard-${randomUUID()}`,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: { title: { type: "string" } },
+    },
+  });
+
+  try {
+    await db.insert(detailPageDocuments).values({
+      id: randomUUID(),
+      name: "Route detail page",
+      contentTypeId: type.id,
+      status: "draft",
+      currentDocument: normalizeDetailPageDocument({
+        schemaVersion: 1,
+        id: randomUUID(),
+        name: "Route detail page",
+        contentTypeId: type.id,
+        contentTypeSlug: type.slug,
+        status: "draft",
+        titlePattern: "{{ title }}",
+        settings: {
+          template: "detail",
+          layout: {},
+        },
+        blocks: [
+          {
+            id: "hero",
+            type: "hero",
+            data: {
+              headline: "Detail",
+            },
+          },
+        ],
+        bindings: [
+          {
+            id: "binding-title",
+            blockId: "hero",
+            propPath: "headline",
+            source: {
+              kind: "entry-meta",
+              field: "title",
+            },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      runRoute(routes, "DELETE", "/content-types/:id", {
+        params: { id: type.id },
+        query: {},
+        body: {},
+      })
+    ).rejects.toMatchObject({
+      code: "content_type_has_detail_pages",
+      status: 409,
+    } satisfies Partial<ApiError>);
+  } finally {
+    await db.delete(detailPageDocuments).where(eq(detailPageDocuments.contentTypeId, type.id));
     await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
   }
 });

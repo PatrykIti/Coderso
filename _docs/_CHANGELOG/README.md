@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 798 | 2026-05-07 | TASK-190 detail page model and schema contract | Assistant/Core |
 | 797 | 2026-05-07 | TASK-190 page upsert composition adapter | Assistant/Core |
 | 796 | 2026-05-07 | TASK-190 post-review drift fixes | Assistant/Core |
 | 795 | 2026-05-07 | TASK-190 page section library slice | Assistant/Core |

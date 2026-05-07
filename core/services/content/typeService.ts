@@ -5,14 +5,11 @@ import {
   contentTaxonomies,
   contentTypes,
   customScreens,
+  detailPageDocuments,
   listingQueries,
   settings,
 } from "../../db/schema";
-import {
-  assertContentSchema,
-  invalidateValidator,
-  type ContentSchema,
-} from "./validation";
+import { assertContentSchema, invalidateValidator, type ContentSchema } from "./validation";
 
 export type ContentTypeRecord = typeof contentTypes.$inferSelect;
 export type ContentTypeStatus = "draft" | "published";
@@ -46,9 +43,7 @@ export async function listContentTypes() {
       status: contentTypes.status,
       createdAt: contentTypes.createdAt,
       updatedAt: contentTypes.updatedAt,
-      entryCount: sql<number>`count(${contentEntries.id})`
-        .mapWith(Number)
-        .as("entryCount"),
+      entryCount: sql<number>`count(${contentEntries.id})`.mapWith(Number).as("entryCount"),
     })
     .from(contentTypes)
     .leftJoin(contentEntries, eq(contentEntries.typeId, contentTypes.id))
@@ -70,16 +65,12 @@ export async function getContentType(id: string): Promise<ContentTypeRecord | nu
 }
 
 export async function getContentTypeBySlug(slug: string): Promise<ContentTypeRecord | null> {
-  const [row] = await db
-    .select()
-    .from(contentTypes)
-    .where(eq(contentTypes.slug, slug));
+  const [row] = await db.select().from(contentTypes).where(eq(contentTypes.slug, slug));
   return (row as ContentTypeRecord | undefined) ?? null;
 }
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const generatedScreenNamePattern =
-  /^screen\s+[0-9a-f]{8}(?:-[0-9a-f]{4}){0,3}(?:-[0-9a-f]{12})?$/i;
+const generatedScreenNamePattern = /^screen\s+[0-9a-f]{8}(?:-[0-9a-f]{4}){0,3}(?:-[0-9a-f]{12})?$/i;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -161,6 +152,13 @@ const assertContentTypeDeleteAllowed = async (record: ContentTypeRecord) => {
     .where(sql`${listingQueries.query}->'sourceConfig'->>'contentTypeId' = ${record.id}`)
     .limit(1);
   if (listing) throw new Error("content_type_has_listings");
+
+  const [detailPage] = await db
+    .select({ id: detailPageDocuments.id })
+    .from(detailPageDocuments)
+    .where(eq(detailPageDocuments.contentTypeId, record.id))
+    .limit(1);
+  if (detailPage) throw new Error("content_type_has_detail_pages");
 };
 
 const findUniqueCopySlug = async (baseSlug: string) => {
@@ -219,12 +217,9 @@ export async function updateContentType(
   if (input.schema) {
     assertContentSchema(input.schema);
   }
-  const name =
-    input.name !== undefined ? normalizeContentTypeName(input.name) : undefined;
-  const slug =
-    input.slug !== undefined ? normalizeContentTypeSlug(input.slug) : undefined;
-  const status =
-    input.status !== undefined ? normalizeContentTypeStatus(input.status) : undefined;
+  const name = input.name !== undefined ? normalizeContentTypeName(input.name) : undefined;
+  const slug = input.slug !== undefined ? normalizeContentTypeSlug(input.slug) : undefined;
+  const status = input.status !== undefined ? normalizeContentTypeStatus(input.status) : undefined;
 
   if (name !== undefined) await assertUniqueContentTypeName(name, id);
   if (slug !== undefined) await assertUniqueContentTypeSlug(slug, id);
@@ -285,9 +280,7 @@ export async function deleteContentType(id: string): Promise<ContentTypeRecord |
       .limit(1);
     const routes = routeSetting?.value;
     if (Array.isArray(routes)) {
-      const nextRoutes = routes.filter(
-        (entry) => !isRecord(entry) || entry.type !== existing.slug
-      );
+      const nextRoutes = routes.filter((entry) => !isRecord(entry) || entry.type !== existing.slug);
       if (nextRoutes.length !== routes.length) {
         await tx
           .update(settings)
@@ -296,10 +289,7 @@ export async function deleteContentType(id: string): Promise<ContentTypeRecord |
       }
     }
 
-    const [deleted] = await tx
-      .delete(contentTypes)
-      .where(eq(contentTypes.id, id))
-      .returning();
+    const [deleted] = await tx.delete(contentTypes).where(eq(contentTypes.id, id)).returning();
     return deleted;
   });
 

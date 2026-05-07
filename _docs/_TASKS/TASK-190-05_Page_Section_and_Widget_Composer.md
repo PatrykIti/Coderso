@@ -35,7 +35,10 @@ Current slice note:
   listing/filter/form blocks through `blueprintPageSectionComposer.ts`, and
   assistant-created collection pages persist `PageData.settings.collectionLink`
   through the existing page owner seam.
-- The later detail-page wave remains open.
+- `TASK-190-05-03-01` is landed: detail-page document/revision storage and the
+  blocking `content_type_has_detail_pages` dependency now exist under the
+  content-domain owner seam.
+- The later detail-page binding/runtime/action/admin waves remain open.
 
 ## Sub-Tasks
 

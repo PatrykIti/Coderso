@@ -63,8 +63,11 @@ can now also merge through schema-backed listing owners and widen
 Canonical collection pages now also compose listing/filter/form sections
 through `blueprintPageSectionComposer.ts`, and assistant-created catalog pages
 persist `PageData.settings.collectionLink` through the existing page owner seam
-instead of leaving canonical collection linkage implicit. The later
-detail-page/workspace/no-duplicate slices remain deferred.
+instead of leaving canonical collection linkage implicit. The first
+detail-page storage/schema slice is also landed through
+`detail_page_documents` / `detail_page_revisions` plus the
+`content_type_has_detail_pages` delete guard, while the later
+detail-page runtime/admin/workspace/no-duplicate slices remain deferred.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

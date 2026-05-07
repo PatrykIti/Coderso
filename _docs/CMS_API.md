@@ -1970,7 +1970,8 @@ creates a unique `Copy of ...` draft and copies schema only, never entries.
 Delete returns `{ "ok": true }` only after the content type dependency guard
 passes. Known conflicts are mapped to HTTP 409:
 `content_type_has_entries`, `content_type_has_custom_screens`,
-`content_type_has_taxonomies`, `content_type_has_listings`. Any
+`content_type_has_taxonomies`, `content_type_has_listings`,
+`content_type_has_detail_pages`. Any
 `site.contentRoutes` entry for the deleted content type slug is pruned during
 delete, because Site Settings keeps default route placeholders in sync with
 content types.

@@ -379,6 +379,13 @@
       "when": 1777631208955,
       "tag": "0053_custom_screen_definition_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1778183751193,
+      "tag": "0054_detail_page_documents",
+      "breakpoints": true
     }
   ]
 }
