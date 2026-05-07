@@ -14,6 +14,17 @@ import {
   type BlueprintCompositionGraph,
   type BlueprintConflict,
 } from "./blueprintCapabilityTypes";
+import {
+  BlueprintListingConfigMergeError,
+  collectListingFacetQueryFields,
+  mergeListingFacets,
+  validateListingFacetsAgainstSchema,
+} from "./blueprintFacetMerger";
+import {
+  collectListingCardQueryFields,
+  mergeListingCardConfig,
+  validateListingCardConfigAgainstSchema,
+} from "./blueprintCardConfigMerger";
 import { mergeBlueprintSchemas } from "./blueprintSchemaMerger";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
@@ -333,6 +344,18 @@ const mergeFormFields = (
 
 const mergeListingFields = (left: string[], right: string[]) => unique([...left, ...right]);
 
+const mergePageListingFilters = (
+  left: AssistantPageUpsertAction["input"]["listingFilters"],
+  right: AssistantPageUpsertAction["input"]["listingFilters"]
+) => {
+  if (!left) return right ?? null;
+  if (!right) return left;
+  return {
+    ...left,
+    facets: mergeListingFacets(left.facets, right.facets),
+  };
+};
+
 const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUpsertAction) => {
   if (left.input.slug !== right.input.slug) return null;
   if (
@@ -361,6 +384,10 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
     right.input.blocks as Array<Record<string, unknown>> | undefined
   );
   if (blocks === null) return null;
+  const listingFilters = mergePageListingFilters(
+    left.input.listingFilters,
+    right.input.listingFilters
+  );
   return {
     ...left,
     input: {
@@ -375,7 +402,7 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
       ctaLabel: left.input.ctaLabel ?? right.input.ctaLabel,
       blocks: blocks as typeof left.input.blocks,
       contentListStyle: left.input.contentListStyle ?? right.input.contentListStyle,
-      listingFilters: left.input.listingFilters ?? right.input.listingFilters,
+      listingFilters,
       formEmbed: left.input.formEmbed ?? right.input.formEmbed ?? null,
     },
   } satisfies AssistantPageUpsertAction;
@@ -474,7 +501,25 @@ export const mergeBlueprintActions = (
       };
     }
     case "listing-template.upsert":
-      return isDeepStrictEqual(left.input, right.input) ? left : null;
+      if (
+        left.input.name !== (right as typeof left).input.name ||
+        left.input.slug !== (right as typeof left).input.slug ||
+        left.input.layout !== (right as typeof left).input.layout
+      ) {
+        return null;
+      }
+      try {
+        return {
+          ...left,
+          input: {
+            ...left.input,
+            description: left.input.description ?? (right as typeof left).input.description,
+            config: mergeListingCardConfig(left.input.config, (right as typeof left).input.config),
+          },
+        };
+      } catch {
+        return null;
+      }
     case "form.upsert": {
       const other = right as typeof left;
       if (
@@ -533,12 +578,134 @@ export const assembleBlueprintActions = (graph: BlueprintCompositionGraph) => {
     }
   }
 
+  const listingFinalize = finalizeListingComposition(mergedActions);
+  conflicts.push(...listingFinalize.conflicts);
+
   return {
-    actions: [...mergedActions].sort(
+    actions: [...listingFinalize.actions].sort(
       (left, right) => actionOrder[left.type] - actionOrder[right.type]
     ),
     conflicts: dedupeConflicts(conflicts),
   };
+};
+
+const buildListingFieldConflict = (input: {
+  actionType: "listing-query.upsert" | "listing-template.upsert";
+  resourceKey: string;
+  message: string;
+}): BlueprintConflict =>
+  normalizeBlueprintConflict({
+    code: "facet_field_missing",
+    severity: "error",
+    actionType: input.actionType,
+    resourceKey: input.resourceKey,
+    message: input.message,
+  });
+
+const finalizeListingComposition = (actions: AssistantPlannedAction[]) => {
+  const conflicts: BlueprintConflict[] = [];
+  const nextActions = actions.map((action) => structuredClone(action));
+
+  const contentTypes = new Map(
+    nextActions
+      .filter(
+        (action): action is Extract<AssistantPlannedAction, { type: "content-type.upsert" }> =>
+          action.type === "content-type.upsert"
+      )
+      .map((action) => [action.input.slug, action.input.schema as Record<string, unknown>])
+  );
+
+  const pagesByQueryName = new Map<string, AssistantPageUpsertAction[]>();
+  for (const action of nextActions) {
+    if (action.type !== "page.upsert") continue;
+    const queryName = action.input.listingQueryName?.trim();
+    if (!queryName) continue;
+    const existing = pagesByQueryName.get(queryName) ?? [];
+    existing.push(action);
+    pagesByQueryName.set(queryName, existing);
+  }
+
+  const templatesBySlug = new Map(
+    nextActions
+      .filter(
+        (action): action is Extract<AssistantPlannedAction, { type: "listing-template.upsert" }> =>
+          action.type === "listing-template.upsert"
+      )
+      .map((action) => [action.input.slug, action])
+  );
+
+  const validatedTemplateSlugs = new Set<string>();
+
+  for (const action of nextActions) {
+    if (action.type !== "listing-query.upsert") continue;
+    const schema = contentTypes.get(action.input.contentTypeSlug);
+    if (!schema) continue;
+
+    const requiredFields = [...action.input.fields];
+    const linkedPages = pagesByQueryName.get(action.input.name) ?? [];
+
+    for (const page of linkedPages) {
+      if (page.input.listingFilters) {
+        try {
+          const facets = validateListingFacetsAgainstSchema(
+            schema,
+            page.input.listingFilters.facets
+          );
+          page.input.listingFilters = {
+            ...page.input.listingFilters,
+            facets: structuredClone(facets) as Array<Record<string, unknown>>,
+          };
+          requiredFields.push(...collectListingFacetQueryFields(facets));
+        } catch (error) {
+          if (
+            error instanceof BlueprintListingConfigMergeError &&
+            error.code === "facet_field_missing"
+          ) {
+            conflicts.push(
+              buildListingFieldConflict({
+                actionType: "listing-query.upsert",
+                resourceKey: `listing-query:${action.input.name}:field:${error.fieldPath ?? "unknown"}`,
+                message: error.message,
+              })
+            );
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      const templateSlug = page.input.listingTemplateSlug?.trim();
+      if (!templateSlug || validatedTemplateSlugs.has(templateSlug)) continue;
+      const template = templatesBySlug.get(templateSlug);
+      if (!template) continue;
+
+      try {
+        const config = validateListingCardConfigAgainstSchema(schema, template.input.config);
+        template.input.config = structuredClone(config) as Record<string, unknown>;
+        requiredFields.push(...collectListingCardQueryFields(config));
+        validatedTemplateSlugs.add(templateSlug);
+      } catch (error) {
+        if (
+          error instanceof BlueprintListingConfigMergeError &&
+          error.code === "facet_field_missing"
+        ) {
+          conflicts.push(
+            buildListingFieldConflict({
+              actionType: "listing-template.upsert",
+              resourceKey: `listing-template:${template.input.slug}:field:${error.fieldPath ?? "unknown"}`,
+              message: error.message,
+            })
+          );
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    action.input.fields = mergeListingFields(action.input.fields, requiredFields);
+  }
+
+  return { actions: nextActions, conflicts };
 };
 
 export const assembleComposedBlueprintPlan = (input: {

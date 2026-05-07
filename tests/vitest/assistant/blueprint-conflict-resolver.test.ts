@@ -211,9 +211,22 @@ test("resolveBlueprintCompositionConflicts reports resource_slug_conflict for in
   if (!listingTemplate || listingTemplate.type !== "listing-template.upsert") {
     throw new Error("listing_template_upsert_missing");
   }
+  const configClone = structuredClone(listingTemplate.input.config) as {
+    fields?: Array<Record<string, unknown>>;
+  };
+  const [firstField, ...otherFields] = configClone.fields ?? [];
+  if (!firstField) {
+    throw new Error("listing_template_field_missing");
+  }
   listingTemplate.input.config = {
-    ...(listingTemplate.input.config as Record<string, unknown>),
-    title: "Conflicting template title",
+    ...configClone,
+    fields: [
+      {
+        ...firstField,
+        source: "data.priceFrom",
+      },
+      ...otherFields,
+    ],
   };
 
   const conflicts = resolveBlueprintCompositionConflicts({

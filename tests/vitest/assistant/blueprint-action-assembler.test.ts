@@ -163,6 +163,258 @@ test("assembleComposedBlueprintPlan merges compatible content schemas into one c
   expect(plan?.actions.filter((action) => action.type === "content-type.upsert")).toHaveLength(1);
 });
 
+test("assembleComposedBlueprintPlan merges listing facets/card config and widens listing query projection fields", () => {
+  const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const additive = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const contentType = additive.actions.find((action) => action.type === "content-type.upsert");
+  if (!contentType || contentType.type !== "content-type.upsert") {
+    throw new Error("content_type_upsert_missing");
+  }
+  const schemaClone = structuredClone(contentType.input.schema) as {
+    properties?: Record<string, Record<string, unknown>>;
+  };
+  schemaClone.properties = {
+    ...(schemaClone.properties ?? {}),
+    deliveryTimeDays: {
+      type: "number",
+      title: "Delivery time",
+      xFieldType: "number",
+    },
+  };
+  contentType.input.schema = schemaClone;
+
+  const page = additive.actions.find((action) => action.type === "page.upsert");
+  if (!page || page.type !== "page.upsert") {
+    throw new Error("page_upsert_missing");
+  }
+  page.input.listingFilters = {
+    title: "Filter products",
+    description: "Narrow results.",
+    autoApply: true,
+    showSearch: true,
+    searchPlaceholder: "Search",
+    searchLabel: "Search",
+    applyLabel: "Apply",
+    facets: [
+      {
+        id: "delivery-time",
+        kind: "range",
+        label: "Delivery time",
+        field: "data.deliveryTimeDays",
+        op: "between",
+      },
+      {
+        id: "sort",
+        kind: "sort",
+        label: "Sort",
+        sortOptions: [{ value: "title-asc", label: "Title", field: "title", dir: "asc" }],
+      },
+    ],
+  };
+
+  const template = additive.actions.find((action) => action.type === "listing-template.upsert");
+  if (!template || template.type !== "listing-template.upsert") {
+    throw new Error("listing_template_upsert_missing");
+  }
+  template.input.config = {
+    ...(template.input.config as Record<string, unknown>),
+    fields: [
+      ...((template.input.config as { fields?: Array<Record<string, unknown>> }).fields ?? []),
+      {
+        key: "delivery-time",
+        source: "data.deliveryTimeDays",
+        label: "Delivery time",
+        fallback: null,
+        format: "text",
+        conditions: [{ id: "status", field: "data.projectStatus", op: "eq", value: "active" }],
+      },
+    ],
+  };
+
+  const registration = getBlueprintCapabilityRegistration("product-catalog");
+  if (!registration) {
+    throw new Error("registration_missing");
+  }
+
+  const fragments = [
+    {
+      capabilityId: "product-catalog",
+      planId: base.id,
+      title: base.title,
+      assumptions: base.assumptions,
+      actions: base.actions,
+    },
+    {
+      capabilityId: "product-catalog-addon",
+      planId: additive.id,
+      title: additive.title,
+      assumptions: additive.assumptions,
+      actions: additive.actions,
+    },
+  ];
+
+  const plan = assembleComposedBlueprintPlan({
+    prompt: "Create a product catalog with delivery-time filters and cards.",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    graph: {
+      primary: {
+        capabilityId: registration.capability.id,
+        role: "primary",
+        score: 100,
+        matchedSignals: ["intent:product_catalog"],
+        reasons: ["Primary product catalog."],
+        capability: registration.capability,
+      },
+      adjuncts: [],
+      gated: [],
+      resources: [],
+      conflicts: resolveBlueprintCompositionConflicts({ fragments }),
+      fragments,
+      selectedCapabilityIds: [registration.capability.id, "product-catalog-addon"],
+    },
+  });
+
+  const query = plan?.actions.find((action) => action.type === "listing-query.upsert");
+  const mergedPage = plan?.actions.find((action) => action.type === "page.upsert");
+  const mergedTemplate = plan?.actions.find((action) => action.type === "listing-template.upsert");
+
+  expect(query).toMatchObject({
+    type: "listing-query.upsert",
+    input: {
+      fields: expect.arrayContaining(["data.deliveryTimeDays", "data.projectStatus"]),
+    },
+  });
+  expect(mergedPage).toMatchObject({
+    type: "page.upsert",
+    input: {
+      listingFilters: {
+        facets: expect.arrayContaining([
+          expect.objectContaining({
+            id: "delivery-time",
+            field: "data.deliveryTimeDays",
+          }),
+          expect.objectContaining({
+            id: "sort",
+            kind: "sort",
+          }),
+        ]),
+      },
+    },
+  });
+  expect(mergedTemplate).toMatchObject({
+    type: "listing-template.upsert",
+    input: {
+      config: {
+        fields: expect.arrayContaining([
+          expect.objectContaining({
+            key: "delivery-time",
+            source: "data.deliveryTimeDays",
+          }),
+        ]),
+      },
+    },
+  });
+});
+
+test("assembleComposedBlueprintPlan returns needs_input when merged listing facets reference fields outside the composed schema", () => {
+  const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const additive = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const page = additive.actions.find((action) => action.type === "page.upsert");
+  if (!page || page.type !== "page.upsert") {
+    throw new Error("page_upsert_missing");
+  }
+  page.input.listingFilters = {
+    title: "Filter products",
+    description: "Narrow results.",
+    autoApply: true,
+    showSearch: true,
+    searchPlaceholder: "Search",
+    searchLabel: "Search",
+    applyLabel: "Apply",
+    facets: [
+      {
+        id: "unknown-field",
+        kind: "checkbox",
+        label: "Unknown field",
+        field: "data.unknownField",
+        op: "in",
+      },
+    ],
+  };
+
+  const registration = getBlueprintCapabilityRegistration("product-catalog");
+  if (!registration) {
+    throw new Error("registration_missing");
+  }
+
+  const fragments = [
+    {
+      capabilityId: "product-catalog",
+      planId: base.id,
+      title: base.title,
+      assumptions: base.assumptions,
+      actions: base.actions,
+    },
+    {
+      capabilityId: "product-catalog-addon",
+      planId: additive.id,
+      title: additive.title,
+      assumptions: additive.assumptions,
+      actions: additive.actions,
+    },
+  ];
+
+  const plan = assembleComposedBlueprintPlan({
+    prompt: "Create a product catalog with an unsupported filter.",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    graph: {
+      primary: {
+        capabilityId: registration.capability.id,
+        role: "primary",
+        score: 100,
+        matchedSignals: ["intent:product_catalog"],
+        reasons: ["Primary product catalog."],
+        capability: registration.capability,
+      },
+      adjuncts: [],
+      gated: [],
+      resources: [],
+      conflicts: resolveBlueprintCompositionConflicts({ fragments }),
+      fragments,
+      selectedCapabilityIds: [registration.capability.id, "product-catalog-addon"],
+    },
+  });
+
+  expect(plan).toMatchObject({
+    status: "needs_input",
+    responseKind: "needs_input",
+    actions: [],
+  });
+  expect(plan?.questions).toEqual([
+    expect.objectContaining({
+      id: expect.stringContaining("blueprint-facet-field-missing"),
+    }),
+  ]);
+  expect(plan?.answer).toContain(
+    'Listing facet "Unknown field" references missing field "data.unknownField".'
+  );
+});
+
 test("assembleComposedBlueprintPlan appends independent adjunct pages without duplicating catalog resources", () => {
   const graph = buildBlueprintCompositionGraph({
     promptKind: "setup_request",

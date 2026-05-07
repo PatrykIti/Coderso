@@ -57,8 +57,10 @@ requests, but single-pack setup/refinement routing plus the broader
 detail/media/no-duplicate cutover stay deferred until the later rollout leaves
 close.
 Compatible `content-type.upsert` fragments can now also merge into one
-validator-backed content schema action, while listing facet/card merge and the
-later detail-page/workspace/no-duplicate slices remain deferred.
+validator-backed content schema action. Compatible listing facet/card fragments
+can now also merge through schema-backed listing owners and widen
+`listing-query.upsert.fields` automatically for the required projection paths,
+while the later detail-page/workspace/no-duplicate slices remain deferred.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

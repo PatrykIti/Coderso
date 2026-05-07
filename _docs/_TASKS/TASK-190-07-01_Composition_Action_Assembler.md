@@ -20,6 +20,9 @@ Current slice note:
   primary-plus-gated setup requests through the composed blueprint path,
 - blocking graph conflicts now downgrade the composed result into typed
   `needs_input` / `gated` plans instead of failing with a null result,
+- compatible listing facet/card fragments now also widen
+  `listing-query.upsert.fields` automatically after merge so runtime filters and
+  card bindings keep the projection data they need,
 - broader refinement cutover, review metadata, detail-page ordering, and later
   media/existing-resource flows remain deferred.
 

@@ -3049,6 +3049,11 @@ For composed setup requests, compatible `content-type.upsert` fragments can now
 merge server-side into one schema-validated action; incompatible field types or
 secret-like defaults still fail closed and surface typed conflict/needs-input
 behavior instead of broad schema patches.
+Compatible listing facet arrays and listing-template card bindings can also
+merge server-side against that composed schema owner; when they require extra
+runtime projection fields, the assembler widens `listing-query.upsert.fields`
+automatically. Missing facet/card source paths still fail closed through typed
+`facet_field_missing` needs-input behavior.
 The generic action mapper must also find an executable action and field mapping
 in `assistantOperationPolicy`; strict action schemas remain the final validator
 for every returned action. Bulk/count and filtered-all destructive behavior is

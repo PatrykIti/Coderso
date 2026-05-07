@@ -76,6 +76,7 @@ Current implemented guide blueprint:
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
   - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path, while single-pack setup/refinement and deeper detail/media/no-duplicate cutover work still remain on the later leaves
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
+  - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - catalog capabilities can already describe latent `detail-page` intent in metadata, but executable detail-page/runtime/admin flows remain deferred to later `TASK-190` slices
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
@@ -130,6 +131,8 @@ Core domain service:
   - `core/services/assistant/blueprints/blueprintCapabilityRegistry.ts`
   - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
   - `core/services/assistant/blueprints/blueprintCompositionGraph.ts`
+  - `core/services/assistant/blueprints/blueprintFacetMerger.ts`
+  - `core/services/assistant/blueprints/blueprintCardConfigMerger.ts`
   - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
   - `core/services/assistant/blueprints/blueprintProviderContext.ts`
   - `core/services/assistant/blueprints/blueprintCompositionDraftSchema.ts`

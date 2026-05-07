@@ -454,6 +454,7 @@ const createListingTemplateConfig = (input: {
   locationLabel: string;
   numericField: string;
   secondaryNumericField: string;
+  locationField?: string;
 }) => ({
   fields: [
     {
@@ -490,7 +491,7 @@ const createListingTemplateConfig = (input: {
     },
     {
       key: "location",
-      source: "data.location",
+      source: `data.${input.locationField ?? "location"}`,
       label: input.locationLabel,
       fallback: null,
       format: "text",
@@ -536,8 +537,7 @@ export const HOUSE_PROJECTS_CATALOG_PRESET: CatalogFamilyPreset = {
   listingTemplateName: "House Projects Catalog Grid",
   customScreenName: "House Projects",
   introTitle: "Katalog Projektów Domów",
-  introBody:
-    "Przeglądaj gotowe projekty domów i otwieraj szczegóły każdego projektu z katalogu.",
+  introBody: "Przeglądaj gotowe projekty domów i otwieraj szczegóły każdego projektu z katalogu.",
   ctaLabel: "Zobacz projekt",
   contentSchema: houseProjectsSchema as unknown as Record<string, unknown>,
   listingTemplateConfig: createListingTemplateConfig({
@@ -551,6 +551,7 @@ export const HOUSE_PROJECTS_CATALOG_PRESET: CatalogFamilyPreset = {
     locationLabel: "Location",
     numericField: "areaM2",
     secondaryNumericField: "rooms",
+    locationField: "location",
   }),
   screen: {
     eyebrow: "House projects",
@@ -693,6 +694,7 @@ export const PRODUCT_CATALOG_PRESET: CatalogFamilyPreset = {
     locationLabel: "Category",
     numericField: "priceFrom",
     secondaryNumericField: "sku",
+    locationField: "category",
   }),
   screen: {
     eyebrow: "Products",
@@ -815,6 +817,7 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
     locationLabel: "Location",
     numericField: "clientName",
     secondaryNumericField: "deliveryYear",
+    locationField: "location",
   }),
   screen: {
     eyebrow: "Portfolio projects",
@@ -952,6 +955,7 @@ export const SERVICES_DIRECTORY_PRESET: CatalogFamilyPreset = {
     locationLabel: "Location",
     numericField: "serviceType",
     secondaryNumericField: "responseTimeHours",
+    locationField: "location",
   }),
   screen: {
     eyebrow: "Services directory",

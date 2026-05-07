@@ -28,6 +28,10 @@ Current slice note:
   fragments,
 - the local setup planner now uses the composed path for supported
   mixed-capability and primary-plus-gated setup requests,
+- listing query assembly now widens projection fields automatically when merged
+  listing facets or listing-template card bindings need additional runtime
+  fields, while schema-backed missing-field drift falls back to typed
+  `facet_field_missing`,
 - DB-backed no-duplicate checks, broader review metadata, and later
   detail/media closure work remain deferred.
 
