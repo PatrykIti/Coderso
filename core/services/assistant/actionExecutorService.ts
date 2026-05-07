@@ -84,6 +84,8 @@ import { logAudit } from "../audit/auditService";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlock } from "../../widgets/validator";
 import type { WidgetBlock } from "../../widgets/types";
+import { composeBlueprintPageData } from "./blueprints/blueprintPageSectionComposer";
+import { normalizePageCollectionLink, type PageCollectionLink } from "../pages/pageCollectionLink";
 import type {
   AssistantActionDryRunResult,
   AssistantActionExecuteResult,
@@ -216,6 +218,29 @@ const readCatalogBlockSource = (page: unknown) => {
   }
 
   return null;
+};
+
+const readStoredPageCollectionLink = (page: unknown) => {
+  if (!isRecord(page)) return null;
+  const sourceData = isRecord(page.currentData)
+    ? page.currentData
+    : isRecord(page.publishedData)
+      ? page.publishedData
+      : null;
+  if (!sourceData) return null;
+  const settings = isRecord(sourceData.settings) ? sourceData.settings : {};
+  return normalizePageCollectionLink(settings.collectionLink) ?? null;
+};
+
+const readPageCatalogSource = (page: unknown) => {
+  const stored = readStoredPageCollectionLink(page);
+  const blocks = readCatalogBlockSource(page);
+  if (!stored && !blocks) return null;
+  return {
+    listingQueryId: stored?.listingQueryId ?? blocks?.listingQueryId ?? null,
+    listingTemplateId: stored?.listingTemplateId ?? blocks?.listingTemplateId ?? null,
+    contentTypeId: stored?.contentTypeId ?? null,
+  };
 };
 
 const readFormEmbedSource = (page: unknown) => {
@@ -361,125 +386,19 @@ const buildCatalogPageData = (input: {
     submitLabel: string;
     successMessage: string;
   } | null;
-}) => ({
-  blocks: [
-    ...(input.listingFilters
-      ? [
-          {
-            id: "catalog-listing-filters",
-            type: "listing-filters",
-            variant: "default",
-            data: {
-              listingQueryId: input.listingQueryId,
-              title: input.listingFilters.title,
-              description: input.listingFilters.description,
-              autoApply: input.listingFilters.autoApply,
-              showSearch: input.listingFilters.showSearch,
-              searchPlaceholder: input.listingFilters.searchPlaceholder,
-              searchLabel: input.listingFilters.searchLabel,
-              applyLabel: input.listingFilters.applyLabel,
-              facets: input.listingFilters.facets,
-              resolved: {
-                listingQueryId: input.listingQueryId,
-                metrics: [],
-                searchQuery: "",
-                rejectedTokens: [],
-              },
-            },
-          },
-        ]
-      : []),
-    {
-      id: "catalog-content-list",
-      type: "content-list",
-      variant: "cards",
-      data: {
-        source: {
-          mode: "listing",
-          listingQueryId: input.listingQueryId,
-          listingTemplateId: input.listingTemplateId,
-          statusScope: "published",
-          limit: 9,
-          sort: "title-asc",
-        },
-        fields: {
-          showImage: true,
-          showExcerpt: true,
-          showMeta: true,
-          showCta: true,
-        },
-        emptyState: {
-          title: "No catalog items yet",
-          description: "Add your first catalog entry in Coderso to populate this page.",
-        },
-        style: {
-          columns: input.contentListStyle?.columns ?? "3",
-          gap: "md",
-          cardStyle: input.contentListStyle?.cardStyle ?? "outlined",
-          ctaLabel: input.ctaLabel,
-          backgroundColor: "var(--color-bg)",
-          borderColor: "var(--color-border)",
-          textColor: "var(--color-text)",
-        },
-        resolved: {
-          items: [],
-          total: 0,
-          sourceTypeId: "",
-          sourceTypeSlug: "",
-          listingQueryId: input.listingQueryId,
-          listingTemplateId: input.listingTemplateId,
-          resolvedAt: "",
-          runtime: {
-            rejectedTokens: [],
-            searchQuery: "",
-            page: 1,
-          },
-        },
-      },
-    },
-    ...(input.formEmbed
-      ? [
-          {
-            id: "catalog-inquiry-form",
-            type: "form-embed",
-            variant: "standard",
-            data: {
-              formId: input.formEmbed.formId,
-              title: input.formEmbed.title,
-              description: input.formEmbed.description,
-              submitLabel: input.formEmbed.submitLabel,
-              successMessage: input.formEmbed.successMessage,
-              layout: {
-                alignment: "start",
-                width: "lg",
-                spacing: "md",
-                buttonAlignment: "start",
-              },
-              style: {
-                background: "transparent",
-                surface: "var(--color-bg)",
-                borderColor: "var(--color-border)",
-                borderWidth: "1",
-                radius: "md",
-                inputSize: "md",
-              },
-              fields: {
-                showLabels: true,
-                showRequiredIndicator: true,
-              },
-            },
-          },
-        ]
-      : []),
-  ],
-  settings: {
-    showInNav: true,
-    seo: {
-      title: input.introTitle,
-      description: input.introBody,
-    },
-  },
-});
+  collectionLink?: PageCollectionLink | null;
+}) =>
+  composeBlueprintPageData({
+    introTitle: input.introTitle,
+    introBody: input.introBody,
+    listingQueryId: input.listingQueryId,
+    listingTemplateId: input.listingTemplateId,
+    ctaLabel: input.ctaLabel,
+    contentListStyle: input.contentListStyle,
+    listingFilters: input.listingFilters,
+    formEmbed: input.formEmbed,
+    collectionLink: input.collectionLink,
+  });
 
 const buildSimplePageData = (input: {
   introTitle: string;
@@ -492,51 +411,78 @@ const buildSimplePageData = (input: {
     submitLabel: string;
     successMessage: string;
   } | null;
-}) => ({
-  blocks: [
-    ...(input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
-    ...(input.formEmbed
-      ? [
-          normalizeAssistantPagePatchBlock({
-            id: "lead-capture-form",
-            type: "form-embed",
-            data: {
-              formId: input.formEmbed.formId,
-              title: input.formEmbed.title,
-              description: input.formEmbed.description,
-              submitLabel: input.formEmbed.submitLabel,
-              successMessage: input.formEmbed.successMessage,
-              layout: {
-                alignment: "start",
-                width: "lg",
-                spacing: "md",
-                buttonAlignment: "start",
-              },
-              style: {
-                background: "transparent",
-                surface: "var(--color-bg)",
-                borderColor: "var(--color-border)",
-                borderWidth: "1",
-                radius: "md",
-                inputSize: "md",
-              },
-              fields: {
-                showLabels: true,
-                showRequiredIndicator: true,
-              },
-            },
-          }),
-        ]
-      : []),
-  ],
-  settings: {
-    showInNav: true,
-    seo: {
-      title: input.introTitle,
-      description: input.introBody,
-    },
-  },
-});
+  collectionLink?: PageCollectionLink | null;
+}) =>
+  composeBlueprintPageData({
+    introTitle: input.introTitle,
+    introBody: input.introBody,
+    blocks: input.blocks,
+    formEmbed: input.formEmbed,
+    collectionLink: input.collectionLink,
+  });
+
+const readListingQueryContentTypeId = (listingQuery: unknown) => {
+  if (!isRecord(listingQuery)) return null;
+  const query = isRecord(listingQuery.query) ? listingQuery.query : {};
+  const sourceConfig = isRecord(query.sourceConfig) ? query.sourceConfig : {};
+  return readString(sourceConfig.contentTypeId);
+};
+
+const resolveAssistantPageCollectionLink = (input: {
+  action: AssistantPageUpsertAction;
+  existing: unknown;
+  simplePageMode: boolean;
+  listingQuery: unknown;
+  listingTemplate: unknown;
+}): PageCollectionLink | null => {
+  const existingCollectionLink = readStoredPageCollectionLink(input.existing);
+  const requested = input.action.input.collectionLink;
+
+  if (!requested) {
+    if (existingCollectionLink) return existingCollectionLink;
+    if (input.simplePageMode) return null;
+
+    const contentTypeId = readListingQueryContentTypeId(input.listingQuery);
+    if (!contentTypeId) return null;
+
+    return {
+      contentTypeId,
+      pageRole: "canonical-list-page",
+      ...(isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
+        ? { listingQueryId: input.listingQuery.id }
+        : {}),
+      ...(isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
+        ? { listingTemplateId: input.listingTemplate.id }
+        : {}),
+    };
+  }
+
+  const contentTypeId =
+    readListingQueryContentTypeId(input.listingQuery) ??
+    existingCollectionLink?.contentTypeId ??
+    null;
+  if (!contentTypeId) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const compositionKey = requested.compositionKey ?? existingCollectionLink?.compositionKey ?? null;
+
+  return {
+    contentTypeId,
+    pageRole: requested.pageRole,
+    ...(compositionKey ? { compositionKey } : {}),
+    ...(isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
+      ? { listingQueryId: input.listingQuery.id }
+      : existingCollectionLink?.listingQueryId
+        ? { listingQueryId: existingCollectionLink.listingQueryId }
+        : {}),
+    ...(isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
+      ? { listingTemplateId: input.listingTemplate.id }
+      : existingCollectionLink?.listingTemplateId
+        ? { listingTemplateId: existingCollectionLink.listingTemplateId }
+        : {}),
+  };
+};
 
 type ActionExecutorDeps = {
   getSetting: typeof getSetting;
@@ -2223,6 +2169,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
     !action.input.listingQueryName ||
     !action.input.listingTemplateSlug;
   const existingData = isRecord(existing?.currentData) ? existing.currentData : {};
+  const existingCollectionLink = readStoredPageCollectionLink(existing);
   const forms = action.input.formEmbed ? await deps.listForms() : [];
   const form = action.input.formEmbed
     ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
@@ -2255,6 +2202,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
             : []),
         ],
         formEmbed: action.input.formEmbed ?? null,
+        collectionLink: action.input.collectionLink ?? existingCollectionLink,
       }
     : {
         title: action.input.title,
@@ -2265,6 +2213,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         contentListStyle: action.input.contentListStyle,
         listingFilters: action.input.listingFilters,
         formEmbed: action.input.formEmbed,
+        collectionLink: action.input.collectionLink ?? existingCollectionLink,
       };
   return createPreviewChange({
     action,
@@ -2280,6 +2229,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
             ? {
                 blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
                 formEmbed: action.input.formEmbed ?? null,
+                collectionLink: existingCollectionLink,
               }
             : {}),
         }
@@ -4003,7 +3953,7 @@ const executePageAction = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getPageBySlug(action.input.slug);
-  const currentCatalogSource = readCatalogBlockSource(existing);
+  const currentCatalogSource = readPageCatalogSource(existing);
   const currentFormSource = readFormEmbedSource(existing);
   const listingQueries = await deps.listListingQueries();
   const listingTemplates = await deps.listListingTemplates();
@@ -4053,12 +4003,20 @@ const executePageAction = async (
           successMessage: action.input.formEmbed.successMessage,
         }
       : null;
+  const resolvedCollectionLink = resolveAssistantPageCollectionLink({
+    action,
+    existing,
+    simplePageMode,
+    listingQuery,
+    listingTemplate,
+  });
   const data = simplePageMode
     ? buildSimplePageData({
         introTitle: action.input.introTitle,
         introBody: action.input.introBody,
         blocks: action.input.blocks,
         formEmbed: resolvedFormEmbed,
+        collectionLink: resolvedCollectionLink,
       })
     : buildCatalogPageData({
         introTitle: action.input.introTitle,
@@ -4069,6 +4027,7 @@ const executePageAction = async (
         contentListStyle: action.input.contentListStyle,
         listingFilters: action.input.listingFilters,
         formEmbed: resolvedFormEmbed,
+        collectionLink: resolvedCollectionLink,
       });
 
   const page =

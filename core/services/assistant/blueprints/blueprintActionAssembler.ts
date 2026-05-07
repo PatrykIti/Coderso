@@ -360,6 +360,41 @@ const mergePageListingFilters = (
   }
 };
 
+const mergePageCollectionLink = (
+  left: AssistantPageUpsertAction["input"]["collectionLink"],
+  right: AssistantPageUpsertAction["input"]["collectionLink"]
+) => {
+  if (!left) return right;
+  if (!right) return left;
+  if (left.contentTypeSlug !== right.contentTypeSlug || left.pageRole !== right.pageRole) {
+    return null;
+  }
+  if (left.compositionKey && right.compositionKey && left.compositionKey !== right.compositionKey) {
+    return null;
+  }
+  if (
+    left.listingQueryName &&
+    right.listingQueryName &&
+    left.listingQueryName !== right.listingQueryName
+  ) {
+    return null;
+  }
+  if (
+    left.listingTemplateSlug &&
+    right.listingTemplateSlug &&
+    left.listingTemplateSlug !== right.listingTemplateSlug
+  ) {
+    return null;
+  }
+  return {
+    contentTypeSlug: left.contentTypeSlug,
+    pageRole: left.pageRole,
+    compositionKey: left.compositionKey ?? right.compositionKey ?? null,
+    listingQueryName: left.listingQueryName ?? right.listingQueryName ?? null,
+    listingTemplateSlug: left.listingTemplateSlug ?? right.listingTemplateSlug ?? null,
+  };
+};
+
 const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUpsertAction) => {
   if (left.input.slug !== right.input.slug) return null;
   if (
@@ -395,6 +430,13 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
   if (left.input.listingFilters && right.input.listingFilters && listingFilters === null) {
     return null;
   }
+  const collectionLink = mergePageCollectionLink(
+    left.input.collectionLink,
+    right.input.collectionLink
+  );
+  if (left.input.collectionLink && right.input.collectionLink && collectionLink === null) {
+    return null;
+  }
   return {
     ...left,
     input: {
@@ -411,6 +453,7 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
       contentListStyle: left.input.contentListStyle ?? right.input.contentListStyle,
       listingFilters: listingFilters ?? null,
       formEmbed: left.input.formEmbed ?? right.input.formEmbed ?? null,
+      ...(collectionLink ? { collectionLink } : {}),
     },
   } satisfies AssistantPageUpsertAction;
 };

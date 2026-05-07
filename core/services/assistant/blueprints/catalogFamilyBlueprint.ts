@@ -193,8 +193,7 @@ export const buildCatalogFamilyPlan = (
       id: `content-route-${preset.key}`,
       type: "setting.content-route.upsert",
       title: `Register public detail route for ${preset.contentTypeName.toLowerCase()}`,
-      description:
-        "Add public entry routes so listing cards can open a working detail page.",
+      description: "Add public entry routes so listing cards can open a working detail page.",
       input: {
         typeSlug: preset.contentTypeSlug,
         listPath: preset.catalogHiddenListPath,
@@ -206,8 +205,7 @@ export const buildCatalogFamilyPlan = (
       id: `content-type-${preset.key}`,
       type: "content-type.upsert",
       title: `Create the ${preset.contentTypeName.toLowerCase()} content model`,
-      description:
-        "Provision structured fields for summaries, media, specs, pricing, and status.",
+      description: "Provision structured fields for summaries, media, specs, pricing, and status.",
       input: {
         slug: preset.contentTypeSlug,
         name: preset.contentTypeName,
@@ -266,8 +264,7 @@ export const buildCatalogFamilyPlan = (
       id: `listing-template-${preset.key}`,
       type: "listing-template.upsert",
       title: "Create a grid listing template for catalog cards",
-      description:
-        "Define which catalog fields appear in cards and how they are formatted.",
+      description: "Define which catalog fields appear in cards and how they are formatted.",
       input: {
         name: preset.listingTemplateName,
         slug: preset.listingTemplateSlug,
@@ -291,6 +288,12 @@ export const buildCatalogFamilyPlan = (
         introTitle: preset.introTitle,
         introBody: preset.introBody,
         ctaLabel: preset.ctaLabel,
+        collectionLink: {
+          contentTypeSlug: preset.contentTypeSlug,
+          pageRole: "canonical-list-page",
+          listingQueryName: preset.listingQueryName,
+          listingTemplateSlug: preset.listingTemplateSlug,
+        },
       },
     },
   ];
@@ -381,6 +384,12 @@ export const buildCatalogFamilyRefinementPlan = (
       introTitle: preset.introTitle,
       introBody: preset.introBody,
       ctaLabel: preset.ctaLabel,
+      collectionLink: {
+        contentTypeSlug: preset.contentTypeSlug,
+        pageRole: "canonical-list-page",
+        listingQueryName: preset.listingQueryName,
+        listingTemplateSlug: preset.listingTemplateSlug,
+      },
       ...(options.pageOverrides ?? {}),
     },
   };

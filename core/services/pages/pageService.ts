@@ -11,6 +11,7 @@ import {
 import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
 import { getSetting } from "../settings/settingsService";
 import { normalizePageDataLayout } from "./layoutSettings";
+import { normalizePageDataCollectionLink } from "./pageCollectionLink";
 import { resolveEmailValue } from "../security/piiEmail";
 import { resolvePageRevisionRetention } from "./revisionRetention";
 
@@ -82,7 +83,7 @@ function applyTemplate(data: PageData, template?: string): PageData {
 
 function preparePageData(data: PageData, template?: string): PageData {
   const withTemplate = applyTemplate(data, template);
-  return normalizePageDataLayout(withTemplate) as PageData;
+  return normalizePageDataCollectionLink(normalizePageDataLayout(withTemplate)) as PageData;
 }
 
 const buildRevisionSnapshot = (
@@ -95,9 +96,7 @@ const buildRevisionSnapshot = (
 ) => ({
   title: overrides?.title ?? page.title,
   slug: overrides?.slug ?? page.slug,
-  data: preparePageData(
-    overrides?.data ?? (page.currentData as PageData)
-  ) as RevisionData,
+  data: preparePageData(overrides?.data ?? (page.currentData as PageData)) as RevisionData,
 });
 
 export async function createPage(input: CreatePageInput) {
@@ -141,10 +140,11 @@ export async function listPages(): Promise<PageSummary[]> {
       ? {
           id: row.authorId,
           name: row.authorName ?? null,
-          email: resolveEmailValue({
-            emailEncrypted: row.authorEmailEncrypted,
-            email: row.authorEmail,
-          }) ?? "",
+          email:
+            resolveEmailValue({
+              emailEncrypted: row.authorEmailEncrypted,
+              email: row.authorEmail,
+            }) ?? "",
         }
       : null,
   }));
@@ -174,11 +174,7 @@ export async function updatePage(id: string, input: UpdatePageInput) {
     updates.currentData = preparePageData(input.data);
   }
 
-  const [page] = await db
-    .update(pages)
-    .set(updates)
-    .where(eq(pages.id, id))
-    .returning();
+  const [page] = await db.update(pages).set(updates).where(eq(pages.id, id)).returning();
   return page ?? null;
 }
 
@@ -307,10 +303,7 @@ export async function duplicatePage(id: string, actorId?: string) {
 }
 
 export async function deletePage(id: string) {
-  const [page] = await db
-    .delete(pages)
-    .where(eq(pages.id, id))
-    .returning();
+  const [page] = await db.delete(pages).where(eq(pages.id, id)).returning();
   return page ?? null;
 }
 

@@ -808,6 +808,52 @@ test("normalizeAssistantActionPlan accepts page update actions", () => {
   expect(normalized.actions[0]?.type).toBe("page.update");
 });
 
+test("normalizeAssistantActionPlan accepts page upsert collection-link metadata", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-products",
+        type: "page.upsert",
+        title: "Create page",
+        description: "Create a catalog page.",
+        input: {
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          listingQueryName: "Products Catalog Query",
+          listingTemplateSlug: "products-grid",
+          introTitle: "Products",
+          introBody: "Browse products.",
+          collectionLink: {
+            contentTypeSlug: "products",
+            pageRole: "canonical-list-page",
+            listingQueryName: "Products Catalog Query",
+            listingTemplateSlug: "products-grid",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      collectionLink: {
+        contentTypeSlug: "products",
+        pageRole: "canonical-list-page",
+        listingQueryName: "Products Catalog Query",
+        listingTemplateSlug: "products-grid",
+      },
+    },
+  });
+});
+
 test("normalizeAssistantActionPlan accepts widget template update and block patch actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

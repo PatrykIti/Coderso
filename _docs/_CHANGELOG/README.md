@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 797 | 2026-05-07 | TASK-190 page upsert composition adapter | Assistant/Core |
 | 796 | 2026-05-07 | TASK-190 post-review drift fixes | Assistant/Core |
 | 795 | 2026-05-07 | TASK-190 page section library slice | Assistant/Core |
 | 794 | 2026-05-07 | TASK-190 listing facet and card merge slice | Assistant/Core |

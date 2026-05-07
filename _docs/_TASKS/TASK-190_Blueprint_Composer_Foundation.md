@@ -59,8 +59,12 @@ close.
 Compatible `content-type.upsert` fragments can now also merge into one
 validator-backed content schema action. Compatible listing facet/card fragments
 can now also merge through schema-backed listing owners and widen
-`listing-query.upsert.fields` automatically for the required projection paths,
-while the later detail-page/workspace/no-duplicate slices remain deferred.
+`listing-query.upsert.fields` automatically for the required projection paths.
+Canonical collection pages now also compose listing/filter/form sections
+through `blueprintPageSectionComposer.ts`, and assistant-created catalog pages
+persist `PageData.settings.collectionLink` through the existing page owner seam
+instead of leaving canonical collection linkage implicit. The later
+detail-page/workspace/no-duplicate slices remain deferred.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

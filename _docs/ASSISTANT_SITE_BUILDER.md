@@ -79,6 +79,7 @@ Current implemented guide blueprint:
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
   - page section seed data still normalizes through the widget owner, but raw media URLs stay gated until the assistant has trusted media-library ids rather than arbitrary external/upload payloads
+  - canonical collection pages now compose listing/filter/form sections through `blueprintPageSectionComposer.ts`, and `page.upsert` persists `PageData.settings.collectionLink` through the existing page owner seam so later workspace/no-duplicate slices can stop relying on route heuristics
   - catalog capabilities can already describe latent `detail-page` intent in metadata, but executable detail-page/runtime/admin flows remain deferred to later `TASK-190` slices
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
@@ -137,6 +138,7 @@ Core domain service:
   - `core/services/assistant/blueprints/blueprintCardConfigMerger.ts`
   - `core/services/assistant/blueprints/blueprintPageSectionTypes.ts`
   - `core/services/assistant/blueprints/blueprintPageSectionLibrary.ts`
+  - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
   - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
   - `core/services/assistant/blueprints/blueprintProviderContext.ts`
   - `core/services/assistant/blueprints/blueprintCompositionDraftSchema.ts`

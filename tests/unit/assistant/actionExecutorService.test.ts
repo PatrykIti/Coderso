@@ -3753,6 +3753,21 @@ test("executeAssistantActionPlan creates product inquiry catalog and form", asyn
   expect(deps.__state.pages[0]?.slug).toBe("/produkty");
   const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
   expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
+  expect(
+    (deps.__state.pages[0]?.currentData.settings as { collectionLink?: Record<string, unknown> })
+      ?.collectionLink
+  ).toMatchObject({
+    pageRole: "canonical-list-page",
+    listingQueryId: deps.__state.listingQueries[0]?.id,
+    listingTemplateId: deps.__state.listingTemplates[0]?.id,
+  });
+  expect(
+    (
+      deps.__state.pages[0]?.currentData.settings as {
+        collectionLink?: { contentTypeId?: string };
+      }
+    )?.collectionLink?.contentTypeId
+  ).toBe(deps.__state.contentTypes[0]?.id);
 });
 
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {

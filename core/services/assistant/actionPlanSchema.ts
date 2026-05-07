@@ -971,6 +971,33 @@ const normalizeFormEmbed = (value: unknown) => {
   };
 };
 
+const normalizePageCollectionLinkInput = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "contentTypeSlug",
+      "pageRole",
+      "compositionKey",
+      "listingQueryName",
+      "listingTemplateSlug",
+    ])
+  );
+  return {
+    contentTypeSlug: readText(input.contentTypeSlug),
+    pageRole: readEnum(input.pageRole, new Set(["canonical-list-page", "supporting-page"])),
+    ...(input.compositionKey !== undefined
+      ? { compositionKey: readOptionalText(input.compositionKey) }
+      : {}),
+    ...(input.listingQueryName !== undefined
+      ? { listingQueryName: readOptionalText(input.listingQueryName) }
+      : {}),
+    ...(input.listingTemplateSlug !== undefined
+      ? { listingTemplateSlug: readOptionalText(input.listingTemplateSlug) }
+      : {}),
+  };
+};
+
 const normalizePageInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -987,6 +1014,7 @@ const normalizePageInput = (input: JsonRecord) => {
       "contentListStyle",
       "listingFilters",
       "formEmbed",
+      "collectionLink",
     ])
   );
   return {
@@ -1012,6 +1040,9 @@ const normalizePageInput = (input: JsonRecord) => {
       ? { listingFilters: normalizeListingFilters(input.listingFilters) }
       : {}),
     ...(input.formEmbed !== undefined ? { formEmbed: normalizeFormEmbed(input.formEmbed) } : {}),
+    ...(input.collectionLink !== undefined
+      ? { collectionLink: normalizePageCollectionLinkInput(input.collectionLink) }
+      : {}),
   };
 };
 

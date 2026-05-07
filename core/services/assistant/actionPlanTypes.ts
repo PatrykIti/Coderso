@@ -714,6 +714,14 @@ export type AssistantFormAutomationUpsertAction = {
   };
 };
 
+export type AssistantPageCollectionLinkInput = {
+  contentTypeSlug: string;
+  pageRole: "canonical-list-page" | "supporting-page";
+  compositionKey?: string | null;
+  listingQueryName?: string | null;
+  listingTemplateSlug?: string | null;
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -750,6 +758,7 @@ export type AssistantPageUpsertAction = {
       submitLabel: string;
       successMessage: string;
     } | null;
+    collectionLink?: AssistantPageCollectionLinkInput;
   };
 };
 

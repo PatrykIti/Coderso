@@ -31,7 +31,11 @@ Current slice note:
 - `TASK-190-05-01` is landed: assistant-facing section alias/slot vocabulary
   and deterministic widget/pack mapping now sit in
   `blueprintPageSectionTypes.ts` / `blueprintPageSectionLibrary.ts`.
-- `TASK-190-05-02` and the later detail-page wave remain open.
+- `TASK-190-05-02` is landed: canonical collection pages now compose
+  listing/filter/form blocks through `blueprintPageSectionComposer.ts`, and
+  assistant-created collection pages persist `PageData.settings.collectionLink`
+  through the existing page owner seam.
+- The later detail-page wave remains open.
 
 ## Sub-Tasks
 
