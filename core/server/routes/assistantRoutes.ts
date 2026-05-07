@@ -381,7 +381,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         await requirePermission("widgets:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitContext(body.context) || includeResourceCatalog) {
+        if (hasSiteKitContext(body.context)) {
           await ensureLlmGuideAvailable();
         }
         const contextWithCatalog: AssistantActionContext | undefined = includeResourceCatalog

@@ -472,6 +472,12 @@ const resolveAssistantPageCollectionLink = async (input: {
     isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
       ? input.listingTemplate.id
       : null;
+  if (requestedListingQueryId && !input.listingQuery) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (requestedListingTemplateId && !input.listingTemplate) {
+    throw new Error("assistant_action_dependency_missing");
+  }
   if (requestedListingQueryName && !input.listingQuery) {
     throw new Error("assistant_action_dependency_missing");
   }
@@ -2230,21 +2236,44 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
     action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
   const requestedListingTemplateSlug =
     action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
+  const requestedListingQueryId = action.input.collectionLink?.listingQueryId ?? null;
+  const requestedListingTemplateId = action.input.collectionLink?.listingTemplateId ?? null;
+  const listingQueryById = requestedListingQueryId
+    ? (listingQueries.find((entry) => entry.id === requestedListingQueryId) ?? null)
+    : null;
   const listingQueryByName = requestedListingQueryName
     ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
     : null;
+  if (
+    requestedListingQueryId &&
+    listingQueryByName &&
+    listingQueryByName.id !== requestedListingQueryId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
   const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
     ? (listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null)
     : null;
-  const listingQuery = listingQueryByName ?? listingQueryFromCurrent;
+  const listingQuery = listingQueryById ?? listingQueryByName ?? listingQueryFromCurrent;
+  const listingTemplateById = requestedListingTemplateId
+    ? (listingTemplates.find((entry) => entry.id === requestedListingTemplateId) ?? null)
+    : null;
   const listingTemplateBySlug = requestedListingTemplateSlug
     ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
     : null;
+  if (
+    requestedListingTemplateId &&
+    listingTemplateBySlug &&
+    listingTemplateBySlug.id !== requestedListingTemplateId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
   const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
     ? (listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ??
       null)
     : null;
-  const listingTemplate = listingTemplateBySlug ?? listingTemplateFromCurrent;
+  const listingTemplate =
+    listingTemplateById ?? listingTemplateBySlug ?? listingTemplateFromCurrent;
   const forms = action.input.formEmbed ? await deps.listForms() : [];
   const form = action.input.formEmbed
     ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??

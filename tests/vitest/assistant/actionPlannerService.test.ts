@@ -3419,6 +3419,39 @@ test("planAssistantActionsWithProviderDraft enforces the LLM gate for catalog-ba
   ).rejects.toThrow("assistant_llm_unavailable");
 });
 
+test("planAssistantActionsWithProviderDraft keeps supported mixed setup requests on the local composed path without LLM availability", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    llmAvailable: false,
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-07T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
+  expect(plan.metadata?.planner).toBe("local");
+  expect(plan.metadata?.providerDraftUsed).toBe(false);
+});
+
 test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {
   let providerCalls = 0;
   const provider: AssistantProvider = {

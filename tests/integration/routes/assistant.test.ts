@@ -390,7 +390,7 @@ test("assistant action plan route attaches resource catalog context when request
   });
 });
 
-test("assistant action plan route preserves locally composed mixed setup plans on the provider-backed path", async () => {
+test("assistant action plan route preserves locally composed mixed setup plans after trusted catalog handoff", async () => {
   const { router, routes } = makeRouter();
   let receivedContext: Record<string, unknown> | undefined;
 
@@ -626,25 +626,34 @@ test("assistant action plan route blocks site-kit planning when LLM Guide is una
   }
 });
 
-test("assistant action plan route blocks catalog-backed planning when LLM Guide is unavailable", async () => {
+test("assistant action plan route maps catalog-backed planner unavailability", async () => {
   const { router, routes } = makeRouter();
 
   registerAssistantRoutes(router, {
     requirePermission: () => async () => undefined,
     validate: () => undefined,
     service: {
-      getStatus: async () => ({
-        enabled: true,
-        defaultMode: "docs-only",
-        retrievalBackend: "db",
-        llmAvailable: false,
-        indexReady: true,
-        indexBuilding: false,
-        indexError: null,
-        lastReindexAt: null,
-        docCount: 12,
-        chunkCount: 44,
+      buildResourceCatalog: async () => ({
+        schemaVersion: 1,
+        generatedAt: "2026-04-11T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
       }),
+      hydrateActiveSurface: async (context) => context,
+      planActions: async () => {
+        throw new Error("assistant_llm_unavailable");
+      },
     },
   });
 

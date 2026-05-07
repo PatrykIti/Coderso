@@ -4078,6 +4078,92 @@ test("executeAssistantActionPlan rejects conflicting collection-link content typ
   expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
 });
 
+test("executeAssistantActionPlan rejects stale supporting page collection-link listing ids", async () => {
+  const deps = createDeps();
+  const productsType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  await deps.createListingQuery({
+    name: "Products Query",
+    description: "Products listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: productsType.id,
+      },
+      filters: [],
+      sort: [],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-supporting-page-collection-link-stale-id",
+    status: "ready",
+    intentId: "supporting-page-collection-link-stale-id",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create supporting page",
+    answer: "I can create a supporting products page.",
+    summary: "Supporting page with stale listing ids.",
+    confidence: 0.82,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-products-comparison",
+        type: "page.upsert",
+        title: "Create products comparison page",
+        description: "Create a supporting page linked to the products collection.",
+        input: {
+          title: "Compare Products",
+          slug: "/compare-products",
+          status: "draft",
+          introTitle: "Compare products",
+          introBody: "Pick the right model.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Compare products",
+              },
+            },
+          ],
+          collectionLink: {
+            contentTypeSlug: "products",
+            pageRole: "supporting-page",
+            listingQueryId: "query-stale",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_missing");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-supporting-page-collection-link-stale-id",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_missing");
+});
+
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {
   const deps = createDeps();
   const initialPlan = buildHouseProjectsCatalogPlan();
