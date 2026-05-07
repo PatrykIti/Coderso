@@ -2683,7 +2683,7 @@ test("planAssistantActions builds product inquiry catalog for catalog plus form 
   });
 });
 
-test("planAssistantActions returns needs-input for checkout/payment prompts", () => {
+test("planAssistantActions routes checkout/payment prompts through the composed gated path", () => {
   const plan = planAssistantActions({
     prompt: "potrzebuje sklep z checkoutem koszykiem i platnosciami",
     context: {
@@ -2693,9 +2693,16 @@ test("planAssistantActions returns needs-input for checkout/payment prompts", ()
   });
 
   expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-checkout-needs-prerequisite");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog-needs-input");
   expect(plan.actions).toEqual([]);
+  expect(plan.questions).toEqual([
+    expect.objectContaining({
+      id: expect.stringContaining("blueprint-gated-domain"),
+    }),
+  ]);
+  expect(plan.summary).toContain("Checkout and Payment");
 });
 
 test("planAssistantActions returns a gated composed plan for mixed services setup with booking", () => {

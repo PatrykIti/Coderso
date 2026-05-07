@@ -358,12 +358,6 @@ const buildBlueprintComposerSetupPlan = (input: {
   normalizedPrompt?: string;
 }): AssistantActionPlan | null => {
   if (input.promptKind !== "setup_request" || input.intentFamily === "unknown") return null;
-  if (
-    input.intentFamily === "product_catalog" &&
-    includesAny(input.normalizedPrompt ?? "", checkoutKeywords)
-  ) {
-    return null;
-  }
 
   const trustedContext = input.context
     ? {
