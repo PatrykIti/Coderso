@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Page Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-03-01, TASK-190-04
-**Status:** To Do
+**Status:** Done (2026-05-07)
 
 ---
 
@@ -17,6 +17,17 @@ This library should be a thin assistant-facing mapping layer over the existing
 widget contract, not a second unrelated section catalog. Where the repo already
 has source-of-truth metadata for composite widgets, section presets, module pack
 coverage, and widget surfaces, this task should reuse it.
+
+Delivered slice note:
+- Added `blueprintPageSectionTypes.ts` for assistant-facing section alias and
+  slot vocabulary.
+- Added `blueprintPageSectionLibrary.ts` as the deterministic mapping layer from
+  those aliases to existing page-builder widget contracts and module pack
+  coverage.
+- Unsupported aliases such as `steps` now stay gated instead of creating
+  assistant-only pseudo-sections.
+- Section seed blocks are normalized through the existing widget owner
+  (`normalizeWidgetBlock`) rather than a parallel defaults registry.
 
 ## Sub-Tasks
 

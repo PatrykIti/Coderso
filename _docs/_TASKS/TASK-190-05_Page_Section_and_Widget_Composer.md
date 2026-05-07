@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Page Builder + Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04
-**Status:** To Do
+**Status:** In Progress (2026-05-07)
 
 ---
 
@@ -26,6 +26,12 @@ Reuse rule:
   metadata, and current section/page preset coverage,
 - this slice must not create a second source of truth for section readiness next
   to the current widget pack / preset contract.
+
+Current slice note:
+- `TASK-190-05-01` is landed: assistant-facing section alias/slot vocabulary
+  and deterministic widget/pack mapping now sit in
+  `blueprintPageSectionTypes.ts` / `blueprintPageSectionLibrary.ts`.
+- `TASK-190-05-02` and the later detail-page wave remain open.
 
 ## Sub-Tasks
 
