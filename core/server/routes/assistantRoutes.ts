@@ -5,10 +5,7 @@ import {
   reindexAssistantDocs,
   type AssistantChatInput,
 } from "../../services/assistant/assistantService";
-import {
-  assistantChatSchema,
-  assistantReindexSchema,
-} from "../validation/assistantSchemas";
+import { assistantChatSchema, assistantReindexSchema } from "../validation/assistantSchemas";
 import {
   assistantActionDryRunRequestSchema,
   assistantActionExecuteRequestSchema,
@@ -52,7 +49,9 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
-  planActions: (input: AssistantActionPlanInput) => AssistantActionPlan | Promise<AssistantActionPlan>;
+  planActions: (
+    input: AssistantActionPlanInput
+  ) => AssistantActionPlan | Promise<AssistantActionPlan>;
   dryRunActions: typeof dryRunAssistantActionPlan;
   executeActions: typeof executeAssistantActionPlan;
   buildResourceCatalog: typeof buildAssistantResourceCatalogSnapshotWithDefaultDeps;
@@ -102,14 +101,8 @@ const defaultService: AssistantRouteService = {
       ),
       llmAvailable: Boolean(provider),
       limits: {
-        maxInputTokens: await readOptionalNumberSetting(
-          "assistant.llm.maxInputTokens",
-          8192
-        ),
-        maxOutputTokens: await readOptionalNumberSetting(
-          "assistant.llm.maxOutputTokens",
-          2048
-        ),
+        maxInputTokens: await readOptionalNumberSetting("assistant.llm.maxInputTokens", 8192),
+        maxOutputTokens: await readOptionalNumberSetting("assistant.llm.maxOutputTokens", 2048),
         timeoutMs: await readOptionalNumberSetting("assistant.llm.timeoutMs", 20000),
       },
     });
@@ -175,7 +168,7 @@ const mapAssistantError = (error: unknown) => {
     case "assistant_llm_unavailable":
       return {
         code: "assistant_llm_unavailable",
-        message: "LLM Guide must be configured before site-kit planning or execution",
+        message: "LLM Guide must be configured before catalog-backed or site-kit planning",
         status: 409,
       };
     case "assistant_action_plan_invalid":
@@ -256,10 +249,7 @@ const mapAssistantError = (error: unknown) => {
   }
 };
 
-const withAssistantErrors = async <T>(
-  requestId: string | undefined,
-  fn: () => Promise<T>
-) => {
+const withAssistantErrors = async <T>(requestId: string | undefined, fn: () => Promise<T>) => {
   try {
     return await fn();
   } catch (error) {
@@ -281,8 +271,7 @@ const withAssistantErrors = async <T>(
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const hasSiteKitContext = (value: unknown) =>
-  isRecord(value) && isRecord(value.siteKit);
+const hasSiteKitContext = (value: unknown) => isRecord(value) && isRecord(value.siteKit);
 
 const activeSurfaceKind = (value: unknown) => {
   if (!isRecord(value) || !isRecord(value.activeSurface)) return null;
@@ -293,14 +282,12 @@ const activeSurfaceKind = (value: unknown) => {
 const hasSiteKitActions = (plan: unknown) => {
   if (!isRecord(plan) || !Array.isArray(plan.actions)) return false;
   return plan.actions.some(
-    (action) => isRecord(action) && typeof action.type === "string" && action.type.startsWith("site-kit.")
+    (action) =>
+      isRecord(action) && typeof action.type === "string" && action.type.startsWith("site-kit.")
   );
 };
 
-const collectActionPermissions = (
-  plan: unknown,
-  phase: "dryRun" | "execute"
-) => {
+const collectActionPermissions = (plan: unknown, phase: "dryRun" | "execute") => {
   if (!isRecord(plan) || !Array.isArray(plan.actions)) return [];
   const permissions = new Set<string>();
   for (const action of plan.actions) {
@@ -339,46 +326,35 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     }
   };
 
-  router.get(
-    "/assistant/status",
-    requirePermission("settings:read"),
-    async (ctx) =>
-      withAssistantErrors(ctx.requestId, async () => {
-        return service.getStatus();
-      })
+  router.get("/assistant/status", requirePermission("settings:read"), async (ctx) =>
+    withAssistantErrors(ctx.requestId, async () => {
+      return service.getStatus();
+    })
   );
 
-  router.post(
-    "/assistant/reindex",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      validate(assistantReindexSchema, ctx.body ?? {});
-      return withAssistantErrors(ctx.requestId, async () => {
-        return service.reindex({
-          actorId: ctx.user?.id ?? null,
-        });
+  router.post("/assistant/reindex", requirePermission("settings:write"), async (ctx) => {
+    validate(assistantReindexSchema, ctx.body ?? {});
+    return withAssistantErrors(ctx.requestId, async () => {
+      return service.reindex({
+        actorId: ctx.user?.id ?? null,
       });
-    }
-  );
+    });
+  });
 
-  router.post(
-    "/assistant/chat",
-    requirePermission("settings:read"),
-    async (ctx) => {
-      validate(assistantChatSchema, ctx.body ?? {});
-      const body = ctx.body as AssistantChatInput;
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.chat({
-          message: body.message,
-          mode: body.mode,
-          detailLevel: body.detailLevel,
-          guideMode: body.guideMode,
-          context: body.context,
-          actorId: ctx.user?.id ?? null,
-        })
-      );
-    }
-  );
+  router.post("/assistant/chat", requirePermission("settings:read"), async (ctx) => {
+    validate(assistantChatSchema, ctx.body ?? {});
+    const body = ctx.body as AssistantChatInput;
+    return withAssistantErrors(ctx.requestId, async () =>
+      service.chat({
+        message: body.message,
+        mode: body.mode,
+        detailLevel: body.detailLevel,
+        guideMode: body.guideMode,
+        context: body.context,
+        actorId: ctx.user?.id ?? null,
+      })
+    );
+  });
 
   router.post(
     "/assistant/actions/plan",

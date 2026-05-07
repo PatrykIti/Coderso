@@ -619,6 +619,9 @@ test("assistant action plan route blocks site-kit planning when LLM Guide is una
     const apiError = error as ApiError;
     expect(apiError.code).toBe("assistant_llm_unavailable");
     expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed or site-kit planning"
+    );
     expect(apiError.details).toEqual({ requestId: "req-site-kit-unavailable" });
   }
 });
@@ -669,6 +672,9 @@ test("assistant action plan route blocks catalog-backed planning when LLM Guide 
     const apiError = error as ApiError;
     expect(apiError.code).toBe("assistant_llm_unavailable");
     expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed or site-kit planning"
+    );
     expect(apiError.details).toEqual({ requestId: "req-catalog-unavailable" });
   }
 });

@@ -2193,6 +2193,28 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
     !action.input.listingTemplateSlug;
   const existingData = isRecord(existing?.currentData) ? existing.currentData : {};
   const existingCollectionLink = readStoredPageCollectionLink(existing);
+  const currentCatalogSource = readPageCatalogSource(existing);
+  const listingQueries = await deps.listListingQueries();
+  const listingTemplates = await deps.listListingTemplates();
+  const requestedListingQueryName =
+    action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
+  const requestedListingTemplateSlug =
+    action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
+  const listingQueryByName = requestedListingQueryName
+    ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
+    : null;
+  const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
+    ? (listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null)
+    : null;
+  const listingQuery = listingQueryByName ?? listingQueryFromCurrent;
+  const listingTemplateBySlug = requestedListingTemplateSlug
+    ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
+    : null;
+  const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
+    ? (listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ??
+      null)
+    : null;
+  const listingTemplate = listingTemplateBySlug ?? listingTemplateFromCurrent;
   const forms = action.input.formEmbed ? await deps.listForms() : [];
   const form = action.input.formEmbed
     ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
@@ -2201,6 +2223,96 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         : null) ??
       null)
     : null;
+  const dependencyConflicts =
+    (!simplePageMode && (!listingQuery || !listingTemplate)) || (action.input.formEmbed && !form)
+      ? [
+          {
+            code: "assistant_action_dependency_missing" as const,
+            severity: "error" as const,
+            message:
+              "Page dependencies could not be resolved for this preview. Re-run planning after the linked resources exist.",
+          },
+        ]
+      : [];
+  let resolvedCollectionLink = existingCollectionLink;
+  if (dependencyConflicts.length === 0) {
+    try {
+      resolvedCollectionLink = await resolveAssistantPageCollectionLink({
+        action,
+        existing,
+        simplePageMode,
+        listingQuery,
+        listingTemplate,
+        deps,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "assistant_action_dependency_missing") {
+          return createPreviewChange({
+            action,
+            targetType: "page",
+            targetKey: action.input.slug,
+            summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
+            conflicts: [
+              {
+                code: "assistant_action_dependency_missing",
+                severity: "error",
+                message:
+                  "Page dependencies could not be resolved for this preview. Re-run planning after the linked resources exist.",
+              },
+            ],
+            beforeValue: existing
+              ? {
+                  title: existing.title,
+                  slug: existing.slug,
+                  status: existing.status,
+                  ...(simplePageMode
+                    ? {
+                        blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                        formEmbed: action.input.formEmbed ?? null,
+                        collectionLink: existingCollectionLink,
+                      }
+                    : {}),
+                }
+              : null,
+            nextValue: null,
+          });
+        }
+        if (error.message === "assistant_action_dependency_conflict") {
+          return createPreviewChange({
+            action,
+            targetType: "page",
+            targetKey: action.input.slug,
+            summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
+            conflicts: [
+              {
+                code: "assistant_action_dependency_conflict",
+                severity: "error",
+                message:
+                  "Collection-link locators disagree with the linked listing resources and must be reconciled before execution.",
+              },
+            ],
+            beforeValue: existing
+              ? {
+                  title: existing.title,
+                  slug: existing.slug,
+                  status: existing.status,
+                  ...(simplePageMode
+                    ? {
+                        blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                        formEmbed: action.input.formEmbed ?? null,
+                        collectionLink: existingCollectionLink,
+                      }
+                    : {}),
+                }
+              : null,
+            nextValue: null,
+          });
+        }
+      }
+      throw error;
+    }
+  }
   const nextValue = simplePageMode
     ? {
         title: action.input.title,
@@ -2225,7 +2337,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
             : []),
         ],
         formEmbed: action.input.formEmbed ?? null,
-        collectionLink: action.input.collectionLink ?? existingCollectionLink,
+        collectionLink: resolvedCollectionLink,
       }
     : {
         title: action.input.title,
@@ -2236,13 +2348,14 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         contentListStyle: action.input.contentListStyle,
         listingFilters: action.input.listingFilters,
         formEmbed: action.input.formEmbed,
-        collectionLink: action.input.collectionLink ?? existingCollectionLink,
+        collectionLink: resolvedCollectionLink,
       };
   return createPreviewChange({
     action,
     targetType: "page",
     targetKey: action.input.slug,
     summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
+    conflicts: dependencyConflicts,
     beforeValue: existing
       ? {
           title: existing.title,

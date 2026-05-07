@@ -187,7 +187,11 @@ RBAC:
 - additional site-kit permissions:
   - `solution-kits:read` when planning or dry-running `site-kit.*` actions
   - `solution-kits:write` when executing `site-kit.*` actions
-- site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and must not run as docs-only fallback
+- site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and
+  must not run as docs-only fallback
+- catalog-backed planning through `includeResourceCatalog=true` also requires
+  `LLM Guide` availability and fails closed instead of degrading into an
+  under-informed local mutation path
 
 Security:
 - CSRF required on all POST endpoints
