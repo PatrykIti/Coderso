@@ -1552,41 +1552,98 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
     intentFamily: "product_catalog",
   });
 
-  expect(() =>
-    normalizeAssistantActionPlan({
-      ...plan,
-      actions: [
-        {
-          id: "page-products",
-          type: "page.upsert",
-          title: "Create page",
-          description: "Create a catalog page.",
-          input: {
-            title: "Products",
-            slug: "/products",
-            status: "published",
-            introTitle: "Products",
-            introBody: "Browse products.",
-            blocks: [
-              {
-                id: "hero-1",
-                type: "hero",
-                variant: "centered",
-                data: {
-                  headline: "Browse products",
-                  media: {
-                    type: "image",
-                    source: "external",
-                    src: "https://example.com/hero.jpg",
+  for (const src of [
+    "https://example.com/hero.jpg",
+    "data:image/png;base64,Zm9v",
+    "blob:https://example.com/123",
+    "file:///tmp/hero.jpg",
+  ]) {
+    expect(() =>
+      normalizeAssistantActionPlan({
+        ...plan,
+        actions: [
+          {
+            id: "page-products",
+            type: "page.upsert",
+            title: "Create page",
+            description: "Create a catalog page.",
+            input: {
+              title: "Products",
+              slug: "/products",
+              status: "published",
+              introTitle: "Products",
+              introBody: "Browse products.",
+              blocks: [
+                {
+                  id: "hero-1",
+                  type: "hero",
+                  variant: "centered",
+                  data: {
+                    headline: "Browse products",
+                    media: {
+                      type: "image",
+                      source: "external",
+                      src,
+                    },
                   },
                 },
+              ],
+            },
+          },
+        ],
+      })
+    ).toThrow("assistant_action_plan_invalid");
+  }
+});
+
+test("normalizeAssistantActionPlan keeps non-media URL fields available to widget contracts", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-products",
+        type: "page.upsert",
+        title: "Create page",
+        description: "Create a catalog page.",
+        input: {
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          introTitle: "Products",
+          introBody: "Browse products.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Browse products",
+                ctaUrl: "https://example.com/buy",
               },
-            ],
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      blocks: [
+        {
+          data: {
+            ctaUrl: "https://example.com/buy",
           },
         },
       ],
-    })
-  ).toThrow("assistant_action_plan_invalid");
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan rejects invalid seo targets and fields", () => {

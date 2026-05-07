@@ -97,6 +97,9 @@ Explicit page-owned metadata contract:
   slug/name locators while upstream resources are still being created, but the
   executor must resolve those locators into the page-owned persisted id fields
   before writing `PageData.settings.collectionLink`.
+- If reviewed collection locators disagree with linked listing resources, the
+  executor fails closed with a dependency conflict instead of persisting mixed
+  collection/listing ownership under one page.
 - Minimal contract for downstream consumers:
 
 ```ts
@@ -209,6 +212,8 @@ export const composePageUpsertInput = (graph): AssistantPageUpsertAction["input"
 - Canonical list-page linkage and page-attached listing query/template refs are
   read from `settings.collectionLink`, not re-derived from route or slug
   heuristics once this contract exists.
+- Conflicting `contentType*` vs listing-query/template locators fail closed
+  instead of persisting mismatched ids into the page seam.
 - Any manual editor support for that metadata stays page-owned in the current
   Page settings drawer seam rather than moving into workspace-only controls or a
   second page-metadata form.

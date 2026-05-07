@@ -288,6 +288,19 @@ test("buildProviderPlanningPromptPackage returns null resources when no catalog 
   expect(prompt.blueprints.capabilities.length).toBeGreaterThan(0);
 });
 
+test("buildProviderPlanningPromptPackage ignores caller-supplied catalogs without the reviewed include flag", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+      resourceCatalog,
+    },
+  });
+
+  expect(prompt.resources).toBeNull();
+});
+
 test("buildProviderPlanningPromptPackage emits truncation warnings for added resource groups", () => {
   const catalog = resourceCatalog as NonNullable<AssistantActionContext["resourceCatalog"]>;
   const prompt = buildProviderPlanningPromptPackage({

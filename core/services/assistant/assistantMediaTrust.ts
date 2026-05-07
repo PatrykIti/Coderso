@@ -1,5 +1,6 @@
 const rawMediaValuePattern = /^(?:data:|blob:|file:|https?:\/\/)/i;
-const mediaLikeKeyPattern = /(src|image|images|media|asset|video|gallery|url)$/i;
+const mediaLikeKeyPattern =
+  /(^src$|^(?:image|images|media|asset|video|gallery)(?:id|ids|url|urls)?$)/i;
 
 export const assertTrustedAssistantMediaReferences = (
   value: unknown,

@@ -382,8 +382,9 @@ export const sanitizeAssistantPlanningContext = (
 ): AssistantActionContext | undefined => {
   if (!input) return undefined;
   const trustedResourceCatalog = readTrustedAssistantResourceCatalog(input);
+  const { resourceCatalog: _resourceCatalog, ...rest } = input;
   return {
-    ...input,
+    ...rest,
     ...(trustedResourceCatalog !== undefined ? { resourceCatalog: trustedResourceCatalog } : {}),
   };
 };

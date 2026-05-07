@@ -1169,7 +1169,7 @@ export const planAssistantActionsWithProviderDraft = async (
     );
   }
   if (isBroadDestructivePromptWithPolicy(input.prompt)) {
-    return planAssistantActions(input);
+    return planAssistantActions({ ...input, context: trustedContext });
   }
   const localPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
   if (

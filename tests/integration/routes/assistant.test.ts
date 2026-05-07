@@ -390,6 +390,93 @@ test("assistant action plan route attaches resource catalog context when request
   });
 });
 
+test("assistant action plan route preserves locally composed mixed setup plans on the provider-backed path", async () => {
+  const { router, routes } = makeRouter();
+  let receivedContext: Record<string, unknown> | undefined;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: true,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+      hydrateActiveSurface: async (context) => context,
+      buildResourceCatalog: async () => ({
+        schemaVersion: 1,
+        generatedAt: "2026-04-11T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [
+          { id: "ct-products", slug: "products", name: "Products", entryCount: 0, fields: [] },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      }),
+      planActions: async (payload) => {
+        receivedContext = payload.context as Record<string, unknown>;
+        return {
+          ...buildHouseProjectsCatalogPlan(),
+          intentId: "blueprint-composed-product-catalog",
+          metadata: {
+            planner: "local",
+            providerDraftUsed: false,
+          },
+        };
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "Create a product catalog with inquiry form and a blog hub.",
+      context: {
+        page: "/admin/advanced/widgets",
+        locale: "en-US",
+        includeResourceCatalog: true,
+      },
+    },
+    requestId: "req-plan-mixed-local",
+    user: { id: "user-1" },
+  });
+
+  expect(result).toMatchObject({
+    intentId: "blueprint-composed-product-catalog",
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+    },
+  });
+  expect(receivedContext).toMatchObject({
+    includeResourceCatalog: true,
+    resourceCatalog: {
+      schemaVersion: 1,
+      contentTypes: [{ slug: "products" }],
+    },
+  });
+});
+
 test("assistant action plan route requires widget read permission for active page template inspection", async () => {
   const { router, routes } = makeRouter();
   const requestedPermissions: string[] = [];
@@ -536,6 +623,56 @@ test("assistant action plan route blocks site-kit planning when LLM Guide is una
   }
 });
 
+test("assistant action plan route blocks catalog-backed planning when LLM Guide is unavailable", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: {
+        prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+        context: {
+          page: "/admin/pages",
+          locale: "pl-PL",
+          includeResourceCatalog: true,
+        },
+      },
+      requestId: "req-catalog-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.details).toEqual({ requestId: "req-catalog-unavailable" });
+  }
+});
+
 test("assistant action dry-run route forwards plan payload", async () => {
   const { router, routes } = makeRouter();
   const plan = buildHouseProjectsCatalogPlan();
@@ -587,15 +724,57 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
     assumptions: [],
     questions: [],
     actions: [
-      { id: "screen-update", type: "custom-screen.update", title: "Screen update", description: "Screen update", input: {} },
-      { id: "screen-widget", type: "custom-screen.widget.patch", title: "Screen widget", description: "Screen widget", input: {} },
+      {
+        id: "screen-update",
+        type: "custom-screen.update",
+        title: "Screen update",
+        description: "Screen update",
+        input: {},
+      },
+      {
+        id: "screen-widget",
+        type: "custom-screen.widget.patch",
+        title: "Screen widget",
+        description: "Screen widget",
+        input: {},
+      },
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
-      { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
-      { id: "menu-update", type: "menu.item.update", title: "Menu update", description: "Menu update", input: {} },
+      {
+        id: "menu-delete",
+        type: "menu.item.delete",
+        title: "Menu delete",
+        description: "Menu delete",
+        input: {},
+      },
+      {
+        id: "menu-update",
+        type: "menu.item.update",
+        title: "Menu update",
+        description: "Menu update",
+        input: {},
+      },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
-      { id: "entry-update", type: "entry.update", title: "Entry update", description: "Entry update", input: {} },
-      { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
-      { id: "listing-query-update", type: "listing-query.update", title: "Listing query update", description: "Listing query update", input: {} },
+      {
+        id: "entry-update",
+        type: "entry.update",
+        title: "Entry update",
+        description: "Entry update",
+        input: {},
+      },
+      {
+        id: "listing-query",
+        type: "listing-query.delete",
+        title: "Listing query",
+        description: "Listing query",
+        input: {},
+      },
+      {
+        id: "listing-query-update",
+        type: "listing-query.update",
+        title: "Listing query update",
+        description: "Listing query update",
+        input: {},
+      },
       {
         id: "listing-template",
         type: "listing-template.delete",
@@ -618,12 +797,48 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
         input: {},
       },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
-      { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
-      { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
-      { id: "form-update", type: "form.update", title: "Form update", description: "Form update", input: {} },
-      { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
-      { id: "seo-delete", type: "seo.document.delete", title: "SEO delete", description: "SEO delete", input: {} },
-      { id: "seo-update", type: "seo.document.update", title: "SEO update", description: "SEO update", input: {} },
+      {
+        id: "form-delete",
+        type: "form.delete",
+        title: "Form delete",
+        description: "Form delete",
+        input: {},
+      },
+      {
+        id: "form-archive",
+        type: "form.archive",
+        title: "Form archive",
+        description: "Form archive",
+        input: {},
+      },
+      {
+        id: "form-update",
+        type: "form.update",
+        title: "Form update",
+        description: "Form update",
+        input: {},
+      },
+      {
+        id: "media",
+        type: "media.reference.attach",
+        title: "Media",
+        description: "Media",
+        input: {},
+      },
+      {
+        id: "seo-delete",
+        type: "seo.document.delete",
+        title: "SEO delete",
+        description: "SEO delete",
+        input: {},
+      },
+      {
+        id: "seo-update",
+        type: "seo.document.update",
+        title: "SEO update",
+        description: "SEO update",
+        input: {},
+      },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
         id: "template",
@@ -796,15 +1011,57 @@ test("assistant action execute route enforces per-action write permissions", asy
     assumptions: [],
     questions: [],
     actions: [
-      { id: "screen-update", type: "custom-screen.update", title: "Screen update", description: "Screen update", input: {} },
-      { id: "screen-widget", type: "custom-screen.widget.patch", title: "Screen widget", description: "Screen widget", input: {} },
+      {
+        id: "screen-update",
+        type: "custom-screen.update",
+        title: "Screen update",
+        description: "Screen update",
+        input: {},
+      },
+      {
+        id: "screen-widget",
+        type: "custom-screen.widget.patch",
+        title: "Screen widget",
+        description: "Screen widget",
+        input: {},
+      },
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
-      { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
-      { id: "menu-update", type: "menu.item.update", title: "Menu update", description: "Menu update", input: {} },
+      {
+        id: "menu-delete",
+        type: "menu.item.delete",
+        title: "Menu delete",
+        description: "Menu delete",
+        input: {},
+      },
+      {
+        id: "menu-update",
+        type: "menu.item.update",
+        title: "Menu update",
+        description: "Menu update",
+        input: {},
+      },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
-      { id: "entry-update", type: "entry.update", title: "Entry update", description: "Entry update", input: {} },
-      { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
-      { id: "listing-query-update", type: "listing-query.update", title: "Listing query update", description: "Listing query update", input: {} },
+      {
+        id: "entry-update",
+        type: "entry.update",
+        title: "Entry update",
+        description: "Entry update",
+        input: {},
+      },
+      {
+        id: "listing-query",
+        type: "listing-query.delete",
+        title: "Listing query",
+        description: "Listing query",
+        input: {},
+      },
+      {
+        id: "listing-query-update",
+        type: "listing-query.update",
+        title: "Listing query update",
+        description: "Listing query update",
+        input: {},
+      },
       {
         id: "listing-template",
         type: "listing-template.delete",
@@ -827,12 +1084,48 @@ test("assistant action execute route enforces per-action write permissions", asy
         input: {},
       },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
-      { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
-      { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
-      { id: "form-update", type: "form.update", title: "Form update", description: "Form update", input: {} },
-      { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
-      { id: "seo-delete", type: "seo.document.delete", title: "SEO delete", description: "SEO delete", input: {} },
-      { id: "seo-update", type: "seo.document.update", title: "SEO update", description: "SEO update", input: {} },
+      {
+        id: "form-delete",
+        type: "form.delete",
+        title: "Form delete",
+        description: "Form delete",
+        input: {},
+      },
+      {
+        id: "form-archive",
+        type: "form.archive",
+        title: "Form archive",
+        description: "Form archive",
+        input: {},
+      },
+      {
+        id: "form-update",
+        type: "form.update",
+        title: "Form update",
+        description: "Form update",
+        input: {},
+      },
+      {
+        id: "media",
+        type: "media.reference.attach",
+        title: "Media",
+        description: "Media",
+        input: {},
+      },
+      {
+        id: "seo-delete",
+        type: "seo.document.delete",
+        title: "SEO delete",
+        description: "SEO delete",
+        input: {},
+      },
+      {
+        id: "seo-update",
+        type: "seo.document.update",
+        title: "SEO update",
+        description: "SEO update",
+        input: {},
+      },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
         id: "template",

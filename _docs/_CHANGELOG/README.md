@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 800 | 2026-05-07 | TASK-190 provider sanitization and collection-link conflict closure | Assistant/Core |
 | 799 | 2026-05-07 | TASK-190 planner boundary and page collection drift fixes | Assistant/Core |
 | 798 | 2026-05-07 | TASK-190 detail page model and schema contract | Assistant/Core |
 | 797 | 2026-05-07 | TASK-190 page upsert composition adapter | Assistant/Core |

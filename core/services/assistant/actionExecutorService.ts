@@ -466,10 +466,18 @@ const resolveAssistantPageCollectionLink = async (input: {
     !requestedContentTypeId && requestedContentTypeSlug
       ? await input.deps.getContentTypeBySlug(requestedContentTypeSlug)
       : null;
+  const requestedResolvedContentTypeId = requestedContentTypeId ?? requestedContentType?.id ?? null;
+  const listingQueryContentTypeId = readListingQueryContentTypeId(input.listingQuery);
+  if (
+    requestedResolvedContentTypeId &&
+    listingQueryContentTypeId &&
+    requestedResolvedContentTypeId !== listingQueryContentTypeId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
   const contentTypeId =
-    requestedContentTypeId ??
-    readListingQueryContentTypeId(input.listingQuery) ??
-    requestedContentType?.id ??
+    requestedResolvedContentTypeId ??
+    listingQueryContentTypeId ??
     existingCollectionLink?.contentTypeId ??
     null;
   if (!contentTypeId) {
@@ -3978,15 +3986,19 @@ const executePageAction = async (
     !action.input.listingQueryName ||
     !action.input.listingTemplateSlug;
 
-  const listingQueryByName = action.input.listingQueryName
-    ? (listingQueries.find((entry) => entry.name === action.input.listingQueryName) ?? null)
+  const requestedListingQueryName =
+    action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
+  const requestedListingTemplateSlug =
+    action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
+  const listingQueryByName = requestedListingQueryName
+    ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
     : null;
   const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
     ? (listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null)
     : null;
   const listingQuery = listingQueryByName ?? listingQueryFromCurrent;
-  const listingTemplateBySlug = action.input.listingTemplateSlug
-    ? (listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ?? null)
+  const listingTemplateBySlug = requestedListingTemplateSlug
+    ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
     : null;
   const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
     ? (listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ??

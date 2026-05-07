@@ -3846,6 +3846,154 @@ test("executeAssistantActionPlan resolves supporting page collection links from 
   });
 });
 
+test("executeAssistantActionPlan resolves supporting page collection-link listing locators into persisted ids", async () => {
+  const deps = createDeps();
+  const plan = buildProductInquiryCatalogPlan();
+  plan.actions.push({
+    id: "page-products-comparison",
+    type: "page.upsert",
+    title: "Create products comparison page",
+    description: "Create a supporting page linked to the products collection.",
+    input: {
+      title: "Compare Products",
+      slug: "/compare-products",
+      status: "draft",
+      introTitle: "Compare products",
+      introBody: "Pick the right model.",
+      blocks: [
+        {
+          id: "hero-1",
+          type: "hero",
+          variant: "centered",
+          data: {
+            headline: "Compare products",
+          },
+        },
+      ],
+      collectionLink: {
+        contentTypeSlug: PRODUCT_CATALOG_PRESET.contentTypeSlug,
+        pageRole: "supporting-page",
+        compositionKey: "comparison",
+        listingQueryName: PRODUCT_CATALOG_PRESET.listingQueryName,
+        listingTemplateSlug: PRODUCT_CATALOG_PRESET.listingTemplateSlug,
+      },
+    },
+  });
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-supporting-page-collection-link-locators",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(
+    (deps.__state.pages[1]?.currentData.settings as { collectionLink?: Record<string, unknown> })
+      ?.collectionLink
+  ).toMatchObject({
+    contentTypeId: deps.__state.contentTypes[0]?.id,
+    pageRole: "supporting-page",
+    compositionKey: "comparison",
+    listingQueryId: deps.__state.listingQueries[0]?.id,
+    listingTemplateId: deps.__state.listingTemplates[0]?.id,
+  });
+});
+
+test("executeAssistantActionPlan rejects conflicting collection-link content type and listing locators", async () => {
+  const deps = createDeps();
+  const productsType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  await deps.createContentType({
+    name: "Cars",
+    slug: "cars",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  await deps.createListingQuery({
+    name: "Products Query",
+    description: "Products listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: productsType.id,
+      },
+      filters: [],
+      sort: [],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-supporting-page-collection-link-conflict",
+    status: "ready",
+    intentId: "supporting-page-collection-link-conflict",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create supporting page",
+    answer: "I can create a supporting cars page.",
+    summary: "Supporting page with conflicting collection locators.",
+    confidence: 0.82,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-cars-comparison",
+        type: "page.upsert",
+        title: "Create cars comparison page",
+        description: "Create a supporting page linked to the cars collection.",
+        input: {
+          title: "Compare Cars",
+          slug: "/compare-cars",
+          status: "draft",
+          introTitle: "Compare cars",
+          introBody: "Pick the right model.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Compare cars",
+              },
+            },
+          ],
+          collectionLink: {
+            contentTypeSlug: "cars",
+            pageRole: "supporting-page",
+            listingQueryName: "Products Query",
+          },
+        },
+      },
+    ],
+  };
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-supporting-page-collection-link-conflict",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+});
+
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {
   const deps = createDeps();
   const initialPlan = buildHouseProjectsCatalogPlan();

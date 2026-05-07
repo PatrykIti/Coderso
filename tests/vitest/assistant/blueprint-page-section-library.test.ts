@@ -133,15 +133,22 @@ test("buildBlueprintPageSectionSeed accepts trusted media library asset ids for 
 });
 
 test("buildBlueprintPageSectionSeed rejects untrusted raw media URLs for media-bearing section data", () => {
-  expect(() =>
-    buildBlueprintPageSectionSeed("hero", {
-      data: {
-        media: {
-          source: "external",
-          type: "image",
-          src: "https://example.com/hero.jpg",
+  for (const src of [
+    "https://example.com/hero.jpg",
+    "data:image/png;base64,Zm9v",
+    "blob:https://example.com/123",
+    "file:///tmp/hero.jpg",
+  ]) {
+    expect(() =>
+      buildBlueprintPageSectionSeed("hero", {
+        data: {
+          media: {
+            source: "external",
+            type: "image",
+            src,
+          },
         },
-      },
-    })
-  ).toThrowError("assistant_blueprint_page_section_media_untrusted");
+      })
+    ).toThrowError("assistant_blueprint_page_section_media_untrusted");
+  }
 });
