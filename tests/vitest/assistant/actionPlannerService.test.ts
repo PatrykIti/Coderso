@@ -269,7 +269,7 @@ test("planAssistantActionsWithProviderDraft also exposes aligned blueprint shado
   });
 });
 
-test("planAssistantActionsWithProviderDraft exposes aligned blueprint shadow diagnostics on provider-path fallback to local setup planning", async () => {
+test("planAssistantActionsWithProviderDraft prefers local blueprint composition before provider drafting for supported mixed setup requests", async () => {
   vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
   const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
 
@@ -301,7 +301,7 @@ test("planAssistantActionsWithProviderDraft exposes aligned blueprint shadow dia
 
   expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(plan.metadata).toMatchObject({
-    planner: "provider",
+    planner: "local",
     providerDraftUsed: false,
     blueprintShadow: {
       currentIntentId: "blueprint-composed-product-catalog",
@@ -310,11 +310,7 @@ test("planAssistantActionsWithProviderDraft exposes aligned blueprint shadow dia
       mismatchReason: null,
     },
   });
-  expect(requests).toHaveLength(1);
-  expect(requests[0]?.responseContract).toMatchObject({
-    kind: "json_schema",
-    name: "cms_operation_draft",
-  });
+  expect(requests).toHaveLength(0);
 });
 
 test("planAssistantActionsWithProviderDraft preserves provider metadata and request contract on a real provider response", async () => {
@@ -3296,6 +3292,7 @@ test("planAssistantActionsWithProviderDraft recovers empty provider inspection t
     ),
     context: {
       page: "/admin/pages",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-19T10:00:00.000Z",
@@ -3350,6 +3347,37 @@ test("planAssistantActionsWithProviderDraft falls back when provider is unavaila
   ).toEqual(["/produkty", "/blog"]);
 });
 
+test("planAssistantActionsWithProviderDraft enforces the LLM gate for catalog-backed planning", async () => {
+  await expect(
+    planAssistantActionsWithProviderDraft({
+      prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+      llmAvailable: false,
+      context: {
+        page: "/admin/pages",
+        locale: "pl-PL",
+        includeResourceCatalog: true,
+        resourceCatalog: {
+          schemaVersion: 1,
+          generatedAt: "2026-04-19T10:00:00.000Z",
+          budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+          pages: [],
+          posts: [],
+          entries: [],
+          contentTypes: [],
+          customScreens: [],
+          listings: { queries: [], templates: [] },
+          forms: [],
+          menus: [],
+          seoDocuments: [],
+          widgets: [],
+          media: [],
+          warnings: [],
+        },
+      },
+    })
+  ).rejects.toThrow("assistant_llm_unavailable");
+});
+
 test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {
   let providerCalls = 0;
   const provider: AssistantProvider = {
@@ -3374,6 +3402,7 @@ test("planAssistantActionsWithProviderDraft prefers planning state for follow-up
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       planningState: {
         schemaVersion: 1,
         sourcePlanId: "plan-cms-page-delete-needs-input",
@@ -3454,6 +3483,7 @@ test("planAssistantActionsWithProviderDraft recovers explicit page create fields
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3507,6 +3537,7 @@ test("planAssistantActionsWithProviderDraft recovers explicit form create fields
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3558,6 +3589,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3666,6 +3698,7 @@ test("planAssistantActionsWithProviderDraft recovers provider misses with local 
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3716,6 +3749,7 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive actions
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3767,6 +3801,7 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive count m
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3812,6 +3847,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied listing templ
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3872,6 +3908,7 @@ test("planAssistantActionsWithProviderDraft coerces prompt-implied listing query
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",

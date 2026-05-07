@@ -93,6 +93,10 @@ Explicit page-owned metadata contract:
 - The default owner path is `PageData.settings.collectionLink` inside the
   existing `currentData` / `publishedData` JSON contract handled by
   `pageService.ts`.
+- The assistant transport may carry either persisted ids or reviewed
+  slug/name locators while upstream resources are still being created, but the
+  executor must resolve those locators into the page-owned persisted id fields
+  before writing `PageData.settings.collectionLink`.
 - Minimal contract for downstream consumers:
 
 ```ts

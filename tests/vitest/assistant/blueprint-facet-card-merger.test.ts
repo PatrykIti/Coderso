@@ -272,3 +272,100 @@ test("collect listing query helper fields include facet and card condition sourc
     "data.projectStatus",
   ]);
 });
+
+test("mergeListingFacets and card config cover Mabudo-like house-project filter and card fragments", () => {
+  const mabudoSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      projectCode: { type: "string", xFieldType: "text" },
+      priceFrom: { type: "number", xFieldType: "number" },
+      pricePackageStart: { type: "number", xFieldType: "number" },
+      roofType: {
+        type: "string",
+        xFieldType: "select",
+        enum: ["gable", "flat"],
+      },
+      houseStyle: {
+        type: "string",
+        xFieldType: "select",
+        enum: ["modern", "classic"],
+      },
+      garageType: {
+        type: "string",
+        xFieldType: "select",
+        enum: ["none", "single"],
+      },
+    },
+  } as const;
+
+  const facets = validateListingFacetsAgainstSchema(
+    mabudoSchema,
+    mergeListingFacets(
+      [
+        {
+          id: "roof-type",
+          kind: "checkbox",
+          label: "Roof type",
+          field: "data.roofType",
+          op: "in",
+          options: [{ value: "gable", label: "Gable" }],
+        },
+      ],
+      [
+        {
+          id: "house-style",
+          kind: "checkbox",
+          label: "House style",
+          field: "data.houseStyle",
+          op: "in",
+          options: [{ value: "modern", label: "Modern" }],
+        },
+        {
+          id: "garage-type",
+          kind: "checkbox",
+          label: "Garage",
+          field: "data.garageType",
+          op: "in",
+          options: [{ value: "single", label: "Single garage" }],
+        },
+      ]
+    )
+  );
+
+  const card = validateListingCardConfigAgainstSchema(mabudoSchema, {
+    fields: [
+      {
+        key: "project-code",
+        source: "data.projectCode",
+        label: "Project code",
+        fallback: null,
+        format: "text",
+        conditions: [],
+      },
+      {
+        key: "package-start",
+        source: "data.pricePackageStart",
+        label: "Start package",
+        fallback: null,
+        format: "text",
+        conditions: [{ id: "roof", field: "data.roofType", op: "eq", value: "gable" }],
+      },
+    ],
+    itemActions: [],
+    emptyState: { title: "No items", description: null, ctaLabel: null, ctaHref: null },
+    style: { columns: 3, gap: "md", cardVariant: "default" },
+  });
+
+  expect(facets.map((facet) => facet.id)).toEqual(["roof-type", "house-style", "garage-type"]);
+  expect(collectListingFacetQueryFields(facets)).toEqual([
+    "data.roofType",
+    "data.houseStyle",
+    "data.garageType",
+  ]);
+  expect(collectListingCardQueryFields(card)).toEqual([
+    "data.projectCode",
+    "data.pricePackageStart",
+    "data.roofType",
+  ]);
+});

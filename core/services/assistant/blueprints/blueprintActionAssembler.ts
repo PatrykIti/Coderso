@@ -366,16 +366,29 @@ const mergePageCollectionLink = (
 ) => {
   if (!left) return right;
   if (!right) return left;
-  if (left.contentTypeSlug !== right.contentTypeSlug || left.pageRole !== right.pageRole) {
+  const leftContentTypeKey = left.contentTypeId ?? left.contentTypeSlug ?? null;
+  const rightContentTypeKey = right.contentTypeId ?? right.contentTypeSlug ?? null;
+  if (!leftContentTypeKey || !rightContentTypeKey) return null;
+  if (leftContentTypeKey !== rightContentTypeKey || left.pageRole !== right.pageRole) {
     return null;
   }
   if (left.compositionKey && right.compositionKey && left.compositionKey !== right.compositionKey) {
+    return null;
+  }
+  if (left.listingQueryId && right.listingQueryId && left.listingQueryId !== right.listingQueryId) {
     return null;
   }
   if (
     left.listingQueryName &&
     right.listingQueryName &&
     left.listingQueryName !== right.listingQueryName
+  ) {
+    return null;
+  }
+  if (
+    left.listingTemplateId &&
+    right.listingTemplateId &&
+    left.listingTemplateId !== right.listingTemplateId
   ) {
     return null;
   }
@@ -387,10 +400,17 @@ const mergePageCollectionLink = (
     return null;
   }
   return {
-    contentTypeSlug: left.contentTypeSlug,
+    ...((left.contentTypeId ?? right.contentTypeId)
+      ? { contentTypeId: left.contentTypeId ?? right.contentTypeId ?? null }
+      : {}),
+    ...((left.contentTypeSlug ?? right.contentTypeSlug)
+      ? { contentTypeSlug: left.contentTypeSlug ?? right.contentTypeSlug ?? null }
+      : {}),
     pageRole: left.pageRole,
     compositionKey: left.compositionKey ?? right.compositionKey ?? null,
+    listingQueryId: left.listingQueryId ?? right.listingQueryId ?? null,
     listingQueryName: left.listingQueryName ?? right.listingQueryName ?? null,
+    listingTemplateId: left.listingTemplateId ?? right.listingTemplateId ?? null,
     listingTemplateSlug: left.listingTemplateSlug ?? right.listingTemplateSlug ?? null,
   };
 };

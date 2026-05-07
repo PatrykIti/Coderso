@@ -10,6 +10,7 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "./actionPlanTypes";
+import { assertTrustedAssistantMediaReferences } from "./assistantMediaTrust";
 import { assistantActionTypes } from "./actionRegistry";
 import {
   normalizeFormActionInput,
@@ -825,6 +826,15 @@ const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
 const normalizePageWidgetPatchBlock = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["id", "type", "variant", "data", "layout", "visibility", "editor"]));
+  try {
+    assertTrustedAssistantMediaReferences(input.data);
+    if (input.layout !== undefined) assertTrustedAssistantMediaReferences(input.layout);
+    if (input.visibility !== undefined) assertTrustedAssistantMediaReferences(input.visibility);
+    if (input.editor !== undefined) assertTrustedAssistantMediaReferences(input.editor);
+  } catch (error) {
+    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") fail();
+    throw error;
+  }
   return {
     id: readText(input.id),
     type: readText(input.type),
@@ -976,21 +986,36 @@ const normalizePageCollectionLinkInput = (value: unknown) => {
   assertKeys(
     input,
     new Set([
+      "contentTypeId",
       "contentTypeSlug",
       "pageRole",
       "compositionKey",
+      "listingQueryId",
       "listingQueryName",
+      "listingTemplateId",
       "listingTemplateSlug",
     ])
   );
+  const contentTypeId =
+    input.contentTypeId === undefined ? undefined : readOptionalText(input.contentTypeId);
+  const contentTypeSlug =
+    input.contentTypeSlug === undefined ? undefined : readOptionalText(input.contentTypeSlug);
+  if (!contentTypeId && !contentTypeSlug) fail();
   return {
-    contentTypeSlug: readText(input.contentTypeSlug),
+    ...(contentTypeId !== undefined ? { contentTypeId } : {}),
+    ...(contentTypeSlug !== undefined ? { contentTypeSlug } : {}),
     pageRole: readEnum(input.pageRole, new Set(["canonical-list-page", "supporting-page"])),
     ...(input.compositionKey !== undefined
       ? { compositionKey: readOptionalText(input.compositionKey) }
       : {}),
+    ...(input.listingQueryId !== undefined
+      ? { listingQueryId: readOptionalText(input.listingQueryId) }
+      : {}),
     ...(input.listingQueryName !== undefined
       ? { listingQueryName: readOptionalText(input.listingQueryName) }
+      : {}),
+    ...(input.listingTemplateId !== undefined
+      ? { listingTemplateId: readOptionalText(input.listingTemplateId) }
       : {}),
     ...(input.listingTemplateSlug !== undefined
       ? { listingTemplateSlug: readOptionalText(input.listingTemplateSlug) }

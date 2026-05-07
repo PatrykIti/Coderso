@@ -95,6 +95,43 @@ test("buildBlueprintPageSectionSeed normalizes a seeded widget block through the
   );
 });
 
+test("buildBlueprintPageSectionSeed accepts trusted media library asset ids for media-bearing section data", () => {
+  const block = buildBlueprintPageSectionSeed("hero", {
+    data: {
+      media: {
+        type: "image",
+        source: "library",
+        assetId: "media-hero",
+      },
+      background: {
+        media: {
+          type: "image",
+          source: "library",
+          assetId: "media-background",
+        },
+      },
+    },
+  });
+
+  expect(block).toMatchObject({
+    type: "hero",
+    data: {
+      media: {
+        type: "image",
+        source: "library",
+        assetId: "media-hero",
+      },
+      background: {
+        media: {
+          type: "image",
+          source: "library",
+          assetId: "media-background",
+        },
+      },
+    },
+  });
+});
+
 test("buildBlueprintPageSectionSeed rejects untrusted raw media URLs for media-bearing section data", () => {
   expect(() =>
     buildBlueprintPageSectionSeed("hero", {

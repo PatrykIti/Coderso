@@ -16,8 +16,9 @@ Convert the composed graph into existing typed assistant actions.
 Current slice note:
 - current catalog/form/page fragments can already be assembled and deduped in
   tests,
-- the local setup planner now routes supported multi-capability and
-  primary-plus-gated setup requests through the composed blueprint path,
+- the setup planner now keeps supported multi-capability and
+  primary-plus-gated setup requests on the composed blueprint path before any
+  provider drafting fallback can bypass them,
 - blocking graph conflicts now downgrade the composed result into typed
   `needs_input` / `gated` plans instead of failing with a null result,
 - compatible listing facet/card fragments now also widen
@@ -82,7 +83,8 @@ Ordering rules:
 - Existing single preset plans unchanged.
 - Mixed prompt plan action order stable.
 - Supported live setup requests route through the composed planner path instead
-  of falling back to a legacy single-pack builder.
+  of falling back to a legacy single-pack builder, including provider-enabled
+  `/assistant/actions/plan` calls for the supported mixed setup slice.
 - Blocking graph conflicts dedupe to one typed question per target instead of
   surfacing a second generic duplicate-resource question.
 - Gated modules produce non-executable metadata/questions.

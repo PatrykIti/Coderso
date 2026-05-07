@@ -190,6 +190,7 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
     context: {
       page: "/admin/advanced/entries",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog,
       runtimeSnapshot: {
         schemaVersion: 2,
@@ -295,6 +296,7 @@ test("buildProviderPlanningPromptPackage emits truncation warnings for added res
     context: {
       page: "/admin/advanced/entries",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         ...catalog,
         posts: [

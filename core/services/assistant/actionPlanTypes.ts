@@ -715,10 +715,13 @@ export type AssistantFormAutomationUpsertAction = {
 };
 
 export type AssistantPageCollectionLinkInput = {
-  contentTypeSlug: string;
+  contentTypeId?: string | null;
+  contentTypeSlug?: string | null;
   pageRole: "canonical-list-page" | "supporting-page";
   compositionKey?: string | null;
+  listingQueryId?: string | null;
   listingQueryName?: string | null;
+  listingTemplateId?: string | null;
   listingTemplateSlug?: string | null;
 };
 

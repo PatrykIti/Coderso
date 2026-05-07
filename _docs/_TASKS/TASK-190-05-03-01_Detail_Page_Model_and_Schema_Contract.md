@@ -59,6 +59,10 @@ No child task files.
 
 - This leaf owns the detail-page document schema, persisted storage, revision
   history, and UUID-compatible id contract.
+- The current delivered slice owns the schema, normalized document contract,
+  raw revision storage tables, and the content-type delete dependency only.
+  Create/update/publish/autosave/restore/discard helpers remain deferred to the
+  later admin/action route leaves that actually introduce the lifecycle API.
 - If collection workspace / reuse matching later needs explicit detail-page-
   owned secondary-resource references or stable composition metadata, this leaf
   owns the schema/storage side of those fields inside `DetailPageDocument`.
@@ -207,14 +211,9 @@ type ContentRouteSetting = {
 - If a later change wants non-UUID detail-page ids, that change must explicitly
   widen the affected shared storage owners and migrations instead of silently
   drifting this contract.
-- The service layer owns normalize/create/update/publish/unpublish helpers.
-- Detail page documents follow the same history contract shape as Pages:
-  - `kind = publish` for publish snapshots,
-  - `kind = autosave` for the latest unsaved editor snapshot,
-  - restore applies `current_document` and returns the detail page to draft,
-  - discard is allowed only for autosave revisions,
-  - retention uses the same min/max policy as Pages unless a later task
-    explicitly changes it.
+- This slice defines the revision storage shape (`publish` / `autosave`) so
+  later lifecycle leaves can reuse it, but it does not yet claim working
+  publish/autosave/restore/discard service helpers.
 
 Normalization rules:
 
@@ -257,9 +256,8 @@ Normalization rules:
 - Non-UUID-compatible detail-page ids reject unless this contract is explicitly
   widened in a later migration-owning task.
 - DB migration artifacts are present and valid.
-- Publish creates a `publish` revision and updates `published_document`.
-- Autosave keeps only the latest autosave revision.
-- Restore/discard revision semantics match the Pages revision contract.
+- Revision tables, indexes, and enum-like `kind` storage contract exist for the
+  later publish/autosave lifecycle leaves.
 - Unknown keys reject.
 - Duplicate block ids reject.
 - Binding to missing block rejects.
@@ -271,6 +269,9 @@ Normalization rules:
   `detail_page_documents.content_type_id` dependency returns
   `content_type_has_detail_pages` and does not rely on `site.contentRoutes`
   placeholder pruning as the only cleanup.
+- Publish/autosave/restore/discard runtime semantics are explicitly deferred to
+  the later detail-page lifecycle leaves and must not be treated as landed by
+  this storage/schema slice alone.
 - End-to-end settings/action/admin-client/UI/matcher round-trip for
   `detailPageId` is explicitly deferred to `TASK-190-05-03-07`; this leaf only
   defines the shared contract that slice must consume.

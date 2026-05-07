@@ -831,9 +831,12 @@ test("normalizeAssistantActionPlan accepts page upsert collection-link metadata"
           introTitle: "Products",
           introBody: "Browse products.",
           collectionLink: {
+            contentTypeId: "ct-products",
             contentTypeSlug: "products",
             pageRole: "canonical-list-page",
+            listingQueryId: "query-products",
             listingQueryName: "Products Catalog Query",
+            listingTemplateId: "template-products",
             listingTemplateSlug: "products-grid",
           },
         },
@@ -845,11 +848,72 @@ test("normalizeAssistantActionPlan accepts page upsert collection-link metadata"
     type: "page.upsert",
     input: {
       collectionLink: {
+        contentTypeId: "ct-products",
         contentTypeSlug: "products",
         pageRole: "canonical-list-page",
+        listingQueryId: "query-products",
         listingQueryName: "Products Catalog Query",
+        listingTemplateId: "template-products",
         listingTemplateSlug: "products-grid",
       },
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan accepts page upsert blocks that reference trusted media library asset ids", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-products",
+        type: "page.upsert",
+        title: "Create page",
+        description: "Create a catalog page.",
+        input: {
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          introTitle: "Products",
+          introBody: "Browse products.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Browse products",
+                media: {
+                  type: "image",
+                  source: "library",
+                  assetId: "media-hero",
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      blocks: [
+        {
+          data: {
+            media: {
+              type: "image",
+              source: "library",
+              assetId: "media-hero",
+            },
+          },
+        },
+      ],
     },
   });
 });
@@ -1475,6 +1539,49 @@ test("normalizeAssistantActionPlan rejects unsupported media reference targets",
             targetType: "page",
             targetId: "page-1",
             field: "heroImage",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blocks", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-products",
+          type: "page.upsert",
+          title: "Create page",
+          description: "Create a catalog page.",
+          input: {
+            title: "Products",
+            slug: "/products",
+            status: "published",
+            introTitle: "Products",
+            introBody: "Browse products.",
+            blocks: [
+              {
+                id: "hero-1",
+                type: "hero",
+                variant: "centered",
+                data: {
+                  headline: "Browse products",
+                  media: {
+                    type: "image",
+                    source: "external",
+                    src: "https://example.com/hero.jpg",
+                  },
+                },
+              },
+            ],
           },
         },
       ],

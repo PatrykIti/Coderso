@@ -6,6 +6,7 @@ import { getWidget, listWidgetsForSurface } from "../../../widgets/registry";
 import { ensureRuntimeWidgetsRegistered } from "../../../widgets/runtime";
 import type { WidgetBlock, WidgetDefinition } from "../../../widgets/types";
 import { normalizeWidgetBlock } from "../../../widgets/validator";
+import { assertTrustedAssistantMediaReferences } from "../assistantMediaTrust";
 import {
   blueprintPageSectionAliases,
   type BlueprintGatedPageSectionLibraryEntry,
@@ -97,32 +98,6 @@ const toGated = (
   ...(options?.widgetType ? { widgetType: options.widgetType } : {}),
   ...(options?.expectedModule ? { expectedModule: options.expectedModule } : {}),
 });
-
-const rawMediaValuePattern = /^(?:data:|blob:|file:|https?:\/\/)/i;
-const mediaLikeKeyPattern = /(src|image|images|media|asset|video|gallery|url)$/i;
-
-const assertTrustedMediaSectionData = (value: unknown, keyPath: string[] = []) => {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) =>
-      assertTrustedMediaSectionData(entry, [...keyPath, String(index)])
-    );
-    return;
-  }
-  if (!value || typeof value !== "object") {
-    if (
-      typeof value === "string" &&
-      rawMediaValuePattern.test(value) &&
-      keyPath.some((segment) => mediaLikeKeyPattern.test(segment))
-    ) {
-      throw new Error("assistant_blueprint_page_section_media_untrusted");
-    }
-    return;
-  }
-
-  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-    assertTrustedMediaSectionData(nested, [...keyPath, key]);
-  }
-};
 
 const resolveSources = (options?: {
   widgets?: WidgetDefinition[];
@@ -248,7 +223,14 @@ export const buildBlueprintPageSectionSeed = (
   if (!widget) {
     throw new Error(`assistant_blueprint_page_section_widget_missing:${resolution.widgetType}`);
   }
-  assertTrustedMediaSectionData(input?.data);
+  try {
+    assertTrustedAssistantMediaReferences(input?.data);
+  } catch (error) {
+    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") {
+      throw new Error("assistant_blueprint_page_section_media_untrusted");
+    }
+    throw error;
+  }
 
   return normalizeWidgetBlock({
     id: input?.id ?? `section-${alias}`,

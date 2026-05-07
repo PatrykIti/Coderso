@@ -1,7 +1,10 @@
 import type { DocsAnswerSource, DocsSearchHit } from "./docsTypes";
 import type { AssistantActionContext, AssistantAdminRuntimeSnapshot } from "./actionPlanTypes";
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
-import { buildAssistantAdminContext } from "./adminContextService";
+import {
+  buildAssistantAdminContext,
+  sanitizeAssistantPlanningContext,
+} from "./adminContextService";
 import { redactAssistantMetadata, redactAssistantText } from "./assistantRedaction";
 import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPolicy";
 import {
@@ -262,7 +265,7 @@ export const buildProviderPlanningPromptPackage = (
   input: AssistantProviderPlanningPromptInput
 ): AssistantProviderPlanningPromptPackage => {
   const warnings: string[] = [];
-  const context = buildAssistantAdminContext(input.context);
+  const context = buildAssistantAdminContext(sanitizeAssistantPlanningContext(input.context));
   const maxDocs = clampPositiveInteger(input.maxDocs, DEFAULT_MAX_DOCS);
   const maxCharsPerDoc = clampPositiveInteger(input.maxCharsPerDoc, DEFAULT_MAX_CHARS_PER_DOC);
   const maxResourceItemsPerGroup = clampPositiveInteger(

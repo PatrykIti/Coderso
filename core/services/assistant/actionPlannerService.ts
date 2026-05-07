@@ -10,6 +10,7 @@ import type { AssistantProvider } from "./providers/providerTypes";
 import {
   buildAssistantAdminContext,
   readTrustedAssistantResourceCatalog,
+  sanitizeAssistantPlanningContext,
 } from "./adminContextService";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import {
@@ -852,13 +853,14 @@ const applyPromptImpliedDraftHintsWithPolicy = (
 };
 
 const buildProviderLocalRecoveryPlan = (input: AssistantProviderDraftPlanInput) => {
-  const context = buildAssistantAdminContext(input.context);
+  const trustedContext = sanitizeAssistantPlanningContext(input.context);
+  const context = buildAssistantAdminContext(trustedContext);
   const policyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
   const plan = policyPlan
     ? policyPlan
     : planAssistantActions({
         prompt: input.prompt,
-        context: input.context,
+        context: trustedContext,
       });
   const hasRecoveredActions = plan.status === "ready" && plan.actions.length > 0;
   const hasRecoveredInspection =
@@ -987,6 +989,62 @@ const withProviderPlannerMetadata = (
     ],
   });
 
+const requiresProviderLlmGate = (context: AssistantActionContext | undefined) =>
+  context?.includeResourceCatalog === true || Boolean(context?.siteKit);
+
+const buildPreferredBlueprintSetupPlan = (input: {
+  prompt: string;
+  context: AssistantActionContext | undefined;
+}) => {
+  const trustedContext = sanitizeAssistantPlanningContext(input.context);
+  const context = buildAssistantAdminContext(trustedContext);
+  const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  if (
+    routedClassification.promptKind !== "setup_request" ||
+    routedClassification.intentFamily === "unknown"
+  ) {
+    return null;
+  }
+
+  const composedPlan = buildBlueprintComposerSetupPlan({
+    prompt: input.prompt,
+    context: {
+      ...trustedContext,
+      page: context.route ?? trustedContext?.page,
+      locale: context.locale ?? trustedContext?.locale,
+      resourceCatalog: context.resourceCatalog ?? trustedContext?.resourceCatalog,
+      runtimeSnapshot: context.runtimeSnapshot ?? trustedContext?.runtimeSnapshot,
+      activeSurface: context.activeSurface ?? trustedContext?.activeSurface,
+      planningState: context.planningState ?? trustedContext?.planningState,
+    },
+    promptKind: routedClassification.promptKind,
+    intentFamily: routedClassification.intentFamily,
+    normalizedPrompt: routedClassification.normalizedPrompt,
+  });
+
+  if (!composedPlan) return null;
+
+  return finalizeAssistantPlan(
+    {
+      prompt: input.prompt,
+      context: trustedContext,
+    },
+    context,
+    routedClassification,
+    normalizeAssistantActionPlan({
+      ...composedPlan,
+      metadata: {
+        planner: "local",
+        providerDraftUsed: false,
+      },
+      assumptions: [
+        ...composedPlan.assumptions,
+        "Supported mixed setup requests use the composed blueprint planner before provider drafting.",
+      ],
+    })
+  );
+};
+
 export const planAssistantActions = (input: AssistantActionPlanInput): AssistantActionPlan => {
   const context = buildAssistantAdminContext(input.context);
   if (input.context?.siteKit) {
@@ -1086,12 +1144,25 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
 export const planAssistantActionsWithProviderDraft = async (
   input: AssistantProviderDraftPlanInput
 ): Promise<AssistantActionPlan> => {
-  const context = buildAssistantAdminContext(input.context);
-  const routedClassification = buildRoutedClassification(input.prompt, context, input.context);
+  const trustedContext = sanitizeAssistantPlanningContext(input.context);
+  const context = buildAssistantAdminContext(trustedContext);
+  const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  if (requiresProviderLlmGate(trustedContext) && (!input.llmAvailable || !input.provider)) {
+    throw new Error("assistant_llm_unavailable");
+  }
+
+  const preferredBlueprintSetupPlan = buildPreferredBlueprintSetupPlan({
+    prompt: input.prompt,
+    context: trustedContext,
+  });
+  if (preferredBlueprintSetupPlan) {
+    return preferredBlueprintSetupPlan;
+  }
+
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
   if (planningStatePlan) {
     return finalizeAssistantPlan(
-      input,
+      { ...input, context: trustedContext },
       context,
       routedClassification,
       withProviderPlannerMetadata(planningStatePlan, input)
@@ -1119,13 +1190,13 @@ export const planAssistantActionsWithProviderDraft = async (
   }
 
   if (!input.llmAvailable || !input.provider) {
-    return planAssistantActions(input);
+    return planAssistantActions({ ...input, context: trustedContext });
   }
 
   try {
     const promptPackage = buildProviderPlanningPromptPackage({
       prompt: input.prompt,
-      context: input.context,
+      context: trustedContext,
       evidence: input.evidence,
     });
     const response = await input.provider.complete({
@@ -1155,7 +1226,7 @@ export const planAssistantActionsWithProviderDraft = async (
         const localInspection = buildGenericCmsInspectionOperationPlan(input.prompt, context);
         if (localInspection && (localInspection.inspection?.candidates.length ?? 0) > 0) {
           return finalizeAssistantPlan(
-            input,
+            { ...input, context: trustedContext },
             context,
             routedClassification,
             withProviderPlannerMetadata(localInspection, input)
@@ -1163,7 +1234,12 @@ export const planAssistantActionsWithProviderDraft = async (
         }
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
         if (recoveredPlan)
-          return finalizeAssistantPlan(input, context, routedClassification, recoveredPlan);
+          return finalizeAssistantPlan(
+            { ...input, context: trustedContext },
+            context,
+            routedClassification,
+            recoveredPlan
+          );
       }
       if (
         operationPlan.status === "needs_input" ||
@@ -1173,35 +1249,40 @@ export const planAssistantActionsWithProviderDraft = async (
       ) {
         const recoveredPlan = buildProviderLocalRecoveryPlan(input);
         if (recoveredPlan)
-          return finalizeAssistantPlan(input, context, routedClassification, recoveredPlan);
+          return finalizeAssistantPlan(
+            { ...input, context: trustedContext },
+            context,
+            routedClassification,
+            recoveredPlan
+          );
       }
       if (
         isBroadDestructivePromptWithPolicy(input.prompt) &&
         hasDestructiveActions(operationPlan)
       ) {
-        return planAssistantActions(input);
+        return planAssistantActions({ ...input, context: trustedContext });
       }
       if (hasDestructiveCountMismatchWithPolicy(input.prompt, operationPlan)) {
-        return planAssistantActions(input);
+        return planAssistantActions({ ...input, context: trustedContext });
       }
       if (hasActionCountMismatchWithPolicy(input.prompt, operationPlan)) {
-        return planAssistantActions(input);
+        return planAssistantActions({ ...input, context: trustedContext });
       }
       if (hasPromptDestructiveIntentMismatchWithPolicy(input.prompt, operationPlan)) {
-        return planAssistantActions(input);
+        return planAssistantActions({ ...input, context: trustedContext });
       }
       if (hasPromptImpliedFieldMismatchWithPolicy(input.prompt, operationPlan)) {
-        return planAssistantActions(input);
+        return planAssistantActions({ ...input, context: trustedContext });
       }
       return finalizeAssistantPlan(
-        input,
+        { ...input, context: trustedContext },
         context,
         routedClassification,
         withProviderPlannerMetadata(operationPlan, input)
       );
     }
-    return planAssistantActions(input);
+    return planAssistantActions({ ...input, context: trustedContext });
   } catch {
-    return planAssistantActions(input);
+    return planAssistantActions({ ...input, context: trustedContext });
   }
 };

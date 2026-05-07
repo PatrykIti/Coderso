@@ -3770,6 +3770,82 @@ test("executeAssistantActionPlan creates product inquiry catalog and form", asyn
   ).toBe(deps.__state.contentTypes[0]?.id);
 });
 
+test("executeAssistantActionPlan resolves supporting page collection links from content type slugs", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+
+  const plan: AssistantActionPlan = {
+    id: "plan-supporting-page-collection-link",
+    status: "ready",
+    intentId: "supporting-page-collection-link",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create supporting page",
+    answer: "I can create a supporting products page.",
+    summary: "Supporting products page with an explicit collection link.",
+    confidence: 0.82,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-products-comparison",
+        type: "page.upsert",
+        title: "Create products comparison page",
+        description: "Create a supporting page linked to the products collection.",
+        input: {
+          title: "Compare Products",
+          slug: "/compare-products",
+          status: "draft",
+          introTitle: "Compare products",
+          introBody: "Pick the right model.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Compare products",
+              },
+            },
+          ],
+          collectionLink: {
+            contentTypeSlug: "products",
+            pageRole: "supporting-page",
+            compositionKey: "comparison",
+          },
+        },
+      },
+    ],
+  };
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-supporting-page-collection-link",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(
+    (deps.__state.pages[0]?.currentData.settings as { collectionLink?: Record<string, unknown> })
+      ?.collectionLink
+  ).toMatchObject({
+    contentTypeId: contentType.id,
+    pageRole: "supporting-page",
+    compositionKey: "comparison",
+  });
+});
+
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {
   const deps = createDeps();
   const initialPlan = buildHouseProjectsCatalogPlan();

@@ -145,9 +145,9 @@ Rules:
   current widget/preset owner seam exposes a deterministic mapping.
 - Section-library resolution stays aligned with current widget pack / preset
   metadata instead of drifting into a second section registry.
-- Media-bearing section fixtures cover existing media ids for hero/gallery/card
-  image fields and prove raw upload bytes are gated before widget data is
-  assembled.
+- Media-bearing section fixtures cover trusted existing media-library ids for
+  current section data shapes and prove raw upload bytes / raw URLs are gated
+  before widget data is assembled.
 
 ## Documentation Updates Required
 

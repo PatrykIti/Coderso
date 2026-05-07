@@ -428,13 +428,14 @@ const readListingQueryContentTypeId = (listingQuery: unknown) => {
   return readString(sourceConfig.contentTypeId);
 };
 
-const resolveAssistantPageCollectionLink = (input: {
+const resolveAssistantPageCollectionLink = async (input: {
   action: AssistantPageUpsertAction;
   existing: unknown;
   simplePageMode: boolean;
   listingQuery: unknown;
   listingTemplate: unknown;
-}): PageCollectionLink | null => {
+  deps: Pick<ActionExecutorDeps, "getContentTypeBySlug">;
+}): Promise<PageCollectionLink | null> => {
   const existingCollectionLink = readStoredPageCollectionLink(input.existing);
   const requested = input.action.input.collectionLink;
 
@@ -457,8 +458,18 @@ const resolveAssistantPageCollectionLink = (input: {
     };
   }
 
+  const requestedContentTypeId = readString(requested.contentTypeId);
+  const requestedContentTypeSlug = readString(requested.contentTypeSlug);
+  const requestedListingQueryId = readString(requested.listingQueryId);
+  const requestedListingTemplateId = readString(requested.listingTemplateId);
+  const requestedContentType =
+    !requestedContentTypeId && requestedContentTypeSlug
+      ? await input.deps.getContentTypeBySlug(requestedContentTypeSlug)
+      : null;
   const contentTypeId =
+    requestedContentTypeId ??
     readListingQueryContentTypeId(input.listingQuery) ??
+    requestedContentType?.id ??
     existingCollectionLink?.contentTypeId ??
     null;
   if (!contentTypeId) {
@@ -471,16 +482,20 @@ const resolveAssistantPageCollectionLink = (input: {
     contentTypeId,
     pageRole: requested.pageRole,
     ...(compositionKey ? { compositionKey } : {}),
-    ...(isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
-      ? { listingQueryId: input.listingQuery.id }
-      : existingCollectionLink?.listingQueryId
-        ? { listingQueryId: existingCollectionLink.listingQueryId }
-        : {}),
-    ...(isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
-      ? { listingTemplateId: input.listingTemplate.id }
-      : existingCollectionLink?.listingTemplateId
-        ? { listingTemplateId: existingCollectionLink.listingTemplateId }
-        : {}),
+    ...(requestedListingQueryId
+      ? { listingQueryId: requestedListingQueryId }
+      : isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
+        ? { listingQueryId: input.listingQuery.id }
+        : existingCollectionLink?.listingQueryId
+          ? { listingQueryId: existingCollectionLink.listingQueryId }
+          : {}),
+    ...(requestedListingTemplateId
+      ? { listingTemplateId: requestedListingTemplateId }
+      : isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
+        ? { listingTemplateId: input.listingTemplate.id }
+        : existingCollectionLink?.listingTemplateId
+          ? { listingTemplateId: existingCollectionLink.listingTemplateId }
+          : {}),
   };
 };
 
@@ -4003,12 +4018,13 @@ const executePageAction = async (
           successMessage: action.input.formEmbed.successMessage,
         }
       : null;
-  const resolvedCollectionLink = resolveAssistantPageCollectionLink({
+  const resolvedCollectionLink = await resolveAssistantPageCollectionLink({
     action,
     existing,
     simplePageMode,
     listingQuery,
     listingTemplate,
+    deps,
   });
   const data = simplePageMode
     ? buildSimplePageData({

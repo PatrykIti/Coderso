@@ -131,3 +131,79 @@ test("mergeBlueprintSchemas rejects secret-like defaults", () => {
     ])
   ).toThrowError('Field "apiKey" cannot define a secret-like default value.');
 });
+
+test("mergeBlueprintSchemas preserves Mabudo-like house-project pricing and classification fields", () => {
+  const merged = mergeBlueprintSchemas([
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["projectCode", "priceFrom", "garageType"],
+      properties: {
+        projectCode: {
+          type: "string",
+          title: "Project code",
+          xFieldType: "text",
+        },
+        priceFrom: {
+          type: "number",
+          title: "Project price",
+          xFieldType: "number",
+        },
+        garageType: {
+          type: "string",
+          title: "Garage",
+          enum: ["none", "single"],
+          xFieldType: "select",
+          xFieldConfig: {
+            select: {
+              options: ["none", "single"],
+            },
+          },
+        },
+      },
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["pricePackageStart", "roofType", "houseStyle"],
+      properties: {
+        pricePackageStart: {
+          type: "number",
+          title: "Start package",
+          xFieldType: "number",
+        },
+        roofType: {
+          type: "string",
+          title: "Roof type",
+          enum: ["gable", "flat"],
+          xFieldType: "select",
+        },
+        houseStyle: {
+          type: "string",
+          title: "Style",
+          enum: ["modern", "classic"],
+          xFieldType: "select",
+        },
+      },
+    },
+  ]);
+
+  expect(merged).toMatchObject({
+    required: [
+      "projectCode",
+      "priceFrom",
+      "garageType",
+      "pricePackageStart",
+      "roofType",
+      "houseStyle",
+    ],
+    properties: {
+      projectCode: { type: "string" },
+      priceFrom: { type: "number" },
+      pricePackageStart: { type: "number" },
+      roofType: { enum: ["gable", "flat"] },
+      houseStyle: { enum: ["modern", "classic"] },
+      garageType: { enum: ["none", "single"] },
+    },
+  });
+});

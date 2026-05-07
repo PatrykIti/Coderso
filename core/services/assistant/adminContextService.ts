@@ -376,3 +376,14 @@ export const buildAssistantAdminContext = (
 
 export const readTrustedAssistantResourceCatalog = (input: AssistantActionContext | undefined) =>
   input?.includeResourceCatalog === true ? input.resourceCatalog : undefined;
+
+export const sanitizeAssistantPlanningContext = (
+  input: AssistantActionContext | undefined
+): AssistantActionContext | undefined => {
+  if (!input) return undefined;
+  const trustedResourceCatalog = readTrustedAssistantResourceCatalog(input);
+  return {
+    ...input,
+    ...(trustedResourceCatalog !== undefined ? { resourceCatalog: trustedResourceCatalog } : {}),
+  };
+};
