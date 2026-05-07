@@ -3321,6 +3321,47 @@ test("planAssistantActionsWithProviderDraft recovers empty provider inspection t
   );
 });
 
+test("planAssistantActionsWithProviderDraft ignores untrusted resource catalogs during provider local recovery", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "page",
+        surfaceHint: "Pages",
+        targetQuery: { exactName: "Pages" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      })
+    ),
+    context: {
+      page: "/admin/pages",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          { id: "page-pysiek", title: "Pysiek Mysiek", slug: "/pysiek-mysiek", status: "draft" },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.candidates).toEqual([]);
+});
+
 test("planAssistantActionsWithProviderDraft falls back when provider is unavailable", async () => {
   const plan = await planAssistantActionsWithProviderDraft({
     prompt: "Create a product catalog with inquiry form and a blog hub.",

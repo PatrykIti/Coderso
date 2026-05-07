@@ -620,7 +620,7 @@ test("assistant action plan route blocks site-kit planning when LLM Guide is una
     expect(apiError.code).toBe("assistant_llm_unavailable");
     expect(apiError.status).toBe(409);
     expect(apiError.message).toBe(
-      "LLM Guide must be configured before catalog-backed or site-kit planning"
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
     );
     expect(apiError.details).toEqual({ requestId: "req-site-kit-unavailable" });
   }
@@ -673,9 +673,171 @@ test("assistant action plan route blocks catalog-backed planning when LLM Guide 
     expect(apiError.code).toBe("assistant_llm_unavailable");
     expect(apiError.status).toBe(409);
     expect(apiError.message).toBe(
-      "LLM Guide must be configured before catalog-backed or site-kit planning"
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
     );
     expect(apiError.details).toEqual({ requestId: "req-catalog-unavailable" });
+  }
+});
+
+test("assistant action dry-run route blocks site-kit actions when LLM Guide is unavailable", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const plan = {
+    id: "plan-site-kit-install",
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Install site kit",
+    answer: "I can install the site kit.",
+    summary: "Install the selected site kit.",
+    confidence: 0.8,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-install-automotive-workshop",
+        type: "site-kit.install",
+        title: "Install Automotive Workshop",
+        description: "Apply the site kit.",
+        input: {
+          businessType: "automotive_workshop",
+          goals: ["lead_generation"],
+          locale: "en",
+          preview: {
+            selectedKitId: "automotive-workshop",
+            selectedKitTitle: "Automotive Workshop",
+            enabledStepIds: ["settings"],
+            plan: { confidence: 80 },
+          },
+          selectedKitId: "automotive-workshop",
+          enabledStepIds: ["settings"],
+          continueOnError: true,
+        },
+      },
+    ],
+  };
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan },
+      requestId: "req-site-kit-dry-run-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
+    );
+    expect(apiError.details).toEqual({ requestId: "req-site-kit-dry-run-unavailable" });
+  }
+});
+
+test("assistant action execute route blocks site-kit actions when LLM Guide is unavailable", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const plan = {
+    id: "plan-site-kit-install",
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Install site kit",
+    answer: "I can install the site kit.",
+    summary: "Install the selected site kit.",
+    confidence: 0.8,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-install-automotive-workshop",
+        type: "site-kit.install",
+        title: "Install Automotive Workshop",
+        description: "Apply the site kit.",
+        input: {
+          businessType: "automotive_workshop",
+          goals: ["lead_generation"],
+          locale: "en",
+          preview: {
+            selectedKitId: "automotive-workshop",
+            selectedKitTitle: "Automotive Workshop",
+            enabledStepIds: ["settings"],
+            plan: { confidence: 80 },
+          },
+          selectedKitId: "automotive-workshop",
+          enabledStepIds: ["settings"],
+          continueOnError: true,
+        },
+      },
+    ],
+  };
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan, idempotencyKey: "assistant-site-kit-unavailable" },
+      requestId: "req-site-kit-execute-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
+    );
+    expect(apiError.details).toEqual({ requestId: "req-site-kit-execute-unavailable" });
   }
 });
 

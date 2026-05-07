@@ -462,6 +462,36 @@ const resolveAssistantPageCollectionLink = async (input: {
   const requestedContentTypeSlug = readString(requested.contentTypeSlug);
   const requestedListingQueryId = readString(requested.listingQueryId);
   const requestedListingTemplateId = readString(requested.listingTemplateId);
+  const requestedListingQueryName = readString(requested.listingQueryName);
+  const requestedListingTemplateSlug = readString(requested.listingTemplateSlug);
+  const resolvedListingQueryId =
+    isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
+      ? input.listingQuery.id
+      : null;
+  const resolvedListingTemplateId =
+    isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
+      ? input.listingTemplate.id
+      : null;
+  if (requestedListingQueryName && !input.listingQuery) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (requestedListingTemplateSlug && !input.listingTemplate) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (
+    requestedListingQueryId &&
+    resolvedListingQueryId &&
+    requestedListingQueryId !== resolvedListingQueryId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  if (
+    requestedListingTemplateId &&
+    resolvedListingTemplateId &&
+    requestedListingTemplateId !== resolvedListingTemplateId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
   const requestedContentType =
     !requestedContentTypeId && requestedContentTypeSlug
       ? await input.deps.getContentTypeBySlug(requestedContentTypeSlug)
@@ -492,15 +522,15 @@ const resolveAssistantPageCollectionLink = async (input: {
     ...(compositionKey ? { compositionKey } : {}),
     ...(requestedListingQueryId
       ? { listingQueryId: requestedListingQueryId }
-      : isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
-        ? { listingQueryId: input.listingQuery.id }
+      : resolvedListingQueryId
+        ? { listingQueryId: resolvedListingQueryId }
         : existingCollectionLink?.listingQueryId
           ? { listingQueryId: existingCollectionLink.listingQueryId }
           : {}),
     ...(requestedListingTemplateId
       ? { listingTemplateId: requestedListingTemplateId }
-      : isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
-        ? { listingTemplateId: input.listingTemplate.id }
+      : resolvedListingTemplateId
+        ? { listingTemplateId: resolvedListingTemplateId }
         : existingCollectionLink?.listingTemplateId
           ? { listingTemplateId: existingCollectionLink.listingTemplateId }
           : {}),

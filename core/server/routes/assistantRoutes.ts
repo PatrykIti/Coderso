@@ -168,7 +168,7 @@ const mapAssistantError = (error: unknown) => {
     case "assistant_llm_unavailable":
       return {
         code: "assistant_llm_unavailable",
-        message: "LLM Guide must be configured before catalog-backed or site-kit planning",
+        message: "LLM Guide must be configured before catalog-backed planning or site-kit actions",
         status: 409,
       };
     case "assistant_action_plan_invalid":

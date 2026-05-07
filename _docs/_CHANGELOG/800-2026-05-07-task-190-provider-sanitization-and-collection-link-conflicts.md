@@ -29,6 +29,8 @@
 - Added provider prompt packaging evidence for ignored untrusted catalogs.
 - Added route-level coverage for trusted catalog handoff into locally composed
   plans plus catalog-backed LLM unavailability gating.
+- Added execute-path coverage for supporting-page locator resolution and
+  preview-path coverage for cross-collection conflict surfacing.
 - Expanded media trust regression tests to cover `https`, `data`, `blob`, and
   `file` raw media sources, while proving non-media URL fields stay allowed.
 
