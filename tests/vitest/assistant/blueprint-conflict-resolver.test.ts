@@ -135,6 +135,67 @@ test("resolveBlueprintCompositionConflicts reports field_type_conflict for incom
   ]);
 });
 
+test("resolveBlueprintCompositionConflicts accepts additive content schema merges for the same content type", () => {
+  const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const additive = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const contentType = additive.actions.find((action) => action.type === "content-type.upsert");
+  if (!contentType || contentType.type !== "content-type.upsert") {
+    throw new Error("content_type_upsert_missing");
+  }
+  const schemaClone = structuredClone(contentType.input.schema) as {
+    required?: string[];
+    properties?: Record<string, Record<string, unknown>>;
+  };
+  schemaClone.required = [...(schemaClone.required ?? []), "deliveryTimeDays"];
+  schemaClone.properties = {
+    ...(schemaClone.properties ?? {}),
+    deliveryTimeDays: {
+      type: "number",
+      title: "Delivery time",
+      xFieldType: "number",
+      xFieldConfig: {
+        layout: { tab: "commercial", section: "Commercial", width: "half" },
+      },
+    },
+    projectStatus: {
+      ...(schemaClone.properties?.projectStatus ?? {}),
+      enum: ["active", "coming-soon", "archived", "sold-out"],
+      xFieldConfig: {
+        ...(schemaClone.properties?.projectStatus?.xFieldConfig as Record<string, unknown>),
+        layout: { tab: "commercial", section: "Commercial", width: "half" },
+      },
+    },
+  };
+  contentType.input.schema = schemaClone;
+
+  const conflicts = resolveBlueprintCompositionConflicts({
+    fragments: [
+      {
+        capabilityId: "product-catalog",
+        planId: base.id,
+        title: base.title,
+        assumptions: base.assumptions,
+        actions: base.actions,
+      },
+      {
+        capabilityId: "product-catalog-addon",
+        planId: additive.id,
+        title: additive.title,
+        assumptions: additive.assumptions,
+        actions: additive.actions,
+      },
+    ],
+  });
+
+  expect(conflicts).toEqual([]);
+});
+
 test("resolveBlueprintCompositionConflicts reports resource_slug_conflict for incompatible listing template inputs", () => {
   const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

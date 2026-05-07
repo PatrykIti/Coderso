@@ -58,6 +58,111 @@ test("assembleComposedBlueprintPlan keeps the existing product inquiry action sh
   });
 });
 
+test("assembleComposedBlueprintPlan merges compatible content schemas into one content-type action", () => {
+  const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const additive = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const contentType = additive.actions.find((action) => action.type === "content-type.upsert");
+  if (!contentType || contentType.type !== "content-type.upsert") {
+    throw new Error("content_type_upsert_missing");
+  }
+  const schemaClone = structuredClone(contentType.input.schema) as {
+    required?: string[];
+    properties?: Record<string, Record<string, unknown>>;
+  };
+  schemaClone.required = [...(schemaClone.required ?? []), "deliveryTimeDays"];
+  schemaClone.properties = {
+    ...(schemaClone.properties ?? {}),
+    deliveryTimeDays: {
+      type: "number",
+      title: "Delivery time",
+      xFieldType: "number",
+      xFieldConfig: {
+        layout: { tab: "commercial", section: "Commercial", width: "half" },
+      },
+    },
+    projectStatus: {
+      ...(schemaClone.properties?.projectStatus ?? {}),
+      enum: ["active", "coming-soon", "archived", "sold-out"],
+      xFieldConfig: {
+        ...(schemaClone.properties?.projectStatus?.xFieldConfig as Record<string, unknown>),
+        layout: { tab: "commercial", section: "Commercial", width: "half" },
+      },
+    },
+  };
+  contentType.input.schema = schemaClone;
+
+  const registration = getBlueprintCapabilityRegistration("product-catalog");
+  if (!registration) {
+    throw new Error("registration_missing");
+  }
+
+  const fragments = [
+    {
+      capabilityId: "product-catalog",
+      planId: base.id,
+      title: base.title,
+      assumptions: base.assumptions,
+      actions: base.actions,
+    },
+    {
+      capabilityId: "product-catalog-addon",
+      planId: additive.id,
+      title: additive.title,
+      assumptions: additive.assumptions,
+      actions: additive.actions,
+    },
+  ];
+
+  const plan = assembleComposedBlueprintPlan({
+    prompt: "Create a product catalog with an extra delivery-time field.",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    graph: {
+      primary: {
+        capabilityId: registration.capability.id,
+        role: "primary",
+        score: 100,
+        matchedSignals: ["intent:product_catalog"],
+        reasons: ["Primary product catalog."],
+        capability: registration.capability,
+      },
+      adjuncts: [],
+      gated: [],
+      resources: [],
+      conflicts: resolveBlueprintCompositionConflicts({ fragments }),
+      fragments,
+      selectedCapabilityIds: [registration.capability.id, "product-catalog-addon"],
+    },
+  });
+
+  const contentTypeAction = plan?.actions.find((action) => action.type === "content-type.upsert");
+  expect(contentTypeAction).toMatchObject({
+    type: "content-type.upsert",
+    input: {
+      slug: "products",
+      schema: {
+        required: expect.arrayContaining(["deliveryTimeDays"]),
+        properties: {
+          deliveryTimeDays: {
+            type: "number",
+            xFieldType: "number",
+          },
+          projectStatus: {
+            enum: ["active", "coming-soon", "archived", "sold-out"],
+          },
+        },
+      },
+    },
+  });
+  expect(plan?.actions.filter((action) => action.type === "content-type.upsert")).toHaveLength(1);
+});
+
 test("assembleComposedBlueprintPlan appends independent adjunct pages without duplicating catalog resources", () => {
   const graph = buildBlueprintCompositionGraph({
     promptKind: "setup_request",

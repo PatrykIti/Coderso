@@ -2,40 +2,7 @@ import type { AssistantPlannedAction } from "../actionPlanTypes";
 import { normalizeBlueprintConflict, type BlueprintConflict } from "./blueprintCapabilityTypes";
 import { buildBlueprintActionMergeKey, mergeBlueprintActions } from "./blueprintActionAssembler";
 import type { BlueprintCompositionGraph } from "./blueprintCapabilityTypes";
-
-const readRecord = (value: unknown): Record<string, unknown> | null =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-
-const readString = (value: unknown) =>
-  typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-
-const readSchemaFieldType = (value: unknown) => {
-  const record = readRecord(value);
-  if (!record) return null;
-  return readString(record.xFieldType) ?? readString(record.type);
-};
-
-const findFieldTypeConflict = (
-  leftSchema: Record<string, unknown>,
-  rightSchema: Record<string, unknown>
-) => {
-  const leftProperties = readRecord(leftSchema.properties);
-  const rightProperties = readRecord(rightSchema.properties);
-  if (!leftProperties || !rightProperties) return null;
-
-  for (const [fieldName, leftField] of Object.entries(leftProperties)) {
-    const rightField = rightProperties[fieldName];
-    if (!rightField) continue;
-    const leftType = readSchemaFieldType(leftField);
-    const rightType = readSchemaFieldType(rightField);
-    if (!leftType || !rightType || leftType === rightType) continue;
-    return { fieldName, leftType, rightType };
-  }
-
-  return null;
-};
+import { BlueprintSchemaMergeError, mergeBlueprintSchemas } from "./blueprintSchemaMerger";
 
 const buildTypedConflict = (input: {
   current: AssistantPlannedAction;
@@ -66,20 +33,28 @@ const buildTypedConflict = (input: {
         message: `Conflicting page setup targets the same route "${current.input.slug}" with incompatible page composition inputs.`,
       });
     case "content-type.upsert": {
-      const other = previous as typeof current;
-      const fieldConflict = findFieldTypeConflict(
-        current.input.schema as Record<string, unknown>,
-        other.input.schema as Record<string, unknown>
-      );
-      if (fieldConflict) {
-        return normalizeBlueprintConflict({
-          code: "field_type_conflict",
-          severity: "error",
-          capabilityId,
-          actionType: current.type,
-          resourceKey: `content-type:${current.input.slug}:field:${fieldConflict.fieldName}`,
-          message: `Conflicting content model field "${fieldConflict.fieldName}" on "${current.input.slug}" uses incompatible types (${fieldConflict.leftType} vs ${fieldConflict.rightType}).`,
-        });
+      try {
+        mergeBlueprintSchemas([
+          current.input.schema as Record<string, unknown>,
+          (previous as typeof current).input.schema as Record<string, unknown>,
+        ]);
+      } catch (error) {
+        if (
+          error instanceof BlueprintSchemaMergeError &&
+          error.code === "field_type_conflict" &&
+          error.fieldName &&
+          error.leftType &&
+          error.rightType
+        ) {
+          return normalizeBlueprintConflict({
+            code: "field_type_conflict",
+            severity: "error",
+            capabilityId,
+            actionType: current.type,
+            resourceKey: `content-type:${current.input.slug}:field:${error.fieldName}`,
+            message: `Conflicting content model field "${error.fieldName}" on "${current.input.slug}" uses incompatible types (${error.leftType} vs ${error.rightType}).`,
+          });
+        }
       }
       return normalizeBlueprintConflict({
         code: "resource_slug_conflict",

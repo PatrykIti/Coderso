@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 74 tasks
-- **In Progress:** 9 tasks
-- **Done:** 1470 tasks
+- **To Do:** 72 tasks
+- **In Progress:** 10 tasks
+- **Done:** 1471 tasks
 
 ---
 
@@ -38,8 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190-04 | Field, Facet, and Card Merge Foundation | High | Large | Business area: merge content models, listing filters, and listing card configs |
-| TASK-190-04-01 | Content Schema Field Merge Engine | High | Large | Technical leaf: strict schema field merge and validation |
 | TASK-190-04-02 | Listing Facet and Card Config Merge Engine | High | Large | Technical leaf: merge listing filter facets and card display fields |
 | TASK-190-05 | Page Section and Widget Composer | High | Large | Business area: compose public page sections from existing widget contracts |
 | TASK-190-05-01 | Page Section Library and Composition Slots | High | Medium | Technical leaf: section kinds, slots, and widget capability map |
@@ -89,9 +87,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, and initial action assembly are landed; the local setup planner now uses the composed path for supported mixed-capability and primary-plus-gated setup requests, while merge-engine, detail-page, workspace, review metadata, and no-duplicate closure waves remain |
+| TASK-190 | Blueprint Composer Foundation | High | Very Large | In progress: capability manifest/registry, candidate planning, provider/shadow safety layer, deterministic composition graph/conflicts, initial action assembly, and content-schema merge are landed; the local setup planner now uses the composed path for supported mixed-capability and primary-plus-gated setup requests, while listing facet/card merge, detail-page, workspace, review metadata, and no-duplicate closure waves remain |
 | TASK-190-03 | Composition Graph and Conflict Policy | High | Large | In progress: deterministic graph fragments plus typed route/resource/field conflicts and blocking gated-domain surfacing are landed for the current capability packs, while broader media/permission needs-input families remain open |
 | TASK-190-03-02 | Conflict Resolver, Stable Keys, and Needs Input | High | Large | In progress: duplicate-action merge keys now classify route/resource/field conflicts and blocking gated domains into a closed typed conflict contract consumed by the assembler/planner needs-input path, while broader media/permission surfacing remains open |
+| TASK-190-04 | Field, Facet, and Card Merge Foundation | High | Large | In progress: content schema merge is landed through validator-backed `content-type.upsert` composition, while listing facet/card merge remains open |
 | TASK-190-07 | Action Assembly, Execution, and No-Duplicate Safety | High | Large | In progress: internal typed-action assembly is landed for the current fragments; the local setup planner now uses the composed path for supported mixed-capability and primary-plus-gated setup requests, while DB-backed no-duplicate checks, review metadata, and deeper cutover remain |
 | TASK-190-07-01 | Composition Action Assembler | High | Large | In progress: current fragments assemble deterministically in tests, the local setup planner now uses the composed path for supported mixed-capability and primary-plus-gated setup requests, and blocking graph conflicts downgrade into typed needs-input/gated plans while detail/media dependency work remains deferred |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
@@ -113,6 +112,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-190-01 | Blueprint Capability Manifest and Registry | High | Large | Done: current blueprint packs and adjunct/gated modules now have a strict manifest/registry layer with latent detail-page metadata |
 | TASK-190-01-02 | Migrate Current Blueprints to Capability Registry | High | Medium | Done: current pack builders are registered as capabilities without changing their single-pack plan output |
 | TASK-190-01-01 | Capability Types, Normalizer, and Invariants | High | Medium | Done: strict capability schema rejects unsafe keys, duplicate ids, raw media payload metadata, and secret-like defaults |
+| TASK-190-04-01 | Content Schema Field Merge Engine | High | Large | Done: compatible `content-type.upsert` fragments now merge through validator-backed schema ownership, while incompatible field types and secret-like defaults still fail closed |
 | TASK-251 | Custom Screens Workspace Preview and Builder Interaction Hardening | High | Large | Done: preview is record-backed and cache-aware, list canvas reorders in-header, and Data uses widget-owned prop contracts |
 | TASK-251-01 | Workspace Preview Parity and Record-Backed Editor Preview | High | Large | Done: builder canvas and preview dialog now share cached-first first-record ownership plus a wider Pages-like preview shell |
 | TASK-251-01-02 | First-Record Preview Data for Editor View Canvas | High | Medium | Done: builder/editor preview now hydrates from `entries:list:<typeSlug>` with explicit fallback notes for no-record and read-failed states |

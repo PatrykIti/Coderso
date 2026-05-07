@@ -75,6 +75,7 @@ Current implemented guide blueprint:
   - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
   - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path, while single-pack setup/refinement and deeper detail/media/no-duplicate cutover work still remain on the later leaves
+  - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - catalog capabilities can already describe latent `detail-page` intent in metadata, but executable detail-page/runtime/admin flows remain deferred to later `TASK-190` slices
   - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
   - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live

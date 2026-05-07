@@ -3045,6 +3045,10 @@ Generic mutation planning maps resolved CMS operation drafts to existing typed
 actions where a safe action contract already exists. Unsupported resources,
 ambiguous targets, missing field values, or broad destructive prompts return
 `needs_input` rather than arbitrary patches.
+For composed setup requests, compatible `content-type.upsert` fragments can now
+merge server-side into one schema-validated action; incompatible field types or
+secret-like defaults still fail closed and surface typed conflict/needs-input
+behavior instead of broad schema patches.
 The generic action mapper must also find an executable action and field mapping
 in `assistantOperationPolicy`; strict action schemas remain the final validator
 for every returned action. Bulk/count and filtered-all destructive behavior is

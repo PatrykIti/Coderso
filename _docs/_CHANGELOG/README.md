@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 793 | 2026-05-07 | TASK-190 content schema merge slice | Assistant/Core |
 | 792 | 2026-05-06 | TASK-190 conflict needs-input slice | Assistant/Core |
 | 791 | 2026-05-06 | TASK-190 provider and shadow diagnostics slice | Assistant/Core |
 | 790 | 2026-05-05 | TASK-190 blueprint composer foundation slice 1 | Assistant/Core |

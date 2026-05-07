@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** In Progress (2026-05-06)
+**Status:** In Progress (2026-05-07)
 
 ---
 
@@ -56,6 +56,9 @@ setup planner for supported mixed-capability and primary-plus-gated setup
 requests, but single-pack setup/refinement routing plus the broader
 detail/media/no-duplicate cutover stay deferred until the later rollout leaves
 close.
+Compatible `content-type.upsert` fragments can now also merge into one
+validator-backed content schema action, while listing facet/card merge and the
+later detail-page/workspace/no-duplicate slices remain deferred.
 
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service

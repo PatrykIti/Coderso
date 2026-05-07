@@ -14,6 +14,7 @@ import {
   type BlueprintCompositionGraph,
   type BlueprintConflict,
 } from "./blueprintCapabilityTypes";
+import { mergeBlueprintSchemas } from "./blueprintSchemaMerger";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
@@ -409,8 +410,26 @@ export const mergeBlueprintActions = (
   switch (left.type) {
     case "setting.content-route.upsert":
       return isDeepStrictEqual(left.input, right.input) ? left : null;
-    case "content-type.upsert":
-      return isDeepStrictEqual(left.input, right.input) ? left : null;
+    case "content-type.upsert": {
+      const other = right as typeof left;
+      if (left.input.slug !== other.input.slug || left.input.name !== other.input.name) {
+        return null;
+      }
+      try {
+        return {
+          ...left,
+          input: {
+            ...left.input,
+            schema: mergeBlueprintSchemas([
+              left.input.schema as Record<string, unknown>,
+              other.input.schema as Record<string, unknown>,
+            ]),
+          },
+        };
+      } catch {
+        return null;
+      }
+    }
     case "custom-screen.upsert": {
       const other = right as typeof left;
       if (
