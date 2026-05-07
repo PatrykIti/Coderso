@@ -415,6 +415,244 @@ test("assembleComposedBlueprintPlan returns needs_input when merged listing face
   );
 });
 
+test("assembleComposedBlueprintPlan downgrades incompatible merged listing filters into needs_input instead of throwing", () => {
+  const base = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const conflicting = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const basePage = base.actions.find((action) => action.type === "page.upsert");
+  const page = conflicting.actions.find((action) => action.type === "page.upsert");
+  if (!basePage || basePage.type !== "page.upsert" || !page || page.type !== "page.upsert") {
+    throw new Error("page_upsert_missing");
+  }
+  basePage.input.listingFilters = {
+    title: "Filter products",
+    description: "Narrow results.",
+    autoApply: true,
+    showSearch: true,
+    searchPlaceholder: "Search",
+    searchLabel: "Search",
+    applyLabel: "Apply",
+    facets: [
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "data.projectStatus",
+        op: "in",
+        options: [{ value: "active", label: "Active" }],
+      },
+    ],
+  };
+  page.input.listingFilters = {
+    title: "Filter products",
+    description: "Narrow results.",
+    autoApply: true,
+    showSearch: true,
+    searchPlaceholder: "Search",
+    searchLabel: "Search",
+    applyLabel: "Apply",
+    facets: [
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "data.projectStatus",
+        op: "in",
+        options: [{ value: "active", label: "Available" }],
+      },
+    ],
+  };
+
+  const registration = getBlueprintCapabilityRegistration("product-catalog");
+  if (!registration) {
+    throw new Error("registration_missing");
+  }
+
+  const fragments = [
+    {
+      capabilityId: "product-catalog",
+      planId: base.id,
+      title: base.title,
+      assumptions: base.assumptions,
+      actions: base.actions,
+    },
+    {
+      capabilityId: "product-catalog-conflict",
+      planId: conflicting.id,
+      title: conflicting.title,
+      assumptions: conflicting.assumptions,
+      actions: conflicting.actions,
+    },
+  ];
+
+  const plan = assembleComposedBlueprintPlan({
+    prompt: "Create a product catalog with conflicting listing filters.",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    graph: {
+      primary: {
+        capabilityId: registration.capability.id,
+        role: "primary",
+        score: 100,
+        matchedSignals: ["intent:product_catalog"],
+        reasons: ["Primary product catalog."],
+        capability: registration.capability,
+      },
+      adjuncts: [],
+      gated: [],
+      resources: [],
+      conflicts: resolveBlueprintCompositionConflicts({ fragments }),
+      fragments,
+      selectedCapabilityIds: [registration.capability.id],
+    },
+  });
+
+  expect(plan).toMatchObject({
+    status: "needs_input",
+    responseKind: "needs_input",
+    actions: [],
+  });
+  expect(plan?.questions).toEqual([
+    expect.objectContaining({
+      id: expect.stringContaining("blueprint-route-conflict"),
+    }),
+  ]);
+});
+
+test("assembleComposedBlueprintPlan widens projection fields for each query when pages share one listing template", () => {
+  const registration = getBlueprintCapabilityRegistration("product-catalog");
+  if (!registration) {
+    throw new Error("registration_missing");
+  }
+
+  const primaryPlan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const secondaryPlan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const primaryQuery = primaryPlan.actions.find((action) => action.type === "listing-query.upsert");
+  const secondaryQuery = secondaryPlan.actions.find(
+    (action) => action.type === "listing-query.upsert"
+  );
+  const secondaryPage = secondaryPlan.actions.find((action) => action.type === "page.upsert");
+  const secondaryContentType = secondaryPlan.actions.find(
+    (action) => action.type === "content-type.upsert"
+  );
+  const secondaryTemplate = secondaryPlan.actions.find(
+    (action) => action.type === "listing-template.upsert"
+  );
+  if (
+    !primaryQuery ||
+    primaryQuery.type !== "listing-query.upsert" ||
+    !secondaryQuery ||
+    secondaryQuery.type !== "listing-query.upsert" ||
+    !secondaryPage ||
+    secondaryPage.type !== "page.upsert" ||
+    !secondaryContentType ||
+    secondaryContentType.type !== "content-type.upsert" ||
+    !secondaryTemplate ||
+    secondaryTemplate.type !== "listing-template.upsert"
+  ) {
+    throw new Error("shared_template_fixture_missing");
+  }
+
+  primaryQuery.input.name = "Primary Query";
+  secondaryQuery.input.name = "Secondary Query";
+  const primaryPage = primaryPlan.actions.find((action) => action.type === "page.upsert");
+  if (!primaryPage || primaryPage.type !== "page.upsert") {
+    throw new Error("primary_page_upsert_missing");
+  }
+  primaryPage.input.listingQueryName = "Primary Query";
+  secondaryPage.input.listingQueryName = "Secondary Query";
+  secondaryPage.input.slug = "/produkty-drugi";
+  secondaryPage.input.title = "Drugi katalog";
+  secondaryPage.input.introTitle = "Drugi katalog";
+  secondaryPage.input.introBody = "Druga strona katalogu.";
+  const schemaClone = structuredClone(secondaryContentType.input.schema) as {
+    properties?: Record<string, Record<string, unknown>>;
+  };
+  schemaClone.properties = {
+    ...(schemaClone.properties ?? {}),
+    deliveryTimeDays: {
+      type: "number",
+      title: "Delivery time",
+      xFieldType: "number",
+    },
+  };
+  secondaryContentType.input.schema = schemaClone;
+  secondaryTemplate.input.config = {
+    ...(secondaryTemplate.input.config as Record<string, unknown>),
+    fields: [
+      ...((secondaryTemplate.input.config as { fields?: Array<Record<string, unknown>> }).fields ??
+        []),
+      {
+        key: "delivery-time",
+        source: "data.deliveryTimeDays",
+        label: "Delivery time",
+        fallback: null,
+        format: "text",
+        conditions: [],
+      },
+    ],
+  };
+
+  const plan = assembleComposedBlueprintPlan({
+    prompt: "Create two product pages sharing one listing template.",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    graph: {
+      primary: {
+        capabilityId: registration.capability.id,
+        role: "primary",
+        score: 100,
+        matchedSignals: ["intent:product_catalog"],
+        reasons: ["Primary product catalog."],
+        capability: registration.capability,
+      },
+      adjuncts: [],
+      gated: [],
+      resources: [],
+      conflicts: [],
+      fragments: [
+        {
+          capabilityId: "product-catalog-primary",
+          planId: primaryPlan.id,
+          title: primaryPlan.title,
+          assumptions: primaryPlan.assumptions,
+          actions: primaryPlan.actions,
+        },
+        {
+          capabilityId: "product-catalog-secondary",
+          planId: secondaryPlan.id,
+          title: secondaryPlan.title,
+          assumptions: secondaryPlan.assumptions,
+          actions: secondaryPlan.actions,
+        },
+      ],
+      selectedCapabilityIds: [registration.capability.id],
+    },
+  });
+
+  const queries =
+    plan?.actions.filter(
+      (
+        action
+      ): action is Extract<(typeof plan.actions)[number], { type: "listing-query.upsert" }> =>
+        action.type === "listing-query.upsert"
+    ) ?? [];
+  expect(queries).toHaveLength(2);
+  expect(queries.every((query) => query.input.fields.includes("data.deliveryTimeDays"))).toBe(true);
+});
+
 test("assembleComposedBlueprintPlan appends independent adjunct pages without duplicating catalog resources", () => {
   const graph = buildBlueprintCompositionGraph({
     promptKind: "setup_request",

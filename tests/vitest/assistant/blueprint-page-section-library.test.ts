@@ -26,7 +26,8 @@ test("page section library resolves ready aliases from page-builder widget and p
     pack: {
       module: "content",
       pagePresets: ["content:landing-home"],
-      sectionPresets: ["content:hero-benefits", "content:proof-cta"],
+      sectionPresets: ["content:hero-benefits"],
+      widgetType: "hero",
     },
   });
   expect(filters).toMatchObject({
@@ -37,7 +38,9 @@ test("page section library resolves ready aliases from page-builder widget and p
     widgetModule: "listings",
     pack: {
       module: "listings",
-      compositeWidgets: expect.arrayContaining(["listing-filters"]),
+      pagePresets: ["listings:directory-index"],
+      sectionPresets: ["listings:grid-filters"],
+      widgetType: "listing-filters",
     },
   });
 });
@@ -90,4 +93,18 @@ test("buildBlueprintPageSectionSeed normalizes a seeded widget block through the
       subhead: expect.any(String),
     })
   );
+});
+
+test("buildBlueprintPageSectionSeed rejects untrusted raw media URLs for media-bearing section data", () => {
+  expect(() =>
+    buildBlueprintPageSectionSeed("hero", {
+      data: {
+        media: {
+          source: "external",
+          type: "image",
+          src: "https://example.com/hero.jpg",
+        },
+      },
+    })
+  ).toThrowError("assistant_blueprint_page_section_media_untrusted");
 });

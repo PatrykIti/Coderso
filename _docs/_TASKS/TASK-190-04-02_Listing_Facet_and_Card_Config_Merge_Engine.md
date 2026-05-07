@@ -26,6 +26,10 @@ Delivered slice note:
 - Missing facet/card source fields now fail closed through typed
   `facet_field_missing` needs-input behavior instead of silently producing a
   broken listing surface.
+- Post-review drift fixes also ensure incompatible facet merges fail closed into
+  typed `needs_input` instead of throwing planner exceptions, and shared listing
+  templates widen projection fields for every linked query instead of only the
+  first one.
 
 ## Sub-Tasks
 

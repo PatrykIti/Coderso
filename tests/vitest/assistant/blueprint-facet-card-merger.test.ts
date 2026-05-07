@@ -114,6 +114,33 @@ test("mergeListingFacets merges sort facet options", () => {
   });
 });
 
+test("mergeListingFacets rejects incompatible duplicate option labels", () => {
+  expect(() =>
+    mergeListingFacets(
+      [
+        {
+          id: "status",
+          kind: "checkbox",
+          label: "Status",
+          field: "data.projectStatus",
+          op: "in",
+          options: [{ value: "available", label: "Available" }],
+        },
+      ],
+      [
+        {
+          id: "status",
+          kind: "checkbox",
+          label: "Status",
+          field: "data.projectStatus",
+          op: "in",
+          options: [{ value: "available", label: "Ready now" }],
+        },
+      ]
+    )
+  ).toThrowError('Facet option "available" has incompatible labels across composed fragments.');
+});
+
 test("validateListingFacetsAgainstSchema rejects facets pointing at missing fields", () => {
   expect(() =>
     validateListingFacetsAgainstSchema(schema, [

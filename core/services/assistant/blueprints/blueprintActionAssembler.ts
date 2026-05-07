@@ -350,10 +350,14 @@ const mergePageListingFilters = (
 ) => {
   if (!left) return right ?? null;
   if (!right) return left;
-  return {
-    ...left,
-    facets: mergeListingFacets(left.facets, right.facets),
-  };
+  try {
+    return {
+      ...left,
+      facets: mergeListingFacets(left.facets, right.facets),
+    };
+  } catch {
+    return null;
+  }
 };
 
 const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUpsertAction) => {
@@ -388,6 +392,9 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
     left.input.listingFilters,
     right.input.listingFilters
   );
+  if (left.input.listingFilters && right.input.listingFilters && listingFilters === null) {
+    return null;
+  }
   return {
     ...left,
     input: {
@@ -402,7 +409,7 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
       ctaLabel: left.input.ctaLabel ?? right.input.ctaLabel,
       blocks: blocks as typeof left.input.blocks,
       contentListStyle: left.input.contentListStyle ?? right.input.contentListStyle,
-      listingFilters,
+      listingFilters: listingFilters ?? null,
       formEmbed: left.input.formEmbed ?? right.input.formEmbed ?? null,
     },
   } satisfies AssistantPageUpsertAction;
@@ -634,8 +641,6 @@ const finalizeListingComposition = (actions: AssistantPlannedAction[]) => {
       .map((action) => [action.input.slug, action])
   );
 
-  const validatedTemplateSlugs = new Set<string>();
-
   for (const action of nextActions) {
     if (action.type !== "listing-query.upsert") continue;
     const schema = contentTypes.get(action.input.contentTypeSlug);
@@ -675,7 +680,7 @@ const finalizeListingComposition = (actions: AssistantPlannedAction[]) => {
       }
 
       const templateSlug = page.input.listingTemplateSlug?.trim();
-      if (!templateSlug || validatedTemplateSlugs.has(templateSlug)) continue;
+      if (!templateSlug) continue;
       const template = templatesBySlug.get(templateSlug);
       if (!template) continue;
 
@@ -683,7 +688,6 @@ const finalizeListingComposition = (actions: AssistantPlannedAction[]) => {
         const config = validateListingCardConfigAgainstSchema(schema, template.input.config);
         template.input.config = structuredClone(config) as Record<string, unknown>;
         requiredFields.push(...collectListingCardQueryFields(config));
-        validatedTemplateSlugs.add(templateSlug);
       } catch (error) {
         if (
           error instanceof BlueprintListingConfigMergeError &&

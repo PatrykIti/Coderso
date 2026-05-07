@@ -38,7 +38,7 @@ export type BlueprintPageSectionPackEvidence = {
   enforcement: WidgetPackEnforcement;
   pagePresets: string[];
   sectionPresets: string[];
-  compositeWidgets: string[];
+  widgetType: string;
   notes?: string;
 };
 

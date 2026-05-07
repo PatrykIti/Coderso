@@ -52,3 +52,6 @@ Note:
 - assistant page-section alias resolution for `TASK-190` reuses this matrix plus
   current page-builder widget metadata; it does not add a second section
   readiness registry or separate preset counters.
+- alias-specific section evidence can be exposed through the optional
+  `assistantPageSections` helper seam on matrix entries, so assistant mappings
+  still derive from this file instead of a separate section registry.

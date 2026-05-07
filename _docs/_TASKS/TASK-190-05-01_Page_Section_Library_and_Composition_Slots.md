@@ -28,6 +28,9 @@ Delivered slice note:
   assistant-only pseudo-sections.
 - Section seed blocks are normalized through the existing widget owner
   (`normalizeWidgetBlock`) rather than a parallel defaults registry.
+- Post-review drift fixes move alias-specific preset evidence into the existing
+  `modulePackMatrix.ts` helper seam and gate raw media URLs in seeded section
+  data until trusted media-library ids exist.
 
 ## Sub-Tasks
 
